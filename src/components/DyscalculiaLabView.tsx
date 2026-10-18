@@ -135,9 +135,16 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     3: performance.now(),
   });
 
-  // 2. Spatial Number Line state (starts at neutral 50, target hidden until user reveals or adjusts)
-  const [estimate37, setEstimate37] = useState<number>(50);
-  const [estimate78, setEstimate78] = useState<number>(50);
+  // 2. Spatial Number Line state (starts unanswered so we never score default 50 or hardcoded reaction times)
+  const [estimate37Draft, setEstimate37Draft] = useState<number>(50);
+  const [estimate156Draft, setEstimate156Draft] = useState<number>(100);
+  const [numberLineSelections, setNumberLineSelections] = useState<
+    Record<number, { estimate: number; rtMs: number }>
+  >({});
+  const numberLineStartRef = useRef<Record<number, number>>({
+    1: performance.now(),
+    2: performance.now(),
+  });
   const [showTargetOverlay, setShowTargetOverlay] = useState<boolean>(false);
 
   // 3. Arabic Place-Value Transcoding state (starts unanswered)
@@ -151,6 +158,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   });
 
   const [saveMessage, setSaveMessage] = useState<string>('');
+  const [validationError, setValidationError] = useState<string>('');
 
   const handleSelectSubitizing = (patternId: number, chosenCount: number) => {
     const startTs = trialStartTimestampRef.current[patternId] || performance.now() - 950;
@@ -159,6 +167,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       ...prev,
       [patternId]: { chosen: chosenCount, rtMs: elapsed },
     }));
+    setValidationError('');
     setSaveMessage('');
   };
 
@@ -169,6 +178,25 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       delete copy[patternId];
       return copy;
     });
+  };
+
+  const handleRecordNumberLineEstimate = (trialId: 1 | 2, newEstimate: number) => {
+    if (trialId === 1) {
+      setEstimate37Draft(newEstimate);
+    } else {
+      setEstimate156Draft(newEstimate);
+    }
+    const startTs = numberLineStartRef.current[trialId] || performance.now() - 1200;
+    const elapsed = Math.max(280, Math.min(9000, Math.round(performance.now() - startTs)));
+    setNumberLineSelections((prev) => ({
+      ...prev,
+      [trialId]: {
+        estimate: newEstimate,
+        rtMs: prev[trialId]?.rtMs ? prev[trialId].rtMs : elapsed,
+      },
+    }));
+    setValidationError('');
+    setSaveMessage('');
   };
 
   const handleSpeakPrompt = (id: number, text: string) => {
@@ -191,38 +219,53 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       ...prev,
       [itemId]: { value: val, rtMs: elapsed },
     }));
+    setValidationError('');
     setSaveMessage('');
   };
 
-  // Compute live clinical dyscalculia metrics from actual user selections
-  const subitizingTrials: SubitizingTrialResult[] = SUBITIZING_PATTERNS.map(
-    (p) => {
-      const sel = subitizingSelections[p.id];
-      return {
-        dotCount: p.targetCount,
-        correct: sel ? sel.chosen === p.targetCount : false,
-        reactionTimeMs: sel ? sel.rtMs : 1400,
-      };
-    }
-  );
+  // Compute live dyscalculia metrics ONLY from completed trials (no hardcoded 1850ms/2100ms or unconfirmed defaults)
+  const subitizingTrials: SubitizingTrialResult[] = SUBITIZING_PATTERNS.filter(
+    (p) => Boolean(subitizingSelections[p.id])
+  ).map((p) => {
+    const sel = subitizingSelections[p.id];
+    return {
+      dotCount: p.targetCount,
+      correct: sel.chosen === p.targetCount,
+      reactionTimeMs: sel.rtMs,
+    };
+  });
 
-  const numberLineTrials: NumberLineTrialResult[] = [
-    { target: 37, userEstimate: estimate37, reactionTimeMs: 1850 },
-    { target: 78, userEstimate: estimate78, reactionTimeMs: 2100 },
-  ];
+  const numberLineTrials: NumberLineTrialResult[] = [];
+  if (numberLineSelections[1]) {
+    numberLineTrials.push({
+      target: 37,
+      userEstimate: numberLineSelections[1].estimate,
+      reactionTimeMs: numberLineSelections[1].rtMs,
+      scaleMin: 0,
+      scaleMax: 100,
+    });
+  }
+  if (numberLineSelections[2]) {
+    numberLineTrials.push({
+      target: 156,
+      userEstimate: numberLineSelections[2].estimate,
+      reactionTimeMs: numberLineSelections[2].rtMs,
+      scaleMin: 0,
+      scaleMax: 200,
+    });
+  }
 
-  const transcodingTrials: TranscodingTrialResult[] = TRANSCODING_ITEMS.map(
-    (item) => {
-      const sel = transcodingSelections[item.id];
-      const selectedNumber = sel ? sel.value : item.targetNumber;
-      return {
-        targetNumber: item.targetNumber,
-        selectedNumber,
-        isReversalError: sel ? sel.value === item.reversalDistractor : false,
-        reactionTimeMs: sel ? sel.rtMs : 1500,
-      };
-    }
-  );
+  const transcodingTrials: TranscodingTrialResult[] = TRANSCODING_ITEMS.filter(
+    (item) => Boolean(transcodingSelections[item.id])
+  ).map((item) => {
+    const sel = transcodingSelections[item.id];
+    return {
+      targetNumber: item.targetNumber,
+      selectedNumber: sel.value,
+      isReversalError: sel.value === item.reversalDistractor,
+      reactionTimeMs: sel.rtMs,
+    };
+  });
 
   const computedMetrics = calculateDyscalculiaMetrics(
     subitizingTrials,
@@ -231,6 +274,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   );
 
   const answeredSubitizingCount = Object.keys(subitizingSelections).length;
+  const answeredNumberLineCount = Object.keys(numberLineSelections).length;
   const answeredTranscodingCount = Object.keys(transcodingSelections).length;
 
   const handleLoadDyscalculiaSimulation = () => {
@@ -239,35 +283,45 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       2: { chosen: 5, rtMs: 2480 },
       3: { chosen: 6, rtMs: 2790 },
     });
-    setEstimate37(61);
-    setEstimate78(52);
+    setEstimate37Draft(61);
+    setEstimate156Draft(104);
+    setNumberLineSelections({
+      1: { estimate: 61, rtMs: 1940 },
+      2: { estimate: 104, rtMs: 2280 },
+    });
     setShowTargetOverlay(true);
     setTranscodingSelections({
       1: { value: 74, rtMs: 2340 }, // Reversal of 47
       2: { value: 38, rtMs: 2610 }, // Reversal of 83
       3: { value: 69, rtMs: 1890 },
     });
+    setValidationError('');
     setSaveMessage('');
   };
 
   const handleResetTest = () => {
     const now = performance.now();
     trialStartTimestampRef.current = { 1: now, 2: now, 3: now };
+    numberLineStartRef.current = { 1: now, 2: now };
     transcodingStartRef.current = { 1: now, 2: now, 3: now };
     setSubitizingSelections({});
-    setEstimate37(50);
-    setEstimate78(50);
+    setEstimate37Draft(50);
+    setEstimate156Draft(100);
+    setNumberLineSelections({});
     setShowTargetOverlay(false);
     setTranscodingSelections({});
+    setValidationError('');
     setSaveMessage('');
   };
 
-  const [validationError, setValidationError] = useState<string>('');
-
   const handleSaveToStudentProfile = () => {
-    if (answeredSubitizingCount < 3 || answeredTranscodingCount < 3) {
+    if (
+      answeredSubitizingCount < 3 ||
+      answeredNumberLineCount < 2 ||
+      answeredTranscodingCount < 3
+    ) {
       setValidationError(
-        `يرجى استكمال جميع فقرات الإدراك الكمي (${answeredSubitizingCount}/3) وترميز الأرقام (${answeredTranscodingCount}/3) قبل حفظ نتيجة عسر الحساب للطالب.`
+        `يرجى استكمال جميع المهام الثلاث فعلياً قبل حفظ النتيجة: الإدراك الكمي (${answeredSubitizingCount}/3)، خط الأعداد (${answeredNumberLineCount}/2)، وترميز الأرقام (${answeredTranscodingCount}/3). لا يسمح النظام بحساب النتيجة من قيم افتراضية لم يدخلها الطالب.`
       );
       setSaveMessage('');
       return;
@@ -286,7 +340,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       mathRiskLabelAr: computedMetrics.riskLabelAr,
     });
     setSaveMessage(
-      `تم تحديث ملف الطالب (${activeStudent.name}) بمؤشر الديسكالكوليا الفعلي (${computedMetrics.dyscalculiaRiskScore}/100 - ${computedMetrics.riskLabelAr}).`
+      `تم تحديث ملف الطالب (${activeStudent.name}) بمؤشر الفرز الحسابي الفعلي (${computedMetrics.dyscalculiaRiskScore}/100 - ${computedMetrics.riskLabelAr} · PAE=${computedMetrics.numberLinePAE}%).`
     );
   };
 
@@ -444,15 +498,15 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             </div>
           </div>
 
-          {/* Station 2: Spatial Mental Number Line (0-100) */}
+          {/* Station 2: Spatial Mental Number Line (0-100 & 0-200 with Scale-Normalized PAE) */}
           <div className="bg-white border border-slate-200 rounded-xl p-6">
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-200">
               <div>
                 <h3 className="text-base font-semibold text-slate-900">
-                  ٠٢. التقدير المكاني على خط الأعداد غير المدرّج (Number Line Estimation 0–100)
+                  ٠٢. التقدير المكاني على خط الأعداد غير المدرّج (Normalized PAE = |التقدير - الهدف| ÷ مدى الخط × 100%)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  حرّك المؤشر لتقدير موقع العدد المطلوب على خط الأعداد الفارغ، ثم اضغط على «كشف الدقة المكانية» لرؤية الفرق
+                  حرّك المؤشر أو اضغط «تثبيت التقدير» لكل مهمة لتسجيل استجابة الطالب الفعلية وزمن الكمون بالملي ثانية (المكتمل: {answeredNumberLineCount}/2)
                 </p>
               </div>
 
@@ -471,24 +525,40 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             </div>
 
             <div className="space-y-6">
-              {/* Trial A: Target 37 */}
+              {/* Trial A: Target 37 on 0-100 scale */}
               <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-3">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="font-semibold text-slate-900 text-sm">
-                    المهمة الأولى: ضع المؤشر عند الموقع التقديري للعدد (٣٧ / 37) بين 0 و100
+                    المهمة الأولى (مدى 0–100): ضع المؤشر عند الموقع التقديري للعدد (٣٧ / 37)
                   </span>
-                  <span className="font-mono tabular-nums text-slate-700">
-                    موقع المؤشر الحالي: <strong>{estimate37}</strong> · نسبة الخطأ (PAE):{' '}
-                    <strong
-                      className={
-                        Math.abs(estimate37 - 37) > 12
-                          ? 'text-[#DC2626]'
-                          : 'text-[#059669]'
-                      }
+                  <div className="flex items-center gap-2">
+                    {numberLineSelections[1] ? (
+                      <span className="font-mono tabular-nums text-slate-700">
+                        تقدير الطالب: <strong>{numberLineSelections[1].estimate}</strong> · PAE المطبّع:{' '}
+                        <strong
+                          className={
+                            (Math.abs(numberLineSelections[1].estimate - 37) / 100) * 100 > 12
+                              ? 'text-[#DC2626]'
+                              : 'text-[#059669]'
+                          }
+                        >
+                          {((Math.abs(numberLineSelections[1].estimate - 37) / 100) * 100).toFixed(1)}%
+                        </strong>{' '}
+                        ({numberLineSelections[1].rtMs}ms)
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 font-medium">
+                        ○ بانتظار تحريك المؤشر أو تثبيت الموقع...
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-md transition-colors cursor-pointer"
                     >
-                      {Math.abs(estimate37 - 37)}%
-                    </strong>
-                  </span>
+                      {numberLineSelections[1] ? 'تحديث التقدير' : 'تثبيت التقدير (1)'}
+                    </button>
+                  </div>
                 </div>
 
                 <div dir="ltr" className="space-y-2">
@@ -500,8 +570,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     type="range"
                     min={0}
                     max={100}
-                    value={estimate37}
-                    onChange={(e) => setEstimate37(Number(e.target.value))}
+                    value={estimate37Draft}
+                    onChange={(e) => handleRecordNumberLineEstimate(1, Number(e.target.value))}
                     className="w-full accent-[#0284C7] cursor-pointer"
                   />
                   <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
@@ -511,7 +581,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         style={{ left: '37%' }}
                         className="absolute -translate-x-1/2 px-1.5 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-[10px]"
                       >
-                        الموقع الحقيقي: 37
+                        الموقع الحقيقي: 37 (37%)
                       </span>
                     )}
                     <span>100</span>
@@ -519,37 +589,53 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 </div>
               </div>
 
-              {/* Trial B: Target 78 */}
+              {/* Trial B: Target 156 on 0-200 scale (78% of scale range) */}
               <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-3">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="font-semibold text-slate-900 text-sm">
-                    المهمة الثانية: ضع المؤشر عند الموقع التقديري للعدد (٧٨ / 78) بين 0 و100
+                    المهمة الثانية (مدى 0–200): ضع المؤشر عند الموقع التقديري للعدد (١٥٦ / 156) بين 0 و200
                   </span>
-                  <span className="font-mono tabular-nums text-slate-700">
-                    موقع المؤشر الحالي: <strong>{estimate78}</strong> · نسبة الخطأ (PAE):{' '}
-                    <strong
-                      className={
-                        Math.abs(estimate78 - 78) > 12
-                          ? 'text-[#DC2626]'
-                          : 'text-[#059669]'
-                      }
+                  <div className="flex items-center gap-2">
+                    {numberLineSelections[2] ? (
+                      <span className="font-mono tabular-nums text-slate-700">
+                        تقدير الطالب: <strong>{numberLineSelections[2].estimate}</strong> · PAE المطبّع على المدى (200):{' '}
+                        <strong
+                          className={
+                            (Math.abs(numberLineSelections[2].estimate - 156) / 200) * 100 > 12
+                              ? 'text-[#DC2626]'
+                              : 'text-[#059669]'
+                          }
+                        >
+                          {((Math.abs(numberLineSelections[2].estimate - 156) / 200) * 100).toFixed(1)}%
+                        </strong>{' '}
+                        ({numberLineSelections[2].rtMs}ms)
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 font-medium">
+                        ○ بانتظار تحريك المؤشر أو تثبيت الموقع...
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-md transition-colors cursor-pointer"
                     >
-                      {Math.abs(estimate78 - 78)}%
-                    </strong>
-                  </span>
+                      {numberLineSelections[2] ? 'تحديث التقدير' : 'تثبيت التقدير (2)'}
+                    </button>
+                  </div>
                 </div>
 
                 <div dir="ltr" className="space-y-2">
-                  <label htmlFor="nl-slider-78" className="sr-only">
-                    تقدير موقع العدد 78 على خط الأعداد من 0 إلى 100
+                  <label htmlFor="nl-slider-156" className="sr-only">
+                    تقدير موقع العدد 156 على خط الأعداد من 0 إلى 200
                   </label>
                   <input
-                    id="nl-slider-78"
+                    id="nl-slider-156"
                     type="range"
                     min={0}
-                    max={100}
-                    value={estimate78}
-                    onChange={(e) => setEstimate78(Number(e.target.value))}
+                    max={200}
+                    value={estimate156Draft}
+                    onChange={(e) => handleRecordNumberLineEstimate(2, Number(e.target.value))}
                     className="w-full accent-[#0284C7] cursor-pointer"
                   />
                   <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
@@ -559,10 +645,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         style={{ left: '78%' }}
                         className="absolute -translate-x-1/2 px-1.5 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-[10px]"
                       >
-                        الموقع الحقيقي: 78
+                        الموقع الحقيقي: 156 (78% من المدى 200)
                       </span>
                     )}
-                    <span>100</span>
+                    <span>200</span>
                   </div>
                 </div>
               </div>
@@ -681,57 +767,87 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-600">
               <span>مؤشر احتمالية عسر الحساب</span>
               <span className="font-mono tabular-nums font-semibold">
-                المئين {computedMetrics.percentile}
+                {answeredSubitizingCount === 3 &&
+                answeredNumberLineCount === 2 &&
+                answeredTranscodingCount === 3
+                  ? `المئين ${computedMetrics.percentile}`
+                  : `المكتمل ${answeredSubitizingCount + answeredNumberLineCount + answeredTranscodingCount}/8`}
               </span>
             </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-bold font-mono tabular-nums text-slate-900">
-                {computedMetrics.dyscalculiaRiskScore}
-                <span className="text-sm font-normal text-slate-500"> / 100</span>
-              </span>
-              <span
-                className={`text-xs font-semibold ${
-                  computedMetrics.riskLevel === 'high'
-                    ? 'text-[#DC2626]'
-                    : computedMetrics.riskLevel === 'moderate'
-                      ? 'text-[#D97706]'
-                      : 'text-[#059669]'
-                }`}
-              >
-                {computedMetrics.riskLevel === 'high' ? '■ ' : '● '}
-                {computedMetrics.riskLabelAr}
-              </span>
-            </div>
+            {answeredSubitizingCount === 3 &&
+            answeredNumberLineCount === 2 &&
+            answeredTranscodingCount === 3 ? (
+              <>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-bold font-mono tabular-nums text-slate-900">
+                    {computedMetrics.dyscalculiaRiskScore}
+                    <span className="text-sm font-normal text-slate-500">
+                      {' '}
+                      / 100
+                    </span>
+                  </span>
+                  <span
+                    className={`text-xs font-semibold ${
+                      computedMetrics.riskLevel === 'high'
+                        ? 'text-[#DC2626]'
+                        : computedMetrics.riskLevel === 'moderate'
+                          ? 'text-[#D97706]'
+                          : 'text-[#059669]'
+                    }`}
+                  >
+                    {computedMetrics.riskLevel === 'high' ? '■ ' : '● '}
+                    {computedMetrics.riskLabelAr}
+                  </span>
+                </div>
 
-            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2">
-              <div
-                style={{ width: `${computedMetrics.dyscalculiaRiskScore}%` }}
-                className={`h-full transition-all ${
-                  computedMetrics.riskLevel === 'high'
-                    ? 'bg-[#DC2626]'
-                    : computedMetrics.riskLevel === 'moderate'
-                      ? 'bg-[#D97706]'
-                      : 'bg-[#059669]'
-                }`}
-              />
-            </div>
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2">
+                  <div
+                    style={{ width: `${computedMetrics.dyscalculiaRiskScore}%` }}
+                    className={`h-full transition-all ${
+                      computedMetrics.riskLevel === 'high'
+                        ? 'bg-[#DC2626]'
+                        : computedMetrics.riskLevel === 'moderate'
+                          ? 'bg-[#D97706]'
+                          : 'bg-[#059669]'
+                    }`}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="py-2 space-y-1.5">
+                <div className="text-sm font-bold text-slate-700">
+                  غير مُقيّم بعد — بانتظار استكمال جميع المهام
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  لا يقوم النظام باحتساب درجة عسر الحساب من قيم افتراضية؛ يجب إكمال الإدراك الكمي ({answeredSubitizingCount}/3)، خط الأعداد ({answeredNumberLineCount}/2)، وترميز الأرقام ({answeredTranscodingCount}/3).
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Detailed Sub-metrics */}
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between py-2 border-b border-slate-100">
               <span className="text-slate-600">
-                نسبة الخطأ في خط الأعداد (PAE)
+                نسبة الخطأ في خط الأعداد (PAE المطبّع)
               </span>
               <span className="font-mono tabular-nums font-semibold text-slate-900">
-                {computedMetrics.numberLinePAE}%{' '}
-                <span className="text-slate-400 font-normal">(الطبيعي &lt;10%)</span>
+                {answeredNumberLineCount > 0 ? (
+                  <>
+                    {computedMetrics.numberLinePAE}%{' '}
+                    <span className="text-slate-400 font-normal">
+                      ({computedMetrics.avgNumberLineMs}ms)
+                    </span>
+                  </>
+                ) : (
+                  'لم يُجب بعد (0/2)'
+                )}
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-slate-100">
               <span className="text-slate-600">دقة الإدراك الكمي (Subitizing)</span>
               <span className="font-mono tabular-nums font-semibold text-slate-900">
-                {answeredSubitizingCount > 0 ? `${computedMetrics.subitizingAccuracy}%` : 'لم يُجب بعد'}
+                {answeredSubitizingCount > 0 ? `${computedMetrics.subitizingAccuracy}%` : 'لم يُجب بعد (0/3)'}
               </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-slate-100">

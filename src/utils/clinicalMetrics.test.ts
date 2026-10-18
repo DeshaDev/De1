@@ -7,6 +7,12 @@ import {
   getConfusableLetterGroup,
   WordFixation,
 } from './clinicalMetrics.ts';
+import {
+  issueClinicalSessionToken,
+  verifyClinicalSessionToken,
+  authorizeSessionScope,
+  validateExplicitGuardianConsent,
+} from './clinicalSecurity.ts';
 
 test('calculateEyeTrackingMetrics identifies high dyslexia risk on slow reading with frequent regressions', () => {
   const fixations = [
@@ -165,4 +171,106 @@ test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions
     'Phonetic error words must be merged into problematicWords'
   );
 });
+
+test('calculateDyscalculiaMetrics normalizes PAE by scale range (scaleMax - scaleMin) per Siegler & Booth (2004)', () => {
+  const subitizing = [{ dotCount: 5, correct: true, reactionTimeMs: 920 }];
+  // Trial 1: target 37, estimate 47 on 0-100 scale -> |47 - 37| / 100 = 10.0% PAE
+  // Trial 2: target 156, estimate 176 on 0-200 scale -> |176 - 156| / 200 = 10.0% PAE (NOT 20% raw absolute error!)
+  const numberLine = [
+    {
+      target: 37,
+      userEstimate: 47,
+      reactionTimeMs: 1450,
+      scaleMin: 0,
+      scaleMax: 100,
+    },
+    {
+      target: 156,
+      userEstimate: 176,
+      reactionTimeMs: 1650,
+      scaleMin: 0,
+      scaleMax: 200,
+    },
+  ];
+  const transcoding = [
+    {
+      targetNumber: 47,
+      selectedNumber: 47,
+      isReversalError: false,
+      reactionTimeMs: 1100,
+    },
+  ];
+
+  const metrics = calculateDyscalculiaMetrics(
+    subitizing,
+    numberLine,
+    transcoding
+  );
+  assert.equal(metrics.numberLinePAE, 10);
+  assert.equal(metrics.avgNumberLineMs, 1550);
+});
+
+test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny guardian consent', () => {
+  const secret = 'unit-test-hmac-secret-2026';
+
+  // 1. Unauthenticated request is rejected with 401
+  const unauthCheck = authorizeSessionScope(null, 'students:read');
+  assert.equal(unauthCheck.allowed, false);
+  assert.equal(unauthCheck.statusCode, 401);
+
+  // 2. Educator readonly role can read students but is forbidden (403) from deleting or writing
+  const readonlySession = issueClinicalSessionToken(
+    'educator_readonly',
+    'معلم الصف',
+    secret
+  );
+  const verifiedReadonly = verifyClinicalSessionToken(
+    `Bearer ${readonlySession.token}`,
+    secret
+  );
+  assert.ok(verifiedReadonly);
+  assert.equal(
+    authorizeSessionScope(verifiedReadonly, 'students:read').allowed,
+    true
+  );
+  const deleteAttempt = authorizeSessionScope(
+    verifiedReadonly,
+    'students:delete'
+  );
+  assert.equal(deleteAttempt.allowed, false);
+  assert.equal(deleteAttempt.statusCode, 403);
+
+  // 3. Clinician role has full scopes
+  const clinicianSession = issueClinicalSessionToken(
+    'clinician',
+    'د. سارة',
+    secret
+  );
+  const verifiedClinician = verifyClinicalSessionToken(
+    clinicianSession.token,
+    secret
+  );
+  assert.equal(
+    authorizeSessionScope(verifiedClinician, 'students:delete').allowed,
+    true
+  );
+  assert.equal(
+    authorizeSessionScope(verifiedClinician, 'ai:analyze').allowed,
+    true
+  );
+
+  // 4. Tampered token is rejected
+  assert.equal(
+    verifyClinicalSessionToken(`${clinicianSession.token}tampered`, secret),
+    null
+  );
+
+  // 5. Strict Default-Deny Guardian Consent: rejects undefined, null, false, or truthy strings
+  assert.equal(validateExplicitGuardianConsent(undefined).valid, false);
+  assert.equal(validateExplicitGuardianConsent(null).valid, false);
+  assert.equal(validateExplicitGuardianConsent(false).valid, false);
+  assert.equal(validateExplicitGuardianConsent('true').valid, false);
+  assert.equal(validateExplicitGuardianConsent(true).valid, true);
+});
+
 

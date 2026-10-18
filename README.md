@@ -25,18 +25,21 @@
 * **عدم افتراض دقة نطق `100%` عند غياب الصوت**: إذا لم يُفعّل الطالب الميكروفون أو لم يُسجل نصاً منطوقاً، تُسجل حالة التقييم الصوتي كـ `oralReadingAssessed: false` (`قراءة صامتة`) دون تمرير نص القطعة المرجعي كنص منطوق افتراضي.
 * **دمج الأخطاء الفونولوجية في مؤشر الفرز وسجل الطالب**: عند توفر قراءة جهرية، تُمرَّر مخرجات `evaluateOralReadingAlignment` (عدد الإبدالات الفونولوجية الديسلكسية، الكلمات المحذوفة، ومعدل الخطأ اللفظي `WER`) مباشرةً إلى دالة `calculateEyeTrackingMetrics` وإلى `StudentRecord` ومسار الخادم `/api/ai/analyze-session`، مع **استثناء البدائل اللهجية العربية الطبيعية** من أي عقوبة في الدرجة.
 
-### 4. فصل نتائج عسر الحساب عن جلسة تتبع العين (Unassessed Dyscalculia State Integrity)
+### 4. فصل نتائج عسر الحساب عن جلسة تتبع العين وضبط معادلة خط الأعداد (Dyscalculia Integrity & Scale-Normalized PAE)
 * **منع تسجيل درجات حسابية مسبقة الصنع**: عند إنهاء جلسة تتبع العين والقراءة، يُحفظ سجل الطالب الجديد بحالة `dyscalculiaAssessed: false` و `mathRiskLevel: 'unassessed'` مع ضبط (`numberLinePAE: null`, `subitizingAccuracy: null`, `reversalErrorCount: null`).
-* تعرض لوحة النتائج والتقرير الإكلينيكي بوضوح عبارة **«غير مُقيَّم بعد — أكمل اختبار الحساب»**، ولا تُسجل نتيجة عسر الحساب إلا بعد إتمام الطالب لجميع فقرات الاختبارات الثلاثة (الإدراك الكمي، خط الأعداد، وترميز الأرقام) في تبويب «فحص الديسكالكوليا والحساب».
+* **إلزامية إكمال جميع المهام الثلاث (بما فيها محاولتا خط الأعداد) بزمن استجابة فعلي**: في `src/components/DyscalculiaLabView.tsx`، تبدأ محاولات الإدراك الكمي (`0/3`)، ومحاولتا خط الأعداد (`0/2`)، ومهام ترميز الأرقام (`0/3`) بحالة غير مُجاب عنها (`Unanswered`) دون أي أزمنة ثابتة (`1850ms` أو `2100ms`)، ويُقاس زمن الكمون الفعلي عبر `performance.now()`. لا يعرض النظام درجة المخاطر ولا يسمح بحفظ النتيجة في ملف الطالب إلا بعد إتمام المحاولات الثماني كاملةً (`3 + 2 + 3`).
+* **تطبيع نسبة الخطأ المطلق (`Scale-Normalized PAE`) وفق Siegler & Booth (2004)**: في `src/utils/clinicalMetrics.ts`، تُحسب نسبة الخطأ المطلق في خط الأعداد بتطبيع الفرق المطلق على مدى المقياس الكلي لكل مهمة (`scaleMax - scaleMin`):
+  $$\text{PAE (\%)} = \frac{|\text{userEstimate} - \text{target}|}{\text{scaleMax} - \text{scaleMin}} \times 100$$
+  بحيث يُقسّم الخطأ في المهمة الأولى على المدى `100` (`0–100`) وفي المهمة الثانية على المدى `200` (`0–200`).
 
 ### 5. التوصيف العلمي الدقيق لمحرك الفرز والمئينات (Heuristic Screening vs. Validated Clinical Diagnosis)
 * **طبيعة المحرك الاستدلالية (`Heuristic Rule Ensemble`)**: الدالة `runLexploreOculomotorInference` في `src/utils/dyslexiaEngines.ts` ومعادلات `src/utils/clinicalMetrics.ts` هي **محركات فرز استدلالية مبنية على قواعد وأوزان معيارية منشورة في الأدبيات البحثية (`5-Rule Heuristic Ensemble & Sequential State Gate`)**، وليست نماذج تعلم آلي تجارية مُدرَّبة على عينات سريرية أو أدوات تشخيص طبي معتمدة سريرياً بشكل مستقل.
 * تحتوي الواجهة والتقارير المُصدَّرة على إفصاح منهجي صريح يوضح أن جميع الدرجات والمئينات هي **مؤشرات فرز تربوية أولية (Screening Indicators)** تهدف إلى مساعدة المعلمين والمختصين في الرصد المبكر ولا تغني عن التقييم الإكلينيكي الشامل.
 
-### 6. التخزين الدائم وحماية خصوصية بيانات الأطفال (Persistence, Guardian Consent, PII Pseudonymization & Rate Limiting)
-* **قاعدة بيانات محلية دائمة (`/api/students`)**: تُحفظ سجلات الطلاب والجلسات بشكل دائم على الخادم في `data/clinical-store.json` عبر مسارات REST API (`GET / POST / PATCH / DELETE /api/students`) مع دعم الحذف الفوري للسجل (**حق محو البيانات — Right to Erasure**).
-* **موافقة ولي الأمر الإلزامية (`Guardian Consent`)**: يتطلب مختبر الكاميرا والميكروفون إقراراً صريحاً بموافقة ولي الأمر أو المختص التربوي قبل تشغيل الكاميرا وتخزين مؤشرات الجلسة.
-* **إخفاء الهوية الشخصية (`PII Pseudonymization`) وتحديد معدل الطلبات (`Rate Limiting`)**: يقوم الخادم (`server.ts`) تلقائياً باستبدال اسم الطفل الحقيقي برمز مرجعي مُعمّى (`Student-[HASH]`) قبل إرسال أي مؤشرات رقمية إلى واجهة `Gemini API` الخارجية، مع فرض محدد معدل طلبات (`Sliding-Window Rate Limiter`) لحماية مسارات الذكاء الاصطناعي.
+### 6. التحكم في الوصول المبني على الأدوار (RBAC)، المنع الافتراضي للموافقة، وحماية خصوصية الأطفال
+* **حماية مسارات البيانات والذكاء الاصطناعي بنظام صلاحيات (`HMAC-SHA256 RBAC`)**: جميع مسارات `/api/students` (`GET / POST / PATCH / DELETE`) ومسار `/api/ai/analyze-session` محمية عبر وسيط التحقق `requireClinicalAuth` في `server.ts` و `src/utils/clinicalSecurity.ts`. يتطلب الوصول رمز جلسة موقّعاً رقمياً (`Bearer Token`) يصدر عبر `/api/auth/session` بصلاحيات محددة (`students:read`, `students:write`, `students:delete`, `ai:analyze`) مع التفرقة بين دور الأخصائي (`clinician`) ودور المعلم للقراءة فقط (`educator_readonly`).
+* **المنع الافتراضي الصارم لموافقة ولي الأمر (`Strict Default-Deny Guardian Consent`)**: لا يفترض الخادم وجود موافقة عند غياب الحقل؛ بل تستخدم الدالة `validateExplicitGuardianConsent` سياسة المنع الافتراضي (`consentField === true`) وترفض أي طلب لحفظ سجل طالب أو تحليل جلسة بالذكاء الاصطناعي إذا كانت قيمة `guardianConsentGiven` مفقودة (`undefined`) أو `null` أو `false` بكود `403 Forbidden`.
+* **إخفاء الهوية الشخصية (`PII Pseudonymization`) وتحديد معدل الطلبات (`Rate Limiting`)**: يقوم الخادم (`server.ts`) تلقائياً بحجب اسم الطفل الحقيقي واستبداله برمز مرجعي مُعمّى قبل إرسال أي مؤشرات رقمية إلى واجهة `Gemini API` الخارجية، مع فرض محدد معدل طلبات (`Sliding-Window Rate Limiter`) لحماية مسارات الذكاء الاصطناعي.
 
 ---
 
@@ -60,21 +63,23 @@
 
 ### 4. مختبر التقييم المتكيف (2PL-IRT) ومختبر عسر الحساب (Dyscalculia Lab)
 * **التقييم المتكيف (`2PL Item Response Theory`)**: تقدير القدرة الكامنة ($\theta$) والخطأ المعياري $SE(\theta)$ واختيار الفقرة التالية التي تعظم معلومات فيشر $I(\theta)$.
-* **مختبر عسر الحساب**: قياس الإدراك الكمي الفوري (`Subitizing`)، نسبة الخطأ المطلق على خط الأعداد (`Number Line PAE`)، وأخطاء الانعكاس المكاني في ترميز الأرقام العربية (`Transcoding Reversals`).
+* **مختبر عسر الحساب**: قياس الإدراك الكمي الفوري (`Subitizing`)، نسبة الخطأ المطلق المطبّعة على مدى خط الأعداد (`Scale-Normalized Number Line PAE`)، وأخطاء الانعكاس المكاني في ترميز الأرقام العربية (`Transcoding Reversals`).
 
 ---
 
 ## 🚀 التشغيل، التحقق البرمجي، والاختبارات الآلية (CI & Testing)
 
-تتضمن المنصة خط تكامل مستمر (`.github/workflows/ci.yml`) وحزمة اختبارات وحدات (`node:test`) تتحقق من:
+تتضمن المنصة خط تكامل مستمر (`.github/workflows/ci.yml`) متوافقاً مع كل من `package-lock.json` و `bun.lock` وحزمة اختبارات وحدات (`21 اختباراً آلياً` عبر `node:test`) تتحقق من:
 * حساب دقة المعايرة خارج عينة التدريب (`LOOCV` و `Independent Holdout`) دون تقييد اصطناعي عند `82%`.
 * رفض الكلمات غير المرصودة (`0ms`) وعدم تعويضها بـ `190ms` وفحص بوابة التغطية البصرية (`isSufficientGazeData`).
 * دمج أخطاء القراءة المنطوقة الفونولوجية في مؤشر الفرز مع استثناء البدائل اللهجية العربية.
+* تطبيع خطأ خط الأعداد (`PAE`) على مدى المقياس (`0-100` و `0-200`).
+* التحقق من صلاحيات الوصول (`HMAC-SHA256 RBAC`) والمنع الافتراضي لموافقة ولي الأمر (`Default-Deny Consent`).
 * خوارزميات `PyGaze I-DT`، `Weighted Levenshtein`، و `2PL-IRT`.
 
 ```bash
 # تثبيت الحزم
-npm install
+npm install --legacy-peer-deps
 
 # تشغيل الخادم وواجهة التطوير على المنفذ 3000
 npm run dev
@@ -82,8 +87,8 @@ npm run dev
 # فحص الأنواع البرمجية (TypeScript Static Analysis)
 npm run lint
 
-# تشغيل جميع اختبارات الوحدات (19 اختباراً آلياً)
-npx tsx --test src/utils/eyeTrackerEngine.test.ts src/utils/clinicalMetrics.test.ts src/utils/dyslexiaEngines.test.ts
+# تشغيل جميع اختبارات الوحدات (21 اختباراً آلياً)
+npm test
 
 # بناء نسخة الإنتاج
 npm run build

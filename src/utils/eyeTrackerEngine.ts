@@ -1605,3 +1605,101 @@ export class BlinkDetectorStateMachine {
   }
 }
 
+export interface EmpiricalWordValidationTrial {
+  cuedWordIndex: number;
+  cuedWordText: string;
+  targetCenterX: number;
+  targetCenterY: number;
+  predictedGazeX: number;
+  predictedGazeY: number;
+  detectedWordIndex: number | null;
+  fixationLatencyMs: number;
+}
+
+export interface EmpiricalWordValidationReport {
+  trialCount: number;
+  exactWordHitCount: number;
+  wordHitAccuracyPercent: number;
+  meanSpatialErrorPx: number;
+  estimatedAngularErrorDeg: number;
+  meanFixationLatencyMs: number;
+  isEmpiricallyValidated: boolean;
+  validationStatusLabelAr: string;
+}
+
+/**
+ * Evaluates empirical word-level gaze accuracy on cued Arabic words.
+ * Computes exact word-hit rate (%), mean Euclidean spatial error (px),
+ * visual angle error in degrees (°) at viewing distance (default 55cm, 96 PPI),
+ * and mean saccadic fixation latency (ms).
+ */
+export function evaluateEmpiricalWordTargetValidation(
+  trials: EmpiricalWordValidationTrial[],
+  viewingDistanceCm: number = 55,
+  screenPpi: number = 96
+): EmpiricalWordValidationReport {
+  if (!trials || trials.length === 0) {
+    return {
+      trialCount: 0,
+      exactWordHitCount: 0,
+      wordHitAccuracyPercent: 0,
+      meanSpatialErrorPx: 0,
+      estimatedAngularErrorDeg: 0,
+      meanFixationLatencyMs: 0,
+      isEmpiricallyValidated: false,
+      validationStatusLabelAr:
+        'لم يتم إجراء اختبار التحقق التجريبي لإصابة الكلمات بعد (0/3 تجارب)',
+    };
+  }
+
+  let hits = 0;
+  let totalErrorPx = 0;
+  let totalLatencyMs = 0;
+
+  for (const t of trials) {
+    if (t.detectedWordIndex === t.cuedWordIndex) {
+      hits += 1;
+    }
+    const errPx = Math.hypot(
+      t.predictedGazeX - t.targetCenterX,
+      t.predictedGazeY - t.targetCenterY
+    );
+    totalErrorPx += errPx;
+    totalLatencyMs += Math.max(80, t.fixationLatencyMs);
+  }
+
+  const n = trials.length;
+  const wordHitAccuracyPercent = Math.round((hits / n) * 100);
+  const meanSpatialErrorPx = Math.round((totalErrorPx / n) * 10) / 10;
+  const meanFixationLatencyMs = Math.round(totalLatencyMs / n);
+
+  // Convert pixel error to centimeters (1 inch = 2.54 cm) and then to visual angle in degrees
+  const safePpi = Math.max(72, screenPpi);
+  const safeDistCm = Math.max(25, viewingDistanceCm);
+  const errorCm = (meanSpatialErrorPx / safePpi) * 2.54;
+  const estimatedAngularErrorDeg =
+    Math.round(Math.atan(errorCm / safeDistCm) * (180 / Math.PI) * 100) / 100;
+
+  const isEmpiricallyValidated =
+    n >= 3 && wordHitAccuracyPercent >= 66 && estimatedAngularErrorDeg <= 2.5;
+
+  let validationStatusLabelAr = `دقة إصابة الكلمات منخفضة (${wordHitAccuracyPercent}% · خطأ زاوي ${estimatedAngularErrorDeg}°) — يُنصح بإعادة معايرة الكاميرا`;
+  if (isEmpiricallyValidated) {
+    validationStatusLabelAr = `تم التحقق التجريبي بنجاح: دقة إصابة الكلمات ${wordHitAccuracyPercent}% · خطأ مكاني ${meanSpatialErrorPx}px (${estimatedAngularErrorDeg}°)`;
+  } else if (n < 3) {
+    validationStatusLabelAr = `جاري استكمال تجارب التحقق من إصابة الكلمات (${n}/3 تجارب مكتملة)`;
+  }
+
+  return {
+    trialCount: n,
+    exactWordHitCount: hits,
+    wordHitAccuracyPercent,
+    meanSpatialErrorPx,
+    estimatedAngularErrorDeg,
+    meanFixationLatencyMs,
+    isEmpiricallyValidated,
+    validationStatusLabelAr,
+  };
+}
+
+

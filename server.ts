@@ -5,6 +5,14 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import {
+  ClinicalRole,
+  ClinicalScope,
+  issueClinicalSessionToken,
+  verifyClinicalSessionToken,
+  authorizeSessionScope,
+  validateExplicitGuardianConsent,
+} from './src/utils/clinicalSecurity';
 
 dotenv.config();
 
@@ -13,6 +21,12 @@ const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, 'data');
 const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
+
+const CLINICAL_ACCESS_CODE =
+  process.env.CLINICAL_ACCESS_CODE || 'BASEERA-CLINICAL-2026';
+const CLINICAL_SESSION_SECRET =
+  process.env.CLINICAL_SESSION_SECRET ||
+  'baseera-rbac-hmac-secret-key-2026';
 
 function loadPersistedStudents(): StudentRecord[] {
   try {
@@ -50,6 +64,34 @@ function savePersistedStudents(records: StudentRecord[]): void {
   } catch (err) {
     console.warn('Failed to persist clinical-store.json:', err);
   }
+}
+
+// Role-Based Access Control (RBAC) Middleware for protecting child records & AI analysis
+function requireClinicalAuth(requiredScope: ClinicalScope) {
+  return (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    const rawHeader =
+      (req.headers.authorization as string) ||
+      (req.headers['x-clinical-session-token'] as string) ||
+      '';
+    const verifiedSession = verifyClinicalSessionToken(
+      rawHeader,
+      CLINICAL_SESSION_SECRET
+    );
+    const authResult = authorizeSessionScope(verifiedSession, requiredScope);
+    if (!authResult.allowed) {
+      res.status(authResult.statusCode).json({
+        error: authResult.errorAr,
+        requiredScope,
+      });
+      return;
+    }
+    (req as any).clinicalSession = verifiedSession;
+    next();
+  };
 }
 
 // Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
@@ -106,48 +148,110 @@ async function startServer() {
 
   let studentsDb: StudentRecord[] = loadPersistedStudents();
 
-  // Persistent Student & Session Storage REST API
-  app.get('/api/students', (_req, res) => {
-    res.json({
-      students: studentsDb,
-      persisted: true,
-      privacyPolicy: 'PII-Pseudonymized-External-AI',
-    });
-  });
+  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint
+  app.post('/api/auth/session', (req, res) => {
+    const {
+      accessCode,
+      role = 'clinician',
+      clinicianName = 'أخصائي التقييم المعتمد',
+    } = req.body || {};
 
-  app.post('/api/students', (req, res) => {
-    const newRecord = req.body as StudentRecord;
-    if (!newRecord || !newRecord.id || !newRecord.name) {
-      res.status(400).json({ error: 'بيانات جلسة الطالب غير مكتملة.' });
+    if (!accessCode || accessCode !== CLINICAL_ACCESS_CODE) {
+      res.status(401).json({
+        error: 'رمز الدخول الإكلينيكي غير صحيح — تم رفض إصدار جلسة الصلاحيات.',
+      });
       return;
     }
-    studentsDb = [
-      newRecord,
-      ...studentsDb.filter((s) => s.id !== newRecord.id),
-    ];
-    savePersistedStudents(studentsDb);
-    res.status(201).json({ student: newRecord, persisted: true });
+
+    const validRole: ClinicalRole =
+      role === 'educator_readonly' ? 'educator_readonly' : 'clinician';
+    const session = issueClinicalSessionToken(
+      validRole,
+      String(clinicianName),
+      CLINICAL_SESSION_SECRET
+    );
+    res.json(session);
   });
 
-  app.patch('/api/students/:id', (req, res) => {
-    const { id } = req.params;
-    const updates = req.body as Partial<StudentRecord>;
-    const idx = studentsDb.findIndex((s) => s.id === id);
-    if (idx === -1) {
-      res.status(404).json({ error: 'سجل الطالب غير موجود.' });
-      return;
+  app.get(
+    '/api/auth/session',
+    requireClinicalAuth('students:read'),
+    (req, res) => {
+      res.json({
+        authenticated: true,
+        session: (req as any).clinicalSession,
+      });
     }
-    studentsDb[idx] = { ...studentsDb[idx], ...updates };
-    savePersistedStudents(studentsDb);
-    res.json({ student: studentsDb[idx], persisted: true });
-  });
+  );
 
-  app.delete('/api/students/:id', (req, res) => {
-    const { id } = req.params;
-    studentsDb = studentsDb.filter((s) => s.id !== id);
-    savePersistedStudents(studentsDb);
-    res.json({ deletedId: id, persisted: true });
-  });
+  // Protected Student & Session Storage REST API (Requires RBAC Authentication & Scopes)
+  app.get(
+    '/api/students',
+    requireClinicalAuth('students:read'),
+    (_req, res) => {
+      res.json({
+        students: studentsDb,
+        persisted: true,
+        privacyPolicy: 'RBAC-Protected-PII-Pseudonymized',
+      });
+    }
+  );
+
+  app.post(
+    '/api/students',
+    requireClinicalAuth('students:write'),
+    (req, res) => {
+      const newRecord = req.body as StudentRecord;
+      if (!newRecord || !newRecord.id || !newRecord.name) {
+        res.status(400).json({ error: 'بيانات جلسة الطالب غير مكتملة.' });
+        return;
+      }
+
+      // Strict Default-Deny Guardian Consent verification on student creation
+      const consentCheck = validateExplicitGuardianConsent(
+        newRecord.guardianConsentGiven
+      );
+      if (!consentCheck.valid) {
+        res.status(403).json({ error: consentCheck.errorAr });
+        return;
+      }
+
+      studentsDb = [
+        newRecord,
+        ...studentsDb.filter((s) => s.id !== newRecord.id),
+      ];
+      savePersistedStudents(studentsDb);
+      res.status(201).json({ student: newRecord, persisted: true });
+    }
+  );
+
+  app.patch(
+    '/api/students/:id',
+    requireClinicalAuth('students:write'),
+    (req, res) => {
+      const { id } = req.params;
+      const updates = req.body as Partial<StudentRecord>;
+      const idx = studentsDb.findIndex((s) => s.id === id);
+      if (idx === -1) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود.' });
+        return;
+      }
+      studentsDb[idx] = { ...studentsDb[idx], ...updates };
+      savePersistedStudents(studentsDb);
+      res.json({ student: studentsDb[idx], persisted: true });
+    }
+  );
+
+  app.delete(
+    '/api/students/:id',
+    requireClinicalAuth('students:delete'),
+    (req, res) => {
+      const { id } = req.params;
+      studentsDb = studentsDb.filter((s) => s.id !== id);
+      savePersistedStudents(studentsDb);
+      res.json({ deletedId: id, persisted: true });
+    }
+  );
 
   const wasmDir = path.join(
     __dirname,
@@ -190,41 +294,47 @@ async function startServer() {
   // Protect all /api/ai/* routes with sliding-window rate limiting
   app.use('/api/ai', aiRateLimiter);
 
-  // 1. Clinical AI Analysis of Eye-Tracking Dyslexia & Dyscalculia Screening (with Child PII Pseudonymization)
-  app.post('/api/ai/analyze-session', async (req, res) => {
-    const {
-      studentName,
-      guardianConsentGiven = true,
-      gradeLevel,
-      wpm,
-      avgFixationMs,
-      regressionRate,
-      gazeCoveragePercent = 100,
-      observedWordCount,
-      totalPassageWordCount,
-      problematicWords = [],
-      oralReadingAssessed = false,
-      oralAccuracyPercent = null,
-      phoneticSubstitutionCount = 0,
-      dialectVariantCount = 0,
-      dyscalculiaAssessed = false,
-      numberLinePAE = null,
-      subitizingAccuracy = null,
-      reversalErrorCount = null,
-    } = req.body || {};
+  // 1. Clinical AI Analysis of Eye-Tracking Dyslexia & Dyscalculia Screening
+  // Enforces both RBAC Authentication ('ai:analyze') AND Strict Default-Deny Guardian Consent
+  app.post(
+    '/api/ai/analyze-session',
+    requireClinicalAuth('ai:analyze'),
+    async (req, res) => {
+      const {
+        studentName,
+        guardianConsentGiven, // NO default `= true`! Must be explicitly verified as `=== true`
+        gradeLevel,
+        wpm,
+        avgFixationMs,
+        regressionRate,
+        gazeCoveragePercent = 100,
+        observedWordCount,
+        totalPassageWordCount,
+        problematicWords = [],
+        oralReadingAssessed = false,
+        oralAccuracyPercent = null,
+        phoneticSubstitutionCount = 0,
+        dialectVariantCount = 0,
+        dyscalculiaAssessed = false,
+        numberLinePAE = null,
+        subitizingAccuracy = null,
+        reversalErrorCount = null,
+      } = req.body || {};
 
-    if (!studentName) {
-      res.status(400).json({ error: 'بيانات الجلسة مطلوبة لإجراء التحليل.' });
-      return;
-    }
+      if (!studentName) {
+        res.status(400).json({ error: 'بيانات الجلسة مطلوبة لإجراء التحليل.' });
+        return;
+      }
 
-    if (guardianConsentGiven === false) {
-      res.status(403).json({
-        error:
-          'لا يمكن إرسال بيانات الجلسة للتحليل دون الإقرار بموافقة ولي الأمر.',
-      });
-      return;
-    }
+      // Strict Default-Deny Consent Check: rejects missing (`undefined`), `null`, or `false`
+      const consentValidation =
+        validateExplicitGuardianConsent(guardianConsentGiven);
+      if (!consentValidation.valid) {
+        res.status(403).json({
+          error: consentValidation.errorAr,
+        });
+        return;
+      }
 
     // Child Privacy Protection: NEVER send the child's real name (`studentName`) to external Gemini API!
     // Use an anonymized token (`الطالب [معرّف الجلسة المشفّر #ANON]`) in the outbound LLM prompt.

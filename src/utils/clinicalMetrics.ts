@@ -55,6 +55,8 @@ export interface NumberLineTrialResult {
   target: number;
   userEstimate: number;
   reactionTimeMs: number;
+  scaleMin?: number; // Default 0
+  scaleMax?: number; // Default 100
 }
 
 export interface TranscodingTrialResult {
@@ -68,6 +70,7 @@ export interface DyscalculiaMetricsResult {
   subitizingAccuracy: number;
   avgSubitizingMs: number;
   numberLinePAE: number;
+  avgNumberLineMs: number;
   transcodingAccuracy: number;
   reversalErrorCount: number;
   dyscalculiaRiskScore: number;
@@ -330,17 +333,32 @@ export function calculateDyscalculiaMetrics(
         )
       : 900;
 
+  // Percent Absolute Error (PAE) normalized by the scale range (scaleMax - scaleMin) per Siegler & Booth (2004):
+  // PAE = (|userEstimate - target| / (scaleMax - scaleMin)) * 100
   const numberLinePAE =
     numberLine.length > 0
       ? Number(
           (
-            numberLine.reduce(
-              (acc, t) => acc + Math.abs(t.userEstimate - t.target),
-              0
-            ) / numberLine.length
+            numberLine.reduce((acc, t) => {
+              const scaleMin = typeof t.scaleMin === 'number' ? t.scaleMin : 0;
+              const scaleMax =
+                typeof t.scaleMax === 'number' ? t.scaleMax : 100;
+              const scaleRange = Math.max(1, Math.abs(scaleMax - scaleMin));
+              const normalizedPaePct =
+                (Math.abs(t.userEstimate - t.target) / scaleRange) * 100;
+              return acc + normalizedPaePct;
+            }, 0) / numberLine.length
           ).toFixed(1)
         )
-      : 5.0;
+      : 0;
+
+  const avgNumberLineMs =
+    numberLine.length > 0
+      ? Math.round(
+          numberLine.reduce((acc, t) => acc + Math.max(100, t.reactionTimeMs), 0) /
+            numberLine.length
+        )
+      : 0;
 
   const transcodingAccuracy =
     transcoding.length > 0
@@ -353,8 +371,8 @@ export function calculateDyscalculiaMetrics(
 
   const reversalErrorCount = transcoding.filter((t) => t.isReversalError).length;
 
-  // Clinical Risk Formula:
-  // High PAE (>12%), slow/inaccurate subitizing, and Arabic place-value reversals
+  // Heuristic Screening Formula:
+  // High PAE (>12% of scale range), slow/inaccurate subitizing, and Arabic place-value reversals
   const paeRisk = Math.min(1, Math.max(0, (numberLinePAE - 4) / 22));
   const subitizingRisk =
     (1 - subitizingAccuracy / 100) * 0.6 +
@@ -373,20 +391,21 @@ export function calculateDyscalculiaMetrics(
   const percentile = Math.max(1, Math.min(99, 100 - dyscalculiaRiskScore));
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let riskLabelAr = 'إدراك كمي ومكاني طبيعي';
+  let riskLabelAr = 'مؤشر فرز أولي: إدراك كمي ومكاني طبيعي';
 
   if (dyscalculiaRiskScore >= 60) {
     riskLevel = 'high';
-    riskLabelAr = 'احتمالية مرتفعة للديسكالكوليا';
+    riskLabelAr = 'مؤشر فرز أولي مرتفع لعسر الحساب (الديسكالكوليا)';
   } else if (dyscalculiaRiskScore >= 34) {
     riskLevel = 'moderate';
-    riskLabelAr = 'صعوبة متوسطة في الحس العددي';
+    riskLabelAr = 'مؤشر فرز أولي متوسط في الحس العددي';
   }
 
   return {
     subitizingAccuracy,
     avgSubitizingMs,
     numberLinePAE,
+    avgNumberLineMs,
     transcodingAccuracy,
     reversalErrorCount,
     dyscalculiaRiskScore,

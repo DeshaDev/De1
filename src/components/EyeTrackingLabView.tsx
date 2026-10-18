@@ -31,6 +31,7 @@ import {
   WordFixation,
   calculateEyeTrackingMetrics,
 } from '../utils/clinicalMetrics';
+import { authenticatedFetch } from '../utils/apiAuth';
 import {
   extractPupilFeaturesFromFrame,
   computeIrisGazeFromLandmarks,
@@ -1852,7 +1853,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     };
 
     try {
-      const response = await fetch('/api/ai/analyze-session', {
+      const response = await authenticatedFetch('/api/ai/analyze-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

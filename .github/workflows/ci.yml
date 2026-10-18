@@ -19,16 +19,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Run TypeScript static analysis (lint)
         run: npm run lint
 
-      - name: Run unit tests (Eye-Tracking, Clinical Metrics & Dyslexia Engines)
-        run: npx tsx --test src/utils/eyeTrackerEngine.test.ts src/utils/clinicalMetrics.test.ts src/utils/dyslexiaEngines.test.ts
+      - name: Run unit tests (Eye-Tracking, Clinical Metrics, Dyscalculia PAE & Security)
+        run: npm test
 
       - name: Build production bundle
         run: npm run build

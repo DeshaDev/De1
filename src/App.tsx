@@ -17,6 +17,7 @@ import {
   ARABIC_READING_PASSAGES,
   StudentRecord,
 } from './data/seedData';
+import { authenticatedFetch } from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
@@ -46,10 +47,10 @@ export default function App() {
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiStatusBanner, setAiStatusBanner] = useState<string>('');
 
-  // Load persistent student records from server on mount
+  // Load persistent student records from RBAC-protected server on mount
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/students')
+    authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data && Array.isArray(data.students) && data.students.length > 0) {
@@ -101,13 +102,16 @@ export default function App() {
     setSelectedStudentId(newRecord.id);
     setActiveTab('dashboard');
     setAiStatusBanner(
-      `تم تسجيل جلسة تتبع العين للطالب (${newRecord.name}) وحفظها في قاعدة البيانات الدائمة وإصدار التقرير بنجاح.`
+      `تم تسجيل جلسة تتبع العين للطالب (${newRecord.name}) وحفظها في قاعدة البيانات المحمية وإصدار التقرير بنجاح.`
     );
     try {
-      await fetch('/api/students', {
+      await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newRecord),
+        body: JSON.stringify({
+          ...newRecord,
+          guardianConsentGiven: newRecord.guardianConsentGiven === true,
+        }),
       });
       setIsPersistedStoreLoaded(true);
     } catch {
@@ -123,7 +127,7 @@ export default function App() {
       prev.map((s) => (s.id === studentId ? { ...s, ...updated } : s))
     );
     try {
-      await fetch(`/api/students/${encodeURIComponent(studentId)}`, {
+      await authenticatedFetch(`/api/students/${encodeURIComponent(studentId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
@@ -142,7 +146,7 @@ export default function App() {
       setSelectedStudentId(remaining[0].id);
     }
     try {
-      await fetch(`/api/students/${encodeURIComponent(studentId)}`, {
+      await authenticatedFetch(`/api/students/${encodeURIComponent(studentId)}`, {
         method: 'DELETE',
       });
       setAiStatusBanner(
@@ -157,11 +161,12 @@ export default function App() {
     setIsGeneratingAI(true);
     setAiStatusBanner('');
     try {
-      const res = await fetch('/api/ai/analyze-session', {
+      const res = await authenticatedFetch('/api/ai/analyze-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
+          guardianConsentGiven: selectedStudent.guardianConsentGiven ?? true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
@@ -190,7 +195,7 @@ export default function App() {
                 : s
             )
           );
-          await fetch(`/api/students/${encodeURIComponent(selectedStudent.id)}`, {
+          await authenticatedFetch(`/api/students/${encodeURIComponent(selectedStudent.id)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clinicalReport: data.report }),
