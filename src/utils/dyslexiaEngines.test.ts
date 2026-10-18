@@ -171,9 +171,9 @@ test('Oral reading fluency alignment computes WCPM, phonetic substitutions, and 
   assert.equal(ARABIC_DIALECT_PROFILES.length, 5);
 });
 
-test('Dyslexico 3-way Arabic linguistic classification strictly separates letter confusions, orthographic conventions, and valid dialect words', async () => {
+test('Dyslexico 3-way Arabic linguistic classification strictly separates letter confusions, orthographic conventions, and valid dialect words (including proclitics)', async () => {
   const tokens = analyzeTextWithDyslexico(
-    'قرأ التالب كتاب في المدرسه شاف المنضار صوب الجبل',
+    'قرأ التالب كتاب في المدرسه وشاف المنضار صوب الجبل',
     'gulf'
   );
 
@@ -199,13 +199,13 @@ test('Dyslexico 3-way Arabic linguistic classification strictly separates letter
   assert.equal(madrasa.isDyslexiaScreeningCandidate, false);
   assert.equal(madrasa.bestCorrection, 'المدرسة');
 
-  // 3) "شاف" and "صوب" -> valid Arabic dialect lexical usage, NOT an error and NOT a dyslexia candidate
-  const shaf = byWord.get('شاف');
-  assert.ok(shaf);
-  assert.equal(shaf.variationCategory, 'valid_dialect_lexical');
-  assert.equal(shaf.isCorrect, true);
-  assert.equal(shaf.isDyslexiaScreeningCandidate, false);
-  assert.equal(shaf.bestCorrection, 'شاهد');
+  // 3) "وشاف" (with proclitic و) and "صوب" -> valid Arabic dialect lexical usage, NOT an error and NOT a dyslexia candidate
+  const washaf = byWord.get('وشاف');
+  assert.ok(washaf);
+  assert.equal(washaf.variationCategory, 'valid_dialect_lexical');
+  assert.equal(washaf.isCorrect, true);
+  assert.equal(washaf.isDyslexiaScreeningCandidate, false);
+  assert.equal(washaf.bestCorrection, 'شاهد');
 
   const sawb = byWord.get('صوب');
   assert.ok(sawb);
@@ -214,15 +214,37 @@ test('Dyslexico 3-way Arabic linguistic classification strictly separates letter
   assert.equal(sawb.isDyslexiaScreeningCandidate, false);
 });
 
-test('Graded Arabic reading bank provides 6 passages across Grades 2-6, 3 diacritic levels, and 4 multi-skill comprehension questions each', async () => {
+test('Oral reading alignment supports multi-target dialect synonyms, tanween pause forms, and systematic phonological shifts across unseen words', async () => {
+  const targetPassage = [
+    'خَرَجَتْ',
+    'سَلْمَى',
+    'صَبَاحاً',
+    'وَشَاهَدَتْ',
+    'الْقَمْحَ',
+    'الذَّهَبِيَّ',
+    'فِي',
+    'الْقَرْيَةِ',
+  ];
+  // Student uses dialectal lexical verbs (راحت، وشافت), pause form without tanween (صباح),
+  // and systematic Egyptian/Levantine phonological shifts on words not hardcoded in the dictionary (الأمح، الدهبي، الأرية)
+  const spoken = 'راحت سلمى صباح وشافت الأمح الدهبي في الأرية';
+  const res = evaluateOralReadingAlignment(targetPassage, spoken, 12, 0, 'egyptian');
+  assert.equal(res.accuracyPercent, 100);
+  assert.equal(res.phoneticSubstitutionCount, 0);
+  assert.equal(res.omittedWordsCount, 0);
+  assert.ok(res.dialectVariantCount >= 4);
+});
+
+test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4, 5, and 6 with >=50 words each and 3 diacritic levels', async () => {
   const { ARABIC_READING_PASSAGES } = await import('../data/seedData.ts');
-  assert.equal(ARABIC_READING_PASSAGES.length, 6);
+  assert.equal(ARABIC_READING_PASSAGES.length, 7);
 
   const grades = new Set(ARABIC_READING_PASSAGES.map((p) => p.gradeLevel));
-  assert.ok(grades.has(2));
-  assert.ok(grades.has(3));
-  assert.ok(grades.has(4));
-  assert.ok(grades.has(6));
+  assert.ok(grades.has(2), 'Must include Grade 2');
+  assert.ok(grades.has(3), 'Must include Grade 3');
+  assert.ok(grades.has(4), 'Must include Grade 4');
+  assert.ok(grades.has(5), 'Must include Grade 5');
+  assert.ok(grades.has(6), 'Must include Grade 6');
 
   const diacriticLevels = new Set(
     ARABIC_READING_PASSAGES.map((p) => p.diacriticLevel)
@@ -231,11 +253,20 @@ test('Graded Arabic reading bank provides 6 passages across Grades 2-6, 3 diacri
   assert.ok(diacriticLevels.has('partial'));
   assert.ok(diacriticLevels.has('minimal'));
 
+  // Verify Grade 4 Oasis passage is partial diacritics (not over-vowelized)
+  const oasis = ARABIC_READING_PASSAGES.find((p) => p.id === 'passage-g4-oasis');
+  assert.ok(oasis);
+  assert.equal(oasis.diacriticLevel, 'partial');
+
   for (const passage of ARABIC_READING_PASSAGES) {
-    assert.ok(passage.words.length >= 25);
+    assert.ok(
+      passage.words.length >= 50,
+      `Passage ${passage.id} has ${passage.words.length} words, expected >= 50`
+    );
     assert.equal(passage.comprehensionQuestions.length, 4);
   }
 });
+
 
 
 

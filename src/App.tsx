@@ -42,6 +42,7 @@ export default function App() {
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'nominal'>('all');
+  const [hideDemoRecords, setHideDemoRecords] = useState<boolean>(false);
 
   // Live Gemini AI re-analysis state
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
@@ -79,6 +80,8 @@ export default function App() {
     ARABIC_READING_PASSAGES[0];
 
   const filteredStudents = students.filter((s) => {
+    if (hideDemoRecords && s.isDemoRecord) return false;
+
     const matchesSearch =
       !searchQuery.trim() ||
       s.name.includes(searchQuery.trim()) ||
@@ -609,6 +612,22 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Transparent Demo Data Disclosure & Live Filter Bar */}
+                  <div className="mb-3 p-2.5 bg-amber-50/80 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-[11px] text-amber-900">
+                    <div>
+                      <span className="font-bold">تنبيه شفافية البيانات:</span> السجلات الأربعة الافتراضية المسبقة موسومة بـ <span className="font-semibold">«نموذج توضيحي»</span> لأغراض المعاينة فقط، وليست نتائج فحص حقيقية.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHideDemoRecords((prev) => !prev)}
+                      className="px-2.5 py-1 rounded-md font-semibold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer shrink-0"
+                    >
+                      {hideDemoRecords
+                        ? 'إظهار النماذج التوضيحية (4)'
+                        : 'عرض الجلسات الفعلية فقط'}
+                    </button>
+                  </div>
+
                   {/* Search Input */}
                   <div className="relative mb-4">
                     <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -665,8 +684,13 @@ export default function App() {
                                 }`}
                               >
                                 <td className="py-3 px-3">
-                                  <div className="text-slate-900 font-semibold">
-                                    {stu.name}
+                                  <div className="text-slate-900 font-semibold flex items-center gap-1.5 flex-wrap">
+                                    <span>{stu.name}</span>
+                                    {stu.isDemoRecord && (
+                                      <span className="text-[10px] font-medium px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">
+                                        نموذج توضيحي
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-[11px] text-slate-500 font-normal">
                                     الصف {stu.gradeLevel} · {stu.dialectRegionAr || 'الفصحى والخليجية'}
