@@ -171,4 +171,71 @@ test('Oral reading fluency alignment computes WCPM, phonetic substitutions, and 
   assert.equal(ARABIC_DIALECT_PROFILES.length, 5);
 });
 
+test('Dyslexico 3-way Arabic linguistic classification strictly separates letter confusions, orthographic conventions, and valid dialect words', async () => {
+  const tokens = analyzeTextWithDyslexico(
+    'قرأ التالب كتاب في المدرسه شاف المنضار صوب الجبل',
+    'gulf'
+  );
+
+  const byWord = new Map(tokens.map((t) => [t.originalWord, t]));
+
+  // 1) "التالب" and "المنضار" -> phonological/visual letter confusion candidate
+  const talib = byWord.get('التالب');
+  assert.ok(talib);
+  assert.equal(talib.variationCategory, 'phonological_or_visual_confusion');
+  assert.equal(talib.isDyslexiaScreeningCandidate, true);
+  assert.equal(talib.bestCorrection, 'الطالب');
+
+  const mindhar = byWord.get('المنضار');
+  assert.ok(mindhar);
+  assert.equal(mindhar.variationCategory, 'phonological_or_visual_confusion');
+  assert.equal(mindhar.isDyslexiaScreeningCandidate, true);
+  assert.equal(mindhar.bestCorrection, 'المنظار');
+
+  // 2) "المدرسه" -> common digital orthographic convention (ه vs ة), NOT a dyslexia candidate
+  const madrasa = byWord.get('المدرسه');
+  assert.ok(madrasa);
+  assert.equal(madrasa.variationCategory, 'orthographic_convention');
+  assert.equal(madrasa.isDyslexiaScreeningCandidate, false);
+  assert.equal(madrasa.bestCorrection, 'المدرسة');
+
+  // 3) "شاف" and "صوب" -> valid Arabic dialect lexical usage, NOT an error and NOT a dyslexia candidate
+  const shaf = byWord.get('شاف');
+  assert.ok(shaf);
+  assert.equal(shaf.variationCategory, 'valid_dialect_lexical');
+  assert.equal(shaf.isCorrect, true);
+  assert.equal(shaf.isDyslexiaScreeningCandidate, false);
+  assert.equal(shaf.bestCorrection, 'شاهد');
+
+  const sawb = byWord.get('صوب');
+  assert.ok(sawb);
+  assert.equal(sawb.variationCategory, 'valid_dialect_lexical');
+  assert.equal(sawb.isCorrect, true);
+  assert.equal(sawb.isDyslexiaScreeningCandidate, false);
+});
+
+test('Graded Arabic reading bank provides 6 passages across Grades 2-6, 3 diacritic levels, and 4 multi-skill comprehension questions each', async () => {
+  const { ARABIC_READING_PASSAGES } = await import('../data/seedData.ts');
+  assert.equal(ARABIC_READING_PASSAGES.length, 6);
+
+  const grades = new Set(ARABIC_READING_PASSAGES.map((p) => p.gradeLevel));
+  assert.ok(grades.has(2));
+  assert.ok(grades.has(3));
+  assert.ok(grades.has(4));
+  assert.ok(grades.has(6));
+
+  const diacriticLevels = new Set(
+    ARABIC_READING_PASSAGES.map((p) => p.diacriticLevel)
+  );
+  assert.ok(diacriticLevels.has('full'));
+  assert.ok(diacriticLevels.has('partial'));
+  assert.ok(diacriticLevels.has('minimal'));
+
+  for (const passage of ARABIC_READING_PASSAGES) {
+    assert.ok(passage.words.length >= 25);
+    assert.equal(passage.comprehensionQuestions.length, 4);
+  }
+});
+
+
 

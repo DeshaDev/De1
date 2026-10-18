@@ -2573,14 +2573,23 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   <select
                     id="grade-level-select"
                     value={gradeLevel}
-                    onChange={(e) => setGradeLevel(Number(e.target.value))}
+                    onChange={(e) => {
+                      const nextGrade = Number(e.target.value);
+                      setGradeLevel(nextGrade);
+                      const matchingPassage = ARABIC_READING_PASSAGES.find(
+                        (p) => p.gradeLevel === nextGrade
+                      );
+                      if (matchingPassage) {
+                        setSelectedPassageId(matchingPassage.id);
+                      }
+                    }}
                     className="w-full px-2.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
                   >
-                    <option value={2}>الصف الثاني (65 WPM)</option>
-                    <option value={3}>الصف الثالث (85 WPM)</option>
-                    <option value={4}>الصف الرابع (105 WPM)</option>
-                    <option value={5}>الصف الخامس (120 WPM)</option>
-                    <option value={6}>الصف السادس (135 WPM)</option>
+                    <option value={2}>الصف الثاني الابتدائي (65 WPM)</option>
+                    <option value={3}>الصف الثالث الابتدائي (85 WPM)</option>
+                    <option value={4}>الصف الرابع الابتدائي (105 WPM)</option>
+                    <option value={5}>الصف الخامس الابتدائي (120 WPM)</option>
+                    <option value={6}>الصف السادس الابتدائي (135 WPM)</option>
                   </select>
                 </div>
 
@@ -2612,21 +2621,46 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     htmlFor="passage-select"
                     className="block text-xs font-medium text-slate-700 mb-1"
                   >
-                    النص المعياري للفحص
+                    النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص)
                   </label>
                   <select
                     id="passage-select"
                     value={selectedPassageId}
-                    onChange={(e) => setSelectedPassageId(e.target.value)}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      setSelectedPassageId(pid);
+                      const found = ARABIC_READING_PASSAGES.find(
+                        (p) => p.id === pid
+                      );
+                      if (found) {
+                        setGradeLevel(found.gradeLevel);
+                      }
+                    }}
                     className="w-full px-2.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
                   >
                     {ARABIC_READING_PASSAGES.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.title}
+                        الصف {p.gradeLevel}: {p.title} ({p.diacriticLabelAr || p.category})
                       </option>
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-700 space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-slate-900">
+                    خصائص النص المحدد: {selectedPassage.title} (الصف {selectedPassage.gradeLevel})
+                  </span>
+                  <span className="font-mono text-[#0284C7] font-semibold">
+                    {selectedPassage.words.length} كلمة · {selectedPassage.diacriticLabelAr || selectedPassage.category}
+                  </span>
+                </div>
+                {selectedPassage.targetSkillsAr && (
+                  <div className="text-slate-600">
+                    الهدف التربوي واللغوي: {selectedPassage.targetSkillsAr.join(' · ')}
+                  </div>
+                )}
               </div>
 
               <div className="p-2.5 bg-sky-50/70 border border-sky-200 rounded-lg text-[11px] text-slate-700">
@@ -3060,10 +3094,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
           <div className="border-b border-slate-200 pb-4">
             <h3 className="text-lg font-bold text-slate-900">
-              أسئلة التحقق من الفهم القرائي وإصدار التقرير الإكلينيكي الشامل
+              أسئلة الفهم والاستيعاب القرائي المتدرجة وإصدار تقرير المؤشرات الأولية
             </h3>
             <p className="text-xs text-slate-600 mt-1">
-              أجب عن السؤالين التاليين لحساب درجة الاستيعاب القرائي ودمجها مع قياسات تتبع العين ({recordedWordsList.length} كلمة مرصودة) ومعدل الرمش ({liveMetrics.blinksPerMinute} رمشة/دقيقة · {liveMetrics.visualStrainLabelAr}) وفق ({selectedDialectProfile.labelAr}).
+              أجب عن أسئلة الاستيعاب القرائي الـ ({selectedPassage.comprehensionQuestions.length}) التالية التي تقيس الفهم المباشر، والاستنتاج الضمني، والمفردات في السياق، والفكرة الرئيسة، لدمجها مع قياسات تتبع العين ({recordedWordsList.length} كلمة مرصودة) ومعدل الرمش ({liveMetrics.blinksPerMinute} رمشة/دقيقة · {liveMetrics.visualStrainLabelAr}) وفق ({selectedDialectProfile.labelAr}).
             </p>
           </div>
 
@@ -3080,6 +3114,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 key={qIdx}
                 className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3"
               >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-50 text-[#0284C7] border border-sky-200">
+                    {q.skillLabelAr || 'مهارة الفهم القرائي'}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    سؤال {qIdx + 1} / {selectedPassage.comprehensionQuestions.length}
+                  </span>
+                </div>
                 <div className="text-sm font-semibold text-slate-900">
                   {qIdx + 1}. {q.question}
                 </div>
@@ -3131,7 +3173,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               <span>
                 {isAnalyzing
                   ? 'جاري تحليل مسار العين ومعدل الرمش بالذكاء الاصطناعي...'
-                  : 'اعتماد الفحص وإصدار التقرير الإكلينيكي وخريطة النظر'}
+                  : 'اعتماد الفحص الأولي وإصدار تقرير المؤشرات القرائية وخريطة النظر'}
               </span>
               <ArrowLeft className="w-4 h-4" />
             </button>

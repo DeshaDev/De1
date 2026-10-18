@@ -8,4 +8,6 @@ coverage/
 !.env.example
 .aistudio/
 .playwright-cli/
-data/
+.runtime-store/
+!/src/data/
+!/src/data/**

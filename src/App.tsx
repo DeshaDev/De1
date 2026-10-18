@@ -201,12 +201,12 @@ export default function App() {
             body: JSON.stringify({ clinicalReport: data.report }),
           }).catch(() => {});
           setAiStatusBanner(
-            `تم تحديث التقرير التشخيصي وخطة التدخل الفردية للطالب (${selectedStudent.name}) مع إخفاء الهوية الشخصية (Pseudonymization).`
+            `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}) مع إخفاء الهوية الشخصية (Pseudonymization).`
           );
         }
       }
     } catch {
-      setAiStatusBanner('تم تحديث التقرير التشخيصي وفق المعايير الإكلينيكية.');
+      setAiStatusBanner('تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.');
     } finally {
       setIsGeneratingAI(false);
     }
@@ -352,15 +352,15 @@ export default function App() {
               <div className="flex flex-wrap items-start justify-between gap-6">
                 <div className="space-y-2 max-w-3xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>منصة التقييم الإكلينيكي المبكر (بمعايير Lexplore · Dyslexico · Marker Learning)</span>
+                    <span>منصة الفحص التربوي الأولي ومؤشرات القراءة والحساب (لا تُغني عن التقييم الإكلينيكي المتخصص)</span>
                     <span aria-hidden="true">·</span>
                     <span>تحليل حركة العين والذكاء الاصطناعي للغة العربية</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display text-balance">
-                    لوحة تشخيص عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكالكوليا)
+                    لوحة الفحص الأولي ومؤشرات عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكالكوليا)
                   </h1>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    يرصد النظام التثبيتات البصرية (Fixations) والقفزات التراجعية (Regressions) بالملي ثانية عبر خوارزميات PyGaze وGazeParser، مع تصحيح فونولوجي موزون (Dyslexico Weighted Levenshtein) واختبارات تكيفية بنظرية استجابة الفقرة (2PL IRT).
+                    يرصد النظام التثبيتات البصرية (Fixations) والقفزات التراجعية (Regressions) بالملي ثانية عبر خوارزميات PyGaze وGazeParser، مع تمييز ثلاثي بين الإبدال الحرفي والتطبيع الإملائي واللهجة العربية الصحيحة، واختبارات تكيفية بنظرية استجابة الفقرة (2PL IRT).
                   </p>
                 </div>
 
@@ -692,9 +692,9 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ عسر قراءة (مئين ${stu.readingPercentile})`
+                                      ? `■ مؤشر صعوبات مرتفع (مئين ${stu.readingPercentile})`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (مئين ${stu.readingPercentile})`
+                                        ? `▲ مؤشر متوسط (مئين ${stu.readingPercentile})`
                                         : `● طبيعي (مئين ${stu.readingPercentile})`}
                                   </span>
                                 </td>
@@ -716,7 +716,7 @@ export default function App() {
                                       }
                                     >
                                       {stu.mathRiskLevel === 'high'
-                                        ? `■ ديسكالكوليا (PAE ${stu.numberLinePAE}%)`
+                                        ? `■ مؤشر صعوبات حسابية (PAE ${stu.numberLinePAE}%)`
                                         : stu.mathRiskLevel === 'moderate'
                                           ? `▲ متابعة (PAE ${stu.numberLinePAE}%)`
                                           : `● سليم (PAE ${stu.numberLinePAE}%)`}
@@ -903,15 +903,15 @@ export default function App() {
               passageCategory={selectedPassage.category}
             />
 
-            {/* Gemini AI Clinical Diagnostic & Individualized Intervention Plan (IEP) */}
+            {/* Gemini AI Screening Indicators & Individualized Support Plan (IEP) */}
             <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <div className="text-xs text-slate-500 mb-1">
-                    التشخيص الإكلينيكي المدعوم بالذكاء الاصطناعي (Gemini 3.8 Clinical Engine)
+                    تقرير الفرز الأولي الاسترشادي المدعوم بالذكاء الاصطناعي (مؤشرات تربوية غير تشخيصية)
                   </div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    التقرير التشخيصي وخطة التدخل الفردية (IEP) — {selectedStudent.name}
+                    تقرير المؤشرات القرائية وخطة المساندة التربوية المقترحة — {selectedStudent.name}
                   </h2>
                 </div>
 
@@ -924,17 +924,17 @@ export default function App() {
                   <Sparkles className="w-4 h-4" />
                   <span>
                     {isGeneratingAI
-                      ? 'جاري توليد التحليل السريري...'
-                      : 'تحديث التشخيص بالذكاء الاصطناعي (Gemini AI)'}
+                      ? 'جاري توليد تقرير المؤشرات القرائية...'
+                      : 'تحديث تقرير المؤشرات القرائية بالذكاء الاصطناعي'}
                   </span>
                 </button>
               </div>
 
-              {/* 2x2 Clinical Insights Grid */}
+              {/* 2x2 Screening Insights Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
                   <h3 className="text-sm font-bold text-slate-900">
-                    ٠١. الملخص الإكلينيكي الشامل
+                    ٠١. ملخص المؤشرات القرائية والفرز الأولي
                   </h3>
                   <p className="text-xs text-slate-700 leading-relaxed">
                     {selectedStudent.clinicalReport.clinicalSummary}
@@ -952,7 +952,7 @@ export default function App() {
 
                 <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
                   <h3 className="text-sm font-bold text-slate-900">
-                    ٠٣. الأنماط الصرفية والفونولوجية في العربية
+                    ٠٣. الملاحظات الصرفية والفونولوجية في العربية
                   </h3>
                   <p className="text-xs text-slate-700 leading-relaxed">
                     {selectedStudent.clinicalReport.orthographicAndPhonologicalPatterns}
@@ -961,7 +961,7 @@ export default function App() {
 
                 <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
                   <h3 className="text-sm font-bold text-slate-900">
-                    ٠٤. تحليل الديسكالكوليا والحس المكاني للأعداد
+                    ٠٤. مؤشرات الحس المكاني للأعداد وخط الأعداد
                   </h3>
                   <p className="text-xs text-slate-700 leading-relaxed">
                     {selectedStudent.clinicalReport.dyscalculiaSpatialAnalysis}
@@ -973,7 +973,7 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
                 <div className="lg:col-span-7 space-y-3">
                   <h3 className="text-sm font-bold text-slate-900">
-                    التمارين العلاجية اليومية الموصى بها:
+                    أنشطة المساندة القرائية اليومية المقترحة:
                   </h3>
                   <div className="space-y-2.5">
                     {selectedStudent.clinicalReport.interventionExercises.map(

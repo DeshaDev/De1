@@ -19,7 +19,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = path.join(__dirname, '.runtime-store');
 const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
 
 const CLINICAL_ACCESS_CODE =

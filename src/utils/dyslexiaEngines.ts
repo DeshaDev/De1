@@ -539,10 +539,21 @@ export interface DyslexicErrorPattern {
   costApplied: number;
 }
 
+export type LinguisticVariationCategory =
+  | 'exact_lexicon_match'
+  | 'valid_dialect_lexical'
+  | 'dialect_phonological_shift'
+  | 'orthographic_convention'
+  | 'phonological_or_visual_confusion';
+
 export interface DyslexicoWordAnalysis {
   originalWord: string;
   cleanWord: string;
   isCorrect: boolean;
+  variationCategory: LinguisticVariationCategory;
+  variationCategoryLabelAr: string;
+  isDyslexiaScreeningCandidate: boolean;
+  contextualCautionAr: string;
   language: 'ar' | 'en';
   phoneticCodeInput: string;
   soundexCodeInput: string;
@@ -1089,67 +1100,259 @@ export const ARABIC_DIALECT_PROFILES: ArabicDialectProfile[] = [
   },
 ];
 
-// Map common Arab student dialectal words & phonetic pronunciations to their MSA canonical target
+// Map common Arab student dialectal words & phonetic pronunciations to their MSA canonical target,
+// explicitly distinguishing valid lexical dialect words ('lexical') from dialectal phonological shifts ('phonological')
+// and orthographic conventions ('orthographic').
 const ARABIC_DIALECT_LEXICAL_MAP: Record<
   string,
-  { canonicalMsa: string; dialectLabelAr: string }
+  {
+    canonicalMsa: string;
+    dialectLabelAr: string;
+    kind: 'lexical' | 'phonological' | 'orthographic';
+  }
 > = {
-  // Egyptian & Levantine phonological shifts (ث->ت/س, ذ->د/ز, ق->أ)
-  تلاميز: { canonicalMsa: 'تلاميذ', dialectLabelAr: 'نطق لهجي (مصري/شامي: ذ ← ز)' },
-  تلميز: { canonicalMsa: 'تلميذ', dialectLabelAr: 'نطق لهجي (مصري/شامي: ذ ← ز)' },
-  دهب: { canonicalMsa: 'ذهب', dialectLabelAr: 'نطق لهجي (مصري/شامي: ذ ← د)' },
-  تلاته: { canonicalMsa: 'ثلاثة', dialectLabelAr: 'نطق لهجي (مصري/شامي: ث ← ت)' },
-  تلاتة: { canonicalMsa: 'ثلاثة', dialectLabelAr: 'نطق لهجي (مصري/شامي: ث ← ت)' },
-  كتير: { canonicalMsa: 'كثير', dialectLabelAr: 'نطق لهجي (مصري/شامي: ث ← ت)' },
-  الملاحزات: { canonicalMsa: 'الملاحظات', dialectLabelAr: 'نطق لهجي (ظ ← ز)' },
-  ملاحزات: { canonicalMsa: 'ملاحظات', dialectLabelAr: 'نطق لهجي (ظ ← ز)' },
-  ملاحزاتهم: { canonicalMsa: 'ملاحظاتهم', dialectLabelAr: 'نطق لهجي (ظ ← ز)' },
-  ألم: { canonicalMsa: 'قلم', dialectLabelAr: 'نطق لهجي (إبدال القاف همزة)' },
-  بألم: { canonicalMsa: 'بقلم', dialectLabelAr: 'نطق لهجي (إبدال القاف همزة)' },
-  أمر: { canonicalMsa: 'قمر', dialectLabelAr: 'نطق لهجي (إبدال القاف همزة)' },
-  // Gulf / Saudi phonological & lexical shifts
-  منضار: { canonicalMsa: 'منظار', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  المنضار: { canonicalMsa: 'المنظار', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  ملاحضات: { canonicalMsa: 'ملاحظات', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  ملاحضاتهم: { canonicalMsa: 'ملاحظاتهم', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  ضهر: { canonicalMsa: 'ظهر', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  فضهرت: { canonicalMsa: 'فظهرت', dialectLabelAr: 'نطق لهجي (دمج الظاء والضاد)' },
-  كال: { canonicalMsa: 'قال', dialectLabelAr: 'نطق لهجي خليجي (ق ← ك/گ)' },
-  الدكيك: { canonicalMsa: 'الدقيق', dialectLabelAr: 'نطق لهجي خليجي (ق ← ك/گ)' },
-  الدئيئ: { canonicalMsa: 'الدقيق', dialectLabelAr: 'نطق لهجي مصري/شامي (ق ← ء)' },
-  مسيد: { canonicalMsa: 'مسجد', dialectLabelAr: 'نطق لهجي خليجي (ج ← ي)' },
-  ريال: { canonicalMsa: 'رجال', dialectLabelAr: 'نطق لهجي خليجي (ج ← ي)' },
-  صافي: { canonicalMsa: 'صاف', dialectLabelAr: 'نطق لهجي عربي (إشباع تنوين الكسر ياءً)' },
-  مسا: { canonicalMsa: 'مساء', dialectLabelAr: 'نطق لهجي عربي (تخفيف الهمزة المتطرفة)' },
-  المدرسه: { canonicalMsa: 'المدرسة', dialectLabelAr: 'نطق الوقف بالهاء لطلاب المدارس' },
-  المضوية: { canonicalMsa: 'المضيئة', dialectLabelAr: 'مفردة لهجية شامية/مغاربية (المضوية بمعنى المضيئة)' },
-  المنورة: { canonicalMsa: 'المضيئة', dialectLabelAr: 'مفردة لهجية مصرية/خليجية (المنورة بمعنى المضيئة)' },
-  لشوفة: { canonicalMsa: 'لمشاهدة', dialectLabelAr: 'مفردة لهجية خليجية/شامية (لشوفة بمعنى لمشاهدة)' },
-  شاف: { canonicalMsa: 'شاهد', dialectLabelAr: 'مفردة لهجية عربية دارجة (شاف بمعنى شاهد)' },
-  شافوا: { canonicalMsa: 'لمشاهدة', dialectLabelAr: 'مفردة لهجية عربية دارجة (شافوا بمعنى شاهدوا)' },
-  عشان: { canonicalMsa: 'لمشاهدة', dialectLabelAr: 'مفردة لهجية عربية دارجة' },
-  علشان: { canonicalMsa: 'لمشاهدة', dialectLabelAr: 'مفردة لهجية مصرية دارجة' },
-  باش: { canonicalMsa: 'لمشاهدة', dialectLabelAr: 'مفردة لهجية مغاربية دارجة' },
-  راح: { canonicalMsa: 'ذهب', dialectLabelAr: 'مفردة لهجية عربية دارجة (راح بمعنى ذهب)' },
-  راحوا: { canonicalMsa: 'زار', dialectLabelAr: 'مفردة لهجية عربية دارجة (راحوا بمعنى زاروا)' },
-  مشوا: { canonicalMsa: 'زار', dialectLabelAr: 'مفردة لهجية مغاربية (مشوا بمعنى ذهبوا/زاروا)' },
-  حط: { canonicalMsa: 'وضع', dialectLabelAr: 'مفردة لهجية عربية دارجة (حط بمعنى وضع)' },
-  صوب: { canonicalMsa: 'نحو', dialectLabelAr: 'مفردة لهجية خليجية/شامية (صوب بمعنى نحو)' },
-  العيال: { canonicalMsa: 'الأطفال', dialectLabelAr: 'مفردة لهجية خليجية/مصرية (العيال بمعنى الأطفال)' },
-  الولاد: { canonicalMsa: 'الأطفال', dialectLabelAr: 'مفردة لهجية مصرية/شامية (الولاد بمعنى الأطفال)' },
-  الدراري: { canonicalMsa: 'الأطفال', dialectLabelAr: 'مفردة لهجية مغاربية (الدراري بمعنى الأطفال)' },
-  بزاف: { canonicalMsa: 'شديد', dialectLabelAr: 'مفردة لهجية مغاربية (بزاف بمعنى شديد/كثير)' },
-  واجد: { canonicalMsa: 'شديد', dialectLabelAr: 'مفردة لهجية خليجية (واجد بمعنى كثير/شديد)' },
+  // Orthographic writing conventions / pause-form normalization (NOT dyslexia errors)
+  المدرسه: {
+    canonicalMsa: 'المدرسة',
+    dialectLabelAr: 'اختلاف إملائي شائع في كتابة التاء المربوطة هاءً عند الوقف (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  مدرسه: {
+    canonicalMsa: 'المدرسة',
+    dialectLabelAr: 'اختلاف إملائي شائع في كتابة التاء المربوطة هاءً (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  الواضحه: {
+    canonicalMsa: 'الواضحة',
+    dialectLabelAr: 'اختلاف إملائي في التاء المربوطة عند الوقف (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  ازرق: {
+    canonicalMsa: 'أزرق',
+    dialectLabelAr: 'تطبيع إملائي لهمزة القطع في الكتابة الرقمية (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  امام: {
+    canonicalMsa: 'أمام',
+    dialectLabelAr: 'تطبيع إملائي لهمزة القطع في الكتابة الرقمية (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  الى: {
+    canonicalMsa: 'إلى',
+    dialectLabelAr: 'تطبيع إملائي لهمزة القطع في الكتابة الرقمية (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  الاطفال: {
+    canonicalMsa: 'الأطفال',
+    dialectLabelAr: 'تطبيع إملائي للهمزة في الكتابة الرقمية (ليس مؤشر عسر قراءة)',
+    kind: 'orthographic',
+  },
+  قري: {
+    canonicalMsa: 'قرأ',
+    dialectLabelAr: 'تسهيل الهمزة المتطرفة أو اختلاف رسم الألف/الياء (تطبيع كتابي/نطقي)',
+    kind: 'orthographic',
+  },
+  مسا: {
+    canonicalMsa: 'مساء',
+    dialectLabelAr: 'تخفيف الهمزة المتطرفة عند الوقف (استعمال صوتي شائع)',
+    kind: 'orthographic',
+  },
+  صافي: {
+    canonicalMsa: 'صاف',
+    dialectLabelAr: 'إشباع الاسم المنقوص ياءً عند الوقف (استعمال عربي شائع)',
+    kind: 'orthographic',
+  },
+
+  // Valid Arabic dialectal & pan-Arab lexical words (Correct in dialect — NEVER classify as spelling errors!)
+  شاف: {
+    canonicalMsa: 'شاهد',
+    dialectLabelAr: 'استعمال لهجي وعربي صحيح («شاف» بمعنى «شاهد/رأى» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  شافوا: {
+    canonicalMsa: 'لمشاهدة',
+    dialectLabelAr: 'استعمال لهجي صحيح («شافوا» بمعنى «شاهدوا» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  صوب: {
+    canonicalMsa: 'نحو',
+    dialectLabelAr: 'استعمال عربي ولهجي صحيح («صَوْب» بمعنى «نحو/اتجاه» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  راح: {
+    canonicalMsa: 'ذهب',
+    dialectLabelAr: 'استعمال لهجي وعربي صحيح («راح» بمعنى «ذهب» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  راحوا: {
+    canonicalMsa: 'زار',
+    dialectLabelAr: 'استعمال لهجي صحيح («راحوا» بمعنى «زاروا/ذهبوا» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  مشوا: {
+    canonicalMsa: 'زار',
+    dialectLabelAr: 'استعمال لهجي مغاربي صحيح («مشوا» بمعنى «ذهبوا» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  حط: {
+    canonicalMsa: 'وضع',
+    dialectLabelAr: 'استعمال لهجي وعربي صحيح («حطّ» بمعنى «وضع» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  العيال: {
+    canonicalMsa: 'الأطفال',
+    dialectLabelAr: 'استعمال لهجي وعربي صحيح («العيال» بمعنى «الأطفال» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  الولاد: {
+    canonicalMsa: 'الأطفال',
+    dialectLabelAr: 'استعمال لهجي صحيح («الولاد/الأولاد» بمعنى «الأطفال» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  الدراري: {
+    canonicalMsa: 'الأطفال',
+    dialectLabelAr: 'استعمال لهجي مغاربي صحيح («الدراري» بمعنى «الأطفال» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  بزاف: {
+    canonicalMsa: 'شديد',
+    dialectLabelAr: 'استعمال لهجي مغاربي صحيح («بزاف» بمعنى «كثير/شديد» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  واجد: {
+    canonicalMsa: 'شديد',
+    dialectLabelAr: 'استعمال لهجي خليجي صحيح («واجد» بمعنى «كثير/شديد» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  المضوية: {
+    canonicalMsa: 'المضيئة',
+    dialectLabelAr: 'استعمال لهجي شامي/مغاربي صحيح («المضوية» بمعنى «المضيئة» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  المنورة: {
+    canonicalMsa: 'المضيئة',
+    dialectLabelAr: 'استعمال لهجي صحيح («المنورة» بمعنى «المضيئة» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  لشوفة: {
+    canonicalMsa: 'لمشاهدة',
+    dialectLabelAr: 'استعمال لهجي صحيح («لشوفة» بمعنى «لمشاهدة» — لا يُعدّ خطأً)',
+    kind: 'lexical',
+  },
+  عشان: {
+    canonicalMsa: 'لمشاهدة',
+    dialectLabelAr: 'أداة تعليل لهجية دارجة صحيحة في السياق الشفهي',
+    kind: 'lexical',
+  },
+  علشان: {
+    canonicalMsa: 'لمشاهدة',
+    dialectLabelAr: 'أداة تعليل لهجية مصرية صحيحة في السياق الشفهي',
+    kind: 'lexical',
+  },
+  باش: {
+    canonicalMsa: 'لمشاهدة',
+    dialectLabelAr: 'أداة تعليل لهجية مغاربية صحيحة في السياق الشفهي',
+    kind: 'lexical',
+  },
+
+  // Dialectal phonological shifts (ث->ت/س, ذ->د/ز, ق->أ/گ, ج->ي)
+  تلاميز: {
+    canonicalMsa: 'تلاميذ',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ذ ← ز — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  تلميز: {
+    canonicalMsa: 'تلميذ',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ذ ← ز — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  دهب: {
+    canonicalMsa: 'ذهب',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ذ ← د — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  تلاته: {
+    canonicalMsa: 'ثلاثة',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ث ← ت — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  تلاتة: {
+    canonicalMsa: 'ثلاثة',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ث ← ت — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  كتير: {
+    canonicalMsa: 'كثير',
+    dialectLabelAr: 'نطق لهجي صوتي (مصري/شامي: ث ← ت — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  الملاحزات: {
+    canonicalMsa: 'الملاحظات',
+    dialectLabelAr: 'نطق لهجي صوتي (ظ ← ز — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  ملاحزات: {
+    canonicalMsa: 'ملاحظات',
+    dialectLabelAr: 'نطق لهجي صوتي (ظ ← ز — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  ملاحزاتهم: {
+    canonicalMsa: 'ملاحظاتهم',
+    dialectLabelAr: 'نطق لهجي صوتي (ظ ← ز — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  ألم: {
+    canonicalMsa: 'قلم',
+    dialectLabelAr: 'نطق لهجي صوتي (إبدال القاف همزة — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  بألم: {
+    canonicalMsa: 'بقلم',
+    dialectLabelAr: 'نطق لهجي صوتي (إبدال القاف همزة — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  أمر: {
+    canonicalMsa: 'قمر',
+    dialectLabelAr: 'نطق لهجي صوتي (إبدال القاف همزة — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  كال: {
+    canonicalMsa: 'قال',
+    dialectLabelAr: 'نطق لهجي خليجي (ق ← ك/گ — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  الدكيك: {
+    canonicalMsa: 'الدقيق',
+    dialectLabelAr: 'نطق لهجي خليجي (ق ← ك/گ — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  الدئيئ: {
+    canonicalMsa: 'الدقيق',
+    dialectLabelAr: 'نطق لهجي مصري/شامي (ق ← ء — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  مسيد: {
+    canonicalMsa: 'مسجد',
+    dialectLabelAr: 'نطق لهجي خليجي (ج ← ي — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
+  ريال: {
+    canonicalMsa: 'رجال',
+    dialectLabelAr: 'نطق لهجي خليجي (ج ← ي — لا يُعامل كخطأ ديسلكسي)',
+    kind: 'phonological',
+  },
 };
 
 /**
  * Normalizes an Arab student's spoken or written token across Arabic dialects,
- * identifying whether it is a natural dialectal variant vs an orthographic/dyslexic error.
+ * identifying whether it is a valid dialectal lexical item, a dialectal phonological shift,
+ * an orthographic writing convention, or a candidate for letter-level confusion analysis.
  */
 export function normalizeArabicDialectWord(rawWord: string): {
   cleaned: string;
   canonicalMsa: string;
   isDialectVariant: boolean;
+  dialectKind?: 'lexical' | 'phonological' | 'orthographic';
   dialectNoteAr?: string;
 } {
   const cleaned = rawWord
@@ -1161,8 +1364,26 @@ export function normalizeArabicDialectWord(rawWord: string): {
       cleaned,
       canonicalMsa: directEntry.canonicalMsa,
       isDialectVariant: true,
+      dialectKind: directEntry.kind,
       dialectNoteAr: directEntry.dialectLabelAr,
     };
+  }
+  if (
+    cleaned.length > 3 &&
+    (cleaned.startsWith('و') || cleaned.startsWith('ف'))
+  ) {
+    const prefix = cleaned[0];
+    const stem = cleaned.slice(1);
+    const stemEntry = ARABIC_DIALECT_LEXICAL_MAP[stem];
+    if (stemEntry) {
+      return {
+        cleaned,
+        canonicalMsa: `${prefix}${stemEntry.canonicalMsa}`,
+        isDialectVariant: true,
+        dialectKind: stemEntry.kind,
+        dialectNoteAr: stemEntry.dialectLabelAr,
+      };
+    }
   }
   return {
     cleaned,
@@ -1290,11 +1511,40 @@ const ARABIC_CLINICAL_LEXICON = [
   'بالعدل',
   'والدقة',
   'المتناهية',
+  'طارق',
+  'توجه',
+  'الجبل',
+  'سلمى',
+  'حديقة',
+  'البيت',
+  'قطة',
+  'بيضاء',
+  'شجرة',
+  'التفاح',
+  'حليب',
+  'دافئ',
+  'خبز',
+  'طري',
 ];
+
+function isPureOrthographicNormalization(wordA: string, wordB: string): boolean {
+  if (!wordA || !wordB || wordA === wordB) return false;
+  const norm = (s: string) =>
+    s
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ة$/g, 'ه')
+      .replace(/ى$/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي');
+  return norm(wordA) === norm(wordB);
+}
 
 /**
  * Analyzes an input word or full sentence using Dyslexico's Phonetic + Weighted Levenshtein
- * and Arabic Dialect-Aware pipeline.
+ * and Arabic Dialect-Aware pipeline, strictly separating:
+ * 1. Valid dialectal/lexical usage (e.g., شاف، صوب، راح) -> NOT an error
+ * 2. Orthographic/typing conventions (e.g., المدرسه/المدرسة، ازرق/أزرق) -> Orthographic normalization, NOT dyslexia
+ * 3. Phonological/visual letter confusions (e.g., التالب/الطالب، المنضار/المنظار) -> Requires contextual repetition
  */
 export function analyzeTextWithDyslexico(
   inputText: string,
@@ -1338,6 +1588,10 @@ export function analyzeTextWithDyslexico(
         originalWord: rawToken,
         cleanWord,
         isCorrect: true,
+        variationCategory: 'exact_lexicon_match',
+        variationCategoryLabelAr: 'كلمة فصيحة/معجمية مطابقة',
+        isDyslexiaScreeningCandidate: false,
+        contextualCautionAr: 'مطابقة تامة للمعجم العربي المدرسي.',
         language,
         phoneticCodeInput,
         soundexCodeInput,
@@ -1351,8 +1605,22 @@ export function analyzeTextWithDyslexico(
       };
     }
 
-    // Check if the token is a known Arabic dialectal form (e.g., تلاميز، دهب، كتير، شافوا، كال)
-    const dialectCheck = isArabic ? normalizeArabicDialectWord(cleanWord) : null;
+    // Check if the token is a known Arabic dialectal or orthographic form (or prefixed with و/ف)
+    const directDialectCheck = isArabic
+      ? normalizeArabicDialectWord(cleanWord)
+      : null;
+    const strippedDialectCheck =
+      isArabic &&
+      !directDialectCheck?.isDialectVariant &&
+      strippedPrefixWord !== cleanWord
+        ? normalizeArabicDialectWord(strippedPrefixWord)
+        : null;
+    const dialectCheck =
+      directDialectCheck?.isDialectVariant
+        ? directDialectCheck
+        : strippedDialectCheck?.isDialectVariant
+          ? strippedDialectCheck
+          : directDialectCheck;
 
     // Score all lexicon candidates
     const scoredCandidates = lexicon
@@ -1381,16 +1649,19 @@ export function analyzeTextWithDyslexico(
         let reasonAr = 'تقارب إملائي معياري';
         const enrichedPatterns = [...detectedPatterns];
         if (isDialectTarget && dialectCheck?.dialectNoteAr) {
-          reasonAr = `${dialectCheck.dialectNoteAr} ← الفصحى (${candidate})`;
+          reasonAr = `${dialectCheck.dialectNoteAr} · المقابل الفصيح (${candidate})`;
           if (
             !enrichedPatterns.some(
               (p) => p.detailAr === dialectCheck.dialectNoteAr
             )
           ) {
             enrichedPatterns.unshift({
-              type: 'phonetic_spelling',
+              type:
+                dialectCheck.dialectKind === 'orthographic'
+                  ? 'vowel_omission_or_shift'
+                  : 'phonetic_spelling',
               labelAr: dialectCheck.dialectNoteAr,
-              detailAr: `تحويل لهجي تلقائي من (${cleanWord}) إلى الفصحى (${candidate})`,
+              detailAr: `المقابل المدرسي الفصيح لكلمة (${cleanWord}) هو (${candidate})`,
               costApplied: 0.12,
             });
           }
@@ -1404,7 +1675,9 @@ export function analyzeTextWithDyslexico(
           word: candidate,
           phoneticCode: candPhonetic,
           standardDist: standardDistance,
-          weightedDist: isDialectTarget ? Math.min(0.18, weightedDistance) : weightedDistance,
+          weightedDist: isDialectTarget
+            ? Math.min(0.18, weightedDistance)
+            : weightedDistance,
           effectiveScore,
           detectedPatterns: enrichedPatterns,
           reasonAr,
@@ -1418,10 +1691,63 @@ export function analyzeTextWithDyslexico(
       Math.max(15, Math.min(99, (1 - top.weightedDist / maxLen) * 100))
     );
 
+    // Determine exact LinguisticVariationCategory so we NEVER conflate dialectal words or orthographic typing conventions with dyslexia
+    let variationCategory: LinguisticVariationCategory =
+      'phonological_or_visual_confusion';
+    let variationCategoryLabelAr =
+      'تبديل حرفي بصري أو صوتي محتمل (يتطلب تكرار السياق)';
+    let isDyslexiaScreeningCandidate = true;
+    let isCorrectToken = false;
+    let contextualCautionAr =
+      'ملاحظة حرفية منفردة — الخطأ الفردي لا يساوي عسر القراءة؛ يلزم النظر إلى سياق القراءة وتكرار النمط.';
+
+    if (
+      dialectCheck?.isDialectVariant &&
+      dialectCheck.dialectKind === 'lexical'
+    ) {
+      variationCategory = 'valid_dialect_lexical';
+      variationCategoryLabelAr =
+        'استعمال لهجي أو معجمي عربي صحيح (لا يُعدّ خطأً)';
+      isDyslexiaScreeningCandidate = false;
+      isCorrectToken = true; // Valid Arabic dialectal word! Not an error.
+      contextualCautionAr =
+        dialectCheck.dialectNoteAr ||
+        'استعمال لغوي صحيح في لهجة عربية — يُعرض المرادف الفصيح للموائمة المدرسية فقط ولا يُصنّف خطأً قرائياً.';
+    } else if (
+      dialectCheck?.isDialectVariant &&
+      dialectCheck.dialectKind === 'phonological'
+    ) {
+      variationCategory = 'dialect_phonological_shift';
+      variationCategoryLabelAr =
+        'نطق لهجي صوتي طبيعي (لا يُعدّ مؤشر عسر قراءة)';
+      isDyslexiaScreeningCandidate = false;
+      isCorrectToken = true;
+      contextualCautionAr =
+        dialectCheck.dialectNoteAr ||
+        'نطق صوتي طبيعي في لهجة الطالب لا يُحتسب خطأً في الفرز القرائي.';
+    } else if (
+      (dialectCheck?.isDialectVariant &&
+        dialectCheck.dialectKind === 'orthographic') ||
+      (isArabic && isPureOrthographicNormalization(cleanWord, top.word))
+    ) {
+      variationCategory = 'orthographic_convention';
+      variationCategoryLabelAr =
+        'اختلاف إملائي أو تطبيع كتابي (ليس مؤشر عسر قراءة)';
+      isDyslexiaScreeningCandidate = false;
+      isCorrectToken = false;
+      contextualCautionAr =
+        dialectCheck?.dialectNoteAr ||
+        'اختلاف إملائي شائع في كتابة التاء المربوطة/الهاء أو الهمزة، وهو تطبيع كتابي لا يكفي لإثبات عسر القراءة.';
+    }
+
     return {
       originalWord: rawToken,
       cleanWord,
-      isCorrect: false,
+      isCorrect: isCorrectToken,
+      variationCategory,
+      variationCategoryLabelAr,
+      isDyslexiaScreeningCandidate,
+      contextualCautionAr,
       language,
       phoneticCodeInput,
       soundexCodeInput,

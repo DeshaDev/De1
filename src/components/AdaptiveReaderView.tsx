@@ -42,26 +42,29 @@ const DYSLEXICO_PRESETS: {
   sample: string;
 }[] = [
   {
+    id: 'ar-three-categories',
+    label: 'نموذج التمييز الثلاثي (إبدال حرفي + تطبيع إملائي + لهجة صحيحة)',
+    dialect: 'gulf',
+    sample: 'قرأ التالب كتاب في المدرسه وشاف المنضار صوب الجبل وكتب الملاحضات',
+  },
+  {
     id: 'ar-dyslexic',
-    label: 'نموذج ديسلكسيا عربية (إبدال صوتي وبصري)',
+    label: 'نموذج إبدالات حرفية متكررة (ت/ط، ض/ظ) مع تطبيع إملائي (ه/ة، همزة)',
     dialect: 'msa',
     sample: 'قرأ التالب كتاب في المدرسه وكتب بقلم ازرق عن المنضار والضوء',
   },
   {
-    id: 'ar-gulf',
-    label: 'نموذج طالب باللهجة الخليجية والسعودية',
-    dialect: 'gulf',
-    sample: 'توجه طارق صوب الجبل وشاف المنضار في المدرسه وكتب الملاحضات',
-  },
-  {
     id: 'ar-egyptian-levantine',
-    label: 'نموذج طالب باللهجة المصرية والشامية',
+    label: 'نموذج طالب باللهجة المصرية والشامية (دهب، شاف، تلاميز)',
     dialect: 'egyptian',
-    sample: 'تارق قري كتاب في المدرسه وشاف المنضار والضوء',
+    sample: 'دهب التالب الى المدرسه وشاف المنضار مع تلاميز الفصل',
   },
 ];
 
 export const AdaptiveReaderView: React.FC = () => {
+  const [selectedPassageId, setSelectedPassageId] = useState<string>(
+    ARABIC_READING_PASSAGES[0].id
+  );
   const [text, setText] = useState<string>(DEFAULT_ADAPTIVE_TEXT);
   const [syllableMode, setSyllableMode] = useState<boolean>(true);
   const [letterColorMode, setLetterColorMode] = useState<boolean>(false);
@@ -74,6 +77,10 @@ export const AdaptiveReaderView: React.FC = () => {
   const [wordSpacingPx, setWordSpacingPx] = useState<number>(10);
   const [letterSpacingPx, setLetterSpacingPx] = useState<number>(1.5);
   const [lineHeightRatio, setLineHeightRatio] = useState<number>(2.0);
+  const [pacingIntervalMs, setPacingIntervalMs] = useState<number>(520);
+  const [pacingSyncModeLabel, setPacingSyncModeLabel] = useState<string>(
+    'مؤشر تتبع بصري إيقاعي قابل لضبط السرعة'
+  );
   const [surfaceTheme, setSurfaceTheme] = useState<
     'white' | 'cream' | 'sky' | 'night'
   >('cream');
@@ -90,26 +97,26 @@ export const AdaptiveReaderView: React.FC = () => {
   // AI Adaptation & TTS state
   const [isAdapting, setIsAdapting] = useState<boolean>(false);
   const [keyIdea, setKeyIdea] = useState<string>(
-    'زيارة علمية مسائية لطلاب المدرسة إلى المرصد الفلكي لرصد حلقات كوكب زحل وتدوين الملاحظات.'
+    'قصة يومية مبسّطة للصف الثاني الابتدائي تدور حول عناية سلمى بالقطة البيضاء في حديقة البيت.'
   );
   const [wordBreakdowns, setWordBreakdowns] = useState<WordBreakdownItem[]>([
     {
-      word: 'لِمُشَاهَدَةِ',
-      syllables: 'لِـ · مُـ · شَا · هَـ · دَةِ',
+      word: 'الْحَدِيقَةِ',
+      syllables: 'الْـ · حَـ · دِيـ · قَـ · ـةِ',
+      root: 'ح - د - ق',
+      meaning: 'المكان المزروع بالأشجار والزهور حول البيت.',
+    },
+    {
+      word: 'شَاهَدَتْ',
+      syllables: 'شَا · هَـ · دَتْ',
       root: 'ش - ه - د',
-      meaning: 'النظر بتمعّن ورؤية الأجرام السماوية بوضوح.',
+      meaning: 'رأت بعينيها بوضوح (ويقابلها في اللهجات العربية الصحيحة: شافت).',
     },
     {
-      word: 'المِنْظَارَ',
-      syllables: 'ال · مِنْ · ظَا · رَ',
-      root: 'ن - ظ - ر',
-      meaning: 'جهاز بصري يقرّب الأجسام البعيدة في الفضاء (التلسكوب).',
-    },
-    {
-      word: 'مُلَاحَظَاتِهِمْ',
-      syllables: 'مُـ · لَا · حَـ · ظَا · تِـ · هِمْ',
-      root: 'ل - ح - ظ',
-      meaning: 'ما يكتبه الباحث من مشاهدات دقيقة أثناء التجربة.',
+      word: 'التُّفَّاحِ',
+      syllables: 'التُّفْـ · فَاحِ',
+      root: 'ت - ف - ح',
+      meaning: 'فاكهة معروفة تبدأ هنا بلام شمسية مدغمة في التاء المشددة.',
     },
   ]);
 
@@ -119,21 +126,52 @@ export const AdaptiveReaderView: React.FC = () => {
   >(null);
   const speechTimerRef = useRef<number | null>(null);
 
-  // Live Dyslexico token analysis with Arabic Dialect Normalization
+  // Live Dyslexico token analysis with strict 3-way separation:
+  // 1) phonological_or_visual_confusion (letter substitution candidate)
+  // 2) orthographic_convention (typing/spelling normalization like ه/ة or hamza)
+  // 3) valid_dialect_lexical / dialect_phonological_shift (correct Arabic dialect usage, NOT an error)
   const dyslexicoAnalysis = useMemo(
     () => analyzeTextWithDyslexico(dyslexicoInput, selectedDialect),
     [dyslexicoInput, selectedDialect]
   );
 
-  const misspelledTokens = useMemo(
-    () => dyslexicoAnalysis.filter((item) => !item.isCorrect),
+  const nonExactTokens = useMemo(
+    () =>
+      dyslexicoAnalysis.filter(
+        (item) => item.variationCategory !== 'exact_lexicon_match'
+      ),
+    [dyslexicoAnalysis]
+  );
+
+  const phonologicalCandidatesCount = useMemo(
+    () =>
+      dyslexicoAnalysis.filter((item) => item.isDyslexiaScreeningCandidate)
+        .length,
+    [dyslexicoAnalysis]
+  );
+
+  const orthographicConventionsCount = useMemo(
+    () =>
+      dyslexicoAnalysis.filter(
+        (item) => item.variationCategory === 'orthographic_convention'
+      ).length,
+    [dyslexicoAnalysis]
+  );
+
+  const validDialectTokensCount = useMemo(
+    () =>
+      dyslexicoAnalysis.filter(
+        (item) =>
+          item.variationCategory === 'valid_dialect_lexical' ||
+          item.variationCategory === 'dialect_phonological_shift'
+      ).length,
     [dyslexicoAnalysis]
   );
 
   // Live Pairwise Weighted Levenshtein + Phonetic inspector
   const pairMetrics = useMemo(() => {
-    const s = pairSource.trim() || 'froot';
-    const t = pairTarget.trim() || 'fruit';
+    const s = pairSource.trim() || 'المنضار';
+    const t = pairTarget.trim() || 'المنظار';
     const isAr = /[\u0600-\u06FF]/.test(s) || /[\u0600-\u06FF]/.test(t);
     const { weightedDistance, standardDistance, detectedPatterns } =
       computeDyslexicoWeightedLevenshtein(s, t);
@@ -232,7 +270,13 @@ export const AdaptiveReaderView: React.FC = () => {
     setHighlightedWordIndex(0);
 
     let currentIdx = 0;
+    let boundaryEventFired = false;
+    setPacingSyncModeLabel(
+      `مؤشر تتبع إيقاعي استرشادي (${pacingIntervalMs}ms للكلمة)`
+    );
+
     speechTimerRef.current = window.setInterval(() => {
+      if (boundaryEventFired) return;
       currentIdx += 1;
       if (currentIdx >= allWords.length) {
         if (speechTimerRef.current) {
@@ -244,7 +288,7 @@ export const AdaptiveReaderView: React.FC = () => {
         setHighlightedWordIndex(currentIdx);
         setActiveLineIdx(Math.floor(currentIdx / WORDS_PER_LINE));
       }
-    }, 520);
+    }, pacingIntervalMs);
 
     try {
       const res = await fetch('/api/ai/tts', {
@@ -256,6 +300,23 @@ export const AdaptiveReaderView: React.FC = () => {
         const data = await res.json();
         if (data?.audioBase64) {
           const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
+          audio.ontimeupdate = () => {
+            if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
+              boundaryEventFired = true;
+              setPacingSyncModeLabel('مرتبط نسبياً بمدة الملف الصوتي الفعلي');
+              const ratio = Math.min(0.999, audio.currentTime / audio.duration);
+              const idx = Math.floor(ratio * allWords.length);
+              setHighlightedWordIndex(idx);
+              setActiveLineIdx(Math.floor(idx / WORDS_PER_LINE));
+            }
+          };
+          audio.onended = () => {
+            if (speechTimerRef.current) {
+              window.clearInterval(speechTimerRef.current);
+            }
+            setIsSpeaking(false);
+            setHighlightedWordIndex(null);
+          };
           audio.play().catch(() => {});
           return;
         }
@@ -268,8 +329,31 @@ export const AdaptiveReaderView: React.FC = () => {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ar-SA';
+        const activeDialectObj = ARABIC_DIALECT_PROFILES.find(
+          (d) => d.code === selectedDialect
+        );
+        utterance.lang = activeDialectObj?.speechRecognitionLang || 'ar-SA';
         utterance.rate = 0.85;
+        utterance.onboundary = (ev) => {
+          if (ev.name === 'word') {
+            boundaryEventFired = true;
+            setPacingSyncModeLabel('متزامن مع حدود نطق الكلمات في المتصفح (onboundary)');
+            const prefix = text.slice(0, ev.charIndex);
+            const wordIdx = Math.min(
+              allWords.length - 1,
+              prefix.trim() ? prefix.trim().split(/\s+/).length : 0
+            );
+            setHighlightedWordIndex(wordIdx);
+            setActiveLineIdx(Math.floor(wordIdx / WORDS_PER_LINE));
+          }
+        };
+        utterance.onend = () => {
+          if (speechTimerRef.current) {
+            window.clearInterval(speechTimerRef.current);
+          }
+          setIsSpeaking(false);
+          setHighlightedWordIndex(null);
+        };
         window.speechSynthesis.speak(utterance);
       } catch {
         // Ignore if headless browser blocks speechSynthesis
@@ -360,14 +444,35 @@ export const AdaptiveReaderView: React.FC = () => {
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-xs text-slate-500 mb-1">
-            بنية مشروع Dyslexico · خوارزميات المطابقة الفونولوجية (Soundex / Double Metaphone) ومسافة ليفنشتاين الموزونة
+            القارئ العربي الميسّر · تحليل الفروق اللغوية الثلاثية (إبدال حرفي / تطبيع إملائي / لهجة صحيحة)
           </div>
           <h2 className="text-xl font-bold text-slate-900">
-            استوديو Dyslexico اللغوي والقارئ العربي الذكي لذوي عسر القراءة
+            القارئ العربي المساند ومحلل الكلمات اللغوي (Dyslexico Studio)
           </h2>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label="اختيار نص القراءة المتدرج في القارئ الميسر"
+            value={selectedPassageId}
+            onChange={(e) => {
+              const pId = e.target.value;
+              setSelectedPassageId(pId);
+              const found = ARABIC_READING_PASSAGES.find((p) => p.id === pId);
+              if (found) {
+                setText(found.words.join(' '));
+                setActiveLineIdx(0);
+              }
+            }}
+            className="px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg text-slate-800"
+          >
+            {ARABIC_READING_PASSAGES.map((p) => (
+              <option key={p.id} value={p.id}>
+                الصف {p.gradeLevel}: {p.title} ({p.diacriticLabelAr || p.category})
+              </option>
+            ))}
+          </select>
+
           <button
             type="button"
             onClick={handleSpeakPassage}
@@ -381,7 +486,7 @@ export const AdaptiveReaderView: React.FC = () => {
             <span>
               {isSpeaking
                 ? 'إيقاف القراءة الصوتية'
-                : 'قراءة صوتية متزامنة (Gemini TTS)'}
+                : 'قراءة صوتية مساندة مع مؤشر تتبع إيقاعي'}
             </span>
           </button>
 
@@ -395,7 +500,7 @@ export const AdaptiveReaderView: React.FC = () => {
             <span>
               {isAdapting
                 ? 'جاري التحليل الصرفي...'
-                : 'تبسيط النص وتحليل الجذور (Gemini AI)'}
+                : 'تبسيط النص وتحليل الجذور'}
             </span>
           </button>
         </div>
@@ -406,13 +511,25 @@ export const AdaptiveReaderView: React.FC = () => {
         <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-slate-200">
           <div>
             <div className="text-xs text-slate-500">
-              مشروع Dyslexico · المطابقة الفونولوجية العربية واللهجية + مسافة ليفنشتاين الموزونة
+              محلل الفروق اللغوية الثلاثي · فصل صارم بين الخطأ القرائي، والتطبيع الإملائي، والمفردة اللهجية الصحيحة
             </div>
             <h3 className="text-base font-bold text-slate-900 mt-0.5">
-              المعالج الإملائي الذكي المخصص لأنماط الديسلكسيا الفونولوجية والبصرية ولهجات الطلاب العرب (حقيقي 100%)
+              محلل الكلمات والمطابقة الفونولوجية المراعية للهجات العربية
             </h3>
-            <p className="text-xs text-slate-600 mt-1">
-              يمنح أوزاناً إحصائية منخفضة جداً للإبدال البصري بين الحروف المتشابهة (ب↔ت↔ث، ج↔ح↔خ بتكلفة 0.14 بدلاً من 1.0) وللكتابة الصوتية واللهجية للطلاب العرب (مثل التالب→الطالب، المنضار→المنظار، شاف→شاهد، صوب→نحو).
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              يفصل المحرك برمجياً بين ثلاث فئات لغوية مختلفة تماماً حتى لا تُعامل اللهجات أو اختصارات الكتابة كأخطاء مرضية:
+              <strong className="text-rose-700 mx-1">
+                (١) إبدال حرفي بصري/صوتي ({phonologicalCandidatesCount})
+              </strong>
+              مثل (التالب ← الطالب) ويتطلب تكرار النمط في السياق،
+              <strong className="text-amber-800 mx-1">
+                (٢) اختلاف إملائي كتابي غير مرضي ({orthographicConventionsCount})
+              </strong>
+              مثل التاء المربوطة والهمزة (المدرسه ↔ المدرسة)،
+              <strong className="text-[#059669] mx-1">
+                (٣) استعمال لهجي عربي صحيح ({validDialectTokensCount})
+              </strong>
+              مثل (شاف، صوب، دهب) ولا يُعدّ خطأً على الإطلاق.
             </p>
           </div>
 
@@ -444,14 +561,14 @@ export const AdaptiveReaderView: React.FC = () => {
                 {preset.label}
               </button>
             ))}
-            {misspelledTokens.length > 0 && (
+            {nonExactTokens.length > 0 && (
               <button
                 type="button"
                 onClick={handleApplyAllCorrections}
                 className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Wand2 className="w-3.5 h-3.5" />
-                <span>تصحيح جميع الكلمات ({misspelledTokens.length})</span>
+                <span>موائمة النص إلى الفصحى المدرسية ({nonExactTokens.length})</span>
               </button>
             )}
           </div>
@@ -465,7 +582,7 @@ export const AdaptiveReaderView: React.FC = () => {
                 htmlFor="dyslexico-live-input"
                 className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
-                اكتب نصاً بالعربية (أو بلهجة الطالب: خليجية، مصرية، شامية، مغاربية) يحتوي على أخطاء ديسلكسيا صوتية أو بصرية (مثل التالب، المدرسه، المنضار، الملاحضات):
+                اختبر أي جملة عربية لملاحظة كيف يميز النظام بين الإبدال الحرفي (التالب)، والاختلاف الإملائي (المدرسه)، والمفردة اللهجية الصحيحة (شاف، صوب):
               </label>
               <textarea
                 id="dyslexico-live-input"
@@ -479,27 +596,83 @@ export const AdaptiveReaderView: React.FC = () => {
               />
             </div>
 
-            {/* Interactive Token Strip */}
+            {/* Interactive Token Strip with 3-Way Color Coding */}
             <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2.5">
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                 <span>
-                  انقر على أي كلمة تحتها خط أحمر لاستبدالها بالتصحيح الفونولوجي أو المعياري الأعلى ترجيحاً:
+                  تصنيف الكلمات المدخلة (الأخضر = لهجة صحيحة لا تُعدّ خطأً · الكهرماني = تطبيع إملائي · الوردي = إبدال حرفي):
                 </span>
                 <span className="font-mono tabular-nums">
-                  الأخطاء أو البدائل المكتشفة: {misspelledTokens.length} / {dyslexicoAnalysis.length}
+                  إبدالات حرفية: {phonologicalCandidatesCount} · تطبيع إملائي: {orthographicConventionsCount} · لهجة صحيحة: {validDialectTokensCount}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-1" dir="auto">
-                {dyslexicoAnalysis.map((token, idx) =>
-                  token.isCorrect ? (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg"
-                    >
-                      {token.originalWord}
-                    </span>
-                  ) : (
+                {dyslexicoAnalysis.map((token, idx) => {
+                  if (token.variationCategory === 'exact_lexicon_match') {
+                    return (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg"
+                      >
+                        {token.originalWord}
+                      </span>
+                    );
+                  }
+                  if (
+                    token.variationCategory === 'valid_dialect_lexical' ||
+                    token.variationCategory === 'dialect_phonological_shift'
+                  ) {
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() =>
+                          handleApplyCorrection(
+                            token.originalWord,
+                            token.bestCorrection
+                          )
+                        }
+                        className="px-2.5 py-1 text-sm bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title={`${token.variationCategoryLabelAr} — المرادف المدرسي الفصيح: ${token.bestCorrection}`}
+                      >
+                        <span className="text-emerald-900 font-semibold">
+                          ✓ {token.originalWord}
+                        </span>
+                        <span className="text-[11px] text-emerald-700 bg-white/80 px-1.5 py-0.5 rounded">
+                          لهجة صحيحة (الفصحى: {token.bestCorrection})
+                        </span>
+                      </button>
+                    );
+                  }
+                  if (token.variationCategory === 'orthographic_convention') {
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() =>
+                          handleApplyCorrection(
+                            token.originalWord,
+                            token.bestCorrection
+                          )
+                        }
+                        className="px-2.5 py-1 text-sm bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title={token.contextualCautionAr}
+                      >
+                        <span className="text-amber-900 font-medium">
+                          {token.originalWord}
+                        </span>
+                        <span className="text-amber-600">↔</span>
+                        <span className="font-bold text-amber-900">
+                          {token.bestCorrection}
+                        </span>
+                        <span className="text-[10px] text-amber-800 bg-white/80 px-1.5 py-0.5 rounded">
+                          تطبيع إملائي (غير مرضي)
+                        </span>
+                      </button>
+                    );
+                  }
+                  return (
                     <button
                       key={idx}
                       type="button"
@@ -510,9 +683,9 @@ export const AdaptiveReaderView: React.FC = () => {
                         )
                       }
                       className="px-2.5 py-1 text-sm bg-rose-50 hover:bg-emerald-50 border border-rose-300 hover:border-emerald-400 rounded-lg transition-colors flex items-center gap-1.5 group cursor-pointer"
-                      title={`انقر للتصحيح إلى: ${token.bestCorrection}`}
+                      title={token.contextualCautionAr}
                     >
-                      <span className="line-through text-rose-700 font-medium">
+                      <span className="underline decoration-rose-500 text-rose-800 font-medium">
                         {token.originalWord}
                       </span>
                       <span className="text-slate-400">←</span>
@@ -521,8 +694,8 @@ export const AdaptiveReaderView: React.FC = () => {
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     </button>
-                  )
-                )}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -641,60 +814,79 @@ export const AdaptiveReaderView: React.FC = () => {
           </div>
         </div>
 
-        {/* Detailed Diagnostic Table of Detected Dyslexic Spelling Errors */}
-        {misspelledTokens.length > 0 && (
+        {/* Detailed 3-Way Classification Table */}
+        {nonExactTokens.length > 0 && (
           <div className="overflow-x-auto pt-2">
             <table className="w-full text-right border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] text-slate-500 bg-slate-50">
                   <th className="py-2 px-3">الكلمة المدخلة</th>
-                  <th className="py-2 px-3">الكود الفونولوجي (Metaphone / Soundex)</th>
-                  <th className="py-2 px-3">التصحيح الأول</th>
-                  <th className="py-2 px-3 text-left">مسافة تقليدية</th>
-                  <th className="py-2 px-3 text-left">مسافة Dyslexico الموزونة</th>
-                  <th className="py-2 px-3">تصنيف النمط الديسلكسي</th>
-                  <th className="py-2 px-3">إجراء</th>
+                  <th className="py-2 px-3">التصنيف اللغوي الدقيق (٣ فئات منفصلة)</th>
+                  <th className="py-2 px-3">المقابل الفصيح</th>
+                  <th className="py-2 px-3">هل يُحتسب كملاحظة عسر قراءة؟</th>
+                  <th className="py-2 px-3">التفسير اللغوي والتربوي</th>
+                  <th className="py-2 px-3">إجراء اختياري</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {misspelledTokens.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/80">
-                    <td className="py-2.5 px-3 font-mono font-bold text-rose-700">
-                      {item.originalWord}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-700">
-                      {item.phoneticCodeInput} · {item.soundexCodeInput}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-[#059669]">
-                      {item.bestCorrection} ({item.phoneticCodeTarget})
-                    </td>
-                    <td className="py-2.5 px-3 text-left font-mono tabular-nums text-slate-600">
-                      {item.standardLevenshteinDistance.toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-3 text-left font-mono tabular-nums font-bold text-[#0284C7]">
-                      {item.weightedDyslexicDistance.toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-3 text-slate-700">
-                      {item.detectedPatterns[0]?.labelAr ||
-                        item.candidates[0]?.reasonAr ||
-                        'تقارب صوتي وإملائي'}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleApplyCorrection(
-                            item.originalWord,
-                            item.bestCorrection
-                          )
-                        }
-                        className="px-2.5 py-1 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded transition-colors whitespace-nowrap"
-                      >
-                        تطبيق التصحيح
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {nonExactTokens.map((item, idx) => {
+                  const isDialect =
+                    item.variationCategory === 'valid_dialect_lexical' ||
+                    item.variationCategory === 'dialect_phonological_shift';
+                  const isOrtho =
+                    item.variationCategory === 'orthographic_convention';
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50/80">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
+                        {item.originalWord}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            isDialect
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : isOrtho
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-rose-50 text-rose-800 border border-rose-200'
+                          }`}
+                        >
+                          {item.variationCategoryLabelAr}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-[#059669]">
+                        {item.bestCorrection}
+                      </td>
+                      <td className="py-2.5 px-3 font-semibold">
+                        {item.isDyslexiaScreeningCandidate ? (
+                          <span className="text-amber-800">
+                            فقط عند التكرار في السياق
+                          </span>
+                        ) : (
+                          <span className="text-[#059669]">
+                            لا (استعمال لهجي أو إملائي طبيعي)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">
+                        {item.contextualCautionAr}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleApplyCorrection(
+                              item.originalWord,
+                              item.bestCorrection
+                            )
+                          }
+                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors whitespace-nowrap"
+                        >
+                          استبدال بالفصحى
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1039,6 +1231,33 @@ export const AdaptiveReaderView: React.FC = () => {
                 onChange={(e) => setLineHeightRatio(Number(e.target.value))}
                 className="w-full accent-[#0284C7] cursor-pointer"
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <label
+                  htmlFor="pacing-speed-slider"
+                  className="font-medium text-slate-700"
+                >
+                  سرعة المؤشر البصري الإيقاعي (عند غياب توقيت الكلمات من المتصفح)
+                </label>
+                <span className="font-mono tabular-nums font-semibold text-slate-900">
+                  {pacingIntervalMs} ms/كلمة
+                </span>
+              </div>
+              <input
+                id="pacing-speed-slider"
+                type="range"
+                min={320}
+                max={850}
+                step={20}
+                value={pacingIntervalMs}
+                onChange={(e) => setPacingIntervalMs(Number(e.target.value))}
+                className="w-full accent-[#0284C7] cursor-pointer"
+              />
+              <div className="text-[10px] text-slate-500 mt-1">
+                حالة المؤشر الحالية: {pacingSyncModeLabel}
+              </div>
             </div>
           </div>
 
