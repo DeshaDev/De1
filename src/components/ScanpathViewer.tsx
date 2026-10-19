@@ -96,7 +96,7 @@ export const ScanpathViewer: React.FC<ScanpathViewerProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-5 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <span>خريطة المسار البصري (Lexplore Scanpath)</span>
+            <span>خريطة المسار البصري</span>
             <span aria-hidden="true">·</span>
             <span>{passageCategory}</span>
           </div>
