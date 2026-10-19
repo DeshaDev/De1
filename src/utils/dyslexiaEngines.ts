@@ -504,7 +504,7 @@ export function runOculomotorHeuristicInference(
         heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 35%',
       },
       {
-        featureNameAr: 'الرتبة المئوية ٩٠ داخل عينة الجلسةات المطوّلة (P90 Fixation Burst)',
+        featureNameAr: 'مدة التثبيت عند الرتبة المئوية ٩٠ داخل الجلسة (P90 Fixation Burst)',
         weightPercent: 16,
         observedValue: `${p90FixationDurationMs} ms`,
         heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 350 ms',
@@ -2364,7 +2364,7 @@ export function estimateIRTAbilityEAP(
   theta: number;
   standardError: number;
   totalFisherInformation: number;
-  percentile: number;
+  modelBasedRank: number;
   dsm5ClassificationAr: string;
   riskLevel: 'nominal' | 'moderate' | 'high';
 } {
@@ -2373,7 +2373,7 @@ export function estimateIRTAbilityEAP(
       theta: 0,
       standardError: 1.0,
       totalFisherInformation: 1.0,
-      percentile: 50,
+      modelBasedRank: 50,
       dsm5ClassificationAr: 'قيد التقييم الأولي (θ = 0.00)',
       riskLevel: 'nominal',
     };
@@ -2422,7 +2422,7 @@ export function estimateIRTAbilityEAP(
   const standardError =
     Math.round((1 / Math.sqrt(totalFisherInformation)) * 100) / 100;
 
-  // Convert theta to standard normal percentile via error function approximation
+  // Map theta to a standard-normal reference rank; this is theoretical, not a student-population norm.
   const z = theta;
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp((-z * z) / 2);
@@ -2432,7 +2432,7 @@ export function estimateIRTAbilityEAP(
     (0.3193815 +
       t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   const cdf = z >= 0 ? 1 - prob : prob;
-  const percentile = Math.max(1, Math.min(99, Math.round(cdf * 100)));
+  const modelBasedRank = Math.max(1, Math.min(99, Math.round(cdf * 100)));
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
   let dsm5ClassificationAr =
@@ -2451,7 +2451,7 @@ export function estimateIRTAbilityEAP(
     theta,
     standardError,
     totalFisherInformation,
-    percentile,
+    modelBasedRank,
     dsm5ClassificationAr,
     riskLevel,
   };
