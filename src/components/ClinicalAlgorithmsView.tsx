@@ -629,7 +629,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             <div className="p-5">
               <div className="text-xs text-slate-500">التصنيف الاسترشادي</div>
               <div className="mt-1 text-xs font-bold text-slate-900 leading-snug">
-                {currentIRTEstimate.dsm5ClassificationAr}
+                {currentIRTEstimate.interpretationLabelAr}
               </div>
             </div>
           </div>
