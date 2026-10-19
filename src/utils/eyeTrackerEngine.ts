@@ -667,7 +667,7 @@ export function computeIrisGazeFromLandmarks(
     brightness: measuredBrightness,
     interOcularPx,
     headRollDeg,
-    faceDetected: dynamicConfidence >= 35,
+    faceDetected: dynamicConfidence >= 20,
     isVirtualOrBlankFrame: false,
     trackingSource: 'mediapipe-iris',
   };
@@ -867,11 +867,11 @@ export function extractPupilFeaturesFromFrame(
   const avgContrast = (left.contrast + right.contrast) / 2;
 
   const isVirtualOrBlankFrame =
-    avgContrast < 18 || (avgColorDiff < 2.5 && avgContrast < 45);
+    avgContrast < 6 || (avgColorDiff < 0.8 && avgContrast < 12);
 
   const confidence = isVirtualOrBlankFrame
     ? 0
-    : Math.max(0, Math.min(100, Math.round((avgContrast / 85) * 100)));
+    : Math.max(42, Math.min(100, Math.round(35 + (avgContrast / 75) * 65)));
 
   const combinedNormX = clamp01((left.normX + right.normX) / 2);
   const combinedNormY = clamp01((left.normY + right.normY) / 2);

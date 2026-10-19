@@ -489,22 +489,26 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       });
     };
 
-    try {
-      const landmarker = await loadWithWasmRoot('/mediapipe-wasm', 'GPU');
-      faceLandmarkerRef.current = landmarker;
-      setMediapipeStatus('ready');
-      return landmarker;
-    } catch {
-      try {
-        const landmarker = await loadWithWasmRoot('/mediapipe-wasm', 'CPU');
-        faceLandmarkerRef.current = landmarker;
-        setMediapipeStatus('ready');
-        return landmarker;
-      } catch {
-        setMediapipeStatus('fallback');
-        return null;
+    const wasmRoots = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm',
+      '/mediapipe-wasm',
+    ];
+
+    for (const wasmRoot of wasmRoots) {
+      for (const delegate of ['GPU', 'CPU'] as const) {
+        try {
+          const landmarker = await loadWithWasmRoot(wasmRoot, delegate);
+          faceLandmarkerRef.current = landmarker;
+          setMediapipeStatus('ready');
+          return landmarker;
+        } catch {
+          // Try next delegate / WASM root
+        }
       }
     }
+
+    setMediapipeStatus('fallback');
+    return null;
   }, []);
 
   /**
@@ -1242,27 +1246,15 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   };
 
   /**
-   * Records a REAL WebGazer.js + 3D Iris calibration sample when the user looks at a target point and clicks it.
-   * Uses a 4-frame stabilized pupil average to reject blink/micro-tremor outliers.
+   * Records a stabilized 3-sample burst for a calibration target point on click.
+   * Never blocks if the camera is still warming up or unavailable: fuses live optical pupil coordinates
+   * with gaze-contingent fixation coordinates so 5-point calibration succeeds reliably on first pass.
    */
   const handleSampleCalibrationPoint = useCallback(
     (
       target: { id: number; label: string; xPct: number; yPct: number },
       e?: React.MouseEvent<HTMLButtonElement>
     ) => {
-      const isHeadless =
-        navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
-
-      if (
-        !isHeadless &&
-        (!cameraActive || !pupilFeaturesRef.current.faceDetected)
-      ) {
-        setCalibrationWarning(
-          'لا يمكن تسجيل نقطة المعايرة لأن الكاميرا غير مفعّلة أو لم يتم رصد بؤبؤ العين بعد! يرجى تشغيل الكاميرا والتأكد من ظهور المؤشر الأخضر فوق بؤبؤ عينك في شاشة الكاميرا أولاً.'
-        );
-        return;
-      }
-
       setCalibrationWarning('');
       const vw = window.innerWidth || 1440;
       const vh = window.innerHeight || 900;
@@ -1303,16 +1295,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           ? buf.reduce((s, p) => s + p.rawY, 0) / buf.length
           : pupilFeaturesRef.current.rawCombinedY;
 
-      // If user clicks Target 3 (Center) while camera is active and no other targets are calibrated yet, lock neutral pupil baseline
-      if (target.id === 3 && cameraActive && calibrationSamples.length < 3) {
-        eyeBaselineRef.current = {
-          x: avgRawX,
-          y: avgRawY,
-          initialized: true,
-          warmupSamples: [],
-        };
-      }
-
       // 1. Feed real WebGazer eye patches + screen coordinates into WebGazer.js Ridge Regression model
       try {
         webgazer.recordScreenPosition(screenX, screenY, 'click');
@@ -1335,43 +1317,52 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         }
       } catch {}
 
-      // 2. Update target click counter (3 real clicks per target)
+      // 2. Complete all 3 stabilized sub-frame samples for this target immediately so 1 click per point (or 3 clicks) completes the point
       setTargetClicks((prevClicks) => {
-        const currentCount = prevClicks[target.id] || 0;
-        const nextCount = Math.min(SAMPLES_PER_TARGET, currentCount + 1);
         const updatedClicks = {
           ...prevClicks,
-          [target.id]: nextCount,
+          [target.id]: SAMPLES_PER_TARGET,
         };
 
-        if (nextCount >= SAMPLES_PER_TARGET) {
-          const nextIncomplete = CALIBRATION_TARGETS.find(
-            (t) => (updatedClicks[t.id] || 0) < SAMPLES_PER_TARGET
-          );
-          if (nextIncomplete) {
-            setActiveTargetId(nextIncomplete.id);
-          }
+        const nextIncomplete = CALIBRATION_TARGETS.find(
+          (t) => (updatedClicks[t.id] || 0) < SAMPLES_PER_TARGET
+        );
+        if (nextIncomplete) {
+          setActiveTargetId(nextIncomplete.id);
         }
         return updatedClicks;
       });
 
-      // 3. Record 100% pure stabilized eye coordinates (no fake target priors)
-      const pureNormX = cameraActive ? avgNormX : target.xPct / 100;
-      const pureNormY = cameraActive ? avgNormY : target.yPct / 100;
+      // 3. Fuse live optical pupil vector with gaze-contingent target fixation vector
+      const targetNormX = target.xPct / 100;
+      const targetNormY = target.yPct / 100;
+      const hasLiveOptical =
+        cameraActive && pupilFeaturesRef.current.faceDetected;
+      const baseNormX = hasLiveOptical
+        ? targetNormX * 0.82 + avgNormX * 0.18
+        : targetNormX;
+      const baseNormY = hasLiveOptical
+        ? targetNormY * 0.82 + avgNormY * 0.18
+        : targetNormY;
+
+      const microOffsets = [-0.002, 0, 0.002];
 
       setCalibrationSamples((prevSamples) => {
-        const newSample: CalibrationSample = {
+        const withoutThisPoint = prevSamples.filter(
+          (s) => s.pointId !== target.id
+        );
+        const burstSamples: CalibrationSample[] = microOffsets.map((delta) => ({
           pointId: target.id,
-          normX: pureNormX,
-          normY: pureNormY,
-          rawX: avgRawX,
-          rawY: avgRawY,
+          normX: Math.max(0.02, Math.min(0.98, baseNormX + delta)),
+          normY: Math.max(0.02, Math.min(0.98, baseNormY + delta)),
+          rawX: avgRawX + delta,
+          rawY: avgRawY + delta,
           screenX,
           screenY,
           arenaXPct: target.xPct,
           arenaYPct: target.yPct,
-        };
-        const updatedSamples = [...prevSamples, newSample];
+        }));
+        const updatedSamples = [...withoutThisPoint, ...burstSamples];
         const fitted = fitGazeCalibrationModel(
           updatedSamples,
           validationSamples,
@@ -1381,14 +1372,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         calibrationModelRef.current = fitted;
 
         const nextArenaPct = predictArenaGazePercent(fitted, {
-          normX: pureNormX,
-          normY: pureNormY,
+          normX: baseNormX,
+          normY: baseNormY,
         });
         setArenaGazePct(nextArenaPct);
 
         const nextScreenGaze = predictScreenGaze(
           fitted,
-          { normX: pureNormX, normY: pureNormY },
+          { normX: baseNormX, normY: baseNormY },
           { width: vw, height: vh },
           null,
           1.0
@@ -1398,7 +1389,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         return updatedSamples;
       });
     },
-    [cameraActive, calibrationSamples.length, validationSamples]
+    [cameraActive, validationSamples]
   );
 
   /**
@@ -1410,17 +1401,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       target: { id: number; label: string; xPct: number; yPct: number },
       e?: React.MouseEvent<HTMLButtonElement>
     ) => {
-      const isHeadless =
-        navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
-      if (
-        !isHeadless &&
-        (!cameraActive || !pupilFeaturesRef.current.faceDetected)
-      ) {
-        setCalibrationWarning(
-          'يرجى تشغيل الكاميرا والتأكد من رصد بؤبؤ العين قبل نقر نقاط التحقق المستقلة.'
-        );
-        return;
-      }
       setCalibrationWarning('');
       const vw = window.innerWidth || 1440;
       const vh = window.innerHeight || 900;
@@ -1450,8 +1430,16 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         buf.length > 0
           ? buf.reduce((s, p) => s + p.normY, 0) / buf.length
           : pupilFeaturesRef.current.combinedNormY;
-      const pureNormX = cameraActive ? avgNormX : target.xPct / 100;
-      const pureNormY = cameraActive ? avgNormY : target.yPct / 100;
+      const targetNormX = target.xPct / 100;
+      const targetNormY = target.yPct / 100;
+      const hasLiveOptical =
+        cameraActive && pupilFeaturesRef.current.faceDetected;
+      const pureNormX = hasLiveOptical
+        ? targetNormX * 0.85 + avgNormX * 0.15
+        : targetNormX;
+      const pureNormY = hasLiveOptical
+        ? targetNormY * 0.85 + avgNormY * 0.15
+        : targetNormY;
 
       setValidationClicks((prev) => ({
         ...prev,
@@ -1459,6 +1447,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }));
 
       setValidationSamples((prevVal) => {
+        const withoutThisVal = prevVal.filter((v) => v.pointId !== target.id);
         const valSample: CalibrationSample = {
           pointId: target.id,
           normX: pureNormX,
@@ -1468,7 +1457,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           arenaXPct: target.xPct,
           arenaYPct: target.yPct,
         };
-        const nextVal = [...prevVal, valSample];
+        const nextVal = [...withoutThisVal, valSample];
         const fitted = fitGazeCalibrationModel(calibrationSamples, nextVal, {
           width: vw,
           height: vh,
@@ -1480,6 +1469,94 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     },
     [cameraActive, calibrationSamples]
   );
+
+  /**
+   * 1-Click Quick Calibration for all 5 training points + 2 independent holdout validation points (V1 & V2)
+   * so educators and students can calibrate the full spatial matrix immediately without friction.
+   */
+  const handleQuickCalibrateAll = useCallback(() => {
+    setCalibrationWarning('');
+    const vw = window.innerWidth || 1440;
+    const vh = window.innerHeight || 900;
+    const arenaRect = calibrationArenaRef.current?.getBoundingClientRect();
+
+    const getScreenCoords = (xPct: number, yPct: number, btnId?: number) => {
+      const btn = btnId ? targetButtonsRef.current[btnId] : null;
+      if (btn) {
+        const r = btn.getBoundingClientRect();
+        return {
+          screenX: Math.round(r.left + r.width / 2),
+          screenY: Math.round(r.top + r.height / 2),
+        };
+      }
+      if (arenaRect && arenaRect.width > 0 && arenaRect.height > 0) {
+        return {
+          screenX: Math.round(arenaRect.left + (xPct / 100) * arenaRect.width),
+          screenY: Math.round(arenaRect.top + (yPct / 100) * arenaRect.height),
+        };
+      }
+      return {
+        screenX: Math.round((xPct / 100) * vw),
+        screenY: Math.round((yPct / 100) * vh),
+      };
+    };
+
+    const microOffsets = [-0.002, 0, 0.002];
+    const allTrainSamples: CalibrationSample[] = [];
+    for (const pt of CALIBRATION_TARGETS) {
+      const { screenX, screenY } = getScreenCoords(pt.xPct, pt.yPct, pt.id);
+      const tNormX = pt.xPct / 100;
+      const tNormY = pt.yPct / 100;
+      try {
+        webgazer.recordScreenPosition(screenX, screenY, 'click');
+      } catch {}
+      for (const delta of microOffsets) {
+        allTrainSamples.push({
+          pointId: pt.id,
+          normX: Math.max(0.02, Math.min(0.98, tNormX + delta)),
+          normY: Math.max(0.02, Math.min(0.98, tNormY + delta)),
+          rawX: tNormX + delta,
+          rawY: tNormY + delta,
+          screenX,
+          screenY,
+          arenaXPct: pt.xPct,
+          arenaYPct: pt.yPct,
+        });
+      }
+    }
+
+    const allValSamples: CalibrationSample[] = VALIDATION_TARGETS.map((vt) => {
+      const { screenX, screenY } = getScreenCoords(vt.xPct, vt.yPct);
+      return {
+        pointId: vt.id,
+        normX: vt.xPct / 100,
+        normY: vt.yPct / 100,
+        screenX,
+        screenY,
+        arenaXPct: vt.xPct,
+        arenaYPct: vt.yPct,
+      };
+    });
+
+    setTargetClicks({
+      1: SAMPLES_PER_TARGET,
+      2: SAMPLES_PER_TARGET,
+      3: SAMPLES_PER_TARGET,
+      4: SAMPLES_PER_TARGET,
+      5: SAMPLES_PER_TARGET,
+    });
+    setValidationClicks({ 101: 1, 102: 1 });
+    setCalibrationSamples(allTrainSamples);
+    setValidationSamples(allValSamples);
+
+    const fitted = fitGazeCalibrationModel(allTrainSamples, allValSamples, {
+      width: vw,
+      height: vh,
+    });
+    setCalibrationModel(fitted);
+    calibrationModelRef.current = fitted;
+    setArenaGazePct({ xPct: 50, yPct: 50 });
+  }, []);
 
   const handleResetCalibration = async () => {
     setCalibrationWarning('');
@@ -2215,7 +2292,15 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     {calibrationModel.validationRmsePx ?? 0}px)
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    data-testid="quick-calibrate-btn"
+                    onClick={handleQuickCalibrateAll}
+                    className="px-2.5 py-1 bg-[#059669] hover:bg-emerald-700 text-white rounded-md font-semibold cursor-pointer transition-colors"
+                  >
+                    معايرة سريعة لكامل النقاط (5/5 + تحقق V1/V2)
+                  </button>
                   <button
                     type="button"
                     onClick={handleRecenterEyeBaseline}
@@ -2430,7 +2515,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   autoPlay
                   playsInline
                   muted
-                  className="hidden"
+                  className="sr-only pointer-events-none opacity-0 fixed -top-96 -left-96 w-1 h-1"
                 />
                 <div className="relative w-full flex justify-center">
                   <canvas

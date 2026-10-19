@@ -253,6 +253,21 @@ test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4
   assert.ok(diacriticLevels.has('partial'));
   assert.ok(diacriticLevels.has('minimal'));
 
+  // Verify Grade 2 Cat passage uses clean water (مَاءٌ عَذْبٌ) and suitable food (وَطَعَامٌ مُنَاسِبٌ.) instead of cow's milk and bread
+  const catPassage = ARABIC_READING_PASSAGES.find(
+    (p) => p.id === 'passage-g2-garden'
+  );
+  assert.ok(catPassage);
+  assert.ok(catPassage.words.includes('مَاءٌ'));
+  assert.ok(catPassage.words.includes('عَذْبٌ'));
+  assert.ok(catPassage.words.includes('وَطَعَامٌ'));
+  assert.ok(!catPassage.words.includes('حَلِيبٌ'));
+  assert.ok(!catPassage.words.includes('وَخُبْزٌ'));
+
+  // Verify exact word counts match README documentation (52, 53, 55, 57, 55, 58, 65; range 52-65)
+  const actualWordCounts = ARABIC_READING_PASSAGES.map((p) => p.words.length);
+  assert.deepEqual(actualWordCounts, [52, 53, 55, 57, 55, 58, 65]);
+
   // Verify Grade 4 Oasis passage is partial diacritics (not over-vowelized)
   const oasis = ARABIC_READING_PASSAGES.find((p) => p.id === 'passage-g4-oasis');
   assert.ok(oasis);
