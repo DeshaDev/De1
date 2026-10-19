@@ -50,7 +50,7 @@ test('calculateEyeTrackingMetrics classifies fluent reader with low regressions 
   assert.ok(result.wpm >= 90);
   assert.equal(result.regressionCount, 0);
   assert.equal(result.riskLevel, 'nominal');
-  assert.ok(result.percentile >= 70);
+  assert.ok(result.heuristicIndicator >= 70);
 });
 
 test('calculateDyscalculiaMetrics detects high dyscalculia risk when PAE and reversals are elevated', () => {
@@ -163,8 +163,8 @@ test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions
     }
   );
   assert.ok(
-    withPhoneticErrors.percentile < withDialectOnly.percentile,
-    'Phonetic substitutions and omissions must lower the screening percentile / increase risk'
+    withPhoneticErrors.heuristicIndicator < withDialectOnly.heuristicIndicator,
+    'Phonetic substitutions and omissions must lower the screening indicator / increase risk'
   );
   assert.ok(
     withPhoneticErrors.problematicWords.some((w) => w.includes('تلاب')),
