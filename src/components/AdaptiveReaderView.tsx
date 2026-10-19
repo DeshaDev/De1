@@ -10,6 +10,7 @@ import {
   Wand2,
   Check,
   Code2,
+  BookOpen,
 } from 'lucide-react';
 import {
   segmentArabicWordIntoSyllables,
@@ -43,25 +44,31 @@ const DYSLEXICO_PRESETS: {
 }[] = [
   {
     id: 'ar-three-categories',
-    label: 'نموذج التمييز الثلاثي (إبدال حرفي + تطبيع إملائي + لهجة صحيحة)',
+    label: 'نموذج التمييز الثلاثي (إبدال + إملاء + لهجة)',
     dialect: 'gulf',
-    sample: 'قرأ التالب كتاب في المدرسه وشاف المنضار صوب الجبل وكتب الملاحضات',
+    sample:
+      'قرأ التالب كتاب في المدرسه وشاف المنضار صوب الجبل وكتب الملاحضات',
   },
   {
     id: 'ar-dyslexic',
-    label: 'نموذج إبدالات حرفية متكررة (ت/ط، ض/ظ) مع تطبيع إملائي (ه/ة، همزة)',
+    label: 'نموذج إبدالات حرفية (ت/ط، ض/ظ)',
     dialect: 'msa',
     sample: 'قرأ التالب كتاب في المدرسه وكتب بقلم ازرق عن المنضار والضوء',
   },
   {
     id: 'ar-egyptian-levantine',
-    label: 'نموذج طالب باللهجة المصرية والشامية (دهب، شاف، تلاميز)',
+    label: 'نموذج باللهجة المصرية والشامية',
     dialect: 'egyptian',
     sample: 'دهب التالب الى المدرسه وشاف المنضار مع تلاميز الفصل',
   },
 ];
 
 export const AdaptiveReaderView: React.FC = () => {
+  // Progressive Disclosure Studio Mode ('reader' | 'dyslexico')
+  const [studioMode, setStudioMode] = useState<'reader' | 'dyslexico'>(
+    'reader'
+  );
+
   const [selectedPassageId, setSelectedPassageId] = useState<string>(
     ARABIC_READING_PASSAGES[0].id
   );
@@ -110,7 +117,8 @@ export const AdaptiveReaderView: React.FC = () => {
       word: 'شَاهَدَتْ',
       syllables: 'شَا · هَـ · دَتْ',
       root: 'ش - ه - د',
-      meaning: 'رأت بعينيها بوضوح (ويقابلها في اللهجات العربية الصحيحة: شافت).',
+      meaning:
+        'رأت بعينيها بوضوح (ويقابلها في اللهجات العربية الصحيحة: شافت).',
     },
     {
       word: 'التُّفَّاحِ',
@@ -126,10 +134,6 @@ export const AdaptiveReaderView: React.FC = () => {
   >(null);
   const speechTimerRef = useRef<number | null>(null);
 
-  // Live Dyslexico token analysis with strict 3-way separation:
-  // 1) phonological_or_visual_confusion (letter substitution candidate)
-  // 2) orthographic_convention (typing/spelling normalization like ه/ة or hamza)
-  // 3) valid_dialect_lexical / dialect_phonological_shift (correct Arabic dialect usage, NOT an error)
   const dyslexicoAnalysis = useMemo(
     () => analyzeTextWithDyslexico(dyslexicoInput, selectedDialect),
     [dyslexicoInput, selectedDialect]
@@ -168,7 +172,6 @@ export const AdaptiveReaderView: React.FC = () => {
     [dyslexicoAnalysis]
   );
 
-  // Live Pairwise Weighted Levenshtein + Phonetic inspector
   const pairMetrics = useMemo(() => {
     const s = pairSource.trim() || 'المنضار';
     const t = pairTarget.trim() || 'المنظار';
@@ -207,7 +210,6 @@ export const AdaptiveReaderView: React.FC = () => {
     setDyslexicoInput(corrected);
   };
 
-  // Split text into lines of 7 words for the Reading Ruler
   const allWords = text
     .trim()
     .split(/\s+/)
@@ -301,7 +303,11 @@ export const AdaptiveReaderView: React.FC = () => {
         if (data?.audioBase64) {
           const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
           audio.ontimeupdate = () => {
-            if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
+            if (
+              audio.duration &&
+              Number.isFinite(audio.duration) &&
+              audio.duration > 0
+            ) {
               boundaryEventFired = true;
               setPacingSyncModeLabel('مرتبط نسبياً بمدة الملف الصوتي الفعلي');
               const ratio = Math.min(0.999, audio.currentTime / audio.duration);
@@ -337,7 +343,9 @@ export const AdaptiveReaderView: React.FC = () => {
         utterance.onboundary = (ev) => {
           if (ev.name === 'word') {
             boundaryEventFired = true;
-            setPacingSyncModeLabel('متزامن مع حدود نطق الكلمات في المتصفح (onboundary)');
+            setPacingSyncModeLabel(
+              'متزامن مع حدود نطق الكلمات في المتصفح (onboundary)'
+            );
             const prefix = text.slice(0, ev.charIndex);
             const wordIdx = Math.min(
               allWords.length - 1,
@@ -439,859 +447,907 @@ export const AdaptiveReaderView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs text-slate-500 mb-1">
-            القارئ العربي الميسّر · تحليل الفروق اللغوية الثلاثية (إبدال حرفي / تطبيع إملائي / لهجة صحيحة)
+    <div className="space-y-8">
+      {/* Executive Header & 2-Mode Studio Switcher */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200">
+          <div>
+            <div className="text-xs text-slate-500 mb-1">
+              بيئة القراءة المساندة والتحليل اللغوي الثلاثي
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 font-display">
+              القارئ العربي الميسّر ومحلل الكلمات اللغوي (Dyslexico Studio)
+            </h2>
           </div>
-          <h2 className="text-xl font-bold text-slate-900">
-            القارئ العربي المساند ومحلل الكلمات اللغوي (Dyslexico Studio)
-          </h2>
+
+          {/* 2-Mode Segmented Studio Switcher */}
+          <div
+            role="tablist"
+            aria-label="أوضاع استوديو القارئ وDyslexico"
+            className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={studioMode === 'reader'}
+              onClick={() => setStudioMode('reader')}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                studioMode === 'reader'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#0284C7]" />
+              <span>١. القارئ العربي الميسّر</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={studioMode === 'dyslexico'}
+              onClick={() => setStudioMode('dyslexico')}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                studioMode === 'dyslexico'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5 text-[#0284C7]" />
+              <span>٢. محلل الفروق اللغوية الثلاثي (Dyslexico)</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="اختيار نص القراءة المتدرج في القارئ الميسر"
-            value={selectedPassageId}
-            onChange={(e) => {
-              const pId = e.target.value;
-              setSelectedPassageId(pId);
-              const found = ARABIC_READING_PASSAGES.find((p) => p.id === pId);
-              if (found) {
-                setText(found.words.join(' '));
-                setActiveLineIdx(0);
-              }
-            }}
-            className="px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg text-slate-800"
-          >
-            {ARABIC_READING_PASSAGES.map((p) => (
-              <option key={p.id} value={p.id}>
-                الصف {p.gradeLevel}: {p.title} ({p.diacriticLabelAr || p.category})
-              </option>
-            ))}
-          </select>
+        {/* Contextual Toolbar for Reader Mode */}
+        {studioMode === 'reader' && (
+          <div className="px-6 sm:px-8 py-4 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                htmlFor="adaptive-passage-select"
+                className="text-xs font-medium text-slate-600"
+              >
+                النص القرائي:
+              </label>
+              <select
+                id="adaptive-passage-select"
+                aria-label="اختيار نص القراءة المتدرج في القارئ الميسر"
+                value={selectedPassageId}
+                onChange={(e) => {
+                  const pId = e.target.value;
+                  setSelectedPassageId(pId);
+                  const found = ARABIC_READING_PASSAGES.find(
+                    (p) => p.id === pId
+                  );
+                  if (found) {
+                    setText(found.words.join(' '));
+                    setActiveLineIdx(0);
+                  }
+                }}
+                className="px-3.5 py-2 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-[#0284C7]"
+              >
+                {ARABIC_READING_PASSAGES.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    الصف {p.gradeLevel}: {p.title} (
+                    {p.diacriticLabelAr || p.category})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            type="button"
-            onClick={handleSpeakPassage}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-              isSpeaking
-                ? 'bg-[#DC2626] text-white'
-                : 'bg-[#0F172A] hover:bg-slate-800 text-white'
-            }`}
-          >
-            <Volume2 className="w-4 h-4" />
-            <span>
-              {isSpeaking
-                ? 'إيقاف القراءة الصوتية'
-                : 'قراءة صوتية مساندة مع مؤشر تتبع إيقاعي'}
-            </span>
-          </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleSpeakPassage}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                  isSpeaking
+                    ? 'bg-[#DC2626] text-white'
+                    : 'bg-[#0F172A] hover:bg-slate-800 text-white'
+                }`}
+              >
+                <Volume2 className="w-4 h-4" />
+                <span>
+                  {isSpeaking
+                    ? 'إيقاف القراءة الصوتية'
+                    : 'قراءة صوتية مساندة'}
+                </span>
+              </button>
 
-          <button
-            type="button"
-            disabled={isAdapting}
-            onClick={handleRunAIAdaptation}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>
-              {isAdapting
-                ? 'جاري التحليل الصرفي...'
-                : 'تبسيط النص وتحليل الجذور'}
-            </span>
-          </button>
-        </div>
+              <button
+                type="button"
+                disabled={isAdapting}
+                onClick={handleRunAIAdaptation}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>
+                  {isAdapting
+                    ? 'جاري التحليل الصرفي...'
+                    : 'تبسيط النص وتحليل الجذور'}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* SECTION 1: DYSLEXICO PHONETIC & WEIGHTED LEVENSHTEIN SPELLCHECKER ENGINE */}
-      <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-slate-200">
-          <div>
-            <div className="text-xs text-slate-500">
-              محلل الفروق اللغوية الثلاثي · فصل صارم بين الخطأ القرائي، والتطبيع الإملائي، والمفردة اللهجية الصحيحة
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mt-0.5">
-              محلل الكلمات والمطابقة الفونولوجية المراعية للهجات العربية
-            </h3>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              يفصل المحرك برمجياً بين ثلاث فئات لغوية مختلفة تماماً حتى لا تُعامل اللهجات أو اختصارات الكتابة كأخطاء مرضية:
-              <strong className="text-rose-700 mx-1">
-                (١) إبدال حرفي بصري/صوتي ({phonologicalCandidatesCount})
-              </strong>
-              مثل (التالب ← الطالب) ويتطلب تكرار النمط في السياق،
-              <strong className="text-amber-800 mx-1">
-                (٢) اختلاف إملائي كتابي غير مرضي ({orthographicConventionsCount})
-              </strong>
-              مثل التاء المربوطة والهمزة (المدرسه ↔ المدرسة)،
-              <strong className="text-[#059669] mx-1">
-                (٣) استعمال لهجي عربي صحيح ({validDialectTokensCount})
-              </strong>
-              مثل (شاف، صوب، دهب) ولا يُعدّ خطأً على الإطلاق.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="لهجة الطالب العربي في معالج Dyslexico"
-              value={selectedDialect}
-              onChange={(e) =>
-                setSelectedDialect(e.target.value as ArabicDialectCode)
-              }
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800"
+      {/* MODE 1: SMART ADAPTIVE READER & VISUAL COMFORT */}
+      {studioMode === 'reader' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* 8 Cols: Interactive Dyslexia Reading Canvas + Morphological Breakdown */}
+          <div className="lg:col-span-8 space-y-6">
+            <div
+              className={`border rounded-2xl p-8 transition-colors shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${surfaceStyles[surfaceTheme]}`}
             >
-              {ARABIC_DIALECT_PROFILES.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.labelAr}
-                </option>
-              ))}
-            </select>
-            {DYSLEXICO_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => {
-                  setSelectedDialect(preset.dialect);
-                  setDyslexicoInput(preset.sample);
-                }}
-                className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                {preset.label}
-              </button>
-            ))}
-            {nonExactTokens.length > 0 && (
-              <button
-                type="button"
-                onClick={handleApplyAllCorrections}
-                className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Wand2 className="w-3.5 h-3.5" />
-                <span>موائمة النص إلى الفصحى المدرسية ({nonExactTokens.length})</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left 7 cols: Live Dyslexic Text Input & Interactive Token Correction */}
-          <div className="lg:col-span-7 space-y-4">
-            <div>
-              <label
-                htmlFor="dyslexico-live-input"
-                className="block text-xs font-semibold text-slate-700 mb-1.5"
-              >
-                اختبر أي جملة عربية لملاحظة كيف يميز النظام بين الإبدال الحرفي (التالب)، والاختلاف الإملائي (المدرسه)، والمفردة اللهجية الصحيحة (شاف، صوب):
-              </label>
-              <textarea
-                id="dyslexico-live-input"
-                rows={2}
-                value={dyslexicoInput}
-                onChange={(e) => setDyslexicoInput(e.target.value)}
-                dir="auto"
-                className={`w-full p-3.5 text-base bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-[#0284C7] ${
-                  openDyslexicMode ? 'font-opendyslexic' : ''
-                }`}
-              />
-            </div>
-
-            {/* Interactive Token Strip with 3-Way Color Coding */}
-            <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-6 border-b border-slate-200/60 text-xs opacity-75">
                 <span>
-                  تصنيف الكلمات المدخلة (الأخضر = لهجة صحيحة لا تُعدّ خطأً · الكهرماني = تطبيع إملائي · الوردي = إبدال حرفي):
+                  انقر على أي سطر لتثبيت المسطرة البصرية عليه ·{' '}
+                  {openDyslexicMode
+                    ? 'خط OpenDyslexic مفعّل'
+                    : 'الخط القياسي مفعّل'}
                 </span>
                 <span className="font-mono tabular-nums">
-                  إبدالات حرفية: {phonologicalCandidatesCount} · تطبيع إملائي: {orthographicConventionsCount} · لهجة صحيحة: {validDialectTokensCount}
+                  السطر النشط: {activeLineIdx + 1} / {Math.max(1, lines.length)}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-1" dir="auto">
-                {dyslexicoAnalysis.map((token, idx) => {
-                  if (token.variationCategory === 'exact_lexicon_match') {
-                    return (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg"
-                      >
-                        {token.originalWord}
-                      </span>
-                    );
-                  }
-                  if (
-                    token.variationCategory === 'valid_dialect_lexical' ||
-                    token.variationCategory === 'dialect_phonological_shift'
-                  ) {
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() =>
-                          handleApplyCorrection(
-                            token.originalWord,
-                            token.bestCorrection
-                          )
-                        }
-                        className="px-2.5 py-1 text-sm bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                        title={`${token.variationCategoryLabelAr} — المرادف المدرسي الفصيح: ${token.bestCorrection}`}
-                      >
-                        <span className="text-emerald-900 font-semibold">
-                          ✓ {token.originalWord}
-                        </span>
-                        <span className="text-[11px] text-emerald-700 bg-white/80 px-1.5 py-0.5 rounded">
-                          لهجة صحيحة (الفصحى: {token.bestCorrection})
-                        </span>
-                      </button>
-                    );
-                  }
-                  if (token.variationCategory === 'orthographic_convention') {
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() =>
-                          handleApplyCorrection(
-                            token.originalWord,
-                            token.bestCorrection
-                          )
-                        }
-                        className="px-2.5 py-1 text-sm bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                        title={token.contextualCautionAr}
-                      >
-                        <span className="text-amber-900 font-medium">
-                          {token.originalWord}
-                        </span>
-                        <span className="text-amber-600">↔</span>
-                        <span className="font-bold text-amber-900">
-                          {token.bestCorrection}
-                        </span>
-                        <span className="text-[10px] text-amber-800 bg-white/80 px-1.5 py-0.5 rounded">
-                          تطبيع إملائي (غير مرضي)
-                        </span>
-                      </button>
-                    );
-                  }
+              <div className="space-y-5">
+                {lines.map((line, lIdx) => {
+                  const isFocusedLine = !readingRuler || activeLineIdx === lIdx;
                   return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() =>
-                        handleApplyCorrection(
-                          token.originalWord,
-                          token.bestCorrection
-                        )
-                      }
-                      className="px-2.5 py-1 text-sm bg-rose-50 hover:bg-emerald-50 border border-rose-300 hover:border-emerald-400 rounded-lg transition-colors flex items-center gap-1.5 group cursor-pointer"
-                      title={token.contextualCautionAr}
+                    <div
+                      key={lIdx}
+                      onClick={() => setActiveLineIdx(lIdx)}
+                      onMouseEnter={() => setActiveLineIdx(lIdx)}
+                      style={{
+                        fontSize: `${fontSizePx}px`,
+                        wordSpacing: `${wordSpacingPx}px`,
+                        letterSpacing: `${letterSpacingPx}px`,
+                        lineHeight: lineHeightRatio,
+                      }}
+                      className={`p-3.5 rounded-xl transition-opacity cursor-pointer flex flex-wrap gap-x-3 gap-y-2 ${
+                        openDyslexicMode ? 'font-opendyslexic' : 'font-display'
+                      } ${
+                        isFocusedLine
+                          ? readingRuler
+                            ? surfaceTheme === 'night'
+                              ? 'bg-slate-800/90 ring-2 ring-sky-400 opacity-100'
+                              : 'bg-white/90 ring-2 ring-[#0284C7] shadow-xs opacity-100'
+                            : 'opacity-100'
+                          : 'opacity-30'
+                      }`}
                     >
-                      <span className="underline decoration-rose-500 text-rose-800 font-medium">
-                        {token.originalWord}
-                      </span>
-                      <span className="text-slate-400">←</span>
-                      <span className="font-bold text-[#059669] flex items-center gap-0.5">
-                        {token.bestCorrection}
-                        <Check className="w-3.5 h-3.5" />
-                      </span>
-                    </button>
+                      {line.words.map(({ word, globalIdx }) => {
+                        const isSpoken = highlightedWordIndex === globalIdx;
+                        return (
+                          <span
+                            key={globalIdx}
+                            className={`px-1.5 py-0.5 rounded transition-colors ${
+                              isSpoken
+                                ? 'bg-[#0284C7] text-white font-bold'
+                                : ''
+                            }`}
+                          >
+                            {renderWordWithAssist(word)}
+                          </span>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
             </div>
-          </div>
 
-          {/* Right 5 cols: Pairwise Weighted Levenshtein & Phonetic Hash Calculator */}
-          <div className="lg:col-span-5 bg-[#F8FAFC] border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-4">
-            <div>
-              <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <Code2 className="w-4 h-4 text-[#0284C7]" />
-                  <span>مختبر حساب المسافة الموزونة والكود الصوتي العربي</span>
-                </span>
-                <span className="text-[11px] font-mono text-slate-500">
-                  Weighted DP Matrix
-                </span>
+            {/* Morphological & Syllabic Breakdown Cards */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    التحليل الصرفي والمقطعي للكلمات المختارة
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    الفكرة المحورية: {keyIdea}
+                  </p>
+                </div>
+                <CheckCircle2 className="w-4 h-4 text-[#059669]" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label
-                    htmlFor="pair-source-input"
-                    className="block text-[11px] text-slate-600 mb-1"
-                  >
-                    الكلمة المكتوبة (خطأ ديسلكسي):
-                  </label>
-                  <input
-                    id="pair-source-input"
-                    type="text"
-                    value={pairSource}
-                    onChange={(e) => setPairSource(e.target.value)}
-                    dir="auto"
-                    className="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="pair-target-input"
-                    className="block text-[11px] text-slate-600 mb-1"
-                  >
-                    الكلمة المعجمية الصحيحة:
-                  </label>
-                  <input
-                    id="pair-target-input"
-                    type="text"
-                    value={pairTarget}
-                    onChange={(e) => setPairTarget(e.target.value)}
-                    dir="auto"
-                    className="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Quick Pair Examples */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {[
-                  { s: 'المنضار', t: 'المنظار', label: 'المنضار ↔ المنظار (ض/ظ)' },
-                  { s: 'التالب', t: 'الطالب', label: 'التالب ↔ الطالب (ت/ط)' },
-                  { s: 'المدرسه', t: 'المدرسة', label: 'المدرسه ↔ المدرسة (ه/ة)' },
-                  { s: 'الملاحضات', t: 'الملاحظات', label: 'الملاحضات ↔ الملاحظات' },
-                ].map((ex, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setPairSource(ex.s);
-                      setPairTarget(ex.t);
-                    }}
-                    className="px-2 py-1 text-[11px] font-mono bg-white hover:bg-sky-50 border border-slate-200 rounded text-slate-700 cursor-pointer"
-                  >
-                    {ex.label}
-                  </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200">
+                {wordBreakdowns.map((item, idx) => (
+                  <div key={idx} className="p-6 space-y-2">
+                    <div className="text-lg font-bold text-slate-900 font-display">
+                      {item.word}
+                    </div>
+                    <div className="text-xs text-[#0284C7] font-semibold">
+                      المقاطع: {item.syllables}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      الجذر اللغوي: <strong>{item.root}</strong>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed pt-2 border-t border-slate-100">
+                      {item.meaning}
+                    </p>
+                  </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 text-xs">
-                <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
-                  <div className="text-[11px] text-slate-500">
-                    مسافة ليفنشتاين التقليدية
+              {/* Custom Arabic Text Input Box */}
+              <div className="p-6 bg-slate-50/50 border-t border-slate-200 space-y-2">
+                <label
+                  htmlFor="custom-arabic-text"
+                  className="block text-xs font-semibold text-slate-700"
+                >
+                  أدخل أي نص مخصص لتطبيق خط OpenDyslexic والتقطيع المقطعي والمسطرة البصرية عليه:
+                </label>
+                <div className="flex gap-2">
+                  <textarea
+                    id="custom-arabic-text"
+                    rows={2}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full p-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0284C7]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setText(DEFAULT_ADAPTIVE_TEXT)}
+                    aria-label="استعادة النص الافتراضي"
+                    className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl shrink-0 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>الافتراضي</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Cols: Assistive Controls Deck */}
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 space-y-5 sticky top-24 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
+                <span>تخصيص الراحة البصرية</span>
+              </div>
+              <h3 className="text-base font-bold text-slate-900">
+                إعدادات الخط والتباعد البصري
+              </h3>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => setOpenDyslexicMode(!openDyslexicMode)}
+                className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between cursor-pointer ${
+                  openDyslexicMode
+                    ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">
+                    خط OpenDyslexic ذو الثقل السفلي
                   </div>
-                  <div className="text-lg font-bold font-mono tabular-nums text-slate-800 mt-0.5">
-                    {pairMetrics.standardDistance.toFixed(2)}
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    تكلفة ثابتة (1.0 لكل حرف)
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    زيادة ثقل قاعدة الحرف لمنع تدويره ذهنياً
                   </div>
                 </div>
-                <div className="p-2.5 bg-sky-50/70 border border-sky-200 rounded-lg">
-                  <div className="text-[11px] text-[#0284C7] font-semibold">
-                    مسافة Dyslexico الموزونة
+                <span className="text-xs font-mono font-semibold text-[#0284C7]">
+                  {openDyslexicMode ? 'مفعّل' : 'مغلق'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSyllableMode(!syllableMode);
+                  if (!syllableMode) setLetterColorMode(false);
+                }}
+                className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between cursor-pointer ${
+                  syllableMode
+                    ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">
+                    التقطيع المقطعي الملون
                   </div>
-                  <div className="text-lg font-bold font-mono tabular-nums text-[#0284C7] mt-0.5">
-                    {pairMetrics.weightedDistance.toFixed(2)}
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    تقسيم الكلمة إلى مقاطع صوتية متناوبة الألوان
                   </div>
-                  <div className="text-[10px] text-slate-600">
-                    وزن منخفض للإبدال البصري/الصوتي
+                </div>
+                <span className="text-xs font-mono font-semibold text-[#0284C7]">
+                  {syllableMode ? 'مفعّل' : 'مغلق'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLetterColorMode(!letterColorMode);
+                  if (!letterColorMode) setSyllableMode(false);
+                }}
+                className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between cursor-pointer ${
+                  letterColorMode
+                    ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">
+                    تمييز الحروف المتشابهة رسماً (ب/ت/ث · ج/ح/خ)
                   </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    تلوين المجموعات الحرفية المتجانسة
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-semibold text-[#0284C7]">
+                  {letterColorMode ? 'مفعّل' : 'مغلق'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setReadingRuler(!readingRuler)}
+                className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between cursor-pointer ${
+                  readingRuler
+                    ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="text-xs font-semibold">
+                    المسطرة البصرية لعزل السطر
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    تعتيم الأسطر المجاورة لمنع القفز العمودي
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-semibold text-[#0284C7]">
+                  {readingRuler ? 'مفعّل' : 'مغلق'}
+                </span>
+              </button>
+            </div>
+
+            {/* Labeled Sliders */}
+            <div className="space-y-4 pt-3 border-t border-slate-200">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <label
+                    htmlFor="font-size-slider"
+                    className="font-medium text-slate-700 flex items-center gap-1"
+                  >
+                    <TypeIcon className="w-3.5 h-3.5 text-slate-500" />
+                    <span>حجم الخط</span>
+                  </label>
+                  <span className="font-mono tabular-nums font-semibold text-slate-900">
+                    {fontSizePx} px
+                  </span>
+                </div>
+                <input
+                  id="font-size-slider"
+                  type="range"
+                  min={20}
+                  max={38}
+                  value={fontSizePx}
+                  onChange={(e) => setFontSizePx(Number(e.target.value))}
+                  className="w-full accent-[#0284C7] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <label
+                    htmlFor="word-spacing-slider"
+                    className="font-medium text-slate-700 flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <span>تباعد الكلمات</span>
+                  </label>
+                  <span className="font-mono tabular-nums font-semibold text-slate-900">
+                    {wordSpacingPx} px
+                  </span>
+                </div>
+                <input
+                  id="word-spacing-slider"
+                  type="range"
+                  min={4}
+                  max={24}
+                  value={wordSpacingPx}
+                  onChange={(e) => setWordSpacingPx(Number(e.target.value))}
+                  className="w-full accent-[#0284C7] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <label
+                    htmlFor="letter-spacing-slider"
+                    className="font-medium text-slate-700"
+                  >
+                    تباعد الحروف
+                  </label>
+                  <span className="font-mono tabular-nums font-semibold text-slate-900">
+                    {letterSpacingPx} px
+                  </span>
+                </div>
+                <input
+                  id="letter-spacing-slider"
+                  type="range"
+                  min={0}
+                  max={6}
+                  step={0.5}
+                  value={letterSpacingPx}
+                  onChange={(e) => setLetterSpacingPx(Number(e.target.value))}
+                  className="w-full accent-[#0284C7] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <label
+                    htmlFor="line-height-slider"
+                    className="font-medium text-slate-700"
+                  >
+                    تباعد الأسطر
+                  </label>
+                  <span className="font-mono tabular-nums font-semibold text-slate-900">
+                    {lineHeightRatio.toFixed(1)}x
+                  </span>
+                </div>
+                <input
+                  id="line-height-slider"
+                  type="range"
+                  min={1.5}
+                  max={2.8}
+                  step={0.1}
+                  value={lineHeightRatio}
+                  onChange={(e) => setLineHeightRatio(Number(e.target.value))}
+                  className="w-full accent-[#0284C7] cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <label
+                    htmlFor="pacing-speed-slider"
+                    className="font-medium text-slate-700"
+                  >
+                    سرعة المؤشر الصوتي الإيقاعي
+                  </label>
+                  <span className="font-mono tabular-nums font-semibold text-slate-900">
+                    {pacingIntervalMs} ms/كلمة
+                  </span>
+                </div>
+                <input
+                  id="pacing-speed-slider"
+                  type="range"
+                  min={320}
+                  max={850}
+                  step={20}
+                  value={pacingIntervalMs}
+                  onChange={(e) => setPacingIntervalMs(Number(e.target.value))}
+                  className="w-full accent-[#0284C7] cursor-pointer"
+                />
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {pacingSyncModeLabel}
                 </div>
               </div>
             </div>
 
-            <div className="pt-2.5 border-t border-slate-200 text-[11px] space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600">الكود الصوتي للمدخل:</span>
-                <span className="font-mono font-semibold text-slate-900">
-                  {pairMetrics.codeS}
-                </span>
+            {/* Irlen Visual Comfort Themes */}
+            <div className="pt-3 border-t border-slate-200">
+              <div className="text-xs font-medium text-slate-700 mb-2">
+                لون خلفية القراءة (مرشحات الراحة البصرية):
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600">الكود الصوتي للهدف:</span>
-                <span className="font-mono font-semibold text-[#059669]">
-                  {pairMetrics.codeT}{' '}
-                  {pairMetrics.isPhoneticMatch ? '· تطابق صوتي تام' : ''}
-                </span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'cream', label: 'كريمي دافئ' },
+                  { id: 'sky', label: 'سماوي هادئ' },
+                  { id: 'white', label: 'أبيض نقي' },
+                  { id: 'night', label: 'داكن مريح' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() =>
+                      setSurfaceTheme(
+                        t.id as 'white' | 'cream' | 'sky' | 'night'
+                      )
+                    }
+                    className={`py-2 px-3 text-xs font-medium rounded-lg border transition-colors cursor-pointer ${
+                      surfaceTheme === t.id
+                        ? 'border-[#0284C7] bg-sky-50 text-[#0284C7] font-semibold'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Detailed 3-Way Classification Table */}
-        {nonExactTokens.length > 0 && (
-          <div className="overflow-x-auto pt-2">
-            <table className="w-full text-right border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-[11px] text-slate-500 bg-slate-50">
-                  <th className="py-2 px-3">الكلمة المدخلة</th>
-                  <th className="py-2 px-3">التصنيف اللغوي الدقيق (٣ فئات منفصلة)</th>
-                  <th className="py-2 px-3">المقابل الفصيح</th>
-                  <th className="py-2 px-3">هل يُحتسب كملاحظة عسر قراءة؟</th>
-                  <th className="py-2 px-3">التفسير اللغوي والتربوي</th>
-                  <th className="py-2 px-3">إجراء اختياري</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {nonExactTokens.map((item, idx) => {
-                  const isDialect =
-                    item.variationCategory === 'valid_dialect_lexical' ||
-                    item.variationCategory === 'dialect_phonological_shift';
-                  const isOrtho =
-                    item.variationCategory === 'orthographic_convention';
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/80">
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
-                        {item.originalWord}
-                      </td>
-                      <td className="py-2.5 px-3">
+      {/* MODE 2: DYSLEXICO 3-WAY LINGUISTIC & DIALECT STUDIO */}
+      {studioMode === 'dyslexico' && (
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200">
+            <div className="max-w-2xl space-y-1.5">
+              <div className="text-xs text-slate-500">
+                فصل صارم بين الخطأ القرائي، والتطبيع الإملائي، والمفردة اللهجية الصحيحة
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">
+                محلل الكلمات والمطابقة الفونولوجية المراعية للهجات العربية
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                يفصل المحرك برمجياً بين ثلاث فئات لغوية:
+                <strong className="text-rose-700 mx-1">
+                  (١) إبدال حرفي ({phonologicalCandidatesCount})
+                </strong>
+                ،
+                <strong className="text-amber-800 mx-1">
+                  (٢) اختلاف إملائي كتابي غير مرضي ({orthographicConventionsCount})
+                </strong>
+                ،
+                <strong className="text-[#059669] mx-1">
+                  (٣) استعمال لهجي عربي صحيح ({validDialectTokensCount})
+                </strong>
+                .
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="لهجة الطالب العربي في معالج Dyslexico"
+                value={selectedDialect}
+                onChange={(e) =>
+                  setSelectedDialect(e.target.value as ArabicDialectCode)
+                }
+                className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800"
+              >
+                {ARABIC_DIALECT_PROFILES.map((d) => (
+                  <option key={d.code} value={d.code}>
+                    {d.labelAr}
+                  </option>
+                ))}
+              </select>
+              {DYSLEXICO_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDialect(preset.dialect);
+                    setDyslexicoInput(preset.sample);
+                  }}
+                  className="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {preset.label}
+                </button>
+              ))}
+              {nonExactTokens.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleApplyAllCorrections}
+                  className="px-3.5 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>
+                    موائمة النص إلى الفصحى ({nonExactTokens.length})
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left 7 cols: Live Dyslexic Text Input & Interactive Token Correction */}
+            <div className="lg:col-span-7 space-y-4">
+              <div>
+                <label
+                  htmlFor="dyslexico-live-input"
+                  className="block text-xs font-semibold text-slate-700 mb-2"
+                >
+                  اختبر أي جملة عربية لملاحظة التمييز الثلاثي بين الإبدال الحرفي، والاختلاف الإملائي، واللهجة الصحيحة:
+                </label>
+                <textarea
+                  id="dyslexico-live-input"
+                  rows={3}
+                  value={dyslexicoInput}
+                  onChange={(e) => setDyslexicoInput(e.target.value)}
+                  dir="auto"
+                  className={`w-full p-4 text-base bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0284C7] ${
+                    openDyslexicMode ? 'font-opendyslexic' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Interactive Token Strip with 3-Way Color Coding */}
+              <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                  <span>تصنيف الكلمات المدخلة (انقر على الكلمة لتطبيق المقابل الفصيح):</span>
+                  <span className="font-mono tabular-nums">
+                    إبدالات: {phonologicalCandidatesCount} · إملاء:{' '}
+                    {orthographicConventionsCount} · لهجة:{' '}
+                    {validDialectTokensCount}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1" dir="auto">
+                  {dyslexicoAnalysis.map((token, idx) => {
+                    if (token.variationCategory === 'exact_lexicon_match') {
+                      return (
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            isDialect
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              : isOrtho
-                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                : 'bg-rose-50 text-rose-800 border border-rose-200'
-                          }`}
+                          key={idx}
+                          className="px-2.5 py-1 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg"
                         >
-                          {item.variationCategoryLabelAr}
+                          {token.originalWord}
                         </span>
-                      </td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-[#059669]">
-                        {item.bestCorrection}
-                      </td>
-                      <td className="py-2.5 px-3 font-semibold">
-                        {item.isDyslexiaScreeningCandidate ? (
-                          <span className="text-amber-800">
-                            فقط عند التكرار في السياق
-                          </span>
-                        ) : (
-                          <span className="text-[#059669]">
-                            لا (استعمال لهجي أو إملائي طبيعي)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-600">
-                        {item.contextualCautionAr}
-                      </td>
-                      <td className="py-2.5 px-3">
+                      );
+                    }
+                    if (
+                      token.variationCategory === 'valid_dialect_lexical' ||
+                      token.variationCategory === 'dialect_phonological_shift'
+                    ) {
+                      return (
                         <button
+                          key={idx}
                           type="button"
                           onClick={() =>
                             handleApplyCorrection(
-                              item.originalWord,
-                              item.bestCorrection
+                              token.originalWord,
+                              token.bestCorrection
                             )
                           }
-                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors whitespace-nowrap"
+                          className="px-2.5 py-1 text-sm bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title={`${token.variationCategoryLabelAr} — المرادف المدرسي الفصيح: ${token.bestCorrection}`}
                         >
-                          استبدال بالفصحى
+                          <span className="text-emerald-900 font-semibold">
+                            ✓ {token.originalWord}
+                          </span>
+                          <span className="text-[11px] text-emerald-700 bg-white/80 px-1.5 py-0.5 rounded">
+                            لهجة ({token.bestCorrection})
+                          </span>
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* Main Split Grid: Left/Top Interactive Reading Stage (8 cols) + Right Control Deck (4 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* 8 Cols: Interactive Dyslexia Reading Canvas + Morphological Breakdown */}
-        <div className="lg:col-span-8 space-y-6">
-          <div
-            className={`border rounded-xl p-8 transition-colors ${surfaceStyles[surfaceTheme]}`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-6 border-b border-slate-200/60 text-xs opacity-75">
-              <span>
-                انقر على أي سطر لتثبيت المسطرة البصرية عليه ·{' '}
-                {openDyslexicMode
-                  ? 'خط OpenDyslexic ثنائي الثقل السفلي مفعّل لمنع تدوير الحروف'
-                  : 'الخط القياسي مفعّل'}
-              </span>
-              <span className="font-mono tabular-nums">
-                السطر النشط: {activeLineIdx + 1} / {Math.max(1, lines.length)}
-              </span>
-            </div>
-
-            <div className="space-y-5">
-              {lines.map((line, lIdx) => {
-                const isFocusedLine = !readingRuler || activeLineIdx === lIdx;
-                return (
-                  <div
-                    key={lIdx}
-                    onClick={() => setActiveLineIdx(lIdx)}
-                    onMouseEnter={() => setActiveLineIdx(lIdx)}
-                    style={{
-                      fontSize: `${fontSizePx}px`,
-                      wordSpacing: `${wordSpacingPx}px`,
-                      letterSpacing: `${letterSpacingPx}px`,
-                      lineHeight: lineHeightRatio,
-                    }}
-                    className={`p-3.5 rounded-xl transition-opacity cursor-pointer flex flex-wrap gap-x-3 gap-y-2 ${
-                      openDyslexicMode ? 'font-opendyslexic' : 'font-display'
-                    } ${
-                      isFocusedLine
-                        ? readingRuler
-                          ? surfaceTheme === 'night'
-                            ? 'bg-slate-800/90 ring-2 ring-sky-400 opacity-100'
-                            : 'bg-white/90 ring-2 ring-[#0284C7] shadow-xs opacity-100'
-                          : 'opacity-100'
-                        : 'opacity-30'
-                    }`}
-                  >
-                    {line.words.map(({ word, globalIdx }) => {
-                      const isSpoken = highlightedWordIndex === globalIdx;
-                      return (
-                        <span
-                          key={globalIdx}
-                          className={`px-1.5 py-0.5 rounded transition-colors ${
-                            isSpoken
-                              ? 'bg-[#0284C7] text-white font-bold'
-                              : ''
-                          }`}
-                        >
-                          {renderWordWithAssist(word)}
-                        </span>
                       );
-                    })}
+                    }
+                    if (token.variationCategory === 'orthographic_convention') {
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() =>
+                            handleApplyCorrection(
+                              token.originalWord,
+                              token.bestCorrection
+                            )
+                          }
+                          className="px-2.5 py-1 text-sm bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title={token.contextualCautionAr}
+                        >
+                          <span className="text-amber-900 font-medium">
+                            {token.originalWord}
+                          </span>
+                          <span className="text-amber-600">↔</span>
+                          <span className="font-bold text-amber-900">
+                            {token.bestCorrection}
+                          </span>
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() =>
+                          handleApplyCorrection(
+                            token.originalWord,
+                            token.bestCorrection
+                          )
+                        }
+                        className="px-2.5 py-1 text-sm bg-rose-50 hover:bg-emerald-50 border border-rose-300 hover:border-emerald-400 rounded-lg transition-colors flex items-center gap-1.5 group cursor-pointer"
+                        title={token.contextualCautionAr}
+                      >
+                        <span className="underline decoration-rose-500 text-rose-800 font-medium">
+                          {token.originalWord}
+                        </span>
+                        <span className="text-slate-400">←</span>
+                        <span className="font-bold text-[#059669] flex items-center gap-0.5">
+                          {token.bestCorrection}
+                          <Check className="w-3.5 h-3.5" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right 5 cols: Pairwise Weighted Levenshtein & Phonetic Hash Calculator */}
+            <div className="lg:col-span-5 bg-[#F8FAFC] border border-slate-200 rounded-xl p-5 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Code2 className="w-4 h-4 text-[#0284C7]" />
+                    <span>مقارنة المسافة الموزونة والكود الصوتي</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label
+                      htmlFor="pair-source-input"
+                      className="block text-[11px] text-slate-600 mb-1"
+                    >
+                      الكلمة المكتوبة:
+                    </label>
+                    <input
+                      id="pair-source-input"
+                      type="text"
+                      value={pairSource}
+                      onChange={(e) => setPairSource(e.target.value)}
+                      dir="auto"
+                      className="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-200 rounded-lg"
+                    />
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Morphological & Syllabic Breakdown Cards */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  التحليل الصرفي والمقطعي للكلمات المركبة (AI Morphological Decoder)
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  الفكرة المحورية: {keyIdea}
-                </p>
-              </div>
-              <CheckCircle2 className="w-4 h-4 text-[#059669]" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {wordBreakdowns.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2"
-                >
-                  <div className="text-lg font-bold text-slate-900 font-display">
-                    {item.word}
+                  <div>
+                    <label
+                      htmlFor="pair-target-input"
+                      className="block text-[11px] text-slate-600 mb-1"
+                    >
+                      الكلمة المعجمية الصحيحة:
+                    </label>
+                    <input
+                      id="pair-target-input"
+                      type="text"
+                      value={pairTarget}
+                      onChange={(e) => setPairTarget(e.target.value)}
+                      dir="auto"
+                      className="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-200 rounded-lg"
+                    />
                   </div>
-                  <div className="text-xs text-[#0284C7] font-semibold">
-                    المقاطع: {item.syllables}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {[
+                    {
+                      s: 'المنضار',
+                      t: 'المنظار',
+                      label: 'المنضار ↔ المنظار',
+                    },
+                    { s: 'التالب', t: 'الطالب', label: 'التالب ↔ الطالب' },
+                    { s: 'المدرسه', t: 'المدرسة', label: 'المدرسه ↔ المدرسة' },
+                  ].map((ex, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setPairSource(ex.s);
+                        setPairTarget(ex.t);
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-mono bg-white hover:bg-sky-50 border border-slate-200 rounded-md text-slate-700 cursor-pointer"
+                    >
+                      {ex.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                    <div className="text-[11px] text-slate-500">
+                      مسافة ليفنشتاين التقليدية
+                    </div>
+                    <div className="text-lg font-bold font-mono tabular-nums text-slate-800 mt-0.5">
+                      {pairMetrics.standardDistance.toFixed(2)}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-600">
-                    الجذر اللغوي: <strong>{item.root}</strong>
+                  <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl">
+                    <div className="text-[11px] text-[#0284C7] font-semibold">
+                      مسافة Dyslexico الموزونة
+                    </div>
+                    <div className="text-lg font-bold font-mono tabular-nums text-[#0284C7] mt-0.5">
+                      {pairMetrics.weightedDistance.toFixed(2)}
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1 border-t border-slate-200">
-                    {item.meaning}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Custom Arabic Text Input Box */}
-            <div className="pt-4 border-t border-slate-200 space-y-2">
-              <label
-                htmlFor="custom-arabic-text"
-                className="block text-xs font-medium text-slate-700"
-              >
-                أدخل أي نص عربي أو إنجليزي مخصص لتطبيق خط OpenDyslexic والتقطيع المقطعي والمسطرة البصرية عليه:
-              </label>
-              <div className="flex gap-2">
-                <textarea
-                  id="custom-arabic-text"
-                  rows={2}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="w-full p-3 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setText(DEFAULT_ADAPTIVE_TEXT)}
-                  aria-label="استعادة النص الافتراضي"
-                  className="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg shrink-0 flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>الافتراضي</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Cols: Assistive Controls Deck */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-xl p-6 space-y-5 sticky top-6">
-          <div className="pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>هندسة الواجهة البصرية (CSS / UI Anti-Crowding)</span>
-            </div>
-            <h3 className="text-base font-bold text-slate-900">
-              إعدادات خط OpenDyslexic والتباعد البصري
-            </h3>
-          </div>
-
-          <div className="space-y-2.5">
-            {/* OpenDyslexic Bottom-Heavy Toggle */}
-            <button
-              type="button"
-              onClick={() => setOpenDyslexicMode(!openDyslexicMode)}
-              className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between ${
-                openDyslexicMode
-                  ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-semibold">
-                  خط OpenDyslexic ذو الثقل السفلي (Bottom-Heavy)
-                </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  زيادة ثقل قاعدة الحرف لمنع الدماغ من قلبه أو تدويره ذهنياً
                 </div>
               </div>
-              <span className="text-xs font-mono font-semibold text-[#0284C7]">
-                {openDyslexicMode ? 'مفعّل' : 'مغلق'}
-              </span>
-            </button>
 
-            {/* Toggle 1: Syllabic Coloring */}
-            <button
-              type="button"
-              onClick={() => {
-                setSyllableMode(!syllableMode);
-                if (!syllableMode) setLetterColorMode(false);
-              }}
-              className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between ${
-                syllableMode
-                  ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-semibold">
-                  التقطيع المقطعي الملون (Syllabic Chunking)
+              <div className="pt-3 border-t border-slate-200 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">الكود الصوتي للمدخل:</span>
+                  <span className="font-mono font-semibold text-slate-900">
+                    {pairMetrics.codeS}
+                  </span>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  تقسيم الكلمة إلى مقاطع صوتية متناوبة الألوان
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">الكود الصوتي للهدف:</span>
+                  <span className="font-mono font-semibold text-[#059669]">
+                    {pairMetrics.codeT}{' '}
+                    {pairMetrics.isPhoneticMatch ? '· تطابق صوتي' : ''}
+                  </span>
                 </div>
-              </div>
-              <span className="text-xs font-mono font-semibold text-[#0284C7]">
-                {syllableMode ? 'مفعّل' : 'مغلق'}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setLetterColorMode(!letterColorMode);
-                if (!letterColorMode) setSyllableMode(false);
-              }}
-              className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between ${
-                letterColorMode
-                  ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-semibold">
-                  تمييز الحروف المتشابهة رسماً (ب/ت/ث · ج/ح/خ)
-                </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  تلوين المجموعات الحرفية المتجانسة لمنع الإبدال
-                </div>
-              </div>
-              <span className="text-xs font-mono font-semibold text-[#0284C7]">
-                {letterColorMode ? 'مفعّل' : 'مغلق'}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setReadingRuler(!readingRuler)}
-              className={`w-full p-3.5 rounded-xl border text-right transition-colors flex items-center justify-between ${
-                readingRuler
-                  ? 'bg-sky-50/70 border-[#0284C7] text-slate-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-semibold">
-                  المسطرة البصرية لعزل السطر (Reading Ruler)
-                </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  تعتيم الأسطر المجاورة لمنع القفز البصري العمودي
-                </div>
-              </div>
-              <span className="text-xs font-mono font-semibold text-[#0284C7]">
-                {readingRuler ? 'مفعّل' : 'مغلق'}
-              </span>
-            </button>
-          </div>
-
-          {/* Labeled Sliders for Visual Crowding Reduction */}
-          <div className="space-y-4 pt-3 border-t border-slate-200">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <label
-                  htmlFor="font-size-slider"
-                  className="font-medium text-slate-700 flex items-center gap-1"
-                >
-                  <TypeIcon className="w-3.5 h-3.5 text-slate-500" />
-                  <span>حجم الخط (Font Size)</span>
-                </label>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {fontSizePx} px
-                </span>
-              </div>
-              <input
-                id="font-size-slider"
-                type="range"
-                min={20}
-                max={38}
-                value={fontSizePx}
-                onChange={(e) => setFontSizePx(Number(e.target.value))}
-                className="w-full accent-[#0284C7] cursor-pointer"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <label
-                  htmlFor="word-spacing-slider"
-                  className="font-medium text-slate-700 flex items-center gap-1"
-                >
-                  <Eye className="w-3.5 h-3.5 text-slate-500" />
-                  <span>تباعد الكلمات (Word Spacing)</span>
-                </label>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {wordSpacingPx} px
-                </span>
-              </div>
-              <input
-                id="word-spacing-slider"
-                type="range"
-                min={4}
-                max={24}
-                value={wordSpacingPx}
-                onChange={(e) => setWordSpacingPx(Number(e.target.value))}
-                className="w-full accent-[#0284C7] cursor-pointer"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <label
-                  htmlFor="letter-spacing-slider"
-                  className="font-medium text-slate-700"
-                >
-                  تباعد الحروف (Letter Spacing - منع التزاحم البصري)
-                </label>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {letterSpacingPx} px
-                </span>
-              </div>
-              <input
-                id="letter-spacing-slider"
-                type="range"
-                min={0}
-                max={6}
-                step={0.5}
-                value={letterSpacingPx}
-                onChange={(e) => setLetterSpacingPx(Number(e.target.value))}
-                className="w-full accent-[#0284C7] cursor-pointer"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <label
-                  htmlFor="line-height-slider"
-                  className="font-medium text-slate-700"
-                >
-                  تباعد الأسطر (Line Height)
-                </label>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {lineHeightRatio.toFixed(1)}x
-                </span>
-              </div>
-              <input
-                id="line-height-slider"
-                type="range"
-                min={1.5}
-                max={2.8}
-                step={0.1}
-                value={lineHeightRatio}
-                onChange={(e) => setLineHeightRatio(Number(e.target.value))}
-                className="w-full accent-[#0284C7] cursor-pointer"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
-                <label
-                  htmlFor="pacing-speed-slider"
-                  className="font-medium text-slate-700"
-                >
-                  سرعة المؤشر البصري الإيقاعي (عند غياب توقيت الكلمات من المتصفح)
-                </label>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {pacingIntervalMs} ms/كلمة
-                </span>
-              </div>
-              <input
-                id="pacing-speed-slider"
-                type="range"
-                min={320}
-                max={850}
-                step={20}
-                value={pacingIntervalMs}
-                onChange={(e) => setPacingIntervalMs(Number(e.target.value))}
-                className="w-full accent-[#0284C7] cursor-pointer"
-              />
-              <div className="text-[10px] text-slate-500 mt-1">
-                حالة المؤشر الحالية: {pacingSyncModeLabel}
               </div>
             </div>
           </div>
 
-          {/* Irlen Visual Comfort Themes */}
-          <div className="pt-3 border-t border-slate-200">
-            <div className="text-xs font-medium text-slate-700 mb-2">
-              لون خلفية القراءة (لتقليل الإجهاد البصري - Irlen Filters):
+          {/* Detailed 3-Way Classification Table */}
+          {nonExactTokens.length > 0 && (
+            <div className="overflow-x-auto pt-4 border-t border-slate-200">
+              <table className="w-full text-right border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[11px] text-slate-500 bg-slate-50">
+                    <th className="py-2.5 px-3">الكلمة المدخلة</th>
+                    <th className="py-2.5 px-3">التصنيف اللغوي الدقيق</th>
+                    <th className="py-2.5 px-3">المقابل الفصيح</th>
+                    <th className="py-2.5 px-3">هل يُحتسب كملاحظة عسر قراءة؟</th>
+                    <th className="py-2.5 px-3">التفسير اللغوي والتربوي</th>
+                    <th className="py-2.5 px-3">إجراء</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {nonExactTokens.map((item, idx) => {
+                    const isDialect =
+                      item.variationCategory === 'valid_dialect_lexical' ||
+                      item.variationCategory === 'dialect_phonological_shift';
+                    const isOrtho =
+                      item.variationCategory === 'orthographic_convention';
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/80">
+                        <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                          {item.originalWord}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span
+                            className={`font-semibold ${
+                              isDialect
+                                ? 'text-[#059669]'
+                                : isOrtho
+                                  ? 'text-[#D97706]'
+                                  : 'text-[#DC2626]'
+                            }`}
+                          >
+                            {item.variationCategoryLabelAr}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-[#059669]">
+                          {item.bestCorrection}
+                        </td>
+                        <td className="py-3 px-3 font-semibold">
+                          {item.isDyslexiaScreeningCandidate ? (
+                            <span className="text-amber-800">
+                              فقط عند التكرار في السياق
+                            </span>
+                          ) : (
+                            <span className="text-[#059669]">
+                              لا (استعمال لهجي أو إملائي طبيعي)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600">
+                          {item.contextualCautionAr}
+                        </td>
+                        <td className="py-3 px-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleApplyCorrection(
+                                item.originalWord,
+                                item.bestCorrection
+                              )
+                            }
+                            className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
+                          >
+                            استبدال بالفصحى
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'cream', label: 'كريمي دافئ (موصى به)' },
-                { id: 'sky', label: 'سماوي هادئ' },
-                { id: 'white', label: 'أبيض نقي' },
-                { id: 'night', label: 'داكن مريح' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() =>
-                    setSurfaceTheme(t.id as 'white' | 'cream' | 'sky' | 'night')
-                  }
-                  className={`py-2 px-3 text-xs font-medium rounded-lg border transition-colors ${
-                    surfaceTheme === t.id
-                      ? 'border-[#0284C7] bg-sky-50 text-[#0284C7] font-semibold'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };

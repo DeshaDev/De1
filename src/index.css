@@ -2,19 +2,37 @@
 
 @layer base {
   :root {
+    /* Primitive & Semantic Design Tokens (Enterprise Clinical System) */
     --font-display: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
     --font-sans: 'IBM Plex Sans Arabic', sans-serif;
-    --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', monospace;
+
+    --surface-canvas: #F8FAFC;
+    --surface-card: #FFFFFF;
+    --surface-subtle: #F1F5F9;
+    --border-hairline: #E2E8F0;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --accent-primary: #0284C7;
+    --accent-primary-hover: #0369A1;
   }
 
   body {
     font-family: var(--font-sans);
+    background-color: var(--surface-canvas);
+    color: var(--text-primary);
     direction: rtl;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
   }
 
-  h1, h2, h3, .font-display {
+  h1, h2, h3, h4, .font-display {
     font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 
   .font-mono, .tabular-nums {
@@ -28,4 +46,3 @@
     text-underline-offset: 6px;
   }
 }
-

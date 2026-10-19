@@ -3,14 +3,13 @@ import {
   Search,
   Sparkles,
   Eye,
-  Calculator,
-  BookOpen,
   BarChart3,
   CheckCircle2,
   ArrowLeft,
-  Cpu,
   Trash2,
   ShieldCheck,
+  FileText,
+  Users,
 } from 'lucide-react';
 import {
   INITIAL_STUDENTS,
@@ -31,17 +30,24 @@ type ActiveTab =
   | 'adaptive-reader'
   | 'algorithms-lab';
 
+type DashboardSubView = 'roster' | 'scanpath' | 'report';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [dashboardSubView, setDashboardSubView] =
+    useState<DashboardSubView>('roster');
   const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     INITIAL_STUDENTS[0].id
   );
-  const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] = useState<boolean>(false);
+  const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
+    useState<boolean>(false);
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'nominal'>('all');
+  const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'nominal'>(
+    'all'
+  );
   const [hideDemoRecords, setHideDemoRecords] = useState<boolean>(false);
 
   // Live Gemini AI re-analysis state
@@ -54,7 +60,12 @@ export default function App() {
     authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data && Array.isArray(data.students) && data.students.length > 0) {
+        if (
+          !cancelled &&
+          data &&
+          Array.isArray(data.students) &&
+          data.students.length > 0
+        ) {
           setStudents(data.students);
           setSelectedStudentId((prev) =>
             data.students.some((s: StudentRecord) => s.id === prev)
@@ -101,11 +112,15 @@ export default function App() {
   });
 
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
-    setStudents((prev) => [newRecord, ...prev.filter((s) => s.id !== newRecord.id)]);
+    setStudents((prev) => [
+      newRecord,
+      ...prev.filter((s) => s.id !== newRecord.id),
+    ]);
     setSelectedStudentId(newRecord.id);
     setActiveTab('dashboard');
+    setDashboardSubView('report');
     setAiStatusBanner(
-      `تم تسجيل جلسة تتبع العين للطالب (${newRecord.name}) وحفظها في قاعدة البيانات المحمية وإصدار التقرير بنجاح.`
+      `تم تسجيل جلسة الفحص للطالب (${newRecord.name}) وحفظها بنجاح.`
     );
     try {
       await authenticatedFetch('/api/students', {
@@ -130,11 +145,14 @@ export default function App() {
       prev.map((s) => (s.id === studentId ? { ...s, ...updated } : s))
     );
     try {
-      await authenticatedFetch(`/api/students/${encodeURIComponent(studentId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
+      await authenticatedFetch(
+        `/api/students/${encodeURIComponent(studentId)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        }
+      );
     } catch {
       // Updated locally
     }
@@ -149,11 +167,14 @@ export default function App() {
       setSelectedStudentId(remaining[0].id);
     }
     try {
-      await authenticatedFetch(`/api/students/${encodeURIComponent(studentId)}`, {
-        method: 'DELETE',
-      });
+      await authenticatedFetch(
+        `/api/students/${encodeURIComponent(studentId)}`,
+        {
+          method: 'DELETE',
+        }
+      );
       setAiStatusBanner(
-        `تم حذف سجل الطالب (${target?.name || studentId}) نهائياً من قاعدة البيانات التزاماً بحق الخصوصية ومحو البيانات.`
+        `تم حذف سجل الطالب (${target?.name || studentId}) نهائياً التزاماً بحق الخصوصية ومحو البيانات.`
       );
     } catch {
       // Removed locally
@@ -198,18 +219,23 @@ export default function App() {
                 : s
             )
           );
-          await authenticatedFetch(`/api/students/${encodeURIComponent(selectedStudent.id)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clinicalReport: data.report }),
-          }).catch(() => {});
+          await authenticatedFetch(
+            `/api/students/${encodeURIComponent(selectedStudent.id)}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clinicalReport: data.report }),
+            }
+          ).catch(() => {});
           setAiStatusBanner(
-            `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}) مع إخفاء الهوية الشخصية (Pseudonymization).`
+            `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
           );
         }
       }
     } catch {
-      setAiStatusBanner('تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.');
+      setAiStatusBanner(
+        'تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.'
+      );
     } finally {
       setIsGeneratingAI(false);
     }
@@ -218,7 +244,7 @@ export default function App() {
   return (
     <div className="min-h-screen w-full overflow-x-hidden flex flex-col bg-[#F8FAFC] text-[#0F172A]">
       {/* Strict 3-Zone Top Bar Contract */}
-      <header className="flex items-center justify-between gap-4 sm:gap-8 px-4 sm:px-6 py-4 bg-white border-b border-slate-200">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
         {/* Zone 1: Single text element wordmark */}
         <a
           href="#top"
@@ -234,12 +260,12 @@ export default function App() {
         {/* Zone 2: 5 concise single-line text navigation links */}
         <nav
           aria-label="التنقل الرئيسي"
-          className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
+          className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600"
         >
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'dashboard'
                 ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
@@ -250,7 +276,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveTab('eye-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'eye-lab'
                 ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
@@ -261,7 +287,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveTab('dyscalculia-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'dyscalculia-lab'
                 ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
@@ -272,18 +298,18 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveTab('adaptive-reader')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'adaptive-reader'
                 ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            القارئ الذكي وDyslexico
+            القارئ الذكي والتحليل اللغوي
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('algorithms-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'algorithms-lab'
                 ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
@@ -298,7 +324,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveTab('eye-lab')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-lg transition-colors whitespace-nowrap shrink-0"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
           >
             فحص طالب جديد
           </button>
@@ -306,7 +332,7 @@ export default function App() {
       </header>
 
       {/* Mobile Navigation Strip (visible only below md) */}
-      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1 overflow-x-auto">
+      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
           { id: 'dashboard', label: 'لوحة النتائج' },
           { id: 'eye-lab', label: 'تتبع العين' },
@@ -318,7 +344,7 @@ export default function App() {
             key={item.id}
             type="button"
             onClick={() => setActiveTab(item.id as ActiveTab)}
-            className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 ${
               activeTab === item.id
                 ? 'bg-[#0F172A] text-white'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -330,9 +356,9 @@ export default function App() {
       </div>
 
       {/* Main Content Container */}
-      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-8 space-y-8">
         {aiStatusBanner && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-950">
+          <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-950">
             <div className="flex items-center gap-2 font-medium">
               <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
               <span>{aiStatusBanner}</span>
@@ -340,96 +366,92 @@ export default function App() {
             <button
               type="button"
               onClick={() => setAiStatusBanner('')}
-              className="text-emerald-700 hover:underline font-medium shrink-0"
+              className="text-emerald-700 hover:underline font-medium shrink-0 cursor-pointer"
             >
               إغلاق
             </button>
           </div>
         )}
 
-        {/* VIEW 1: CLINICAL DASHBOARD (LEXPLORE PORTAL) */}
+        {/* VIEW 1: EXECUTIVE CLINICAL DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Hero / Clinical Context Bar */}
-            <section className="bg-white border border-slate-200 rounded-xl p-6">
-              <div className="flex flex-wrap items-start justify-between gap-6">
-                <div className="space-y-2 max-w-3xl">
+          <div className="space-y-8">
+            {/* Unified Executive Header & 4-Metric Hairline Ribbon (Single-Elevation, Zero Card-in-Card) */}
+            <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
+                <div className="space-y-1.5 max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>منصة الفحص التربوي الأولي ومؤشرات القراءة والحساب (لا تُغني عن التقييم الإكلينيكي المتخصص)</span>
+                    <span>منصة الفرز التربوي الأولي</span>
                     <span aria-hidden="true">·</span>
-                    <span>تحليل حركة العين والذكاء الاصطناعي للغة العربية</span>
+                    <span>الصف {selectedStudent.gradeLevel}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{selectedStudent.schoolName}</span>
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display text-balance">
-                    لوحة الفحص الأولي ومؤشرات عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكالكوليا)
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
+                    ملخص المؤشرات القرائية والحسابية — {selectedStudent.name}
                   </h1>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    يرصد النظام التثبيتات البصرية (Fixations) والقفزات التراجعية (Regressions) بالملي ثانية عبر خوارزميات PyGaze وGazeParser، مع تمييز ثلاثي بين الإبدال الحرفي والتطبيع الإملائي واللهجة العربية الصحيحة، واختبارات تكيفية بنظرية استجابة الفقرة (2PL IRT).
-                  </p>
                 </div>
 
-                {/* Quick Action Triggers */}
-                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('eye-lab')}
-                    className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0F172A] hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                {/* Active Student Quick Switcher & Primary Action */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <label
+                    htmlFor="dashboard-student-select"
+                    className="text-xs font-medium text-slate-500 whitespace-nowrap"
                   >
-                    <Eye className="w-3.5 h-3.5 text-sky-400" />
-                    <span>مختبر تتبع العين</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('adaptive-reader')}
-                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    الطالب المحدد:
+                  </label>
+                  <select
+                    id="dashboard-student-select"
+                    value={selectedStudent.id}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    className="px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:border-[#0284C7]"
                   >
-                    <BookOpen className="w-3.5 h-3.5 text-[#059669]" />
-                    <span>استوديو Dyslexico والقارئ</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('algorithms-lab')}
-                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                  >
-                    <Cpu className="w-3.5 h-3.5 text-[#0284C7]" />
-                    <span>مختبر IRT والتقييم الصوتي</span>
-                  </button>
+                    {students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} — الصف {s.gradeLevel}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* 4-Column Clinical KPI Strip for Active Student */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200">
-                <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl">
+              {/* Flat Hairline-Divided 4-Column Metric Strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-200 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 bg-slate-50/40">
+                <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    سرعة القراءة ({selectedStudent.name})
+                    سرعة القراءة والفهم
                   </div>
-                  <div className="mt-1 flex items-baseline justify-between">
+                  <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
                       {selectedStudent.wpm}{' '}
                       <span className="text-xs font-normal text-slate-500">
-                        كلمة/دقيقة
+                        كلمة/د
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      المئين {selectedStudent.readingPercentile}
+                      المئين P{selectedStudent.readingPercentile}
                     </span>
                   </div>
-                  <div className="mt-1.5 text-xs text-slate-600">
+                  <div className="text-xs text-slate-600 pt-1">
                     {selectedStudent.readingRiskLevel === 'high'
                       ? '■ دون المعيار العمري المتوقع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
-                        : '● طلاقة قرائية طبيعية'}
+                        : '● طلاقة قرائية طبيعية'}{' '}
+                    · فهم {selectedStudent.comprehensionScore}%
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl">
+                <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
                     متوسط زمن التثبيت البصري (Fixation)
                   </div>
-                  <div className="mt-1 flex items-baseline justify-between">
+                  <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
                       {selectedStudent.avgFixationMs}{' '}
-                      <span className="text-xs font-normal text-slate-500">ms</span>
+                      <span className="text-xs font-normal text-slate-500">
+                        ms
+                      </span>
                     </span>
                     <span
                       className={`text-xs font-semibold ${
@@ -447,24 +469,25 @@ export default function App() {
                           : '● معياري (220ms)'}
                     </span>
                   </div>
-                  <div className="mt-1.5 text-xs text-slate-600">
-                    يقيس زمن معالجة الكلمة بصرياً وصوتياً · معدل الرمش:{' '}
-                    <strong className="font-mono text-slate-900">
-                      {selectedStudent.blinksPerMinute ?? 16} رمشة/د
-                    </strong>
+                  <div className="text-xs text-slate-600 pt-1">
+                    الرمش:{' '}
+                    <span className="font-mono tabular-nums font-semibold text-slate-900">
+                      {selectedStudent.blinksPerMinute ?? 16}
+                    </span>{' '}
+                    رمشة/دقيقة
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl">
+                <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    التراجعات ومعدل الرمش (Blink Rate)
+                    القفزات التراجعية (Regressions)
                   </div>
-                  <div className="mt-1 flex items-baseline justify-between">
+                  <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
                       {selectedStudent.regressionRate}%
                     </span>
                     <span
-                      className={`text-xs font-mono tabular-nums font-semibold ${
+                      className={`text-xs font-semibold ${
                         selectedStudent.visualStrainLevel === 'severe'
                           ? 'text-[#DC2626]'
                           : selectedStudent.visualStrainLevel === 'moderate'
@@ -472,44 +495,44 @@ export default function App() {
                             : 'text-[#059669]'
                       }`}
                     >
-                      {selectedStudent.blinksPerMinute ?? 16} رمشة/دقيقة
+                      {selectedStudent.regressionRate > 22
+                        ? '■ تراجع مرتفع'
+                        : '● مسح بصري مستقر'}
                     </span>
                   </div>
-                  <div className="mt-1.5 text-xs text-slate-600">
+                  <div className="text-xs text-slate-600 pt-1 truncate">
                     {selectedStudent.visualStrainLabelAr ||
-                      (selectedStudent.regressionRate > 22
-                        ? '■ تردد وإجهاد بصري مرتفع'
-                        : '● راحة بصرية ومسح مستقر')}
+                      'استقرار حركة العين أثناء القراءة'}
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl">
+                <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    مؤشر الديسكالكوليا وخط الأعداد (PAE)
+                    مؤشر خط الأعداد والحساب (PAE)
                   </div>
                   {selectedStudent.mathRiskLevel === 'unassessed' ||
                   selectedStudent.dyscalculiaAssessed === false ||
                   selectedStudent.numberLinePAE === null ? (
                     <>
-                      <div className="mt-1 flex items-baseline justify-between">
+                      <div className="flex items-baseline justify-between gap-2">
                         <span className="text-base font-bold text-slate-600">
                           غير مُقيَّم بعد
                         </span>
                         <button
                           type="button"
                           onClick={() => setActiveTab('dyscalculia-lab')}
-                          className="text-xs font-semibold text-[#0284C7] hover:underline"
+                          className="text-xs font-semibold text-[#0284C7] hover:underline cursor-pointer"
                         >
-                          بدء اختبار الحساب ←
+                          بدء الفحص ←
                         </button>
                       </div>
-                      <div className="mt-1.5 text-xs text-slate-500">
-                        لم يُستكمل اختبار خط الأعداد والإدراك الكمي في هذه الجلسة
+                      <div className="text-xs text-slate-500 pt-1">
+                        لم يُستكمل تقييم خط الأعداد بعد
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-1 flex items-baseline justify-between">
+                      <div className="flex items-baseline justify-between gap-2">
                         <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
                           {selectedStudent.numberLinePAE}%
                         </span>
@@ -529,48 +552,104 @@ export default function App() {
                               : '● حس عددي سليم'}
                         </span>
                       </div>
-                      <div className="mt-1.5 text-xs text-slate-600">
-                        دقة الإدراك الكمي: {selectedStudent.subitizingAccuracy}% · عكس أرقام:{' '}
-                        {selectedStudent.reversalErrorCount}
+                      <div className="text-xs text-slate-600 pt-1">
+                        الإدراك الكمي: {selectedStudent.subitizingAccuracy}% ·
+                        عكس أرقام: {selectedStudent.reversalErrorCount}
                       </div>
                     </>
                   )}
                 </div>
               </div>
+            </section>
 
-              {/* Clinical Methodology & Data Protection Disclosure Strip */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#059669] shrink-0" />
+            {/* Segmented Sub-Navigation Bar for Progressive Disclosure */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+              <div
+                role="tablist"
+                aria-label="أقسام لوحة القياس"
+                className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-200/70 rounded-xl"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={dashboardSubView === 'roster'}
+                  onClick={() => setDashboardSubView('roster')}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                    dashboardSubView === 'roster'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-[#0284C7]" />
+                  <span>١. سجل الطلاب والمئينات ({students.length})</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={dashboardSubView === 'scanpath'}
+                  onClick={() => setDashboardSubView('scanpath')}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                    dashboardSubView === 'scanpath'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#0284C7]" />
+                  <span>٢. خريطة المسار البصري (Scanpath)</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={dashboardSubView === 'report'}
+                  onClick={() => setDashboardSubView('report')}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                    dashboardSubView === 'report'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#0284C7]" />
+                  <span>٣. تقرير الفرز وخطة المساندة التربوية</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" />
                   <span>
-                    <strong className="text-slate-700">إفصاح علمي وحماية بيانات الطفل:</strong> درجات المخاطر والمئينات المعروضة هي مؤشرات فرز استدلالية أولية (Heuristic Screening Indicators) ولا تعد تشخيصاً طبياً مستقلاً. تُحفظ السجلات محلياً ({isPersistedStoreLoaded ? 'قاعدة البيانات الدائمة متصلة' : 'وضع الجلسة'}) مع إخفاء هوية الطفل تلقائياً قبل أي معالجة سحابية.
+                    مؤشرات فرز استرشادية غير تشخيصية ·{' '}
+                    {isPersistedStoreLoaded
+                      ? 'قاعدة البيانات متصلة'
+                      : 'وضع الجلسة'}
                   </span>
-                </div>
+                </span>
                 {students.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => handleDeleteStudentRecord(selectedStudent.id)}
-                    className="inline-flex items-center gap-1 text-rose-700 hover:underline font-medium shrink-0"
+                    onClick={() =>
+                      handleDeleteStudentRecord(selectedStudent.id)
+                    }
+                    className="inline-flex items-center gap-1 text-rose-700 hover:underline font-medium shrink-0 cursor-pointer"
                   >
                     <Trash2 className="w-3 h-3" />
-                    <span>حذف سجل الطالب الحالي (حق محو البيانات)</span>
+                    <span>حذف السجل الحالي</span>
                   </button>
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* Student Roster & Normative Percentile Distribution */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-              {/* 7 Cols: Student Clinical Roster Table */}
-              <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-200">
+            {/* SUB-VIEW 1: STUDENT ROSTER & NORMATIVE MATRIX */}
+            {dashboardSubView === 'roster' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* 7 Cols: Clean Enterprise Data Table */}
+                <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                  <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h2 className="text-base font-bold text-slate-900">
-                        سجل الطلاب ونتائج الفحص المعياري (انقر لاختيار الطالب)
+                        سجل الطلاب ونتائج الفرز المعياري
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        مقارنة مؤشرات عسر القراءة ومعدل الرمش والإجهاد البصري وعسر الحساب
+                        انقر على أي طالب لعرض مؤشراته أو فتح خريطة مسار العين
                       </p>
                     </div>
 
@@ -579,7 +658,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setRiskFilter('all')}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                           riskFilter === 'all'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
@@ -590,7 +669,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setRiskFilter('high')}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                           riskFilter === 'high'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
@@ -601,7 +680,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setRiskFilter('nominal')}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                           riskFilter === 'nominal'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
@@ -612,15 +691,24 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Transparent Demo Data Disclosure & Live Filter Bar */}
-                  <div className="mb-3 p-2.5 bg-amber-50/80 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-2 text-[11px] text-amber-900">
-                    <div>
-                      <span className="font-bold">تنبيه شفافية البيانات:</span> السجلات الأربعة الافتراضية المسبقة موسومة بـ <span className="font-semibold">«نموذج توضيحي»</span> لأغراض المعاينة فقط، وليست نتائج فحص حقيقية.
+                  {/* Search & Demo Toggle Toolbar */}
+                  <div className="px-6 py-3.5 bg-slate-50/60 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                    <div className="relative flex-1 min-w-[220px]">
+                      <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="ابحث باسم الطالب أو المدرسة..."
+                        aria-label="ابحث باسم الطالب أو المدرسة"
+                        className="w-full pr-9 pl-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                      />
                     </div>
+
                     <button
                       type="button"
                       onClick={() => setHideDemoRecords((prev) => !prev)}
-                      className="px-2.5 py-1 rounded-md font-semibold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer shrink-0"
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     >
                       {hideDemoRecords
                         ? 'إظهار النماذج التوضيحية (4)'
@@ -628,32 +716,20 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Search Input */}
-                  <div className="relative mb-4">
-                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="ابحث باسم الطالب أو المدرسة..."
-                      aria-label="ابحث باسم الطالب أو المدرسة"
-                      className="w-full pr-10 pl-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0284C7]"
-                    />
-                  </div>
-
-                  {/* High-Density Clinical Table */}
+                  {/* Table Body */}
                   {filteredStudents.length === 0 ? (
-                    <div className="py-10 text-center bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                      <p className="text-xs text-slate-600">
-                        لا توجد سجلات طلاب مطابقة لمعايير البحث الحالية.
+                    <div className="py-12 text-center space-y-2">
+                      <p className="text-xs text-slate-500">
+                        لا توجد سجلات طلاب مطابقة لمعايير الفلترة الحالية.
                       </p>
                       <button
                         type="button"
                         onClick={() => {
                           setSearchQuery('');
                           setRiskFilter('all');
+                          setHideDemoRecords(false);
                         }}
-                        className="px-3 py-1.5 text-xs font-medium text-[#0284C7] hover:underline"
+                        className="px-3 py-1.5 text-xs font-semibold text-[#0284C7] hover:underline cursor-pointer"
                       >
                         إعادة ضبط الفلاتر
                       </button>
@@ -662,12 +738,12 @@ export default function App() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-right border-collapse">
                         <thead>
-                          <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500">
-                            <th className="py-2.5 px-3">اسم الطالب والصف</th>
-                            <th className="py-2.5 px-3 text-left">السرعة (WPM)</th>
-                            <th className="py-2.5 px-3 text-left">التثبيت والرمش</th>
-                            <th className="py-2.5 px-3">مؤشر القراءة</th>
-                            <th className="py-2.5 px-3">مؤشر الديسكالكوليا</th>
+                          <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/40">
+                            <th className="py-3 px-4">الطالب والصف</th>
+                            <th className="py-3 px-3 text-left">السرعة</th>
+                            <th className="py-3 px-3 text-left">التثبيت</th>
+                            <th className="py-3 px-3">مؤشر القراءة</th>
+                            <th className="py-3 px-4">مؤشر الحساب</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -679,33 +755,26 @@ export default function App() {
                                 onClick={() => setSelectedStudentId(stu.id)}
                                 className={`cursor-pointer transition-colors ${
                                   isSelected
-                                    ? 'bg-sky-50/80 font-semibold'
-                                    : 'hover:bg-slate-50'
+                                    ? 'bg-sky-50/70'
+                                    : 'hover:bg-slate-50/80'
                                 }`}
                               >
-                                <td className="py-3 px-3">
-                                  <div className="text-slate-900 font-semibold flex items-center gap-1.5 flex-wrap">
-                                    <span>{stu.name}</span>
-                                    {stu.isDemoRecord && (
-                                      <span className="text-[10px] font-medium px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">
-                                        نموذج توضيحي
-                                      </span>
-                                    )}
+                                <td className="py-3.5 px-4">
+                                  <div className="text-slate-900 font-semibold">
+                                    {stu.name}
                                   </div>
-                                  <div className="text-[11px] text-slate-500 font-normal">
-                                    الصف {stu.gradeLevel} · {stu.dialectRegionAr || 'الفصحى والخليجية'}
+                                  <div className="text-[11px] text-slate-500 mt-0.5">
+                                    الصف {stu.gradeLevel}
+                                    {stu.isDemoRecord ? ' · نموذج توضيحي' : ''}
                                   </div>
                                 </td>
-                                <td className="py-3 px-3 text-left font-mono tabular-nums text-slate-900">
-                                  {stu.wpm}
+                                <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900 font-medium">
+                                  {stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
                                 </td>
-                                <td className="py-3 px-3 text-left font-mono tabular-nums text-slate-900">
-                                  <div>{stu.avgFixationMs}ms</div>
-                                  <div className="text-[10px] text-slate-500">
-                                    {stu.blinksPerMinute ?? 16} رمشة/د
-                                  </div>
+                                <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900">
+                                  {stu.avgFixationMs}ms
                                 </td>
-                                <td className="py-3 px-3">
+                                <td className="py-3.5 px-3">
                                   <span
                                     className={
                                       stu.readingRiskLevel === 'high'
@@ -716,18 +785,18 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ مؤشر صعوبات مرتفع (مئين ${stu.readingPercentile})`
+                                      ? `■ مرتفع (P${stu.readingPercentile})`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ مؤشر متوسط (مئين ${stu.readingPercentile})`
-                                        : `● طبيعي (مئين ${stu.readingPercentile})`}
+                                        ? `▲ متوسط (P${stu.readingPercentile})`
+                                        : `● طبيعي (P${stu.readingPercentile})`}
                                   </span>
                                 </td>
-                                <td className="py-3 px-3">
+                                <td className="py-3.5 px-4">
                                   {stu.mathRiskLevel === 'unassessed' ||
                                   stu.dyscalculiaAssessed === false ||
                                   stu.numberLinePAE === null ? (
-                                    <span className="text-slate-500 font-normal">
-                                      ○ غير مُقيَّم بعد
+                                    <span className="text-slate-400">
+                                      ○ غير مُقيَّم
                                     </span>
                                   ) : (
                                     <span
@@ -740,10 +809,10 @@ export default function App() {
                                       }
                                     >
                                       {stu.mathRiskLevel === 'high'
-                                        ? `■ مؤشر صعوبات حسابية (PAE ${stu.numberLinePAE}%)`
+                                        ? `■ صعوبات (${stu.numberLinePAE}%)`
                                         : stu.mathRiskLevel === 'moderate'
-                                          ? `▲ متابعة (PAE ${stu.numberLinePAE}%)`
-                                          : `● سليم (PAE ${stu.numberLinePAE}%)`}
+                                          ? `▲ متابعة (${stu.numberLinePAE}%)`
+                                          : `● سليم (${stu.numberLinePAE}%)`}
                                     </span>
                                   )}
                                 </td>
@@ -754,303 +823,359 @@ export default function App() {
                       </table>
                     </div>
                   )}
-                </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>
-                    الطالب المحدد حالياً: <strong className="text-slate-900">{selectedStudent.name}</strong>
-                  </span>
-                  <span>نسبة الفهم القرائي: {selectedStudent.comprehensionScore}%</span>
-                </div>
-              </div>
-
-              {/* 5 Cols: Lexplore Normative Percentile Matrix Chart */}
-              <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
-                    <div>
-                      <h2 className="text-base font-bold text-slate-900">
-                        منحنى المئينات المعياري (Lexplore Percentile Matrix)
-                      </h2>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        توزيع الطلاب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
-                      </p>
+                  {/* Footer Action Bar */}
+                  <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-600">
+                      الطالب النشط:{' '}
+                      <strong className="text-slate-900">
+                        {selectedStudent.name}
+                      </strong>
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setDashboardSubView('scanpath')}
+                        className="font-semibold text-[#0284C7] hover:underline cursor-pointer"
+                      >
+                        فتح خريطة المسار البصري ←
+                      </button>
+                      <span aria-hidden="true" className="text-slate-300">
+                        |
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDashboardSubView('report')}
+                        className="font-semibold text-slate-700 hover:text-slate-900 hover:underline cursor-pointer"
+                      >
+                        عرض التقرير وخطة المساندة ←
+                      </button>
                     </div>
-                    <BarChart3 className="w-4 h-4 text-[#0284C7]" />
                   </div>
+                </div>
 
-                  {/* Interactive 2D Clinical Quadrant SVG */}
-                  <svg
-                    viewBox="0 0 380 230"
-                    className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-lg"
-                    role="img"
-                    aria-label="مخطط توزيع الطلاب حسب المئين القرائي والحسابي"
-                  >
-                    {/* Risk Bands */}
-                    <rect
-                      x="40"
-                      y="15"
-                      width="110"
-                      height="180"
-                      fill="#FEE2E2"
-                      fillOpacity="0.45"
-                    />
-                    <rect
-                      x="150"
-                      y="15"
-                      width="75"
-                      height="180"
-                      fill="#FEF3C7"
-                      fillOpacity="0.4"
-                    />
-                    <rect
-                      x="225"
-                      y="15"
-                      width="135"
-                      height="180"
-                      fill="#DCFCE7"
-                      fillOpacity="0.4"
-                    />
+                {/* 5 Cols: Lexplore Normative Percentile Matrix Chart */}
+                <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                  <div>
+                    <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
+                      <div>
+                        <h2 className="text-base font-bold text-slate-900">
+                          مصفوفة المئينات المعيارية
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          موقع الطالب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
+                        </p>
+                      </div>
+                      <BarChart3 className="w-4 h-4 text-[#0284C7]" />
+                    </div>
 
-                    {/* Grid Lines */}
-                    <line
-                      x1="40"
-                      y1="105"
-                      x2="360"
-                      y2="105"
-                      stroke="#CBD5E1"
-                      strokeDasharray="3 3"
-                    />
-                    <line
-                      x1="150"
-                      y1="15"
-                      x2="150"
-                      y2="195"
-                      stroke="#CBD5E1"
-                      strokeDasharray="3 3"
-                    />
+                    <svg
+                      viewBox="0 0 380 230"
+                      className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-xl"
+                      role="img"
+                      aria-label="مخطط توزيع الطلاب حسب المئين القرائي والحسابي"
+                    >
+                      <rect
+                        x="40"
+                        y="15"
+                        width="110"
+                        height="180"
+                        fill="#FEE2E2"
+                        fillOpacity="0.4"
+                      />
+                      <rect
+                        x="150"
+                        y="15"
+                        width="75"
+                        height="180"
+                        fill="#FEF3C7"
+                        fillOpacity="0.35"
+                      />
+                      <rect
+                        x="225"
+                        y="15"
+                        width="135"
+                        height="180"
+                        fill="#DCFCE7"
+                        fillOpacity="0.35"
+                      />
 
-                    {/* Axis Labels */}
-                    <text x="95" y="30" fontSize="9" fill="#991B1B" textAnchor="middle">
-                      نطاق عسر القراءة (&lt;25%)
-                    </text>
-                    <text x="187" y="30" fontSize="9" fill="#92400E" textAnchor="middle">
-                      متابعة (25-45%)
-                    </text>
-                    <text x="292" y="30" fontSize="9" fill="#065F46" textAnchor="middle">
-                      طلاقة طبيعية (&gt;45%)
-                    </text>
+                      <line
+                        x1="40"
+                        y1="105"
+                        x2="360"
+                        y2="105"
+                        stroke="#CBD5E1"
+                        strokeDasharray="3 3"
+                      />
+                      <line
+                        x1="150"
+                        y1="15"
+                        x2="150"
+                        y2="195"
+                        stroke="#CBD5E1"
+                        strokeDasharray="3 3"
+                      />
 
-                    <text x="200" y="218" fontSize="10" fill="#475569" textAnchor="middle">
-                      المئين القرائي (Lexplore Reading Percentile) →
-                    </text>
+                      <text
+                        x="95"
+                        y="30"
+                        fontSize="9"
+                        fill="#991B1B"
+                        textAnchor="middle"
+                      >
+                        دون المعيار (&lt;25%)
+                      </text>
+                      <text
+                        x="187"
+                        y="30"
+                        fontSize="9"
+                        fill="#92400E"
+                        textAnchor="middle"
+                      >
+                        متابعة (25-45%)
+                      </text>
+                      <text
+                        x="292"
+                        y="30"
+                        fontSize="9"
+                        fill="#065F46"
+                        textAnchor="middle"
+                      >
+                        طلاقة طبيعية (&gt;45%)
+                      </text>
 
-                    {/* Plot Each Student */}
-                    {students.map((stu) => {
-                      const cx = 40 + (stu.readingPercentile / 100) * 320;
-                      const effectiveMathPct =
-                        stu.mathPercentile !== null &&
-                        stu.mathRiskLevel !== 'unassessed'
-                          ? stu.mathPercentile
-                          : 50;
-                      const cy = 195 - (effectiveMathPct / 100) * 170;
-                      const isSel = stu.id === selectedStudent.id;
-                      const firstName = stu.name.split(' ')[0];
+                      <text
+                        x="200"
+                        y="218"
+                        fontSize="10"
+                        fill="#475569"
+                        textAnchor="middle"
+                      >
+                        المئين القرائي (Reading Percentile) →
+                      </text>
 
-                      return (
-                        <g
-                          key={stu.id}
-                          onClick={() => setSelectedStudentId(stu.id)}
-                          className="cursor-pointer"
-                        >
-                          {isSel && (
+                      {students.map((stu) => {
+                        const cx = 40 + (stu.readingPercentile / 100) * 320;
+                        const effectiveMathPct =
+                          stu.mathPercentile !== null &&
+                          stu.mathRiskLevel !== 'unassessed'
+                            ? stu.mathPercentile
+                            : 50;
+                        const cy = 190 - (effectiveMathPct / 100) * 135;
+                        const isSel = stu.id === selectedStudent.id;
+                        const firstName = stu.name.split(' ')[0];
+
+                        return (
+                          <g
+                            key={stu.id}
+                            onClick={() => setSelectedStudentId(stu.id)}
+                            className="cursor-pointer"
+                          >
+                            {isSel && (
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r={13}
+                                fill="#0284C7"
+                                fillOpacity="0.2"
+                                stroke="#0284C7"
+                                strokeWidth="1.5"
+                              />
+                            )}
                             <circle
                               cx={cx}
                               cy={cy}
-                              r={13}
-                              fill="#0284C7"
-                              fillOpacity="0.2"
-                              stroke="#0284C7"
+                              r={isSel ? 7 : 5.5}
+                              fill={
+                                stu.readingRiskLevel === 'high' ||
+                                stu.mathRiskLevel === 'high'
+                                  ? '#DC2626'
+                                  : stu.readingRiskLevel === 'moderate' ||
+                                      stu.mathRiskLevel === 'moderate'
+                                    ? '#D97706'
+                                    : '#059669'
+                              }
+                              stroke="#FFFFFF"
                               strokeWidth="1.5"
                             />
-                          )}
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={isSel ? 7 : 5.5}
-                            fill={
-                              stu.readingRiskLevel === 'high' ||
-                              stu.mathRiskLevel === 'high'
-                                ? '#DC2626'
-                                : stu.readingRiskLevel === 'moderate' ||
-                                    stu.mathRiskLevel === 'moderate'
-                                  ? '#D97706'
-                                  : '#059669'
-                            }
-                            stroke="#FFFFFF"
-                            strokeWidth="1.5"
-                          />
-                          <text
-                            x={cx}
-                            y={cy - 10}
-                            fontSize="10"
-                            fontWeight={isSel ? '700' : '500'}
-                            fill="#0F172A"
-                            textAnchor="middle"
-                          >
-                            {firstName}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                <div className="pt-3 mt-3 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-                  <span>انقر على أي نقطة في المخطط لعرض مسار عين الطالب</span>
-                  <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                    P{selectedStudent.readingPercentile} قراءة ·{' '}
-                    {selectedStudent.mathPercentile !== null &&
-                    selectedStudent.mathRiskLevel !== 'unassessed'
-                      ? `P${selectedStudent.mathPercentile} حساب`
-                      : 'الحساب غير مُقيَّم'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Lexplore Scanpath & Heatmap Visualizer */}
-            <ScanpathViewer
-              words={selectedPassage.words}
-              fixations={selectedStudent.fixations}
-              passageTitle={`${selectedPassage.title} — مسار نظر الطالب (${selectedStudent.name})`}
-              passageCategory={selectedPassage.category}
-            />
-
-            {/* Gemini AI Screening Indicators & Individualized Support Plan (IEP) */}
-            <section className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                <div>
-                  <div className="text-xs text-slate-500 mb-1">
-                    تقرير الفرز الأولي الاسترشادي المدعوم بالذكاء الاصطناعي (مؤشرات تربوية غير تشخيصية)
+                            <text
+                              x={cx}
+                              y={cy - 10}
+                              fontSize="10"
+                              fontWeight={isSel ? '700' : '500'}
+                              fill="#0F172A"
+                              textAnchor="middle"
+                            >
+                              {firstName}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
                   </div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    تقرير المؤشرات القرائية وخطة المساندة التربوية المقترحة — {selectedStudent.name}
-                  </h2>
-                </div>
 
-                <button
-                  type="button"
-                  disabled={isGeneratingAI}
-                  onClick={handleRegenerateAIClinicalReport}
-                  className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>
-                    {isGeneratingAI
-                      ? 'جاري توليد تقرير المؤشرات القرائية...'
-                      : 'تحديث تقرير المؤشرات القرائية بالذكاء الاصطناعي'}
-                  </span>
-                </button>
-              </div>
-
-              {/* 2x2 Screening Insights Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    ٠١. ملخص المؤشرات القرائية والفرز الأولي
-                  </h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {selectedStudent.clinicalReport.clinicalSummary}
-                  </p>
-                </div>
-
-                <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    ٠٢. تحليل حركة العين والتثبيتات البصرية (Ocular-Motor)
-                  </h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {selectedStudent.clinicalReport.ocularMotorAnalysis}
-                  </p>
-                </div>
-
-                <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    ٠٣. الملاحظات الصرفية والفونولوجية في العربية
-                  </h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {selectedStudent.clinicalReport.orthographicAndPhonologicalPatterns}
-                  </p>
-                </div>
-
-                <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    ٠٤. مؤشرات الحس المكاني للأعداد وخط الأعداد
-                  </h3>
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {selectedStudent.clinicalReport.dyscalculiaSpatialAnalysis}
-                  </p>
-                </div>
-              </div>
-
-              {/* Actionable Daily Exercises & Classroom Accommodations */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-                <div className="lg:col-span-7 space-y-3">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    أنشطة المساندة القرائية اليومية المقترحة:
-                  </h3>
-                  <div className="space-y-2.5">
-                    {selectedStudent.clinicalReport.interventionExercises.map(
-                      (ex, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 bg-white border border-slate-200 rounded-xl flex items-start justify-between gap-4"
-                        >
-                          <div className="space-y-1">
-                            <div className="text-xs font-bold text-slate-900">
-                              {idx + 1}. {ex.title}
-                            </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                              {ex.description}
-                            </p>
-                          </div>
-                          <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7] shrink-0">
-                            {ex.durationMinutes} دقائق
-                          </span>
-                        </div>
-                      )
-                    )}
+                  <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
+                    <span>انقر على أي نقطة لتحديد الطالب</span>
+                    <span className="font-mono tabular-nums text-slate-900 font-semibold">
+                      P{selectedStudent.readingPercentile} قراءة ·{' '}
+                      {selectedStudent.mathPercentile !== null &&
+                      selectedStudent.mathRiskLevel !== 'unassessed'
+                        ? `P${selectedStudent.mathPercentile} حساب`
+                        : 'الحساب غير مُقيَّم'}
+                    </span>
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-bold text-slate-900">
-                      التيسيرات الصفية والمدرسية:
-                    </h3>
-                    <ul className="space-y-2 text-xs text-slate-700">
-                      {selectedStudent.clinicalReport.classroomAccommodations.map(
-                        (acc, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-[#0284C7] font-bold">·</span>
-                            <span>{acc}</span>
-                          </li>
-                        )
-                      )}
-                    </ul>
+            {/* SUB-VIEW 2: INTERACTIVE SCANPATH & HEATMAP VISUALIZER */}
+            {dashboardSubView === 'scanpath' && (
+              <div className="space-y-4">
+                <ScanpathViewer
+                  words={selectedPassage.words}
+                  fixations={selectedStudent.fixations}
+                  passageTitle={`${selectedPassage.title} — مسار نظر الطالب (${selectedStudent.name})`}
+                  passageCategory={selectedPassage.category}
+                />
+              </div>
+            )}
+
+            {/* SUB-VIEW 3: AI SCREENING REPORT & INDIVIDUALIZED SUPPORT PLAN */}
+            {dashboardSubView === 'report' && (
+              <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">
+                      تقرير الفرز الأولي الاسترشادي (مؤشرات تربوية غير تشخيصية)
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      تقرير المؤشرات القرائية وخطة المساندة المقترحة —{' '}
+                      {selectedStudent.name}
+                    </h2>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setActiveTab('adaptive-reader')}
-                    className="w-full py-2.5 px-4 bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                    disabled={isGeneratingAI}
+                    onClick={handleRegenerateAIClinicalReport}
+                    className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >
-                    <span>فتح القارئ العربي الميسّر لتدريب الطالب الآن</span>
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <Sparkles className="w-4 h-4" />
+                    <span>
+                      {isGeneratingAI
+                        ? 'جاري تحديث التقرير...'
+                        : 'تحديث التقرير بالذكاء الاصطناعي'}
+                    </span>
                   </button>
                 </div>
-              </div>
-            </section>
+
+                {/* Hairline-Divided 2x2 Analytical Matrix (Zero Card-in-Card Nesting) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200 border-b border-slate-200">
+                  <div className="p-6 sm:p-8 space-y-6">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        ٠١. ملخص المؤشرات القرائية والفرز الأولي
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {selectedStudent.clinicalReport.clinicalSummary}
+                      </p>
+                    </div>
+                    <div className="pt-6 border-t border-slate-200 space-y-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        ٠٢. تحليل حركة العين والتثبيتات البصرية
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {selectedStudent.clinicalReport.ocularMotorAnalysis}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-6 sm:p-8 space-y-6">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        ٠٣. الملاحظات الصرفية والفونولوجية في العربية
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {
+                          selectedStudent.clinicalReport
+                            .orthographicAndPhonologicalPatterns
+                        }
+                      </p>
+                    </div>
+                    <div className="pt-6 border-t border-slate-200 space-y-2">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        ٠٤. مؤشرات الحس المكاني للأعداد وخط الأعداد
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {
+                          selectedStudent.clinicalReport
+                            .dyscalculiaSpatialAnalysis
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actionable Daily Exercises & Classroom Accommodations */}
+                <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-slate-50/40">
+                  <div className="lg:col-span-7 space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      أنشطة المساندة القرائية اليومية المقترحة
+                    </h3>
+                    <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white overflow-hidden">
+                      {selectedStudent.clinicalReport.interventionExercises.map(
+                        (ex, idx) => (
+                          <div
+                            key={idx}
+                            className="p-4 flex items-start justify-between gap-4"
+                          >
+                            <div className="space-y-1">
+                              <div className="text-xs font-bold text-slate-900">
+                                {idx + 1}. {ex.title}
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                {ex.description}
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7] shrink-0">
+                              {ex.durationMinutes} دقائق
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-bold text-slate-900">
+                        التيسيرات الصفية والمدرسية الموصى بها
+                      </h3>
+                      <ul className="space-y-2.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-5">
+                        {selectedStudent.clinicalReport.classroomAccommodations.map(
+                          (acc, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-[#0284C7] font-bold">·</span>
+                              <span>{acc}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('adaptive-reader')}
+                      className="w-full py-3 px-4 bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>فتح القارئ العربي الميسّر لتدريب الطالب</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
         )}
 
@@ -1079,16 +1204,16 @@ export default function App() {
       </main>
 
       {/* Quiet Clinical Footer */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-4 mt-8">
+      <footer className="bg-white border-t border-slate-200 px-6 py-5 mt-12">
         <div className="max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
           <span>
-            بصيرة — المنصة العربية لتقييم عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكالكوليا) بتتبع حركة العين
+            بصيرة — المنصة العربية للفرز الأولي لمؤشرات عسر القراءة والحساب بتتبع حركة العين
           </span>
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setActiveTab('dashboard')}
-              className="hover:text-slate-900"
+              className="hover:text-slate-900 cursor-pointer"
             >
               لوحة النتائج
             </button>
@@ -1096,7 +1221,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('eye-lab')}
-              className="hover:text-slate-900"
+              className="hover:text-slate-900 cursor-pointer"
             >
               فحص تتبع العين
             </button>
@@ -1104,7 +1229,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('adaptive-reader')}
-              className="hover:text-slate-900"
+              className="hover:text-slate-900 cursor-pointer"
             >
               استوديو Dyslexico
             </button>
@@ -1112,7 +1237,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('algorithms-lab')}
-              className="hover:text-slate-900"
+              className="hover:text-slate-900 cursor-pointer"
             >
               مختبر IRT وPyGaze
             </button>

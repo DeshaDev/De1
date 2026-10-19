@@ -2068,14 +2068,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         </div>
       )}
 
-      {/* Stage Stepper & WebGazer.js Control Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
+      {/* Clean Enterprise Stage Header & Stepper */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <div className="text-xs text-slate-500 mb-1">
-            WebGazer.js v3.5.3 · تتبع بؤبؤ العين الحقيقي + رصد معدل الرمش والإجهاد البصري (EAR Blink Rate) + دعم اللهجات العربية
+          <div className="text-xs font-semibold text-[#0284C7] tracking-wide mb-1">
+            مختبر الفحص البصري والقرائي المباشر · WebGazer.js & EAR
           </div>
-          <h2 className="text-xl font-bold text-slate-900">
-            مختبر فحص عسر القراءة بتتبع بؤبؤ العين ومعدل الرمش (WebGazer.js & EAR)
+          <h2 className="text-xl font-bold text-slate-900 font-display">
+            تتبع بؤبؤ العين ومعدل الرمش ومحاكاة اللهجات العربية
           </h2>
         </div>
 
@@ -2083,105 +2083,98 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           <button
             type="button"
             onClick={handleRecenterEyeBaseline}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 bg-emerald-50 text-[#059669] hover:bg-emerald-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Target className="w-3.5 h-3.5" />
+            <Target className="w-3.5 h-3.5 text-[#059669]" />
             <span>توسيط محور البؤبؤ (Space)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowGazeReticle(!showGazeReticle)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
               showGazeReticle
-                ? 'bg-emerald-50 border-emerald-300 text-[#059669]'
-                : 'bg-slate-100 border-slate-200 text-slate-600'
+                ? 'bg-emerald-50 border-emerald-200 text-[#059669]'
+                : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
             <Crosshair className="w-3.5 h-3.5" />
             <span>
-              {showGazeReticle
-                ? 'مؤشر البؤبؤ الأخضر: نشط'
-                : 'إظهار مؤشر البؤبؤ'}
+              {showGazeReticle ? 'مؤشر البؤبؤ: نشط' : 'إظهار مؤشر البؤبؤ'}
             </span>
           </button>
 
-          <div className="flex items-center gap-2 text-xs font-medium">
+          {/* 3-Step Progressive Stepper */}
+          <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold">
             <span
-              className={`px-3 py-1.5 rounded-lg border ${
+              className={`px-3 py-1.5 rounded-lg transition-all ${
                 stage === 'setup'
-                  ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                  : 'bg-slate-50 text-slate-700 border-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600'
               }`}
             >
-              ١. الكاميرا ومعايرة WebGazer ({completedTargetsCount}/5)
-            </span>
-            <span aria-hidden="true" className="text-slate-400">
-              ←
+              ١. الكاميرا والمعايرة ({completedTargetsCount}/5)
             </span>
             <span
-              className={`px-3 py-1.5 rounded-lg border ${
+              className={`px-3 py-1.5 rounded-lg transition-all ${
                 stage === 'reading'
-                  ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                  : 'bg-slate-50 text-slate-700 border-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600'
               }`}
             >
-              ٢. القراءة ورصد التثبيتات والرمش
-            </span>
-            <span aria-hidden="true" className="text-slate-400">
-              ←
+              ٢. القراءة الحية
             </span>
             <span
-              className={`px-3 py-1.5 rounded-lg border ${
+              className={`px-3 py-1.5 rounded-lg transition-all ${
                 stage === 'comprehension'
-                  ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                  : 'bg-slate-50 text-slate-700 border-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600'
               }`}
             >
-              ٣. الفهم القرائي والتقرير
+              ٣. الفهم والتقرير
             </span>
           </div>
         </div>
       </div>
 
-      {/* STAGE 1: REAL WEBGAZER.JS EYE-PATCH TRACKER & 5-POINT RIDGE REGRESSION CALIBRATION */}
+      {/* STAGE 1: CALIBRATION & STUDENT SETUP */}
       {stage === 'setup' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left/Main 7 Cols: Interactive 5-Point WebGazer Calibration Arena */}
-          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left 7 Cols: Interactive 5-Point Calibration Arena */}
+          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  معايرة ربط بؤبؤ العين الحقيقي بالشاشة (WebGazer.js Calibration)
+                <h3 className="text-base font-bold text-slate-900 font-display">
+                  لوحة معايرة ربط بؤبؤ العين بالشاشة (5 نقاط + نقطتي تحقق مستقلتين)
                 </h3>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  <strong>طريقة المعايرة في WebGazer:</strong> أولاً شغّل الكاميرا وتأكد أن الصليب الأخضر في شاشة الكاميرا يتبع بؤبؤ عينك، ثم <strong>انظر بعينيك إلى النقطة واضغط عليها بالماوس (٣ نقرات لكل نقطة)</strong> لتدريب مصفوفة الانحدار على شكل بؤبؤ عينك عند تلك الزاوية.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  شغّل الكاميرا ثم انظر بعينيك إلى كل نقطة واضغط عليها (٣ نقرات لكل نقطة) لتدريب نموذج الانحدار البصري.
                 </p>
               </div>
               <span
-                className={`text-xs font-mono tabular-nums font-bold shrink-0 ${
+                className={`text-xs font-mono tabular-nums font-semibold px-2.5 py-1 rounded-md border shrink-0 ${
                   isManualDemoMode
-                    ? 'text-amber-700'
+                    ? 'bg-amber-50 border-amber-200 text-amber-800'
                     : completedTargetsCount === 5 &&
                         calibrationModel.accuracyPercent >= 70
-                      ? 'text-[#059669]'
-                      : 'text-[#D97706]'
+                      ? 'bg-emerald-50 border-emerald-200 text-[#059669]'
+                      : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}
               >
                 {isManualDemoMode
-                  ? `▲ وضع محاكاة يدوية بالماوس (${completedTargetsCount}/5 نقاط · دقة الكاميرا غير مقيسة 0%)`
+                  ? `وضع محاكاة يدوية (${completedTargetsCount}/5 نقاط · دقة الكاميرا 0%)`
                   : completedTargetsCount === 5
-                    ? `● معايرة كاميرا (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة · دقة خارج التدريب ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
-                    : `▲ قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة مرصودة)`}
+                    ? `مكتمل (${completedTargetsCount}/5 · دقة التحقق ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
+                    : `قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة)`}
               </span>
             </div>
 
-            {/* Live Eye Detection Status Banner + Explicit Manual Simulation Toggle */}
+            {/* Concise Status & Simulation Mode Bar */}
             <div
-              className={`px-3.5 py-2.5 rounded-lg border text-xs flex flex-wrap items-center justify-between gap-2 ${
+              className={`px-4 py-3 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-3 ${
                 cameraActive && pupilFeatures.faceDetected && !isManualDemoMode
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                  : 'bg-amber-50 border-amber-300 text-amber-950'
+                  ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                  : 'bg-amber-50/70 border-amber-200 text-amber-950'
               }`}
             >
               <div className="flex items-center gap-2 font-medium">
@@ -2189,8 +2182,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   <>
                     <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
                     <span>
-                      تم رصد بؤبؤ العين ونسبة انفتاح الجفن (EAR ={' '}
-                      {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)}) بنجاح! تُسجَّل عينات المعايرة بنسبة 100% من إحداثيات بؤبؤ عينك المرصودة فعلياً دون أي مزج مع إحداثيات الهدف.
+                      رصد البؤبؤ والجفن نشط (EAR = {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)}) — تُسجَّل العينات من إحداثيات بؤبؤ العين الخالصة.
                     </span>
                   </>
                 ) : (
@@ -2198,10 +2190,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                     <span>
                       {isManualDemoMode
-                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): مخصص لاستعراض خطوات المنصة فقط؛ تُسجَّل دقة معايرة الكاميرا 0% ولا تُعرض النتائج كقياسات بصرية فعلية.'
+                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): مخصص لاستعراض خطوات المنصة؛ دقة الكاميرا تُسجَّل 0%.'
                         : cameraActive
-                          ? 'جاري البحث عن الوجه وبؤبؤ العين في بث الكاميرا... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
-                          : 'الكاميرا غير مفعّلة بعد — اضغط زر «تشغيل كاميرا WebGazer الحقيقية» لبدء الرصد الفعلي لبؤبؤ العين.'}
+                          ? 'جاري البحث عن الوجه وبؤبؤ العين... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
+                          : 'الكاميرا غير مفعّلة — شغّل الكاميرا لبدء الرصد البصري أو فعّل وضع التجربة اليدوية.'}
                     </span>
                   </>
                 )}
@@ -2212,14 +2204,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   setIsManualDemoMode((prev) => !prev);
                   setCalibrationWarning('');
                 }}
-                className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition-colors cursor-pointer shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer shrink-0 ${
                   isManualDemoMode
                     ? 'bg-amber-700 text-white border-amber-800'
                     : 'bg-white text-amber-900 border-amber-300 hover:bg-amber-100'
                 }`}
               >
                 {isManualDemoMode
-                  ? 'إيقاف وضع المحاكاة اليدوية والعودة للكاميرا الحقيقية'
+                  ? 'العودة للكاميرا الحقيقية'
                   : 'وضع تجربة يدوية بالماوس (بدون كاميرا)'}
               </button>
             </div>
@@ -2227,23 +2219,23 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             {completedTargetsCount === 5 &&
               !isManualDemoMode &&
               calibrationModel.accuracyPercent < 70 && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-950 flex items-center gap-2">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                   <span>
-                    <strong>تنبيه محدودية دقة المعايرة الحالية ({calibrationModel.accuracyPercent}%):</strong>{' '}
-                    خطأ التحقق خارج التدريب مرتفع نسبياً ({calibrationModel.validationRmsePx ?? 0}px). لا يُنصح بالاعتماد على قياسات الكاميرا في هذه الجلسة كفرز دقيق قبل تحسين الإضاءة وتثبيت الرأس وإعادة المعايرة (3 نقرات لكل نقطة).
+                    <strong>تنبيه دقة المعايرة ({calibrationModel.accuracyPercent}%):</strong>{' '}
+                    خطأ التحقق خارج التدريب ({calibrationModel.validationRmsePx ?? 0}px). يُنصح بتحسين الإضاءة وتثبيت الرأس وإعادة المعايرة قبل الاعتماد على القياسات.
                   </span>
                 </div>
               )}
 
             {calibrationWarning && (
-              <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-950 flex items-center gap-2">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-950 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
                 <span>{calibrationWarning}</span>
               </div>
             )}
 
-            {/* Interactive 5-Point Calibration Target Box with Pure Eye-Driven Green Gaze Dot */}
+            {/* Interactive 5-Point Calibration Target Box */}
             <div
               ref={calibrationArenaRef}
               className="relative h-80 bg-[#0F172A] rounded-xl overflow-hidden border border-slate-800 select-none"
@@ -2255,7 +2247,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 <div className="h-full w-px bg-slate-400" />
               </div>
 
-              {/* LIVE GREEN GAZE DOT INSIDE CALIBRATION ARENA (Driven 100% by Real Pupil Coordinates) */}
+              {/* LIVE GREEN GAZE DOT INSIDE CALIBRATION ARENA */}
               {showGazeReticle && cameraActive && pupilFeatures.faceDetected && (
                 <div
                   style={{
@@ -2289,11 +2281,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onClick={(e) => handleSampleCalibrationPoint(pt, e)}
                     style={{ left: `${pt.xPct}%`, top: `${pt.yPct}%` }}
                     aria-label={`نقطة معايرة ${pt.label} (${clicks} من ${SAMPLES_PER_TARGET})`}
-                    className={`-translate-x-1/2 -translate-y-1/2 absolute w-15 h-15 rounded-full border-2 flex flex-col items-center justify-center transition-all hover:scale-110 cursor-pointer z-10 ${
+                    className={`-translate-x-1/2 -translate-y-1/2 absolute w-15 h-15 rounded-full border-2 flex flex-col items-center justify-center transition-all hover:scale-105 cursor-pointer z-10 ${
                       isDone
                         ? 'border-[#059669] bg-[#059669]/35 text-white'
                         : isActiveTarget
-                          ? 'border-amber-400 bg-amber-500/35 text-white ring-4 ring-amber-400/35'
+                          ? 'border-amber-400 bg-amber-500/35 text-white ring-4 ring-amber-400/30'
                           : 'border-[#0284C7] bg-[#0284C7]/25 text-white'
                     }`}
                   >
@@ -2307,7 +2299,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 );
               })}
 
-              {/* 2 Independent Held-Out Validation Points (V1 & V2) — Never enter training model */}
+              {/* 2 Independent Held-Out Validation Points (V1 & V2) */}
               {VALIDATION_TARGETS.map((vt) => {
                 const vClicks = validationClicks[vt.id] || 0;
                 const isValDone = vClicks >= 1;
@@ -2335,165 +2327,121 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               })}
             </div>
 
-            {/* WebGazer Regression & Kalman Filter Controls + Telemetry Bar */}
-            <div className="space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200">
-                <div className="font-mono tabular-nums flex flex-wrap items-center gap-3">
-                  <span>
-                    إحداثيات الشاشة: X={Math.round(gazeScreenPos.x)}px, Y=
-                    {Math.round(gazeScreenPos.y)}px
-                  </span>
-                  {wgRawPrediction && (
-                    <span className="text-[#059669]">
-                      · WebGazer Ridge: ({Math.round(wgRawPrediction.x)}px,{' '}
-                      {Math.round(wgRawPrediction.y)}px)
-                    </span>
-                  )}
-                  <span>
-                    · تدريب: {calibrationSamples.length}/15 · تحقق مستقل:{' '}
-                    {completedValidationCount}/2 (RMSE:{' '}
-                    {calibrationModel.validationRmsePx ?? 0}px)
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleRecenterEyeBaseline}
-                    className="text-[#D97706] hover:underline font-semibold cursor-pointer"
-                  >
-                    توسيط المنتصف (50%)
-                  </button>
-                  <span>·</span>
-                  <button
-                    type="button"
-                    onClick={handleResetCalibration}
-                    className="text-[#0284C7] hover:underline font-medium cursor-pointer"
-                  >
-                    مسح بيانات WebGazer وإعادة المعايرة ({fullySampledTargetsCount}/5 مكتمل بالكامل)
-                  </button>
-                </div>
+            {/* Clean Calibration Footer & Progressive Disclosure for Advanced Parameters */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200/80">
+              <div className="font-mono tabular-nums flex flex-wrap items-center gap-3">
+                <span>
+                  الشاشة: ({Math.round(gazeScreenPos.x)}px, {Math.round(gazeScreenPos.y)}px)
+                </span>
+                <span>
+                  · تدريب: {calibrationSamples.length}/15 · تحقق مستقل: {completedValidationCount}/2
+                </span>
               </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2 bg-slate-50 rounded-lg border border-slate-200 text-xs">
-                <div className="flex items-center gap-2">
-                  <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span className="font-medium text-slate-700">
-                    خوارزمية انحدار WebGazer:
-                  </span>
-                  <select
-                    aria-label="خوارزمية انحدار WebGazer"
-                    value={wgRegressionType}
-                    onChange={(e) =>
-                      setWgRegressionType(
-                        e.target.value as 'ridge' | 'weightedRidge'
-                      )
-                    }
-                    className="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono"
-                  >
-                    <option value="weightedRidge">
-                      weightedRidge (انحدار موزون)
-                    </option>
-                    <option value="ridge">ridge (انحدار خطي قياسي)</option>
-                  </select>
-                </div>
-
-                <label className="flex items-center gap-1.5 text-slate-700 cursor-pointer font-medium">
-                  <input
-                    type="checkbox"
-                    checked={wgKalmanEnabled}
-                    onChange={(e) => setWgKalmanEnabled(e.target.checked)}
-                    className="accent-[#0284C7]"
-                  />
-                  <span>مرشح كالمان + مرشح 1€ التكيفي (1€ + 4D Kalman)</span>
-                </label>
-              </div>
-
-              {/* 5-Stage Professional Foveal & Blink Rate Pipeline Telemetry Card */}
-              <div className="p-3 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
-                  <span className="text-xs font-bold text-emerald-400">
-                    الحل الاحترافي لتتبع بؤرة العين ومعدل الرمش (5-Stage Foveal & EAR Blink Pipeline)
-                  </span>
-                  <div className="flex items-center gap-2 text-[11px] font-mono tabular-nums text-sky-300">
-                    <span>
-                      EAR: {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)}
-                    </span>
-                    <span>·</span>
-                    <span>الرمشات المرصودة: {blinkCount}</span>
-                    <span>·</span>
-                    <span>
-                      المسافة بين العينين: {pupilFeatures.interOcularPx ?? 140}px
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
-                  <div className="bg-slate-800/80 rounded-lg p-2 border border-slate-700/70">
-                    <div className="text-emerald-400 font-semibold">
-                      ١. عزل انعكاس القرنية
-                    </div>
-                    <div className="text-slate-300 mt-0.5 font-mono">
-                      Purkinje Glint Mask
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/80 rounded-lg p-2 border border-slate-700/70">
-                    <div className="text-sky-400 font-semibold">
-                      ٢. تفاضل بياض الصلبة
-                    </div>
-                    <div className="text-slate-300 mt-0.5 font-mono tabular-nums">
-                      ΔSclera:{' '}
-                      {(
-                        ((pupilFeatures.leftEye.scleraRatioX ?? 0) +
-                          (pupilFeatures.rightEye.scleraRatioX ?? 0)) *
-                        50
-                      ).toFixed(2)}
-                      %
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/80 rounded-lg p-2 border border-slate-700/70">
-                    <div className="text-amber-400 font-semibold">
-                      ٣. محور المآقي والرأس
-                    </div>
-                    <div className="text-slate-300 mt-0.5 font-mono">
-                      Canthal + Yaw/Pitch
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/80 rounded-lg p-2 border border-slate-700/70">
-                    <div className="text-emerald-400 font-semibold">
-                      ٤. مرشح 1€ + RBF
-                    </div>
-                    <div className="text-slate-300 mt-0.5 font-mono">
-                      Zero-Lag Saccade
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/80 rounded-lg p-2 border border-amber-500/40">
-                    <div className="text-amber-300 font-semibold">
-                      ٥. معدل الرمش (EAR)
-                    </div>
-                    <div className="text-slate-200 mt-0.5 font-mono tabular-nums">
-                      {pupilFeatures.isBlinking
-                        ? '▲ جفن مغلق (رمشة)'
-                        : `EAR ${(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)} · ${blinkCount} رمشة`}
-                    </div>
-                  </div>
-                </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleRecenterEyeBaseline}
+                  className="text-[#059669] hover:underline font-semibold cursor-pointer"
+                >
+                  توسيط المنتصف (50%)
+                </button>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={handleResetCalibration}
+                  className="text-[#0284C7] hover:underline font-semibold cursor-pointer"
+                >
+                  إعادة ضبط المعايرة ({fullySampledTargetsCount}/5)
+                </button>
               </div>
             </div>
+
+            {/* Progressive Disclosure: Advanced Calibration & Signal Parameters */}
+            <details className="group bg-slate-50/70 border border-slate-200/80 rounded-xl overflow-hidden">
+              <summary className="px-4 py-2.5 text-xs font-semibold text-slate-700 cursor-pointer flex items-center justify-between select-none hover:bg-slate-100/70">
+                <span className="flex items-center gap-2">
+                  <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
+                  <span>الإعدادات المتقدمة لمعايرة WebGazer ومعامل كسب البؤبؤ</span>
+                </span>
+                <span className="text-[11px] font-mono text-slate-400 group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
+              </summary>
+              <div className="p-4 border-t border-slate-200/80 bg-white space-y-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-700">خوارزمية الانحدار:</span>
+                    <select
+                      aria-label="خوارزمية انحدار WebGazer"
+                      value={wgRegressionType}
+                      onChange={(e) =>
+                        setWgRegressionType(
+                          e.target.value as 'ridge' | 'weightedRidge'
+                        )
+                      }
+                      className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono"
+                    >
+                      <option value="weightedRidge">weightedRidge (انحدار موزون)</option>
+                      <option value="ridge">ridge (انحدار خطي قياسي)</option>
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-1.5 text-slate-700 cursor-pointer font-medium">
+                    <input
+                      type="checkbox"
+                      checked={wgKalmanEnabled}
+                      onChange={(e) => setWgKalmanEnabled(e.target.checked)}
+                      className="accent-[#0284C7]"
+                    />
+                    <span>مرشح كالمان + مرشح 1€ التكيفي</span>
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-700">حساسية البؤبؤ:</span>
+                    {[
+                      { label: 'عادي 1x', val: 1.0 },
+                      { label: 'عالي 1.4x', val: 1.35 },
+                      { label: 'فائق 1.8x', val: 1.8 },
+                    ].map((opt) => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => setEyeSensitivity(opt.val)}
+                        className={`px-2.5 py-1 text-[11px] rounded-md font-medium transition-colors cursor-pointer ${
+                          Math.abs(eyeSensitivity - opt.val) < 0.05
+                            ? 'bg-slate-900 text-white font-semibold'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    EAR: {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)} · الرمشات: {blinkCount}
+                  </span>
+                </div>
+              </div>
+            </details>
           </div>
 
-          {/* Right 5 Cols: Real Webcam Feed + Extracted WebGazer Eye Patches + Student & Dialect Setup */}
-          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between space-y-4">
+          {/* Right 5 Cols: Webcam Monitor & Student Session Configuration */}
+          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5">
+            {/* Webcam Preview Section */}
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    canvas تتبع بؤبؤ العين ومعدل الرمش (HD 720p)
+                  <h3 className="text-sm font-bold text-slate-900 font-display">
+                    الكاميرا المباشرة ورصد البؤبؤ (HD 720p)
                   </h3>
                   <div className="text-[11px] text-slate-500">
                     {cameraActive
                       ? pupilFeatures.faceDetected
-                        ? `● تتبع البؤبؤ والرمش نشط (${wgFeatureCount || 120} ميزة · EAR ${(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)})`
-                        : '● الكاميرا تعمل — وجّه وجهك للكاميرا لرصد بؤبؤ العين والجفون'
-                      : '○ الكاميرا متوقفة — اضغط تشغيل كاميرا WebGazer لبدء الرصد الفعلي'}
+                        ? `● البؤبؤ مرصود (EAR ${(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)})`
+                        : '● الكاميرا نشطة — وجّه الوجه نحو الإطار'
+                      : '○ الكاميرا متوقفة'}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -2504,13 +2452,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }
                     className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
                       binocularZoomEnabled
-                        ? 'bg-emerald-50 border-emerald-300 text-[#059669]'
-                        : 'bg-slate-100 border-slate-300 text-slate-700'
+                        ? 'bg-emerald-50 border-emerald-200 text-[#059669]'
+                        : 'bg-slate-50 border-slate-200 text-slate-700'
                     }`}
                   >
-                    {binocularZoomEnabled
-                      ? 'تكبير العينين 2.4x: نشط'
-                      : 'عرض الوجه الكامل 1x'}
+                    {binocularZoomEnabled ? 'تكبير العينين 2.4x' : 'الوجه الكامل 1x'}
                   </button>
                   <button
                     type="button"
@@ -2523,28 +2469,25 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>
-                      {cameraActive
-                        ? 'إيقاف الكاميرا'
-                        : 'تشغيل كاميرا WebGazer الحقيقية'}
+                      {cameraActive ? 'إيقاف الكاميرا' : 'تشغيل كاميرا WebGazer الحقيقية'}
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* Camera Device Selector */}
               {cameraDevices.length > 0 && (
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="camera-device-select"
                     className="text-xs text-slate-600 shrink-0"
                   >
-                    جهاز الكاميرا:
+                    الكاميرا:
                   </label>
                   <select
                     id="camera-device-select"
                     value={selectedDeviceId}
                     onChange={(e) => handleChangeCameraDevice(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                    className="flex-1 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0284C7]"
                   >
                     {cameraDevices.map((dev, idx) => (
                       <option key={dev.deviceId || idx} value={dev.deviceId}>
@@ -2563,7 +2506,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 </div>
               )}
 
-              {/* Live Webcam Tracking Canvas + Dual Magnified WebGazer Eye-Patch Canvases */}
+              {/* Live Webcam Canvas + Dual Eye Patches */}
               <div className="relative bg-[#0F172A] rounded-xl overflow-hidden border border-slate-800 flex flex-col items-center justify-center p-2.5 space-y-2">
                 <video
                   ref={videoRef}
@@ -2578,7 +2521,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     width={640}
                     height={360}
                     data-testid="pupil-cv-canvas"
-                    className="w-full max-w-[380px] h-40 rounded-lg object-cover border border-slate-700"
+                    className="w-full max-w-[380px] h-36 rounded-lg object-cover border border-slate-800"
                   />
                   {!cameraActive && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-center px-4 rounded-lg">
@@ -2587,21 +2530,18 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                         بث الكاميرا المباشر غير مفعّل حالياً
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        اضغط زر «تشغيل كاميرا WebGazer الحقيقية» أعلاه ليظهر الصليب الأخضر فوق بؤبؤ عينك مع رصد معدل الرمش (EAR)
+                        اضغط «تشغيل كاميرا WebGazer الحقيقية» أعلاه لرصد بؤبؤ العين ومعدل الرمش
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Magnified WebGazer Extracted Eye Patches (Left & Right Palpebral Fissure Crops with Pupil Reticle & EAR) */}
-                <div className="w-full grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+                <div className="w-full grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-800/80">
                   <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex items-center justify-between gap-2">
                     <div className="text-[10px] text-slate-300 font-mono tabular-nums">
-                      <div className="text-emerald-400 font-semibold">
-                        بؤبؤ العين اليمنى
-                      </div>
+                      <div className="text-emerald-400 font-semibold">العين اليمنى</div>
                       <div>
-                        X:{Math.round(pupilFeatures.rightEye.normX * 100)}% · EAR:
+                        X:{Math.round(pupilFeatures.rightEye.normX * 100)}% · EAR:{' '}
                         {(pupilFeatures.rightEAR ?? 0.29).toFixed(2)}
                       </div>
                     </div>
@@ -2609,17 +2549,15 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       ref={rightPatchCanvasRef}
                       width={96}
                       height={44}
-                      className="w-22 h-10 rounded border border-slate-700 bg-slate-950"
+                      className="w-20 h-9 rounded border border-slate-700 bg-slate-950"
                     />
                   </div>
 
                   <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex items-center justify-between gap-2">
                     <div className="text-[10px] text-slate-300 font-mono tabular-nums">
-                      <div className="text-emerald-400 font-semibold">
-                        بؤبؤ العين اليسرى
-                      </div>
+                      <div className="text-emerald-400 font-semibold">العين اليسرى</div>
                       <div>
-                        X:{Math.round(pupilFeatures.leftEye.normX * 100)}% · EAR:
+                        X:{Math.round(pupilFeatures.leftEye.normX * 100)}% · EAR:{' '}
                         {(pupilFeatures.leftEAR ?? 0.29).toFixed(2)}
                       </div>
                     </div>
@@ -2627,59 +2565,25 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       ref={leftPatchCanvasRef}
                       width={96}
                       height={44}
-                      className="w-22 h-10 rounded border border-slate-700 bg-slate-950"
+                      className="w-20 h-9 rounded border border-slate-700 bg-slate-950"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Eye Sensitivity & Centering Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-700">
-                    معامل كسب البؤبؤ:
-                  </span>
-                  {[
-                    { label: 'عادي 1x', val: 1.0 },
-                    { label: 'عالي 1.4x', val: 1.35 },
-                    { label: 'فائق 1.8x', val: 1.8 },
-                  ].map((opt) => (
-                    <button
-                      key={opt.val}
-                      type="button"
-                      onClick={() => setEyeSensitivity(opt.val)}
-                      className={`px-2 py-0.5 text-[11px] rounded font-medium transition-colors cursor-pointer ${
-                        Math.abs(eyeSensitivity - opt.val) < 0.05
-                          ? 'bg-[#059669] text-white font-semibold'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRecenterEyeBaseline}
-                  className="text-[11px] font-semibold text-[#0284C7] hover:underline cursor-pointer"
-                >
-                  توسيط البؤبؤ الآن
-                </button>
-              </div>
-
               {cameraError && (
-                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
                   {cameraError}
                 </p>
               )}
             </div>
 
-            {/* Student Metadata & Arabic Dialect Inputs */}
-            <div className="space-y-3 pt-2 border-t border-slate-200">
+            {/* Student Metadata & Passage Selection */}
+            <div className="space-y-3.5 pt-3 border-t border-slate-100">
               <div>
                 <label
                   htmlFor="student-name-input"
-                  className="block text-xs font-medium text-slate-700 mb-1"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
                 >
                   اسم الطالب الثلاثي
                 </label>
@@ -2692,7 +2596,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     if (nameError) setNameError('');
                   }}
                   placeholder="أدخل اسم الطالب..."
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                  className="w-full px-3.5 py-2 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                 />
                 {nameError && (
                   <p className="mt-1 text-xs text-[#DC2626] flex items-center gap-1">
@@ -2702,11 +2606,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label
                     htmlFor="grade-level-select"
-                    className="block text-xs font-medium text-slate-700 mb-1"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
                   >
                     الصف الدراسي
                   </label>
@@ -2723,7 +2627,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                         setSelectedPassageId(matchingPassage.id);
                       }
                     }}
-                    className="w-full px-2.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                    className="w-full px-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                   >
                     <option value={2}>الصف الثاني الابتدائي (65 WPM)</option>
                     <option value={3}>الصف الثالث الابتدائي (85 WPM)</option>
@@ -2736,7 +2640,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 <div>
                   <label
                     htmlFor="student-dialect-select"
-                    className="block text-xs font-medium text-slate-700 mb-1"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
                   >
                     اللهجة العربية للطالب
                   </label>
@@ -2746,7 +2650,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onChange={(e) =>
                       setSelectedDialect(e.target.value as ArabicDialectCode)
                     }
-                    className="w-full px-2.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                    className="w-full px-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                   >
                     {ARABIC_DIALECT_PROFILES.map((d) => (
                       <option key={d.code} value={d.code}>
@@ -2755,62 +2659,39 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label
-                    htmlFor="passage-select"
-                    className="block text-xs font-medium text-slate-700 mb-1"
-                  >
-                    النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص)
-                  </label>
-                  <select
-                    id="passage-select"
-                    value={selectedPassageId}
-                    onChange={(e) => {
-                      const pid = e.target.value;
-                      setSelectedPassageId(pid);
-                      const found = ARABIC_READING_PASSAGES.find(
-                        (p) => p.id === pid
-                      );
-                      if (found) {
-                        setGradeLevel(found.gradeLevel);
-                      }
-                    }}
-                    className="w-full px-2.5 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
-                  >
-                    {ARABIC_READING_PASSAGES.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        الصف {p.gradeLevel}: {p.title} ({p.diacriticLabelAr || p.category})
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
-              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-700 space-y-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-900">
-                    خصائص النص المحدد: {selectedPassage.title} (الصف {selectedPassage.gradeLevel})
-                  </span>
-                  <span className="font-mono text-[#0284C7] font-semibold">
-                    {selectedPassage.words.length} كلمة · {selectedPassage.diacriticLabelAr || selectedPassage.category}
-                  </span>
-                </div>
-                {selectedPassage.targetSkillsAr && (
-                  <div className="text-slate-600">
-                    الهدف التربوي واللغوي: {selectedPassage.targetSkillsAr.join(' · ')}
-                  </div>
-                )}
+              <div>
+                <label
+                  htmlFor="passage-select"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص معيارية)
+                </label>
+                <select
+                  id="passage-select"
+                  value={selectedPassageId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setSelectedPassageId(pid);
+                    const found = ARABIC_READING_PASSAGES.find(
+                      (p) => p.id === pid
+                    );
+                    if (found) {
+                      setGradeLevel(found.gradeLevel);
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
+                >
+                  {ARABIC_READING_PASSAGES.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      الصف {p.gradeLevel}: {p.title} ({p.words.length} كلمة · {p.diacriticLabelAr || p.category})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="p-2.5 bg-sky-50/70 border border-sky-200 rounded-lg text-[11px] text-slate-700">
-                <strong className="text-[#0284C7]">
-                  تكيّف اللهجة النشط ({selectedDialectProfile.labelAr}):
-                </strong>{' '}
-                {selectedDialectProfile.phonologicalNotesAr}
-              </div>
-
-              <label className="flex items-start gap-2.5 p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs text-slate-800 cursor-pointer">
+              <label className="flex items-start gap-2.5 p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={guardianConsent}
@@ -2823,7 +2704,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   className="mt-0.5 accent-[#059669]"
                 />
                 <span>
-                  <strong>موافقة ولي الأمر وحماية خصوصية الطفل:</strong> أقرّ بموافقة ولي الأمر على إجراء هذا الفحص الأولي الاسترشادي، مع تفعيل إخفاء الهوية الشخصية (PII Pseudonymization) تلقائياً قبل إرسال أي مؤشرات رقمية لخدمة التحليل السحابي.
+                  <strong className="text-slate-900">موافقة ولي الأمر وحماية الخصوصية:</strong>{' '}
+                  أقرّ بموافقة ولي الأمر على إجراء الفحص الأولي الاسترشادي مع إخفاء الهوية الشخصية (PII Pseudonymization).
                 </span>
               </label>
             </div>
@@ -2831,154 +2713,139 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             <button
               type="button"
               onClick={handleStartReadingStage}
-              className="w-full py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold text-sm rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <Play className="w-4 h-4" />
               <span>
-                بدء القراءة الحية وتتبع التثبيتات ومعدل الرمش ({completedTargetsCount}/5 نقاط معايرة)
+                بدء القراءة الحية ورصد التثبيتات ({completedTargetsCount}/5 نقاط معايرة)
               </span>
             </button>
           </div>
         </div>
       )}
 
-      {/* STAGE 2: REAL-TIME GAZE-HIT-TESTED READING, BLINK RATE (EAR) & DIALECT VOICE TRACKING */}
+      {/* STAGE 2: CLEAN READING WORKSPACE & DIALECT VOICE ALIGNMENT */}
       {stage === 'reading' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
-          {/* Primary Oculomotor + Blink Rate Telemetry Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <div className="flex flex-wrap items-center gap-5 text-xs">
-              <div>
-                <span className="text-slate-500 block">الزمن الفعلي</span>
-                <span className="font-mono tabular-nums font-bold text-slate-900 text-sm">
+        <div className="space-y-6">
+          {/* Unified Hairline Telemetry & Action Ribbon */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-100">
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">الزمن الفعلي</span>
+                <span className="font-mono tabular-nums font-bold text-slate-900 text-base mt-0.5 block">
                   {(elapsedMs / 1000).toFixed(1)}s
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block">الكلمات المقروءة بصرياً</span>
-                <span className="font-mono tabular-nums font-bold text-[#0284C7] text-sm">
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">الكلمات المرصودة</span>
+                <span className="font-mono tabular-nums font-bold text-[#0284C7] text-base mt-0.5 block">
                   {recordedWordsList.length} / {selectedPassage.words.length}
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block">السرعة الحية (WPM)</span>
-                <span className="font-mono tabular-nums font-bold text-slate-900 text-sm">
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">السرعة الحية (WPM)</span>
+                <span className="font-mono tabular-nums font-bold text-slate-900 text-base mt-0.5 block">
                   {recordedWordsList.length > 0 ? liveMetrics.wpm : 0} كلمة/دقيقة
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block">متوسط زمن التثبيت الفعلي</span>
-                <span className="font-mono tabular-nums font-bold text-slate-900 text-sm">
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">متوسط زمن التثبيت</span>
+                <span className="font-mono tabular-nums font-bold text-slate-900 text-base mt-0.5 block">
                   {recordedWordsList.length > 0 ? liveMetrics.avgFixationMs : 0} ms
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block">التراجعات المرصودة (Regressions)</span>
-                <span className="font-mono tabular-nums font-bold text-[#DC2626] text-sm">
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">التراجعات (Regressions)</span>
+                <span className="font-mono tabular-nums font-bold text-[#DC2626] text-base mt-0.5 block">
                   {liveMetrics.regressionCount} ({liveMetrics.regressionRate}%)
                 </span>
               </div>
-              <div className="pl-3 border-r border-slate-200 pr-3">
-                <span className="text-slate-500 block">
-                  معدل الرمش (Blink Rate)
+              <div className="p-4">
+                <span className="text-[11px] font-medium text-slate-500 block">
+                  معدل الرمش (EAR {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)})
                 </span>
-                <span
-                  data-testid="live-blink-rate-value"
-                  className={`font-mono tabular-nums font-bold text-sm ${
-                    liveBlinkClinical.visualStrainLevel === 'high' ||
-                    liveBlinkClinical.visualStrainLevel === 'severe'
-                      ? 'text-[#DC2626]'
-                      : liveBlinkClinical.visualStrainLevel === 'moderate'
-                        ? 'text-[#D97706]'
-                        : 'text-[#059669]'
-                  }`}
-                >
-                  {liveBlinkClinical.blinksPerMinute} رمشة/دقيقة ({blinkCount} رمشة)
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">
-                  مؤشر الإجهاد البصري (EAR {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)})
-                </span>
-                <span
-                  data-testid="visual-strain-badge"
-                  className={`font-bold text-xs ${
-                    liveBlinkClinical.visualStrainLevel === 'high' ||
-                    liveBlinkClinical.visualStrainLevel === 'severe'
-                      ? 'text-[#DC2626]'
-                      : liveBlinkClinical.visualStrainLevel === 'moderate'
-                        ? 'text-[#D97706]'
-                        : 'text-[#059669]'
-                  }`}
-                >
-                  {liveBlinkClinical.visualStrainLevel === 'high' ||
-                  liveBlinkClinical.visualStrainLevel === 'severe'
-                    ? '■ إجهاد بصري مرتفع (رمش متكرر)'
-                    : liveBlinkClinical.visualStrainLevel === 'moderate'
-                      ? '▲ إجهاد بصري متوسط'
-                      : '● راحة بصرية طبيعية'}
-                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span
+                    data-testid="live-blink-rate-value"
+                    className={`font-mono tabular-nums font-bold text-sm ${
+                      liveBlinkClinical.visualStrainLevel === 'high' ||
+                      liveBlinkClinical.visualStrainLevel === 'severe'
+                        ? 'text-[#DC2626]'
+                        : liveBlinkClinical.visualStrainLevel === 'moderate'
+                          ? 'text-[#D97706]'
+                          : 'text-[#059669]'
+                    }`}
+                  >
+                    {liveBlinkClinical.blinksPerMinute}/دقيقة
+                  </span>
+                  <span
+                    data-testid="visual-strain-badge"
+                    className="text-[10px] font-semibold text-slate-500"
+                  >
+                    ({blinkCount} رمشة)
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                data-testid="record-blink-btn"
-                onClick={() => handleRecordManualBlink()}
-                className="px-3 py-2 text-xs font-semibold rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 transition-colors flex items-center gap-1.5 cursor-pointer"
-                title="يرصد النظام الرمش تلقائياً عبر الكاميرا (EAR < 0.21)، ويمكنك أيضاً نقر هذا الزر لتسجيل رمشة عين على الكلمة الحالية لاختبار مؤشر الإجهاد البصري"
-              >
-                <Eye className="w-3.5 h-3.5 text-[#D97706]" />
-                <span>+ رصد رمشة عين ({blinkCount})</span>
-              </button>
+            {/* Action Bar */}
+            <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="record-blink-btn"
+                  onClick={() => handleRecordManualBlink()}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#D97706]" />
+                  <span>+ تسجيل رمشة ({blinkCount})</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleToggleMicrophone}
-                className={`px-3 py-2 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  micActive
-                    ? 'bg-red-50 border-red-300 text-[#DC2626]'
-                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {micActive ? (
-                  <>
-                    <MicOff className="w-3.5 h-3.5" />
-                    <span>
-                      ميكروفون ({selectedDialectProfile.speechRecognitionLang}) نشط ({micVolume}%)
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-3.5 h-3.5 text-[#0284C7]" />
-                    <span>تشغيل الميكروفون ({selectedDialectProfile.labelAr})</span>
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleToggleMicrophone}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    micActive
+                      ? 'bg-red-50 border-red-200 text-[#DC2626]'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {micActive ? (
+                    <>
+                      <MicOff className="w-3.5 h-3.5" />
+                      <span>الميكروفون نشط ({micVolume}%)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5 text-[#0284C7]" />
+                      <span>تشغيل الميكروفون ({selectedDialectProfile.labelAr})</span>
+                    </>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setIsReadingActive(!isReadingActive)}
-                className="px-3 py-2 text-xs font-medium bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-lg flex items-center gap-1.5 cursor-pointer"
-              >
-                {isReadingActive ? (
-                  <>
-                    <Pause className="w-3.5 h-3.5" />
-                    <span>إيقاف الرصد مؤقتاً</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5" />
-                    <span>استئناف الرصد</span>
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setIsReadingActive(!isReadingActive)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isReadingActive ? (
+                    <>
+                      <Pause className="w-3.5 h-3.5" />
+                      <span>إيقاف مؤقت</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5" />
+                      <span>استئناف</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={handleProceedToComprehension}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#059669] hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>
@@ -2992,7 +2859,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             <div
               role="alert"
               data-testid="reading-coverage-error"
-              className="p-4 bg-red-50 border border-red-300 rounded-xl text-xs text-red-950 flex flex-wrap items-center justify-between gap-3"
+              className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-950 flex flex-wrap items-center justify-between gap-3"
             >
               <div className="flex items-center gap-2 font-medium">
                 <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
@@ -3004,190 +2871,16 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             </div>
           )}
 
-          {/* Dedicated Blink Rate & Arabic Dialect Clinical Telemetry Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* 6 Cols: Blink Rate (EAR) & Visual Fatigue Diagnostic Card */}
-            <div className="lg:col-span-6 p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                  <Eye className="w-4 h-4 text-[#0284C7]" />
-                  <span>
-                    تتبع معدل الرمش والإجهاد البصري الحقيقي (Soukupova & Cech 6-Point EAR)
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono tabular-nums text-slate-600">
-                  EAR اللحظي: {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)} · آخر رمشة:{' '}
-                  {lastBlinkDurationMs > 0 ? `${lastBlinkDurationMs}ms` : '—'}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-700 leading-relaxed">
-                {liveBlinkClinical.clinicalNoteAr}
-              </p>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-600">
-                <span>
-                  المعيار المرجعي للقراءة: <strong>12 – 21 رمشة/دقيقة</strong> (أكثر من 28 رمشة/دقيقة = إجهاد بصري ديسلكسي)
-                </span>
-                {blinkEvents.length > 0 && (
-                  <span className="font-mono text-[#0284C7] font-semibold">
-                    آخر رمشة عند الكلمة:{' '}
-                    {typeof blinkEvents[blinkEvents.length - 1].wordIndex ===
-                      'number' &&
-                    selectedPassage.words[
-                      blinkEvents[blinkEvents.length - 1].wordIndex!
-                    ]
-                      ? selectedPassage.words[
-                          blinkEvents[blinkEvents.length - 1].wordIndex!
-                        ]
-                      : 'عام'}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 6 Cols: Arabic Dialect Phonological & Lexical Adaptation Card */}
-            <div className="lg:col-span-6 p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                  <Globe className="w-4 h-4 text-[#059669]" />
-                  <span>
-                    محرك فهم اللهجات العربية أثناء القراءة الجهرية ({selectedDialectProfile.labelAr})
-                  </span>
-                </div>
-                <select
-                  aria-label="تغيير اللهجة العربية أثناء القراءة"
-                  value={selectedDialect}
-                  onChange={(e) =>
-                    setSelectedDialect(e.target.value as ArabicDialectCode)
-                  }
-                  className="px-2 py-1 text-[11px] bg-white border border-slate-300 rounded font-medium text-slate-800"
-                >
-                  {ARABIC_DIALECT_PROFILES.map((d) => (
-                    <option key={d.code} value={d.code}>
-                      {d.labelAr}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="text-slate-600">اختبار نطق الطالب بلهجته:</span>
-                {[
-                  {
-                    dialect: 'gulf' as ArabicDialectCode,
-                    label: 'نطق خليجي/سعودي',
-                    sample:
-                      'زار طلاب المدرسة المرصد الفلكي في مسا صافي لشوفة الكواكب المنورة حط المهندس المنضار الدكيك صوب السماء',
-                  },
-                  {
-                    dialect: 'egyptian' as ArabicDialectCode,
-                    label: 'نطق مصري',
-                    sample:
-                      'زار طلاب المدرسه المرصد الفلكي في مسا صافي علشان الكواكب المنورة حط المهندس المنظار الدئيئ نحو السماء',
-                  },
-                  {
-                    dialect: 'levantine' as ArabicDialectCode,
-                    label: 'نطق شامي',
-                    sample:
-                      'زار طلاب المدرسة المرصد الفلكي في مسا صافي لشوفة الكواكب المضوية حط المهندس المنظار الدئيئ صوب السماء',
-                  },
-                  {
-                    dialect: 'maghrebi' as ArabicDialectCode,
-                    label: 'نطق مغاربي',
-                    sample:
-                      'مشوا طلاب المدرسة المرصد الفلكي في مسا صافي باش الكواكب المضوية حط المهندس المنضار الدقيق نحو السماء',
-                  },
-                ].map((preset) => (
-                  <button
-                    key={preset.dialect}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDialect(preset.dialect);
-                      setSpokenTranscript(preset.sample);
-                    }}
-                    className="px-2 py-0.5 bg-white hover:bg-sky-50 border border-slate-300 rounded text-slate-700 font-medium cursor-pointer"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-
-              {speechRecErrorMsg && (
-                <div
-                  role="alert"
-                  className="p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-[11px] text-amber-950 flex items-start gap-2"
-                >
-                  <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
-                  <span>{speechRecErrorMsg}</span>
-                </div>
-              )}
-
-              <div className="pt-1">
-                <label
-                  htmlFor="manual-spoken-transcript-input"
-                  className="block text-[11px] font-semibold text-slate-700 mb-1"
-                >
-                  النص المنطوق الفعلي للطالب (يُحدَّث تلقائياً عبر SpeechRecognition عند دعمه، أو يمكن كتابته/تعديله يدوياً):
-                </label>
-                <input
-                  id="manual-spoken-transcript-input"
-                  type="text"
-                  value={spokenTranscript}
-                  onChange={(e) => setSpokenTranscript(e.target.value)}
-                  placeholder="اكتب أو عدّل ما نطقه الطالب هنا لاختبار محاذاة القراءة الجهرية واللهجة..."
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-700 pt-0.5">
-                {liveOralDialectMetrics ? (
-                  <>
-                    <span>
-                      دقة المطابقة مع مراعاة اللهجة:{' '}
-                      <strong className="font-mono text-[#059669]">
-                        {liveOralDialectMetrics.accuracyPercent}%
-                      </strong>{' '}
-                      · بدائل لهجية مقبولة (غير ديسلكسيا):{' '}
-                      <strong className="font-mono text-[#0284C7]">
-                        {liveOralDialectMetrics.dialectVariantCount}
-                      </strong>
-                    </span>
-                    <span className="text-slate-500">
-                      إبدالات ديسلكسيا فونولوجية:{' '}
-                      <strong className="font-mono text-[#D97706]">
-                        {liveOralDialectMetrics.phoneticSubstitutionCount}
-                      </strong>
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-slate-500">
-                    {speechRecStatus === 'unsupported'
-                      ? 'التعرف الصوتي التلقائي غير مدعوم في هذا المتصفح — أدخل النص المنطوق في الحقل أعلاه أو اختر نموذج نطق لهجي.'
-                      : 'لم يتم تسجيل قراءة جهرية بعد — شغّل الميكروفون (Chrome/Edge) أو اكتب النص المنطوق في الحقل أعلاه.'}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {spokenTranscript && (
-            <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-950 flex flex-wrap items-center justify-between gap-2">
+          {/* Primary Reading Canvas — Front and Center */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-xs space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-b border-slate-100 pb-4">
               <div>
-                <strong>النص المنطوق ({selectedDialectProfile.labelAr}):</strong>{' '}
-                {spokenTranscript}
+                <span className="font-bold text-slate-900">{selectedPassage.title}</span>
+                <span className="mx-2">·</span>
+                <span>
+                  اقرأ النص بعينيك ليتم رصد زمن التثبيت الفعلي (ms) وعدد مرات الرمش (👁) على كل كلمة
+                </span>
               </div>
-              <span className="text-[11px] text-[#059669] font-semibold">
-                يميز النظام تلقائياً بين النطق اللهجي للطالب وبين أخطاء عسر القراءة الفونولوجية
-              </span>
-            </div>
-          )}
-
-          <div className="p-8 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-b border-slate-200 pb-3">
-              <span>
-                جميع الكلمات تبدأ من (0ms و 0 رمشة) — اقرأ النص بعينيك ليتم رصد زمن التثبيت الفعلي (ms) وعدد مرات الرمش (👁) على كل كلمة:
-              </span>
               <button
                 type="button"
                 onClick={() => {
@@ -3199,14 +2892,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   setGazeTrail([]);
                   setElapsedMs(0);
                 }}
-                className="text-[#0284C7] hover:underline font-medium cursor-pointer"
+                className="text-[#0284C7] hover:underline font-semibold cursor-pointer"
               >
-                تصفير عدادات الكلمات والرمش (0ms / 0 رمشة)
+                تصفير عدادات الكلمات والرمش
               </button>
             </div>
 
             <div
-              className="flex flex-wrap gap-x-5 gap-y-7 leading-loose select-none"
+              className="flex flex-wrap gap-x-5 gap-y-7 leading-loose select-none py-2"
               dir="rtl"
             >
               {selectedPassage.words.map((word, idx) => {
@@ -3227,12 +2920,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onClick={() => handleManualFixateWord(idx)}
                     className={`px-3.5 py-2.5 rounded-xl text-2xl font-display transition-all cursor-pointer relative ${
                       isCurrentGaze
-                        ? 'bg-[#0284C7] text-white font-bold ring-4 ring-sky-400/40'
+                        ? 'bg-[#0284C7] text-white font-bold ring-4 ring-sky-400/30'
                         : isHighFixation
-                          ? 'bg-red-50 text-red-950 border border-red-300 font-semibold'
+                          ? 'bg-red-50 text-red-950 border border-red-200 font-semibold'
                           : duration > 0 || wordBlinks > 0
-                            ? 'bg-emerald-50/70 text-slate-900 border border-emerald-300'
-                            : 'bg-white text-slate-900 border border-slate-200'
+                            ? 'bg-emerald-50/70 text-slate-900 border border-emerald-200'
+                            : 'bg-slate-50/60 text-slate-900 border border-slate-200/80 hover:bg-slate-100/70'
                     }`}
                   >
                     <span>{word}</span>
@@ -3255,23 +2948,146 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               })}
             </div>
           </div>
+
+          {/* Compact Dialect & Oral Transcript Studio Card */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                <Globe className="w-4 h-4 text-[#059669]" />
+                <span>محاذاة القراءة الجهرية وتكيّف اللهجة العربية ({selectedDialectProfile.labelAr})</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label="تغيير اللهجة العربية أثناء القراءة"
+                  value={selectedDialect}
+                  onChange={(e) =>
+                    setSelectedDialect(e.target.value as ArabicDialectCode)
+                  }
+                  className="px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800"
+                >
+                  {ARABIC_DIALECT_PROFILES.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.labelAr}
+                    </option>
+                  ))}
+                </select>
+
+                {[
+                  {
+                    dialect: 'gulf' as ArabicDialectCode,
+                    label: 'نموذج خليجي',
+                    sample:
+                      'زار طلاب المدرسة المرصد الفلكي في مسا صافي لشوفة الكواكب المنورة حط المهندس المنضار الدكيك صوب السماء',
+                  },
+                  {
+                    dialect: 'egyptian' as ArabicDialectCode,
+                    label: 'نموذج مصري',
+                    sample:
+                      'زار طلاب المدرسه المرصد الفلكي في مسا صافي علشان الكواكب المنورة حط المهندس المنظار الدئيئ نحو السماء',
+                  },
+                  {
+                    dialect: 'levantine' as ArabicDialectCode,
+                    label: 'نموذج شامي',
+                    sample:
+                      'زار طلاب المدرسة المرصد الفلكي في مسا صافي لشوفة الكواكب المضوية حط المهندس المنظار الدئيئ صوب السماء',
+                  },
+                  {
+                    dialect: 'maghrebi' as ArabicDialectCode,
+                    label: 'نموذج مغاربي',
+                    sample:
+                      'مشوا طلاب المدرسة المرصد الفلكي في مسا صافي باش الكواكب المضوية حط المهندس المنضار الدقيق نحو السماء',
+                  },
+                ].map((preset) => (
+                  <button
+                    key={preset.dialect}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDialect(preset.dialect);
+                      setSpokenTranscript(preset.sample);
+                    }}
+                    className="px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {speechRecErrorMsg && (
+              <div
+                role="alert"
+                className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+                <span>{speechRecErrorMsg}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+              <div className="lg:col-span-8">
+                <label
+                  htmlFor="manual-spoken-transcript-input"
+                  className="sr-only"
+                >
+                  النص المنطوق الفعلي للطالب
+                </label>
+                <input
+                  id="manual-spoken-transcript-input"
+                  type="text"
+                  value={spokenTranscript}
+                  onChange={(e) => setSpokenTranscript(e.target.value)}
+                  placeholder="النص المنطوق للطالب (يُحدَّث تلقائياً عبر الميكروفون أو يُكتب يدوياً هنا)..."
+                  className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+              <div className="lg:col-span-4 text-xs text-slate-600 flex flex-wrap items-center justify-end gap-3">
+                {liveOralDialectMetrics ? (
+                  <>
+                    <span>
+                      المطابقة:{' '}
+                      <strong className="font-mono text-[#059669]">
+                        {liveOralDialectMetrics.accuracyPercent}%
+                      </strong>
+                    </span>
+                    <span>
+                      بدائل لهجية:{' '}
+                      <strong className="font-mono text-[#0284C7]">
+                        {liveOralDialectMetrics.dialectVariantCount}
+                      </strong>
+                    </span>
+                    <span>
+                      إبدال فونولوجي:{' '}
+                      <strong className="font-mono text-[#D97706]">
+                        {liveOralDialectMetrics.phoneticSubstitutionCount}
+                      </strong>
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-slate-400">
+                    {liveBlinkClinical.clinicalNoteAr}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* STAGE 3: COMPREHENSION & AI REPORT GENERATION */}
       {stage === 'comprehension' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-6">
-          <div className="border-b border-slate-200 pb-4">
-            <h3 className="text-lg font-bold text-slate-900">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-8 shadow-xs space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h3 className="text-lg font-bold text-slate-900 font-display">
               أسئلة الفهم والاستيعاب القرائي المتدرجة وإصدار تقرير المؤشرات الأولية
             </h3>
-            <p className="text-xs text-slate-600 mt-1">
-              أجب عن أسئلة الاستيعاب القرائي الـ ({selectedPassage.comprehensionQuestions.length}) التالية التي تقيس الفهم المباشر، والاستنتاج الضمني، والمفردات في السياق، والفكرة الرئيسة، لدمجها مع قياسات تتبع العين ({recordedWordsList.length} كلمة مرصودة) ومعدل الرمش ({liveMetrics.blinksPerMinute} رمشة/دقيقة · {liveMetrics.visualStrainLabelAr}) وفق ({selectedDialectProfile.labelAr}).
+            <p className="text-xs text-slate-500 mt-1">
+              أجب عن أسئلة الاستيعاب القرائي الـ ({selectedPassage.comprehensionQuestions.length}) لدمجها مع قياسات تتبع العين ({recordedWordsList.length} كلمة مرصودة) ومعدل الرمش ({liveMetrics.blinksPerMinute} رمشة/دقيقة).
             </p>
           </div>
 
           {comprehensionError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-[#DC2626] flex items-center gap-2">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-[#DC2626] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{comprehensionError}</span>
             </div>
@@ -3281,27 +3097,27 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             {selectedPassage.comprehensionQuestions.map((q, qIdx) => (
               <div
                 key={qIdx}
-                className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3"
+                className="p-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-50 text-[#0284C7] border border-sky-200">
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-sky-50 text-[#0284C7] border border-sky-200/80">
                     {q.skillLabelAr || 'مهارة الفهم القرائي'}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-500">
+                  <span className="text-[11px] font-mono text-slate-400">
                     سؤال {qIdx + 1} / {selectedPassage.comprehensionQuestions.length}
                   </span>
                 </div>
-                <div className="text-sm font-semibold text-slate-900">
+                <div className="text-sm font-bold text-slate-900">
                   {qIdx + 1}. {q.question}
                 </div>
                 <div className="space-y-2">
                   {q.options.map((opt, optIdx) => (
                     <label
                       key={optIdx}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-medium transition-colors ${
                         answers[qIdx] === optIdx
-                          ? 'bg-white border-[#0284C7] text-slate-900'
-                          : 'bg-white/60 border-slate-200 text-slate-700 hover:bg-white'
+                          ? 'bg-white border-[#0284C7] text-slate-900 shadow-2xs'
+                          : 'bg-white/70 border-slate-200/80 text-slate-700 hover:bg-white'
                       }`}
                     >
                       <input
@@ -3322,11 +3138,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setStage('reading')}
-              className="px-4 py-2.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>العودة لشاشة القراءة</span>
@@ -3336,13 +3152,13 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               type="button"
               disabled={isAnalyzing}
               onClick={handleFinalizeSession}
-              className="px-6 py-3 text-sm font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2"
+              className="px-6 py-3 text-sm font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-xl transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
             >
               <Sparkles className="w-4 h-4" />
               <span>
                 {isAnalyzing
-                  ? 'جاري تحليل مسار العين ومعدل الرمش بالذكاء الاصطناعي...'
-                  : 'اعتماد الفحص الأولي وإصدار تقرير المؤشرات القرائية وخريطة النظر'}
+                  ? 'جاري تحليل مسار العين ومعدل الرمش...'
+                  : 'اعتماد الفحص الأولي وإصدار تقرير المؤشرات القرائية'}
               </span>
               <ArrowLeft className="w-4 h-4" />
             </button>
