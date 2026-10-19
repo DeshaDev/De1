@@ -19,7 +19,7 @@ import {
   estimateIRTAbilityEAP,
   selectNextAdaptiveIRTItem,
   evaluateOralReadingAlignment,
-  runLexploreOculomotorInference,
+  runOculomotorHeuristicAnalysis,
   RawGazeSample,
   ARABIC_DIALECT_PROFILES,
   ArabicDialectCode,
@@ -398,9 +398,9 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
     return samples;
   }, [gazePresetMode, selectedStudent]);
 
-  const lexploreMLResult = useMemo(
+  const oculomotorHeuristicResult = useMemo(
     () =>
-      runLexploreOculomotorInference(
+      runOculomotorHeuristicAnalysis(
         activeGazeSamples,
         ARABIC_READING_PASSAGES[0].words.length,
         {
@@ -422,13 +422,13 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
         maxDispersionPx: maxDispersionThresholdPx,
         readingDirection: 'rtl',
       },
-      extractedFeatures: lexploreMLResult.features,
-      randomForestInference: {
-        dyslexiaProbability: lexploreMLResult.dyslexiaProbability,
-        classification: lexploreMLResult.classification,
-        recurrentSequenceStateScore:
-          lexploreMLResult.recurrentSequenceStateScore,
-        treeVotes: lexploreMLResult.treeVotes,
+      extractedFeatures: oculomotorHeuristicResult.features,
+      heuristicInference: {
+        heuristicRiskScore: oculomotorHeuristicResult.heuristicRiskScore,
+        classification: oculomotorHeuristicResult.classification,
+        temporalHeuristicScore:
+          oculomotorHeuristicResult.temporalHeuristicScore,
+        ruleVotes: oculomotorHeuristicResult.ruleVotes,
       },
       irtAdaptiveSummary: currentIRTEstimate,
       oralReadingFluency: oralFluencyMetrics,
@@ -542,7 +542,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               </div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
-              {lexploreMLResult.dyslexiaProbability}%
+              {oculomotorHeuristicResult.heuristicRiskScore}%
             </span>
           </button>
         </div>
@@ -1168,7 +1168,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
 
           <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-950 leading-relaxed">
             <strong className="font-bold">إفصاح منهجي: </strong>
-            {lexploreMLResult.clinicalValidationDisclaimerAr}
+            {oculomotorHeuristicResult.clinicalValidationDisclaimerAr}
           </div>
 
           {/* PyGaze Threshold Controls */}
@@ -1232,20 +1232,20 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               </div>
               <div className="flex items-baseline justify-between mt-1">
                 <span className="text-xl font-bold font-mono tabular-nums text-slate-900">
-                  {lexploreMLResult.dyslexiaProbability}%
+                  {oculomotorHeuristicResult.heuristicRiskScore}%
                 </span>
                 <span
                   className={`text-xs font-semibold ${
-                    lexploreMLResult.classification === 'high_dyslexia_risk'
+                    oculomotorHeuristicResult.classification === 'high_dyslexia_risk'
                       ? 'text-[#DC2626]'
-                      : lexploreMLResult.classification === 'moderate_risk'
+                      : oculomotorHeuristicResult.classification === 'moderate_risk'
                         ? 'text-[#D97706]'
                         : 'text-[#059669]'
                   }`}
                 >
-                  {lexploreMLResult.classification === 'high_dyslexia_risk'
+                  {oculomotorHeuristicResult.classification === 'high_dyslexia_risk'
                     ? '■ مؤشر فرز مرتفع'
-                    : lexploreMLResult.classification === 'moderate_risk'
+                    : oculomotorHeuristicResult.classification === 'moderate_risk'
                       ? '▲ مؤشر فرز متوسط'
                       : '● مؤشر فرز طبيعي'}
                 </span>
@@ -1261,14 +1261,14 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               </div>
 
               <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-[#F8FAFC] overflow-hidden">
-                {lexploreMLResult.treeVotes.map((tree) => (
-                  <div key={tree.treeId} className="p-4 space-y-1">
+                {oculomotorHeuristicResult.ruleVotes.map((tree) => (
+                  <div key={tree.ruleId} className="p-4 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-900">
-                        {tree.treeNameAr}
+                        {tree.ruleNameAr}
                       </span>
                       <span className="font-mono tabular-nums font-bold text-[#0284C7]">
-                        {Math.round(tree.riskProbability * 100)}%
+                        {Math.round(tree.riskSignalStrength * 100)}%
                       </span>
                     </div>
                     <p className="text-xs text-slate-600">
@@ -1286,7 +1286,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               </div>
 
               <div className="bg-[#F8FAFC] border border-slate-200 rounded-xl p-5 space-y-3.5">
-                {lexploreMLResult.featureImportances.map((feat, idx) => (
+                {oculomotorHeuristicResult.heuristicFeatureWeights.map((feat, idx) => (
                   <div
                     key={idx}
                     className="pb-3 border-b border-slate-200/70 last:border-b-0 last:pb-0 text-xs"
@@ -1299,7 +1299,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 font-mono">
                       <span>القيمة: {feat.observedValue}</span>
-                      <span>المعيار: {feat.normativeRange}</span>
+                      <span>المعيار: {feat.heuristicReferenceBand}</span>
                     </div>
                   </div>
                 ))}
