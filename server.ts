@@ -60,37 +60,54 @@ const PATCHABLE_STUDENT_FIELDS = new Set<string>([
   'calibrationAccuracyPercent', 'calibrationValidationMethod',
   'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
   'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
-  'dyslexiaRiskScore', 'readingPercentile', 'readingRiskLevel', 'readingRiskLabelAr',
+  'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
   'problematicWords', 'fixations', 'comprehensionScore',
   'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
   'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-  'mathPercentile', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
+  'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
 ]);
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
-  const cleanName = (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim();
+  // Migrate records written by older builds, where heuristic indices were mislabeled as percentiles.
+  const legacy = s as StudentRecord & {
+    readingPercentile?: number;
+    mathPercentile?: number;
+  };
+  const normalized = {
+    ...s,
+    guardianConsentGiven: s.isDemoRecord ? false : s.guardianConsentGiven,
+    readingHeuristicIndicator:
+      s.readingHeuristicIndicator ??
+      (typeof legacy.readingPercentile === 'number' ? legacy.readingPercentile : 50),
+    mathHeuristicIndicator:
+      s.mathHeuristicIndicator ??
+      (typeof legacy.mathPercentile === 'number' ? legacy.mathPercentile : null),
+  } as StudentRecord & { readingPercentile?: number; mathPercentile?: number };
+  delete normalized.readingPercentile;
+  delete normalized.mathPercentile;
+
+  const cleanName = (normalized.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim();
   const cleanSchool =
-    s.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
+    normalized.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
       ? 'مدرسة الرواد الابتدائية'
-      : s.schoolName;
-  const cleanSummary = s.clinicalReport?.clinicalSummary
-    ? s.clinicalReport.clinicalSummary
-        .replace(/^\[سجل تجريبي توضيحي[^\]]*\]\s*/g, '')
+      : normalized.schoolName;
+  const cleanSummary = normalized.clinicalReport?.clinicalSummary
+    ? normalized.clinicalReport.clinicalSummary
+        .replace(/^\\[سجل تجريبي توضيحي[^\\]]*\\]\\s*/g, '')
         .trim()
     : '';
   return {
-    ...s,
+    ...normalized,
     name: cleanName,
     schoolName: cleanSchool,
-    clinicalReport: s.clinicalReport
+    clinicalReport: normalized.clinicalReport
       ? {
-          ...s.clinicalReport,
-          clinicalSummary: cleanSummary || s.clinicalReport.clinicalSummary,
+          ...normalized.clinicalReport,
+          clinicalSummary: cleanSummary || normalized.clinicalReport.clinicalSummary,
         }
-      : s.clinicalReport,
+      : normalized.clinicalReport,
   };
 }
-
 function createSeededStudents(): StudentRecord[] {
   return INITIAL_STUDENTS.map((s) =>
     sanitizeStudentRecord({
