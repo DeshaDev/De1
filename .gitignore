@@ -11,3 +11,5 @@ coverage/
 .runtime-store/
 !/src/data/
 !/src/data/**
+clinical-store.json
+clinical-store.json.tmp
