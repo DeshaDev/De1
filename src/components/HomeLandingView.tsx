@@ -566,7 +566,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 onClick={() => onNavigateTab('eye-lab')}
                 className="px-6 py-3.5 rounded-full bg-[#18181B] hover:bg-[#15803D] text-white text-sm font-bold transition-colors flex items-center gap-2.5 cursor-pointer shadow-sm whitespace-nowrap"
               >
-                <span>ابدأ جلسة فحص القراءة والعين</span>
+                <span>جرّب القراءة وتتبع العين</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <button
@@ -575,7 +575,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 className="px-5 py-3.5 rounded-full bg-white/90 hover:bg-white text-slate-900 border border-slate-300/90 text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
               >
                 <SoundwaveBarsIcon className="text-[#15803D]" />
-                <span>تجربة فورية بحساب طالب جاهز</span>
+                <span>جرّب ملفاً توضيحياً</span>
               </button>
             </div>
           </div>
@@ -759,7 +759,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 أولياء الأمور والأسرة
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                ماذا يحدث عندما يقرأ طفلك مع بصيرة؟ رافق طفلك في جلسة فحص
+                ماذا يحدث خلال جلسة القراءة؟ استكشف المراحل التفاعلية خطوة بخطوة
                 وتدريب ميسّرة خطوة بخطوة في دقائق.
               </p>
             </div>
@@ -787,7 +787,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 قادة المدارس والتعليم
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                كيف تدعم بصيرة خطة المدرسة في الفرز المبكر بأمان وخصوصية تامة،
+                كيف يمكن استخدام المؤشرات الاسترشادية لدعم الملاحظة التربوية،
                 ومع عزل دقيق للهجات العربية والخليجية.
               </p>
             </div>
