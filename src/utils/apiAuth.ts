@@ -10,7 +10,6 @@ export interface ClinicalSessionInfo {
 
 const SESSION_STORAGE_KEY = 'baseera_clinical_session_v1';
 let cachedSession: ClinicalSessionInfo | null = null;
-let pendingSessionPromise: Promise<ClinicalSessionInfo | null> | null = null;
 
 export function getStoredClinicalSession(): ClinicalSessionInfo | null {
   if (cachedSession && cachedSession.expiresAt > Date.now() + 10_000) {
@@ -32,7 +31,7 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
 }
 
 export async function loginClinicalSession(
-  accessCode: string = 'BASEERA-CLINICAL-2026',
+  accessCode: string,
   role: ClinicalRole = 'clinician',
   clinicianName: string = 'أخصائي التقييم المعتمد'
 ): Promise<ClinicalSessionInfo | null> {
@@ -69,14 +68,8 @@ export function clearClinicalSession(): void {
 }
 
 export async function ensureClinicalSession(): Promise<ClinicalSessionInfo | null> {
-  const existing = getStoredClinicalSession();
-  if (existing) return existing;
-  if (pendingSessionPromise) return pendingSessionPromise;
-
-  pendingSessionPromise = loginClinicalSession().finally(() => {
-    pendingSessionPromise = null;
-  });
-  return pendingSessionPromise;
+  // Authentication is explicit; never mint a server session from a bundled credential.
+  return getStoredClinicalSession();
 }
 
 /**
@@ -84,6 +77,17 @@ export async function ensureClinicalSession(): Promise<ClinicalSessionInfo | nul
  * required by `/api/students` and `/api/ai/*`.
  */
 export async function authenticatedFetch(
+  input: string,
+  init: RequestInit = {}
+): Promise<Response> {
+  const session = await ensureClinicalSession();
+  const headers = new Headers(init.headers || {});
+  if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
+  const response = await fetch(input, { ...init, headers });
+  if (response.status === 401) clearClinicalSession();
+  return response;
+}
+
   input: string,
   init: RequestInit = {}
 ): Promise<Response> {
