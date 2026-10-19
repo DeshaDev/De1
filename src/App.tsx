@@ -654,7 +654,7 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      المئين P{selectedStudent.readingPercentile}
+                      مؤشر الفرز الاسترشادي {selectedStudent.readingPercentile}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
@@ -1079,13 +1079,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 5 Cols: Lexplore Normative Percentile Matrix Chart */}
+                {/* 5 Cols: Heuristic Screening Index Matrix Chart */}
                 <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                   <div>
                     <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
                       <div>
                         <h2 className="text-base font-bold text-slate-900">
-                          مصفوفة المئينات المعيارية
+                          مصفوفة مؤشرات الفرز الاسترشادية (غير معيارية)
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
                           موقع الطالب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
@@ -1098,7 +1098,7 @@ export default function App() {
                       viewBox="0 0 380 230"
                       className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-xl"
                       role="img"
-                      aria-label="مخطط توزيع الطلاب حسب المئين القرائي والحسابي"
+                      aria-label="مخطط توزيع الطلاب حسب مؤشرات الفرز القرائي والحسابي"
                     >
                       <rect
                         x="40"
@@ -1177,7 +1177,7 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        المئين القرائي للطالب →
+                        مؤشر الفرز القرائي للطالب →
                       </text>
 
                       {students.map((stu) => {
