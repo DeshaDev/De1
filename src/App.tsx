@@ -651,7 +651,7 @@ export default function App() {
             </div>
           )}
 
-        {/* VIEW 1: EXECUTIVE CLINICAL DASHBOARD */}
+        {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Unified Executive Header & 4-Metric Hairline Ribbon (Single-Elevation, Zero Card-in-Card) */}
@@ -715,7 +715,7 @@ export default function App() {
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
-                        : '● طلاقة قرائية طبيعية'}{' '}
+                        : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
                     · فهم {selectedStudent.comprehensionScore}%
                   </div>
                 </div>
@@ -744,7 +744,7 @@ export default function App() {
                         ? '■ تثبيت مطوّل'
                         : selectedStudent.avgFixationMs >= 320
                           ? '▲ تثبيت متوسط'
-                          : '● معياري (220ms)'}
+                          : 'ضمن العرض التجريبي'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
