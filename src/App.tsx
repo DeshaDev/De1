@@ -680,12 +680,12 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      المئين P{selectedStudent.readingPercentile}
+                      مؤشر الفرز الاسترشادي {selectedStudent.readingHeuristicIndicator}/100
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
                     {selectedStudent.readingRiskLevel === 'high'
-                      ? '■ دون المعيار العمري المتوقع'
+                      ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
                         : '● طلاقة قرائية طبيعية'}{' '}
@@ -832,7 +832,7 @@ export default function App() {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>١. سجل الطلاب والمئينات ({students.length})</span>
+                  <span>١. سجل الطلاب ومؤشرات الفرز ({students.length})</span>
                 </button>
                 <button
                   type="button"
@@ -1036,10 +1036,10 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ مرتفع (P${stu.readingPercentile})`
+                                      ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (P${stu.readingPercentile})`
-                                        : `● طبيعي (P${stu.readingPercentile})`}
+                                        ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
+                                        : `● استدلالي منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1105,13 +1105,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 5 Cols: Lexplore Normative Percentile Matrix Chart */}
+                {/* 5 Cols: Exploratory screening-indicator matrix */}
                 <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                   <div>
                     <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
                       <div>
                         <h2 className="text-base font-bold text-slate-900">
-                          مصفوفة المئينات المعيارية
+                          مصفوفة مؤشرات الفرز الاسترشادية
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
                           موقع الطالب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
@@ -1124,7 +1124,7 @@ export default function App() {
                       viewBox="0 0 380 230"
                       className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-xl"
                       role="img"
-                      aria-label="مخطط توزيع الطلاب حسب المئين القرائي والحسابي"
+                      aria-label="مخطط مؤشرات الفرز القرائي والحسابي الاسترشادية"
                     >
                       <rect
                         x="40"
@@ -1203,16 +1203,18 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        المئين القرائي للطالب →
+                        مؤشر الفرز القرائي (استرشادي) →
                       </text>
 
                       {students.map((stu) => {
-                        const cx = 40 + (stu.readingPercentile / 100) * 320;
-                        const effectiveMathPct =
-                          stu.mathPercentile !== null &&
-                          stu.mathRiskLevel !== 'unassessed'
-                            ? stu.mathPercentile
-                            : 50;
+                        if (
+                          stu.mathHeuristicIndicator === null ||
+                          stu.mathRiskLevel === 'unassessed'
+                        ) {
+                          return null;
+                        }
+                        const cx = 40 + (stu.readingHeuristicIndicator / 100) * 320;
+                        const effectiveMathPct = stu.mathHeuristicIndicator;
                         const cy = 190 - (effectiveMathPct / 100) * 135;
                         const isSel = stu.id === selectedStudent.id;
                         const firstName = stu.name.split(' ')[0];
@@ -1269,10 +1271,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      P{selectedStudent.readingPercentile} قراءة ·{' '}
-                      {selectedStudent.mathPercentile !== null &&
+                      P{selectedStudent.readingHeuristicIndicator} قراءة ·{' '}
+                      {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `P${selectedStudent.mathPercentile} حساب`
+                        ? `P${selectedStudent.mathHeuristicIndicator} حساب`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
