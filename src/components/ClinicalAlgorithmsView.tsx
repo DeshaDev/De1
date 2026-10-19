@@ -1247,7 +1247,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     ? '■ مؤشر فرز مرتفع'
                     : oculomotorHeuristicResult.classification === 'moderate_risk'
                       ? '▲ مؤشر فرز متوسط'
-                      : '● مؤشر فرز طبيعي'}
+                      : '● مؤشر فرز استرشادي منخفض'}
                 </span>
               </div>
             </div>
