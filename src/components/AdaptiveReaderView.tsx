@@ -464,7 +464,7 @@ export const AdaptiveReaderView: React.FC = () => {
           {/* 2-Mode Segmented Studio Switcher */}
           <div
             role="tablist"
-            aria-label="أوضاع استوديو القارئ وDyslexico"
+            aria-label="أوضاع القارئ العربي الميسّر"
             className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl"
           >
             <button
@@ -975,7 +975,7 @@ export const AdaptiveReaderView: React.FC = () => {
           <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200">
             <div className="max-w-2xl space-y-1.5">
               <div className="text-xs text-slate-500">
-                فصل صارم بين الخطأ القرائي، والتطبيع الإملائي، والمفردة اللهجية الصحيحة
+                محاولة التمييز بين الخطأ القرائي، والاختلاف الإملائي، والمفردة اللهجية
               </div>
               <h3 className="text-lg font-bold text-slate-900">
                 محلل الكلمات والمطابقة الفونولوجية المراعية للهجات العربية
@@ -1048,7 +1048,7 @@ export const AdaptiveReaderView: React.FC = () => {
                   htmlFor="dyslexico-live-input"
                   className="block text-xs font-semibold text-slate-700 mb-2"
                 >
-                  اختبر أي جملة عربية لملاحظة التمييز الثلاثي بين الإبدال الحرفي، والاختلاف الإملائي، واللهجة الصحيحة:
+                  أدخل جملة عربية لمعاينة كيفية تصنيف بعض الإبدالات والاختلافات الإملائية والبدائل اللهجية. التصنيف آلي أولي وقد يحتاج إلى مراجعة:
                 </label>
                 <textarea
                   id="dyslexico-live-input"
