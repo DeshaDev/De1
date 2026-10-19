@@ -375,7 +375,7 @@ export function runOculomotorHeuristicAnalysis(
     decisionPathAr:
       meanFixationDurationMs >= 310
         ? `زمن التثبيت (${meanFixationDurationMs}ms > 310ms) يشير لبطء فك الترميز الفونولوجي`
-        : `زمن التثبيت (${meanFixationDurationMs}ms <= 310ms) ضمن النطاق المعياري السريع`,
+        : `زمن التثبيت (${meanFixationDurationMs}ms <= 310ms) دون عتبة القاعدة المبرمجة`,
   };
 
   // Tree 2: Regressive Saccade Density
@@ -497,13 +497,13 @@ export function runOculomotorHeuristicAnalysis(
         heuristicReferenceBand: '8% – 15%',
       },
       {
-        featureNameAr: 'بوابة التسلسل الزمني المتكرر (Temporal RNN/Markov State)',
+        featureNameAr: 'مؤشر تنعيم زمني استدلالي (قاعدة يدوية، وليست شبكة عصبية)',
         weightPercent: 18,
         observedValue: `${temporalHeuristicScore}%`,
         heuristicReferenceBand: '< 35%',
       },
       {
-        featureNameAr: 'المئين ٩٠ للتثبيتات المطوّلة (P90 Fixation Burst)',
+        featureNameAr: 'القيمة المئوية التسعون لمدة التثبيت (P90 Fixation Burst)',
         weightPercent: 16,
         observedValue: `${p90FixationDurationMs} ms`,
         heuristicReferenceBand: '< 350 ms',
@@ -2421,7 +2421,7 @@ export function estimateIRTAbilityEAP(
   const standardError =
     Math.round((1 / Math.sqrt(totalFisherInformation)) * 100) / 100;
 
-  // Convert theta to standard normal modelBasedIndex via error function approximation
+  // Convert theta to assumed Normal(0,1) model-based index via a CDF approximation; not an empirical norm percentile
   const z = theta;
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp((-z * z) / 2);
