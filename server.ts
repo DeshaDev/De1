@@ -99,6 +99,7 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
   };
   const normalized = {
     ...s,
+    guardianConsentGiven: s.isDemoRecord ? false : s.guardianConsentGiven,
     readingHeuristicIndicator:
       s.readingHeuristicIndicator ??
       (typeof legacy.readingPercentile === 'number' ? legacy.readingPercentile : 50),
@@ -387,7 +388,10 @@ async function startServer() {
       res.json({
         students: studentsDb,
         persisted: Boolean(CLINICAL_DATA_ENCRYPTION_KEY && storageIntegrityConfirmed),
-        privacyPolicy: 'EncryptedAtRest; identifiable records are returned only to authenticated users',
+        privacyPolicy:
+          CLINICAL_DATA_ENCRYPTION_KEY && storageIntegrityConfirmed
+            ? 'EncryptedAtRest; identifiable records are returned only to authenticated users'
+            : 'DemoOnly; clinical persistence disabled until encryption is configured',
       });
     }
   );
@@ -454,7 +458,7 @@ async function startServer() {
       }
       if ('guardianConsentGiven' in updates) {
         res.status(403).json({
-          error: 'لا يمكن تعديل حالة موافقة ولي الأمر عبر PATCH. تتطلب الموافقة إجراءً مستقلاً قابلاً للتدقيق.',
+          error: 'لا يمكن تعديل حالة موافقة ولي الأمر عبر PATCH. عند اكتشاف موافقة غير صحيحة، أوقف استخدام السجل واتبع إجراء المؤسسة الموثق بدلاً من تعديل الحقل.'
         });
         return;
       }
