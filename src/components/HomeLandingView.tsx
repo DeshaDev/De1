@@ -731,8 +731,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 المعلمون والأخصائيون
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                اكتشف كيف تساعدك «بصيرة» في تنمية الطلاقة القرائية والحسابية
-                لدى الطلاب ومراجعة مؤشرات القراءة المبكرة بحذر.
+                استكشف كيف تجمع «بصيرة» مؤشرات أولية عن القراءة والحساب لمراجعتها ضمن الملاحظة التربوية، دون اعتبارها تشخيصاً.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
@@ -759,8 +758,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 أولياء الأمور والأسرة
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                ماذا يحدث خلال جلسة القراءة؟ استكشف المراحل التفاعلية خطوة بخطوة
-                وتدريب ميسّرة خطوة بخطوة في دقائق.
+                تعرّف على مراحل الجلسة التفاعلية، ثم جرّب القارئ العربي الميسّر.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
@@ -787,8 +785,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 قادة المدارس والتعليم
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                كيف يمكن استخدام المؤشرات الاسترشادية لدعم الملاحظة التربوية،
-                ومع عزل دقيق للهجات العربية والخليجية.
+                كيف يمكن مراجعة المؤشرات الاسترشادية ضمن الملاحظة التربوية، مع مراعاة أولية للاختلافات اللهجية.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
