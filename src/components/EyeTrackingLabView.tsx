@@ -1967,7 +1967,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
       ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — دقة الكاميرا غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
-        ? `[تنبيه منهجي: دقة معايرة الكاميرا خارج التدريب منخفضة (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — قياسات الكاميرا في هذه الجلسة غير موثوقة ولا يُعتمد عليها] `
+        ? `[تنبيه منهجي: خطأ التقدير في نقاط التحقق منخفضة (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — قياسات الكاميرا في هذه الجلسة غير موثوقة ولا يُعتمد عليها] `
         : '[مؤشر فرز أولي استرشادي مبني على قواعد استدلالية (Heuristic MVP) — لا يغني عن التشخيص الإكلينيكي المعتمد] ';
 
     let clinicalReport = {
@@ -2423,7 +2423,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-slate-700">خوارزمية الانحدار:</span>
                     <select
-                      aria-label="خوارزمية انحدار WebGazer"
+                      aria-label="نموذج تقدير نقطة النظر (تجريبي)"
                       value={wgRegressionType}
                       onChange={(e) =>
                         setWgRegressionType(
