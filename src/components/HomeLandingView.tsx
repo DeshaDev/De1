@@ -66,7 +66,7 @@ const SIMULATOR_PROFILES: Record<
   }
 > = {
   fluent: {
-    title: 'قارئ طلق',
+    title: 'مثال تجريبي',
     wpm: 108,
     avgFixationMs: 215,
     regressionRate: 6,
@@ -126,7 +126,7 @@ const SIMULATOR_PROFILES: Record<
     ],
   },
   'dyslexia-risk': {
-    title: 'مؤشر عسر قراءة',
+    title: 'مؤشر تجريبي مرتفع',
     wpm: 54,
     avgFixationMs: 425,
     regressionRate: 28,
@@ -461,7 +461,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
     e.preventDefault();
     const cleanName = mockName.trim() || 'عمر خالد الدوسري';
     const roleLabel =
-      mockRole === 'student' ? 'طالب / ولي أمر' : 'معلم / مختص';
+      mockRole === 'student' ? 'تجربة كطالب' : 'تجربة كمختص';
     setRegistrationNotice(`تم تسجيل «${cleanName}» — جاري فتح الخطوة ٢...`);
     onStartMockUserJourney(cleanName, mockGrade, roleLabel);
   };
@@ -994,7 +994,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     [
                       { id: 'dyslexia-risk', label: 'عسر قراءة' },
                       { id: 'dialect-nominal', label: 'تنوع لهجي' },
-                      { id: 'fluent', label: 'قارئ طلق' },
+                      { id: 'fluent', label: 'مثال تجريبي' },
                     ] as const
                   ).map((tab) => (
                     <button
@@ -1343,15 +1343,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
           <div className="space-y-1.5">
             <div className="text-xs font-bold text-[#15803D]">
-              بوابة التجربة العملية المباشرة
+              مسار تجريبي تفاعلي
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
-              ابدأ رحلة الفحص الآن: اختر حساب طالب جاهز أو سجّل طالباً جديداً
+              جرّب المسار بملف تجريبي أو أنشئ سجلاً للاختبار
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-slate-600">
-            تسير الرحلة في ٤ خطوات متسلسلة: اختيار الطالب ← فحص القراءة والعين ←
-            فحص الحساب ← التقرير النهائي.
+            تسير الرحلة في ٤ خطوات: اختيار الملف ← القراءة والعين ← الحساب ← التقرير. الملفات المعروضة تجريبية، ولا تمثل نتائج طلاب حقيقيين. لا تُدخل بيانات أطفال حقيقية في هذه النسخة.
           </p>
         </div>
 
@@ -1361,10 +1360,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800">
-                  أ) دخول فوري بحساب طالب جاهز (بنقرة واحدة):
+                  أ) اختر ملفاً تجريبياً (بيانات اصطناعية):
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  اختر الطالب لبدء الفحص أو استعراض تقريره
+                  النتائج المعروضة أمثلة توضيحية وليست تشخيصاً
                 </span>
               </div>
 
@@ -1396,10 +1395,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                             }`}
                           >
                             {stu.readingRiskLevel === 'high'
-                              ? 'مؤشر عسر قراءة'
+                              ? 'مؤشر تجريبي مرتفع'
                               : stu.readingRiskLevel === 'moderate'
-                                ? 'متابعة متوسطة'
-                                : 'قارئ طلق'}
+                                ? 'مؤشر تجريبي متوسط'
+                                : 'مثال تجريبي'}
                           </span>
                         </div>
                       </div>
@@ -1438,7 +1437,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <UserPlus className="w-4 h-4 text-[#15803D]" />
-                  <span>ب) أو تسجيل طالب جديد لبدء الفحص من الخطوة الأولى:</span>
+                  <span>ب) أو أنشئ سجلاً للاختبار دون بيانات شخصية حقيقية:</span>
                 </span>
                 <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 text-[11px]">
                   <button
@@ -1450,7 +1449,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         : 'text-slate-600'
                     }`}
                   >
-                    طالب / ولي أمر
+                    تجربة كطالب
                   </button>
                   <button
                     type="button"
@@ -1461,7 +1460,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         : 'text-slate-600'
                     }`}
                   >
-                    معلم / مختص
+                    تجربة كمختص
                   </button>
                 </div>
               </div>
