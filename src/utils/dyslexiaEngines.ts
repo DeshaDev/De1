@@ -6,7 +6,7 @@
  */
 
 // ============================================================================
-// 1. LEXPLORE ENGINE: PYGAZE / GAZEPARSER OCULOMOTOR & ML INFERENCE
+// 1. WEBCAM GAZE EVENT EXTRACTION AND HAND-WRITTEN HEURISTICS
 // ============================================================================
 
 export interface RawGazeSample {
@@ -260,7 +260,7 @@ export function detectOculomotorEvents(
 }
 
 /**
- * Extracts the 12-metric oculomotor feature matrix from PyGaze events and runs
+ * Extracts an experimental oculomotor feature matrix from webcam-derived samples and applies
  * five hand-written threshold rules plus a simple temporal smoothing heuristic; no trained machine-learning model is used.
  */
 export function runOculomotorHeuristicAnalysis(
@@ -316,7 +316,7 @@ export function runOculomotorHeuristicAnalysis(
   const meanSaccadeAmplitudePx =
     saccadeCount > 0 ? Math.round(totalScanpathLengthPx / saccadeCount) : 0;
 
-  // Compute temporal sequence lag-1 autocorrelation & recurrent state gate
+  // Compute temporal lag-1 autocorrelation; this is a descriptive statistic, not a recurrent model.
   let temporalDurationAutocorrelation = 0;
   if (durations.length >= 3 && variance > 1) {
     let cov = 0;
@@ -358,8 +358,8 @@ export function runOculomotorHeuristicAnalysis(
   };
 
   // five hand-written threshold rules Ensemble Evaluation
-  // Tree 1: Fixation Duration Thresholds (Lexical & Phonological Processing Latency)
-  const tree1Prob =
+  // Rule 1: Fixation Duration Thresholds (Lexical & Phonological Processing Latency)
+  const rule1Signal =
     meanFixationDurationMs >= 380
       ? 0.88
       : meanFixationDurationMs >= 310
@@ -367,19 +367,19 @@ export function runOculomotorHeuristicAnalysis(
         : meanFixationDurationMs >= 260
           ? 0.35
           : 0.12;
-  const tree1Vote: HeuristicRuleVote = {
+  const rule1Vote: HeuristicRuleVote = {
     ruleId: 1,
-    ruleNameAr: 'شجرة القرار ١: كمون التثبيت البؤري (Fixation Latency)',
+    ruleNameAr: 'القاعدة الاستدلالية ١: زمن التثبيت',
     primaryFeature: 'meanFixationDurationMs',
-    riskSignalStrength: tree1Prob,
+    riskSignalStrength: rule1Signal,
     decisionPathAr:
       meanFixationDurationMs >= 310
         ? `زمن التثبيت (${meanFixationDurationMs}ms > 310ms) يشير لبطء فك الترميز الفونولوجي`
         : `زمن التثبيت (${meanFixationDurationMs}ms <= 310ms) دون عتبة القاعدة المبرمجة`,
   };
 
-  // Tree 2: Regressive Saccade Density
-  const tree2Prob =
+  // Rule 2: Regressive Saccade Density
+  const rule2Signal =
     regressionRatePercent >= 28
       ? 0.91
       : regressionRatePercent >= 19
@@ -387,47 +387,47 @@ export function runOculomotorHeuristicAnalysis(
         : regressionRatePercent >= 12
           ? 0.32
           : 0.10;
-  const tree2Vote: HeuristicRuleVote = {
+  const rule2Vote: HeuristicRuleVote = {
     ruleId: 2,
-    ruleNameAr: 'شجرة القرار ٢: كثافة القفزات التراجعية (Regressive Saccades)',
+    ruleNameAr: 'القاعدة الاستدلالية ٢: كثافة القفزات التراجعية',
     primaryFeature: 'regressionRatePercent',
-    riskSignalStrength: tree2Prob,
+    riskSignalStrength: rule2Signal,
     decisionPathAr:
       regressionRatePercent >= 19
         ? `نسبة التراجع (${regressionRatePercent}% >= 19%) تعكس إعادة قراءة الحروف المتشابهة`
         : `نسبة التراجع (${regressionRatePercent}% < 19%) تدل على مسح أمامي مستقر`,
   };
 
-  // Tree 3: P90 Extreme Fixation Bursts & SD
-  const tree3Prob =
+  // Rule 3: P90 Extreme Fixation Bursts & SD
+  const rule3Signal =
     p90FixationDurationMs >= 520
       ? 0.86
       : p90FixationDurationMs >= 390
         ? 0.58
         : 0.15;
-  const tree3Vote: HeuristicRuleVote = {
+  const rule3Vote: HeuristicRuleVote = {
     ruleId: 3,
     ruleNameAr: 'شجرة القرار ٣: ذروة التثبيتات المطوّلة (P90 Lexical Bottleneck)',
     primaryFeature: 'p90FixationDurationMs',
-    riskSignalStrength: tree3Prob,
+    riskSignalStrength: rule3Signal,
     decisionPathAr:
       p90FixationDurationMs >= 390
         ? `المئين ٩٠ للتثبيت (${p90FixationDurationMs}ms) يكشف تعثراً في الكلمات المركبة`
         : `المئين ٩٠ للتثبيت (${p90FixationDurationMs}ms) متوازن عبر النص`,
   };
 
-  // Tree 4: Saccadic Amplitude & Visual Crowding Sensitivity
-  const tree4Prob =
+  // Rule 4: Saccadic Amplitude & Visual Crowding Sensitivity
+  const rule4Signal =
     meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 55
       ? 0.78
       : meanSaccadeAmplitudePx <= 80
         ? 0.48
         : 0.16;
-  const tree4Vote: HeuristicRuleVote = {
+  const rule4Vote: HeuristicRuleVote = {
     ruleId: 4,
-    ruleNameAr: 'شجرة القرار ٤: مدى القفزة البصرية والتزاحم (Saccadic Span)',
+    ruleNameAr: 'القاعدة الاستدلالية ٤: مدى القفزة البصرية',
     primaryFeature: 'meanSaccadeAmplitudePx',
-    riskSignalStrength: tree4Prob,
+    riskSignalStrength: rule4Signal,
     decisionPathAr:
       meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 65
         ? `قصر مدى القفزة (${meanSaccadeAmplitudePx}px) يشير لقراءة حرفية مجزأة`
@@ -435,27 +435,27 @@ export function runOculomotorHeuristicAnalysis(
   };
 
   // Rule 5: Temporal smoothing heuristic
-  const tree5Prob = temporalHeuristicScore / 100;
-  const tree5Vote: HeuristicRuleVote = {
+  const rule5Signal = temporalHeuristicScore / 100;
+  const rule5Vote: HeuristicRuleVote = {
     ruleId: 5,
-    ruleNameAr: 'شجرة القرار ٥: تنعيم المؤشر عبر الزمن (قاعدة استدلالية وليست شبكة عصبية)',
+    ruleNameAr: 'القاعدة الاستدلالية ٥: تنعيم المؤشر عبر الزمن (قاعدة استدلالية وليست شبكة عصبية)',
     primaryFeature: 'temporalHeuristicScore',
-    riskSignalStrength: Math.round(tree5Prob * 100) / 100,
+    riskSignalStrength: Math.round(rule5Signal * 100) / 100,
     decisionPathAr:
       temporalHeuristicScore >= 55
         ? `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يرصد تذبذباً متكرراً بين التثبيت والتراجع`
         : `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يظهر إيقاعاً قرائياً منتظماً`,
   };
 
-  const ruleVotes = [tree1Vote, tree2Vote, tree3Vote, tree4Vote, tree5Vote];
+  const ruleVotes = [rule1Vote, rule2Vote, rule3Vote, rule4Vote, rule5Vote];
 
   // Weighted Ensemble Probability
   const ensembleProb =
-    tree1Prob * 0.28 +
-    tree2Prob * 0.26 +
-    tree3Prob * 0.16 +
-    tree4Prob * 0.12 +
-    tree5Prob * 0.18;
+    rule1Signal * 0.28 +
+    rule2Signal * 0.26 +
+    rule3Signal * 0.16 +
+    rule4Signal * 0.12 +
+    rule5Signal * 0.18;
 
   const heuristicRiskScore = Math.round(
     Math.min(98, Math.max(4, ensembleProb * 100))
@@ -2439,7 +2439,7 @@ export function estimateIRTAbilityEAP(
   if (theta <= -0.75) {
     riskLevel = 'high';
     preliminaryInterpretationAr =
-      'مؤشر إكلينيكي مرتفع لاضطراب التعلم المحدد في القراءة (DSM-5 315.00 / ICD-11 6A03.0)';
+      'مؤشر استدلالي مرتفع وفق حدود النموذج المبرمجة؛ لا يمثل تشخيصاً ولا تصنيفاً سريرياً معتمداً.';
   } else if (theta < 0.0) {
     riskLevel = 'moderate';
     preliminaryInterpretationAr =
