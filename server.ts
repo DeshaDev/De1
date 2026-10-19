@@ -228,6 +228,32 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
   };
 }
 
+// Rate-limit credential attempts independently from paid AI requests.
+const authAttemptBuckets = new Map<string, number[]>();
+function authRateLimiter(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
+  const now = Date.now();
+  const windowMs = 60_000;
+  const maxAttemptsPerMinute = 8;
+  const attempts = (authAttemptBuckets.get(clientIp) || []).filter(
+    (ts) => now - ts < windowMs
+  );
+  if (attempts.length >= maxAttemptsPerMinute) {
+    res.setHeader('Retry-After', '60');
+    res.status(429).json({
+      error: 'محاولات تسجيل الدخول كثيرة. يرجى الانتظار قبل المحاولة مجددًا.',
+    });
+    return;
+  }
+  attempts.push(now);
+  authAttemptBuckets.set(clientIp, attempts);
+  next();
+}
+
 // Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
 const rateLimitBuckets = new Map<string, number[]>();
 function aiRateLimiter(
@@ -281,7 +307,7 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
 
   // Educator / Clinician Authentication & RBAC Session Issuing Endpoint
-  app.post('/api/auth/session', (req, res) => {
+  app.post('/api/auth/session', authRateLimiter, (req, res) => {
     if (!isClinicalAuthConfigured()) {
       res.status(503).json({
         error: 'المصادقة غير مفعّلة: اضبط CLINICAL_ACCESS_CODE وCLINICAL_SESSION_SECRET وCLINICAL_STORE_ENCRYPTION_KEY.',
