@@ -224,7 +224,7 @@ export default function App() {
         body: JSON.stringify({
           ...newRecord,
           isDemoRecord: false,
-          guardianConsentGiven: true,
+          guardianConsentGiven: newRecord.guardianConsentGiven === true,
         }),
       });
       if (!response.ok) {
