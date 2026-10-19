@@ -586,10 +586,11 @@ export default function App() {
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
           { id: 'home', label: 'الرئيسية' },
-          { id: 'eye-lab', label: 'فحص العين' },
-          { id: 'dyscalculia-lab', label: 'فحص الحساب' },
+          { id: 'eye-lab', label: 'فحص القراءة والعين' },
+          { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
-          { id: 'dashboard', label: 'التقرير النهائي' },
+          { id: 'algorithms-lab', label: 'المنهجية والحدود' },
+          { id: 'dashboard', label: 'التقرير والمؤشرات' },
         ].map((item) => (
           <button
             key={item.id}
