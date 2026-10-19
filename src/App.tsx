@@ -1274,7 +1274,7 @@ export default function App() {
                       P{selectedStudent.readingHeuristicIndicator} قراءة ·{' '}
                       {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `P${selectedStudent.mathHeuristicIndicator} حساب`
+                        ? `مؤشر ${selectedStudent.mathHeuristicIndicator}/100 حساب`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
