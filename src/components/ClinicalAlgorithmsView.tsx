@@ -587,7 +587,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     : currentIRTEstimate.theta.toFixed(2)}
                 </span>
                 <span className="text-xs font-mono text-[#0284C7] font-semibold">
-                  المئين P{currentIRTEstimate.percentile}
+                  مؤشر النموذج (غير معياري) {currentIRTEstimate.modelBasedIndex}/100
                 </span>
               </div>
             </div>
@@ -627,9 +627,9 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             </div>
 
             <div className="p-5">
-              <div className="text-xs text-slate-500">التصنيف الاسترشادي</div>
+              <div className="text-xs text-slate-500">التفسير الاسترشادي غير السريري</div>
               <div className="mt-1 text-xs font-bold text-slate-900 leading-snug">
-                {currentIRTEstimate.dsm5ClassificationAr}
+                {currentIRTEstimate.preliminaryInterpretationAr}
               </div>
             </div>
           </div>
@@ -1299,7 +1299,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1 font-mono">
                       <span>القيمة: {feat.observedValue}</span>
-                      <span>المعيار: {feat.heuristicReferenceBand}</span>
+                      <span>عتبة استدلالية مبرمجة (غير معيارية): {feat.heuristicReferenceBand}</span>
                     </div>
                   </div>
                 ))}
