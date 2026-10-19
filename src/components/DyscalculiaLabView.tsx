@@ -358,7 +358,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       transcodingAccuracy: computedMetrics.transcodingAccuracy,
       reversalErrorCount: computedMetrics.reversalErrorCount,
       dyscalculiaRiskScore: computedMetrics.dyscalculiaRiskScore,
-      mathPercentile: computedMetrics.percentile,
+      mathHeuristicIndicator: computedMetrics.heuristicIndicator,
       mathRiskLevel: computedMetrics.riskLevel,
       mathRiskLabelAr: computedMetrics.riskLabelAr,
     });
@@ -985,7 +985,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 {answeredSubitizingCount === 3 &&
                 answeredNumberLineCount === 2 &&
                 answeredTranscodingCount === 3
-                  ? `المئين P${computedMetrics.percentile}`
+                  ? `مؤشر الفرز الاسترشادي {computedMetrics.heuristicIndicator}/100`
                   : `${
                       answeredSubitizingCount +
                       answeredNumberLineCount +
