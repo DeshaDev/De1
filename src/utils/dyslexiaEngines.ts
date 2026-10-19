@@ -2365,7 +2365,7 @@ export function estimateIRTAbilityEAP(
   standardError: number;
   totalFisherInformation: number;
   modelBasedRank: number;
-  dsm5ClassificationAr: string;
+  interpretationLabelAr: string;
   riskLevel: 'nominal' | 'moderate' | 'high';
 } {
   if (!responses || responses.length === 0) {
@@ -2374,7 +2374,7 @@ export function estimateIRTAbilityEAP(
       standardError: 1.0,
       totalFisherInformation: 1.0,
       modelBasedRank: 50,
-      dsm5ClassificationAr: 'قيد التقييم الأولي (θ = 0.00)',
+      interpretationLabelAr: 'مؤشر حسابي تجريبي؛ لا توجد بيانات كافية بعد',
       riskLevel: 'nominal',
     };
   }
@@ -2435,16 +2435,16 @@ export function estimateIRTAbilityEAP(
   const modelBasedRank = Math.max(1, Math.min(99, Math.round(cdf * 100)));
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let dsm5ClassificationAr =
-    'كفاءة فونولوجية وإملائية ضمن المعيار العمري (DSM-5 Low Risk)';
+  let interpretationLabelAr =
+    'المؤشر الحسابي التجريبي قريب من مركز التوزيع الافتراضي؛ لا يمثل معيارًا عمريًا';
   if (theta <= -0.75) {
     riskLevel = 'high';
-    dsm5ClassificationAr =
-      'مؤشر إكلينيكي مرتفع لاضطراب التعلم المحدد في القراءة (DSM-5 315.00 / ICD-11 6A03.0)';
+    interpretationLabelAr =
+      'المؤشر الحسابي التجريبي منخفض مقارنة بالتوزيع الافتراضي؛ لا يشخّص اضطراب تعلم';
   } else if (theta < 0.0) {
     riskLevel = 'moderate';
-    dsm5ClassificationAr =
-      'أداء دون المتوسط يتطلب دعماً فونولوجياً موجهاً (Tier-2 RTI Intervention)';
+    interpretationLabelAr =
+      'المؤشر الحسابي التجريبي دون مركز التوزيع الافتراضي؛ يلزم تفسيره في سياق تقييم شامل';
   }
 
   return {
@@ -2452,7 +2452,7 @@ export function estimateIRTAbilityEAP(
     standardError,
     totalFisherInformation,
     modelBasedRank,
-    dsm5ClassificationAr,
+    interpretationLabelAr,
     riskLevel,
   };
 }
