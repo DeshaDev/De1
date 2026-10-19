@@ -1965,14 +1965,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     }
 
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
-      ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — مؤشر المعايرة التجريبي غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
+      ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — مؤشر المعايرة التجريبي غير متاح (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
-        ? `[تنبيه منهجي: خطأ التقدير في نقاط التحقق منخفضة (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — قياسات الكاميرا في هذه الجلسة غير موثوقة ولا يُعتمد عليها] `
+        ? `[تنبيه منهجي: مؤشر المعايرة التجريبي منخفض (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — لا تُعتمد قياسات هذه الجلسة لتفسير أداء الطالب] `
         : '[مؤشر فرز أولي استرشادي مبني على قواعد استدلالية (Heuristic MVP) — لا يغني عن التشخيص الإكلينيكي المعتمد] ';
 
     let clinicalReport = {
       clinicalSummary: `${measurementReliabilityPrefix}تم إجراء جلسة القراءة للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية كلمات مرصودة ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
-      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بمؤشر المعايرة كاميرا خارج التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
+      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بمؤشر المعايرة التجريبي خارج نقاط التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
       orthographicAndPhonologicalPatterns:
         eyeMetrics.problematicWords.length > 0
           ? `تركزت أطول فترات التثبيت أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
