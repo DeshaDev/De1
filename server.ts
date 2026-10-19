@@ -22,6 +22,7 @@ const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '.runtime-store');
 const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
+let clinicalStoreReady = false;
 
 const CLINICAL_ACCESS_CODE = (process.env.CLINICAL_ACCESS_CODE || '').trim();
 const CLINICAL_SESSION_SECRET = (process.env.CLINICAL_SESSION_SECRET || '').trim();
@@ -144,6 +145,7 @@ function decodeStudentRecords(
 function loadPersistedStudents(): StudentRecord[] {
   const key = getStoreEncryptionKey();
   if (!key) {
+    clinicalStoreReady = false;
     console.warn('Encrypted clinical persistence is disabled until CLINICAL_STORE_ENCRYPTION_KEY is configured.');
     return createSeededStudents();
   }
@@ -153,7 +155,7 @@ function loadPersistedStudents(): StudentRecord[] {
     fs.chmodSync(DATA_DIR, 0o700);
     if (!fs.existsSync(STORE_PATH)) {
       const seeded = createSeededStudents();
-      savePersistedStudents(seeded);
+      clinicalStoreReady = savePersistedStudents(seeded);
       return seeded;
     }
 
@@ -172,12 +174,15 @@ function loadPersistedStudents(): StudentRecord[] {
 
     // Migrate a legacy plaintext JSON store on first startup with a valid key.
     if (!decoded.wasEncrypted && !savePersistedStudents(cleaned)) {
+      clinicalStoreReady = false;
       console.warn('Legacy clinical store could not be migrated to encrypted storage.');
       return createSeededStudents();
     }
+    clinicalStoreReady = true;
     return cleaned;
   } catch {
-    console.warn('Failed to load the encrypted clinical store; using in-memory demo data.');
+    clinicalStoreReady = false;
+    console.warn('Failed to load the encrypted clinical store; protected persistence endpoints remain disabled.');
     return createSeededStudents();
   }
 }
@@ -209,9 +214,9 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
     res: express.Response,
     next: express.NextFunction
   ) => {
-    if (!isClinicalAuthConfigured()) {
+    if (!isClinicalAuthConfigured() || !clinicalStoreReady) {
       res.status(503).json({
-        error: 'يلزم ضبط رمز وصول قوي ومفتاح جلسات ومفتاح تشفير التخزين قبل تفعيل بيانات الطلاب.',
+        error: 'يلزم ضبط الأسرار وتهيئة مخزن سريري مشفر قابل للقراءة والكتابة قبل تفعيل بيانات الطلاب.',
       });
       return;
     }
@@ -368,7 +373,7 @@ async function startServer() {
       res.json({
         students: studentsDb,
         persisted: true,
-        privacyPolicy: 'RBAC-Protected-PII-Pseudonymized',
+        privacyPolicy: 'Authenticated access; encrypted at rest; names remain visible to authorised users',
       });
     }
   );
