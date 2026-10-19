@@ -258,14 +258,103 @@ test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4
   assert.ok(oasis);
   assert.equal(oasis.diacriticLevel, 'partial');
 
+  // Verify editorial accuracy: تَفقَّدَ with shadda in G4 water passage & الألواحُ الشمسيةُ in G5 solar passage
+  const waterPassage = ARABIC_READING_PASSAGES.find(
+    (p) => p.id === 'passage-g4-partial-water'
+  );
+  assert.ok(waterPassage);
+  assert.ok(waterPassage.words.includes('تَفقَّدَ'));
+
+  const solarPassage = ARABIC_READING_PASSAGES.find(
+    (p) => p.id === 'passage-g5-solar'
+  );
+  assert.ok(solarPassage);
+  assert.ok(solarPassage.words.includes('الشمسيةُ'));
+
+  const answerPositionCounts = [0, 0, 0];
   for (const passage of ARABIC_READING_PASSAGES) {
     assert.ok(
       passage.words.length >= 50,
       `Passage ${passage.id} has ${passage.words.length} words, expected >= 50`
     );
+    assert.equal(passage.wordCount, passage.words.length);
     assert.equal(passage.comprehensionQuestions.length, 4);
+
+    // Within each 4-question passage, all 3 option positions (0, 1, 2) must appear
+    const passageIndices = new Set(
+      passage.comprehensionQuestions.map((q) => q.correctIndex)
+    );
+    assert.equal(
+      passageIndices.size,
+      3,
+      `Passage ${passage.id} must use all 3 answer positions (0, 1, 2)`
+    );
+
+    for (const q of passage.comprehensionQuestions) {
+      assert.equal(q.options.length, 3);
+      assert.ok(q.correctIndex >= 0 && q.correctIndex <= 2);
+      answerPositionCounts[q.correctIndex]++;
+    }
+  }
+
+  // Across all 28 questions, each option position (A=0, B=1, C=2) must be balanced (8 to 11 each; here 9, 10, 9)
+  assert.equal(
+    answerPositionCounts[0] + answerPositionCounts[1] + answerPositionCounts[2],
+    28
+  );
+  for (let pos = 0; pos < 3; pos++) {
+    assert.ok(
+      answerPositionCounts[pos] >= 8 && answerPositionCounts[pos] <= 11,
+      `Option index ${pos} count is ${answerPositionCounts[pos]}/28 — must be balanced between 8 and 11`
+    );
   }
 });
+
+test('analyzeTextWithDyslexico actively changes token classification based on selected Arabic dialect and sentence context', async () => {
+  const sampleSentence = 'زار تلاميز المسيد في الأرية';
+
+  // 1) In Egyptian dialect: "تلاميز" (ذ->ز) and "الأرية" (ق->أ) are valid Egyptian phonological shifts,
+  // whereas Gulf-specific "المسيد" / "مسيد" (ج->ي) is NOT Egyptian
+  const egyptianTokens = analyzeTextWithDyslexico(sampleSentence, 'egyptian');
+  const egByWord = new Map(egyptianTokens.map((t) => [t.originalWord, t]));
+  assert.equal(
+    egByWord.get('تلاميز')?.variationCategory,
+    'dialect_phonological_shift'
+  );
+  assert.equal(egByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, false);
+  assert.equal(
+    egByWord.get('الأرية')?.variationCategory,
+    'dialect_phonological_shift'
+  );
+  assert.equal(egByWord.get('الأرية')?.isDyslexiaScreeningCandidate, false);
+
+  // 2) In Gulf dialect: "تلاميز" and "الأرية" are NOT Gulf phonological shifts, so they are flagged as confusions,
+  // whereas "مسيد" (ج->ي) IS a valid Gulf phonological shift
+  const gulfTokens = analyzeTextWithDyslexico('زار تلاميز مسيد في الأرية', 'gulf');
+  const gulfByWord = new Map(gulfTokens.map((t) => [t.originalWord, t]));
+  assert.equal(
+    gulfByWord.get('تلاميز')?.variationCategory,
+    'phonological_or_visual_confusion'
+  );
+  assert.equal(gulfByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, true);
+  assert.equal(
+    gulfByWord.get('الأرية')?.variationCategory,
+    'phonological_or_visual_confusion'
+  );
+  assert.equal(
+    gulfByWord.get('مسيد')?.variationCategory,
+    'dialect_phonological_shift'
+  );
+  assert.equal(gulfByWord.get('مسيد')?.isDyslexiaScreeningCandidate, false);
+
+  // 3) In strict MSA mode ('msa'): neither Egyptian nor Gulf phonological shifts are exempted
+  const msaTokens = analyzeTextWithDyslexico('زار تلاميز مسيد في الأرية', 'msa');
+  const msaByWord = new Map(msaTokens.map((t) => [t.originalWord, t]));
+  assert.equal(msaByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, true);
+  assert.equal(msaByWord.get('مسيد')?.isDyslexiaScreeningCandidate, true);
+  assert.equal(msaByWord.get('الأرية')?.isDyslexiaScreeningCandidate, true);
+});
+
 
 
 
