@@ -1092,7 +1092,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 </div>
                 <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                   <div className="text-[11px] text-slate-500">
-                    دقة المطابقة
+                    نسبة المطابقة المحسوبة
                   </div>
                   <div className="text-xl font-bold font-mono tabular-nums text-[#059669] mt-0.5">
                     {oralFluencyMetrics.accuracyPercent}%
