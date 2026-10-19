@@ -2058,7 +2058,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         isManualDemoMode || !cameraActive ? 0 : calibrationModel.accuracyPercent,
       calibrationValidationMethod:
         isManualDemoMode || !cameraActive
-          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — دقة النظر غير مقيسة)'
+          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)'
           : calibrationModel.validationMethod === 'independent-holdout'
             ? 'تحقق مستقل (Independent Holdout)'
             : 'تحقق متقاطع (Leave-One-Point-Out CV)',
@@ -2241,7 +2241,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                     <span>
                       {isManualDemoMode
-                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): مخصص لاستعراض خطوات المنصة؛ مؤشر المعايرة التجريبي تُسجَّل 0%.'
+                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): لاستعراض الواجهة فقط؛ لا توجد بيانات تتبّع حقيقية.'
                         : cameraActive
                           ? 'جاري البحث عن الوجه وبؤبؤ العين... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
                           : 'الكاميرا غير مفعّلة — شغّل الكاميرا لبدء الرصد البصري أو فعّل وضع التجربة اليدوية.'}
@@ -2273,8 +2273,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                   <span>
-                    <strong>تنبيه دقة المعايرة ({calibrationModel.accuracyPercent}%):</strong>{' '}
-                    خطأ التحقق خارج التدريب ({calibrationModel.validationRmsePx ?? 0}px). يُنصح بتحسين الإضاءة وتثبيت الرأس وإعادة المعايرة قبل الاعتماد على القياسات.
+                    <strong>تنبيه مؤشر المعايرة التجريبي ({calibrationModel.accuracyPercent}%):</strong>{' '}
+                    خطأ التقدير في نقاط التحقق ({calibrationModel.validationRmsePx ?? 0}px). هذه النسبة مؤشر داخلي تجريبي وليست مقياساً معيارياً لدقة النظر؛ لا تعتمد عليها وحدها لتفسير أداء الطالب.
                   </span>
                 </div>
               )}
@@ -2717,7 +2717,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   htmlFor="passage-select"
                   className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص معيارية)
+                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص قراءة متدرجة)
                 </label>
                 <select
                   id="passage-select"
