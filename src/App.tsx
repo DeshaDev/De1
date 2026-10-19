@@ -16,7 +16,13 @@ import {
   ARABIC_READING_PASSAGES,
   StudentRecord,
 } from './data/seedData';
-import { authenticatedFetch } from './utils/apiAuth';
+import {
+  authenticatedFetch,
+  clearClinicalSession,
+  getStoredClinicalSession,
+  loginClinicalSession,
+  ClinicalSessionInfo,
+} from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
@@ -51,6 +57,12 @@ export default function App() {
   );
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
+  const [clinicalSession, setClinicalSession] =
+    useState<ClinicalSessionInfo | null>(() => getStoredClinicalSession());
+  const [showClinicalLogin, setShowClinicalLogin] = useState<boolean>(false);
+  const [clinicalAccessCode, setClinicalAccessCode] = useState<string>('');
+  const [clinicalLoginError, setClinicalLoginError] = useState<string>('');
+  const [isClinicalLoggingIn, setIsClinicalLoggingIn] = useState<boolean>(false);
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -154,10 +166,10 @@ export default function App() {
     setActiveTab('dashboard');
     setDashboardSubView('report');
     setAiStatusBanner(
-      `تم تسجيل جلسة الفحص للطالب (${newRecord.name}) وحفظها بنجاح.`
+      `تم إنشاء جلسة الفحص للطالب (${newRecord.name}) محليًا؛ لم يتأكد حفظها في الخادم بعد.`
     );
     try {
-      await authenticatedFetch('/api/students', {
+      const response = await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,9 +177,20 @@ export default function App() {
           guardianConsentGiven: newRecord.guardianConsentGiven === true,
         }),
       });
-      setIsPersistedStoreLoaded(true);
+      if (response.ok) {
+        setIsPersistedStoreLoaded(true);
+        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${newRecord.name}) في التخزين المشفر.`);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم.');
+        if (response.status === 401) {
+          clearClinicalSession();
+          setClinicalSession(null);
+          setShowClinicalLogin(true);
+        }
+      }
     } catch {
-      // Saved in local state if network fails
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود محليًا فقط ولم يُحفظ في الخادم.');
     }
   };
 
@@ -191,7 +214,7 @@ export default function App() {
         gradeLevel: grade,
         schoolName: `جلسة فحص (${roleLabel})`,
         isDemoRecord: false,
-        guardianConsentGiven: true,
+        guardianConsentGiven: false,
       };
       setStudents((prev) => [newMockStudent, ...prev]);
       setSelectedStudentId(newMockStudent.id);
@@ -257,6 +280,15 @@ export default function App() {
   };
 
   const handleRegenerateAIClinicalReport = async () => {
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
+      setShowClinicalLogin(true);
+      return;
+    }
+    if (selectedStudent.guardianConsentGiven !== true) {
+      setAiStatusBanner('لا يمكن إنشاء التقرير قبل تسجيل موافقة صريحة من ولي الأمر.');
+      return;
+    }
     setIsGeneratingAI(true);
     setAiStatusBanner('');
     try {
@@ -265,11 +297,15 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
-          guardianConsentGiven: selectedStudent.guardianConsentGiven ?? true,
+          guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
           regressionRate: selectedStudent.regressionRate,
+          gazeCoveragePercent: selectedStudent.gazeCoveragePercent,
+          observedWordCount: selectedStudent.observedWordCount,
+          totalPassageWordCount: selectedStudent.totalPassageWordCount,
+          calibrationAccuracyPercent: selectedStudent.calibrationAccuracyPercent,
           problematicWords: selectedStudent.problematicWords,
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,
@@ -306,13 +342,53 @@ export default function App() {
             `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
           );
         }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'تعذر إصدار التقرير؛ قد تكون بيانات التتبع أو المعايرة غير كافية.');
       }
     } catch {
-      setAiStatusBanner(
-        'تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.'
-      );
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم تأكيد إصدار التقرير.');
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleClinicalLogin = async () => {
+    setClinicalLoginError('');
+    setIsClinicalLoggingIn(true);
+    try {
+      const session = await loginClinicalSession(
+        clinicalAccessCode.trim(),
+        'clinician',
+        'أخصائي التقييم'
+      );
+      if (!session) {
+        setClinicalLoginError('فشل تسجيل الدخول. تحقق من الرمز ومن إعدادات المصادقة والتخزين المشفر على الخادم.');
+        return;
+      }
+      setClinicalSession(session);
+      setClinicalAccessCode('');
+      setShowClinicalLogin(false);
+      const response = await authenticatedFetch('/api/students');
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data?.students)) {
+          const normalized = data.students.map((student: StudentRecord) => ({
+            ...student,
+            name: (student.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim(),
+          }));
+          setStudents(normalized);
+          if (normalized.length > 0) setSelectedStudentId(normalized[0].id);
+          setIsPersistedStoreLoaded(true);
+        }
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'تم تسجيل الدخول لكن تعذر تحميل السجلات.');
+      }
+    } catch {
+      setClinicalLoginError('تعذر الاتصال بخدمة تسجيل الدخول.');
+    } finally {
+      setIsClinicalLoggingIn(false);
     }
   };
 
@@ -332,6 +408,28 @@ export default function App() {
                 : 'bg-[#FAF6EE] text-[#1E293B]'
       }`}
     >
+      {showClinicalLogin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-login-title">
+          <form
+            onSubmit={(event) => { event.preventDefault(); void handleClinicalLogin(); }}
+            className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
+          >
+            <h2 id="clinical-login-title" className="text-lg font-bold">تسجيل دخول الأخصائي</h2>
+            <p className="text-sm text-slate-600">أدخل رمز الوصول الذي أعدّه مسؤول النظام. لا يوجد رمز افتراضي داخل التطبيق.</p>
+            <label className="block space-y-1 text-sm font-medium">
+              <span>رمز الوصول</span>
+              <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setClinicalAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
+            </label>
+            {clinicalLoginError && <p role="alert" className="text-sm text-red-700">{clinicalLoginError}</p>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={isClinicalLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {isClinicalLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+              </button>
+              <button type="button" onClick={() => { setShowClinicalLogin(false); setClinicalLoginError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* Strict 3-Zone Top Bar Contract — Ordered Sequentially by User Lifecycle */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-4 sm:px-6 py-3 sm:py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
         {/* Zone 1: Single text element wordmark */}
@@ -421,6 +519,15 @@ export default function App() {
           </button>
         </div>
       </header>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName}. تحقق من حالة كل عملية حفظ.` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        {clinicalSession ? (
+          <button type="button" onClick={() => { clearClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم تسجيل الخروج؛ ستبقى التغييرات محلية ما لم يُسجل الدخول.'); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
+        ) : (
+          <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول لحفظ السجلات</button>
+        )}
+      </div>
+
 
       {/* Mobile Navigation Strip (visible only below md, same sequential order) */}
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
