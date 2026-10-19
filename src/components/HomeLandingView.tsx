@@ -556,10 +556,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </h1>
 
             <p className="text-base sm:text-lg text-slate-700 leading-relaxed max-w-2xl font-normal">
-              يستخدم المعلمون والأخصائيون وأولياء الأمور منصة{' '}
-              <strong className="font-bold text-slate-900">«بصيرة»</strong> مع
-              الطلاب لتقييم مهارات القراءة الجهرية والحساب، وتقديم تغذية راجعة
-              فورية عبر تتبع حركة العين والصوت لتوجيه التعليم والمساندة المبكرة.
+              «بصيرة» نموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات تتبّع العين، ومهام حسابية استكشافية. تساعد نتائجه على تنظيم الملاحظات التربوية، لكنها لا تشخّص عسر القراءة أو عسر الحساب ولا تستبدل التقييم المتخصص.
             </p>
 
             {/* Primary Hero Action Buttons */}
@@ -735,7 +732,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
                 اكتشف كيف تساعدك «بصيرة» في تنمية الطلاقة القرائية والحسابية
-                لدى طلابك ورصد مؤشرات عسر القراءة مبكراً بدقة.
+                لدى الطلاب ومراجعة مؤشرات القراءة المبكرة بحذر.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
