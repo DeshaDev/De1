@@ -20,7 +20,7 @@ import {
   type RawGazeSample,
 } from './dyslexiaEngines.ts';
 
-test('Lexplore PyGaze I-DT detector extracts fixations and regressive saccades accurately', () => {
+test('I-DT-style heuristic detector extracts fixation events and regression candidates', () => {
   // Simulate an RTL reading trace:
   // Fixation 1 at x=700 (word 0, 0..260ms)
   // Forward saccade to x=550 (word 1, 280..620ms)
