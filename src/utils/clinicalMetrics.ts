@@ -31,7 +31,7 @@ export interface EyeTrackingMetricsResult {
   visualStrainLevel: 'nominal' | 'moderate' | 'high';
   visualStrainLabelAr: string;
   dyslexiaRiskScore: number;
-  percentile: number;
+  heuristicIndicator: number;
   riskLevel: 'nominal' | 'moderate' | 'high';
   riskLabelAr: string;
   problematicWords: string[];
@@ -67,6 +67,7 @@ export interface TranscodingTrialResult {
 }
 
 export interface DyscalculiaMetricsResult {
+  // Inverse of the heuristic risk score (1–99), not a norm-referenced percentile.
   subitizingAccuracy: number;
   avgSubitizingMs: number;
   numberLinePAE: number;
@@ -74,7 +75,7 @@ export interface DyscalculiaMetricsResult {
   transcodingAccuracy: number;
   reversalErrorCount: number;
   dyscalculiaRiskScore: number;
-  percentile: number;
+  heuristicIndicator: number;
   riskLevel: 'nominal' | 'moderate' | 'high';
   riskLabelAr: string;
 }
@@ -144,7 +145,7 @@ export function calculateEyeTrackingMetrics(
             ? 'إجهاد بصري متوسط'
             : 'ضمن المعدل الطبيعي للرمش',
       dyslexiaRiskScore: 0,
-      percentile: 50,
+      heuristicIndicator: 50,
       riskLevel: 'nominal',
       riskLabelAr: 'بيانات غير كافية — لم يُرصد تثبيت بصري',
       problematicWords: [],
@@ -270,7 +271,7 @@ export function calculateEyeTrackingMetrics(
     blinkStrainPenalty +
     oralPhonologicalPenalty;
   const dyslexiaRiskScore = Math.max(5, Math.min(98, Math.round(rawRisk)));
-  const percentile = Math.max(1, Math.min(99, 100 - dyslexiaRiskScore));
+  const heuristicIndicator = Math.max(1, Math.min(99, 100 - dyslexiaRiskScore)); // Inverse heuristic score; not a population percentile.
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
   let riskLabelAr = 'ضمن المتوسط الاسترشادي الطبيعي';
@@ -298,7 +299,7 @@ export function calculateEyeTrackingMetrics(
     visualStrainLevel,
     visualStrainLabelAr,
     dyslexiaRiskScore,
-    percentile,
+    heuristicIndicator,
     riskLevel,
     riskLabelAr,
     problematicWords,
@@ -388,7 +389,7 @@ export function calculateDyscalculiaMetrics(
       Math.round(paeRisk * 36 + subitizingRisk * 32 + transcodingRisk * 32)
     )
   );
-  const percentile = Math.max(1, Math.min(99, 100 - dyscalculiaRiskScore));
+  const heuristicIndicator = Math.max(1, Math.min(99, 100 - dyscalculiaRiskScore)); // Inverse heuristic score; not a population percentile.
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
   let riskLabelAr = 'مؤشر فرز أولي: إدراك كمي ومكاني طبيعي';
@@ -409,7 +410,7 @@ export function calculateDyscalculiaMetrics(
     transcodingAccuracy,
     reversalErrorCount,
     dyscalculiaRiskScore,
-    percentile,
+    heuristicIndicator,
     riskLevel,
     riskLabelAr,
   };
