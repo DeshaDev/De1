@@ -840,7 +840,7 @@ export default function App() {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>١. سجل الطلاب والمئينات ({students.length})</span>
+                  <span>١. سجل الطلاب ومؤشرات الفرز ({students.length})</span>
                 </button>
                 <button
                   type="button"
