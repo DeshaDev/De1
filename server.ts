@@ -38,7 +38,8 @@ function isClinicalAuthConfigured(): boolean {
     CLINICAL_SESSION_SECRET.length >= 32 &&
     CLINICAL_ACCESS_CODE !== 'BASEERA-CLINICAL-2026' &&
     CLINICAL_SESSION_SECRET !== 'baseera-rbac-hmac-secret-key-2026' &&
-    getStoreEncryptionKey() !== null
+    getStoreEncryptionKey() !== null &&
+    Buffer.from(CLINICAL_SESSION_SECRET, 'utf8').toString('hex') !== process.env.CLINICAL_STORE_ENCRYPTION_KEY?.trim().toLowerCase()
   );
 }
 
@@ -147,6 +148,7 @@ function loadPersistedStudents(): StudentRecord[] {
 
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
     if (!fs.existsSync(STORE_PATH)) {
       const seeded = createSeededStudents();
       savePersistedStudents(seeded);
@@ -158,7 +160,11 @@ function loadPersistedStudents(): StudentRecord[] {
     const cleaned = decoded.records.map((record) =>
       sanitizeStudentRecord({
         ...record,
-        ...(record.isDemoRecord ? { guardianConsentGiven: false } : {}),
+        // Legacy plaintext records may have had consent defaulted by an older client.
+        // Require consent to be captured again rather than treating that value as proof.
+        guardianConsentGiven: decoded.wasEncrypted
+          ? record.guardianConsentGiven === true
+          : false,
       })
     );
 
