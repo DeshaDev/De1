@@ -66,7 +66,7 @@ const SIMULATOR_PROFILES: Record<
   }
 > = {
   fluent: {
-    title: 'قارئ طلق',
+    title: 'مثال تجريبي',
     wpm: 108,
     avgFixationMs: 215,
     regressionRate: 6,
@@ -126,7 +126,7 @@ const SIMULATOR_PROFILES: Record<
     ],
   },
   'dyslexia-risk': {
-    title: 'مؤشر عسر قراءة',
+    title: 'مؤشر تجريبي مرتفع',
     wpm: 54,
     avgFixationMs: 425,
     regressionRate: 28,
@@ -264,10 +264,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'before-reading',
     tabLabel: 'قبل أن يبدأ الطالب القراءة',
     kicker: 'قبل بدء القراءة',
-    headline: 'بصيرة في وضع «الاستعداد الآمن» — لا تنصّت ولا تسجيل في الخلفية.',
+    headline: 'قبل بدء الجلسة: لا تُشغّل الكاميرا أو الميكروفون إلا عند اختيار ذلك.',
     description:
-      'قبل أن يبدأ الطفل القراءة ويوافق ولي الأمر أو المختص، لا يتم فتح الميكروفون أو الكاميرا إطلاقاً. لا تقوم بصيرة بالاستماع في الخلفية أو تسجيل الغرفة أو تخزين أي فيديو خام.',
-    privacyNote: 'لا يتم إنشاء أي بصمة بيومترية من صوت الطالب أو صورته.',
+      'توضح هذه المرحلة متى تبدأ الجلسة. راجع أذونات المتصفح وحالة المؤشرات الظاهرة، ولا تستخدم بيانات حقيقية قبل مراجعة مسار البيانات وإجراءات الموافقة.',
+    privacyNote: 'مؤشرات الجلسة ليست نظاماً للتعرّف على هوية الطالب.',
     waveBars: [18, 22, 16, 24, 20, 18, 22, 16, 20, 24, 18, 16, 22, 20, 18],
     actionLabel: 'انتقل إلى بوابة بدء الجلسة',
     targetTab: 'eye-lab',
@@ -276,9 +276,9 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'student-begins',
     tabLabel: 'عندما يبدأ الطالب القراءة',
     kicker: 'لحظة انطلاق الجلسة',
-    headline: 'معايرة بصرية سريعة في ثوانٍ، ونص عربي مشكول مريح للعين.',
+    headline: 'تجربة معايرة بصرية ونص عربي واضح للقراءة.',
     description:
-      'يتابع الطالب ٩ نقاط معايرة سريعة لضبط زاوية النظر، ثم يُعرض النص العربي بخط واضح وتباعد مريح يمنع التزاحم البصري، مع تكيّف تلقائي حسب الصف الدراسي.',
+      'يجرب الطالب خطوات معايرة ثم يقرأ نصاً عربياً متدرجاً. تعتمد فائدة المؤشرات على جودة المعايرة وظروف الكاميرا، وقد لا تكون مناسبة لكل جهاز أو جلسة.',
     privacyNote: 'تُحوَّل حركة العين فوراً إلى إحداثيات رقمية (X, Y) داخل المتصفح.',
     waveBars: [26, 38, 30, 48, 42, 34, 52, 44, 36, 46, 32, 40, 28, 36, 24],
     actionLabel: 'جرّب معايرة العين الآن',
@@ -288,10 +288,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'while-reading',
     tabLabel: 'أثناء القراءة الجهرية',
     kicker: 'خلال القراءة الجهرية',
-    headline: 'ترصد بصيرة تزامن العين والصوت، وتفصل اللهجة عن عسر القراءة.',
+    headline: 'تجمع الجلسة مؤشرات النظر والقراءة الجهرية مع مراعاة بعض الاختلافات اللهجية.',
     description:
-      'أثناء قراءة الطالب بصوت مسموع، تقيس بصيرة زمن التثبيت البصري والتراجعات، وتطابق النطق مع الحروف العربية مع عزل المرادفات اللهجية الخليجية والعربية لكي لا تُحتسب أخطاء قرائية.',
-    privacyNote: 'تحليل صوتي لحظي للأصوات والمقاطع دون حفظ تسجيلات صوتية.',
+      'أثناء القراءة، تحاول المنصة جمع مؤشرات بصرية ومحاذاة النص المنطوق مع النص المرجعي. قد تتأثر النتائج بالمعايرة والميكروفون والمتصفح واللهجة، وتحتاج المخرجات إلى تفسير حذر.',
+    privacyNote: 'تعتمد معالجة الصوت على دعم المتصفح وإعدادات الجلسة؛ لا تفترض أن كل بيئة تعمل بالطريقة نفسها.',
     waveBars: [45, 72, 88, 64, 95, 78, 56, 92, 84, 68, 90, 74, 60, 82, 50],
     actionLabel: 'افتح مختبر القراءة والعين',
     targetTab: 'eye-lab',
@@ -300,10 +300,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'passage-ends',
     tabLabel: 'انتهاء النص وفحص الحساب',
     kicker: 'اكتمال القراءة والانتقال للحساب',
-    headline: 'ينتهي النص فتُغلق الكاميرا فوراً، وينتقل الطالب لمحطة خط الأعداد.',
+    headline: 'بعد القراءة، يمكن الانتقال إلى مهام الإدراك العددي.',
     description:
-      'بمجرد انتهاء الفقرة القرائية، تُغلق الكاميرا والميكروفون تلقائياً، وينتقل الطالب في رحلة متسلسلة إلى فحص الإدراك الكمي (تقدير موقع العدد على خط الأعداد والتمييز الكمي السريع).',
-    privacyNote: 'إغلاق تلقائي للكاميرا والميكروفون فور انتهاء قراءة الفقرة.',
+      'تتيح الواجهة الانتقال إلى مهام حسابية قصيرة مثل تقدير موقع العدد والتمييز الكمي. تحقق من مؤشرات تشغيل الأجهزة في واجهتك قبل الانتقال.',
+    privacyNote: 'راجع حالة الكاميرا والميكروفون في الواجهة بعد كل مرحلة.',
     waveBars: [34, 56, 44, 68, 52, 40, 62, 48, 36, 54, 42, 30, 38, 28, 22],
     actionLabel: 'استكشف مختبر فحص الحساب',
     targetTab: 'dyscalculia-lab',
@@ -312,10 +312,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'insights-surfaced',
     tabLabel: 'ظهور المؤشرات والقرار للمعلم',
     kicker: 'مؤشرات واضحة وخطة مساندة',
-    headline: 'بصيرة تُقدّم البيّنة العلمية، والمعلم وولي الأمر يتخذان القرار.',
+    headline: 'تُعرض المؤشرات للمراجعة — ولا تصدر تشخيصاً.',
     description:
-      'تُلخّص بصيرة نتائج القراءة والحساب في تقرير تربوي موحّد يوضح الكلمات التي استغرقت تثبيتاً بصرياً طويلاً، مع فتح القارئ العربي الميسّر لتدريب الطالب بالتقطيع المقطعي وتلوين الحروف.',
-    privacyNote: 'تقرير فرز أولي قابل للتصدير والحذف الفوري بنقرة واحدة.',
+      'يلخّص التقرير ما رُصد فعلياً عندما تتوفر بيانات كافية. أما القارئ الميسّر فيتيح تجربة التقطيع والتباعد والتلوين، دون ادعاء أنها علاج مثبت.',
+    privacyNote: 'تحقق من نجاح الحفظ أو الحذف من رسالة الحالة قبل الاعتماد عليه.',
     waveBars: [30, 44, 60, 76, 64, 82, 70, 58, 74, 62, 48, 56, 40, 34, 28],
     actionLabel: 'استعرض التقرير النهائي والنتائج',
     targetTab: 'dashboard',
@@ -332,31 +332,31 @@ interface TrustQuestionItem {
 const TRUST_CENTER_QUESTIONS: TrustQuestionItem[] = [
   {
     id: 'biometrics',
-    question: 'هل تجمع بصيرة بيانات بيومترية من صوت الطالب أو كاميرا الويب؟',
-    answerTitle: 'لا يتم إنشاء أو تخزين أي بصمة بيومترية على الإطلاق.',
+    question: 'هل تستخدم بصيرة الكاميرا للتعرّف على هوية الطالب؟',
+    answerTitle: 'لا توجد ميزة للتعرّف على الهوية؛ تُستخدم الكاميرا لمؤشرات النظر.',
     answerBody:
-      'تعالج بصيرة إطارات الكاميرا محلياً داخل متصفح الجهاز لاستخراج إحداثيات نقطة النظر (X, Y) وزمن التثبيت بالمللي ثانية فقط. لا يتم إرسال أو حفظ أي فيديو لوجه الطالب أو تسجيل صوتي خام في الخوادم.',
+      'يُستخدم تدفق الكاميرا داخل المتصفح لاستخراج مؤشرات بصرية أثناء الجلسة. لا تعرض المنصة فيديو خاماً ضمن التقرير؛ راجع إعدادات الاستضافة ومسار البيانات قبل استخدام بيانات حقيقية، ولا تُدخل بيانات أطفال في النسخة التجريبية.',
   },
   {
     id: 'consent',
     question: 'كيف يوافق ولي الأمر أو المدرسة قبل بدء جلسة الفحص؟',
-    answerTitle: 'بوابة موافقة صريحة وإلزامية قبل تفعيل الكاميرا أو الميكروفون.',
+    answerTitle: 'واجهة موافقة أولية — وليست سجل موافقة مؤسسياً مدققاً.',
     answerBody:
-      'لا يمكن بدء أي جلسة فحص في مختبر القراءة والعين إلا بعد تفعيل إقرار موافقة ولي الأمر أو الأخصائي التربوي المفوّض، مع إمكانية استخدام المحاكاة التجريبية الكاملة دون كاميرا في أي وقت.',
+      'تتضمن الواجهة خطوة موافقة، لكنها لا تمثل وحدها سجلاً قانونياً مستقلاً أو مسار موافقات مؤسسياً مدققاً. استخدم المحاكاة دون كاميرا للتعرّف على التجربة، ولا تستخدم بيانات أطفال حقيقية قبل استكمال إجراءات الموافقة والمراجعة الأمنية.',
   },
   {
     id: 'dialect',
     question: 'كيف تميّز بصيرة بين اللهجة الخليجية والعربية وبين عسر القراءة؟',
-    answerTitle: 'محرك عزل التنوع اللهجي الفونولوجي والمعجمي لستّ لهجات عربية.',
+    answerTitle: 'ملفات لهجية أولية لاختبار بعض الاختلافات العربية.',
     answerBody:
-      'يدعم النظام اللهجة الخليجية والسعودية، المصرية، الشامية، المغاربية، السودانية، والعراقية. عند نطق الطالب لمرادف لهجي سليم أو إبدال صوتي لهجي معتاد (مثل نطق القاف أو الجيم)، يُصنَّف كـ «تنوع لهجي سليم» ولا يُحتسب مؤشر خطورة لعسر القراءة.',
+      'تتيح الواجهة اختيار ملفات لهجية متعددة، لكنها لا تثبت أنها تصنّف جميع اللهجات أو تمنع احتساب كل اختلاف لهجي كخطأ. يجب مراجعة نتائج الصوت يدوياً، ولا توجد حتى الآن دقة مستقلة منشورة لهذا التصنيف.',
   },
   {
     id: 'deletion',
     question: 'ما مدى تحكّم المدرسة وولي الأمر في حفظ أو حذف سجلات الطلاب؟',
-    answerTitle: 'تحكّم كامل وحق المسح الفوري والنهائي بضغطة زر.',
+    answerTitle: 'تحقق من حالة الحفظ قبل اعتبار السجل محفوظاً.',
     answerBody:
-      'تُحفظ المؤشرات الرقمية والتقارير التربوية لمتابعة تقدم الطالب، ويمكن للمعلم أو ولي الأمر حذف سجل أي طالب نهائياً من قاعدة البيانات في أي لحظة من صفحة التقرير النهائي.',
+      'قد تبقى التغييرات محلية إذا لم يسجّل الأخصائي الدخول أو تعذّر الاتصال بالخادم. تحقق من رسالة حالة الحفظ، ولا تفترض أن الحذف من الواجهة يضمن وحده محواً من النسخ الاحتياطية أو سجلات الاستضافة.',
   },
 ];
 
@@ -461,7 +461,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
     e.preventDefault();
     const cleanName = mockName.trim() || 'عمر خالد الدوسري';
     const roleLabel =
-      mockRole === 'student' ? 'طالب / ولي أمر' : 'معلم / مختص';
+      mockRole === 'student' ? 'تجربة كطالب' : 'تجربة كمختص';
     setRegistrationNotice(`تم تسجيل «${cleanName}» — جاري فتح الخطوة ٢...`);
     onStartMockUserJourney(cleanName, mockGrade, roleLabel);
   };
@@ -534,7 +534,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="lg:col-span-7 space-y-6 text-right">
             <div className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] tracking-wide">
               <SoundwaveBarsIcon className="text-[#15803D]" />
-              <span>كل قارئ · كل صف دراسي · كل فرصة تعلّم</span>
+              <span>قراءة عربية · مؤشرات بصرية · مهام حسابية</span>
             </div>
 
             <h1
@@ -545,21 +545,18 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               }}
             >
               <span className="block text-[#18181B]">
-                نمو قرائي مُثبت علمياً
+                مؤشرات أولية لفهم القراءة والحساب
               </span>
               <span className="block text-[#15803D] mt-1">
-                ومُحقّق في كل صف
+                تجربة عربية متعددة المؤشرات
               </span>
               <span className="block text-[#18181B] font-bold mt-1 text-[0.82em]">
-                مرّةً بعد مرّة<span className="text-[#15803D]">.</span>
+                لدعم الملاحظة المبكرة<span className="text-[#15803D]">.</span>
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-slate-700 leading-relaxed max-w-2xl font-normal">
-              يستخدم المعلمون والأخصائيون وأولياء الأمور منصة{' '}
-              <strong className="font-bold text-slate-900">«بصيرة»</strong> مع
-              الطلاب لتقييم مهارات القراءة الجهرية والحساب، وتقديم تغذية راجعة
-              فورية عبر تتبع حركة العين والصوت لتوجيه التعليم والمساندة المبكرة.
+              «بصيرة» نموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات تتبّع العين، ومحاولات موزعة على ثلاث مهام حسابية. تساعد نتائجه على تنظيم الملاحظات التربوية، لكنها لا تشخّص عسر القراءة أو عسر الحساب ولا تستبدل التقييم المتخصص.
             </p>
 
             {/* Primary Hero Action Buttons */}
@@ -569,7 +566,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 onClick={() => onNavigateTab('eye-lab')}
                 className="px-6 py-3.5 rounded-full bg-[#18181B] hover:bg-[#15803D] text-white text-sm font-bold transition-colors flex items-center gap-2.5 cursor-pointer shadow-sm whitespace-nowrap"
               >
-                <span>ابدأ جلسة فحص القراءة والعين</span>
+                <span>جرّب القراءة وتتبع العين</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <button
@@ -578,7 +575,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 className="px-5 py-3.5 rounded-full bg-white/90 hover:bg-white text-slate-900 border border-slate-300/90 text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
               >
                 <SoundwaveBarsIcon className="text-[#15803D]" />
-                <span>تجربة فورية بحساب طالب جاهز</span>
+                <span>جرّب ملفاً توضيحياً</span>
               </button>
             </div>
           </div>
@@ -735,7 +732,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
                 اكتشف كيف تساعدك «بصيرة» في تنمية الطلاقة القرائية والحسابية
-                لدى طلابك ورصد مؤشرات عسر القراءة مبكراً بدقة.
+                لدى الطلاب ومراجعة مؤشرات القراءة المبكرة بحذر.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
@@ -762,7 +759,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 أولياء الأمور والأسرة
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                ماذا يحدث عندما يقرأ طفلك مع بصيرة؟ رافق طفلك في جلسة فحص
+                ماذا يحدث خلال جلسة القراءة؟ استكشف المراحل التفاعلية خطوة بخطوة
                 وتدريب ميسّرة خطوة بخطوة في دقائق.
               </p>
             </div>
@@ -790,7 +787,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 قادة المدارس والتعليم
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                كيف تدعم بصيرة خطة المدرسة في الفرز المبكر بأمان وخصوصية تامة،
+                كيف يمكن استخدام المؤشرات الاسترشادية لدعم الملاحظة التربوية،
                 ومع عزل دقيق للهجات العربية والخليجية.
               </p>
             </div>
@@ -997,7 +994,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     [
                       { id: 'dyslexia-risk', label: 'عسر قراءة' },
                       { id: 'dialect-nominal', label: 'تنوع لهجي' },
-                      { id: 'fluent', label: 'قارئ طلق' },
+                      { id: 'fluent', label: 'مثال تجريبي' },
                     ] as const
                   ).map((tab) => (
                     <button
@@ -1149,194 +1146,39 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       </section>
 
       {/* =====================================================================
-          SECTION 3: AMIRA IMPACT & RESEARCH SECTION
-          ("The impact is real." + 5M+ / 4K+ / 9+ + Soft Mint Green Research Container)
+          SECTION 3: COMPACT FEATURE NAVIGATION
+          The animated reading simulation and interactive sections above/below stay intact.
           ===================================================================== */}
-      <section className="space-y-10">
-        {/* Top Impact Header & 3 Monumental Counters */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <h2
-            className="font-display font-extrabold text-[#18181B]"
-            style={{
-              fontSize: 'clamp(1.75rem, 3vw, 2.6rem)',
-              textWrap: 'balance',
-            }}
-          >
-            الأثر التربوي حقيقي وملموس.
+      <section className="rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="max-w-3xl space-y-2">
+          <div className="text-xs font-bold text-[#15803D]">استكشف النموذج</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+            اختر التجربة التي تريد استكشافها
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            تستند «بصيرة» إلى أبحاث محكّمة في تتبع حركة العين واللسانيات
-            العربية، وتساعد المدارس والأسر على اكتشاف صعوبات التعلم مبكراً.
+            صُممت بصيرة كنموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات النظر، ومهام الإدراك العددي، وأدوات تيسير القراءة. المؤشرات استرشادية وليست تشخيصاً معتمداً.
           </p>
         </div>
-
-        {/* 3 Monumental Impact Counters Separated by Vertical Hairlines (Matches Amira 5M+ | 4K+ | 9+) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 py-4">
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {[
+            { id: 'eye-lab' as AppTabId, title: 'القراءة وتتبع العين', description: 'جرّب المعايرة والقراءة الجهرية، وراجع جودة البيانات قبل تفسير المؤشرات.' },
+            { id: 'dyscalculia-lab' as AppTabId, title: 'مهام الحساب', description: 'استكشف التمييز الكمي وتقدير الموقع على خط الأعداد وترميز الأرقام.' },
+            { id: 'adaptive-reader' as AppTabId, title: 'القارئ العربي الميسّر', description: 'جرّب التشكيل والتباعد والتقطيع والتلوين لتحسين سهولة عرض النص.' },
+            { id: 'algorithms-lab' as AppTabId, title: 'المنهجية والحدود', description: 'اطّلع على المؤشرات المستخدمة وما لا يمكن استنتاجه من النموذج الحالي.' },
+          ].map((feature) => (
+            <button
+              key={feature.id}
+              type="button"
+              onClick={() => onNavigateTab(feature.id)}
+              className="text-right p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 transition-colors cursor-pointer group"
             >
-              12K+
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              جلسة فرز قرائي وحسابي
-            </div>
-          </div>
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
-            >
-              340+
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              مدرسة ومركز مساندة تربوية
-            </div>
-          </div>
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#15803D] tabular-nums"
-            >
-              6+
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              لهجات خليجية وعربية مدعومة
-            </div>
-          </div>
-        </div>
-
-        {/* Soft Mint-Green Research & Evidence Split Container (Matches Amira Section 3 Screenshot) */}
-        <div className="rounded-[2rem] bg-gradient-to-br from-[#F2FBF5] via-[#EAFBF0] to-[#E2F7EB] border border-emerald-200/80 p-7 sm:p-12 shadow-xs">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            {/* Right Column (6 cols in RTL): "Better readers. Proven results. Research you can trust." */}
-            <div className="lg:col-span-6 space-y-6 text-right">
-              <h3
-                className="font-display font-extrabold text-[#18181B] leading-[1.22]"
-                style={{
-                  fontSize: 'clamp(1.65rem, 2.6vw, 2.5rem)',
-                  textWrap: 'balance',
-                }}
-              >
-                قُرّاء أفضل. نتائج مُثبتة. أبحاث علمية يمكنك الوثوق بها.
-              </h3>
-
-              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                كل استثمار تربوي في القراءة والحساب يتلخص في سؤال واحد:{' '}
-                <strong className="font-bold text-slate-950">
-                  هل يصبح الطلاب قُرّاء أقوى وأكثر طلاقة؟
-                </strong>{' '}
-                مع «بصيرة»، تتحدث المؤشرات الرقمية عن نفسها. بالاعتماد على
-                نماذج حركة العين المعيارية والوعي الصوتي العربي، نقدم نتائج قابلة
-                للقياس تدعم قرار المعلم.
-              </p>
-
-              {/* 3-Column Hairline Stat Strip (50+ | 15 | 211K+ equivalent) */}
-              <div className="grid grid-cols-3 border-y border-emerald-900/15 py-5 divide-x divide-x-reverse divide-emerald-900/15">
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    +35
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    مؤشراً بصرياً وصوتياً
-                  </div>
-                </div>
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    6
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    نطاقات لهجية عربية
-                  </div>
-                </div>
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    94%
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    دقة عزل أثر اللهجة
-                  </div>
-                </div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-sm font-bold text-slate-900">{feature.title}</span>
+                <ArrowLeft className="w-4 h-4 text-[#15803D] shrink-0 transition-transform group-hover:-translate-x-1" />
               </div>
-
-              {/* Recognized By Standards Row */}
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-                <span className="font-bold text-slate-500">
-                  مبني على أطر مرجعية:
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>معايير حركة العين (Rayner)</span>
-                </span>
-                <span aria-hidden="true" className="text-slate-300">
-                  ·
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>التقدير الكمي (Siegler)</span>
-                </span>
-                <span aria-hidden="true" className="text-slate-300">
-                  ·
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>توافق القراءة الشاملة W3C</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Left Column (6 cols in RTL): "Independently studied." */}
-            <div className="lg:col-span-6 space-y-5 text-right lg:pr-6">
-              <h4 className="text-xl sm:text-2xl font-bold text-[#18181B] font-display">
-                منهجية خوارزمية موثّقة.
-              </h4>
-
-              <div className="space-y-2.5">
-                <div className="text-xs font-bold text-[#15803D]">
-                  مختبر اللسانيات الحاسوبية وتتبع النظر
-                </div>
-                <h5 className="text-lg sm:text-2xl font-medium text-[#18181B] leading-snug">
-                  الدمج بين تتبع التثبيت البصري ومطابقة النطق العربي يرفع دقة
-                  الفرز المبكر لعسر القراءة ويمنع التشخيص الخاطئ الناتج عن
-                  اللهجة المحلية
-                </h5>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('algorithms-lab')}
-                  className="pt-1 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] hover:underline cursor-pointer"
-                >
-                  <span>استعرض المعادلات والخوارزميات السريرية</span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-              </div>
-
-              <div className="pt-4 border-t border-emerald-900/15 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('adaptive-reader')}
-                  className="w-full py-3 border-b border-emerald-900/15 flex items-center justify-between text-xs sm:text-sm font-bold text-[#18181B] hover:text-[#15803D] transition-colors cursor-pointer"
-                >
-                  <span>
-                    استكشف القارئ العربي الميسّر (التقطيع المقطعي وتلوين الحروف)
-                  </span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('dashboard')}
-                  className="w-full py-2 flex items-center justify-between text-xs sm:text-sm text-slate-800 hover:text-[#15803D] transition-colors cursor-pointer"
-                >
-                  <span>
-                    استعرض <strong className="font-bold">التقرير النهائي</strong>{' '}
-                    ولوحة نتائج الطلاب
-                  </span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-              </div>
-            </div>
-          </div>
+              <p className="text-xs leading-relaxed text-slate-600">{feature.description}</p>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -1351,15 +1193,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
           <div className="space-y-1.5">
             <div className="text-xs font-bold text-[#15803D]">
-              بوابة التجربة العملية المباشرة
+              مسار تجريبي تفاعلي
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
-              ابدأ رحلة الفحص الآن: اختر حساب طالب جاهز أو سجّل طالباً جديداً
+              جرّب المسار بملف تجريبي أو أنشئ سجلاً للاختبار
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-slate-600">
-            تسير الرحلة في ٤ خطوات متسلسلة: اختيار الطالب ← فحص القراءة والعين ←
-            فحص الحساب ← التقرير النهائي.
+            تسير الرحلة في ٤ خطوات: اختيار الملف ← القراءة والعين ← الحساب ← التقرير. الملفات المعروضة تجريبية، ولا تمثل نتائج طلاب حقيقيين. لا تُدخل بيانات أطفال حقيقية في هذه النسخة.
           </p>
         </div>
 
@@ -1369,10 +1210,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800">
-                  أ) دخول فوري بحساب طالب جاهز (بنقرة واحدة):
+                  أ) اختر ملفاً تجريبياً (بيانات اصطناعية):
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  اختر الطالب لبدء الفحص أو استعراض تقريره
+                  النتائج المعروضة أمثلة توضيحية وليست تشخيصاً
                 </span>
               </div>
 
@@ -1404,10 +1245,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                             }`}
                           >
                             {stu.readingRiskLevel === 'high'
-                              ? 'مؤشر عسر قراءة'
+                              ? 'مؤشر تجريبي مرتفع'
                               : stu.readingRiskLevel === 'moderate'
-                                ? 'متابعة متوسطة'
-                                : 'قارئ طلق'}
+                                ? 'مؤشر تجريبي متوسط'
+                                : 'مثال تجريبي'}
                           </span>
                         </div>
                       </div>
@@ -1446,7 +1287,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <UserPlus className="w-4 h-4 text-[#15803D]" />
-                  <span>ب) أو تسجيل طالب جديد لبدء الفحص من الخطوة الأولى:</span>
+                  <span>ب) أو أنشئ سجلاً للاختبار دون بيانات شخصية حقيقية:</span>
                 </span>
                 <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 text-[11px]">
                   <button
@@ -1458,7 +1299,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         : 'text-slate-600'
                     }`}
                   >
-                    طالب / ولي أمر
+                    تجربة كطالب
                   </button>
                   <button
                     type="button"
@@ -1469,7 +1310,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                         : 'text-slate-600'
                     }`}
                   >
-                    معلم / مختص
+                    تجربة كمختص
                   </button>
                 </div>
               </div>
@@ -1791,7 +1632,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <span>مركز الثقة والخصوصية</span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-[#18181B] font-display">
-              إجابات صريحة وموثّقة — على المكشوف.
+              إجابات واضحة عن الاستخدام والخصوصية
             </h2>
             <p className="text-xs text-slate-600">
               اختر سؤالاً أو ابحث عن استفسارك لتطّلع على سياسة حماية بيانات

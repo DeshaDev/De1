@@ -1513,7 +1513,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         (!cameraActive || !pupilFeaturesRef.current.faceDetected)
       ) {
         setCalibrationWarning(
-          'يرجى تشغيل الكاميرا والتأكد من رصد بؤبؤ العين قبل نقر نقاط التحقق المستقلة لقياس دقة النظر الفعلية.'
+          'يرجى تشغيل الكاميرا والتأكد من رصد بؤبؤ العين قبل نقر نقاط التحقق المستقلة لقياس خطأ تقدير النظر.'
         );
         return;
       }
@@ -1868,7 +1868,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const handleProceedToComprehension = () => {
     if (recordedWordsList.length < minRequiredObservedWords) {
       setReadingCoverageError(
-        `لا يمكن إنهاء القراءة وإصدار التقرير: تم رصد تثبيت بصري فعلي على (${recordedWordsList.length}) من أصل (${selectedPassage.words.length}) كلمة فقط (تغطية ${currentCoveragePercent}%). يمنع النظام تعويض الكلمات غير المرصودة بقيم افتراضية (مثل 190ms) لضمان دقة القياس. يرجى متابعة القراءة حتى رصد ${minRequiredObservedWords} كلمات على الأقل (25% من النص).`
+        `لا يمكن إنهاء القراءة وإصدار التقرير: تم رصد تثبيت بصري فعلي على (${recordedWordsList.length}) من أصل (${selectedPassage.words.length}) كلمة فقط (تغطية ${currentCoveragePercent}%). يمنع النظام تعويض الكلمات غير المرصودة بقيم افتراضية (مثل 190ms) لضمان مؤشر القياس التجريبي. يرجى متابعة القراءة حتى رصد ${minRequiredObservedWords} كلمات على الأقل (25% من النص).`
       );
       return;
     }
@@ -1933,7 +1933,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
     const oralSummaryClause =
       oralIntegrationInput && liveOralDialectMetrics
-        ? ` كما أظهر تحليل القراءة الجهرية (${selectedDialectProfile.labelAr}) دقة مطابقة فونولوجية ${liveOralDialectMetrics.accuracyPercent}% مع رصد ${liveOralDialectMetrics.phoneticSubstitutionCount} إبدالات فونولوجية و${liveOralDialectMetrics.omittedWordsCount} كلمات محذوفة واستثناء ${liveOralDialectMetrics.dialectVariantCount} بدائل لهجية طبيعية.`
+        ? ` كما أظهر تحليل القراءة الجهرية (${selectedDialectProfile.labelAr}) نسبة المطابقة المحسوبة ${liveOralDialectMetrics.accuracyPercent}% مع رصد ${liveOralDialectMetrics.phoneticSubstitutionCount} إبدالات فونولوجية و${liveOralDialectMetrics.omittedWordsCount} كلمات محذوفة واستثناء ${liveOralDialectMetrics.dialectVariantCount} بدائل لهجية طبيعية.`
         : ' (لم يتم تفعيل تسجيل القراءة الجهرية بالميكروفون في هذه الجلسة).';
 
     const isLowCameraReliability =
@@ -1959,20 +1959,20 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     }
     if (isLowCameraReliability) {
       setIsAnalyzing(false);
-      setCalibrationWarning('تم حجب التقرير لأن تتبع الكاميرا تجريبي أو أن دقة التحقق من المعايرة أقل من 70%. حسّن الإضاءة وأعد المعايرة بالكاميرا الفعلية.');
+      setCalibrationWarning('تم حجب التقرير لأن تتبع الكاميرا تجريبي أو أن مؤشر التحقق التجريبي من المعايرة أقل من 70%. حسّن الإضاءة وأعد المعايرة بالكاميرا الفعلية.');
       setStage('setup');
       return;
     }
 
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
-      ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — دقة الكاميرا غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
+      ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — مؤشر المعايرة التجريبي غير متاح (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
-        ? `[تنبيه منهجي: دقة معايرة الكاميرا خارج التدريب منخفضة (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — قياسات الكاميرا في هذه الجلسة غير موثوقة ولا يُعتمد عليها] `
+        ? `[تنبيه منهجي: مؤشر المعايرة التجريبي منخفض (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — لا تُعتمد قياسات هذه الجلسة لتفسير أداء الطالب] `
         : '[مؤشر فرز أولي استرشادي مبني على قواعد استدلالية (Heuristic MVP) — لا يغني عن التشخيص الإكلينيكي المعتمد] ';
 
     let clinicalReport = {
       clinicalSummary: `${measurementReliabilityPrefix}تم إجراء جلسة القراءة للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية كلمات مرصودة ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
-      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بدقة معايرة كاميرا خارج التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
+      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بمؤشر المعايرة التجريبي خارج نقاط التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
       orthographicAndPhonologicalPatterns:
         eyeMetrics.problematicWords.length > 0
           ? `تركزت أطول فترات التثبيت أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
@@ -2058,7 +2058,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         isManualDemoMode || !cameraActive ? 0 : calibrationModel.accuracyPercent,
       calibrationValidationMethod:
         isManualDemoMode || !cameraActive
-          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — دقة النظر غير مقيسة)'
+          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)'
           : calibrationModel.validationMethod === 'independent-holdout'
             ? 'تحقق مستقل (Independent Holdout)'
             : 'تحقق متقاطع (Leave-One-Point-Out CV)',
@@ -2213,9 +2213,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 }`}
               >
                 {isManualDemoMode
-                  ? `وضع محاكاة يدوية (${completedTargetsCount}/5 نقاط · دقة الكاميرا 0%)`
+                  ? `وضع محاكاة يدوية (${completedTargetsCount}/5 نقاط · مؤشر المعايرة التجريبي 0%)`
                   : completedTargetsCount === 5
-                    ? `مكتمل (${completedTargetsCount}/5 · دقة التحقق ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
+                    ? `مكتمل (${completedTargetsCount}/5 · مؤشر التحقق التجريبي ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
                     : `قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة)`}
               </span>
             </div>
@@ -2241,7 +2241,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                     <span>
                       {isManualDemoMode
-                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): مخصص لاستعراض خطوات المنصة؛ دقة الكاميرا تُسجَّل 0%.'
+                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): لاستعراض الواجهة فقط؛ لا توجد بيانات تتبّع حقيقية.'
                         : cameraActive
                           ? 'جاري البحث عن الوجه وبؤبؤ العين... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
                           : 'الكاميرا غير مفعّلة — شغّل الكاميرا لبدء الرصد البصري أو فعّل وضع التجربة اليدوية.'}
@@ -2273,8 +2273,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                   <span>
-                    <strong>تنبيه دقة المعايرة ({calibrationModel.accuracyPercent}%):</strong>{' '}
-                    خطأ التحقق خارج التدريب ({calibrationModel.validationRmsePx ?? 0}px). يُنصح بتحسين الإضاءة وتثبيت الرأس وإعادة المعايرة قبل الاعتماد على القياسات.
+                    <strong>تنبيه مؤشر المعايرة التجريبي ({calibrationModel.accuracyPercent}%):</strong>{' '}
+                    خطأ التقدير في نقاط التحقق ({calibrationModel.validationRmsePx ?? 0}px). هذه النسبة مؤشر داخلي تجريبي وليست مقياساً معيارياً لدقة النظر؛ لا تعتمد عليها وحدها لتفسير أداء الطالب.
                   </span>
                 </div>
               )}
@@ -2423,7 +2423,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-slate-700">خوارزمية الانحدار:</span>
                     <select
-                      aria-label="خوارزمية انحدار WebGazer"
+                      aria-label="نموذج تقدير نقطة النظر (تجريبي)"
                       value={wgRegressionType}
                       onChange={(e) =>
                         setWgRegressionType(
@@ -2717,7 +2717,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   htmlFor="passage-select"
                   className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص معيارية)
+                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص قراءة متدرجة)
                 </label>
                 <select
                   id="passage-select"

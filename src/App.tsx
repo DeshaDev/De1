@@ -533,7 +533,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            فحص الحساب
+            مهام الحساب
           </button>
           <button
             type="button"
@@ -548,6 +548,17 @@ export default function App() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('algorithms-lab')}
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === 'algorithms-lab'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
+                : 'hover:text-slate-900'
+            }`}
+          >
+            المنهجية والحدود
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('dashboard')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'dashboard'
@@ -555,7 +566,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            التقرير النهائي والنتائج
+            التقرير والمؤشرات
           </button>
         </nav>
 
@@ -586,10 +597,11 @@ export default function App() {
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
           { id: 'home', label: 'الرئيسية' },
-          { id: 'eye-lab', label: 'فحص العين' },
-          { id: 'dyscalculia-lab', label: 'فحص الحساب' },
+          { id: 'eye-lab', label: 'فحص القراءة والعين' },
+          { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
-          { id: 'dashboard', label: 'التقرير النهائي' },
+          { id: 'algorithms-lab', label: 'المنهجية والحدود' },
+          { id: 'dashboard', label: 'التقرير والمؤشرات' },
         ].map((item) => (
           <button
             key={item.id}
@@ -651,7 +663,7 @@ export default function App() {
             </div>
           )}
 
-        {/* VIEW 1: EXECUTIVE CLINICAL DASHBOARD */}
+        {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Unified Executive Header & 4-Metric Hairline Ribbon (Single-Elevation, Zero Card-in-Card) */}
@@ -715,7 +727,7 @@ export default function App() {
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
-                        : '● طلاقة قرائية طبيعية'}{' '}
+                        : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
                     · فهم {selectedStudent.comprehensionScore}%
                   </div>
                 </div>
@@ -744,7 +756,7 @@ export default function App() {
                         ? '■ تثبيت مطوّل'
                         : selectedStudent.avgFixationMs >= 320
                           ? '▲ تثبيت متوسط'
-                          : '● معياري (220ms)'}
+                          : 'ضمن العرض التجريبي'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
@@ -924,7 +936,7 @@ export default function App() {
                   <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h2 className="text-base font-bold text-slate-900">
-                        سجل الطلاب ونتائج الفرز المعياري
+                        سجل الطلاب ومؤشرات الفرز الاسترشادية
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         انقر على أي طالب لعرض مؤشراته أو فتح خريطة مسار العين
@@ -1202,7 +1214,7 @@ export default function App() {
                         fill="#991B1B"
                         textAnchor="middle"
                       >
-                        دون المعيار (&lt;25%)
+                        دون حد التغطية (&lt;25%)
                       </text>
                       <text
                         x="187"
@@ -1220,7 +1232,7 @@ export default function App() {
                         fill="#065F46"
                         textAnchor="middle"
                       >
-                        طلاقة طبيعية (&gt;45%)
+                        مؤشر الطلاقة أعلى من العتبة الداخلية (&gt;45%)
                       </text>
 
                       <text

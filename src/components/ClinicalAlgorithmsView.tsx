@@ -62,7 +62,7 @@ const SAMPLE_GAZE_PRESETS: Record<
     ],
   },
   nominal: {
-    label: 'عينة مسار عين لقارئ طلق معياري (تثبيتات 210ms + مسح أمامي منتظم)',
+    label: 'عينة اصطناعية لمسار نظر قارئ طلق (للعرض التوضيحي فقط)',
     samples: [
       { x: 780, y: 180, timestampMs: 0, wordIndex: 0 },
       { x: 782, y: 181, timestampMs: 110, wordIndex: 0 },
@@ -454,7 +454,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               محركات استرشادية · تحليل قراءة · نموذج IRT تجريبي غير معاير
             </div>
             <h2 className="text-2xl font-bold text-slate-900 font-display">
-              مختبر التقييم المتكيف والخوارزميات البصرية والصوتية
+              مختبر المؤشرات البصرية والصوتية
             </h2>
           </div>
 
@@ -487,7 +487,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠١
+                المؤشرات البصرية
               </div>
               <div className="text-sm mt-0.5">
                 الاختبار المتكيف بنظرية استجابة الفقرة (2PL IRT)
@@ -511,7 +511,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠٢
+                محاذاة القراءة الجهرية
               </div>
               <div className="text-sm mt-0.5">
                 طلاقة القراءة الجهرية واللهجات العربية (WCPM)
@@ -535,7 +535,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠٣
+                عرض IRT التوضيحي
               </div>
               <div className="text-sm mt-0.5">
                 مؤشر استرشادي لحركة العين
@@ -627,7 +627,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             </div>
 
             <div className="p-5">
-              <div className="text-xs text-slate-500">التصنيف الاسترشادي</div>
+              <div className="text-xs text-slate-500">تصنيف استرشادي غير معياري</div>
               <div className="mt-1 text-xs font-bold text-slate-900 leading-snug">
                 {currentIRTEstimate.interpretationLabelAr}
               </div>
@@ -924,7 +924,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 WebRTC Audio + Dialect-Aware Arabic Phonological Alignment
               </div>
               <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                مختبر التقييم الصوتي للطلاقة القرائية وفهم اللهجات العربية (WCPM)
+                تحليل تجريبي للقراءة الجهرية ومحاذاة النص المنطوق
               </h3>
             </div>
 
@@ -1092,7 +1092,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 </div>
                 <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                   <div className="text-[11px] text-slate-500">
-                    دقة المطابقة
+                    نسبة المطابقة المحسوبة
                   </div>
                   <div className="text-xl font-bold font-mono tabular-nums text-[#059669] mt-0.5">
                     {oralFluencyMetrics.accuracyPercent}%
@@ -1142,7 +1142,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
 
             <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
               {[
-                { id: 'dyslexic', label: 'عينة اصطناعية بمؤشرات مرتفعة' },
+                { id: 'dyslexic', label: 'عينة اصطناعية لأغراض العرض' },
                 { id: 'nominal', label: 'عينة قارئ طلق' },
                 { id: 'student', label: `بيانات ${selectedStudent.name}` },
               ].map((tab) => (
@@ -1247,7 +1247,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     ? '■ مؤشر فرز مرتفع'
                     : oculomotorHeuristicResult.classification === 'moderate_risk'
                       ? '▲ مؤشر فرز متوسط'
-                      : '● مؤشر فرز طبيعي'}
+                      : '● مؤشر فرز استرشادي منخفض'}
                 </span>
               </div>
             </div>
