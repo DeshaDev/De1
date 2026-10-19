@@ -1,8 +1,8 @@
 /**
- * Core Clinical & Algorithmic Engines for:
- * 1. Lexplore Platform: PyGaze / GazeParser Oculomotor Event Detection (I-DT & I-VT) + Random Forest & Temporal Sequence ML Inference
- * 2. Dyslexico Project: Soundex, Double Metaphone, Arabic Phonetic Skeleton, and Dyslexia-Weighted Damerau-Levenshtein Distance
- * 3. Marker Learning & Parallel Learning: 2-Parameter Logistic (2PL) Item Response Theory (IRT) Adaptive Engine + Oral Reading Acoustic Alignment
+ * Experimental heuristic engines for:
+ * 1. Webcam gaze-event extraction and hand-written heuristic rules: simple dispersion-threshold-inspired Oculomotor Event Detection (I-DT & I-VT) + fixed threshold-rule ensemble & Temporal Sequence ML Inference
+ * 2. Arabic reading-error analysis: Soundex, Double Metaphone, Arabic Phonetic Skeleton, and Dyslexia-Weighted Damerau-Levenshtein Distance
+ * 3. Exploratory IRT-style scoring and oral-reading alignment: 2-Parameter Logistic (2PL) Item Response Theory (IRT) Adaptive Engine + Oral Reading Acoustic Alignment
  */
 
 // ============================================================================
@@ -60,46 +60,46 @@ export interface OculomotorFeatureVector {
   temporalDurationAutocorrelation: number;
 }
 
-export interface RandomForestTreeVote {
-  treeId: number;
-  treeNameAr: string;
+export interface HeuristicRuleVote {
+  ruleId: number;
+  ruleNameAr: string;
   primaryFeature: string;
-  riskProbability: number;
+  riskSignalStrength: number;
   decisionPathAr: string;
 }
 
-export interface LexploreMLInferenceResult {
-  dyslexiaProbability: number; // 0..100 heuristic risk score
+export interface OculomotorHeuristicResult {
+  heuristicRiskScore: number; // 0..100 heuristic risk score
   classification: 'nominal' | 'moderate_risk' | 'high_dyslexia_risk';
   classificationLabelAr: string;
   modelArchitectureType: 'heuristic_rule_ensemble';
   clinicalValidationDisclaimerAr: string;
-  treeVotes: RandomForestTreeVote[];
-  recurrentSequenceStateScore: number; // 0..100 temporal sequence instability
-  featureImportances: {
+  ruleVotes: HeuristicRuleVote[];
+  temporalHeuristicScore: number; // 0..100 temporal sequence instability
+  heuristicFeatureWeights: {
     featureNameAr: string;
     weightPercent: number;
     observedValue: string;
-    normativeRange: string;
+    heuristicReferenceBand: string;
   }[];
   features: OculomotorFeatureVector;
   fixations: DetectedFixationEvent[];
   saccades: DetectedSaccadeEvent[];
 }
 
-export interface PyGazeDetectionOptions {
-  minFixationDurationMs?: number; // Default 120ms (clinical reading threshold)
-  maxDispersionPx?: number; // Default 45px (~1.2 deg visual angle)
+export interface OculomotorDetectionOptions {
+  minFixationDurationMs?: number; // Default 120ms (analysis threshold)
+  maxDispersionPx?: number; // Default 45px (CSS-pixel threshold; not normalized to visual angle)
   readingDirection?: 'rtl' | 'ltr'; // Default 'rtl' for Arabic
 }
 
 /**
- * Authentic PyGaze / GazeParser Dispersion-Threshold (I-DT) & Velocity-Threshold (I-VT)
+ * A simple dispersion-threshold-inspired event detector (not the PyGaze/GazeParser packages)
  * Oculomotor Event Detector (Salvucci & Goldberg, 2000; Dalmaijer et al., 2014).
  */
-export function detectOculomotorEventsPyGaze(
+export function detectOculomotorEvents(
   samples: RawGazeSample[],
-  options?: PyGazeDetectionOptions
+  options?: OculomotorDetectionOptions
 ): {
   fixations: DetectedFixationEvent[];
   saccades: DetectedSaccadeEvent[];
@@ -261,14 +261,14 @@ export function detectOculomotorEventsPyGaze(
 
 /**
  * Extracts the 12-metric oculomotor feature matrix from PyGaze events and runs
- * a 5-Tree Random Forest + Sequential Recurrent State Classifier (Lexplore Architecture).
+ * a five hand-written threshold rules + temporal smoothing heuristic (Oculomotor heuristic Architecture).
  */
-export function runLexploreOculomotorInference(
+export function runOculomotorHeuristicAnalysis(
   samples: RawGazeSample[],
   wordCount: number = 25,
-  options?: PyGazeDetectionOptions
-): LexploreMLInferenceResult {
-  const { fixations, saccades } = detectOculomotorEventsPyGaze(samples, options);
+  options?: OculomotorDetectionOptions
+): OculomotorHeuristicResult {
+  const { fixations, saccades } = detectOculomotorEvents(samples, options);
 
   const durations = fixations.map((f) => f.durationMs);
   const fixationCount = fixations.length;
@@ -329,7 +329,7 @@ export function runLexploreOculomotorInference(
       Math.round((cov / ((durations.length - 1) * variance)) * 100) / 100;
   }
 
-  // Recurrent Hidden State Simulation (Sequential gate over normalized fixation durations & regressions)
+  // Simple temporal smoothing heuristic (Sequential gate over normalized fixation durations & regressions)
   let hiddenState = 0.25;
   for (let i = 0; i < fixations.length; i++) {
     const durNorm = Math.min(1, Math.max(0, (fixations[i].durationMs - 200) / 350));
@@ -338,7 +338,7 @@ export function runLexploreOculomotorInference(
     const inputGate = 0.65 * durNorm + 0.35 * isReg;
     hiddenState = 0.6 * hiddenState + 0.4 * inputGate;
   }
-  const recurrentSequenceStateScore = Math.round(
+  const temporalHeuristicScore = Math.round(
     Math.min(99, Math.max(4, hiddenState * 100))
   );
 
@@ -357,7 +357,7 @@ export function runLexploreOculomotorInference(
     temporalDurationAutocorrelation,
   };
 
-  // 5-Tree Random Forest Ensemble Evaluation
+  // five hand-written threshold rules Ensemble Evaluation
   // Tree 1: Fixation Duration Thresholds (Lexical & Phonological Processing Latency)
   const tree1Prob =
     meanFixationDurationMs >= 380
@@ -367,11 +367,11 @@ export function runLexploreOculomotorInference(
         : meanFixationDurationMs >= 260
           ? 0.35
           : 0.12;
-  const tree1Vote: RandomForestTreeVote = {
-    treeId: 1,
-    treeNameAr: 'شجرة القرار ١: كمون التثبيت البؤري (Fixation Latency)',
+  const tree1Vote: HeuristicRuleVote = {
+    ruleId: 1,
+    ruleNameAr: 'شجرة القرار ١: كمون التثبيت البؤري (Fixation Latency)',
     primaryFeature: 'meanFixationDurationMs',
-    riskProbability: tree1Prob,
+    riskSignalStrength: tree1Prob,
     decisionPathAr:
       meanFixationDurationMs >= 310
         ? `زمن التثبيت (${meanFixationDurationMs}ms > 310ms) يشير لبطء فك الترميز الفونولوجي`
@@ -387,11 +387,11 @@ export function runLexploreOculomotorInference(
         : regressionRatePercent >= 12
           ? 0.32
           : 0.10;
-  const tree2Vote: RandomForestTreeVote = {
-    treeId: 2,
-    treeNameAr: 'شجرة القرار ٢: كثافة القفزات التراجعية (Regressive Saccades)',
+  const tree2Vote: HeuristicRuleVote = {
+    ruleId: 2,
+    ruleNameAr: 'شجرة القرار ٢: كثافة القفزات التراجعية (Regressive Saccades)',
     primaryFeature: 'regressionRatePercent',
-    riskProbability: tree2Prob,
+    riskSignalStrength: tree2Prob,
     decisionPathAr:
       regressionRatePercent >= 19
         ? `نسبة التراجع (${regressionRatePercent}% >= 19%) تعكس إعادة قراءة الحروف المتشابهة`
@@ -405,11 +405,11 @@ export function runLexploreOculomotorInference(
       : p90FixationDurationMs >= 390
         ? 0.58
         : 0.15;
-  const tree3Vote: RandomForestTreeVote = {
-    treeId: 3,
-    treeNameAr: 'شجرة القرار ٣: ذروة التثبيتات المطوّلة (P90 Lexical Bottleneck)',
+  const tree3Vote: HeuristicRuleVote = {
+    ruleId: 3,
+    ruleNameAr: 'شجرة القرار ٣: ذروة التثبيتات المطوّلة (P90 Lexical Bottleneck)',
     primaryFeature: 'p90FixationDurationMs',
-    riskProbability: tree3Prob,
+    riskSignalStrength: tree3Prob,
     decisionPathAr:
       p90FixationDurationMs >= 390
         ? `المئين ٩٠ للتثبيت (${p90FixationDurationMs}ms) يكشف تعثراً في الكلمات المركبة`
@@ -423,11 +423,11 @@ export function runLexploreOculomotorInference(
       : meanSaccadeAmplitudePx <= 80
         ? 0.48
         : 0.16;
-  const tree4Vote: RandomForestTreeVote = {
-    treeId: 4,
-    treeNameAr: 'شجرة القرار ٤: مدى القفزة البصرية والتزاحم (Saccadic Span)',
+  const tree4Vote: HeuristicRuleVote = {
+    ruleId: 4,
+    ruleNameAr: 'شجرة القرار ٤: مدى القفزة البصرية والتزاحم (Saccadic Span)',
     primaryFeature: 'meanSaccadeAmplitudePx',
-    riskProbability: tree4Prob,
+    riskSignalStrength: tree4Prob,
     decisionPathAr:
       meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 65
         ? `قصر مدى القفزة (${meanSaccadeAmplitudePx}px) يشير لقراءة حرفية مجزأة`
@@ -435,19 +435,19 @@ export function runLexploreOculomotorInference(
   };
 
   // Tree 5: Recurrent Temporal Sequence State
-  const tree5Prob = recurrentSequenceStateScore / 100;
-  const tree5Vote: RandomForestTreeVote = {
-    treeId: 5,
-    treeNameAr: 'شجرة القرار ٥: الشبكة التسلسلية الزمنية (Sequential RNN Gate)',
-    primaryFeature: 'recurrentSequenceStateScore',
-    riskProbability: Math.round(tree5Prob * 100) / 100,
+  const tree5Prob = temporalHeuristicScore / 100;
+  const tree5Vote: HeuristicRuleVote = {
+    ruleId: 5,
+    ruleNameAr: 'شجرة القرار ٥: الشبكة التسلسلية الزمنية (Sequential RNN Gate)',
+    primaryFeature: 'temporalHeuristicScore',
+    riskSignalStrength: Math.round(tree5Prob * 100) / 100,
     decisionPathAr:
-      recurrentSequenceStateScore >= 55
-        ? `مؤشر التسلسل الزمني (${recurrentSequenceStateScore}%) يرصد تذبذباً متكرراً بين التثبيت والتراجع`
-        : `مؤشر التسلسل الزمني (${recurrentSequenceStateScore}%) يظهر إيقاعاً قرائياً منتظماً`,
+      temporalHeuristicScore >= 55
+        ? `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يرصد تذبذباً متكرراً بين التثبيت والتراجع`
+        : `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يظهر إيقاعاً قرائياً منتظماً`,
   };
 
-  const treeVotes = [tree1Vote, tree2Vote, tree3Vote, tree4Vote, tree5Vote];
+  const ruleVotes = [tree1Vote, tree2Vote, tree3Vote, tree4Vote, tree5Vote];
 
   // Weighted Ensemble Probability
   const ensembleProb =
@@ -457,62 +457,62 @@ export function runLexploreOculomotorInference(
     tree4Prob * 0.12 +
     tree5Prob * 0.18;
 
-  const dyslexiaProbability = Math.round(
+  const heuristicRiskScore = Math.round(
     Math.min(98, Math.max(4, ensembleProb * 100))
   );
 
   let classification: 'nominal' | 'moderate_risk' | 'high_dyslexia_risk' =
     'nominal';
   let classificationLabelAr = 'مؤشر فرز أولي ضمن النطاق المتوقع (طلاقة بصرية سريعة)';
-  if (dyslexiaProbability >= 62) {
+  if (heuristicRiskScore >= 62) {
     classification = 'high_dyslexia_risk';
     classificationLabelAr =
       'مؤشر فرز أولي مرتفع لعسر القراءة (يستوجب تقييماً سريرياً متخصصاً)';
-  } else if (dyslexiaProbability >= 38) {
+  } else if (heuristicRiskScore >= 38) {
     classification = 'moderate_risk';
     classificationLabelAr =
       'مؤشر فرز أولي متوسط لصعوبات المعالجة الفونولوجية يتطلب متابعة';
   }
 
   return {
-    dyslexiaProbability,
+    heuristicRiskScore,
     classification,
     classificationLabelAr,
     modelArchitectureType: 'heuristic_rule_ensemble',
     clinicalValidationDisclaimerAr:
       'يعتمد هذا المصنف على ٥ قواعد قرار استدلالية موزونة (Heuristic Rule Ensemble) مع تراكم تسلسلي زمني للميزات الحركية البصرية المستخلصة، وهو أداة فرز تربوية أولية غير مُجازة سريرياً ولا تُغني عن التشخيص الإكلينيكي المعتمد.',
-    treeVotes,
-    recurrentSequenceStateScore,
-    featureImportances: [
+    ruleVotes,
+    temporalHeuristicScore,
+    heuristicFeatureWeights: [
       {
         featureNameAr: 'متوسط زمن التثبيت البؤري (Mean Fixation Duration)',
         weightPercent: 28,
         observedValue: `${meanFixationDurationMs} ms`,
-        normativeRange: '200 – 260 ms',
+        heuristicReferenceBand: '200 – 260 ms',
       },
       {
         featureNameAr: 'نسبة القفزات التراجعية (Regressive Saccade Ratio)',
         weightPercent: 26,
         observedValue: `${regressionRatePercent}% (${regressionsPer100Words}/100 كلمة)`,
-        normativeRange: '8% – 15%',
+        heuristicReferenceBand: '8% – 15%',
       },
       {
         featureNameAr: 'بوابة التسلسل الزمني المتكرر (Temporal RNN/Markov State)',
         weightPercent: 18,
-        observedValue: `${recurrentSequenceStateScore}%`,
-        normativeRange: '< 35%',
+        observedValue: `${temporalHeuristicScore}%`,
+        heuristicReferenceBand: '< 35%',
       },
       {
         featureNameAr: 'المئين ٩٠ للتثبيتات المطوّلة (P90 Fixation Burst)',
         weightPercent: 16,
         observedValue: `${p90FixationDurationMs} ms`,
-        normativeRange: '< 350 ms',
+        heuristicReferenceBand: '< 350 ms',
       },
       {
         featureNameAr: 'متوسط مدى القفزة البصرية (Mean Saccade Amplitude)',
         weightPercent: 12,
         observedValue: `${meanSaccadeAmplitudePx} px`,
-        normativeRange: '70 – 130 px',
+        heuristicReferenceBand: '70 – 130 px',
       },
     ],
     features,
