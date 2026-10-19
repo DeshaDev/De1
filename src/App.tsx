@@ -897,7 +897,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* SUB-VIEW 1: STUDENT ROSTER & NORMATIVE MATRIX */}
+            {/* SUB-VIEW 1: STUDENT ROSTER & HEURISTIC INDICES */}
             {dashboardSubView === 'roster' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* 7 Cols: Clean Enterprise Data Table */}
@@ -1044,10 +1044,10 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ مرتفع (P${stu.readingPercentile})`
+                                      ? `■ مرتفع (مؤشر ${stu.readingPercentile})`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (P${stu.readingPercentile})`
-                                        : `● طبيعي (P${stu.readingPercentile})`}
+                                        ? `▲ متوسط (مؤشر ${stu.readingPercentile})`
+                                        : `● منخفض (مؤشر ${stu.readingPercentile})`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1277,10 +1277,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      P{selectedStudent.readingPercentile} قراءة ·{' '}
+                      مؤشر فرز {selectedStudent.readingPercentile} قراءة ·{' '}
                       {selectedStudent.mathPercentile !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `P${selectedStudent.mathPercentile} حساب`
+                        ? `مؤشر فرز ${selectedStudent.mathPercentile} حساب`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
