@@ -93,26 +93,43 @@ function decryptStudentRecords(raw: string): StudentRecord[] {
 }
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
-  const cleanName = (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim();
+  const legacy = s as StudentRecord & {
+    readingPercentile?: number;
+    mathPercentile?: number;
+  };
+  const normalized = {
+    ...s,
+    readingHeuristicIndicator:
+      s.readingHeuristicIndicator ??
+      (typeof legacy.readingPercentile === 'number' ? legacy.readingPercentile : 50),
+    mathHeuristicIndicator:
+      s.mathHeuristicIndicator ??
+      (typeof legacy.mathPercentile === 'number' ? legacy.mathPercentile : null),
+  } as StudentRecord & { readingPercentile?: number; mathPercentile?: number };
+  delete normalized.readingPercentile;
+  delete normalized.mathPercentile;
+
+  const cleanName = (normalized.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim();
   const cleanSchool =
-    s.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
+    normalized.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
       ? 'مدرسة الرواد الابتدائية'
-      : s.schoolName;
-  const cleanSummary = s.clinicalReport?.clinicalSummary
-    ? s.clinicalReport.clinicalSummary
+      : normalized.schoolName;
+  const cleanSummary = normalized.clinicalReport?.clinicalSummary
+    ? normalized.clinicalReport.clinicalSummary
         .replace(/^\[سجل تجريبي توضيحي[^\]]*\]\s*/g, '')
         .trim()
     : '';
   return {
-    ...s,
+    ...normalized,
     name: cleanName,
     schoolName: cleanSchool,
-    clinicalReport: s.clinicalReport
+    clinicalReport: normalized.clinicalReport
       ? {
-          ...s.clinicalReport,
-          clinicalSummary: cleanSummary || s.clinicalReport.clinicalSummary,
+          ...normalized.clinicalReport,
+          clinicalSummary:
+            cleanSummary || normalized.clinicalReport.clinicalSummary,
         }
-      : s.clinicalReport,
+      : normalized.clinicalReport,
   };
 }
 
@@ -453,11 +470,11 @@ async function startServer() {
         'totalPassageWordCount', 'calibrationAccuracyPercent', 'calibrationValidationMethod',
         'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
         'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount',
-        'omissionCount', 'dyslexiaRiskScore', 'readingPercentile', 'readingRiskLevel',
+        'omissionCount', 'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel',
         'readingRiskLabelAr', 'problematicWords', 'fixations', 'comprehensionScore',
         'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
         'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-        'mathPercentile', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
+        'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
       ]);
       const suppliedFields = Object.keys(updates);
       if (
