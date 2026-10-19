@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,76 +22,205 @@ const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '.runtime-store');
 const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
+let clinicalStoreReady = false;
 
-const CLINICAL_ACCESS_CODE =
-  process.env.CLINICAL_ACCESS_CODE || 'BASEERA-CLINICAL-2026';
-const CLINICAL_SESSION_SECRET =
-  process.env.CLINICAL_SESSION_SECRET ||
-  'baseera-rbac-hmac-secret-key-2026';
+const CLINICAL_ACCESS_CODE = (process.env.CLINICAL_ACCESS_CODE || '').trim();
+const CLINICAL_SESSION_SECRET = (process.env.CLINICAL_SESSION_SECRET || '').trim();
+
+function getStoreEncryptionKey(): Buffer | null {
+  const raw = (process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim();
+  if (!/^[a-f0-9]{64}$/i.test(raw)) return null;
+  return Buffer.from(raw, 'hex');
+}
+
+function isClinicalAuthConfigured(): boolean {
+  const storeKeyHex = (process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim().toLowerCase();
+  return (
+    CLINICAL_ACCESS_CODE.length >= 24 &&
+    CLINICAL_SESSION_SECRET.length >= 32 &&
+    CLINICAL_ACCESS_CODE !== 'BASEERA-CLINICAL-2026' &&
+    CLINICAL_SESSION_SECRET !== 'baseera-rbac-hmac-secret-key-2026' &&
+    CLINICAL_ACCESS_CODE !== CLINICAL_SESSION_SECRET &&
+    CLINICAL_ACCESS_CODE !== storeKeyHex &&
+    CLINICAL_SESSION_SECRET !== storeKeyHex &&
+    getStoreEncryptionKey() !== null
+  );
+}
+function constantTimeStringEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+const PATCHABLE_STUDENT_FIELDS = new Set<string>([
+  'lastScreenedDate', 'passageId', 'dialectRegionAr',
+  'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
+  'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
+  'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
+  'calibrationAccuracyPercent', 'calibrationValidationMethod',
+  'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
+  'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
+  'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
+  'problematicWords', 'fixations', 'comprehensionScore',
+  'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
+  'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
+  'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
+]);
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
-  const cleanName = (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim();
+  // Migrate records written by older builds, where heuristic indices were mislabeled as percentiles.
+  const legacy = s as StudentRecord & {
+    readingPercentile?: number;
+    mathPercentile?: number;
+  };
+  const normalized = {
+    ...s,
+    guardianConsentGiven: s.isDemoRecord ? false : s.guardianConsentGiven,
+    readingHeuristicIndicator:
+      s.readingHeuristicIndicator ??
+      (typeof legacy.readingPercentile === 'number' ? legacy.readingPercentile : 50),
+    mathHeuristicIndicator:
+      s.mathHeuristicIndicator ??
+      (typeof legacy.mathPercentile === 'number' ? legacy.mathPercentile : null),
+  } as StudentRecord & { readingPercentile?: number; mathPercentile?: number };
+  delete normalized.readingPercentile;
+  delete normalized.mathPercentile;
+
+  const cleanName = (normalized.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim();
   const cleanSchool =
-    s.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
+    normalized.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
       ? 'مدرسة الرواد الابتدائية'
-      : s.schoolName;
-  const cleanSummary = s.clinicalReport?.clinicalSummary
-    ? s.clinicalReport.clinicalSummary
-        .replace(/^\[سجل تجريبي توضيحي[^\]]*\]\s*/g, '')
+      : normalized.schoolName;
+  const cleanSummary = normalized.clinicalReport?.clinicalSummary
+    ? normalized.clinicalReport.clinicalSummary
+        .replace(/^\\[سجل تجريبي توضيحي[^\\]]*\\]\\s*/g, '')
         .trim()
     : '';
   return {
-    ...s,
+    ...normalized,
     name: cleanName,
     schoolName: cleanSchool,
-    clinicalReport: s.clinicalReport
+    clinicalReport: normalized.clinicalReport
       ? {
-          ...s.clinicalReport,
-          clinicalSummary: cleanSummary || s.clinicalReport.clinicalSummary,
+          ...normalized.clinicalReport,
+          clinicalSummary: cleanSummary || normalized.clinicalReport.clinicalSummary,
         }
-      : s.clinicalReport,
+      : normalized.clinicalReport,
   };
+}
+function createSeededStudents(): StudentRecord[] {
+  return INITIAL_STUDENTS.map((s) =>
+    sanitizeStudentRecord({
+      ...s,
+      dyscalculiaAssessed: false,
+      guardianConsentGiven: false,
+    })
+  );
+}
+
+function encryptStudentRecords(records: StudentRecord[], key: Buffer): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(records), 'utf8'),
+    cipher.final(),
+  ]);
+  return JSON.stringify({
+    format: 'baseera-aes-256-gcm-v1',
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    ciphertext: ciphertext.toString('base64'),
+  });
+}
+
+function decodeStudentRecords(
+  raw: string,
+  key: Buffer
+): { records: StudentRecord[]; wasEncrypted: boolean } {
+  const envelope = JSON.parse(raw);
+  if (envelope?.format === 'baseera-aes-256-gcm-v1') {
+    const iv = Buffer.from(String(envelope.iv || ''), 'base64');
+    const tag = Buffer.from(String(envelope.tag || ''), 'base64');
+    const ciphertext = Buffer.from(String(envelope.ciphertext || ''), 'base64');
+    if (iv.length !== 12 || tag.length !== 16 || ciphertext.length === 0) {
+      throw new Error('Invalid encrypted clinical store envelope');
+    }
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ]).toString('utf8');
+    const records = JSON.parse(plaintext);
+    if (!Array.isArray(records)) throw new Error('Invalid clinical store payload');
+    return { records: records as StudentRecord[], wasEncrypted: true };
+  }
+  if (!Array.isArray(envelope)) throw new Error('Unsupported clinical store format');
+  return { records: envelope as StudentRecord[], wasEncrypted: false };
 }
 
 function loadPersistedStudents(): StudentRecord[] {
+  const key = getStoreEncryptionKey();
+  if (!key) {
+    clinicalStoreReady = false;
+    console.warn('Encrypted clinical persistence is disabled until CLINICAL_STORE_ENCRYPTION_KEY is configured.');
+    return createSeededStudents();
+  }
+
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
     if (!fs.existsSync(STORE_PATH)) {
-      const seeded = INITIAL_STUDENTS.map((s) =>
-        sanitizeStudentRecord({
-          ...s,
-          dyscalculiaAssessed: s.dyscalculiaAssessed ?? true,
-          guardianConsentGiven: true,
-        })
-      );
-      fs.writeFileSync(STORE_PATH, JSON.stringify(seeded, null, 2), 'utf8');
+      const seeded = createSeededStudents();
+      clinicalStoreReady = savePersistedStudents(seeded);
       return seeded;
     }
+
     const raw = fs.readFileSync(STORE_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      const cleaned = parsed.map((s: StudentRecord) => sanitizeStudentRecord(s));
-      fs.writeFileSync(STORE_PATH, JSON.stringify(cleaned, null, 2), 'utf8');
-      return cleaned;
+    const decoded = decodeStudentRecords(raw, key);
+    const cleaned = decoded.records.map((record) =>
+      sanitizeStudentRecord({
+        ...record,
+        // Legacy plaintext records may have had consent defaulted by an older client.
+        // Require consent to be captured again rather than treating that value as proof.
+        guardianConsentGiven: decoded.wasEncrypted
+          ? record.guardianConsentGiven === true
+          : false,
+      })
+    );
+
+    // Migrate a legacy plaintext JSON store on first startup with a valid key.
+    if (!decoded.wasEncrypted && !savePersistedStudents(cleaned)) {
+      clinicalStoreReady = false;
+      console.warn('Legacy clinical store could not be migrated to encrypted storage.');
+      return createSeededStudents();
     }
-  } catch (err) {
-    console.warn('Failed to read clinical-store.json, using seed data:', err);
+    clinicalStoreReady = true;
+    return cleaned;
+  } catch {
+    clinicalStoreReady = false;
+    console.warn('Failed to load the encrypted clinical store; protected persistence endpoints remain disabled.');
+    return createSeededStudents();
   }
-  return INITIAL_STUDENTS.map(sanitizeStudentRecord);
 }
 
-function savePersistedStudents(records: StudentRecord[]): void {
+function savePersistedStudents(records: StudentRecord[]): boolean {
+  const key = getStoreEncryptionKey();
+  if (!key) return false;
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
     const tmpPath = `${STORE_PATH}.tmp`;
-    fs.writeFileSync(tmpPath, JSON.stringify(records, null, 2), 'utf8');
+    fs.writeFileSync(tmpPath, encryptStudentRecords(records, key), {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    fs.chmodSync(tmpPath, 0o600);
     fs.renameSync(tmpPath, STORE_PATH);
-  } catch (err) {
-    console.warn('Failed to persist clinical-store.json:', err);
+    fs.chmodSync(STORE_PATH, 0o600);
+    return true;
+  } catch {
+    console.warn('Failed to persist the encrypted clinical store.');
+    return false;
   }
 }
 
@@ -101,6 +231,12 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
     res: express.Response,
     next: express.NextFunction
   ) => {
+    if (!isClinicalAuthConfigured() || !clinicalStoreReady) {
+      res.status(503).json({
+        error: 'يلزم ضبط الأسرار وتهيئة مخزن سريري مشفر قابل للقراءة والكتابة قبل تفعيل بيانات الطلاب.',
+      });
+      return;
+    }
     const rawHeader =
       (req.headers.authorization as string) ||
       (req.headers['x-clinical-session-token'] as string) ||
@@ -122,6 +258,32 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
   };
 }
 
+// Rate-limit credential attempts independently from paid AI requests.
+const authAttemptBuckets = new Map<string, number[]>();
+function authRateLimiter(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
+  const now = Date.now();
+  const windowMs = 60_000;
+  const maxAttemptsPerMinute = 8;
+  const attempts = (authAttemptBuckets.get(clientIp) || []).filter(
+    (ts) => now - ts < windowMs
+  );
+  if (attempts.length >= maxAttemptsPerMinute) {
+    res.setHeader('Retry-After', '60');
+    res.status(429).json({
+      error: 'محاولات تسجيل الدخول كثيرة. يرجى الانتظار قبل المحاولة مجددًا.',
+    });
+    return;
+  }
+  attempts.push(now);
+  authAttemptBuckets.set(clientIp, attempts);
+  next();
+}
+
 // Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
 const rateLimitBuckets = new Map<string, number[]>();
 function aiRateLimiter(
@@ -129,10 +291,8 @@ function aiRateLimiter(
   res: express.Response,
   next: express.NextFunction
 ) {
-  const clientIp =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.socket.remoteAddress ||
-    'local';
+  // Do not trust client-supplied X-Forwarded-For unless a trusted proxy is explicitly configured.
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
   const now = Date.now();
   const windowMs = 60_000;
   const maxRequestsPerMinute = 20;
@@ -177,29 +337,35 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
 
   // Educator / Clinician Authentication & RBAC Session Issuing Endpoint
-  app.post('/api/auth/session', (req, res) => {
+  app.post('/api/auth/session', authRateLimiter, (req, res) => {
+    if (!isClinicalAuthConfigured()) {
+      res.status(503).json({
+        error: 'المصادقة غير مفعّلة: اضبط CLINICAL_ACCESS_CODE وCLINICAL_SESSION_SECRET وCLINICAL_STORE_ENCRYPTION_KEY.',
+      });
+      return;
+    }
     const {
       accessCode,
       role = 'clinician',
-      clinicianName = 'أخصائي التقييم المعتمد',
+      clinicianName = 'أخصائي التقييم',
     } = req.body || {};
 
-    if (
-      !accessCode ||
-      (accessCode !== CLINICAL_ACCESS_CODE &&
-        accessCode !== 'BASEERA-CLINICAL-2026')
-    ) {
+    if (typeof accessCode !== 'string' || !constantTimeStringEqual(accessCode, CLINICAL_ACCESS_CODE)) {
       res.status(401).json({
         error: 'رمز الدخول الإكلينيكي غير صحيح — تم رفض إصدار جلسة الصلاحيات.',
       });
       return;
     }
+    if (role !== 'clinician' && role !== 'educator_readonly') {
+      res.status(400).json({ error: 'الدور المطلوب غير صالح.' });
+      return;
+    }
 
-    const validRole: ClinicalRole =
-      role === 'educator_readonly' ? 'educator_readonly' : 'clinician';
+    const safeClinicianName =
+      typeof clinicianName === 'string' ? clinicianName.trim().slice(0, 100) : '';
     const session = issueClinicalSessionToken(
-      validRole,
-      String(clinicianName),
+      role as ClinicalRole,
+      safeClinicianName || 'أخصائي التقييم',
       CLINICAL_SESSION_SECRET
     );
     res.json(session);
@@ -224,7 +390,7 @@ async function startServer() {
       res.json({
         students: studentsDb,
         persisted: true,
-        privacyPolicy: 'RBAC-Protected-PII-Pseudonymized',
+        privacyPolicy: 'Authenticated access; encrypted at rest; names remain visible to authorised users',
       });
     }
   );
@@ -248,11 +414,15 @@ async function startServer() {
         return;
       }
 
-      studentsDb = [
+      const nextRecords = [
         newRecord,
         ...studentsDb.filter((s) => s.id !== newRecord.id),
       ];
-      savePersistedStudents(studentsDb);
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ السجل في التخزين المشفر.' });
+        return;
+      }
+      studentsDb = nextRecords;
       res.status(201).json({ student: newRecord, persisted: true });
     }
   );
@@ -262,15 +432,36 @@ async function startServer() {
     requireClinicalAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
-      const updates = req.body as Partial<StudentRecord>;
+      const updates = req.body as Partial<StudentRecord> | null;
       const idx = studentsDb.findIndex((s) => s.id === id);
       if (idx === -1) {
         res.status(404).json({ error: 'سجل الطالب غير موجود.' });
         return;
       }
-      studentsDb[idx] = { ...studentsDb[idx], ...updates };
-      savePersistedStudents(studentsDb);
-      res.json({ student: studentsDb[idx], persisted: true });
+      if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+        res.status(400).json({ error: 'جسم التحديث غير صالح.' });
+        return;
+      }
+
+      const keys = Object.keys(updates);
+      const forbidden = keys.filter((key) => !PATCHABLE_STUDENT_FIELDS.has(key));
+      if (forbidden.length > 0) {
+        res.status(400).json({
+          error: 'يتضمن التحديث حقول هوية أو موافقة أو حقولاً غير قابلة للتعديل.',
+          rejectedFields: forbidden,
+        });
+        return;
+      }
+
+      const updatedRecord = { ...studentsDb[idx], ...updates };
+      const nextRecords = [...studentsDb];
+      nextRecords[idx] = updatedRecord;
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ السجل المشفر. تحقق من إعدادات التخزين وصلاحيات الملفات.' });
+        return;
+      }
+      studentsDb = nextRecords;
+      res.json({ student: updatedRecord, persisted: true });
     }
   );
 
@@ -279,8 +470,12 @@ async function startServer() {
     requireClinicalAuth('students:delete'),
     (req, res) => {
       const { id } = req.params;
-      studentsDb = studentsDb.filter((s) => s.id !== id);
-      savePersistedStudents(studentsDb);
+      const nextRecords = studentsDb.filter((s) => s.id !== id);
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ التغيير في التخزين المشفر.' });
+        return;
+      }
+      studentsDb = nextRecords;
       res.json({ deletedId: id, persisted: true });
     }
   );
@@ -323,8 +518,8 @@ async function startServer() {
   // Serve exact matching @mediapipe/tasks-vision WASM binaries locally for zero-latency 3D iris tracking
   app.use('/mediapipe-wasm', express.static(wasmDir));
 
-  // Protect all /api/ai/* routes with sliding-window rate limiting
-  app.use('/api/ai', aiRateLimiter);
+  // Prevent the server from becoming an unauthenticated paid AI proxy.
+  app.use('/api/ai', requireClinicalAuth('ai:analyze'), aiRateLimiter);
 
   // 1. Clinical AI Analysis of Eye-Tracking Dyslexia & Dyscalculia Screening
   // Enforces both RBAC Authentication ('ai:analyze') AND Strict Default-Deny Guardian Consent
@@ -339,9 +534,10 @@ async function startServer() {
         wpm,
         avgFixationMs,
         regressionRate,
-        gazeCoveragePercent = 100,
+        gazeCoveragePercent,
         observedWordCount,
         totalPassageWordCount,
+        calibrationAccuracyPercent,
         problematicWords = [],
         oralReadingAssessed = false,
         oralAccuracyPercent = null,
@@ -353,8 +549,13 @@ async function startServer() {
         reversalErrorCount = null,
       } = req.body || {};
 
-      if (!studentName) {
-        res.status(400).json({ error: 'بيانات الجلسة مطلوبة لإجراء التحليل.' });
+      if (
+        typeof studentName !== 'string' ||
+        !studentName.trim() ||
+        studentName.length > 120 ||
+        !Array.isArray(problematicWords)
+      ) {
+        res.status(400).json({ error: 'بيانات الجلسة غير مكتملة أو غير صالحة.' });
         return;
       }
 
@@ -364,6 +565,37 @@ async function startServer() {
       if (!consentValidation.valid) {
         res.status(403).json({
           error: consentValidation.errorAr,
+        });
+        return;
+      }
+
+      const hasValidCoverage =
+        typeof gazeCoveragePercent === 'number' &&
+        typeof observedWordCount === 'number' &&
+        typeof totalPassageWordCount === 'number' &&
+        Number.isFinite(gazeCoveragePercent) &&
+        Number.isFinite(observedWordCount) &&
+        Number.isFinite(totalPassageWordCount) &&
+        totalPassageWordCount > 0 &&
+        observedWordCount >= 4 &&
+        observedWordCount <= totalPassageWordCount &&
+        gazeCoveragePercent >= 25 &&
+        observedWordCount / totalPassageWordCount >= 0.25;
+      if (!hasValidCoverage) {
+        res.status(422).json({
+          error: 'بيانات تتبع العين غير كافية لإصدار تقرير. يلزم رصد 4 كلمات على الأقل وتغطية 25% من النص دون تعويض اصطناعي.',
+          reportBlocked: true,
+        });
+        return;
+      }
+      if (
+        typeof calibrationAccuracyPercent !== 'number' ||
+        !Number.isFinite(calibrationAccuracyPercent) ||
+        calibrationAccuracyPercent < 70
+      ) {
+        res.status(422).json({
+          error: 'دقة التحقق من معايرة الكاميرا منخفضة أو غير متاحة؛ تم حجب التقرير بدلاً من إصدار نتيجة غير موثوقة.',
+          reportBlocked: true,
         });
         return;
       }
@@ -532,8 +764,8 @@ ${mathContextLine}
   // 2. AI Text Adaptation & Morphological Breakdown for Smart Dyslexia Reader
   app.post('/api/ai/adapt-text', async (req, res) => {
     const { text } = req.body || {};
-    if (!text || typeof text !== 'string' || !text.trim()) {
-      res.status(400).json({ error: 'يرجى إدخال نص عربي لتحليله وتبسيطه.' });
+    if (!text || typeof text !== 'string' || !text.trim() || text.length > 20000) {
+      res.status(400).json({ error: 'يرجى إدخال نص صالح لا يتجاوز 20,000 حرف لتحليله وتبسيطه.' });
       return;
     }
 
@@ -612,8 +844,8 @@ ${mathContextLine}
   // 3. Gemini Text-to-Speech (gemini-3.8-flash-lite-tts) for Auditory Support
   app.post('/api/ai/tts', async (req, res) => {
     const { text } = req.body || {};
-    if (!text || typeof text !== 'string') {
-      res.status(400).json({ error: 'النص مطلوب لتحويله إلى صوت.' });
+    if (!text || typeof text !== 'string' || !text.trim() || text.length > 8000) {
+      res.status(400).json({ error: 'يلزم إدخال نص صالح لا يتجاوز 8,000 حرف لتحويله إلى صوت.' });
       return;
     }
 

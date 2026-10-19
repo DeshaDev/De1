@@ -16,7 +16,13 @@ import {
   ARABIC_READING_PASSAGES,
   StudentRecord,
 } from './data/seedData';
-import { authenticatedFetch } from './utils/apiAuth';
+import {
+  authenticatedFetch,
+  clearClinicalSession,
+  getStoredClinicalSession,
+  loginClinicalSession,
+  ClinicalSessionInfo,
+} from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
@@ -51,6 +57,14 @@ export default function App() {
   );
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
+  const [clinicalSession, setClinicalSession] =
+    useState<ClinicalSessionInfo | null>(() => getStoredClinicalSession());
+  const [pendingServerRecord, setPendingServerRecord] =
+    useState<StudentRecord | null>(null);
+  const [showClinicalLogin, setShowClinicalLogin] = useState<boolean>(false);
+  const [clinicalAccessCode, setClinicalAccessCode] = useState<string>('');
+  const [clinicalLoginError, setClinicalLoginError] = useState<string>('');
+  const [isClinicalLoggingIn, setIsClinicalLoggingIn] = useState<boolean>(false);
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -153,11 +167,17 @@ export default function App() {
     setSelectedStudentId(newRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
+    if (!clinicalSession) {
+      setPendingServerRecord(newRecord);
+      setAiStatusBanner('اكتملت الجلسة محليًا، لكنها لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان.');
+      setShowClinicalLogin(true);
+      return;
+    }
     setAiStatusBanner(
-      `تم تسجيل جلسة الفحص للطالب (${newRecord.name}) وحفظها بنجاح.`
+      `تم إنشاء جلسة الفحص للطالب (${newRecord.name}) محليًا؛ لم يتأكد حفظها في الخادم بعد.`
     );
     try {
-      await authenticatedFetch('/api/students', {
+      const response = await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,9 +185,22 @@ export default function App() {
           guardianConsentGiven: newRecord.guardianConsentGiven === true,
         }),
       });
-      setIsPersistedStoreLoaded(true);
+      if (response.ok) {
+        setIsPersistedStoreLoaded(true);
+        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${newRecord.name}) في التخزين المشفر.`);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setPendingServerRecord(newRecord);
+        setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم. بقيت نسخة محلية لإعادة المحاولة بعد تسجيل الدخول.');
+        if (response.status === 401) {
+          clearClinicalSession();
+          setClinicalSession(null);
+          setShowClinicalLogin(true);
+        }
+      }
     } catch {
-      // Saved in local state if network fails
+      setPendingServerRecord(newRecord);
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود محليًا فقط ولم يُحفظ في الخادم.');
     }
   };
 
@@ -191,7 +224,7 @@ export default function App() {
         gradeLevel: grade,
         schoolName: `جلسة فحص (${roleLabel})`,
         isDemoRecord: false,
-        guardianConsentGiven: true,
+        guardianConsentGiven: false,
       };
       setStudents((prev) => [newMockStudent, ...prev]);
       setSelectedStudentId(newMockStudent.id);
@@ -216,11 +249,13 @@ export default function App() {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, ...updated } : s))
-    );
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
+      setShowClinicalLogin(true);
+      return;
+    }
     try {
-      await authenticatedFetch(
+      const response = await authenticatedFetch(
         `/api/students/${encodeURIComponent(studentId)}`,
         {
           method: 'PATCH',
@@ -228,35 +263,61 @@ export default function App() {
           body: JSON.stringify(updated),
         }
       );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يُحفظ تحديث السجل في الخادم.');
+        return;
+      }
+      setStudents((prev) =>
+        prev.map((student) => (student.id === studentId ? { ...student, ...updated } : student))
+      );
+      setAiStatusBanner('تم حفظ تحديث السجل في التخزين المشفر.');
     } catch {
-      // Updated locally
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
     }
   };
 
   const handleDeleteStudentRecord = async (studentId: string) => {
-    if (students.length <= 1) return;
-    const target = students.find((s) => s.id === studentId);
-    const remaining = students.filter((s) => s.id !== studentId);
-    setStudents(remaining);
-    if (selectedStudentId === studentId && remaining.length > 0) {
-      setSelectedStudentId(remaining[0].id);
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
+      setShowClinicalLogin(true);
+      return;
     }
+    if (students.length <= 1) return;
+    const target = students.find((student) => student.id === studentId);
     try {
-      await authenticatedFetch(
+      const response = await authenticatedFetch(
         `/api/students/${encodeURIComponent(studentId)}`,
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يتم حذف السجل من الخادم.');
+        return;
+      }
+      const remaining = students.filter((student) => student.id !== studentId);
+      setStudents(remaining);
+      if (selectedStudentId === studentId && remaining.length > 0) {
+        setSelectedStudentId(remaining[0].id);
+      }
       setAiStatusBanner(
-        `تم حذف سجل الطالب (${target?.name || studentId}) نهائياً التزاماً بحق الخصوصية ومحو البيانات.`
+        `تم حذف سجل الطالب (${target?.name || studentId}) من التخزين المشفر.`
       );
     } catch {
-      // Removed locally
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حذف السجل.');
     }
   };
 
   const handleRegenerateAIClinicalReport = async () => {
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
+      setShowClinicalLogin(true);
+      return;
+    }
+    if (selectedStudent.guardianConsentGiven !== true) {
+      setAiStatusBanner('لا يمكن إنشاء التقرير قبل تسجيل موافقة صريحة من ولي الأمر.');
+      return;
+    }
     setIsGeneratingAI(true);
     setAiStatusBanner('');
     try {
@@ -265,11 +326,15 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
-          guardianConsentGiven: selectedStudent.guardianConsentGiven ?? true,
+          guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
           regressionRate: selectedStudent.regressionRate,
+          gazeCoveragePercent: selectedStudent.gazeCoveragePercent,
+          observedWordCount: selectedStudent.observedWordCount,
+          totalPassageWordCount: selectedStudent.totalPassageWordCount,
+          calibrationAccuracyPercent: selectedStudent.calibrationAccuracyPercent,
           problematicWords: selectedStudent.problematicWords,
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,
@@ -306,13 +371,77 @@ export default function App() {
             `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
           );
         }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'تعذر إصدار التقرير؛ قد تكون بيانات التتبع أو المعايرة غير كافية.');
       }
     } catch {
-      setAiStatusBanner(
-        'تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.'
-      );
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم تأكيد إصدار التقرير.');
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleClinicalLogin = async () => {
+    setClinicalLoginError('');
+    setIsClinicalLoggingIn(true);
+    try {
+      const session = await loginClinicalSession(
+        clinicalAccessCode.trim(),
+        'clinician',
+        'أخصائي التقييم'
+      );
+      if (!session) {
+        setClinicalLoginError('فشل تسجيل الدخول. تحقق من الرمز ومن إعدادات المصادقة والتخزين المشفر على الخادم.');
+        return;
+      }
+      setClinicalSession(session);
+      setClinicalAccessCode('');
+      setShowClinicalLogin(false);
+      const response = await authenticatedFetch('/api/students');
+      if (response.ok) {
+        const data = await response.json();
+        let loadedStudents: StudentRecord[] = Array.isArray(data?.students)
+          ? data.students.map((student: StudentRecord) => ({
+              ...student,
+              name: (student.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim(),
+            }))
+          : [];
+
+        if (pendingServerRecord) {
+          const pendingSave = await authenticatedFetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...pendingServerRecord,
+              guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
+            }),
+          });
+          if (pendingSave.ok) {
+            loadedStudents = [
+              pendingServerRecord,
+              ...loadedStudents.filter((student) => student.id !== pendingServerRecord.id),
+            ];
+            setPendingServerRecord(null);
+            setSelectedStudentId(pendingServerRecord.id);
+            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${pendingServerRecord.name} في التخزين المشفر.`);
+          } else {
+            const saveError = await pendingSave.json().catch(() => ({}));
+            setAiStatusBanner(saveError?.error || 'تم تسجيل الدخول، لكن تعذر حفظ الجلسة المعلّقة.');
+          }
+        }
+
+        setStudents(loadedStudents);
+        if (loadedStudents.length > 0 && !pendingServerRecord) setSelectedStudentId(loadedStudents[0].id);
+        setIsPersistedStoreLoaded(true);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'تم تسجيل الدخول لكن تعذر تحميل السجلات.');
+      }
+    } catch {
+      setClinicalLoginError('تعذر الاتصال بخدمة تسجيل الدخول.');
+    } finally {
+      setIsClinicalLoggingIn(false);
     }
   };
 
@@ -332,6 +461,28 @@ export default function App() {
                 : 'bg-[#FAF6EE] text-[#1E293B]'
       }`}
     >
+      {showClinicalLogin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-login-title">
+          <form
+            onSubmit={(event) => { event.preventDefault(); void handleClinicalLogin(); }}
+            className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
+          >
+            <h2 id="clinical-login-title" className="text-lg font-bold">تسجيل دخول الأخصائي</h2>
+            <p className="text-sm text-slate-600">أدخل رمز الوصول الذي أعدّه مسؤول النظام. لا يوجد رمز افتراضي داخل التطبيق.</p>
+            <label className="block space-y-1 text-sm font-medium">
+              <span>رمز الوصول</span>
+              <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setClinicalAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
+            </label>
+            {clinicalLoginError && <p role="alert" className="text-sm text-red-700">{clinicalLoginError}</p>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={isClinicalLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {isClinicalLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+              </button>
+              <button type="button" onClick={() => { setShowClinicalLogin(false); setClinicalLoginError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* Strict 3-Zone Top Bar Contract — Ordered Sequentially by User Lifecycle */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-4 sm:px-6 py-3 sm:py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
         {/* Zone 1: Single text element wordmark */}
@@ -421,6 +572,15 @@ export default function App() {
           </button>
         </div>
       </header>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName}. تحقق من حالة كل عملية حفظ.` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        {clinicalSession ? (
+          <button type="button" onClick={() => { clearClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم تسجيل الخروج؛ ستبقى التغييرات محلية ما لم يُسجل الدخول.'); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
+        ) : (
+          <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول لحفظ السجلات</button>
+        )}
+      </div>
+
 
       {/* Mobile Navigation Strip (visible only below md, same sequential order) */}
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
@@ -547,12 +707,12 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      المئين P{selectedStudent.readingPercentile}
+                      مؤشر الفرز الاسترشادي {selectedStudent.readingHeuristicIndicator}/100
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
                     {selectedStudent.readingRiskLevel === 'high'
-                      ? '■ دون المعيار العمري المتوقع'
+                      ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
                         : '● طلاقة قرائية طبيعية'}{' '}
@@ -699,7 +859,7 @@ export default function App() {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>١. سجل الطلاب والمئينات ({students.length})</span>
+                  <span>١. سجل الطلاب ومؤشرات الفرز ({students.length})</span>
                 </button>
                 <button
                   type="button"
@@ -756,7 +916,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* SUB-VIEW 1: STUDENT ROSTER & NORMATIVE MATRIX */}
+            {/* SUB-VIEW 1: STUDENT ROSTER & HEURISTIC INDICES */}
             {dashboardSubView === 'roster' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* 7 Cols: Clean Enterprise Data Table */}
@@ -903,10 +1063,10 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ مرتفع (P${stu.readingPercentile})`
+                                      ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (P${stu.readingPercentile})`
-                                        : `● طبيعي (P${stu.readingPercentile})`}
+                                        ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
+                                        : `● منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -972,13 +1132,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 5 Cols: Lexplore Normative Percentile Matrix Chart */}
+                {/* 5 Cols: Heuristic Screening Index Matrix Chart */}
                 <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                   <div>
                     <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
                       <div>
                         <h2 className="text-base font-bold text-slate-900">
-                          مصفوفة المئينات المعيارية
+                          مصفوفة مؤشرات الفرز الاسترشادية (غير معيارية)
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
                           موقع الطالب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
@@ -991,7 +1151,7 @@ export default function App() {
                       viewBox="0 0 380 230"
                       className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-xl"
                       role="img"
-                      aria-label="مخطط توزيع الطلاب حسب المئين القرائي والحسابي"
+                      aria-label="مخطط توزيع الطلاب حسب مؤشرات الفرز القرائي والحسابي"
                     >
                       <rect
                         x="40"
@@ -1070,17 +1230,21 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        المئين القرائي للطالب →
+                        مؤشر الفرز القرائي للطالب →
                       </text>
 
                       {students.map((stu) => {
-                        const cx = 40 + (stu.readingPercentile / 100) * 320;
-                        const effectiveMathPct =
-                          stu.mathPercentile !== null &&
-                          stu.mathRiskLevel !== 'unassessed'
-                            ? stu.mathPercentile
-                            : 50;
-                        const cy = 190 - (effectiveMathPct / 100) * 135;
+                        // Do not plot unassessed arithmetic tasks at an invented neutral score.
+                        if (
+                          stu.mathHeuristicIndicator === null ||
+                          stu.mathRiskLevel === 'unassessed' ||
+                          stu.dyscalculiaAssessed === false
+                        ) {
+                          return null;
+                        }
+                        const cx = 40 + (stu.readingHeuristicIndicator / 100) * 320;
+                        const effectiveMathIndicator = stu.mathHeuristicIndicator;
+                        const cy = 190 - (effectiveMathIndicator / 100) * 135;
                         const isSel = stu.id === selectedStudent.id;
                         const firstName = stu.name.split(' ')[0];
 
@@ -1136,10 +1300,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      P{selectedStudent.readingPercentile} قراءة ·{' '}
-                      {selectedStudent.mathPercentile !== null &&
+                      مؤشر فرز {selectedStudent.readingHeuristicIndicator}/100 قراءة ·{' '}
+                      {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `P${selectedStudent.mathPercentile} حساب`
+                        ? `مؤشر فرز ${selectedStudent.mathHeuristicIndicator}/100 حساب`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>

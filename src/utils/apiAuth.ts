@@ -5,12 +5,12 @@ export interface ClinicalSessionInfo {
   role: ClinicalRole;
   clinicianName: string;
   scopes: string[];
+  issuedAt?: number;
   expiresAt: number;
 }
 
 const SESSION_STORAGE_KEY = 'baseera_clinical_session_v1';
 let cachedSession: ClinicalSessionInfo | null = null;
-let pendingSessionPromise: Promise<ClinicalSessionInfo | null> | null = null;
 
 export function getStoredClinicalSession(): ClinicalSessionInfo | null {
   if (cachedSession && cachedSession.expiresAt > Date.now() + 10_000) {
@@ -21,42 +21,44 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
     const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ClinicalSessionInfo;
-    if (parsed && parsed.token && parsed.expiresAt > Date.now() + 10_000) {
+    if (parsed?.token && parsed.expiresAt > Date.now() + 10_000) {
       cachedSession = parsed;
       return parsed;
     }
   } catch {
-    // ignore storage errors
+    // Ignore session storage errors and keep the client signed out.
   }
   return null;
 }
 
 export async function loginClinicalSession(
-  accessCode: string = 'BASEERA-CLINICAL-2026',
+  accessCode: string,
   role: ClinicalRole = 'clinician',
-  clinicianName: string = 'أخصائي التقييم المعتمد'
+  clinicianName = 'أخصائي التقييم'
 ): Promise<ClinicalSessionInfo | null> {
+  if (!accessCode || typeof accessCode !== 'string') return null;
   try {
-    const res = await fetch('/api/auth/session', {
+    const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accessCode, role, clinicianName }),
     });
-    if (!res.ok) return null;
-    const data = (await res.json()) as ClinicalSessionInfo;
-    if (data && data.token) {
-      cachedSession = data;
-      if (typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
-        } catch {}
+    if (!response.ok) return null;
+    const data = (await response.json()) as ClinicalSessionInfo;
+    if (!data?.token || !data.expiresAt) return null;
+
+    cachedSession = data;
+    if (typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+      } catch {
+        // The in-memory session remains usable for this tab.
       }
-      return data;
     }
+    return data;
   } catch {
-    // network error
+    return null;
   }
-  return null;
 }
 
 export function clearClinicalSession(): void {
@@ -64,24 +66,20 @@ export function clearClinicalSession(): void {
   if (typeof window !== 'undefined') {
     try {
       window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch {}
+    } catch {
+      // Ignore storage errors.
+    }
   }
 }
 
 export async function ensureClinicalSession(): Promise<ClinicalSessionInfo | null> {
-  const existing = getStoredClinicalSession();
-  if (existing) return existing;
-  if (pendingSessionPromise) return pendingSessionPromise;
-
-  pendingSessionPromise = loginClinicalSession().finally(() => {
-    pendingSessionPromise = null;
-  });
-  return pendingSessionPromise;
+  // Authentication is explicit. Never mint a session from a bundled credential.
+  return getStoredClinicalSession();
 }
 
 /**
- * Wrapper around fetch() that automatically attaches the Educator/Clinician RBAC Bearer token
- * required by `/api/students` and `/api/ai/*`.
+ * Send an authenticated request when an explicit session exists.
+ * No automatic sign-in or credential refresh is performed.
  */
 export async function authenticatedFetch(
   input: string,
@@ -89,26 +87,8 @@ export async function authenticatedFetch(
 ): Promise<Response> {
   const session = await ensureClinicalSession();
   const headers = new Headers(init.headers || {});
-  if (session?.token) {
-    headers.set('Authorization', `Bearer ${session.token}`);
-    headers.set('X-Clinical-Session-Token', session.token);
-  }
-  const response = await fetch(input, {
-    ...init,
-    headers,
-  });
-  if (response.status === 401) {
-    // Token expired or server restarted: re-authenticate once
-    clearClinicalSession();
-    const refreshed = await loginClinicalSession();
-    if (refreshed?.token) {
-      headers.set('Authorization', `Bearer ${refreshed.token}`);
-      headers.set('X-Clinical-Session-Token', refreshed.token);
-      return fetch(input, {
-        ...init,
-        headers,
-      });
-    }
-  }
+  if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
+  const response = await fetch(input, { ...init, headers });
+  if (response.status === 401) clearClinicalSession();
   return response;
 }

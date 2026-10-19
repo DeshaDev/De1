@@ -97,7 +97,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [selectedPassageId, setSelectedPassageId] = useState<string>(
     ARABIC_READING_PASSAGES[0].id
   );
-  const [guardianConsent, setGuardianConsent] = useState<boolean>(true);
+  const [guardianConsent, setGuardianConsent] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string>('');
   const [calibrationWarning, setCalibrationWarning] = useState<string>('');
   const [readingCoverageError, setReadingCoverageError] = useState<string>('');
@@ -1939,7 +1939,31 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const isLowCameraReliability =
       isManualDemoMode ||
       !cameraActive ||
+      !Number.isFinite(calibrationModel.accuracyPercent) ||
       calibrationModel.accuracyPercent < 70;
+
+    // Match the server-side evidence gate before showing any report in the client.
+    const hasValidGazeCoverage =
+      eyeMetrics.isSufficientGazeData &&
+      Number.isFinite(eyeMetrics.gazeCoveragePercent) &&
+      eyeMetrics.gazeCoveragePercent >= 25 &&
+      Number.isFinite(eyeMetrics.observedWordCount) &&
+      eyeMetrics.observedWordCount >= 4 &&
+      Number.isFinite(eyeMetrics.totalPassageWordCount) &&
+      eyeMetrics.totalPassageWordCount > 0 &&
+      eyeMetrics.observedWordCount <= eyeMetrics.totalPassageWordCount;
+    if (!hasValidGazeCoverage) {
+      setIsAnalyzing(false);
+      setComprehensionError('لا يمكن إصدار التقرير: يلزم رصد أربع كلمات على الأقل وتغطية بصرية فعلية لا تقل عن 25% من النص. أعد جلسة القراءة بعد التأكد من ظهور الوجه والعينين.');
+      return;
+    }
+    if (isLowCameraReliability) {
+      setIsAnalyzing(false);
+      setCalibrationWarning('تم حجب التقرير لأن تتبع الكاميرا تجريبي أو أن دقة التحقق من المعايرة أقل من 70%. حسّن الإضاءة وأعد المعايرة بالكاميرا الفعلية.');
+      setStage('setup');
+      return;
+    }
+
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
       ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — دقة الكاميرا غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
@@ -1983,6 +2007,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
           observedWordCount: eyeMetrics.observedWordCount,
           totalPassageWordCount: eyeMetrics.totalPassageWordCount,
+          calibrationAccuracyPercent: calibrationModel.accuracyPercent,
           blinkCount: eyeMetrics.blinkCount,
           blinksPerMinute: eyeMetrics.blinksPerMinute,
           visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
@@ -2045,7 +2070,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         oralIntegrationInput?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegrationInput?.dialectVariantCount ?? 0,
       dyslexiaRiskScore: eyeMetrics.dyslexiaRiskScore,
-      readingPercentile: eyeMetrics.percentile,
+      readingHeuristicIndicator: eyeMetrics.heuristicIndicator,
       readingRiskLevel: eyeMetrics.riskLevel,
       readingRiskLabelAr: eyeMetrics.riskLabelAr,
       problematicWords: eyeMetrics.problematicWords,
@@ -2058,7 +2083,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       transcodingAccuracy: null,
       reversalErrorCount: null,
       dyscalculiaRiskScore: null,
-      mathPercentile: null,
+      mathHeuristicIndicator: null,
       mathRiskLevel: 'unassessed',
       mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
       clinicalReport,

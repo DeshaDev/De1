@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  detectOculomotorEventsPyGaze,
-  runLexploreOculomotorInference,
+  detectOculomotorEventsIDTStyle,
+  runOculomotorHeuristicInference,
   encodeSoundex,
   encodeDoubleMetaphoneLite,
   encodeArabicPhoneticSkeleton,
@@ -20,7 +20,7 @@ import {
   type RawGazeSample,
 } from './dyslexiaEngines.ts';
 
-test('Lexplore PyGaze I-DT detector extracts fixations and regressive saccades accurately', () => {
+test('I-DT-style heuristic detector extracts fixation events and regression candidates', () => {
   // Simulate an RTL reading trace:
   // Fixation 1 at x=700 (word 0, 0..260ms)
   // Forward saccade to x=550 (word 1, 280..620ms)
@@ -42,7 +42,7 @@ test('Lexplore PyGaze I-DT detector extracts fixations and regressive saccades a
     { x: 697, y: 201, timestampMs: 1120, wordIndex: 0 },
   ];
 
-  const { fixations, saccades } = detectOculomotorEventsPyGaze(samples, {
+  const { fixations, saccades } = detectOculomotorEventsIDTStyle(samples, {
     minFixationDurationMs: 120,
     maxDispersionPx: 30,
     readingDirection: 'rtl',
@@ -53,11 +53,11 @@ test('Lexplore PyGaze I-DT detector extracts fixations and regressive saccades a
   assert.equal(saccades[0].direction, 'forward');
   assert.equal(saccades[1].direction, 'regressive');
 
-  const mlResult = runLexploreOculomotorInference(samples, 5, {
+  const mlResult = runOculomotorHeuristicInference(samples, 5, {
     readingDirection: 'rtl',
   });
-  assert.equal(mlResult.treeVotes.length, 5);
-  assert.ok(mlResult.dyslexiaProbability >= 40);
+  assert.equal(mlResult.ruleVotes.length, 5);
+  assert.ok(mlResult.heuristicRiskScore >= 40);
   assert.equal(mlResult.features.regressiveSaccadeCount, 1);
 });
 
