@@ -925,7 +925,7 @@ export default function App() {
                   <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h2 className="text-base font-bold text-slate-900">
-                        سجل الطلاب ونتائج الفرز المعياري
+                        سجل الطلاب ومؤشرات الفرز الاسترشادية
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         انقر على أي طالب لعرض مؤشراته أو فتح خريطة مسار العين
@@ -1203,7 +1203,7 @@ export default function App() {
                         fill="#991B1B"
                         textAnchor="middle"
                       >
-                        دون المعيار (&lt;25%)
+                        دون حد التغطية (&lt;25%)
                       </text>
                       <text
                         x="187"
