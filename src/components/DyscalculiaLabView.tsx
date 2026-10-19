@@ -985,7 +985,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 {answeredSubitizingCount === 3 &&
                 answeredNumberLineCount === 2 &&
                 answeredTranscodingCount === 3
-                  ? `مؤشر الفرز الاسترشادي {computedMetrics.heuristicIndicator}/100`
+                  ? `مؤشر الفرز الاسترشادي ${computedMetrics.heuristicIndicator}/100`
                   : `${
                       answeredSubitizingCount +
                       answeredNumberLineCount +
