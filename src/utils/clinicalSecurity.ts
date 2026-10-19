@@ -6,6 +6,7 @@ export type ClinicalScope =
   | 'students:read'
   | 'students:write'
   | 'students:delete'
+  | 'ai:use'
   | 'ai:analyze';
 
 export interface VerifiedClinicalSession {
@@ -22,9 +23,10 @@ const ROLE_SCOPES: Record<ClinicalRole, ClinicalScope[]> = {
     'students:read',
     'students:write',
     'students:delete',
+    'ai:use',
     'ai:analyze',
   ],
-  educator_readonly: ['students:read'],
+  educator_readonly: ['students:read', 'ai:use'],
 };
 
 export function getScopesForRole(role: ClinicalRole): ClinicalScope[] {
