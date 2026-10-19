@@ -556,7 +556,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </h1>
 
             <p className="text-base sm:text-lg text-slate-700 leading-relaxed max-w-2xl font-normal">
-              «بصيرة» نموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات تتبّع العين، ومهام حسابية استكشافية. تساعد نتائجه على تنظيم الملاحظات التربوية، لكنها لا تشخّص عسر القراءة أو عسر الحساب ولا تستبدل التقييم المتخصص.
+              «بصيرة» نموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات تتبّع العين، ومحاولات موزعة على ثلاث مهام حسابية. تساعد نتائجه على تنظيم الملاحظات التربوية، لكنها لا تشخّص عسر القراءة أو عسر الحساب ولا تستبدل التقييم المتخصص.
             </p>
 
             {/* Primary Hero Action Buttons */}
@@ -1173,10 +1173,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
             >
-              قراءة
+              3
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              نصوص قراءة عربية متدرجة
+              وحدات تفاعلية مترابطة في النموذج
             </div>
           </div>
           <div className="py-4 px-6 text-center space-y-1">
@@ -1184,10 +1184,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
             >
-              عين + صوت
+              6
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              مؤشرات بصرية وقراءة جهرية
+              ملفات لهجية أولية للاختبار
             </div>
           </div>
           <div className="py-4 px-6 text-center space-y-1">
@@ -1195,10 +1195,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#15803D] tabular-nums"
             >
-              3 مهام
+              8
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              مهام حسابية استكشافية
+              محاولات موزعة على ثلاث مهام حسابية
             </div>
           </div>
         </div>
@@ -1230,10 +1230,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="grid grid-cols-3 border-y border-emerald-900/15 py-5 divide-x divide-x-reverse divide-emerald-900/15">
                 <div className="px-3 space-y-1">
                   <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    متعدد
+                    2
                   </div>
                   <div className="text-xs text-slate-600">
-                    مؤشرات مستخرجة حسب جودة الجلسة
+                    قناتا ملاحظة: النظر والقراءة الجهرية
                   </div>
                 </div>
                 <div className="px-3 space-y-1">
