@@ -97,7 +97,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [selectedPassageId, setSelectedPassageId] = useState<string>(
     ARABIC_READING_PASSAGES[0].id
   );
-  const [guardianConsent, setGuardianConsent] = useState<boolean>(true);
+  const [guardianConsent, setGuardianConsent] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string>('');
   const [calibrationWarning, setCalibrationWarning] = useState<string>('');
   const [readingCoverageError, setReadingCoverageError] = useState<string>('');
@@ -1940,6 +1940,20 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       isManualDemoMode ||
       !cameraActive ||
       calibrationModel.accuracyPercent < 70;
+
+    // Fail closed: never issue a report from simulated or insufficiently validated gaze data.
+    if (!eyeMetrics.isSufficientGazeData) {
+      setIsAnalyzing(false);
+      setComprehensionError('لا يمكن إصدار التقرير لأن تغطية تتبع العين الفعلية غير كافية. أعد جلسة القراءة حتى يتحقق الحد الأدنى من الكلمات المرصودة.');
+      return;
+    }
+    if (isLowCameraReliability) {
+      setIsAnalyzing(false);
+      setCalibrationWarning('تم حجب التقرير لأن تتبع الكاميرا تجريبي أو أن دقة التحقق من المعايرة أقل من 70%. حسّن الإضاءة وأعد المعايرة بالكاميرا الفعلية.');
+      setStage('setup');
+      return;
+    }
+
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
       ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — دقة الكاميرا غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
@@ -1983,6 +1997,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
           observedWordCount: eyeMetrics.observedWordCount,
           totalPassageWordCount: eyeMetrics.totalPassageWordCount,
+          calibrationAccuracyPercent: calibrationModel.accuracyPercent,
           blinkCount: eyeMetrics.blinkCount,
           blinksPerMinute: eyeMetrics.blinksPerMinute,
           visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
