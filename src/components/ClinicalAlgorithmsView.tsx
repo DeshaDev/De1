@@ -62,7 +62,7 @@ const SAMPLE_GAZE_PRESETS: Record<
     ],
   },
   nominal: {
-    label: 'عينة مسار عين لقارئ طلق معياري (تثبيتات 210ms + مسح أمامي منتظم)',
+    label: 'عينة اصطناعية لمسار نظر قارئ طلق (للعرض التوضيحي فقط)',
     samples: [
       { x: 780, y: 180, timestampMs: 0, wordIndex: 0 },
       { x: 782, y: 181, timestampMs: 110, wordIndex: 0 },
