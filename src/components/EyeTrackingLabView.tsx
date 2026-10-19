@@ -1868,7 +1868,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const handleProceedToComprehension = () => {
     if (recordedWordsList.length < minRequiredObservedWords) {
       setReadingCoverageError(
-        `لا يمكن إنهاء القراءة وإصدار التقرير: تم رصد تثبيت بصري فعلي على (${recordedWordsList.length}) من أصل (${selectedPassage.words.length}) كلمة فقط (تغطية ${currentCoveragePercent}%). يمنع النظام تعويض الكلمات غير المرصودة بقيم افتراضية (مثل 190ms) لضمان مؤشر القياس التجريبي. يرجى متابعة القراءة حتى رصد ${minRequiredObservedWords} كلمات على الأقل (25% من النص).`
+        `لا يمكن إنهاء القراءة وإصدار التقرير: تم رصد تثبيت بصري فعلي على (${recordedWordsList.length}) من أصل (${selectedPassage.words.length}) كلمة فقط (تغطية ${currentCoveragePercent}%). لا يضيف النظام زمناً افتراضياً للكلمات التي لم يرصدها؛ لذلك أكمل القراءة حتى تتوفر بيانات كافية. يرجى متابعة القراءة حتى رصد ${minRequiredObservedWords} كلمات على الأقل (25% من النص).`
       );
       return;
     }
@@ -2485,7 +2485,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 font-display">
-                    الكاميرا المباشرة ورصد البؤبؤ (HD 720p)
+                    معاينة الكاميرا ورصد البؤبؤ
                   </h3>
                   <div className="text-[11px] text-slate-500">
                     {cameraActive
@@ -2680,11 +2680,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                   >
-                    <option value={2}>الصف الثاني الابتدائي (65 كلمة/د)</option>
-                    <option value={3}>الصف الثالث الابتدائي (85 كلمة/د)</option>
-                    <option value={4}>الصف الرابع الابتدائي (105 كلمة/د)</option>
-                    <option value={5}>الصف الخامس الابتدائي (120 كلمة/د)</option>
-                    <option value={6}>الصف السادس الابتدائي (135 كلمة/د)</option>
+                    <option value={2}>الصف الثاني الابتدائي</option>
+                    <option value={3}>الصف الثالث الابتدائي</option>
+                    <option value={4}>الصف الرابع الابتدائي</option>
+                    <option value={5}>الصف الخامس الابتدائي</option>
+                    <option value={6}>الصف السادس الابتدائي</option>
                   </select>
                 </div>
 
@@ -2717,7 +2717,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   htmlFor="passage-select"
                   className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  النص القرائي المتدرج ({ARABIC_READING_PASSAGES.length} نصوص قراءة متدرجة)
+                  نص القراءة ({ARABIC_READING_PASSAGES.length} نصوص متدرجة)
                 </label>
                 <select
                   id="passage-select"
