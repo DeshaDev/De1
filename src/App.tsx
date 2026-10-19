@@ -404,7 +404,7 @@ export default function App() {
         let loadedStudents: StudentRecord[] = Array.isArray(data?.students)
           ? data.students.map((student: StudentRecord) => ({
               ...student,
-              name: (student.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim(),
+              name: (student.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim(),
             }))
           : [];
 
