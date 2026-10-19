@@ -1232,7 +1232,7 @@ export default function App() {
                         fill="#065F46"
                         textAnchor="middle"
                       >
-                        طلاقة طبيعية (&gt;45%)
+                        مؤشر الطلاقة أعلى من العتبة الداخلية (&gt;45%)
                       </text>
 
                       <text
