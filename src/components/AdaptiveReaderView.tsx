@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { authenticatedFetch } from '../utils/apiAuth';
 import {
   Volume2,
   Sparkles,
@@ -229,7 +230,7 @@ export const AdaptiveReaderView: React.FC = () => {
     if (!text.trim()) return;
     setIsAdapting(true);
     try {
-      const res = await fetch('/api/ai/adapt-text', {
+      const res = await authenticatedFetch('/api/ai/adapt-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -293,7 +294,7 @@ export const AdaptiveReaderView: React.FC = () => {
     }, pacingIntervalMs);
 
     try {
-      const res = await fetch('/api/ai/tts', {
+      const res = await authenticatedFetch('/api/ai/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
