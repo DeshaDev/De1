@@ -16,7 +16,13 @@ import {
   ARABIC_READING_PASSAGES,
   StudentRecord,
 } from './data/seedData';
-import { authenticatedFetch } from './utils/apiAuth';
+import {
+  authenticatedFetch,
+  loginClinicalSession,
+  clearClinicalSession,
+  getStoredClinicalSession,
+  ClinicalSessionInfo,
+} from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
@@ -45,12 +51,26 @@ export default function App() {
   });
   const [dashboardSubView, setDashboardSubView] =
     useState<DashboardSubView>('roster');
-  const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
+  const [students, setStudents] = useState<StudentRecord[]>(() =>
+    INITIAL_STUDENTS.map((student) => ({
+      ...student,
+      isDemoRecord: true,
+      guardianConsentGiven: false,
+    }))
+  );
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     INITIAL_STUDENTS[0].id
   );
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
+  const [clinicalSession, setClinicalSession] =
+    useState<ClinicalSessionInfo | null>(() => getStoredClinicalSession());
+  const [showClinicalLogin, setShowClinicalLogin] = useState(false);
+  const [accessCodeInput, setAccessCodeInput] = useState('');
+  const [clinicianNameInput, setClinicianNameInput] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authRefreshKey, setAuthRefreshKey] = useState(0);
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -115,7 +135,38 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authRefreshKey]);
+
+  const handleClinicalLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSigningIn(true);
+    setAuthError('');
+    const session = await loginClinicalSession(accessCodeInput, clinicianNameInput);
+    setIsSigningIn(false);
+    if (!session) {
+      setAuthError('تعذر تسجيل الدخول. تحقق من رمز الوصول وإعدادات الخادم.');
+      return;
+    }
+    setClinicalSession(session);
+    setShowClinicalLogin(false);
+    setAccessCodeInput('');
+    setAuthRefreshKey((value) => value + 1);
+  };
+
+  const handleClinicalLogout = () => {
+    clearClinicalSession();
+    setClinicalSession(null);
+    setStudents(
+      INITIAL_STUDENTS.map((student) => ({
+        ...student,
+        isDemoRecord: true,
+        guardianConsentGiven: false,
+      }))
+    );
+    setSelectedStudentId(INITIAL_STUDENTS[0].id);
+    setIsPersistedStoreLoaded(false);
+    setAiStatusBanner('تم تسجيل الخروج؛ عُرضت البيانات التجريبية فقط.');
+  };
 
   const selectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0];
@@ -147,27 +198,47 @@ export default function App() {
 
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
     setStudents((prev) => [
-      newRecord,
+      { ...newRecord, isDemoRecord: false },
       ...prev.filter((s) => s.id !== newRecord.id),
     ]);
     setSelectedStudentId(newRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
-    setAiStatusBanner(
-      `تم تسجيل جلسة الفحص للطالب (${newRecord.name}) وحفظها بنجاح.`
-    );
+
+    if (newRecord.guardianConsentGiven !== true) {
+      setAiStatusBanner(
+        'عُرضت النتيجة محلياً فقط. لم تُحفظ بيانات الطالب لأن موافقة ولي الأمر لم تُؤكد صراحةً.'
+      );
+      return;
+    }
+    if (!clinicalSession) {
+      setAiStatusBanner(
+        'عُرضت النتيجة محلياً فقط. سجّل دخول المختص لحفظ السجل على الخادم.'
+      );
+      return;
+    }
     try {
-      await authenticatedFetch('/api/students', {
+      const response = await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newRecord,
-          guardianConsentGiven: newRecord.guardianConsentGiven === true,
+          isDemoRecord: false,
+          guardianConsentGiven: true,
         }),
       });
+      if (!response.ok) {
+        setAiStatusBanner(
+          'عُرضت النتيجة محلياً، لكن لم يؤكد الخادم حفظها. تحقق من إعداد التشفير والصلاحيات.'
+        );
+        return;
+      }
       setIsPersistedStoreLoaded(true);
+      setAiStatusBanner(
+        `تم حفظ سجل الجلسة للطالب (${newRecord.name}) على الخادم بعد تأكيد الموافقة.`
+      );
     } catch {
-      // Saved in local state if network fails
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم تأكيد حفظ سجل الطالب.');
     }
   };
 
@@ -190,8 +261,8 @@ export default function App() {
         name: cleanName,
         gradeLevel: grade,
         schoolName: `جلسة فحص (${roleLabel})`,
-        isDemoRecord: false,
-        guardianConsentGiven: true,
+        isDemoRecord: true,
+        guardianConsentGiven: false,
       };
       setStudents((prev) => [newMockStudent, ...prev]);
       setSelectedStudentId(newMockStudent.id);
@@ -265,7 +336,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
-          guardianConsentGiven: selectedStudent.guardianConsentGiven ?? true,
+          guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
@@ -419,8 +490,55 @@ export default function App() {
           >
             {activeTab === 'home' ? 'ابدأ فحص القراءة' : 'العودة للرئيسية'}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (clinicalSession) handleClinicalLogout();
+              else {
+                setAuthError('');
+                setShowClinicalLogin(true);
+              }
+            }}
+            className="px-3 py-2 text-xs font-semibold text-slate-700 border border-slate-300 hover:border-slate-500 rounded-full transition-colors whitespace-nowrap"
+          >
+            {clinicalSession ? 'تسجيل الخروج' : 'دخول المختص'}
+          </button>
         </div>
       </header>
+      {showClinicalLogin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clinical-login-title"
+            onSubmit={handleClinicalLogin}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl text-slate-900 space-y-4"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="clinical-login-title" className="text-xl font-bold">دخول المختص</h2>
+                <p className="mt-1 text-sm text-slate-600">استخدم رمز الوصول الذي أعدّه مسؤول النظام. لا يوجد دخول تلقائي.</p>
+              </div>
+              <button type="button" onClick={() => setShowClinicalLogin(false)} className="text-slate-500 hover:text-slate-900" aria-label="إغلاق">✕</button>
+            </div>
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">اسم المختص (اختياري)</span>
+              <input value={clinicianNameInput} onChange={(event) => setClinicianNameInput(event.target.value)} maxLength={80} className="w-full rounded-lg border border-slate-300 px-3 py-2" autoComplete="name" />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-sm font-medium">رمز الوصول</span>
+              <input value={accessCodeInput} onChange={(event) => setAccessCodeInput(event.target.value)} required type="password" autoComplete="current-password" className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </label>
+            {authError && <p role="alert" className="text-sm text-red-700">{authError}</p>}
+            <div className="flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setShowClinicalLogin(false)} className="rounded-full px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">إلغاء</button>
+              <button type="submit" disabled={isSigningIn || !accessCodeInput.trim()} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {isSigningIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Mobile Navigation Strip (visible only below md, same sequential order) */}
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
