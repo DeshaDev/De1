@@ -33,16 +33,18 @@ function getStoreEncryptionKey(): Buffer | null {
 }
 
 function isClinicalAuthConfigured(): boolean {
+  const storeKeyHex = (process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim().toLowerCase();
   return (
     CLINICAL_ACCESS_CODE.length >= 24 &&
     CLINICAL_SESSION_SECRET.length >= 32 &&
     CLINICAL_ACCESS_CODE !== 'BASEERA-CLINICAL-2026' &&
     CLINICAL_SESSION_SECRET !== 'baseera-rbac-hmac-secret-key-2026' &&
-    getStoreEncryptionKey() !== null &&
-    Buffer.from(CLINICAL_SESSION_SECRET, 'utf8').toString('hex') !== process.env.CLINICAL_STORE_ENCRYPTION_KEY?.trim().toLowerCase()
+    CLINICAL_ACCESS_CODE !== CLINICAL_SESSION_SECRET &&
+    CLINICAL_ACCESS_CODE !== storeKeyHex &&
+    CLINICAL_SESSION_SECRET !== storeKeyHex &&
+    getStoreEncryptionKey() !== null
   );
 }
-
 function constantTimeStringEqual(a: string, b: string): boolean {
   const left = Buffer.from(a, 'utf8');
   const right = Buffer.from(b, 'utf8');
