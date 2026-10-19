@@ -976,6 +976,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <h3 className="text-lg font-bold text-slate-900">
               ملخص المهام الحسابية
             </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600">
+              هذا مؤشر استكشافي مبني على عدد قليل من المحاولات، وليس اختباراً معيارياً أو تشخيصاً لعسر الحساب.
+            </p>
           </div>
 
           <div className="p-6 border-b border-slate-200 bg-slate-50/50 space-y-2">
