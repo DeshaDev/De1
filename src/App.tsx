@@ -59,6 +59,8 @@ export default function App() {
     useState<boolean>(false);
   const [clinicalSession, setClinicalSession] =
     useState<ClinicalSessionInfo | null>(() => getStoredClinicalSession());
+  const [pendingServerRecord, setPendingServerRecord] =
+    useState<StudentRecord | null>(null);
   const [showClinicalLogin, setShowClinicalLogin] = useState<boolean>(false);
   const [clinicalAccessCode, setClinicalAccessCode] = useState<string>('');
   const [clinicalLoginError, setClinicalLoginError] = useState<string>('');
@@ -165,6 +167,12 @@ export default function App() {
     setSelectedStudentId(newRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
+    if (!clinicalSession) {
+      setPendingServerRecord(newRecord);
+      setAiStatusBanner('اكتملت الجلسة محليًا، لكنها لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان.');
+      setShowClinicalLogin(true);
+      return;
+    }
     setAiStatusBanner(
       `تم إنشاء جلسة الفحص للطالب (${newRecord.name}) محليًا؛ لم يتأكد حفظها في الخادم بعد.`
     );
@@ -182,7 +190,8 @@ export default function App() {
         setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${newRecord.name}) في التخزين المشفر.`);
       } else {
         const data = await response.json().catch(() => ({}));
-        setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم.');
+        setPendingServerRecord(newRecord);
+        setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم. بقيت نسخة محلية لإعادة المحاولة بعد تسجيل الدخول.');
         if (response.status === 401) {
           clearClinicalSession();
           setClinicalSession(null);
@@ -190,6 +199,7 @@ export default function App() {
         }
       }
     } catch {
+      setPendingServerRecord(newRecord);
       setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود محليًا فقط ولم يُحفظ في الخادم.');
     }
   };
@@ -372,15 +382,39 @@ export default function App() {
       const response = await authenticatedFetch('/api/students');
       if (response.ok) {
         const data = await response.json();
-        if (Array.isArray(data?.students)) {
-          const normalized = data.students.map((student: StudentRecord) => ({
-            ...student,
-            name: (student.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim(),
-          }));
-          setStudents(normalized);
-          if (normalized.length > 0) setSelectedStudentId(normalized[0].id);
-          setIsPersistedStoreLoaded(true);
+        let loadedStudents: StudentRecord[] = Array.isArray(data?.students)
+          ? data.students.map((student: StudentRecord) => ({
+              ...student,
+              name: (student.name || '').replace(/\\s+(بن|بنت)\\s+/g, ' ').trim(),
+            }))
+          : [];
+
+        if (pendingServerRecord) {
+          const pendingSave = await authenticatedFetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...pendingServerRecord,
+              guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
+            }),
+          });
+          if (pendingSave.ok) {
+            loadedStudents = [
+              pendingServerRecord,
+              ...loadedStudents.filter((student) => student.id !== pendingServerRecord.id),
+            ];
+            setPendingServerRecord(null);
+            setSelectedStudentId(pendingServerRecord.id);
+            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${pendingServerRecord.name} في التخزين المشفر.`);
+          } else {
+            const saveError = await pendingSave.json().catch(() => ({}));
+            setAiStatusBanner(saveError?.error || 'تم تسجيل الدخول، لكن تعذر حفظ الجلسة المعلّقة.');
+          }
         }
+
+        setStudents(loadedStudents);
+        if (loadedStudents.length > 0 && !pendingServerRecord) setSelectedStudentId(loadedStudents[0].id);
+        setIsPersistedStoreLoaded(true);
       } else {
         const data = await response.json().catch(() => ({}));
         setAiStatusBanner(data?.error || 'تم تسجيل الدخول لكن تعذر تحميل السجلات.');
