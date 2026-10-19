@@ -1219,7 +1219,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </h3>
 
               <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                كل استثمار تربوي في القراءة والحساب يتلخص في سؤال واحد:{' '}
+                السؤال التربوي الأهم هو:{' '}
                 <strong className="font-bold text-slate-950">
                   هل يصبح الطلاب قُرّاء أقوى وأكثر طلاقة؟
                 </strong>{' '}
@@ -1261,7 +1261,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
                   <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>معايير حركة العين (Rayner)</span>
+                  <span>أبحاث حركة العين (Rayner)</span>
                 </span>
                 <span aria-hidden="true" className="text-slate-300">
                   ·
