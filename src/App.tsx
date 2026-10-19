@@ -533,7 +533,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            فحص الحساب
+            مهام الحساب
           </button>
           <button
             type="button"
@@ -548,6 +548,17 @@ export default function App() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('algorithms-lab')}
+            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === 'algorithms-lab'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
+                : 'hover:text-slate-900'
+            }`}
+          >
+            المنهجية والحدود
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('dashboard')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'dashboard'
@@ -555,7 +566,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            التقرير النهائي والنتائج
+            التقرير والمؤشرات
           </button>
         </nav>
 
