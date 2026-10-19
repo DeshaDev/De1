@@ -1893,6 +1893,23 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       );
       return;
     }
+    if (guardianConsent !== true) {
+      setComprehensionError(
+        'لا يمكن إصدار التقرير أو إرسال بيانات الجلسة قبل تأكيد موافقة ولي الأمر.'
+      );
+      return;
+    }
+    if (
+      isManualDemoMode ||
+      !cameraActive ||
+      !Number.isFinite(calibrationModel.accuracyPercent) ||
+      calibrationModel.accuracyPercent < 70
+    ) {
+      setComprehensionError(
+        'لا يمكن إصدار تقرير تتبع العين: يلزم تشغيل الكاميرا الفعلية وإتمام معايرة تحققها 70% على الأقل. وضع الماوس والمحاكاة لا ينتجان قياساً بصرياً.'
+      );
+      return;
+    }
     setComprehensionError('');
     setIsAnalyzing(true);
 
@@ -1930,6 +1947,17 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const comprehensionScore = Math.round(
       (correctAnswers / selectedPassage.comprehensionQuestions.length) * 100
     );
+    if (
+      !eyeMetrics.isSufficientGazeData ||
+      eyeMetrics.observedWordCount < 4 ||
+      eyeMetrics.gazeCoveragePercent < 25
+    ) {
+      setIsAnalyzing(false);
+      setComprehensionError(
+        'لا يمكن إصدار التقرير لأن التغطية البصرية الفعلية أقل من الحد الأدنى المطلوب. أعد جلسة القراءة بعد التأكد من ظهور الوجه والعينين.'
+      );
+      return;
+    }
 
     const oralSummaryClause =
       oralIntegrationInput && liveOralDialectMetrics
@@ -1983,6 +2011,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
           observedWordCount: eyeMetrics.observedWordCount,
           totalPassageWordCount: eyeMetrics.totalPassageWordCount,
+          calibrationAccuracyPercent:
+            isManualDemoMode || !cameraActive ? 0 : calibrationModel.accuracyPercent,
           blinkCount: eyeMetrics.blinkCount,
           blinksPerMinute: eyeMetrics.blinksPerMinute,
           visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
