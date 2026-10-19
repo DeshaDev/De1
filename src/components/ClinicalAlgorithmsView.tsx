@@ -687,19 +687,19 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 <div className="py-10 text-center space-y-3">
                   <CheckCircle2 className="w-8 h-8 text-[#059669] mx-auto" />
                   <div className="text-base font-bold text-slate-900">
-                    اكتمل الاختبار المتكيف لجميع فقرات بنك الأسئلة!
+                    انتهى العرض التوضيحي لفقرات النموذج.
                   </div>
                   <p className="text-xs text-slate-600 max-w-md mx-auto">
-                    استقرت القدرة الكامنة للطالب عند θ ={' '}
-                    {currentIRTEstimate.theta.toFixed(2)} بخطأ معياري SE = ±
-                    {currentIRTEstimate.standardError.toFixed(2)}.
+                    القيمة التوضيحية داخل النموذج θ ={' '}
+                    {currentIRTEstimate.theta.toFixed(2)}، ومقدار الخطأ المحسوب داخله SE = ±
+                    {currentIRTEstimate.standardError.toFixed(2)}. لا تمثل هذه الأرقام درجة معيارية؛ فمعاملات الفقرات غير معايرة على عينة طلاب ممثلة.
                   </p>
                   <button
                     type="button"
                     onClick={handleResetIRT}
                     className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] rounded-lg cursor-pointer"
                   >
-                    إعادة تشغيل الاختبار التكيفي
+                    إعادة تشغيل العرض التوضيحي
                   </button>
                 </div>
               )}
