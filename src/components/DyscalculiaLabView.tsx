@@ -439,7 +439,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
         {/* 3-Step Station Navigation Strip */}
         <div
           role="tablist"
-          aria-label="محطات فحص الديسكالكوليا"
+          aria-label="مهام استكشافية للإدراك العددي"
           className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 bg-slate-50/50"
         >
           <button
@@ -457,7 +457,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠١
               </div>
-              <div className="text-sm mt-0.5">الإدراك الكمي الفوري</div>
+              <div className="text-sm mt-0.5">تمييز الكميات بسرعة</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredSubitizingCount}/3
@@ -479,7 +479,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠٢
               </div>
-              <div className="text-sm mt-0.5">التقدير المكاني على خط الأعداد</div>
+              <div className="text-sm mt-0.5">تقدير الموقع على خط الأعداد</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredNumberLineCount}/2
@@ -501,7 +501,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠٣
               </div>
-              <div className="text-sm mt-0.5">ترميز الأرقام والآحاد والعشرات</div>
+              <div className="text-sm mt-0.5">قراءة الأرقام وترميزها</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredTranscodingCount}/3
@@ -520,7 +520,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    ٠١. اختبار الإدراك الكمي الفوري وسرعة التقاط العدد
+                    ٠١. اختبار تمييز الكميات بسرعة وسرعة التقاط العدد
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     انقر على العدد المطابق لعدد النقاط في كل مصفوفة بأسرع ما يمكن لحساب زمن الاستجابة بالملي ثانية
@@ -633,7 +633,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    ٠٢. التقدير المكاني على خط الأعداد غير المدرّج
+                    ٠٢. تقدير الموقع على خط الأعداد غير المدرّج
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     حرّك المؤشر أو اضغط «تثبيت التقدير» لكل مهمة لتسجيل موقع العدد المتوقع (المكتمل: {answeredNumberLineCount}/2)
@@ -1061,7 +1061,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               </div>
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">
-                  دقة الإدراك الكمي الفوري
+                  دقة تمييز الكميات بسرعة
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0
@@ -1070,7 +1070,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">متوسط زمن التقاط الكمية</span>
+                <span className="text-slate-600">متوسط زمن الاستجابة في المهام</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0
                     ? `${computedMetrics.avgSubitizingMs} مللي ثانية`
