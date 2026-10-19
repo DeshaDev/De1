@@ -707,12 +707,12 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      مؤشر الفرز الاسترشادي {selectedStudent.readingPercentile}
+                      مؤشر الفرز الاسترشادي {selectedStudent.readingHeuristicIndicator}/100
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
                     {selectedStudent.readingRiskLevel === 'high'
-                      ? '■ دون المعيار العمري المتوقع'
+                      ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ طلاقة متوسطة تحتاج دعماً'
                         : '● طلاقة قرائية طبيعية'}{' '}
@@ -1063,10 +1063,10 @@ export default function App() {
                                     }
                                   >
                                     {stu.readingRiskLevel === 'high'
-                                      ? `■ مرتفع (مؤشر ${stu.readingPercentile})`
+                                      ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (مؤشر ${stu.readingPercentile})`
-                                        : `● منخفض (مؤشر ${stu.readingPercentile})`}
+                                        ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
+                                        : `● منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1234,13 +1234,17 @@ export default function App() {
                       </text>
 
                       {students.map((stu) => {
-                        const cx = 40 + (stu.readingPercentile / 100) * 320;
-                        const effectiveMathPct =
-                          stu.mathPercentile !== null &&
-                          stu.mathRiskLevel !== 'unassessed'
-                            ? stu.mathPercentile
-                            : 50;
-                        const cy = 190 - (effectiveMathPct / 100) * 135;
+                        // Do not plot unassessed arithmetic tasks at an invented neutral score.
+                        if (
+                          stu.mathHeuristicIndicator === null ||
+                          stu.mathRiskLevel === 'unassessed' ||
+                          stu.dyscalculiaAssessed === false
+                        ) {
+                          return null;
+                        }
+                        const cx = 40 + (stu.readingHeuristicIndicator / 100) * 320;
+                        const effectiveMathIndicator = stu.mathHeuristicIndicator;
+                        const cy = 190 - (effectiveMathIndicator / 100) * 135;
                         const isSel = stu.id === selectedStudent.id;
                         const firstName = stu.name.split(' ')[0];
 
@@ -1296,10 +1300,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      مؤشر فرز {selectedStudent.readingPercentile} قراءة ·{' '}
-                      {selectedStudent.mathPercentile !== null &&
+                      مؤشر فرز {selectedStudent.readingHeuristicIndicator}/100 قراءة ·{' '}
+                      {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `مؤشر فرز ${selectedStudent.mathPercentile} حساب`
+                        ? `مؤشر فرز ${selectedStudent.mathHeuristicIndicator}/100 حساب`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
