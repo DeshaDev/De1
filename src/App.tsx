@@ -341,46 +341,61 @@ export default function App() {
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
           regressionRate: selectedStudent.regressionRate,
+          gazeCoveragePercent: selectedStudent.gazeCoveragePercent,
+          observedWordCount: selectedStudent.observedWordCount,
+          totalPassageWordCount: selectedStudent.totalPassageWordCount,
+          calibrationAccuracyPercent: selectedStudent.calibrationAccuracyPercent,
           problematicWords: selectedStudent.problematicWords,
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,
           reversalErrorCount: selectedStudent.reversalErrorCount,
           dyscalculiaAssessed:
-            selectedStudent.dyscalculiaAssessed !== false &&
+            selectedStudent.dyscalculiaAssessed === true &&
             selectedStudent.mathRiskLevel !== 'unassessed',
-          oralReadingAssessed: selectedStudent.oralReadingAssessed,
+          oralReadingAssessed: selectedStudent.oralReadingAssessed === true,
           oralAccuracyPercent: selectedStudent.oralAccuracyPercent,
           oralWcpm: selectedStudent.oralWcpm,
           phoneticSubstitutionCount: selectedStudent.phoneticSubstitutionCount,
           dialectVariantCount: selectedStudent.dialectVariantCount,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.report) {
-          setStudents((prev) =>
-            prev.map((s) =>
-              s.id === selectedStudent.id
-                ? { ...s, clinicalReport: data.report }
-                : s
-            )
-          );
-          await authenticatedFetch(
-            `/api/students/${encodeURIComponent(selectedStudent.id)}`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clinicalReport: data.report }),
-            }
-          ).catch(() => {});
-          setAiStatusBanner(
-            `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
-          );
-        }
+      if (!res.ok) {
+        const failure = await res.json().catch(() => null);
+        setAiStatusBanner(
+          failure?.error ||
+            'لم يصدر التقرير. يلزم وجود موافقة صريحة وبيانات كاميرا كافية ومعايرة موثوقة.'
+        );
+        return;
       }
+
+      const data = await res.json();
+      if (!data?.report) {
+        setAiStatusBanner('لم يُرجع الخادم تقريراً صالحاً لهذه الجلسة.');
+        return;
+      }
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id
+            ? { ...s, clinicalReport: data.report }
+            : s
+        )
+      );
+      const saveResponse = await authenticatedFetch(
+        `/api/students/${encodeURIComponent(selectedStudent.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clinicalReport: data.report }),
+        }
+      );
+      setAiStatusBanner(
+        saveResponse.ok
+          ? `تم تحديث التقرير الاسترشادي للطالب (${selectedStudent.name}).`
+          : 'تم إعداد التقرير في الجلسة الحالية، لكن لم يؤكد الخادم حفظه.'
+      );
     } catch {
       setAiStatusBanner(
-        'تم تحديث تقرير المؤشرات القرائية والفرز الأولي بنجاح.'
+        'تعذر الاتصال بخدمة التقرير. لم يتم تأكيد تحديث التقرير أو حفظه.'
       );
     } finally {
       setIsGeneratingAI(false);
