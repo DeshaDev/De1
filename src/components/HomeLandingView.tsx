@@ -264,10 +264,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'before-reading',
     tabLabel: 'قبل أن يبدأ الطالب القراءة',
     kicker: 'قبل بدء القراءة',
-    headline: 'بصيرة في وضع «الاستعداد الآمن» — لا تنصّت ولا تسجيل في الخلفية.',
+    headline: 'قبل بدء الجلسة: لا تُشغّل الكاميرا أو الميكروفون إلا عند اختيار ذلك.',
     description:
-      'قبل أن يبدأ الطفل القراءة ويوافق ولي الأمر أو المختص، لا يتم فتح الميكروفون أو الكاميرا إطلاقاً. لا تقوم بصيرة بالاستماع في الخلفية أو تسجيل الغرفة أو تخزين أي فيديو خام.',
-    privacyNote: 'لا يتم إنشاء أي بصمة بيومترية من صوت الطالب أو صورته.',
+      'توضح هذه المرحلة متى تبدأ الجلسة. راجع أذونات المتصفح وحالة المؤشرات الظاهرة، ولا تستخدم بيانات حقيقية قبل مراجعة مسار البيانات وإجراءات الموافقة.',
+    privacyNote: 'مؤشرات الجلسة ليست نظاماً للتعرّف على هوية الطالب.',
     waveBars: [18, 22, 16, 24, 20, 18, 22, 16, 20, 24, 18, 16, 22, 20, 18],
     actionLabel: 'انتقل إلى بوابة بدء الجلسة',
     targetTab: 'eye-lab',
@@ -276,9 +276,9 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'student-begins',
     tabLabel: 'عندما يبدأ الطالب القراءة',
     kicker: 'لحظة انطلاق الجلسة',
-    headline: 'معايرة بصرية سريعة في ثوانٍ، ونص عربي مشكول مريح للعين.',
+    headline: 'تجربة معايرة بصرية ونص عربي واضح للقراءة.',
     description:
-      'يتابع الطالب ٩ نقاط معايرة سريعة لضبط زاوية النظر، ثم يُعرض النص العربي بخط واضح وتباعد مريح يمنع التزاحم البصري، مع تكيّف تلقائي حسب الصف الدراسي.',
+      'يجرب الطالب خطوات معايرة ثم يقرأ نصاً عربياً متدرجاً. تعتمد فائدة المؤشرات على جودة المعايرة وظروف الكاميرا، وقد لا تكون مناسبة لكل جهاز أو جلسة.',
     privacyNote: 'تُحوَّل حركة العين فوراً إلى إحداثيات رقمية (X, Y) داخل المتصفح.',
     waveBars: [26, 38, 30, 48, 42, 34, 52, 44, 36, 46, 32, 40, 28, 36, 24],
     actionLabel: 'جرّب معايرة العين الآن',
@@ -288,10 +288,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'while-reading',
     tabLabel: 'أثناء القراءة الجهرية',
     kicker: 'خلال القراءة الجهرية',
-    headline: 'ترصد بصيرة تزامن العين والصوت، وتفصل اللهجة عن عسر القراءة.',
+    headline: 'تجمع الجلسة مؤشرات النظر والقراءة الجهرية مع مراعاة بعض الاختلافات اللهجية.',
     description:
-      'أثناء قراءة الطالب بصوت مسموع، تقيس بصيرة زمن التثبيت البصري والتراجعات، وتطابق النطق مع الحروف العربية مع عزل المرادفات اللهجية الخليجية والعربية لكي لا تُحتسب أخطاء قرائية.',
-    privacyNote: 'تحليل صوتي لحظي للأصوات والمقاطع دون حفظ تسجيلات صوتية.',
+      'أثناء القراءة، تحاول المنصة جمع مؤشرات بصرية ومحاذاة النص المنطوق مع النص المرجعي. قد تتأثر النتائج بالمعايرة والميكروفون والمتصفح واللهجة، وتحتاج المخرجات إلى تفسير حذر.',
+    privacyNote: 'تعتمد معالجة الصوت على دعم المتصفح وإعدادات الجلسة؛ لا تفترض أن كل بيئة تعمل بالطريقة نفسها.',
     waveBars: [45, 72, 88, 64, 95, 78, 56, 92, 84, 68, 90, 74, 60, 82, 50],
     actionLabel: 'افتح مختبر القراءة والعين',
     targetTab: 'eye-lab',
@@ -300,10 +300,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'passage-ends',
     tabLabel: 'انتهاء النص وفحص الحساب',
     kicker: 'اكتمال القراءة والانتقال للحساب',
-    headline: 'ينتهي النص فتُغلق الكاميرا فوراً، وينتقل الطالب لمحطة خط الأعداد.',
+    headline: 'بعد القراءة، يمكن الانتقال إلى مهام الإدراك العددي.',
     description:
-      'بمجرد انتهاء الفقرة القرائية، تُغلق الكاميرا والميكروفون تلقائياً، وينتقل الطالب في رحلة متسلسلة إلى فحص الإدراك الكمي (تقدير موقع العدد على خط الأعداد والتمييز الكمي السريع).',
-    privacyNote: 'إغلاق تلقائي للكاميرا والميكروفون فور انتهاء قراءة الفقرة.',
+      'تتيح الواجهة الانتقال إلى مهام حسابية قصيرة مثل تقدير موقع العدد والتمييز الكمي. تحقق من مؤشرات تشغيل الأجهزة في واجهتك قبل الانتقال.',
+    privacyNote: 'راجع حالة الكاميرا والميكروفون في الواجهة بعد كل مرحلة.',
     waveBars: [34, 56, 44, 68, 52, 40, 62, 48, 36, 54, 42, 30, 38, 28, 22],
     actionLabel: 'استكشف مختبر فحص الحساب',
     targetTab: 'dyscalculia-lab',
@@ -312,10 +312,10 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     id: 'insights-surfaced',
     tabLabel: 'ظهور المؤشرات والقرار للمعلم',
     kicker: 'مؤشرات واضحة وخطة مساندة',
-    headline: 'بصيرة تُقدّم البيّنة العلمية، والمعلم وولي الأمر يتخذان القرار.',
+    headline: 'تُعرض المؤشرات للمراجعة — ولا تصدر تشخيصاً.',
     description:
-      'تُلخّص بصيرة نتائج القراءة والحساب في تقرير تربوي موحّد يوضح الكلمات التي استغرقت تثبيتاً بصرياً طويلاً، مع فتح القارئ العربي الميسّر لتدريب الطالب بالتقطيع المقطعي وتلوين الحروف.',
-    privacyNote: 'تقرير فرز أولي قابل للتصدير والحذف الفوري بنقرة واحدة.',
+      'يلخّص التقرير ما رُصد فعلياً عندما تتوفر بيانات كافية. أما القارئ الميسّر فيتيح تجربة التقطيع والتباعد والتلوين، دون ادعاء أنها علاج مثبت.',
+    privacyNote: 'تحقق من نجاح الحفظ أو الحذف من رسالة الحالة قبل الاعتماد عليه.',
     waveBars: [30, 44, 60, 76, 64, 82, 70, 58, 74, 62, 48, 56, 40, 34, 28],
     actionLabel: 'استعرض التقرير النهائي والنتائج',
     targetTab: 'dashboard',
@@ -333,30 +333,30 @@ const TRUST_CENTER_QUESTIONS: TrustQuestionItem[] = [
   {
     id: 'biometrics',
     question: 'هل تجمع بصيرة بيانات بيومترية من صوت الطالب أو كاميرا الويب؟',
-    answerTitle: 'لا يتم إنشاء أو تخزين أي بصمة بيومترية على الإطلاق.',
+    answerTitle: 'معالجة محلية لمؤشرات النظر — وليست أداة للتعرّف على الهوية.',
     answerBody:
-      'تعالج بصيرة إطارات الكاميرا محلياً داخل متصفح الجهاز لاستخراج إحداثيات نقطة النظر (X, Y) وزمن التثبيت بالمللي ثانية فقط. لا يتم إرسال أو حفظ أي فيديو لوجه الطالب أو تسجيل صوتي خام في الخوادم.',
+      'يُستخدم تدفق الكاميرا داخل المتصفح لاستخراج مؤشرات بصرية أثناء الجلسة. لا تعرض المنصة فيديو خاماً ضمن التقرير؛ راجع إعدادات الاستضافة ومسار البيانات قبل استخدام بيانات حقيقية، ولا تُدخل بيانات أطفال في النسخة التجريبية.',
   },
   {
     id: 'consent',
     question: 'كيف يوافق ولي الأمر أو المدرسة قبل بدء جلسة الفحص؟',
-    answerTitle: 'بوابة موافقة صريحة وإلزامية قبل تفعيل الكاميرا أو الميكروفون.',
+    answerTitle: 'واجهة موافقة أولية — وليست سجل موافقة مؤسسياً مدققاً.',
     answerBody:
-      'لا يمكن بدء أي جلسة فحص في مختبر القراءة والعين إلا بعد تفعيل إقرار موافقة ولي الأمر أو الأخصائي التربوي المفوّض، مع إمكانية استخدام المحاكاة التجريبية الكاملة دون كاميرا في أي وقت.',
+      'تتضمن الواجهة خطوة موافقة، لكنها لا تمثل وحدها سجلاً قانونياً مستقلاً أو مسار موافقات مؤسسياً مدققاً. استخدم المحاكاة دون كاميرا للتعرّف على التجربة، ولا تستخدم بيانات أطفال حقيقية قبل استكمال إجراءات الموافقة والمراجعة الأمنية.',
   },
   {
     id: 'dialect',
     question: 'كيف تميّز بصيرة بين اللهجة الخليجية والعربية وبين عسر القراءة؟',
-    answerTitle: 'محرك عزل التنوع اللهجي الفونولوجي والمعجمي لستّ لهجات عربية.',
+    answerTitle: 'ملفات لهجية أولية لاختبار بعض الاختلافات العربية.',
     answerBody:
-      'يدعم النظام اللهجة الخليجية والسعودية، المصرية، الشامية، المغاربية، السودانية، والعراقية. عند نطق الطالب لمرادف لهجي سليم أو إبدال صوتي لهجي معتاد (مثل نطق القاف أو الجيم)، يُصنَّف كـ «تنوع لهجي سليم» ولا يُحتسب مؤشر خطورة لعسر القراءة.',
+      'تتيح الواجهة اختيار ملفات لهجية متعددة، لكنها لا تثبت أنها تصنّف جميع اللهجات أو تمنع احتساب كل اختلاف لهجي كخطأ. يجب مراجعة نتائج الصوت يدوياً، ولا توجد حتى الآن دقة مستقلة منشورة لهذا التصنيف.',
   },
   {
     id: 'deletion',
     question: 'ما مدى تحكّم المدرسة وولي الأمر في حفظ أو حذف سجلات الطلاب؟',
-    answerTitle: 'تحكّم كامل وحق المسح الفوري والنهائي بضغطة زر.',
+    answerTitle: 'تحقق من حالة الحفظ قبل اعتبار السجل محفوظاً.',
     answerBody:
-      'تُحفظ المؤشرات الرقمية والتقارير التربوية لمتابعة تقدم الطالب، ويمكن للمعلم أو ولي الأمر حذف سجل أي طالب نهائياً من قاعدة البيانات في أي لحظة من صفحة التقرير النهائي.',
+      'قد تبقى التغييرات محلية إذا لم يسجّل الأخصائي الدخول أو تعذّر الاتصال بالخادم. تحقق من رسالة حالة الحفظ، ولا تفترض أن الحذف من الواجهة يضمن وحده محواً من النسخ الاحتياطية أو سجلات الاستضافة.',
   },
 ];
 
@@ -534,7 +534,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="lg:col-span-7 space-y-6 text-right">
             <div className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] tracking-wide">
               <SoundwaveBarsIcon className="text-[#15803D]" />
-              <span>كل قارئ · كل صف دراسي · كل فرصة تعلّم</span>
+              <span>قراءة عربية · مؤشرات بصرية · مهام حسابية</span>
             </div>
 
             <h1
@@ -545,13 +545,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               }}
             >
               <span className="block text-[#18181B]">
-                نمو قرائي مُثبت علمياً
+                مؤشرات أولية لفهم القراءة والحساب
               </span>
               <span className="block text-[#15803D] mt-1">
-                ومُحقّق في كل صف
+                تجربة عربية متعددة المؤشرات
               </span>
               <span className="block text-[#18181B] font-bold mt-1 text-[0.82em]">
-                مرّةً بعد مرّة<span className="text-[#15803D]">.</span>
+                لدعم الملاحظة المبكرة<span className="text-[#15803D]">.</span>
               </span>
             </h1>
 
@@ -1162,11 +1162,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               textWrap: 'balance',
             }}
           >
-            الأثر التربوي حقيقي وملموس.
+            ما الذي يقدّمه النموذج الأولي؟
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            تستند «بصيرة» إلى أبحاث محكّمة في تتبع حركة العين واللسانيات
-            العربية، وتساعد المدارس والأسر على اكتشاف صعوبات التعلم مبكراً.
+            تجمع التجربة بين قراءة عربية متدرجة، ومؤشرات بصرية وصوتية، ومهام حسابية قصيرة. ما زالت الأوزان والعتبات بحاجة إلى تحقق مستقل على عينة مناسبة قبل الاستدلال على الدقة أو الأثر التربوي.
           </p>
         </div>
 
@@ -1177,10 +1176,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
             >
-              12K+
+              قراءة
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              جلسة فرز قرائي وحسابي
+              نصوص قراءة عربية متدرجة
             </div>
           </div>
           <div className="py-4 px-6 text-center space-y-1">
@@ -1188,10 +1187,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
             >
-              340+
+              عين + صوت
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              مدرسة ومركز مساندة تربوية
+              مؤشرات بصرية وقراءة جهرية
             </div>
           </div>
           <div className="py-4 px-6 text-center space-y-1">
@@ -1199,10 +1198,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               dir="ltr"
               className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#15803D] tabular-nums"
             >
-              6+
+              3 مهام
             </div>
             <div className="text-xs font-bold tracking-wider text-slate-500">
-              لهجات خليجية وعربية مدعومة
+              مهام حسابية استكشافية
             </div>
           </div>
         </div>
@@ -1219,7 +1218,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   textWrap: 'balance',
                 }}
               >
-                قُرّاء أفضل. نتائج مُثبتة. أبحاث علمية يمكنك الوثوق بها.
+                منهجية واضحة وحدود معلنة.
               </h3>
 
               <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
@@ -1227,19 +1226,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 <strong className="font-bold text-slate-950">
                   هل يصبح الطلاب قُرّاء أقوى وأكثر طلاقة؟
                 </strong>{' '}
-                مع «بصيرة»، تتحدث المؤشرات الرقمية عن نفسها. بالاعتماد على
-                نماذج حركة العين المعيارية والوعي الصوتي العربي، نقدم نتائج قابلة
-                للقياس تدعم قرار المعلم.
+                تعرض بصيرة مؤشرات مشتقة من الجلسة، لا نتائج معيارية مثبتة. يجب تفسيرها في ضوء جودة المعايرة، وتغطية الكلمات، وجودة الصوت، وعمر الطالب وخلفيته اللغوية.
               </p>
 
               {/* 3-Column Hairline Stat Strip (50+ | 15 | 211K+ equivalent) */}
               <div className="grid grid-cols-3 border-y border-emerald-900/15 py-5 divide-x divide-x-reverse divide-emerald-900/15">
                 <div className="px-3 space-y-1">
                   <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    +35
+                    متعدد
                   </div>
                   <div className="text-xs text-slate-600">
-                    مؤشراً بصرياً وصوتياً
+                    مؤشرات مستخرجة حسب جودة الجلسة
                   </div>
                 </div>
                 <div className="px-3 space-y-1">
@@ -1247,15 +1244,15 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     6
                   </div>
                   <div className="text-xs text-slate-600">
-                    نطاقات لهجية عربية
+                    ملفات لهجية أولية للاختبار
                   </div>
                 </div>
                 <div className="px-3 space-y-1">
                   <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    94%
+                    قيد التحقق
                   </div>
                   <div className="text-xs text-slate-600">
-                    دقة عزل أثر اللهجة
+                    لم تُثبت دقة مستقلة بعد
                   </div>
                 </div>
               </div>
@@ -1263,7 +1260,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {/* Recognized By Standards Row */}
               <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
                 <span className="font-bold text-slate-500">
-                  مبني على أطر مرجعية:
+                  مراجع للاسترشاد المنهجي:
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
                   <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
@@ -1281,7 +1278,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
                   <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>توافق القراءة الشاملة W3C</span>
+                  <span>إرشادات إتاحة رقمية W3C</span>
                 </span>
               </div>
             </div>
@@ -1289,7 +1286,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             {/* Left Column (6 cols in RTL): "Independently studied." */}
             <div className="lg:col-span-6 space-y-5 text-right lg:pr-6">
               <h4 className="text-xl sm:text-2xl font-bold text-[#18181B] font-display">
-                منهجية خوارزمية موثّقة.
+                كيف تعمل المؤشرات؟
               </h4>
 
               <div className="space-y-2.5">
@@ -1297,16 +1294,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   مختبر اللسانيات الحاسوبية وتتبع النظر
                 </div>
                 <h5 className="text-lg sm:text-2xl font-medium text-[#18181B] leading-snug">
-                  الدمج بين تتبع التثبيت البصري ومطابقة النطق العربي يرفع دقة
-                  الفرز المبكر لعسر القراءة ويمنع التشخيص الخاطئ الناتج عن
-                  اللهجة المحلية
+                  يجمع النموذج بين مؤشرات النظر ومحاذاة القراءة الجهرية، مع محاولة فصل بعض الاختلافات اللهجية عن أخطاء القراءة. لم تُثبت بعد زيادة الدقة أو منع التشخيص الخاطئ بدراسة مستقلة.
                 </h5>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('algorithms-lab')}
                   className="pt-1 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] hover:underline cursor-pointer"
                 >
-                  <span>استعرض المعادلات والخوارزميات السريرية</span>
+                  <span>استعرض المنهجية وحدود النموذج</span>
                   <SoundwaveBarsIcon className="text-[#15803D]" />
                 </button>
               </div>
@@ -1791,7 +1786,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <span>مركز الثقة والخصوصية</span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-[#18181B] font-display">
-              إجابات صريحة وموثّقة — على المكشوف.
+              إجابات واضحة عن الاستخدام والخصوصية
             </h2>
             <p className="text-xs text-slate-600">
               اختر سؤالاً أو ابحث عن استفسارك لتطّلع على سياسة حماية بيانات
