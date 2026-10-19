@@ -78,7 +78,7 @@ export interface StudentRecord {
   omissionCount?: number;
   // Heuristic Dyslexia Screening Score
   dyslexiaRiskScore: number;
-  readingPercentile: number;
+  readingHeuristicIndicator: number;
   readingRiskLevel: 'nominal' | 'moderate' | 'high';
   readingRiskLabelAr: string;
   problematicWords: string[];
@@ -92,7 +92,7 @@ export interface StudentRecord {
   transcodingAccuracy: number | null;
   reversalErrorCount: number | null;
   dyscalculiaRiskScore: number | null;
-  mathPercentile: number | null;
+  mathHeuristicIndicator: number | null;
   mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   mathRiskLabelAr: string;
   clinicalReport: ClinicalReport;
@@ -867,7 +867,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     visualStrainLevel: 'high',
     visualStrainLabelAr: 'إجهاد بصري مرتفع (رمش متكرر ٢٦ رمشة/دقيقة)',
     dyslexiaRiskScore: 76,
-    readingPercentile: 18,
+    readingHeuristicIndicator: 18,
     readingRiskLevel: 'high',
     readingRiskLabelAr: 'مؤشر فرز مرتفع — يوصى بمتابعة متخصصة',
     problematicWords: ['لِمُشَاهَدَةِ', 'الكَوَاكِبِ', 'المُضِيئَةِ', 'المِنْظَارَ', 'مُلَاحَظَاتِهِمْ'],
@@ -892,7 +892,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     transcodingAccuracy: 50,
     reversalErrorCount: 2,
     dyscalculiaRiskScore: 68,
-    mathPercentile: 24,
+    mathHeuristicIndicator: 24,
     mathRiskLevel: 'high',
     mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
     clinicalReport: {
@@ -948,7 +948,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     visualStrainLevel: 'nominal',
     visualStrainLabelAr: 'معدل رمش طبيعي ومريح (١٢ رمشة/دقيقة)',
     dyslexiaRiskScore: 18,
-    readingPercentile: 82,
+    readingHeuristicIndicator: 82,
     readingRiskLevel: 'nominal',
     readingRiskLabelAr: 'طلاقة قرائية ضمن النطاق المتوقع',
     problematicWords: ['مُلَاحَظَاتِهِمْ'],
@@ -967,7 +967,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     transcodingAccuracy: 50,
     reversalErrorCount: 2,
     dyscalculiaRiskScore: 74,
-    mathPercentile: 19,
+    mathHeuristicIndicator: 19,
     mathRiskLevel: 'high',
     mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
     clinicalReport: {
@@ -1017,7 +1017,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     visualStrainLevel: 'moderate',
     visualStrainLabelAr: 'إجهاد بصري متوسط (١٩ رمشة/دقيقة)',
     dyslexiaRiskScore: 48,
-    readingPercentile: 44,
+    readingHeuristicIndicator: 44,
     readingRiskLevel: 'moderate',
     readingRiskLabelAr: 'مؤشر فرز متوسط — يوصى بمتابعة تربوية',
     problematicWords: ['تتميزُ', 'الأفلاجِ', 'الينابيعِ', 'الوارفةِ'],
@@ -1036,7 +1036,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     transcodingAccuracy: 100,
     reversalErrorCount: 0,
     dyscalculiaRiskScore: 22,
-    mathPercentile: 78,
+    mathHeuristicIndicator: 78,
     mathRiskLevel: 'nominal',
     mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
     clinicalReport: {
@@ -1080,7 +1080,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     visualStrainLevel: 'nominal',
     visualStrainLabelAr: 'معدل رمش طبيعي ومريح (١١ رمشة/دقيقة)',
     dyslexiaRiskScore: 11,
-    readingPercentile: 91,
+    readingHeuristicIndicator: 91,
     readingRiskLevel: 'nominal',
     readingRiskLabelAr: 'طلاقة قرائية ضمن النطاق المتوقع',
     problematicWords: [],
@@ -1099,7 +1099,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     transcodingAccuracy: 100,
     reversalErrorCount: 0,
     dyscalculiaRiskScore: 9,
-    mathPercentile: 92,
+    mathHeuristicIndicator: 92,
     mathRiskLevel: 'nominal',
     mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
     clinicalReport: {
