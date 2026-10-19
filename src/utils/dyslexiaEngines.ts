@@ -261,7 +261,7 @@ export function detectOculomotorEvents(
 
 /**
  * Extracts the 12-metric oculomotor feature matrix from PyGaze events and runs
- * a five hand-written threshold rules + temporal smoothing heuristic (Oculomotor heuristic Architecture).
+ * five hand-written threshold rules plus a simple temporal smoothing heuristic; no trained machine-learning model is used.
  */
 export function runOculomotorHeuristicAnalysis(
   samples: RawGazeSample[],
@@ -434,11 +434,11 @@ export function runOculomotorHeuristicAnalysis(
         : `مدى القفزة (${meanSaccadeAmplitudePx}px) يغطي مقاطع كاملة بكفاءة`,
   };
 
-  // Tree 5: Recurrent Temporal Sequence State
+  // Rule 5: Temporal smoothing heuristic
   const tree5Prob = temporalHeuristicScore / 100;
   const tree5Vote: HeuristicRuleVote = {
     ruleId: 5,
-    ruleNameAr: 'شجرة القرار ٥: الشبكة التسلسلية الزمنية (Sequential RNN Gate)',
+    ruleNameAr: 'شجرة القرار ٥: تنعيم المؤشر عبر الزمن (قاعدة استدلالية وليست شبكة عصبية)',
     primaryFeature: 'temporalHeuristicScore',
     riskSignalStrength: Math.round(tree5Prob * 100) / 100,
     decisionPathAr:
@@ -2363,8 +2363,8 @@ export function estimateIRTAbilityEAP(
   theta: number;
   standardError: number;
   totalFisherInformation: number;
-  percentile: number;
-  dsm5ClassificationAr: string;
+  modelBasedIndex: number;
+  preliminaryInterpretationAr: string;
   riskLevel: 'nominal' | 'moderate' | 'high';
 } {
   if (!responses || responses.length === 0) {
@@ -2372,8 +2372,8 @@ export function estimateIRTAbilityEAP(
       theta: 0,
       standardError: 1.0,
       totalFisherInformation: 1.0,
-      percentile: 50,
-      dsm5ClassificationAr: 'قيد التقييم الأولي (θ = 0.00)',
+      modelBasedIndex: 50,
+      preliminaryInterpretationAr: 'لا توجد استجابات بعد؛ هذا خط أساس حسابي افتراضي وليس تقييماً للطالب.',
       riskLevel: 'nominal',
     };
   }
@@ -2421,7 +2421,7 @@ export function estimateIRTAbilityEAP(
   const standardError =
     Math.round((1 / Math.sqrt(totalFisherInformation)) * 100) / 100;
 
-  // Convert theta to standard normal percentile via error function approximation
+  // Convert theta to standard normal modelBasedIndex via error function approximation
   const z = theta;
   const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const d = 0.3989423 * Math.exp((-z * z) / 2);
@@ -2431,27 +2431,27 @@ export function estimateIRTAbilityEAP(
     (0.3193815 +
       t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   const cdf = z >= 0 ? 1 - prob : prob;
-  const percentile = Math.max(1, Math.min(99, Math.round(cdf * 100)));
+  const modelBasedIndex = Math.max(1, Math.min(99, Math.round(cdf * 100)));
 
   let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let dsm5ClassificationAr =
-    'كفاءة فونولوجية وإملائية ضمن المعيار العمري (DSM-5 Low Risk)';
+  let preliminaryInterpretationAr =
+    'المؤشر ضمن النطاق الذي تنتجه المعادلة الاستدلالية؛ لا يمثل معياراً عمرياً أو تصنيف DSM-5.';
   if (theta <= -0.75) {
     riskLevel = 'high';
-    dsm5ClassificationAr =
+    preliminaryInterpretationAr =
       'مؤشر إكلينيكي مرتفع لاضطراب التعلم المحدد في القراءة (DSM-5 315.00 / ICD-11 6A03.0)';
   } else if (theta < 0.0) {
     riskLevel = 'moderate';
-    dsm5ClassificationAr =
-      'أداء دون المتوسط يتطلب دعماً فونولوجياً موجهاً (Tier-2 RTI Intervention)';
+    preliminaryInterpretationAr =
+      'المؤشر الاستدلالي منخفض وفق حدود النموذج؛ يُفسَّر مع بيانات التقييم الأخرى ولا يمثل تشخيصاً.';
   }
 
   return {
     theta,
     standardError,
     totalFisherInformation,
-    percentile,
-    dsm5ClassificationAr,
+    modelBasedIndex,
+    preliminaryInterpretationAr,
     riskLevel,
   };
 }
