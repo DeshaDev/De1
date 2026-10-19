@@ -560,9 +560,10 @@ async function startServer() {
         wpm,
         avgFixationMs,
         regressionRate,
-        gazeCoveragePercent = 100,
+        gazeCoveragePercent,
         observedWordCount,
         totalPassageWordCount,
+        calibrationAccuracyPercent,
         problematicWords = [],
         oralReadingAssessed = false,
         oralAccuracyPercent = null,
@@ -585,6 +586,28 @@ async function startServer() {
       if (!consentValidation.valid) {
         res.status(403).json({
           error: consentValidation.errorAr,
+        });
+        return;
+      }
+
+      const validGazeEvidence =
+        typeof calibrationAccuracyPercent === 'number' &&
+        Number.isFinite(calibrationAccuracyPercent) &&
+        calibrationAccuracyPercent >= 70 &&
+        typeof gazeCoveragePercent === 'number' &&
+        Number.isFinite(gazeCoveragePercent) &&
+        gazeCoveragePercent >= 25 &&
+        typeof observedWordCount === 'number' &&
+        Number.isFinite(observedWordCount) &&
+        observedWordCount >= 4 &&
+        typeof totalPassageWordCount === 'number' &&
+        Number.isFinite(totalPassageWordCount) &&
+        totalPassageWordCount >= observedWordCount;
+      if (!validGazeEvidence) {
+        res.status(422).json({
+          error:
+            'لم يصدر التقرير: يلزم تحقق معايرة كاميرا لا يقل عن 70%، وتغطية بصرية فعلية لا تقل عن 25%، ورصد أربع كلمات على الأقل. لا تُستبدل القياسات الناقصة بقيم افتراضية.',
+          code: 'INSUFFICIENT_GAZE_EVIDENCE',
         });
         return;
       }
