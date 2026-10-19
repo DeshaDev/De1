@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
+    "prebuild": "mkdir -p public/mediapipe-wasm && cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm/",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

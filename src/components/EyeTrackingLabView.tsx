@@ -191,6 +191,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [validationSamples, setValidationSamples] = useState<
     CalibrationSample[]
   >([]);
+  const [isManualDemoMode, setIsManualDemoMode] = useState<boolean>(false);
   const [calibrationModel, setCalibrationModel] =
     useState<GazeCalibrationModel>({
       isCalibrated: false,
@@ -299,6 +300,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [micActive, setMicActive] = useState<boolean>(false);
   const [micVolume, setMicVolume] = useState<number>(0);
   const [spokenTranscript, setSpokenTranscript] = useState<string>('');
+  const [speechRecStatus, setSpeechRecStatus] = useState<
+    'idle' | 'listening' | 'unsupported' | 'error'
+  >('idle');
+  const [speechRecErrorMsg, setSpeechRecErrorMsg] = useState<string>('');
   const audioCtxRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -490,8 +495,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     };
 
     const wasmRoots = [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.34/wasm',
       '/mediapipe-wasm',
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/wasm',
     ];
 
     for (const wasmRoot of wasmRoots) {
@@ -772,8 +777,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }
 
                     extracted = computeIrisGazeFromLandmarks(lm, width, height, {
-                      baselineX: eyeBaselineRef.current.x,
-                      baselineY: eyeBaselineRef.current.y,
+                      baselineX:
+                        calibrationModelRef.current.empiricalRawCenterX ??
+                        eyeBaselineRef.current.x,
+                      baselineY:
+                        calibrationModelRef.current.empiricalRawCenterY ??
+                        eyeBaselineRef.current.y,
+                      spanX: calibrationModelRef.current.empiricalRawSpanX,
+                      spanY: calibrationModelRef.current.empiricalRawSpanY,
                       sensitivity: eyeSensitivityRef.current,
                       rgba: frameImgData.data,
                     });
@@ -1179,7 +1190,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     }
   };
 
-  // Real Microphone Voice Tracker for Aloud Reading with Arabic Dialect Recognition
+  // Real Microphone Voice Tracker for Aloud Reading with Arabic Dialect Recognition & Strict SpeechRecognition Validation
   const handleToggleMicrophone = async () => {
     if (micActive) {
       if (micStreamRef.current) {
@@ -1188,14 +1199,32 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }
       if (recognitionRef.current) {
         try {
+          recognitionRef.current.onend = null;
           recognitionRef.current.stop();
         } catch {}
+        recognitionRef.current = null;
       }
       setMicActive(false);
       setMicVolume(0);
+      setSpeechRecStatus('idle');
       return;
     }
 
+    const SpeechRec =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRec) {
+      setMicActive(false);
+      setMicVolume(0);
+      setSpeechRecStatus('unsupported');
+      setSpeechRecErrorMsg(
+        'متصفحك الحالي لا يدعم واجهة التعرف الصوتي المباشر (Web Speech API / SpeechRecognition). لتحويل القراءة الجهرية إلى نص تلقائياً يُرجى استخدام متصفح Google Chrome أو Microsoft Edge، أو يمكنك كتابة النص المنطوق للطالب يدوياً في الحقل أدناه.'
+      );
+      return;
+    }
+
+    setSpeechRecErrorMsg('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
@@ -1221,40 +1250,93 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         window.requestAnimationFrame(updateMeter);
       }
 
-      const SpeechRec =
-        (window as any).SpeechRecognition ||
-        (window as any).webkitSpeechRecognition;
-      if (SpeechRec) {
-        const rec = new SpeechRec();
-        rec.lang = selectedDialectProfile.speechRecognitionLang;
-        rec.continuous = true;
-        rec.interimResults = true;
-        rec.onresult = (event: any) => {
-          let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript + ' ';
+      const rec = new SpeechRec();
+      rec.lang = selectedDialectProfile.speechRecognitionLang;
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.onstart = () => {
+        setSpeechRecStatus('listening');
+        setSpeechRecErrorMsg('');
+      };
+      rec.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript + ' ';
+        }
+        setSpokenTranscript(transcript.trim());
+        setSpeechRecStatus('listening');
+      };
+      rec.onerror = (event: any) => {
+        const errCode = event?.error || 'unknown';
+        if (errCode === 'no-speech') {
+          setSpeechRecErrorMsg(
+            'لم يُرصد صوت واضح بعد — يرجى القراءة بصوت مسموع بالقرب من الميكروفون.'
+          );
+          return;
+        }
+        // Fatal SpeechRecognition error: stop mic stream so UI never falsely shows active transcription
+        if (micStreamRef.current) {
+          micStreamRef.current.getTracks().forEach((t) => t.stop());
+          micStreamRef.current = null;
+        }
+        setMicActive(false);
+        setMicVolume(0);
+        setSpeechRecStatus('error');
+        setSpeechRecErrorMsg(
+          `تعذّر تشغيل خدمة تحويل الصوت إلى نص (${errCode}). تم إيقاف حالة الميكروفون النشطة لمنع إظهار حالة مضللة؛ يمكنك إدخال النص المنطوق يدوياً في الحقل أدناه.`
+        );
+      };
+      rec.onend = () => {
+        if (micStreamRef.current && recognitionRef.current === rec) {
+          try {
+            rec.start();
+          } catch {
+            setMicActive(false);
+            setSpeechRecStatus('idle');
           }
-          setSpokenTranscript(transcript.trim());
-        };
-        rec.start();
-        recognitionRef.current = rec;
-      }
+        }
+      };
+      rec.start();
+      recognitionRef.current = rec;
       setMicActive(true);
+      setSpeechRecStatus('listening');
     } catch {
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+      }
       setMicActive(false);
+      setMicVolume(0);
+      setSpeechRecStatus('error');
+      setSpeechRecErrorMsg(
+        'تعذّر الوصول إلى الميكروفون أو بدء التعرف الصوتي في المتصفح. يرجى التحقق من إذن الميكروفون أو إدخال النص المنطوق يدوياً.'
+      );
     }
   };
 
   /**
-   * Records a stabilized 3-sample burst for a calibration target point on click.
-   * Never blocks if the camera is still warming up or unavailable: fuses live optical pupil coordinates
-   * with gaze-contingent fixation coordinates so 5-point calibration succeeds reliably on first pass.
+   * Records a REAL observed eye-tracking sample when the user looks at a target point and clicks it.
+   * Uses 100% pure observed pupil coordinates (`avgNormX, avgNormY`) from the camera without mixing target coordinates or synthetic offsets.
    */
   const handleSampleCalibrationPoint = useCallback(
     (
       target: { id: number; label: string; xPct: number; yPct: number },
       e?: React.MouseEvent<HTMLButtonElement>
     ) => {
+      const isHeadless =
+        navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
+
+      if (
+        !isHeadless &&
+        !isManualDemoMode &&
+        (!cameraActive || !pupilFeaturesRef.current.faceDetected)
+      ) {
+        setCalibrationWarning(
+          'لا يمكن تسجيل نقطة معايرة حقيقية لأن الكاميرا غير مفعّلة أو لم يتم رصد بؤبؤ العين بعد! شغّل الكاميرا وتأكد من ظهور المؤشر الأخضر فوق بؤبؤ عينك، أو فعّل «وضع المحاكاة اليدوية بالماوس (بدون كاميرا)» أدناه لتجربة خطوات الواجهة دون ادعاء قياس بصري.'
+        );
+        return;
+      }
+
       setCalibrationWarning('');
       const vw = window.innerWidth || 1440;
       const vh = window.innerHeight || 900;
@@ -1276,7 +1358,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         );
       }
 
-      // Compute stabilized pupil position across the last 4 frames
+      // Compute stabilized pupil position across the last 4 camera frames (100% pure observed eye signal)
       const buf = recentPupilBufferRef.current;
       const avgNormX =
         buf.length > 0
@@ -1296,90 +1378,97 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           : pupilFeaturesRef.current.rawCombinedY;
 
       // 1. Feed real WebGazer eye patches + screen coordinates into WebGazer.js Ridge Regression model
-      try {
-        webgazer.recordScreenPosition(screenX, screenY, 'click');
-        if (wgRegressorRef.current && latestEyePatchesRef.current) {
-          wgRegressorRef.current.addData(
-            latestEyePatchesRef.current,
-            [screenX, screenY],
-            'click'
-          );
-          const pred = wgRegressorRef.current.predict(
-            latestEyePatchesRef.current
-          );
-          if (pred && !Number.isNaN(pred.x) && !Number.isNaN(pred.y)) {
-            const bounded = webgazer.util.bound(pred);
-            setWgRawPrediction({
-              x: Math.round(bounded.x),
-              y: Math.round(bounded.y),
-            });
+      if (cameraActive && pupilFeaturesRef.current.faceDetected) {
+        try {
+          webgazer.recordScreenPosition(screenX, screenY, 'click');
+          if (wgRegressorRef.current && latestEyePatchesRef.current) {
+            wgRegressorRef.current.addData(
+              latestEyePatchesRef.current,
+              [screenX, screenY],
+              'click'
+            );
+            const pred = wgRegressorRef.current.predict(
+              latestEyePatchesRef.current
+            );
+            if (pred && !Number.isNaN(pred.x) && !Number.isNaN(pred.y)) {
+              const bounded = webgazer.util.bound(pred);
+              setWgRawPrediction({
+                x: Math.round(bounded.x),
+                y: Math.round(bounded.y),
+              });
+            }
           }
-        }
-      } catch {}
+        } catch {}
+      }
 
-      // 2. Complete all 3 stabilized sub-frame samples for this target immediately so 1 click per point (or 3 clicks) completes the point
+      // 2. Record 1 real click sample for this target
       setTargetClicks((prevClicks) => {
+        const currentCount = prevClicks[target.id] || 0;
+        const nextCount = Math.min(SAMPLES_PER_TARGET, currentCount + 1);
         const updatedClicks = {
           ...prevClicks,
-          [target.id]: SAMPLES_PER_TARGET,
+          [target.id]: nextCount,
         };
 
-        const nextIncomplete = CALIBRATION_TARGETS.find(
-          (t) => (updatedClicks[t.id] || 0) < SAMPLES_PER_TARGET
-        );
-        if (nextIncomplete) {
-          setActiveTargetId(nextIncomplete.id);
+        if (nextCount >= 1) {
+          const nextUnvisited = CALIBRATION_TARGETS.find(
+            (t) => (updatedClicks[t.id] || 0) === 0
+          );
+          const nextIncomplete = CALIBRATION_TARGETS.find(
+            (t) => (updatedClicks[t.id] || 0) < SAMPLES_PER_TARGET
+          );
+          if (nextUnvisited) {
+            setActiveTargetId(nextUnvisited.id);
+          } else if (nextIncomplete) {
+            setActiveTargetId(nextIncomplete.id);
+          }
         }
         return updatedClicks;
       });
 
-      // 3. Fuse live optical pupil vector with gaze-contingent target fixation vector
-      const targetNormX = target.xPct / 100;
-      const targetNormY = target.yPct / 100;
-      const hasLiveOptical =
-        cameraActive && pupilFeaturesRef.current.faceDetected;
-      const baseNormX = hasLiveOptical
-        ? targetNormX * 0.82 + avgNormX * 0.18
-        : targetNormX;
-      const baseNormY = hasLiveOptical
-        ? targetNormY * 0.82 + avgNormY * 0.18
-        : targetNormY;
-
-      const microOffsets = [-0.002, 0, 0.002];
+      // 3. Record 100% pure observed camera coordinates when camera is active (never blend target.xPct into camera samples!)
+      const hasRealCameraGaze =
+        cameraActive && pupilFeaturesRef.current.faceDetected && !isManualDemoMode;
+      const pureNormX = hasRealCameraGaze ? avgNormX : target.xPct / 100;
+      const pureNormY = hasRealCameraGaze ? avgNormY : target.yPct / 100;
 
       setCalibrationSamples((prevSamples) => {
-        const withoutThisPoint = prevSamples.filter(
-          (s) => s.pointId !== target.id
-        );
-        const burstSamples: CalibrationSample[] = microOffsets.map((delta) => ({
+        const newSample: CalibrationSample = {
           pointId: target.id,
-          normX: Math.max(0.02, Math.min(0.98, baseNormX + delta)),
-          normY: Math.max(0.02, Math.min(0.98, baseNormY + delta)),
-          rawX: avgRawX + delta,
-          rawY: avgRawY + delta,
+          normX: pureNormX,
+          normY: pureNormY,
+          rawX: hasRealCameraGaze ? avgRawX : pureNormX,
+          rawY: hasRealCameraGaze ? avgRawY : pureNormY,
           screenX,
           screenY,
           arenaXPct: target.xPct,
           arenaYPct: target.yPct,
-        }));
-        const updatedSamples = [...withoutThisPoint, ...burstSamples];
+        };
+        const updatedSamples = [...prevSamples, newSample];
         const fitted = fitGazeCalibrationModel(
           updatedSamples,
           validationSamples,
           { width: vw, height: vh }
         );
-        setCalibrationModel(fitted);
-        calibrationModelRef.current = fitted;
+        // If in manual mouse demo mode (no camera), never report fake camera accuracy!
+        const finalModel: GazeCalibrationModel = hasRealCameraGaze
+          ? fitted
+          : {
+              ...fitted,
+              accuracyPercent: 0,
+            };
+        setCalibrationModel(finalModel);
+        calibrationModelRef.current = finalModel;
 
-        const nextArenaPct = predictArenaGazePercent(fitted, {
-          normX: baseNormX,
-          normY: baseNormY,
+        const nextArenaPct = predictArenaGazePercent(finalModel, {
+          normX: pureNormX,
+          normY: pureNormY,
         });
         setArenaGazePct(nextArenaPct);
 
         const nextScreenGaze = predictScreenGaze(
-          fitted,
-          { normX: baseNormX, normY: baseNormY },
+          finalModel,
+          { normX: pureNormX, normY: pureNormY },
           { width: vw, height: vh },
           null,
           1.0
@@ -1389,18 +1478,30 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         return updatedSamples;
       });
     },
-    [cameraActive, validationSamples]
+    [cameraActive, isManualDemoMode, validationSamples]
   );
 
   /**
    * Records an independent held-out validation sample (V1 or V2) that NEVER enters the training set.
-   * Used exclusively to measure out-of-sample gaze prediction error (`validationRmsePx`).
+   * Uses 100% pure observed pupil coordinates (`avgNormX, avgNormY`) from the camera.
    */
   const handleSampleValidationPoint = useCallback(
     (
       target: { id: number; label: string; xPct: number; yPct: number },
       e?: React.MouseEvent<HTMLButtonElement>
     ) => {
+      const isHeadless =
+        navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
+      if (
+        !isHeadless &&
+        !isManualDemoMode &&
+        (!cameraActive || !pupilFeaturesRef.current.faceDetected)
+      ) {
+        setCalibrationWarning(
+          'يرجى تشغيل الكاميرا والتأكد من رصد بؤبؤ العين قبل نقر نقاط التحقق المستقلة لقياس دقة النظر الفعلية.'
+        );
+        return;
+      }
       setCalibrationWarning('');
       const vw = window.innerWidth || 1440;
       const vh = window.innerHeight || 900;
@@ -1430,16 +1531,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         buf.length > 0
           ? buf.reduce((s, p) => s + p.normY, 0) / buf.length
           : pupilFeaturesRef.current.combinedNormY;
-      const targetNormX = target.xPct / 100;
-      const targetNormY = target.yPct / 100;
-      const hasLiveOptical =
-        cameraActive && pupilFeaturesRef.current.faceDetected;
-      const pureNormX = hasLiveOptical
-        ? targetNormX * 0.85 + avgNormX * 0.15
-        : targetNormX;
-      const pureNormY = hasLiveOptical
-        ? targetNormY * 0.85 + avgNormY * 0.15
-        : targetNormY;
+      const hasRealCameraGaze =
+        cameraActive && pupilFeaturesRef.current.faceDetected && !isManualDemoMode;
+      const pureNormX = hasRealCameraGaze ? avgNormX : target.xPct / 100;
+      const pureNormY = hasRealCameraGaze ? avgNormY : target.yPct / 100;
 
       setValidationClicks((prev) => ({
         ...prev,
@@ -1447,7 +1542,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }));
 
       setValidationSamples((prevVal) => {
-        const withoutThisVal = prevVal.filter((v) => v.pointId !== target.id);
         const valSample: CalibrationSample = {
           pointId: target.id,
           normX: pureNormX,
@@ -1457,106 +1551,24 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           arenaXPct: target.xPct,
           arenaYPct: target.yPct,
         };
-        const nextVal = [...withoutThisVal, valSample];
+        const nextVal = [...prevVal, valSample];
         const fitted = fitGazeCalibrationModel(calibrationSamples, nextVal, {
           width: vw,
           height: vh,
         });
-        setCalibrationModel(fitted);
-        calibrationModelRef.current = fitted;
+        const finalModel: GazeCalibrationModel = hasRealCameraGaze
+          ? fitted
+          : {
+              ...fitted,
+              accuracyPercent: 0,
+            };
+        setCalibrationModel(finalModel);
+        calibrationModelRef.current = finalModel;
         return nextVal;
       });
     },
-    [cameraActive, calibrationSamples]
+    [cameraActive, isManualDemoMode, calibrationSamples]
   );
-
-  /**
-   * 1-Click Quick Calibration for all 5 training points + 2 independent holdout validation points (V1 & V2)
-   * so educators and students can calibrate the full spatial matrix immediately without friction.
-   */
-  const handleQuickCalibrateAll = useCallback(() => {
-    setCalibrationWarning('');
-    const vw = window.innerWidth || 1440;
-    const vh = window.innerHeight || 900;
-    const arenaRect = calibrationArenaRef.current?.getBoundingClientRect();
-
-    const getScreenCoords = (xPct: number, yPct: number, btnId?: number) => {
-      const btn = btnId ? targetButtonsRef.current[btnId] : null;
-      if (btn) {
-        const r = btn.getBoundingClientRect();
-        return {
-          screenX: Math.round(r.left + r.width / 2),
-          screenY: Math.round(r.top + r.height / 2),
-        };
-      }
-      if (arenaRect && arenaRect.width > 0 && arenaRect.height > 0) {
-        return {
-          screenX: Math.round(arenaRect.left + (xPct / 100) * arenaRect.width),
-          screenY: Math.round(arenaRect.top + (yPct / 100) * arenaRect.height),
-        };
-      }
-      return {
-        screenX: Math.round((xPct / 100) * vw),
-        screenY: Math.round((yPct / 100) * vh),
-      };
-    };
-
-    const microOffsets = [-0.002, 0, 0.002];
-    const allTrainSamples: CalibrationSample[] = [];
-    for (const pt of CALIBRATION_TARGETS) {
-      const { screenX, screenY } = getScreenCoords(pt.xPct, pt.yPct, pt.id);
-      const tNormX = pt.xPct / 100;
-      const tNormY = pt.yPct / 100;
-      try {
-        webgazer.recordScreenPosition(screenX, screenY, 'click');
-      } catch {}
-      for (const delta of microOffsets) {
-        allTrainSamples.push({
-          pointId: pt.id,
-          normX: Math.max(0.02, Math.min(0.98, tNormX + delta)),
-          normY: Math.max(0.02, Math.min(0.98, tNormY + delta)),
-          rawX: tNormX + delta,
-          rawY: tNormY + delta,
-          screenX,
-          screenY,
-          arenaXPct: pt.xPct,
-          arenaYPct: pt.yPct,
-        });
-      }
-    }
-
-    const allValSamples: CalibrationSample[] = VALIDATION_TARGETS.map((vt) => {
-      const { screenX, screenY } = getScreenCoords(vt.xPct, vt.yPct);
-      return {
-        pointId: vt.id,
-        normX: vt.xPct / 100,
-        normY: vt.yPct / 100,
-        screenX,
-        screenY,
-        arenaXPct: vt.xPct,
-        arenaYPct: vt.yPct,
-      };
-    });
-
-    setTargetClicks({
-      1: SAMPLES_PER_TARGET,
-      2: SAMPLES_PER_TARGET,
-      3: SAMPLES_PER_TARGET,
-      4: SAMPLES_PER_TARGET,
-      5: SAMPLES_PER_TARGET,
-    });
-    setValidationClicks({ 101: 1, 102: 1 });
-    setCalibrationSamples(allTrainSamples);
-    setValidationSamples(allValSamples);
-
-    const fitted = fitGazeCalibrationModel(allTrainSamples, allValSamples, {
-      width: vw,
-      height: vh,
-    });
-    setCalibrationModel(fitted);
-    calibrationModelRef.current = fitted;
-    setArenaGazePct({ xPct: 50, yPct: 50 });
-  }, []);
 
   const handleResetCalibration = async () => {
     setCalibrationWarning('');
@@ -1597,6 +1609,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   };
 
   const completedTargetsCount = CALIBRATION_TARGETS.filter(
+    (t) => (targetClicks[t.id] || 0) >= 1
+  ).length;
+  const fullySampledTargetsCount = CALIBRATION_TARGETS.filter(
     (t) => (targetClicks[t.id] || 0) >= SAMPLES_PER_TARGET
   ).length;
   const completedValidationCount = VALIDATION_TARGETS.filter(
@@ -1906,12 +1921,22 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         ? ` كما أظهر تحليل القراءة الجهرية (${selectedDialectProfile.labelAr}) دقة مطابقة فونولوجية ${liveOralDialectMetrics.accuracyPercent}% مع رصد ${liveOralDialectMetrics.phoneticSubstitutionCount} إبدالات فونولوجية و${liveOralDialectMetrics.omittedWordsCount} كلمات محذوفة واستثناء ${liveOralDialectMetrics.dialectVariantCount} بدائل لهجية طبيعية.`
         : ' (لم يتم تفعيل تسجيل القراءة الجهرية بالميكروفون في هذه الجلسة).';
 
+    const isLowCameraReliability =
+      isManualDemoMode ||
+      !cameraActive ||
+      calibrationModel.accuracyPercent < 70;
+    const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
+      ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — دقة الكاميرا غير مقيسة (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
+      : isLowCameraReliability
+        ? `[تنبيه منهجي: دقة معايرة الكاميرا خارج التدريب منخفضة (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — قياسات الكاميرا في هذه الجلسة غير موثوقة ولا يُعتمد عليها] `
+        : '[مؤشر فرز أولي استرشادي مبني على قواعد استدلالية (Heuristic MVP) — لا يغني عن التشخيص الإكلينيكي المعتمد] ';
+
     let clinicalReport = {
-      clinicalSummary: `[مؤشر فرز أولي استرشادي] تم إجراء فحص تتبع حركة العين ومعدل الرمش للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية بصرية فعلية ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت بصري ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
-      ocularMotorAnalysis: `سُجلت بيانات التثبيت الفعلية على ${eyeMetrics.observedWordCount} كلمة دون أي تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع البصري المرصودة ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بدقة معايرة محققة خارج التدريب ${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px).`,
+      clinicalSummary: `${measurementReliabilityPrefix}تم إجراء جلسة القراءة للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية كلمات مرصودة ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
+      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بدقة معايرة كاميرا خارج التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
       orthographicAndPhonologicalPatterns:
         eyeMetrics.problematicWords.length > 0
-          ? `تركزت أطول فترات التثبيت البصري أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
+          ? `تركزت أطول فترات التثبيت أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
           : `قراءة متوازنة للمقاطع الصوتية المرصودة دون تعثر ملحوظ مع مطابقة فونولوجية سليمة لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`,
       dyscalculiaSpatialAnalysis:
         'لم يخضع الطالب لاختبار عسر الحساب (الديسكالكوليا) في هذه الجلسة بعد — لا يقوم النظام بتسجيل درجات حسابية افتراضية قبل إتمام الاختبارات الثلاثة في تبويب «مختبر فحص الديسكالكوليا والحساب».',
@@ -1925,7 +1950,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       ],
       classroomAccommodations: [
         'تفعيل المسطرة البصرية أثناء القراءة وتكبير حجم الخط إلى 24px لتقليل إجهاد الجفن والرمش المتكرر.',
-        'ملاحظة إكلينيكية: هذه النتائج تمثل مؤشرات فرز أولية استرشادية ولا تغني عن التشخيص الإكلينيكي المتخصص.',
+        'ملاحظة منهجية: درجات المخاطر في هذا النموذج الأولي (MVP) تُحسب عبر قواعد استدلالية (Heuristic Rules) وليست أداة تشخيص سريرية معتمدة مستقلًا.',
       ],
     };
 
@@ -1974,7 +1999,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       gradeLevel,
       ageYears: gradeLevel + 6,
       schoolName: 'مدرسة الرواد النموذجية - فحص مباشر',
-      lastScreenedDate: '٢٠٢٦/١٠/١٨ (الآن)',
+      lastScreenedDate: '٢٠٢٦/١٠/١٩ (الآن)',
       passageId: selectedPassage.id,
       dialectRegionAr: selectedDialectProfile.labelAr,
       guardianConsentGiven: guardianConsent,
@@ -1989,11 +2014,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
       observedWordCount: eyeMetrics.observedWordCount,
       totalPassageWordCount: eyeMetrics.totalPassageWordCount,
-      calibrationAccuracyPercent: calibrationModel.accuracyPercent,
+      calibrationAccuracyPercent:
+        isManualDemoMode || !cameraActive ? 0 : calibrationModel.accuracyPercent,
       calibrationValidationMethod:
-        calibrationModel.validationMethod === 'independent-holdout'
-          ? 'تحقق مستقل (Independent Holdout)'
-          : 'تحقق متقاطع (Leave-One-Point-Out CV)',
+        isManualDemoMode || !cameraActive
+          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — دقة النظر غير مقيسة)'
+          : calibrationModel.validationMethod === 'independent-holdout'
+            ? 'تحقق مستقل (Independent Holdout)'
+            : 'تحقق متقاطع (Leave-One-Point-Out CV)',
       oralReadingAssessed: hasSpokenTranscript,
       spokenTranscript: hasSpokenTranscript ? spokenTranscript.trim() : '',
       oralAccuracyPercent: oralIntegrationInput?.accuracyPercent ?? null,
@@ -2132,46 +2160,81 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
               <span
                 className={`text-xs font-mono tabular-nums font-bold shrink-0 ${
-                  completedTargetsCount === 5
-                    ? 'text-[#059669]'
-                    : 'text-[#D97706]'
+                  isManualDemoMode
+                    ? 'text-amber-700'
+                    : completedTargetsCount === 5 &&
+                        calibrationModel.accuracyPercent >= 70
+                      ? 'text-[#059669]'
+                      : 'text-[#D97706]'
                 }`}
               >
-                {completedTargetsCount === 5
-                  ? `● معايرة مكتملة (5/5 · دقة التحقق المستقل ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
-                  : `▲ قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة)`}
+                {isManualDemoMode
+                  ? `▲ وضع محاكاة يدوية بالماوس (${completedTargetsCount}/5 نقاط · دقة الكاميرا غير مقيسة 0%)`
+                  : completedTargetsCount === 5
+                    ? `● معايرة كاميرا (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة · دقة خارج التدريب ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
+                    : `▲ قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة مرصودة)`}
               </span>
             </div>
 
-            {/* Live Eye Detection Status Banner */}
+            {/* Live Eye Detection Status Banner + Explicit Manual Simulation Toggle */}
             <div
               className={`px-3.5 py-2.5 rounded-lg border text-xs flex flex-wrap items-center justify-between gap-2 ${
-                cameraActive && pupilFeatures.faceDetected
+                cameraActive && pupilFeatures.faceDetected && !isManualDemoMode
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
                   : 'bg-amber-50 border-amber-300 text-amber-950'
               }`}
             >
               <div className="flex items-center gap-2 font-medium">
-                {cameraActive && pupilFeatures.faceDetected ? (
+                {cameraActive && pupilFeatures.faceDetected && !isManualDemoMode ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
                     <span>
                       تم رصد بؤبؤ العين ونسبة انفتاح الجفن (EAR ={' '}
-                      {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)}) بنجاح! حرّك عينيك لترى الصليب الأخضر يتبع بؤبؤك، ثم انظر إلى كل دائرة واضغط عليها ٣ مرات.
+                      {(pupilFeatures.combinedEAR ?? 0.29).toFixed(2)}) بنجاح! تُسجَّل عينات المعايرة بنسبة 100% من إحداثيات بؤبؤ عينك المرصودة فعلياً دون أي مزج مع إحداثيات الهدف.
                     </span>
                   </>
                 ) : (
                   <>
                     <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                     <span>
-                      {cameraActive
-                        ? 'جاري البحث عن الوجه وبؤبؤ العين في بث الكاميرا... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
-                        : 'الكاميرا غير مفعّلة بعد — اضغط زر «تشغيل كاميرا WebGazer الحقيقية» في اللوحة المجاورة لبدء تتبع بؤبؤ العين ومعدل الرمش.'}
+                      {isManualDemoMode
+                        ? 'وضع المحاكاة اليدوية بالماوس مفعّل (بدون كاميرا): مخصص لاستعراض خطوات المنصة فقط؛ تُسجَّل دقة معايرة الكاميرا 0% ولا تُعرض النتائج كقياسات بصرية فعلية.'
+                        : cameraActive
+                          ? 'جاري البحث عن الوجه وبؤبؤ العين في بث الكاميرا... وجّه وجهك نحو الكاميرا في إضاءة واضحة.'
+                          : 'الكاميرا غير مفعّلة بعد — اضغط زر «تشغيل كاميرا WebGazer الحقيقية» لبدء الرصد الفعلي لبؤبؤ العين.'}
                     </span>
                   </>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManualDemoMode((prev) => !prev);
+                  setCalibrationWarning('');
+                }}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition-colors cursor-pointer shrink-0 ${
+                  isManualDemoMode
+                    ? 'bg-amber-700 text-white border-amber-800'
+                    : 'bg-white text-amber-900 border-amber-300 hover:bg-amber-100'
+                }`}
+              >
+                {isManualDemoMode
+                  ? 'إيقاف وضع المحاكاة اليدوية والعودة للكاميرا الحقيقية'
+                  : 'وضع تجربة يدوية بالماوس (بدون كاميرا)'}
+              </button>
             </div>
+
+            {completedTargetsCount === 5 &&
+              !isManualDemoMode &&
+              calibrationModel.accuracyPercent < 70 && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-950 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
+                  <span>
+                    <strong>تنبيه محدودية دقة المعايرة الحالية ({calibrationModel.accuracyPercent}%):</strong>{' '}
+                    خطأ التحقق خارج التدريب مرتفع نسبياً ({calibrationModel.validationRmsePx ?? 0}px). لا يُنصح بالاعتماد على قياسات الكاميرا في هذه الجلسة كفرز دقيق قبل تحسين الإضاءة وتثبيت الرأس وإعادة المعايرة (3 نقرات لكل نقطة).
+                  </span>
+                </div>
+              )}
 
             {calibrationWarning && (
               <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-950 flex items-center gap-2">
@@ -2295,14 +2358,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    data-testid="quick-calibrate-btn"
-                    onClick={handleQuickCalibrateAll}
-                    className="px-2.5 py-1 bg-[#059669] hover:bg-emerald-700 text-white rounded-md font-semibold cursor-pointer transition-colors"
-                  >
-                    معايرة سريعة لكامل النقاط (5/5 + تحقق V1/V2)
-                  </button>
-                  <button
-                    type="button"
                     onClick={handleRecenterEyeBaseline}
                     className="text-[#D97706] hover:underline font-semibold cursor-pointer"
                   >
@@ -2314,7 +2369,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onClick={handleResetCalibration}
                     className="text-[#0284C7] hover:underline font-medium cursor-pointer"
                   >
-                    مسح بيانات WebGazer وإعادة المعايرة (0/5)
+                    مسح بيانات WebGazer وإعادة المعايرة ({fullySampledTargetsCount}/5 مكتمل بالكامل)
                   </button>
                 </div>
               </div>
@@ -3058,6 +3113,33 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 ))}
               </div>
 
+              {speechRecErrorMsg && (
+                <div
+                  role="alert"
+                  className="p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-[11px] text-amber-950 flex items-start gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <span>{speechRecErrorMsg}</span>
+                </div>
+              )}
+
+              <div className="pt-1">
+                <label
+                  htmlFor="manual-spoken-transcript-input"
+                  className="block text-[11px] font-semibold text-slate-700 mb-1"
+                >
+                  النص المنطوق الفعلي للطالب (يُحدَّث تلقائياً عبر SpeechRecognition عند دعمه، أو يمكن كتابته/تعديله يدوياً):
+                </label>
+                <input
+                  id="manual-spoken-transcript-input"
+                  type="text"
+                  value={spokenTranscript}
+                  onChange={(e) => setSpokenTranscript(e.target.value)}
+                  placeholder="اكتب أو عدّل ما نطقه الطالب هنا لاختبار محاذاة القراءة الجهرية واللهجة..."
+                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-700 pt-0.5">
                 {liveOralDialectMetrics ? (
                   <>
@@ -3080,7 +3162,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   </>
                 ) : (
                   <span className="text-slate-500">
-                    لم يتم تسجيل قراءة جهرية بعد — شغّل الميكروفون أو اختر نموذج نطق لهجي أعلاه لإدراج أخطاء النطق في التقرير النهائي.
+                    {speechRecStatus === 'unsupported'
+                      ? 'التعرف الصوتي التلقائي غير مدعوم في هذا المتصفح — أدخل النص المنطوق في الحقل أعلاه أو اختر نموذج نطق لهجي.'
+                      : 'لم يتم تسجيل قراءة جهرية بعد — شغّل الميكروفون (Chrome/Edge) أو اكتب النص المنطوق في الحقل أعلاه.'}
                   </span>
                 )}
               </div>

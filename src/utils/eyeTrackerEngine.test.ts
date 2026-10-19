@@ -320,5 +320,28 @@ test('fitGazeCalibrationModel computes genuine out-of-sample accuracy without ar
   assert.ok((validatedModel.validationRmsePx ?? 999) <= 15);
 });
 
+test('fitGazeCalibrationModel accurately fits pure observed pupil coordinates inside a compact 320px-tall arena without vertical slope clamping distortion', () => {
+  // Arena rect: left=100, top=200, width=700, height=320
+  const arenaTraining = [
+    { pointId: 1, normX: 0.28, normY: 0.30, screenX: 226, screenY: 258, arenaXPct: 18, arenaYPct: 18 },
+    { pointId: 2, normX: 0.72, normY: 0.30, screenX: 674, screenY: 258, arenaXPct: 82, arenaYPct: 18 },
+    { pointId: 3, normX: 0.50, normY: 0.50, screenX: 450, screenY: 360, arenaXPct: 50, arenaYPct: 50 },
+    { pointId: 4, normX: 0.28, normY: 0.70, screenX: 226, screenY: 462, arenaXPct: 18, arenaYPct: 82 },
+    { pointId: 5, normX: 0.72, normY: 0.70, screenX: 674, screenY: 462, arenaXPct: 82, arenaYPct: 82 },
+  ];
+  const arenaHoldout = [
+    { pointId: 101, normX: 0.39, normY: 0.40, screenX: 338, screenY: 309, arenaXPct: 34, arenaYPct: 34 },
+    { pointId: 102, normX: 0.61, normY: 0.60, screenX: 562, screenY: 411, arenaXPct: 66, arenaYPct: 66 },
+  ];
 
-
+  const model = fitGazeCalibrationModel(arenaTraining, arenaHoldout, { width: 1440, height: 900 });
+  assert.equal(model.validationMethod, 'independent-holdout');
+  assert.ok(
+    model.accuracyPercent >= 90,
+    `Expected >=90% accuracy for compact arena pure gaze calibration, got ${model.accuracyPercent}%`
+  );
+  assert.ok(
+    (model.validationRmsePx ?? 999) <= 25,
+    `Expected <=25px validation RMSE in compact arena, got ${model.validationRmsePx}px`
+  );
+});

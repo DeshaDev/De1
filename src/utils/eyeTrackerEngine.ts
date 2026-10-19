@@ -1005,14 +1005,14 @@ function fitBaseGazeParameters(samples: CalibrationSample[]) {
   const rawScaleY = varY > 1e-6 ? covY / (varY + 1e-7) : 900;
 
   const scaleX = Math.max(
-    450,
-    Math.min(28000, rawScaleX > 150 ? rawScaleX : 1400)
+    120,
+    Math.min(28000, rawScaleX > 80 ? rawScaleX : 1400)
   );
   const offsetX = meanScreenX - scaleX * meanNormX;
 
   const scaleY = Math.max(
-    350,
-    Math.min(20000, rawScaleY > 100 ? rawScaleY : 900)
+    100,
+    Math.min(20000, rawScaleY > 60 ? rawScaleY : 900)
   );
   const offsetY = meanScreenY - scaleY * meanNormY;
 
