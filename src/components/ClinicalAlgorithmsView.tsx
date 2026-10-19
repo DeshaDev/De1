@@ -451,7 +451,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
         <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200">
           <div>
             <div className="text-xs text-slate-500 mb-1">
-              محركات استرشادية · تحليل قراءة · نموذج IRT تجريبي غير معاير
+              مؤشرات استرشادية · محاذاة قراءة · نموذج IRT توضيحي غير معاير
             </div>
             <h2 className="text-2xl font-bold text-slate-900 font-display">
               مختبر المؤشرات البصرية والصوتية
@@ -490,7 +490,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 المؤشرات البصرية
               </div>
               <div className="text-sm mt-0.5">
-                الاختبار المتكيف بنظرية استجابة الفقرة (2PL IRT)
+                عرض توضيحي لنظرية استجابة الفقرة (2PL IRT) — غير معاير
               </div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
@@ -557,7 +557,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 2-Parameter Logistic Item Response Theory (IRT 2PL)
               </div>
               <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                محرك الاختبارات الديناميكي المتكيف (تعظيم معلومات فيشر I(θ))
+                محاكاة نظرية استجابة الفقرة (IRT) بمعاملات توضيحية غير معايرة
               </h3>
             </div>
 
