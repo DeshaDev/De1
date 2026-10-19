@@ -1171,7 +1171,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             {oculomotorHeuristicResult.clinicalValidationDisclaimerAr}
           </div>
 
-          {/* PyGaze Threshold Controls */}
+          {/* I-DT-style heuristic controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl">
             <div>
               <div className="flex items-center justify-between text-xs mb-1.5">
@@ -1261,18 +1261,18 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               </div>
 
               <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-[#F8FAFC] overflow-hidden">
-                {oculomotorHeuristicResult.ruleVotes.map((tree) => (
-                  <div key={tree.ruleId} className="p-4 space-y-1">
+                {oculomotorHeuristicResult.ruleVotes.map((rule) => (
+                  <div key={rule.ruleId} className="p-4 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-900">
-                        {tree.ruleNameAr}
+                        {rule.ruleNameAr}
                       </span>
                       <span className="font-mono tabular-nums font-bold text-[#0284C7]">
-                        {Math.round(tree.riskProbability * 100)}%
+                        {Math.round(rule.normalizedRuleScore * 100)}%
                       </span>
                     </div>
                     <p className="text-xs text-slate-600">
-                      {tree.decisionPathAr}
+                      {rule.decisionPathAr}
                     </p>
                   </div>
                 ))}
