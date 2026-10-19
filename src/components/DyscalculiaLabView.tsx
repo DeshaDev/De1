@@ -377,7 +377,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               فحص الحس العددي والترميز المكاني للأعداد
             </div>
             <h2 className="text-2xl font-bold text-slate-900 font-display">
-              مختبر فحص الديسكالكوليا والإدراك المكاني للأعداد
+              مهام استكشافية للإدراك العددي
             </h2>
           </div>
 
@@ -649,7 +649,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   <span>
                     {showTargetOverlay
                       ? 'إخفاء الإجابات المرجعية'
-                      : 'كشف الدقة المكانية والمؤشر المرجعي'}
+                      : 'مؤشر استكشافي لتقدير الموقع'}
                   </span>
                 </button>
               </div>
@@ -974,7 +974,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <span>ملخص الفرز الحسابي الفوري</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900">
-              نتيجة فحص الديسكالكوليا
+              ملخص المهام الحسابية
             </h3>
           </div>
 
@@ -1061,7 +1061,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               </div>
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">
-                  دقة تمييز الكميات بسرعة
+                  صحة الإجابات في مهمة تمييز الكميات
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0
