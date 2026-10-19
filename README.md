@@ -32,7 +32,7 @@
   $$\text{PAE (\%)} = \frac{|\text{userEstimate} - \text{target}|}{\text{scaleMax} - \text{scaleMin}} \times 100$$
   بحيث يُقسّم الخطأ في المهمة الأولى على المدى `100` (`0–100`) وفي المهمة الثانية على المدى `200` (`0–200`).
 
-### 5. التوصيف العلمي الدقيق لمحرك الفرز والمئينات (Heuristic Screening vs. Validated Clinical Diagnosis)
+### 5. التوصيف العلمي الدقيق لمحرك الفرز (Heuristic Screening vs. Validated Clinical Diagnosis)
 * **طبيعة محرك النظر والفرز:** تستخدم `runOculomotorHeuristicInference` خمس قواعد وأوزانًا مكتوبة يدويًا مع حالة زمنية مُمهدة. ليست هذه Random Forest أو RNN مدرّبًا، ولا نموذج شركة Lexplore. لم تُعايَر العتبات والأوزان على قاعدة بيانات سريرية ممثلة.
 * درجات الخطورة الحالية مؤشرات استدلالية غير معيارية وليست مئينات سكانية. لا تتوفر بعد دراسة تحقق مستقلة أو قيم حساسية ونوعية محسوبة على عينة طلاب مناسبة.
 
@@ -80,7 +80,7 @@
 
 ## 🚀 التشغيل، التحقق البرمجي، والاختبارات الآلية (CI & Testing)
 
-تتضمن المنصة خط تكامل مستمر (`.github/workflows/ci.yml`) مع حماية صريحة لملف البيانات الأساسي (`!/src/data/seedData.ts` في `.gitignore`)، وطبقة توافق لبناء Rollup/Vite مع حزم الرؤية الحاسوبية (`src/shims/mediapipe-legacy-shims.ts`)، وحزمة اختبارات وحدات (**`25 اختباراً آلياً`** عبر `node:test`) تتحقق من:
+تتضمن المنصة خط تكامل مستمر (`.github/workflows/ci.yml`) مع حماية صريحة لملف البيانات الأساسي (`!/src/data/seedData.ts` في `.gitignore`)، وطبقة توافق لبناء Rollup/Vite مع حزم الرؤية الحاسوبية (`src/shims/mediapipe-legacy-shims.ts`)، وحزمة اختبارات وحدات عبر `node:test` تتحقق من:
 * سلامة بنك النصوص العربية الـ **7** عبر جميع الصفوف (`2، 3، 4، 5، 6`) بطول `52–65` كلمة لكل نص، وتوازن مفاتيح الإجابة للأسئلة الـ **28** (`9 A / 10 B / 9 C`)، ومستويات التشكيل الـ **3** (`full`، `partial`، `minimal`).
 * تأثير اختيار اللهجة (`gulf`، `egyptian`، `levantine`، `maghrebi`، `msa`) والسياق فعلياً في نتائج `analyzeTextWithDyslexico` و`evaluateOralReadingAlignment`.
 * حساب دقة المعايرة خارج عينة التدريب (`LOOCV` و `Independent Holdout`) دون تقييد اصطناعي عند `82%`.
