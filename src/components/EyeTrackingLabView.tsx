@@ -1939,12 +1939,22 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const isLowCameraReliability =
       isManualDemoMode ||
       !cameraActive ||
+      !Number.isFinite(calibrationModel.accuracyPercent) ||
       calibrationModel.accuracyPercent < 70;
 
-    // Fail closed: never issue a report from simulated or insufficiently validated gaze data.
-    if (!eyeMetrics.isSufficientGazeData) {
+    // Match the server-side evidence gate before showing any report in the client.
+    const hasValidGazeCoverage =
+      eyeMetrics.isSufficientGazeData &&
+      Number.isFinite(eyeMetrics.gazeCoveragePercent) &&
+      eyeMetrics.gazeCoveragePercent >= 25 &&
+      Number.isFinite(eyeMetrics.observedWordCount) &&
+      eyeMetrics.observedWordCount >= 4 &&
+      Number.isFinite(eyeMetrics.totalPassageWordCount) &&
+      eyeMetrics.totalPassageWordCount > 0 &&
+      eyeMetrics.observedWordCount <= eyeMetrics.totalPassageWordCount;
+    if (!hasValidGazeCoverage) {
       setIsAnalyzing(false);
-      setComprehensionError('لا يمكن إصدار التقرير لأن تغطية تتبع العين الفعلية غير كافية. أعد جلسة القراءة حتى يتحقق الحد الأدنى من الكلمات المرصودة.');
+      setComprehensionError('لا يمكن إصدار التقرير: يلزم رصد أربع كلمات على الأقل وتغطية بصرية فعلية لا تقل عن 25% من النص. أعد جلسة القراءة بعد التأكد من ظهور الوجه والعينين.');
       return;
     }
     if (isLowCameraReliability) {
