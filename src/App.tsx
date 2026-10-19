@@ -249,11 +249,13 @@ export default function App() {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, ...updated } : s))
-    );
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
+      setShowClinicalLogin(true);
+      return;
+    }
     try {
-      await authenticatedFetch(
+      const response = await authenticatedFetch(
         `/api/students/${encodeURIComponent(studentId)}`,
         {
           method: 'PATCH',
@@ -261,31 +263,48 @@ export default function App() {
           body: JSON.stringify(updated),
         }
       );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يُحفظ تحديث السجل في الخادم.');
+        return;
+      }
+      setStudents((prev) =>
+        prev.map((student) => (student.id === studentId ? { ...student, ...updated } : student))
+      );
+      setAiStatusBanner('تم حفظ تحديث السجل في التخزين المشفر.');
     } catch {
-      // Updated locally
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
     }
   };
 
   const handleDeleteStudentRecord = async (studentId: string) => {
-    if (students.length <= 1) return;
-    const target = students.find((s) => s.id === studentId);
-    const remaining = students.filter((s) => s.id !== studentId);
-    setStudents(remaining);
-    if (selectedStudentId === studentId && remaining.length > 0) {
-      setSelectedStudentId(remaining[0].id);
+    if (!clinicalSession) {
+      setAiStatusBanner('يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
+      setShowClinicalLogin(true);
+      return;
     }
+    if (students.length <= 1) return;
+    const target = students.find((student) => student.id === studentId);
     try {
-      await authenticatedFetch(
+      const response = await authenticatedFetch(
         `/api/students/${encodeURIComponent(studentId)}`,
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يتم حذف السجل من الخادم.');
+        return;
+      }
+      const remaining = students.filter((student) => student.id !== studentId);
+      setStudents(remaining);
+      if (selectedStudentId === studentId && remaining.length > 0) {
+        setSelectedStudentId(remaining[0].id);
+      }
       setAiStatusBanner(
-        `تم حذف سجل الطالب (${target?.name || studentId}) نهائياً التزاماً بحق الخصوصية ومحو البيانات.`
+        `تم حذف سجل الطالب (${target?.name || studentId}) من التخزين المشفر.`
       );
     } catch {
-      // Removed locally
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حذف السجل.');
     }
   };
 
