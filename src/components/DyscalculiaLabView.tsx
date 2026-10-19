@@ -27,6 +27,7 @@ interface DyscalculiaLabViewProps {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => void;
+  onOpenFinalReport?: () => void;
 }
 
 const SUBITIZING_PATTERNS: {
@@ -123,6 +124,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   selectedStudentId,
   onSelectStudent,
   onUpdateStudentMath,
+  onOpenFinalReport,
 }) => {
   const activeStudent =
     students.find((s) => s.id === selectedStudentId) || students[0];
@@ -420,6 +422,17 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               <span>إعادة الضبط</span>
             </button>
+
+            {onOpenFinalReport && (
+              <button
+                type="button"
+                onClick={onOpenFinalReport}
+                className="px-4 py-2 text-xs font-bold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-xl transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-2xs"
+              >
+                <span>الخطوة التالية: التقرير النهائي</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -444,7 +457,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠١
               </div>
-              <div className="text-sm mt-0.5">الإدراك الكمي الفوري (Subitizing)</div>
+              <div className="text-sm mt-0.5">الإدراك الكمي الفوري</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredSubitizingCount}/3
@@ -466,7 +479,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠٢
               </div>
-              <div className="text-sm mt-0.5">خط الأعداد المكاني (PAE)</div>
+              <div className="text-sm mt-0.5">التقدير المكاني على خط الأعداد</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredNumberLineCount}/2
@@ -507,7 +520,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    ٠١. اختبار الإدراك الكمي الفوري (Subitizing Speed & Accuracy)
+                    ٠١. اختبار الإدراك الكمي الفوري وسرعة التقاط العدد
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     انقر على العدد المطابق لعدد النقاط في كل مصفوفة بأسرع ما يمكن لحساب زمن الاستجابة بالملي ثانية
@@ -620,7 +633,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    ٠٢. التقدير المكاني على خط الأعداد غير المدرّج (Normalized PAE)
+                    ٠٢. التقدير المكاني على خط الأعداد غير المدرّج
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     حرّك المؤشر أو اضغط «تثبيت التقدير» لكل مهمة لتسجيل موقع العدد المتوقع (المكتمل: {answeredNumberLineCount}/2)
@@ -1038,7 +1051,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="divide-y divide-slate-100 text-xs">
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">
-                  نسبة الخطأ في خط الأعداد (PAE)
+                  نسبة الخطأ في خط الأعداد
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredNumberLineCount > 0
@@ -1048,7 +1061,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               </div>
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">
-                  دقة الإدراك الكمي (Subitizing)
+                  دقة الإدراك الكمي الفوري
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0
@@ -1059,7 +1072,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">متوسط زمن التقاط الكمية</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {computedMetrics.avgSubitizingMs} ms
+                  {answeredSubitizingCount > 0
+                    ? `${computedMetrics.avgSubitizingMs} مللي ثانية`
+                    : '—'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">

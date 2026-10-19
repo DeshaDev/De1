@@ -28,29 +28,57 @@ const CLINICAL_SESSION_SECRET =
   process.env.CLINICAL_SESSION_SECRET ||
   'baseera-rbac-hmac-secret-key-2026';
 
+function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
+  const cleanName = (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim();
+  const cleanSchool =
+    s.schoolName === 'نموذج تجريبي توضيحي — مدرسة الرواد'
+      ? 'مدرسة الرواد الابتدائية'
+      : s.schoolName;
+  const cleanSummary = s.clinicalReport?.clinicalSummary
+    ? s.clinicalReport.clinicalSummary
+        .replace(/^\[سجل تجريبي توضيحي[^\]]*\]\s*/g, '')
+        .trim()
+    : '';
+  return {
+    ...s,
+    name: cleanName,
+    schoolName: cleanSchool,
+    clinicalReport: s.clinicalReport
+      ? {
+          ...s.clinicalReport,
+          clinicalSummary: cleanSummary || s.clinicalReport.clinicalSummary,
+        }
+      : s.clinicalReport,
+  };
+}
+
 function loadPersistedStudents(): StudentRecord[] {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     if (!fs.existsSync(STORE_PATH)) {
-      const seeded = INITIAL_STUDENTS.map((s) => ({
-        ...s,
-        dyscalculiaAssessed: s.dyscalculiaAssessed ?? true,
-        guardianConsentGiven: true,
-      }));
+      const seeded = INITIAL_STUDENTS.map((s) =>
+        sanitizeStudentRecord({
+          ...s,
+          dyscalculiaAssessed: s.dyscalculiaAssessed ?? true,
+          guardianConsentGiven: true,
+        })
+      );
       fs.writeFileSync(STORE_PATH, JSON.stringify(seeded, null, 2), 'utf8');
       return seeded;
     }
     const raw = fs.readFileSync(STORE_PATH, 'utf8');
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      const cleaned = parsed.map((s: StudentRecord) => sanitizeStudentRecord(s));
+      fs.writeFileSync(STORE_PATH, JSON.stringify(cleaned, null, 2), 'utf8');
+      return cleaned;
     }
   } catch (err) {
     console.warn('Failed to read clinical-store.json, using seed data:', err);
   }
-  return INITIAL_STUDENTS;
+  return INITIAL_STUDENTS.map(sanitizeStudentRecord);
 }
 
 function savePersistedStudents(records: StudentRecord[]): void {

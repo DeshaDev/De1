@@ -2,20 +2,62 @@
 
 @layer base {
   :root {
-    /* Primitive & Semantic Design Tokens (Enterprise Clinical System) */
     --font-display: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
-    --font-sans: 'IBM Plex Sans Arabic', sans-serif;
+    --font-sans: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
     --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', monospace;
 
+    --surface-canvas: #FAF6EE;
+    --surface-card: #FFFDF9;
+    --surface-subtle: #F3EDE0;
+    --border-hairline: #E5DEC9;
+    --text-primary: #1E293B;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --accent-primary: #0284C7;
+    --accent-primary-hover: #0369A1;
+  }
+
+  [data-dyslexia-theme="cream"] {
+    --surface-canvas: #FAF6EE;
+    --surface-card: #FFFDF9;
+    --surface-subtle: #F3EDE0;
+    --border-hairline: #E5DEC9;
+    --text-primary: #1E293B;
+  }
+
+  [data-dyslexia-theme="sage"] {
+    --surface-canvas: #EFF7F3;
+    --surface-card: #FAFDFA;
+    --surface-subtle: #E2F0E9;
+    --border-hairline: #CBE3D7;
+    --text-primary: #0F291E;
+  }
+
+  [data-dyslexia-theme="sky"] {
+    --surface-canvas: #EFF6FF;
+    --surface-card: #F8FBFF;
+    --surface-subtle: #E0EEFF;
+    --border-hairline: #C7DFFB;
+    --text-primary: #0F172A;
+  }
+
+  [data-dyslexia-theme="lab"] {
     --surface-canvas: #F8FAFC;
     --surface-card: #FFFFFF;
     --surface-subtle: #F1F5F9;
     --border-hairline: #E2E8F0;
     --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
-    --accent-primary: #0284C7;
-    --accent-primary-hover: #0369A1;
+  }
+
+  [data-dyslexia-theme="night"] {
+    color-scheme: dark;
+    --surface-canvas: #0B1120;
+    --surface-card: #131C31;
+    --surface-subtle: #1E293B;
+    --border-hairline: #334155;
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
   }
 
   body {
@@ -26,7 +68,10 @@
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    line-height: 1.6;
+    line-height: 1.8;
+    word-spacing: 0.06em;
+    transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      color 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   h1, h2, h3, h4, .font-display {
@@ -44,5 +89,291 @@
     font-family: 'OpenDyslexic', 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
     font-weight: 600;
     text-underline-offset: 6px;
+  }
+}
+
+/* Unlayered Dyslexia Spacing & Scale Modes (overrides utility classes cleanly) */
+[data-dyslexia-spacing="expanded"] {
+  word-spacing: 0.22em;
+  letter-spacing: 0.015em;
+  line-height: 2.0;
+}
+
+[data-dyslexia-spacing="expanded"] p,
+[data-dyslexia-spacing="expanded"] li {
+  line-height: 2.05 !important;
+  word-spacing: 0.24em !important;
+}
+
+[data-dyslexia-spacing="xl"] {
+  font-size: 106%;
+  word-spacing: 0.26em;
+  letter-spacing: 0.02em;
+  line-height: 2.1;
+}
+
+[data-dyslexia-spacing="xl"] p,
+[data-dyslexia-spacing="xl"] li {
+  line-height: 2.1 !important;
+  word-spacing: 0.26em !important;
+}
+
+/* Surface tinting for light warm themes */
+[data-dyslexia-theme="cream"] .bg-white {
+  background-color: #FFFDF9;
+}
+
+[data-dyslexia-theme="sage"] .bg-white {
+  background-color: #FAFDFA;
+}
+
+[data-dyslexia-theme="sky"] .bg-white {
+  background-color: #F9FCFF;
+}
+
+/* ============================================================================
+   UNLAYERED HIGH-CONTRAST NIGHT MODE OVERRIDES (Zero Glare, Zero White-on-White)
+   ============================================================================ */
+[data-dyslexia-theme="night"] {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+[data-dyslexia-theme="night"] header,
+[data-dyslexia-theme="night"] footer,
+[data-dyslexia-theme="night"] .bg-white,
+[data-dyslexia-theme="night"] [class*="bg-white/"],
+[data-dyslexia-theme="night"] .bg-\[\#FFFDF9\],
+[data-dyslexia-theme="night"] .bg-\[\#FAFDFA\],
+[data-dyslexia-theme="night"] .bg-\[\#F8FBFF\] {
+  background-color: #131C31 !important;
+  border-color: #293548 !important;
+  color: #F8FAFC !important;
+}
+
+[data-dyslexia-theme="night"] .bg-slate-50,
+[data-dyslexia-theme="night"] [class*="bg-slate-50/"],
+[data-dyslexia-theme="night"] .bg-slate-100,
+[data-dyslexia-theme="night"] [class*="bg-slate-100/"],
+[data-dyslexia-theme="night"] .bg-slate-200,
+[data-dyslexia-theme="night"] [class*="bg-slate-200/"],
+[data-dyslexia-theme="night"] .bg-\[\#FAF6EE\],
+[data-dyslexia-theme="night"] .bg-\[\#F3EDE0\],
+[data-dyslexia-theme="night"] .bg-\[\#F8FAFC\] {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+/* Semantic Tinted Callouts in Night Mode */
+[data-dyslexia-theme="night"] [class*="from-[#EAEFE9]"],
+[data-dyslexia-theme="night"] [class*="from-[#F2FBF5]"],
+[data-dyslexia-theme="night"] [class*="from-slate-50"] {
+  background-image: linear-gradient(135deg, #131C31 0%, #0F2922 100%) !important;
+  border-color: #293548 !important;
+}
+
+[data-dyslexia-theme="night"] [class*="bg-emerald-50"],
+[data-dyslexia-theme="night"] [class*="bg-emerald-100"],
+[data-dyslexia-theme="night"] [class*="bg-[#ECFDF5]"],
+[data-dyslexia-theme="night"] [class*="bg-[#F0FDF4]"] {
+  background-color: rgba(6, 78, 59, 0.45) !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  color: #D1FAE5 !important;
+}
+
+[data-dyslexia-theme="night"] [class*="bg-amber-50"],
+[data-dyslexia-theme="night"] [class*="bg-amber-100"] {
+  background-color: rgba(120, 53, 15, 0.45) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  color: #FEF3C7 !important;
+}
+
+[data-dyslexia-theme="night"] [class*="bg-rose-50"],
+[data-dyslexia-theme="night"] [class*="bg-rose-100"],
+[data-dyslexia-theme="night"] [class*="bg-red-50"] {
+  background-color: rgba(136, 19, 55, 0.45) !important;
+  border-color: rgba(244, 63, 94, 0.45) !important;
+  color: #FFE4E6 !important;
+}
+
+[data-dyslexia-theme="night"] [class*="bg-sky-50"],
+[data-dyslexia-theme="night"] [class*="bg-sky-100"],
+[data-dyslexia-theme="night"] [class*="bg-blue-50"] {
+  background-color: rgba(12, 74, 110, 0.45) !important;
+  border-color: rgba(14, 165, 233, 0.45) !important;
+  color: #E0F2FE !important;
+}
+
+/* Form Controls in Night Mode */
+[data-dyslexia-theme="night"] input,
+[data-dyslexia-theme="night"] select,
+[data-dyslexia-theme="night"] textarea {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+
+[data-dyslexia-theme="night"] input::placeholder,
+[data-dyslexia-theme="night"] textarea::placeholder {
+  color: #64748B !important;
+}
+
+/* Typography Contrast in Night Mode */
+[data-dyslexia-theme="night"] .text-slate-950,
+[data-dyslexia-theme="night"] .text-slate-900,
+[data-dyslexia-theme="night"] .text-slate-800,
+[data-dyslexia-theme="night"] .text-\[\#18181B\] {
+  color: #F8FAFC !important;
+}
+
+[data-dyslexia-theme="night"] .text-slate-700,
+[data-dyslexia-theme="night"] .text-slate-600 {
+  color: #CBD5E1 !important;
+}
+
+[data-dyslexia-theme="night"] .text-slate-500,
+[data-dyslexia-theme="night"] .text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+[data-dyslexia-theme="night"] .text-emerald-950,
+[data-dyslexia-theme="night"] .text-emerald-900,
+[data-dyslexia-theme="night"] .text-emerald-800,
+[data-dyslexia-theme="night"] .text-emerald-700,
+[data-dyslexia-theme="night"] .text-\[\#15803D\],
+[data-dyslexia-theme="night"] .text-\[\#064E3B\],
+[data-dyslexia-theme="night"] .text-\[\#065F46\],
+[data-dyslexia-theme="night"] .text-\[\#059669\] {
+  color: #34D399 !important;
+}
+
+[data-dyslexia-theme="night"] .text-amber-950,
+[data-dyslexia-theme="night"] .text-amber-900,
+[data-dyslexia-theme="night"] .text-amber-800,
+[data-dyslexia-theme="night"] .text-amber-700,
+[data-dyslexia-theme="night"] .text-\[\#D97706\] {
+  color: #FBBF24 !important;
+}
+
+[data-dyslexia-theme="night"] .text-rose-950,
+[data-dyslexia-theme="night"] .text-rose-900,
+[data-dyslexia-theme="night"] .text-rose-800,
+[data-dyslexia-theme="night"] .text-rose-700,
+[data-dyslexia-theme="night"] .text-\[\#DC2626\] {
+  color: #FB7185 !important;
+}
+
+[data-dyslexia-theme="night"] .text-sky-950,
+[data-dyslexia-theme="night"] .text-sky-900,
+[data-dyslexia-theme="night"] .text-sky-800,
+[data-dyslexia-theme="night"] .text-sky-700,
+[data-dyslexia-theme="night"] .text-\[\#0284C7\] {
+  color: #38BDF8 !important;
+}
+
+/* Active dark buttons stand out clearly against dark cards */
+[data-dyslexia-theme="night"] button.bg-\[\#0F172A\],
+[data-dyslexia-theme="night"] button.bg-\[\#18181B\] {
+  background-color: #15803D !important;
+  color: #FFFFFF !important;
+  border-color: #34D399 !important;
+}
+
+/* SVG Dots & Labels in Night Mode (Subitizing dots & chart labels) */
+[data-dyslexia-theme="night"] svg circle[fill="#0F172A"] {
+  fill: #38BDF8 !important;
+}
+
+[data-dyslexia-theme="night"] svg text[fill="#0F172A"],
+[data-dyslexia-theme="night"] svg text[fill="#475569"] {
+  fill: #F1F5F9 !important;
+}
+
+/* Borders & Dividers in Night Mode */
+[data-dyslexia-theme="night"] .border-slate-100,
+[data-dyslexia-theme="night"] .border-slate-200,
+[data-dyslexia-theme="night"] [class*="border-slate-200/"],
+[data-dyslexia-theme="night"] .border-slate-300,
+[data-dyslexia-theme="night"] [class*="border-slate-300/"],
+[data-dyslexia-theme="night"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+[data-dyslexia-theme="night"] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #293548 !important;
+}
+
+/* Compositor-Only Smooth Keyframe Animations */
+@keyframes baseeraFadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes baseeraWaveScale {
+  0%, 100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes baseeraCrowdedJitter {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  33% {
+    transform: translate3d(-1.5px, 0.8px, 0);
+  }
+  66% {
+    transform: translate3d(1.5px, -0.8px, 0);
+  }
+}
+
+@keyframes baseeraFocusBeamGlow {
+  0%, 100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+.animate-fade-slide-up {
+  animation: baseeraFadeSlideUp 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-wave-bar {
+  transform-origin: bottom;
+  animation: baseeraWaveScale 850ms ease-in-out infinite;
+}
+
+.animate-crowded-jitter {
+  animation: baseeraCrowdedJitter 2.2s ease-in-out infinite;
+}
+
+.animate-focus-beam {
+  animation: baseeraFocusBeamGlow 2.4s ease-in-out infinite;
+}
+
+.hover-lift-card {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift-card:hover {
+  transform: translate3d(0, -3px, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

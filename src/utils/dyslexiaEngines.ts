@@ -1065,35 +1065,35 @@ export interface ArabicDialectProfile {
 export const ARABIC_DIALECT_PROFILES: ArabicDialectProfile[] = [
   {
     code: 'gulf',
-    labelAr: 'اللهجة الخليجية والسعودية (ar-SA)',
+    labelAr: 'اللهجة الخليجية والسعودية',
     speechRecognitionLang: 'ar-SA',
     phonologicalNotesAr:
       'تراعي نطق القاف (گـ/ك)، إبدال الجيم ياءً في بعض المفردات، وتجانس الظاء والضاد (منضار/منظار).',
   },
   {
     code: 'egyptian',
-    labelAr: 'اللهجة المصرية (ar-EG)',
+    labelAr: 'اللهجة المصرية',
     speechRecognitionLang: 'ar-EG',
     phonologicalNotesAr:
       'تراعي إبدال الثاء (ت/س)، الذال (د/ز)، الظاء (ض/ز)، ونطق القاف همزة (ألم/قلم، دهب/ذهب، تلاميز/تلاميذ).',
   },
   {
     code: 'levantine',
-    labelAr: 'اللهجة الشامية (ar-JO / ar-LB)',
+    labelAr: 'اللهجة الشامية',
     speechRecognitionLang: 'ar-JO',
     phonologicalNotesAr:
       'تراعي إبدال الثاء تاءً والذال دالاً أو زاياً وتخفيف الهمزة وتسهيل التاء المربوطة.',
   },
   {
     code: 'maghrebi',
-    labelAr: 'اللهجة المغاربية (ar-MA / ar-DZ)',
+    labelAr: 'اللهجة المغاربية',
     speechRecognitionLang: 'ar-MA',
     phonologicalNotesAr:
       'تراعي تسكين المقطع الأول وتفخيم التاء إلى طاء في جوار الحروف المفخمة ومفردات الدارجة المدرسية.',
   },
   {
     code: 'msa',
-    labelAr: 'العربية الفصحى المعيارية (MSA)',
+    labelAr: 'العربية الفصحى المعيارية',
     speechRecognitionLang: 'ar-SA',
     phonologicalNotesAr:
       'معيار النطق المدرسي الفصيح مع التمييز الكامل بين مخارج الحروف اللثوية والمفخمة.',

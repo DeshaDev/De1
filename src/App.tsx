@@ -22,18 +22,27 @@ import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
+import { HomeLandingView, AppTabId } from './components/HomeLandingView';
+import {
+  DyslexiaComfortBar,
+  DyslexiaSurfaceTheme,
+  DyslexiaSpacingMode,
+} from './components/DyslexiaComfortBar';
 
-type ActiveTab =
-  | 'dashboard'
-  | 'eye-lab'
-  | 'dyscalculia-lab'
-  | 'adaptive-reader'
-  | 'algorithms-lab';
+type ActiveTab = AppTabId;
 
 type DashboardSubView = 'roster' | 'scanpath' | 'report';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autostart') === '1' || params.get('tab') === 'dashboard') {
+        return 'dashboard';
+      }
+    }
+    return 'home';
+  });
   const [dashboardSubView, setDashboardSubView] =
     useState<DashboardSubView>('roster');
   const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
@@ -54,6 +63,27 @@ export default function App() {
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiStatusBanner, setAiStatusBanner] = useState<string>('');
 
+  // Site-wide Dyslexia Accessibility & Comfort Studio state
+  const [surfaceTheme, setSurfaceTheme] =
+    useState<DyslexiaSurfaceTheme>('cream');
+  const [spacingMode, setSpacingMode] =
+    useState<DyslexiaSpacingMode>('standard');
+  const [readingRulerEnabled, setReadingRulerEnabled] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute(
+        'data-dyslexia-theme',
+        surfaceTheme
+      );
+      document.documentElement.setAttribute(
+        'data-dyslexia-spacing',
+        spacingMode
+      );
+    }
+  }, [surfaceTheme, spacingMode]);
+
   // Load persistent student records from RBAC-protected server on mount
   useEffect(() => {
     let cancelled = false;
@@ -66,11 +96,15 @@ export default function App() {
           Array.isArray(data.students) &&
           data.students.length > 0
         ) {
-          setStudents(data.students);
+          const normalized = data.students.map((s: StudentRecord) => ({
+            ...s,
+            name: (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim(),
+          }));
+          setStudents(normalized);
           setSelectedStudentId((prev) =>
-            data.students.some((s: StudentRecord) => s.id === prev)
+            normalized.some((s: StudentRecord) => s.id === prev)
               ? prev
-              : data.students[0].id
+              : normalized[0].id
           );
           setIsPersistedStoreLoaded(true);
         }
@@ -135,6 +169,47 @@ export default function App() {
     } catch {
       // Saved in local state if network fails
     }
+  };
+
+  const handleStartMockUserJourney = (
+    name: string,
+    grade: number,
+    roleLabel: string
+  ) => {
+    const cleanName = (name.trim() || 'نواف عبد العزيز القحطاني')
+      .replace(/\s+(بن|بنت)\s+/g, ' ')
+      .trim();
+    const existing = students.find((s) => s.name === cleanName);
+    if (existing) {
+      setSelectedStudentId(existing.id);
+    } else {
+      const template = students[0];
+      const newMockStudent: StudentRecord = {
+        ...template,
+        id: `stu-mock-${Date.now()}`,
+        name: cleanName,
+        gradeLevel: grade,
+        schoolName: `جلسة فحص (${roleLabel})`,
+        isDemoRecord: false,
+        guardianConsentGiven: true,
+      };
+      setStudents((prev) => [newMockStudent, ...prev]);
+      setSelectedStudentId(newMockStudent.id);
+    }
+    setActiveTab('eye-lab');
+    setAiStatusBanner(
+      `تم تسجيل الطالب «${cleanName}» (الصف ${grade}) — ابدأ الآن معايرة الكاميرا وفحص القراءة.`
+    );
+  };
+
+  const handleSelectExistingDemoJourney = (
+    studentId: string,
+    targetTab: ActiveTab
+  ) => {
+    const stu = students.find((s) => s.id === studentId) || students[0];
+    setSelectedStudentId(stu.id);
+    setActiveTab(targetTab);
+    setAiStatusBanner('');
   };
 
   const handleUpdateStudentMath = async (
@@ -242,80 +317,94 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden flex flex-col bg-[#F8FAFC] text-[#0F172A]">
-      {/* Strict 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-6 py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
+    <div
+      data-dyslexia-theme={surfaceTheme}
+      data-dyslexia-spacing={spacingMode}
+      className={`min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
+        surfaceTheme === 'night'
+          ? 'bg-[#0B1120] text-slate-100'
+          : surfaceTheme === 'sage'
+            ? 'bg-[#EFF7F3] text-[#0F291E]'
+            : surfaceTheme === 'sky'
+              ? 'bg-[#EFF6FF] text-[#0F172A]'
+              : surfaceTheme === 'lab'
+                ? 'bg-[#F8FAFC] text-[#0F172A]'
+                : 'bg-[#FAF6EE] text-[#1E293B]'
+      }`}
+    >
+      {/* Strict 3-Zone Top Bar Contract — Ordered Sequentially by User Lifecycle */}
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-4 sm:px-6 py-3 sm:py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
         {/* Zone 1: Single text element wordmark */}
         <a
           href="#top"
           onClick={(e) => {
             e.preventDefault();
-            setActiveTab('dashboard');
+            setActiveTab('home');
           }}
           className="text-xl font-bold tracking-tight text-slate-900 font-display whitespace-nowrap shrink-0"
         >
           بصيرة
         </a>
 
-        {/* Zone 2: 5 concise single-line text navigation links */}
+        {/* Zone 2: 5 Sequential User Lifecycle Links (Home -> Reading -> Math -> Reader -> Final Report) */}
         <nav
           aria-label="التنقل الرئيسي"
-          className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600"
+          className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
         >
           <button
             type="button"
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => setActiveTab('home')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
+              activeTab === 'home'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            لوحة القياس والنتائج
+            الرئيسية
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('eye-lab')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'eye-lab'
-                ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            فحص تتبع العين والقراءة
+            فحص القراءة والعين
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('dyscalculia-lab')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'dyscalculia-lab'
-                ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            فحص الديسكالكوليا والحساب
+            فحص الحساب
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('adaptive-reader')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'adaptive-reader'
-                ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            القارئ الذكي والتحليل اللغوي
+            القارئ الميسّر
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('algorithms-lab')}
+            onClick={() => setActiveTab('dashboard')}
             className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'algorithms-lab'
-                ? 'text-[#0284C7] font-semibold underline underline-offset-8 decoration-2'
+              activeTab === 'dashboard'
+                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
                 : 'hover:text-slate-900'
             }`}
           >
-            مختبر التقييم المتكيف (IRT)
+            التقرير النهائي والنتائج
           </button>
         </nav>
 
@@ -323,22 +412,24 @@ export default function App() {
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => setActiveTab('eye-lab')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
+            onClick={() =>
+              setActiveTab(activeTab === 'home' ? 'eye-lab' : 'home')
+            }
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#18181B] hover:bg-[#15803D] rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
           >
-            فحص طالب جديد
+            {activeTab === 'home' ? 'ابدأ فحص القراءة' : 'العودة للرئيسية'}
           </button>
         </div>
       </header>
 
-      {/* Mobile Navigation Strip (visible only below md) */}
+      {/* Mobile Navigation Strip (visible only below md, same sequential order) */}
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
-          { id: 'dashboard', label: 'لوحة النتائج' },
-          { id: 'eye-lab', label: 'تتبع العين' },
+          { id: 'home', label: 'الرئيسية' },
+          { id: 'eye-lab', label: 'فحص العين' },
           { id: 'dyscalculia-lab', label: 'فحص الحساب' },
-          { id: 'adaptive-reader', label: 'Dyslexico والقارئ' },
-          { id: 'algorithms-lab', label: 'مختبر IRT والصوت' },
+          { id: 'adaptive-reader', label: 'القارئ الميسّر' },
+          { id: 'dashboard', label: 'التقرير النهائي' },
         ].map((item) => (
           <button
             key={item.id}
@@ -355,23 +446,50 @@ export default function App() {
         ))}
       </div>
 
-      {/* Main Content Container */}
-      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-8 space-y-8">
-        {aiStatusBanner && (
-          <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-950">
-            <div className="flex items-center gap-2 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
-              <span>{aiStatusBanner}</span>
+      {/* Floating Accessibility & Night Mode Widget */}
+      <DyslexiaComfortBar
+        activeTab={activeTab}
+        surfaceTheme={surfaceTheme}
+        onChangeSurfaceTheme={setSurfaceTheme}
+        spacingMode={spacingMode}
+        onChangeSpacingMode={setSpacingMode}
+        readingRulerEnabled={readingRulerEnabled}
+        onToggleReadingRuler={() => setReadingRulerEnabled((prev) => !prev)}
+      />
+
+      {/* Main Content Container (Single Unified Navigation — Zero Duplicate Top Stepper Bar) */}
+      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+        <div key={activeTab} className="space-y-8 animate-fade-slide-up">
+          {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
+          {activeTab === 'home' && (
+            <HomeLandingView
+              students={students}
+              activeStudent={selectedStudent}
+              onStartMockUserJourney={handleStartMockUserJourney}
+              onSelectExistingDemoJourney={handleSelectExistingDemoJourney}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onSelectStudentReport={(studentId) => {
+                setSelectedStudentId(studentId);
+                setActiveTab('dashboard');
+                setDashboardSubView('report');
+              }}
+            />
+          )}
+          {aiStatusBanner && (
+            <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-950">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
+                <span>{aiStatusBanner}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiStatusBanner('')}
+                className="text-emerald-700 hover:underline font-medium shrink-0 cursor-pointer"
+              >
+                إغلاق
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setAiStatusBanner('')}
-              className="text-emerald-700 hover:underline font-medium shrink-0 cursor-pointer"
-            >
-              إغلاق
-            </button>
-          </div>
-        )}
+          )}
 
         {/* VIEW 1: EXECUTIVE CLINICAL DASHBOARD */}
         {activeTab === 'dashboard' && (
@@ -444,7 +562,7 @@ export default function App() {
 
                 <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    متوسط زمن التثبيت البصري (Fixation)
+                    متوسط زمن التثبيت البصري
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
@@ -480,7 +598,7 @@ export default function App() {
 
                 <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    القفزات التراجعية (Regressions)
+                    القفزات البصرية التراجعية
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
@@ -508,7 +626,7 @@ export default function App() {
 
                 <div className="p-6 space-y-1.5">
                   <div className="text-xs text-slate-500">
-                    مؤشر خط الأعداد والحساب (PAE)
+                    مؤشر خط الأعداد والحساب
                   </div>
                   {selectedStudent.mathRiskLevel === 'unassessed' ||
                   selectedStudent.dyscalculiaAssessed === false ||
@@ -595,7 +713,7 @@ export default function App() {
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>٢. خريطة المسار البصري (Scanpath)</span>
+                  <span>٢. خريطة المسار البصري</span>
                 </button>
                 <button
                   type="button"
@@ -952,7 +1070,7 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        المئين القرائي (Reading Percentile) →
+                        المئين القرائي للطالب →
                       </text>
 
                       {students.map((stu) => {
@@ -1181,7 +1299,11 @@ export default function App() {
 
         {/* VIEW 2: LIVE EYE-TRACKING READING LAB */}
         {activeTab === 'eye-lab' && (
-          <EyeTrackingLabView onCompleteSession={handleCompleteNewSession} />
+          <EyeTrackingLabView
+            onCompleteSession={handleCompleteNewSession}
+            activeStudent={selectedStudent}
+            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
+          />
         )}
 
         {/* VIEW 3: DYSCALCULIA & NUMERICAL COGNITION LAB */}
@@ -1191,6 +1313,10 @@ export default function App() {
             selectedStudentId={selectedStudentId}
             onSelectStudent={setSelectedStudentId}
             onUpdateStudentMath={handleUpdateStudentMath}
+            onOpenFinalReport={() => {
+              setActiveTab('dashboard');
+              setDashboardSubView('report');
+            }}
           />
         )}
 
@@ -1201,6 +1327,7 @@ export default function App() {
         {activeTab === 'algorithms-lab' && (
           <ClinicalAlgorithmsView selectedStudent={selectedStudent} />
         )}
+        </div>
       </main>
 
       {/* Quiet Clinical Footer */}
@@ -1209,13 +1336,13 @@ export default function App() {
           <span>
             بصيرة — المنصة العربية للفرز الأولي لمؤشرات عسر القراءة والحساب بتتبع حركة العين
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <button
               type="button"
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab('home')}
               className="hover:text-slate-900 cursor-pointer"
             >
-              لوحة النتائج
+              الرئيسية
             </button>
             <span aria-hidden="true">·</span>
             <button
@@ -1223,7 +1350,15 @@ export default function App() {
               onClick={() => setActiveTab('eye-lab')}
               className="hover:text-slate-900 cursor-pointer"
             >
-              فحص تتبع العين
+              فحص القراءة والعين
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('dyscalculia-lab')}
+              className="hover:text-slate-900 cursor-pointer"
+            >
+              فحص الحساب
             </button>
             <span aria-hidden="true">·</span>
             <button
@@ -1231,15 +1366,15 @@ export default function App() {
               onClick={() => setActiveTab('adaptive-reader')}
               className="hover:text-slate-900 cursor-pointer"
             >
-              استوديو Dyslexico
+              القارئ الميسّر
             </button>
             <span aria-hidden="true">·</span>
             <button
               type="button"
-              onClick={() => setActiveTab('algorithms-lab')}
+              onClick={() => setActiveTab('dashboard')}
               className="hover:text-slate-900 cursor-pointer"
             >
-              مختبر IRT وPyGaze
+              التقرير النهائي والنتائج
             </button>
           </div>
         </div>

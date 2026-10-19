@@ -849,12 +849,12 @@ export const ARABIC_READING_PASSAGES: ReadingPassage[] = [
 export const INITIAL_STUDENTS: StudentRecord[] = [
   {
     id: 'stu-rayan',
-    name: 'ريان بن طلال العتيبي',
+    name: 'ريان طلال العتيبي',
     isDemoRecord: true,
     gradeLevel: 3,
     ageYears: 9,
-    schoolName: 'نموذج تجريبي توضيحي — مدرسة الرواد',
-    lastScreenedDate: 'بيانات تجريبية للمعاينة',
+    schoolName: 'مدرسة الرواد الابتدائية',
+    lastScreenedDate: '٢٠٢٦/١٠/١٩',
     passageId: 'passage-g3-astronomy',
     dialectRegionAr: 'اللهجة الخليجية / السعودية',
     guardianConsentGiven: true,
@@ -897,7 +897,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
     clinicalReport: {
       clinicalSummary:
-        '[سجل تجريبي توضيحي — مؤشر فرز أولي استرشادي] يُظهر رصد حركة العين في هذا النموذج التوضيحي بطئاً في فك ترميز الكلمات الطويلة المتصلة بضمائر ولواحق مثل (لِمُشَاهَدَةِ، مُلَاحَظَاتِهِمْ)، مع ارتفاع معدل الرمش (٢٦ رمشة/دقيقة) وطول متوسط التثبيت البصري (445ms). يوصى بتجربة نص بمستوى تأسيسي ومراجعة مختص صعوبات التعلم.',
+        'يُظهر رصد حركة العين للطالب ريان طلال العتيبي بطئاً في فك ترميز الكلمات الطويلة المتصلة بضمائر ولواحق مثل (لِمُشَاهَدَةِ، مُلَاحَظَاتِهِمْ)، مع ارتفاع معدل الرمش (٢٦ رمشة/دقيقة) وطول متوسط التثبيت البصري (445ms). يوصى بالتدريب عبر القارئ المقطعي الميسّر ومراجعة مختص صعوبات التعلم.',
       ocularMotorAnalysis:
         'تُبيّن خريطة مسار النظر تجمّع دوائر تثبيت طويلة فوق المقاطع الوسطى للكلمات الرباعية والخماسية، مع 14 قفزة تراجعية (Regressions) نحو اليمين لإعادة التحقق من مواقع النقاط في الحروف المتشابهة (ظ/ض، ذ/د).',
       orthographicAndPhonologicalPatterns:
@@ -930,12 +930,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
   },
   {
     id: 'stu-layla',
-    name: 'ليلى بنت سامي المنصور',
+    name: 'ليلى سامي المنصور',
     isDemoRecord: true,
     gradeLevel: 3,
     ageYears: 9,
-    schoolName: 'نموذج تجريبي توضيحي — مدرسة الرواد',
-    lastScreenedDate: 'بيانات تجريبية للمعاينة',
+    schoolName: 'مدرسة الرواد الابتدائية',
+    lastScreenedDate: '٢٠٢٦/١٠/١٩',
     passageId: 'passage-g3-astronomy',
     dialectRegionAr: 'اللهجة الشامية / الفصحى',
     guardianConsentGiven: true,
@@ -972,7 +972,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
     clinicalReport: {
       clinicalSummary:
-        '[سجل تجريبي توضيحي — مؤشر فرز أولي استرشادي] تتمتع الطالبة ليلى في هذا النموذج التوضيحي بطلاقة قرائية متميزة (المئين 82) مع حركة عين منتظمة ومعدل رمش طبيعي مريح (١٢ رمشة/دقيقة)، غير أن فحص الحس العددي يُظهر مؤشر فرز مرتفع في تقدير الكميات المكانية على خط الأعداد (PAE 21.5%).',
+        'تتمتع الطالبة ليلى سامي المنصور بطلاقة قرائية متميزة (المئين 82) مع حركة عين منتظمة ومعدل رمش طبيعي مريح (١٢ رمشة/دقيقة)، غير أن فحص الحس العددي يُظهر مؤشر فرز مرتفع في تقدير الكميات المكانية على خط الأعداد (PAE 21.5%).',
       ocularMotorAnalysis:
         'حركة العين أثناء قراءة النصوص العربية سلسة ومنتظمة بمتوسط تثبيت 235ms دون إجهاد بصري، بينما يزداد التردد الزمني عند مقارنة المجموعات النقطية والأعداد.',
       orthographicAndPhonologicalPatterns:
@@ -999,12 +999,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
   },
   {
     id: 'stu-omar',
-    name: 'عمر بن خالد الدوسري',
+    name: 'عمر خالد الدوسري',
     isDemoRecord: true,
     gradeLevel: 4,
     ageYears: 10,
-    schoolName: 'نموذج تجريبي توضيحي — مدرسة الرواد',
-    lastScreenedDate: 'بيانات تجريبية للمعاينة',
+    schoolName: 'مدرسة الرواد الابتدائية',
+    lastScreenedDate: '٢٠٢٦/١٠/١٩',
     passageId: 'passage-g4-oasis',
     dialectRegionAr: 'اللهجة المصرية / الخليجية',
     guardianConsentGiven: true,
@@ -1041,7 +1041,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
     clinicalReport: {
       clinicalSummary:
-        '[سجل تجريبي توضيحي — مؤشر فرز أولي استرشادي] يُظهر الطالب عمر في هذا النموذج التوضيحي فهماً قرائياً كاملاً (100%) وحساً عددياً طبيعياً، مع تأنٍّ نسبي عند قراءة المفردات التراثية الأقل شيوعاً في معجمه اليومي مثل (الأفلاجِ، الوارفةِ).',
+        'يُظهر الطالب عمر خالد الدوسري فهماً قرائياً كاملاً (100%) وحساً عددياً طبيعياً، مع تأنٍّ نسبي عند قراءة المفردات التراثية الأقل شيوعاً في معجمه اليومي مثل (الأفلاجِ، الوارفةِ).',
       ocularMotorAnalysis:
         'متوسط تثبيت معتدل (345ms) يرتفع فقط عند الكلمات التراثية أو النادرة في المعجم المدرسي.',
       orthographicAndPhonologicalPatterns:
@@ -1062,12 +1062,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
   },
   {
     id: 'stu-sara',
-    name: 'سارة بنت فهد الزهراني',
+    name: 'سارة فهد الزهراني',
     isDemoRecord: true,
     gradeLevel: 5,
     ageYears: 11,
-    schoolName: 'نموذج تجريبي توضيحي — مدرسة الرواد',
-    lastScreenedDate: 'بيانات تجريبية للمعاينة',
+    schoolName: 'مدرسة الرواد الابتدائية',
+    lastScreenedDate: '٢٠٢٦/١٠/١٩',
     passageId: 'passage-g5-solar',
     dialectRegionAr: 'الفصحى المعيارية / الخليجية',
     guardianConsentGiven: true,
@@ -1104,7 +1104,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
     clinicalReport: {
       clinicalSummary:
-        '[سجل تجريبي توضيحي — مؤشر فرز أولي استرشادي] تُحقق الطالبة سارة في هذا النموذج التوضيحي للصف الخامس أداءً متقدماً في كلٍّ من الطلاقة القرائية (المئين 91) والإدراك الكمي والمكاني (المئين 92)، مع كفاءة عالية في حركة العين عبر الأسطر.',
+        'تُحقق الطالبة سارة فهد الزهراني في الصف الخامس أداءً متقدماً في كلٍّ من الطلاقة القرائية (المئين 91) والإدراك الكمي والمكاني (المئين 92)، مع كفاءة عالية في حركة العين عبر الأسطر.',
       ocularMotorAnalysis:
         'تثبيتات بصرية قصيرة ودقيقة (210ms) وقفزات أمامية منتظمة دون تراجعات معطِّلة.',
       orthographicAndPhonologicalPatterns:

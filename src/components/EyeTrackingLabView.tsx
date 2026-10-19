@@ -54,6 +54,8 @@ import {
 
 interface EyeTrackingLabViewProps {
   onCompleteSession: (newRecord: StudentRecord) => void;
+  activeStudent?: StudentRecord;
+  onProceedToMathLab?: () => void;
 }
 
 const CALIBRATION_TARGETS = [
@@ -74,9 +76,22 @@ const SAMPLES_PER_TARGET = 3;
 
 export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   onCompleteSession,
+  activeStudent,
+  onProceedToMathLab,
 }) => {
-  const [studentName, setStudentName] = useState('نواف بن عبد العزيز القحطاني');
-  const [gradeLevel, setGradeLevel] = useState<number>(3);
+  const [studentName, setStudentName] = useState(
+    activeStudent?.name || 'نواف عبد العزيز القحطاني'
+  );
+  const [gradeLevel, setGradeLevel] = useState<number>(
+    activeStudent?.gradeLevel || 3
+  );
+
+  useEffect(() => {
+    if (activeStudent) {
+      setStudentName(activeStudent.name);
+      setGradeLevel(activeStudent.gradeLevel);
+    }
+  }, [activeStudent?.id, activeStudent?.name, activeStudent?.gradeLevel]);
   const [selectedDialect, setSelectedDialect] =
     useState<ArabicDialectCode>('gulf');
   const [selectedPassageId, setSelectedPassageId] = useState<string>(
@@ -2072,10 +2087,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="text-xs font-semibold text-[#0284C7] tracking-wide mb-1">
-            مختبر الفحص البصري والقرائي المباشر · WebGazer.js & EAR
+            الخطوة ٢ · مختبر الفحص البصري والقرائي المباشر
           </div>
           <h2 className="text-xl font-bold text-slate-900 font-display">
-            تتبع بؤبؤ العين ومعدل الرمش ومحاكاة اللهجات العربية
+            تتبع حركة بؤبؤ العين وتحليل القراءة الصوتية
           </h2>
         </div>
 
@@ -2086,7 +2101,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             className="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Target className="w-3.5 h-3.5 text-[#059669]" />
-            <span>توسيط محور البؤبؤ (Space)</span>
+            <span>توسيط محور البؤبؤ</span>
           </button>
 
           <button
@@ -2134,6 +2149,17 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               ٣. الفهم والتقرير
             </span>
           </div>
+
+          {onProceedToMathLab && (
+            <button
+              type="button"
+              onClick={onProceedToMathLab}
+              className="px-4 py-2 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <span>الخطوة التالية: فحص الحساب</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -2469,7 +2495,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>
-                      {cameraActive ? 'إيقاف الكاميرا' : 'تشغيل كاميرا WebGazer الحقيقية'}
+                      {cameraActive ? 'إيقاف الكاميرا' : 'تشغيل الكاميرا المباشرة'}
                     </span>
                   </button>
                 </div>
@@ -2530,7 +2556,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                         بث الكاميرا المباشر غير مفعّل حالياً
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        اضغط «تشغيل كاميرا WebGazer الحقيقية» أعلاه لرصد بؤبؤ العين ومعدل الرمش
+                        اضغط «تشغيل الكاميرا المباشرة» أعلاه لرصد بؤبؤ العين ومعدل الرمش
                       </p>
                     </div>
                   )}
@@ -2629,11 +2655,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                   >
-                    <option value={2}>الصف الثاني الابتدائي (65 WPM)</option>
-                    <option value={3}>الصف الثالث الابتدائي (85 WPM)</option>
-                    <option value={4}>الصف الرابع الابتدائي (105 WPM)</option>
-                    <option value={5}>الصف الخامس الابتدائي (120 WPM)</option>
-                    <option value={6}>الصف السادس الابتدائي (135 WPM)</option>
+                    <option value={2}>الصف الثاني الابتدائي (65 كلمة/د)</option>
+                    <option value={3}>الصف الثالث الابتدائي (85 كلمة/د)</option>
+                    <option value={4}>الصف الرابع الابتدائي (105 كلمة/د)</option>
+                    <option value={5}>الصف الخامس الابتدائي (120 كلمة/د)</option>
+                    <option value={6}>الصف السادس الابتدائي (135 كلمة/د)</option>
                   </select>
                 </div>
 
@@ -2705,7 +2731,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 />
                 <span>
                   <strong className="text-slate-900">موافقة ولي الأمر وحماية الخصوصية:</strong>{' '}
-                  أقرّ بموافقة ولي الأمر على إجراء الفحص الأولي الاسترشادي مع إخفاء الهوية الشخصية (PII Pseudonymization).
+                  أقرّ بموافقة ولي الأمر على إجراء الفحص الأولي الاسترشادي مع حماية سرية بيانات الطالب.
                 </span>
               </label>
             </div>
