@@ -726,7 +726,7 @@ export default function App() {
                     {selectedStudent.readingRiskLevel === 'high'
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
-                        ? '▲ طلاقة متوسطة تحتاج دعماً'
+                        ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
                         : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
                     · فهم {selectedStudent.comprehensionScore}%
                   </div>
@@ -1232,7 +1232,7 @@ export default function App() {
                         fill="#065F46"
                         textAnchor="middle"
                       >
-                        مؤشر الطلاقة أعلى من العتبة الداخلية (&gt;45%)
+                        مؤشر أعلى من العتبة الداخلية (&gt;45%)
                       </text>
 
                       <text
