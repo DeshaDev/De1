@@ -7,7 +7,7 @@
  */
 
 // ============================================================================
-// 1. LEXPLORE ENGINE: PYGAZE / GAZEPARSER OCULOMOTOR & ML INFERENCE
+// 1. REPOSITORY-IMPLEMENTED I-DT-STYLE OCULOMOTOR EVENT EXTRACTION
 // ============================================================================
 
 export interface RawGazeSample {
@@ -65,7 +65,7 @@ export interface HeuristicRuleVote {
   ruleId: number;
   ruleNameAr: string;
   primaryFeature: string;
-  riskProbability: number;
+  normalizedRuleScore: number;
   decisionPathAr: string;
 }
 
@@ -359,7 +359,7 @@ export function runOculomotorHeuristicInference(
   };
 
   // Five hand-authored heuristic rules; thresholds and weights are not clinically calibrated.
-  // Tree 1: Fixation Duration Thresholds (Lexical & Phonological Processing Latency)
+  // Rule 1: Fixation-duration thresholds (Lexical & Phonological Processing Latency)
   const rule1Score =
     meanFixationDurationMs >= 380
       ? 0.88
@@ -372,14 +372,14 @@ export function runOculomotorHeuristicInference(
     ruleId: 1,
     ruleNameAr: 'شجرة القرار ١: كمون التثبيت البؤري (Fixation Latency)',
     primaryFeature: 'meanFixationDurationMs',
-    riskProbability: rule1Score,
+    normalizedRuleScore: rule1Score,
     decisionPathAr:
       meanFixationDurationMs >= 310
         ? `زمن التثبيت (${meanFixationDurationMs}ms > 310ms) يشير لبطء فك الترميز الفونولوجي`
         : `زمن التثبيت (${meanFixationDurationMs}ms <= 310ms) أقل من العتبة الاسترشادية المحددة`,
   };
 
-  // Tree 2: Regressive Saccade Density
+  // Rule 2: Regressive-saccade density
   const rule2Score =
     regressionRatePercent >= 28
       ? 0.91
@@ -392,14 +392,14 @@ export function runOculomotorHeuristicInference(
     ruleId: 2,
     ruleNameAr: 'شجرة القرار ٢: كثافة القفزات التراجعية (Regressive Saccades)',
     primaryFeature: 'regressionRatePercent',
-    riskProbability: rule2Score,
+    normalizedRuleScore: rule2Score,
     decisionPathAr:
       regressionRatePercent >= 19
         ? `نسبة التراجع (${regressionRatePercent}% >= 19%) تعكس إعادة قراءة الحروف المتشابهة`
         : `نسبة التراجع (${regressionRatePercent}% < 19%) أقل من العتبة الاسترشادية المضمّنة`,
   };
 
-  // Tree 3: P90 Extreme Fixation Bursts & SD
+  // Rule 3: Upper-tail fixation duration
   const rule3Score =
     p90FixationDurationMs >= 520
       ? 0.86
@@ -410,14 +410,14 @@ export function runOculomotorHeuristicInference(
     ruleId: 3,
     ruleNameAr: 'شجرة القرار ٣: ذروة التثبيتات المطوّلة (P90 Lexical Bottleneck)',
     primaryFeature: 'p90FixationDurationMs',
-    riskProbability: rule3Score,
+    normalizedRuleScore: rule3Score,
     decisionPathAr:
       p90FixationDurationMs >= 390
-        ? `المئين ٩٠ للتثبيت (${p90FixationDurationMs}ms) يكشف تعثراً في الكلمات المركبة`
-        : `المئين ٩٠ للتثبيت (${p90FixationDurationMs}ms) متوازن عبر النص`,
+        ? `الرتبة المئوية ٩٠ داخل عينة الجلسة (${p90FixationDurationMs}ms) يكشف تعثراً في الكلمات المركبة`
+        : `الرتبة المئوية ٩٠ داخل عينة الجلسة (${p90FixationDurationMs}ms) متوازن عبر النص`,
   };
 
-  // Tree 4: Saccadic Amplitude & Visual Crowding Sensitivity
+  // Rule 4: Saccade amplitude
   const rule4Score =
     meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 55
       ? 0.78
@@ -428,20 +428,20 @@ export function runOculomotorHeuristicInference(
     ruleId: 4,
     ruleNameAr: 'شجرة القرار ٤: مدى القفزة البصرية والتزاحم (Saccadic Span)',
     primaryFeature: 'meanSaccadeAmplitudePx',
-    riskProbability: rule4Score,
+    normalizedRuleScore: rule4Score,
     decisionPathAr:
       meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 65
         ? `قصر مدى القفزة (${meanSaccadeAmplitudePx}px) يشير لقراءة حرفية مجزأة`
         : `مدى القفزة (${meanSaccadeAmplitudePx}px) يغطي مقاطع كاملة بكفاءة`,
   };
 
-  // Tree 5: Recurrent Temporal Sequence State
+  // Rule 5: Smoothed temporal heuristic state
   const rule5Score = temporalHeuristicScore / 100;
   const rule5Vote: HeuristicRuleVote = {
     ruleId: 5,
     ruleNameAr: 'شجرة القرار ٥: الشبكة التسلسلية الزمنية (Smoothed temporal heuristic rule)',
     primaryFeature: 'temporalHeuristicScore',
-    riskProbability: Math.round(rule5Score * 100) / 100,
+    normalizedRuleScore: Math.round(rule5Score * 100) / 100,
     decisionPathAr:
       temporalHeuristicScore >= 55
         ? `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يرصد تذبذباً متكرراً بين التثبيت والتراجع`
@@ -450,7 +450,7 @@ export function runOculomotorHeuristicInference(
 
   const ruleVotes = [rule1Vote, rule2Vote, rule3Vote, rule4Vote, rule5Vote];
 
-  // Weighted Ensemble Probability
+  // Weighted combination of manually selected heuristic rule scores
   const ensembleProb =
     rule1Score * 0.28 +
     rule2Score * 0.26 +
@@ -489,31 +489,31 @@ export function runOculomotorHeuristicInference(
         featureNameAr: 'متوسط زمن التثبيت البؤري (Mean Fixation Duration)',
         weightPercent: 28,
         observedValue: `${meanFixationDurationMs} ms`,
-        heuristicReferenceRange: '200 – 260 ms',
+        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 200–260 ms',
       },
       {
         featureNameAr: 'نسبة القفزات التراجعية (Regressive Saccade Ratio)',
         weightPercent: 26,
         observedValue: `${regressionRatePercent}% (${regressionsPer100Words}/100 كلمة)`,
-        heuristicReferenceRange: '8% – 15%',
+        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 8–15%',
       },
       {
         featureNameAr: 'بوابة التسلسل الزمني المتكرر (Smoothed temporal heuristic state)',
         weightPercent: 18,
         observedValue: `${temporalHeuristicScore}%`,
-        heuristicReferenceRange: '< 35%',
+        heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 35%',
       },
       {
-        featureNameAr: 'المئين ٩٠ للتثبيتات المطوّلة (P90 Fixation Burst)',
+        featureNameAr: 'الرتبة المئوية ٩٠ داخل عينة الجلسةات المطوّلة (P90 Fixation Burst)',
         weightPercent: 16,
         observedValue: `${p90FixationDurationMs} ms`,
-        heuristicReferenceRange: '< 350 ms',
+        heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 350 ms',
       },
       {
         featureNameAr: 'متوسط مدى القفزة البصرية (Mean Saccade Amplitude)',
         weightPercent: 12,
         observedValue: `${meanSaccadeAmplitudePx} px`,
-        heuristicReferenceRange: '70 – 130 px',
+        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 70–130 px',
       },
     ],
     features,
