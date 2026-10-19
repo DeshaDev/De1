@@ -627,7 +627,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             </div>
 
             <div className="p-5">
-              <div className="text-xs text-slate-500">التصنيف الاسترشادي</div>
+              <div className="text-xs text-slate-500">تصنيف استرشادي غير معياري</div>
               <div className="mt-1 text-xs font-bold text-slate-900 leading-snug">
                 {currentIRTEstimate.interpretationLabelAr}
               </div>
@@ -1142,7 +1142,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
 
             <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
               {[
-                { id: 'dyslexic', label: 'عينة اصطناعية بمؤشرات مرتفعة' },
+                { id: 'dyslexic', label: 'عينة اصطناعية لأغراض العرض' },
                 { id: 'nominal', label: 'عينة قارئ طلق' },
                 { id: 'student', label: `بيانات ${selectedStudent.name}` },
               ].map((tab) => (
