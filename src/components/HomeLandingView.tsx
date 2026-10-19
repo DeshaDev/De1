@@ -1146,189 +1146,39 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       </section>
 
       {/* =====================================================================
-          SECTION 3: AMIRA IMPACT & RESEARCH SECTION
-          ("The impact is real." + 5M+ / 4K+ / 9+ + Soft Mint Green Research Container)
+          SECTION 3: COMPACT FEATURE NAVIGATION
+          The animated reading simulation and interactive sections above/below stay intact.
           ===================================================================== */}
-      <section className="space-y-10">
-        {/* Top Impact Header & 3 Monumental Counters */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <h2
-            className="font-display font-extrabold text-[#18181B]"
-            style={{
-              fontSize: 'clamp(1.75rem, 3vw, 2.6rem)',
-              textWrap: 'balance',
-            }}
-          >
-            ما الذي يقدّمه النموذج الأولي؟
+      <section className="rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="max-w-3xl space-y-2">
+          <div className="text-xs font-bold text-[#15803D]">استكشف النموذج</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+            اختر التجربة التي تريد استكشافها
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            تجمع التجربة بين قراءة عربية متدرجة، ومؤشرات بصرية وصوتية، ومهام حسابية قصيرة. ما زالت الأوزان والعتبات بحاجة إلى تحقق مستقل على عينة مناسبة قبل الاستدلال على الدقة أو الأثر التربوي.
+            صُممت بصيرة كنموذج أولي عربي يجمع بين القراءة الجهرية، ومؤشرات النظر، ومهام الإدراك العددي، وأدوات تيسير القراءة. المؤشرات استرشادية وليست تشخيصاً معتمداً.
           </p>
         </div>
-
-        {/* 3 Monumental Impact Counters Separated by Vertical Hairlines (Matches Amira 5M+ | 4K+ | 9+) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 py-4">
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {[
+            { id: 'eye-lab' as AppTabId, title: 'القراءة وتتبع العين', description: 'جرّب المعايرة والقراءة الجهرية، وراجع جودة البيانات قبل تفسير المؤشرات.' },
+            { id: 'dyscalculia-lab' as AppTabId, title: 'مهام الحساب', description: 'استكشف التمييز الكمي وتقدير الموقع على خط الأعداد وترميز الأرقام.' },
+            { id: 'adaptive-reader' as AppTabId, title: 'القارئ العربي الميسّر', description: 'جرّب التشكيل والتباعد والتقطيع والتلوين لتحسين سهولة عرض النص.' },
+            { id: 'algorithms-lab' as AppTabId, title: 'المنهجية والحدود', description: 'اطّلع على المؤشرات المستخدمة وما لا يمكن استنتاجه من النموذج الحالي.' },
+          ].map((feature) => (
+            <button
+              key={feature.id}
+              type="button"
+              onClick={() => onNavigateTab(feature.id)}
+              className="text-right p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 transition-colors cursor-pointer group"
             >
-              3
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              وحدات تفاعلية مترابطة في النموذج
-            </div>
-          </div>
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#18181B] tabular-nums"
-            >
-              6
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              ملفات لهجية أولية للاختبار
-            </div>
-          </div>
-          <div className="py-4 px-6 text-center space-y-1">
-            <div
-              dir="ltr"
-              className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-[#15803D] tabular-nums"
-            >
-              8
-            </div>
-            <div className="text-xs font-bold tracking-wider text-slate-500">
-              محاولات موزعة على ثلاث مهام حسابية
-            </div>
-          </div>
-        </div>
-
-        {/* Soft Mint-Green Research & Evidence Split Container (Matches Amira Section 3 Screenshot) */}
-        <div className="rounded-[2rem] bg-gradient-to-br from-[#F2FBF5] via-[#EAFBF0] to-[#E2F7EB] border border-emerald-200/80 p-7 sm:p-12 shadow-xs">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            {/* Right Column (6 cols in RTL): "Better readers. Proven results. Research you can trust." */}
-            <div className="lg:col-span-6 space-y-6 text-right">
-              <h3
-                className="font-display font-extrabold text-[#18181B] leading-[1.22]"
-                style={{
-                  fontSize: 'clamp(1.65rem, 2.6vw, 2.5rem)',
-                  textWrap: 'balance',
-                }}
-              >
-                منهجية واضحة وحدود معلنة.
-              </h3>
-
-              <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                السؤال التربوي الأهم هو:{' '}
-                <strong className="font-bold text-slate-950">
-                  هل يصبح الطلاب قُرّاء أقوى وأكثر طلاقة؟
-                </strong>{' '}
-                تعرض بصيرة مؤشرات مشتقة من الجلسة، لا نتائج معيارية مثبتة. يجب تفسيرها في ضوء جودة المعايرة، وتغطية الكلمات، وجودة الصوت، وعمر الطالب وخلفيته اللغوية.
-              </p>
-
-              {/* 3-Column Hairline Stat Strip (50+ | 15 | 211K+ equivalent) */}
-              <div className="grid grid-cols-3 border-y border-emerald-900/15 py-5 divide-x divide-x-reverse divide-emerald-900/15">
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    2
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    قناتا ملاحظة: النظر والقراءة الجهرية
-                  </div>
-                </div>
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    6
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    ملفات لهجية أولية للاختبار
-                  </div>
-                </div>
-                <div className="px-3 space-y-1">
-                  <div className="text-2xl sm:text-3xl font-extrabold font-mono tabular-nums text-[#18181B]">
-                    قيد التحقق
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    لم تُثبت دقة مستقلة بعد
-                  </div>
-                </div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-sm font-bold text-slate-900">{feature.title}</span>
+                <ArrowLeft className="w-4 h-4 text-[#15803D] shrink-0 transition-transform group-hover:-translate-x-1" />
               </div>
-
-              {/* Recognized By Standards Row */}
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-                <span className="font-bold text-slate-500">
-                  مراجع للاسترشاد المنهجي:
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>أبحاث حركة العين (Rayner)</span>
-                </span>
-                <span aria-hidden="true" className="text-slate-300">
-                  ·
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>التقدير الكمي (Siegler)</span>
-                </span>
-                <span aria-hidden="true" className="text-slate-300">
-                  ·
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#065F46]">
-                  <CheckCircle2 className="w-4 h-4 text-[#15803D]" />
-                  <span>إرشادات إتاحة رقمية W3C</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Left Column (6 cols in RTL): "Independently studied." */}
-            <div className="lg:col-span-6 space-y-5 text-right lg:pr-6">
-              <h4 className="text-xl sm:text-2xl font-bold text-[#18181B] font-display">
-                كيف تعمل المؤشرات؟
-              </h4>
-
-              <div className="space-y-2.5">
-                <div className="text-xs font-bold text-[#15803D]">
-                  مختبر اللسانيات الحاسوبية وتتبع النظر
-                </div>
-                <h5 className="text-lg sm:text-2xl font-medium text-[#18181B] leading-snug">
-                  يجمع النموذج بين مؤشرات النظر ومحاذاة القراءة الجهرية، مع محاولة فصل بعض الاختلافات اللهجية عن أخطاء القراءة. لم تُثبت بعد زيادة الدقة أو منع التشخيص الخاطئ بدراسة مستقلة.
-                </h5>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('algorithms-lab')}
-                  className="pt-1 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] hover:underline cursor-pointer"
-                >
-                  <span>استعرض المنهجية وحدود النموذج</span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-              </div>
-
-              <div className="pt-4 border-t border-emerald-900/15 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('adaptive-reader')}
-                  className="w-full py-3 border-b border-emerald-900/15 flex items-center justify-between text-xs sm:text-sm font-bold text-[#18181B] hover:text-[#15803D] transition-colors cursor-pointer"
-                >
-                  <span>
-                    استكشف القارئ العربي الميسّر (التقطيع المقطعي وتلوين الحروف)
-                  </span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('dashboard')}
-                  className="w-full py-2 flex items-center justify-between text-xs sm:text-sm text-slate-800 hover:text-[#15803D] transition-colors cursor-pointer"
-                >
-                  <span>
-                    استعرض <strong className="font-bold">التقرير النهائي</strong>{' '}
-                    ولوحة نتائج الطلاب
-                  </span>
-                  <SoundwaveBarsIcon className="text-[#15803D]" />
-                </button>
-              </div>
-            </div>
-          </div>
+              <p className="text-xs leading-relaxed text-slate-600">{feature.description}</p>
+            </button>
+          ))}
         </div>
       </section>
 
