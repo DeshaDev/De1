@@ -454,7 +454,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               محركات استرشادية · تحليل قراءة · نموذج IRT تجريبي غير معاير
             </div>
             <h2 className="text-2xl font-bold text-slate-900 font-display">
-              مختبر التقييم المتكيف والخوارزميات البصرية والصوتية
+              مختبر المؤشرات البصرية والصوتية
             </h2>
           </div>
 
@@ -487,7 +487,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠١
+                المؤشرات البصرية
               </div>
               <div className="text-sm mt-0.5">
                 الاختبار المتكيف بنظرية استجابة الفقرة (2PL IRT)
@@ -511,7 +511,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠٢
+                محاذاة القراءة الجهرية
               </div>
               <div className="text-sm mt-0.5">
                 طلاقة القراءة الجهرية واللهجات العربية (WCPM)
@@ -535,7 +535,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المختبر ٠٣
+                عرض IRT التوضيحي
               </div>
               <div className="text-sm mt-0.5">
                 مؤشر استرشادي لحركة العين
@@ -924,7 +924,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 WebRTC Audio + Dialect-Aware Arabic Phonological Alignment
               </div>
               <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                مختبر التقييم الصوتي للطلاقة القرائية وفهم اللهجات العربية (WCPM)
+                تحليل تجريبي للقراءة الجهرية ومحاذاة النص المنطوق
               </h3>
             </div>
 
