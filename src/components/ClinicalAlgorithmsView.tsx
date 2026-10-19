@@ -587,7 +587,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     : currentIRTEstimate.theta.toFixed(2)}
                 </span>
                 <span className="text-xs font-mono text-[#0284C7] font-semibold">
-                  رتبة نظرية داخل النموذج: {currentIRTEstimate.percentile} (غير معيارية)
+                  رتبة نظرية داخل النموذج: {currentIRTEstimate.modelBasedRank} (غير معيارية)
                 </span>
               </div>
             </div>
