@@ -1209,6 +1209,8 @@ async function startServer() {
       if (!auditForRequest(req, 'student.session.complete', updatedRecord.id, [
         'readingEvidence',
         'wpm', 'dyslexiaRiskScore', 'readingRiskLevel', 'comprehensionScore',
+        'guardianConsentGiven', 'guardianConsentRecordedAt', 'guardianConsentSource',
+        'guardianAudioConsentGiven', 'guardianAudioConsentRecordedAt',
       ])) {
         if (!savePersistedStudents(studentsDb)) {
           studentsDb = nextRecords;
