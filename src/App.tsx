@@ -166,7 +166,7 @@ export default function App() {
 
   const snapshotCompletedSession = (record: StudentRecord) => ({
     sessionId: `session-${record.id}-${Date.now()}`,
-    completedAt: new Date().toISOString(),
+    completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
     passageId: record.passageId,
     wpm: record.wpm,
     avgFixationMs: record.avgFixationMs,
@@ -193,9 +193,11 @@ export default function App() {
       newRecord.guardianConsentGiven === true
         ? newRecord.guardianConsentRecordedAt || new Date().toISOString()
         : undefined;
+    const completedAt = new Date().toISOString();
     const completedRecord: StudentRecord = {
       ...newRecord,
       sessionStatus: 'completed',
+      sessionCompletedAt: completedAt,
       assessmentHistory: history,
       lastScreenedDate: new Date().toLocaleString('ar-EG', {
         year: 'numeric',
@@ -270,6 +272,23 @@ export default function App() {
         student.name.trim().replace(/\\s+/g, ' ') === cleanName.replace(/\\s+/g, ' ')
     );
     if (existing) {
+      if (existing.sessionStatus === 'completed') {
+        const resumedRecord: StudentRecord = {
+          ...existing,
+          sessionStatus: 'in_progress',
+          sessionCompletedAt: undefined,
+          sessionRoleLabel: roleLabel,
+          assessmentHistory: [...(existing.assessmentHistory || []), snapshotCompletedSession(existing)],
+          guardianConsentGiven: false,
+          guardianConsentRecordedAt: undefined,
+          guardianConsentSource: undefined,
+          guardianAudioConsentGiven: false,
+          guardianAudioConsentRecordedAt: undefined,
+          speechRecognitionUsed: false,
+          lastScreenedDate: '',
+        };
+        setStudents((prev) => prev.map((student) => student.id === existing.id ? resumedRecord : student));
+      }
       setSelectedStudentId(existing.id);
     } else {
       const newStudent: StudentRecord = {
