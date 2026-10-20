@@ -340,21 +340,19 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   const followup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
     method: 'POST',
     headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({
-      wpm: 63,
-      guardianConsentGiven: true,
-      guardianConsentRecordedAt: new Date().toISOString(),
+    body: JSON.stringify(validReadingEvidence({
       guardianConsentSource: 'إقرار الواجهة — جلسة متابعة اختبارية',
-      guardianAudioConsentGiven: false,
-      speechRecognitionUsed: false,
-    }),
+      readingDurationSeconds: 14,
+    })),
   });
   assert.equal(followup.status, 200);
-  const followupBody = await followup.json() as { student: Record<string, unknown> };
+  const followupBody = await followup.json() as { student: Record<string, unknown>; scoring: string };
+  assert.equal(followupBody.scoring, 'server-derived');
   assert.equal(followupBody.student.name, 'مريم بن حسن');
   assert.equal(followupBody.student.schoolName, 'مدرسة ألف');
   assert.equal(followupBody.student.tenantId, 'school_alpha');
-  assert.equal(followupBody.student.wpm, 63);
+  assert.equal(typeof followupBody.student.wpm, 'number');
+  assert.equal(typeof followupBody.student.dyslexiaRiskScore, 'number');
   assert.ok(Array.isArray(followupBody.student.assessmentHistory));
   assert.equal((followupBody.student.assessmentHistory as unknown[]).length, 1);
 
