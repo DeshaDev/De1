@@ -412,6 +412,21 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     body: JSON.stringify({ text: 'test' }),
   })).status, 401);
 
+  // Authenticated AI requests are rate-limited persistently even when the test endpoint is not implemented.
+  for (let index = 0; index < 20; index += 1) {
+    await fetch(baseUrl + '/api/ai/security-test-probe', {
+      method: 'POST',
+      headers: authorizedHeaders(alpha.token),
+      body: JSON.stringify({ probe: index }),
+    });
+  }
+  const rateLimitedAi = await fetch(baseUrl + '/api/ai/security-test-probe', {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ probe: 'limit-check' }),
+  });
+  assert.equal(rateLimitedAi.status, 429);
+
   // Logout revokes the bearer token at the server; local clearing is not the only control.
   const logout = await fetch(`${baseUrl}/api/auth/logout`, {
     method: 'POST',
@@ -436,4 +451,10 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     headers: authorizedHeaders(alpha.token),
   })).status, 401);
   assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
+  const persistedAiLimit = await fetch(baseUrl + '/api/ai/security-test-probe', {
+    method: 'POST',
+    headers: authorizedHeaders(beta.token),
+    body: JSON.stringify({ probe: 'after-restart' }),
+  });
+  assert.equal(persistedAiLimit.status, 429);
 });
