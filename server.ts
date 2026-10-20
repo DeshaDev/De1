@@ -5,6 +5,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
+import { z } from 'zod';
+import {
+  calculateDyscalculiaMetrics,
+  SubitizingTrialResult,
+  NumberLineTrialResult,
+  TranscodingTrialResult,
+} from './src/utils/clinicalMetrics';
 import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   ClinicalRole,
@@ -28,7 +35,37 @@ const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
 let clinicalStoreReady = false;
 
 const CLINICAL_SESSION_SECRET = (process.env.CLINICAL_SESSION_SECRET || '').trim();
-const REVOKED_CLINICAL_SESSIONS = new Map<string, number>();
+const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
+
+interface AuditEvent {
+  eventId: string;
+  timestamp: string;
+  tenantId: string;
+  sessionId: string;
+  role: ClinicalRole;
+  action: string;
+  subjectId?: string;
+  changedFields: string[];
+  outcome: 'success' | 'denied';
+}
+
+interface SecurityState {
+  version: 1;
+  revokedSessions: Record<string, number>;
+  rateLimitBuckets: {
+    auth: Record<string, number[]>;
+    ai: Record<string, number[]>;
+  };
+  auditEvents: AuditEvent[];
+}
+
+let securityState: SecurityState = {
+  version: 1,
+  revokedSessions: {},
+  rateLimitBuckets: { auth: {}, ai: {} },
+  auditEvents: [],
+};
+let securityStateReady = false;
 
 interface TenantCredential {
   tenantId: string;
@@ -85,6 +122,228 @@ function isClinicalAuthConfigured(): boolean {
     getStoreEncryptionKey() !== null
   );
 }
+
+
+function emptySecurityState(): SecurityState {
+  return {
+    version: 1,
+    revokedSessions: {},
+    rateLimitBuckets: { auth: {}, ai: {} },
+    auditEvents: [],
+  };
+}
+
+function sealSecurityState(state: SecurityState, key: Buffer): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(state), 'utf8'),
+    cipher.final(),
+  ]);
+  return JSON.stringify({
+    format: 'baseera-aes-256-gcm-security-v1',
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    ciphertext: ciphertext.toString('base64'),
+  });
+}
+
+function openSecurityState(raw: string, key: Buffer): SecurityState {
+  const envelope = JSON.parse(raw) as {
+    format?: unknown;
+    iv?: unknown;
+    tag?: unknown;
+    ciphertext?: unknown;
+  };
+  if (
+    envelope.format !== 'baseera-aes-256-gcm-security-v1' ||
+    typeof envelope.iv !== 'string' ||
+    typeof envelope.tag !== 'string' ||
+    typeof envelope.ciphertext !== 'string'
+  ) throw new Error('Unsupported encrypted security-state format');
+
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    key,
+    Buffer.from(envelope.iv, 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
+  const plaintext = Buffer.concat([
+    decipher.update(Buffer.from(envelope.ciphertext, 'base64')),
+    decipher.final(),
+  ]).toString('utf8');
+  const parsed = JSON.parse(plaintext) as Partial<SecurityState>;
+
+  if (
+    parsed.version !== 1 ||
+    !parsed.revokedSessions ||
+    typeof parsed.revokedSessions !== 'object' ||
+    Array.isArray(parsed.revokedSessions) ||
+    !parsed.rateLimitBuckets ||
+    typeof parsed.rateLimitBuckets.auth !== 'object' ||
+    typeof parsed.rateLimitBuckets.ai !== 'object' ||
+    !Array.isArray(parsed.auditEvents)
+  ) throw new Error('Invalid decrypted security-state structure');
+
+  return {
+    version: 1,
+    revokedSessions: parsed.revokedSessions as Record<string, number>,
+    rateLimitBuckets: {
+      auth: parsed.rateLimitBuckets.auth as Record<string, number[]>,
+      ai: parsed.rateLimitBuckets.ai as Record<string, number[]>,
+    },
+    auditEvents: parsed.auditEvents as AuditEvent[],
+  };
+}
+
+function persistSecurityState(): boolean {
+  const key = getStoreEncryptionKey();
+  if (!key) return false;
+  const tempPath = `${SECURITY_STATE_PATH}.tmp`;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
+    fs.writeFileSync(tempPath, sealSecurityState(securityState, key), {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    fs.chmodSync(tempPath, 0o600);
+    fs.renameSync(tempPath, SECURITY_STATE_PATH);
+    fs.chmodSync(SECURITY_STATE_PATH, 0o600);
+    return true;
+  } catch {
+    try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
+    console.error('Unable to persist encrypted authentication/revocation/audit state; protected APIs are being disabled.');
+    securityStateReady = false;
+    return false;
+  }
+}
+
+/** Corrupt or unreadable security state is a hard failure: never silently reset revocations or counters. */
+function initializeSecurityState(): boolean {
+  const key = getStoreEncryptionKey();
+  if (!key) {
+    securityStateReady = false;
+    return false;
+  }
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
+    if (!fs.existsSync(SECURITY_STATE_PATH)) {
+      securityState = emptySecurityState();
+      if (!persistSecurityState()) return false;
+    } else {
+      securityState = openSecurityState(fs.readFileSync(SECURITY_STATE_PATH, 'utf8'), key);
+    }
+
+    const now = Date.now();
+    for (const [id, expiry] of Object.entries(securityState.revokedSessions)) {
+      if (!Number.isFinite(expiry) || expiry <= now) delete securityState.revokedSessions[id];
+    }
+    for (const kind of ['auth', 'ai'] as const) {
+      for (const [ip, timestamps] of Object.entries(securityState.rateLimitBuckets[kind])) {
+        const retained = Array.isArray(timestamps)
+          ? timestamps.filter((timestamp) => Number.isFinite(timestamp) && now - timestamp < 60_000)
+          : [];
+        if (retained.length === 0) delete securityState.rateLimitBuckets[kind][ip];
+        else securityState.rateLimitBuckets[kind][ip] = retained;
+      }
+    }
+    if (securityState.auditEvents.length > 5000) {
+      securityState.auditEvents = securityState.auditEvents.slice(-5000);
+    }
+    securityStateReady = true;
+    return persistSecurityState();
+  } catch {
+    securityStateReady = false;
+    console.error('Encrypted security state could not be loaded. Authentication is disabled until the store is repaired.');
+    return false;
+  }
+}
+
+function consumePersistentRateLimit(
+  kind: 'auth' | 'ai',
+  key: string,
+  maxAttempts: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSeconds: number; available: boolean } {
+  if (!securityStateReady) {
+    return { allowed: false, retryAfterSeconds: 60, available: false };
+  }
+  const now = Date.now();
+  const previous = securityState.rateLimitBuckets[kind][key] || [];
+  const active = previous.filter((timestamp) => now - timestamp < windowMs);
+  if (active.length >= maxAttempts) {
+    const oldest = active[0] || now;
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((windowMs - (now - oldest)) / 1000)),
+      available: true,
+    };
+  }
+
+  securityState.rateLimitBuckets[kind][key] = [...active, now];
+  // Keep persistence bounded if an attacker rotates source addresses.
+  const keys = Object.keys(securityState.rateLimitBuckets[kind]);
+  if (keys.length > 5000) {
+    for (const oldKey of keys.slice(0, keys.length - 5000)) {
+      delete securityState.rateLimitBuckets[kind][oldKey];
+    }
+  }
+  if (!persistSecurityState()) {
+    securityState.rateLimitBuckets[kind][key] = previous;
+    return { allowed: false, retryAfterSeconds: 60, available: false };
+  }
+  return { allowed: true, retryAfterSeconds: 0, available: true };
+}
+
+function appendAuditEvent(event: Omit<AuditEvent, 'eventId' | 'timestamp'>): boolean {
+  if (!securityStateReady) return false;
+  const priorEvents = securityState.auditEvents;
+  securityState.auditEvents = [
+    ...priorEvents,
+    {
+      ...event,
+      eventId: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+    },
+  ].slice(-5000);
+  if (persistSecurityState()) return true;
+  securityState.auditEvents = priorEvents;
+  return false;
+}
+
+function auditForRequest(
+  req: express.Request,
+  action: string,
+  subjectId: string | undefined,
+  changedFields: string[]
+): boolean {
+  const session = (req as any).clinicalSession as VerifiedClinicalSession | undefined;
+  if (!session) return false;
+  return appendAuditEvent({
+    tenantId: session.tenantId,
+    sessionId: session.sessionId,
+    role: session.role,
+    action,
+    subjectId,
+    changedFields: [...new Set(changedFields)].sort(),
+    outcome: 'success',
+  });
+}
+
+function readTrustedProxyHops(): number {
+  const raw = (process.env.TRUST_PROXY_HOPS || '0').trim();
+  if (!/^\\d+$/.test(raw)) {
+    throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5.');
+  }
+  const hops = Number(raw);
+  if (!Number.isInteger(hops) || hops < 0 || hops > 5) {
+    throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5.');
+  }
+  return hops;
+}
+
 function constantTimeStringEqual(a: string, b: string): boolean {
   const left = Buffer.from(a, 'utf8');
   const right = Buffer.from(b, 'utf8');
