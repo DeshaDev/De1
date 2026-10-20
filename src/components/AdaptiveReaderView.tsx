@@ -44,7 +44,7 @@ interface AdaptiveReaderViewProps {
 }
 
 const normalizeArabicWord = (value: string) =>
-  value.replace(/[\\u064B-\\u065F\\u0670ـ]/g, '').replace(/[.,،؛:!?؟]/g, '').trim();
+  value.replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[.,،؛:!?؟]/g, '').trim();
 
 const DYSLEXICO_PRESETS: {
   id: string;
