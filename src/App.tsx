@@ -874,7 +874,7 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.regressionRate}%
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : `${selectedStudent.regressionRate}%`}
                     </span>
                     <span
                       className={`text-xs font-semibold ${
@@ -885,14 +885,17 @@ export default function App() {
                             : 'text-[#059669]'
                       }`}
                     >
-                      {selectedStudent.regressionRate > 22
-                        ? '■ تراجع مرتفع'
-                        : '● مسح بصري مستقر'}
+                      {selectedStudent.sessionStatus === 'in_progress'
+                        ? 'لا توجد قياسات بعد'
+                        : selectedStudent.regressionRate > 22
+                          ? '■ تراجع مرتفع'
+                          : '● مسح بصري مستقر'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1 truncate">
-                    {selectedStudent.visualStrainLabelAr ||
-                      'استقرار حركة العين أثناء القراءة'}
+                    {selectedStudent.sessionStatus === 'in_progress'
+                      ? 'ستظهر الملاحظة بعد إكمال الجلسة'
+                      : selectedStudent.visualStrainLabelAr || 'لا توجد ملاحظة مسجلة'}
                   </div>
                 </div>
 
