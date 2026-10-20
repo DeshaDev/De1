@@ -28,6 +28,7 @@ import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -159,38 +160,83 @@ export default function App() {
     return true;
   });
 
+  const snapshotCompletedSession = (record: StudentRecord) => ({
+    sessionId: `session-${record.id}-${Date.now()}`,
+    completedAt: new Date().toISOString(),
+    passageId: record.passageId,
+    wpm: record.wpm,
+    avgFixationMs: record.avgFixationMs,
+    regressionRate: record.regressionRate,
+    comprehensionScore: record.comprehensionScore,
+    problematicWords: [...(record.problematicWords || [])],
+    dyslexiaRiskScore: record.dyslexiaRiskScore,
+    readingHeuristicIndicator: record.readingHeuristicIndicator,
+    readingRiskLevel: record.readingRiskLevel,
+    subitizingAccuracy: record.subitizingAccuracy,
+    numberLinePAE: record.numberLinePAE,
+    transcodingAccuracy: record.transcodingAccuracy,
+    dyscalculiaRiskScore: record.dyscalculiaRiskScore,
+    mathRiskLevel: record.mathRiskLevel,
+  });
+
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
+    const previous = students.find((student) => student.id === newRecord.id);
+    const history = [...(previous?.assessmentHistory || [])];
+    if (previous?.sessionStatus === 'completed') {
+      history.push(snapshotCompletedSession(previous));
+    }
+    const consentRecordedAt =
+      newRecord.guardianConsentGiven === true
+        ? newRecord.guardianConsentRecordedAt || new Date().toISOString()
+        : undefined;
+    const completedRecord: StudentRecord = {
+      ...newRecord,
+      sessionStatus: 'completed',
+      assessmentHistory: history,
+      lastScreenedDate: new Date().toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      guardianConsentRecordedAt: consentRecordedAt,
+      guardianConsentSource:
+        newRecord.guardianConsentGiven === true
+          ? newRecord.guardianConsentSource || 'إقرار صريح داخل واجهة الفحص'
+          : undefined,
+    };
     setStudents((prev) => [
-      newRecord,
-      ...prev.filter((s) => s.id !== newRecord.id),
+      completedRecord,
+      ...prev.filter((student) => student.id !== completedRecord.id),
     ]);
-    setSelectedStudentId(newRecord.id);
+    setSelectedStudentId(completedRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
     if (!clinicalSession) {
-      setPendingServerRecord(newRecord);
-      setAiStatusBanner('اكتملت الجلسة محليًا، لكنها لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان.');
+      setPendingServerRecord(completedRecord);
+      setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها في التخزين المشفر.');
       setShowClinicalLogin(true);
       return;
     }
     setAiStatusBanner(
-      `تم إنشاء جلسة الفحص للطالب (${newRecord.name}) محليًا؛ لم يتأكد حفظها في الخادم بعد.`
+      `تم إنهاء جلسة الفحص للطالب (${completedRecord.name}) محليًا؛ جارٍ محاولة حفظها في الخادم.`
     );
     try {
       const response = await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newRecord,
-          guardianConsentGiven: newRecord.guardianConsentGiven === true,
+          ...completedRecord,
+          guardianConsentGiven: completedRecord.guardianConsentGiven === true,
         }),
       });
       if (response.ok) {
         setIsPersistedStoreLoaded(true);
-        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${newRecord.name}) في التخزين المشفر.`);
+        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${completedRecord.name}) في التخزين المشفر.`);
       } else {
         const data = await response.json().catch(() => ({}));
-        setPendingServerRecord(newRecord);
+        setPendingServerRecord(completedRecord);
         setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم. بقيت نسخة محلية لإعادة المحاولة بعد تسجيل الدخول.');
         if (response.status === 401) {
           clearClinicalSession();
@@ -199,8 +245,8 @@ export default function App() {
         }
       }
     } catch {
-      setPendingServerRecord(newRecord);
-      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود محليًا فقط ولم يُحفظ في الخادم.');
+      setPendingServerRecord(completedRecord);
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود على هذا الجهاز فقط ولم يُحفظ في الخادم.');
     }
   };
 
@@ -209,29 +255,69 @@ export default function App() {
     grade: number,
     roleLabel: string
   ) => {
-    const cleanName = (name.trim() || 'نواف عبد العزيز القحطاني')
-      .replace(/\s+(بن|بنت)\s+/g, ' ')
-      .trim();
-    const existing = students.find((s) => s.name === cleanName);
+    const cleanName = name.trim().replace(/\\s+(بن|بنت)\\s+/g, ' ').trim();
+    if (!cleanName) {
+      setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
+      return;
+    }
+    const existing = students.find(
+      (student) =>
+        !student.isDemoRecord &&
+        student.name.trim().replace(/\\s+/g, ' ') === cleanName.replace(/\\s+/g, ' ')
+    );
     if (existing) {
       setSelectedStudentId(existing.id);
     } else {
-      const template = students[0];
-      const newMockStudent: StudentRecord = {
-        ...template,
-        id: `stu-mock-${Date.now()}`,
+      const newStudent: StudentRecord = {
+        id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
         name: cleanName,
+        sessionStatus: 'in_progress',
+        sessionRoleLabel: roleLabel,
+        assessmentHistory: [],
         gradeLevel: grade,
-        schoolName: `جلسة فحص (${roleLabel})`,
-        isDemoRecord: false,
+        ageYears: grade + 6,
+        schoolName: 'لم تُحدّد المدرسة',
+        lastScreenedDate: '',
+        passageId: ARABIC_READING_PASSAGES.find((passage) => passage.gradeLevel === grade)?.id || ARABIC_READING_PASSAGES[0].id,
         guardianConsentGiven: false,
+        guardianConsentRecordedAt: undefined,
+        guardianConsentSource: undefined,
+        wpm: 0,
+        avgFixationMs: 0,
+        regressionRate: 0,
+        regressionCount: 0,
+        dyslexiaRiskScore: 0,
+        readingHeuristicIndicator: 0,
+        readingRiskLevel: 'nominal',
+        readingRiskLabelAr: 'لم يُستكمل الفحص بعد',
+        problematicWords: [],
+        fixations: [],
+        comprehensionScore: 0,
+        dyscalculiaAssessed: false,
+        subitizingAccuracy: null,
+        avgSubitizingMs: null,
+        numberLinePAE: null,
+        transcodingAccuracy: null,
+        reversalErrorCount: null,
+        dyscalculiaRiskScore: null,
+        mathHeuristicIndicator: null,
+        mathRiskLevel: 'unassessed',
+        mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
+        clinicalReport: {
+          clinicalSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
+          ocularMotorAnalysis: 'لا توجد بيانات نظر مكتملة لهذه الجلسة.',
+          orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر نص منطوق فعلي.',
+          dyscalculiaSpatialAnalysis: 'لم يُستكمل فحص الحساب بعد.',
+          interventionExercises: [],
+          classroomAccommodations: [],
+        },
       };
-      setStudents((prev) => [newMockStudent, ...prev]);
-      setSelectedStudentId(newMockStudent.id);
+      setStudents((prev) => [newStudent, ...prev]);
+      setSelectedStudentId(newStudent.id);
     }
     setActiveTab('eye-lab');
     setAiStatusBanner(
-      `تم تسجيل الطالب «${cleanName}» (الصف ${grade}) — ابدأ الآن معايرة الكاميرا وفحص القراءة.`
+      `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لا تُعرض نتيجة فرز قبل إكمال الجلسة.`
     );
   };
 
@@ -713,7 +799,7 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.wpm}{' '}
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.wpm}{' '}
                       <span className="text-xs font-normal text-slate-500">
                         كلمة/د
                       </span>
@@ -723,7 +809,9 @@ export default function App() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
-                    {selectedStudent.readingRiskLevel === 'high'
+                    {selectedStudent.sessionStatus === 'in_progress'
+                      ? 'الجلسة غير مكتملة — لا توجد نتيجة'
+                      : selectedStudent.readingRiskLevel === 'high'
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
@@ -738,7 +826,7 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.avgFixationMs}{' '}
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.avgFixationMs}{' '}
                       <span className="text-xs font-normal text-slate-500">
                         ms
                       </span>
@@ -1059,10 +1147,10 @@ export default function App() {
                                   </div>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900 font-medium">
-                                  {stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
+                                  {stu.sessionStatus === 'in_progress' ? '—' : stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900">
-                                  {stu.avgFixationMs}ms
+                                  {stu.sessionStatus === 'in_progress' ? '—' : `${stu.avgFixationMs}ms`}
                                 </td>
                                 <td className="py-3.5 px-3">
                                   <span
@@ -1074,7 +1162,9 @@ export default function App() {
                                           : 'text-[#059669] font-medium'
                                     }
                                   >
-                                    {stu.readingRiskLevel === 'high'
+                                    {stu.sessionStatus === 'in_progress'
+                                      ? 'لم يُستكمل الفحص'
+                                      : stu.readingRiskLevel === 'high'
                                       ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
                                         ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
@@ -1337,7 +1427,7 @@ export default function App() {
 
             {/* SUB-VIEW 3: AI SCREENING REPORT & INDIVIDUALIZED SUPPORT PLAN */}
             {dashboardSubView === 'report' && (
-              <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">
@@ -1349,6 +1439,44 @@ export default function App() {
                     </h2>
                   </div>
 
+                  <div className="no-print flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    طباعة التقرير / حفظ PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const shareText = [
+                        `تقرير فرز تربوي استرشادي — ${selectedStudent.name}`,
+                        `الصف: ${selectedStudent.gradeLevel}`,
+                        `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
+                        `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
+                        `الكلمات المستهدفة للتدريب: ${(selectedStudent.problematicWords || []).join('، ') || 'لم تُحدد بعد'}`,
+                        'هذا التقرير استرشادي وغير تشخيصي.',
+                      ].join('\\n');
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({ title: 'تقرير بصيرة الاسترشادي', text: shareText });
+                        } else if (navigator.clipboard?.writeText) {
+                          await navigator.clipboard.writeText(shareText);
+                          setAiStatusBanner('نُسخ ملخص التقرير إلى الحافظة للمشاركة.');
+                        } else {
+                          setAiStatusBanner('المشاركة المباشرة غير مدعومة في هذا المتصفح. استخدم طباعة التقرير لحفظه PDF.');
+                        }
+                      } catch (error) {
+                        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                          setAiStatusBanner('تعذرت المشاركة من المتصفح. يمكنك طباعة التقرير وحفظه PDF.');
+                        }
+                      }
+                    }}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    مشاركة الملخص
+                  </button>
                   <button
                     type="button"
                     disabled={isGeneratingAI}
@@ -1362,6 +1490,7 @@ export default function App() {
                         : 'تحديث التقرير بالذكاء الاصطناعي'}
                     </span>
                   </button>
+                  </div>
                 </div>
 
                 {/* Hairline-Divided 2x2 Analytical Matrix (Zero Card-in-Card Nesting) */}
@@ -1497,12 +1626,18 @@ export default function App() {
         )}
 
         {/* VIEW 4: SMART ADAPTIVE DYSLEXIA READER & DYSLEXICO STUDIO */}
-        {activeTab === 'adaptive-reader' && <AdaptiveReaderView />}
+        {activeTab === 'adaptive-reader' && (
+          <AdaptiveReaderView
+            problematicWords={selectedStudent.problematicWords || []}
+            studentName={selectedStudent.name}
+          />
+        )}
 
         {/* VIEW 5: CLINICAL ALGORITHMS & ADAPTIVE IRT / PYGAZE ML LAB */}
         {activeTab === 'algorithms-lab' && (
           <ClinicalAlgorithmsView selectedStudent={selectedStudent} />
         )}
+        {activeTab === 'privacy' && <PrivacyPolicyView />}
         </div>
       </main>
 
@@ -1547,7 +1682,15 @@ export default function App() {
             <span aria-hidden="true">·</span>
             <button
               type="button"
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => setActiveTab('privacy')}
+              className="hover:text-slate-900 cursor-pointer"
+            >
+              سياسة الخصوصية
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard')
               className="hover:text-slate-900 cursor-pointer"
             >
               التقرير النهائي والنتائج
