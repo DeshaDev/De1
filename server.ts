@@ -364,7 +364,10 @@ function constantTimeStringEqual(a: string, b: string): boolean {
 const studentPatchSchema = z.object({
   gradeLevel: z.number().int().min(1).max(12).optional(),
   ageYears: z.number().int().min(4).max(21).optional(),
-  passageId: z.string().trim().min(1).max(120).optional(),
+  passageId: z.string().trim().min(1).max(120)
+    .refine((value) => ARABIC_READING_PASSAGES.some((passage) => passage.id === value), {
+      message: 'Unknown reading passage ID.',
+    }).optional(),
   dialectRegionAr: z.string().trim().min(1).max(100).optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, {
   message: 'At least one editable profile field is required.',
