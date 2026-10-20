@@ -2039,7 +2039,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
           dialectRegionAr: selectedDialectProfile.labelAr,
           problematicWords: eyeMetrics.problematicWords,
-          oralReadingAssessed: hasSpokenTranscript,
           oralAccuracyPercent: oralIntegrationInput?.accuracyPercent ?? null,
           oralWerPercent: oralIntegrationInput?.werPercent ?? null,
           phoneticSubstitutionCount:
