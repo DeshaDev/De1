@@ -970,16 +970,16 @@ async function startServer() {
     '/api/students',
     requireClinicalAuth('students:write'),
     (req, res) => {
-      const incoming = req.body as StudentRecord;
       const session = (req as any).clinicalSession as VerifiedClinicalSession;
-      if (!incoming || typeof incoming.id !== 'string' ||
-          !/^[a-zA-Z0-9._:-]{1,120}$/.test(incoming.id) ||
-          typeof incoming.name !== 'string' || !incoming.name.trim() ||
-          incoming.name.length > 120) {
-        res.status(400).json({ error: 'بيانات جلسة الطالب غير مكتملة أو غير صالحة.' });
+      const parsed = studentCreateEvidenceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'بيانات إنشاء الملف أو أدلة القراءة غير صالحة.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
+        });
         return;
       }
-      // Do not disclose whether an ID belongs to a different tenant.
+      const incoming = parsed.data;
       const existingId = studentsDb.find((student) => student.id === incoming.id);
       if (existingId && existingId.tenantId !== session.tenantId) {
         res.status(404).json({ error: 'تعذر إنشاء السجل بهذا المعرّف.' });
@@ -989,40 +989,80 @@ async function startServer() {
         res.status(409).json({ error: 'معرّف الطالب موجود بالفعل؛ رُفض استبدال سجل موجود.' });
         return;
       }
-      if (incoming.isDemoRecord === true) {
-        res.status(400).json({ error: 'لا يمكن حفظ سجل عرض تجريبي كسجل طالب.' });
+
+      const derived = deriveServerReadingMetrics(incoming, incoming.gradeLevel);
+      if ('error' in derived) {
+        res.status(derived.statusCode).json({ error: derived.error });
         return;
       }
+      const { metrics, comprehensionScore, clinicalReport, oral } = derived;
+      const now = new Date();
       const newRecord: StudentRecord = {
-        ...incoming,
         id: incoming.id,
-        name: incoming.name.trim(),
+        name: incoming.name,
+        schoolName: incoming.schoolName,
         tenantId: session.tenantId,
         isDemoRecord: false,
+        sessionStatus: 'completed',
+        sessionCompletedAt: now.toISOString(),
+        sessionRoleLabel: 'جلسة فرز',
+        assessmentHistory: [],
+        gradeLevel: incoming.gradeLevel,
+        ageYears: incoming.ageYears,
+        lastScreenedDate: now.toLocaleString('ar-EG', {
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        }),
+        passageId: incoming.passageId,
+        dialectRegionAr: incoming.dialectRegionAr || incoming.dialectCode,
+        dialectCode: incoming.dialectCode,
+        readingDurationSeconds: incoming.readingDurationSeconds,
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: incoming.guardianConsentRecordedAt,
+        guardianConsentSource: incoming.guardianConsentSource,
+        guardianAudioConsentGiven: incoming.guardianAudioConsentGiven,
+        guardianAudioConsentRecordedAt: incoming.guardianAudioConsentRecordedAt,
+        speechRecognitionUsed: incoming.speechRecognitionUsed,
+        wpm: metrics.wpm,
+        avgFixationMs: metrics.avgFixationMs,
+        regressionRate: metrics.regressionRate,
+        regressionCount: metrics.regressionCount,
+        blinkCount: metrics.blinkCount,
+        blinksPerMinute: metrics.blinksPerMinute,
+        visualStrainLevel: metrics.visualStrainLevel,
+        visualStrainLabelAr: metrics.visualStrainLabelAr,
+        gazeCoveragePercent: metrics.gazeCoveragePercent,
+        observedWordCount: metrics.observedWordCount,
+        totalPassageWordCount: metrics.totalPassageWordCount,
+        calibrationAccuracyPercent: incoming.calibrationAccuracyPercent,
+        calibrationValidationMethod: incoming.calibrationValidationMethod,
+        oralReadingAssessed: Boolean(oral),
+        spokenTranscript: incoming.spokenTranscript,
+        oralWcpm: oral?.wcpm ?? null,
+        oralAccuracyPercent: oral?.accuracyPercent ?? null,
+        oralWerPercent: oral?.werPercent ?? null,
+        phoneticSubstitutionCount: oral?.phoneticSubstitutionCount ?? 0,
+        dialectVariantCount: oral?.dialectVariantCount ?? 0,
+        omissionCount: oral?.omittedWordsCount ?? 0,
+        dyslexiaRiskScore: metrics.dyslexiaRiskScore,
+        readingHeuristicIndicator: metrics.heuristicIndicator,
+        readingRiskLevel: metrics.riskLevel,
+        readingRiskLabelAr: metrics.riskLabelAr,
+        problematicWords: metrics.problematicWords,
+        fixations: incoming.fixations as WordFixation[],
+        comprehensionScore,
+        dyscalculiaAssessed: false,
+        subitizingAccuracy: null,
+        avgSubitizingMs: null,
+        numberLinePAE: null,
+        transcodingAccuracy: null,
+        reversalErrorCount: null,
+        dyscalculiaRiskScore: null,
+        mathHeuristicIndicator: null,
+        mathRiskLevel: 'unassessed',
+        mathRiskLabelAr: 'لم يجر اختبار الحساب بعد',
+        clinicalReport,
       };
-
-      const consentCheck = validateExplicitGuardianConsent(newRecord.guardianConsentGiven);
-      const consentTimeValid = typeof newRecord.guardianConsentRecordedAt === 'string' &&
-        Number.isFinite(Date.parse(newRecord.guardianConsentRecordedAt));
-      const consentSourceValid = typeof newRecord.guardianConsentSource === 'string' &&
-        newRecord.guardianConsentSource.trim().length > 0;
-      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
-        res.status(403).json({
-          error: consentCheck.valid
-            ? 'يلزم تسجيل وقت الموافقة ومصدرها قبل حفظ الجلسة.'
-            : consentCheck.errorAr,
-        });
-        return;
-      }
-      if (newRecord.speechRecognitionUsed === true && (
-        newRecord.guardianAudioConsentGiven !== true ||
-        typeof newRecord.guardianAudioConsentRecordedAt !== 'string' ||
-        !Number.isFinite(Date.parse(newRecord.guardianAudioConsentRecordedAt))
-      )) {
-        res.status(403).json({ error: 'رُصد استخدام التعرف الصوتي دون سجل موافقة صوتية منفصل صالح؛ رُفض حفظ الجلسة.' });
-        return;
-      }
-
       const nextRecords = [newRecord, ...studentsDb];
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ السجل في التخزين المشفر.' });
@@ -1031,13 +1071,13 @@ async function startServer() {
       if (!auditForRequest(req, 'student.create', newRecord.id, Object.keys(newRecord))) {
         if (!savePersistedStudents(studentsDb)) {
           studentsDb = nextRecords;
-          console.error('Audit persistence failed and student-store rollback also failed.');
+          console.error('Audit persistence failed and student-create rollback also failed.');
         }
         res.status(503).json({ error: 'تعذر تسجيل إنشاء السجل في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;
-      res.status(201).json({ student: newRecord, persisted: true });
+      res.status(201).json({ student: newRecord, persisted: true, scoring: 'server-derived' });
     }
   );
 
