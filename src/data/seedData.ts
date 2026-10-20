@@ -77,6 +77,8 @@ export interface StudentRecord {
   guardianConsentGiven?: boolean;
   guardianConsentRecordedAt?: string;
   guardianConsentSource?: string;
+  guardianAudioConsentGiven?: boolean;
+  guardianAudioConsentRecordedAt?: string;
   // Dyslexia / Eye-Tracking & Blink Rate metrics
   wpm: number;
   avgFixationMs: number;
