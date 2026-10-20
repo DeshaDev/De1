@@ -160,6 +160,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
 
   const [saveMessage, setSaveMessage] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
+  const [isSimulationData, setIsSimulationData] = useState<boolean>(false);
 
   const handleSelectSubitizing = (patternId: number, chosenCount: number) => {
     if (!readySubitizingIds[patternId] || visibleSubitizingIds[patternId]) return;
@@ -304,10 +305,15 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const answeredTranscodingCount = Object.keys(transcodingSelections).length;
 
   const handleLoadDyscalculiaSimulation = () => {
+    Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
+    subitizingTimersRef.current = {};
+    setVisibleSubitizingIds({});
+    setReadySubitizingIds({});
     setSubitizingSelections({
-      1: { chosen: 5, rtMs: 2150 },
-      2: { chosen: 5, rtMs: 2480 },
-      3: { chosen: 6, rtMs: 2790 },
+      1: { chosen: 1, rtMs: 520 },
+      2: { chosen: 3, rtMs: 690 },
+      3: { chosen: 3, rtMs: 610 },
+      4: { chosen: 2, rtMs: 740 },
     });
     setEstimate37Draft(61);
     setEstimate156Draft(104);
@@ -321,13 +327,18 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       2: { value: 38, rtMs: 2610 },
       3: { value: 69, rtMs: 1890 },
     });
-    setValidationError('');
+    setIsSimulationData(true);
+    setValidationError('هذه بيانات اصطناعية للعرض فقط. امسح النموذج وابدأ المحاولات بنفسك قبل حفظ نتيجة طالب.');
     setSaveMessage('');
   };
 
   const handleResetTest = () => {
-    const now = performance.now();
-    trialStartTimestampRef.current = { 1: now, 2: now, 3: now };
+    Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
+    subitizingTimersRef.current = {};
+    trialStartTimestampRef.current = {};
+    setVisibleSubitizingIds({});
+    setReadySubitizingIds({});
+    setIsSimulationData(false);
     numberLineStartRef.current = { 1: now, 2: now };
     transcodingStartRef.current = { 1: now, 2: now, 3: now };
     setSubitizingSelections({});
@@ -342,13 +353,18 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   };
 
   const handleSaveToStudentProfile = () => {
+    if (isSimulationData) {
+      setValidationError('لا يمكن حفظ البيانات الاصطناعية في ملف الطالب. اضغط «إعادة ضبط المهام» ثم أجرِ المحاولات الفعلية.');
+      setSaveMessage('');
+      return;
+    }
     if (
-      answeredSubitizingCount < 3 ||
+      answeredSubitizingCount < SUBITIZING_PATTERNS.length ||
       answeredNumberLineCount < 2 ||
       answeredTranscodingCount < 3
     ) {
       setValidationError(
-        `يرجى استكمال جميع المهام الثلاث فعلياً قبل حفظ النتيجة: الإدراك الكمي (${answeredSubitizingCount}/3)، خط الأعداد (${answeredNumberLineCount}/2)، وترميز الأرقام (${answeredTranscodingCount}/3).`
+        `يرجى إكمال المحاولات الفعلية قبل حفظ النتيجة: تمييز الكميات (${answeredSubitizingCount}/${SUBITIZING_PATTERNS.length})، خط الأعداد (${answeredNumberLineCount}/2)، وترميز الأرقام (${answeredTranscodingCount}/3).`
       );
       setSaveMessage('');
       return;
@@ -415,7 +431,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               onClick={handleLoadDyscalculiaSimulation}
               className="px-3.5 py-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
-              نموذج حالة ديسكالكوليا للمقارنة
+              تحميل بيانات توضيحية (لا تُحفظ)
             </button>
 
             <button
@@ -464,7 +480,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-sm mt-0.5">تمييز الكميات بسرعة</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
-              {answeredSubitizingCount}/3
+              {answeredSubitizingCount}/{SUBITIZING_PATTERNS.length}
             </span>
           </button>
 
@@ -565,6 +581,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRestartSubitizingTimer(pattern.id)}
+                            disabled={visibleSubitizingIds[pattern.id]}
                             className="min-h-11 text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Timer className="w-3 h-3" />
@@ -966,7 +983,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveToStudentProfile}
-                  className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                  disabled={isSimulationData}
+                  className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>اعتماد وحفظ النتيجة في ملف الطالب</span>
@@ -995,7 +1013,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>حالة استكمال المهام</span>
               <span className="font-mono tabular-nums font-semibold text-slate-900">
-                {answeredSubitizingCount === 3 &&
+                {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
                 answeredNumberLineCount === 2 &&
                 answeredTranscodingCount === 3
                   ? `مؤشر الفرز الاسترشادي ${computedMetrics.heuristicIndicator}/100`
@@ -1052,7 +1070,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   بانتظار استكمال المحطات الثلاث
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  أكمل الإدراك الكمي ({answeredSubitizingCount}/3)، خط الأعداد (
+                  أكمل تمييز الكميات ({answeredSubitizingCount}/{SUBITIZING_PATTERNS.length})، خط الأعداد (
                   {answeredNumberLineCount}/2)، وترميز الأرقام (
                   {answeredTranscodingCount}/3) لإصدار النتيجة.
                 </p>
@@ -1079,7 +1097,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0
                     ? `${computedMetrics.subitizingAccuracy}%`
-                    : '0/3'}
+                    : '0/4'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
@@ -1110,7 +1128,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <button
               type="button"
               onClick={handleSaveToStudentProfile}
-              className="w-full py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSimulationData}
+              className="w-full py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>حفظ النتيجة في سجل الطالب ({activeStudent.name})</span>
