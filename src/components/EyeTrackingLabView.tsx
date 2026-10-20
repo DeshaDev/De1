@@ -2175,9 +2175,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           <div className="text-xs font-semibold text-[#0284C7] tracking-wide mb-1">
             الخطوة ٢ · مختبر الفحص البصري والقرائي المباشر
           </div>
-          <h2 className="text-xl font-bold text-slate-900 font-display">
+          <h1 className="text-xl font-bold text-slate-900 font-display">
             تتبع حركة بؤبؤ العين وتحليل القراءة الصوتية
-          </h2>
+          </h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
