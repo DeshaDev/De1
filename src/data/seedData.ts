@@ -42,10 +42,32 @@ export interface ReadingPassage {
   comprehensionQuestions: ComprehensionQuestion[];
 }
 
+export interface StudentAssessmentSnapshot {
+  sessionId: string;
+  completedAt: string;
+  passageId: string;
+  wpm: number;
+  avgFixationMs: number;
+  regressionRate: number;
+  comprehensionScore: number;
+  problematicWords: string[];
+  dyslexiaRiskScore: number;
+  readingHeuristicIndicator: number;
+  readingRiskLevel: 'nominal' | 'moderate' | 'high';
+  subitizingAccuracy: number | null;
+  numberLinePAE: number | null;
+  transcodingAccuracy: number | null;
+  dyscalculiaRiskScore: number | null;
+  mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
+}
+
 export interface StudentRecord {
   id: string;
   name: string;
   isDemoRecord?: boolean;
+  sessionStatus?: 'in_progress' | 'completed';
+  sessionRoleLabel?: string;
+  assessmentHistory?: StudentAssessmentSnapshot[];
   gradeLevel: number;
   ageYears: number;
   schoolName: string;
@@ -53,6 +75,8 @@ export interface StudentRecord {
   passageId: string;
   dialectRegionAr?: string;
   guardianConsentGiven?: boolean;
+  guardianConsentRecordedAt?: string;
+  guardianConsentSource?: string;
   // Dyslexia / Eye-Tracking & Blink Rate metrics
   wpm: number;
   avgFixationMs: number;
