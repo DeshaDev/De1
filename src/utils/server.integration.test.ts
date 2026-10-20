@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
 const credentialMap = {
   school_alpha: {
@@ -19,8 +20,46 @@ const credentialMap = {
 
 let child: ChildProcessWithoutNullStreams | null = null;
 let baseUrl = '';
+let serverPort = 0;
 let dataDir = '';
 let childOutput = '';
+
+async function startTestServer(): Promise<void> {
+  baseUrl = `http://127.0.0.1:${serverPort}`;
+  childOutput = '';
+  child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: String(serverPort),
+      TRUST_PROXY_HOPS: '0',
+      CLINICAL_DATA_DIR: dataDir,
+      CLINICAL_TENANT_CREDENTIALS: JSON.stringify(credentialMap),
+      CLINICAL_SESSION_SECRET: 'integration-test-session-signing-key-not-a-production-secret-64',
+      CLINICAL_STORE_ENCRYPTION_KEY: 'd3'.repeat(32),
+      GEMINI_API_KEY: '',
+    },
+    stdio: 'pipe',
+  });
+  child.stdout.on('data', (chunk) => { childOutput += chunk.toString(); });
+  child.stderr.on('data', (chunk) => { childOutput += chunk.toString(); });
+  await waitForServer();
+}
+
+async function stopTestServer(): Promise<void> {
+  if (!child) return;
+  const running = child;
+  if (running.exitCode === null) {
+    running.kill('SIGTERM');
+    await Promise.race([
+      new Promise<void>((resolve) => running.once('exit', () => resolve())),
+      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
+    ]);
+    if (running.exitCode === null) running.kill('SIGKILL');
+  }
+  child = null;
+}
 
 async function findAvailablePort(): Promise<number> {
   const server = createServer();
@@ -54,50 +93,60 @@ async function waitForServer(): Promise<void> {
 }
 
 before(async () => {
-  const port = await findAvailablePort();
+  serverPort = await findAvailablePort();
   dataDir = mkdtempSync(join(tmpdir(), 'de1-http-security-'));
-  baseUrl = `http://127.0.0.1:${port}`;
-  child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      PORT: String(port),
-      CLINICAL_DATA_DIR: dataDir,
-      CLINICAL_TENANT_CREDENTIALS: JSON.stringify(credentialMap),
-      CLINICAL_SESSION_SECRET: 'integration-test-session-signing-key-not-a-production-secret-64',
-      CLINICAL_STORE_ENCRYPTION_KEY: 'd3'.repeat(32),
-      GEMINI_API_KEY: '',
-    },
-    stdio: 'pipe',
-  });
-  child.stdout.on('data', (chunk) => { childOutput += chunk.toString(); });
-  child.stderr.on('data', (chunk) => { childOutput += chunk.toString(); });
-  await waitForServer();
+  await startTestServer();
 });
 
 after(async () => {
-  if (child && child.exitCode === null) {
-    child.kill('SIGTERM');
-    await Promise.race([
-      new Promise<void>((resolve) => child?.once('exit', () => resolve())),
-      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
-    ]);
-    if (child.exitCode === null) child.kill('SIGKILL');
-  }
+  await stopTestServer();
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
 });
 
-async function login(accessCode: string, roleClaim = 'clinician') {
+async function login(accessCode: string, roleClaim = 'clinician', spoofedForwardedFor?: string) {
   return fetch(`${baseUrl}/api/auth/session`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(spoofedForwardedFor ? { 'X-Forwarded-For': spoofedForwardedFor } : {}),
+    },
     body: JSON.stringify({ accessCode, role: roleClaim, clinicianName: 'اختبار تكامل' }),
   });
 }
 
 function authorizedHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+function validReadingEvidence(overrides: Record<string, unknown> = {}) {
+  const passage = ARABIC_READING_PASSAGES.find((item) => item.id === 'passage-g3-astronomy');
+  if (!passage) throw new Error('Integration passage fixture was not found.');
+  const observedCount = Math.max(4, Math.ceil(passage.words.length * 0.3));
+  return {
+    passageId: passage.id,
+    dialectCode: 'gulf',
+    dialectRegionAr: 'لهجة اختبارية',
+    readingDurationSeconds: 12,
+    blinkCount: 4,
+    fixations: passage.words.map((word, wordIndex) => ({
+      wordIndex,
+      word,
+      durationMs: wordIndex < observedCount ? 260 + (wordIndex % 4) * 15 : 0,
+      visits: wordIndex < observedCount ? 1 : 0,
+      observed: wordIndex < observedCount,
+      blinks: 0,
+    })),
+    comprehensionAnswers: passage.comprehensionQuestions.map((question) => question.correctIndex),
+    spokenTranscript: '',
+    guardianConsentGiven: true,
+    guardianConsentRecordedAt: new Date().toISOString(),
+    guardianConsentSource: 'إقرار الواجهة — اختبار تكامل',
+    guardianAudioConsentGiven: false,
+    speechRecognitionUsed: false,
+    calibrationAccuracyPercent: 92,
+    calibrationValidationMethod: 'leave-one-point-out',
+    ...overrides,
+  };
 }
 
 function validStudent(id: string, overrides: Record<string, unknown> = {}) {
@@ -107,44 +156,7 @@ function validStudent(id: string, overrides: Record<string, unknown> = {}) {
     schoolName: 'مدرسة ألف',
     gradeLevel: 4,
     ageYears: 10,
-    lastScreenedDate: '2026-10-20',
-    passageId: 'passage-g3-astronomy',
-    sessionStatus: 'completed',
-    sessionCompletedAt: new Date().toISOString(),
-    guardianConsentGiven: true,
-    guardianConsentRecordedAt: new Date().toISOString(),
-    guardianConsentSource: 'إقرار الواجهة — اختبار تكامل',
-    guardianAudioConsentGiven: false,
-    speechRecognitionUsed: false,
-    wpm: 41,
-    avgFixationMs: 430,
-    regressionRate: 22,
-    regressionCount: 4,
-    dyslexiaRiskScore: 72,
-    readingHeuristicIndicator: 28,
-    readingRiskLevel: 'high',
-    readingRiskLabelAr: 'مؤشر فرز استرشادي مرتفع',
-    problematicWords: ['الكواكب'],
-    fixations: [],
-    comprehensionScore: 60,
-    dyscalculiaAssessed: false,
-    subitizingAccuracy: null,
-    avgSubitizingMs: null,
-    numberLinePAE: null,
-    transcodingAccuracy: null,
-    reversalErrorCount: null,
-    dyscalculiaRiskScore: null,
-    mathHeuristicIndicator: null,
-    mathRiskLevel: 'unassessed',
-    mathRiskLabelAr: 'لم يجر اختبار الحساب',
-    clinicalReport: {
-      clinicalSummary: 'ملخص اختبار تقني اصطناعي',
-      ocularMotorAnalysis: 'بيانات اصطناعية',
-      orthographicAndPhonologicalPatterns: 'بيانات اصطناعية',
-      dyscalculiaSpatialAnalysis: 'لم يجر اختبار الحساب',
-      interventionExercises: [],
-      classroomAccommodations: [],
-    },
+    ...validReadingEvidence(),
     ...overrides,
   };
 }
@@ -186,9 +198,20 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     headers: authorizedHeaders(alpha.token),
     body: JSON.stringify(validStudent('integration-no-consent', { guardianConsentGiven: false })),
   });
-  assert.equal(noConsent.status, 403);
+  assert.equal(noConsent.status, 400);
 
   const studentId = 'integration-alpha-student';
+  const forgedCreate = await fetch(`${baseUrl}/api/students`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify(validStudent('integration-forged-create', {
+      tenantId: 'school_beta',
+      dyslexiaRiskScore: 1,
+      readingRiskLevel: 'nominal',
+    })),
+  });
+  assert.equal(forgedCreate.status, 400);
+
   const create = await fetch(`${baseUrl}/api/students`, {
     method: 'POST',
     headers: {
@@ -196,18 +219,26 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
       'X-Tenant-Id': 'school_beta',
       'X-Forwarded-For': '198.51.100.222',
     },
-    body: JSON.stringify(validStudent(studentId, { tenantId: 'school_beta' })),
+    body: JSON.stringify(validStudent(studentId)),
   });
   assert.equal(create.status, 201);
   const created = await create.json() as { student: Record<string, unknown> };
   assert.equal(created.student.tenantId, 'school_alpha');
   assert.equal(created.student.name, 'مريم بن حسن');
 
+  // An identifier owned by another school must not reveal a collision.
+  const crossTenantCollision = await fetch(`${baseUrl}/api/students`, {
+    method: 'POST',
+    headers: authorizedHeaders(beta.token),
+    body: JSON.stringify(validStudent(studentId)),
+  });
+  assert.equal(crossTenantCollision.status, 404);
+
   // Duplicate POST is not an upsert: original name, school and tenant stay intact.
   const overwriteAttempt = await fetch(`${baseUrl}/api/students`, {
     method: 'POST',
     headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent(studentId, { name: 'اسم مهاجم', schoolName: 'مدرسة أخرى', tenantId: 'school_beta' })),
+    body: JSON.stringify(validStudent(studentId, { name: 'اسم مهاجم', schoolName: 'مدرسة أخرى' })),
   });
   assert.equal(overwriteAttempt.status, 409);
   const alphaListResponse = await fetch(`${baseUrl}/api/students`, {
@@ -248,6 +279,11 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     { guardianConsentRecordedAt: new Date().toISOString() },
     { guardianConsentSource: 'spoofed' },
     { assessmentHistory: [] },
+    { wpm: 'not-a-number' },
+    { gradeLevel: 'not-a-number' },
+    { ageYears: 999 },
+    { dyslexiaRiskScore: 98 },
+    { readingRiskLevel: 'nominal' },
   ]) {
     const response = await fetch(`${baseUrl}/api/students/${studentId}`, {
       method: 'PATCH',
@@ -265,27 +301,94 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   });
   assert.equal(specialKeyResponse.status, 400);
 
+  // Runtime schemas reject malformed evidence and derive risk scores on the server.
+  const mathEvidence = {
+    subitizingTrials: [
+      { dotCount: 1, chosen: 1, reactionTimeMs: 520 },
+      { dotCount: 2, chosen: 2, reactionTimeMs: 690 },
+      { dotCount: 3, chosen: 2, reactionTimeMs: 610 },
+      { dotCount: 4, chosen: 4, reactionTimeMs: 740 },
+    ],
+    numberLineTrials: [
+      { target: 37, userEstimate: 39, reactionTimeMs: 1940, scaleMin: 0, scaleMax: 100 },
+      { target: 156, userEstimate: 151, reactionTimeMs: 2280, scaleMin: 0, scaleMax: 200 },
+    ],
+    transcodingTrials: [
+      { targetNumber: 47, selectedNumber: 74, reactionTimeMs: 2340 },
+      { targetNumber: 83, selectedNumber: 83, reactionTimeMs: 2610 },
+      { targetNumber: 69, selectedNumber: 69, reactionTimeMs: 1890 },
+    ],
+  };
+  const mathSave = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify(mathEvidence),
+  });
+  assert.equal(mathSave.status, 200);
+  const mathBody = await mathSave.json() as { scoring: string; student: Record<string, unknown> };
+  assert.equal(mathBody.scoring, 'server-derived');
+  assert.equal(mathBody.student.dyscalculiaAssessed, true);
+  assert.equal(typeof mathBody.student.dyscalculiaRiskScore, 'number');
+  assert.equal(mathBody.student.reversalErrorCount, 1);
+
+  const forgedMathScore = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ ...mathEvidence, dyscalculiaRiskScore: 1, mathRiskLevel: 'nominal' }),
+  });
+  assert.equal(forgedMathScore.status, 400);
+  const invalidTiming = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({
+      ...mathEvidence,
+      subitizingTrials: mathEvidence.subitizingTrials.map((trial, index) =>
+        index === 0 ? { ...trial, reactionTimeMs: 'fast' } : trial
+      ),
+    }),
+  });
+  assert.equal(invalidTiming.status, 400);
+
   // A repeat assessment updates only session fields; server preserves identity and appends history.
   const followup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
     method: 'POST',
     headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({
-      wpm: 63,
-      guardianConsentGiven: true,
-      guardianConsentRecordedAt: new Date().toISOString(),
+    body: JSON.stringify(validReadingEvidence({
       guardianConsentSource: 'إقرار الواجهة — جلسة متابعة اختبارية',
-      guardianAudioConsentGiven: false,
-      speechRecognitionUsed: false,
-    }),
+      readingDurationSeconds: 14,
+    })),
   });
   assert.equal(followup.status, 200);
-  const followupBody = await followup.json() as { student: Record<string, unknown> };
+  const followupBody = await followup.json() as { student: Record<string, unknown>; scoring: string };
+  assert.equal(followupBody.scoring, 'server-derived');
   assert.equal(followupBody.student.name, 'مريم بن حسن');
   assert.equal(followupBody.student.schoolName, 'مدرسة ألف');
   assert.equal(followupBody.student.tenantId, 'school_alpha');
-  assert.equal(followupBody.student.wpm, 63);
+  assert.equal(typeof followupBody.student.wpm, 'number');
+  assert.equal(typeof followupBody.student.dyslexiaRiskScore, 'number');
   assert.ok(Array.isArray(followupBody.student.assessmentHistory));
   assert.equal((followupBody.student.assessmentHistory as unknown[]).length, 1);
+
+  const forgedFollowup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ ...validReadingEvidence(), dyslexiaRiskScore: 0, readingRiskLevel: 'nominal' }),
+  });
+  assert.equal(forgedFollowup.status, 400);
+
+  const auditResponse = await fetch(`${baseUrl}/api/audit-events?limit=200`, {
+    headers: authorizedHeaders(alpha.token),
+  });
+  assert.equal(auditResponse.status, 200);
+  const auditBody = await auditResponse.json() as { events: Array<Record<string, unknown>> };
+  assert.ok(auditBody.events.some((event) => event.action === 'student.create' && event.subjectId === studentId && event.actorLabel === 'اختبار تكامل'));
+  assert.ok(auditBody.events.some((event) => event.action === 'student.math-assessment' && event.subjectId === studentId));
+  assert.ok(auditBody.events.some((event) => event.action === 'student.session.complete' && event.subjectId === studentId && Array.isArray(event.changedFields) && (event.changedFields as string[]).includes('guardianConsentRecordedAt')));
+  assert.ok(auditBody.events.every((event) => event.tenantId === 'school_alpha'));
+  const readOnlyAudit = await fetch(`${baseUrl}/api/audit-events`, {
+    headers: authorizedHeaders(educator.token),
+  });
+  assert.equal(readOnlyAudit.status, 403);
 
   // Speech-recognition usage requires its own explicit, timestamped consent.
   const noAudioConsent = await fetch(`${baseUrl}/api/students`, {
@@ -297,7 +400,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
       guardianAudioConsentRecordedAt: undefined,
     })),
   });
-  assert.equal(noAudioConsent.status, 403);
+  assert.equal(noAudioConsent.status, 400);
 
   // AI endpoints must not work anonymously.
   assert.equal((await fetch(`${baseUrl}/api/ai/adapt-text`, {
@@ -311,6 +414,21 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     body: JSON.stringify({ text: 'test' }),
   })).status, 401);
 
+  // Authenticated AI requests are rate-limited persistently even when the test endpoint is not implemented.
+  for (let index = 0; index < 20; index += 1) {
+    await fetch(baseUrl + '/api/ai/security-test-probe', {
+      method: 'POST',
+      headers: authorizedHeaders(alpha.token),
+      body: JSON.stringify({ probe: index }),
+    });
+  }
+  const rateLimitedAi = await fetch(baseUrl + '/api/ai/security-test-probe', {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ probe: 'limit-check' }),
+  });
+  assert.equal(rateLimitedAi.status, 429);
+
   // Logout revokes the bearer token at the server; local clearing is not the only control.
   const logout = await fetch(`${baseUrl}/api/auth/logout`, {
     method: 'POST',
@@ -320,4 +438,25 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   assert.equal((await fetch(`${baseUrl}/api/students`, {
     headers: authorizedHeaders(alpha.token),
   })).status, 401);
+
+  // Persisted login throttling remains in force after a process restart.
+  for (let index = 0; index < 8; index += 1) {
+    await login(`invalid-integration-secret-${index}-long-enough-123456`, 'clinician', `198.51.100.${index + 1}`);
+  }
+  assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
+
+  // Reboot on a new ephemeral port but the same encrypted data directory.
+  await stopTestServer();
+  serverPort = await findAvailablePort();
+  await startTestServer();
+  assert.equal((await fetch(`${baseUrl}/api/students`, {
+    headers: authorizedHeaders(alpha.token),
+  })).status, 401);
+  assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
+  const persistedAiLimit = await fetch(baseUrl + '/api/ai/security-test-probe', {
+    method: 'POST',
+    headers: authorizedHeaders(beta.token),
+    body: JSON.stringify({ probe: 'after-restart' }),
+  });
+  assert.equal(persistedAiLimit.status, 429);
 });

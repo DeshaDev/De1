@@ -5,7 +5,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
-import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { z } from 'zod';
+import {
+  calculateDyscalculiaMetrics,
+  calculateEyeTrackingMetrics,
+  WordFixation,
+  SubitizingTrialResult,
+  NumberLineTrialResult,
+  TranscodingTrialResult,
+} from './src/utils/clinicalMetrics';
+import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { evaluateOralReadingAlignment } from './src/utils/dyslexiaEngines';
 import {
   ClinicalRole,
   ClinicalScope,
@@ -28,7 +38,39 @@ const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
 let clinicalStoreReady = false;
 
 const CLINICAL_SESSION_SECRET = (process.env.CLINICAL_SESSION_SECRET || '').trim();
-const REVOKED_CLINICAL_SESSIONS = new Map<string, number>();
+const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
+
+interface AuditEvent {
+  eventId: string;
+  timestamp: string;
+  tenantId: string;
+  sessionId: string;
+  role: ClinicalRole;
+  /** Self-declared label from login, not verified individual identity. */
+  actorLabel: string;
+  action: string;
+  subjectId?: string;
+  changedFields: string[];
+  outcome: 'success' | 'denied';
+}
+
+interface SecurityState {
+  version: 1;
+  revokedSessions: Record<string, number>;
+  rateLimitBuckets: {
+    auth: Record<string, number[]>;
+    ai: Record<string, number[]>;
+  };
+  auditEvents: AuditEvent[];
+}
+
+let securityState: SecurityState = {
+  version: 1,
+  revokedSessions: {},
+  rateLimitBuckets: { auth: {}, ai: {} },
+  auditEvents: [],
+};
+let securityStateReady = false;
 
 interface TenantCredential {
   tenantId: string;
@@ -85,27 +127,484 @@ function isClinicalAuthConfigured(): boolean {
     getStoreEncryptionKey() !== null
   );
 }
+
+
+function emptySecurityState(): SecurityState {
+  return {
+    version: 1,
+    revokedSessions: {},
+    rateLimitBuckets: { auth: {}, ai: {} },
+    auditEvents: [],
+  };
+}
+
+function sealSecurityState(state: SecurityState, key: Buffer): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(state), 'utf8'),
+    cipher.final(),
+  ]);
+  return JSON.stringify({
+    format: 'baseera-aes-256-gcm-security-v1',
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    ciphertext: ciphertext.toString('base64'),
+  });
+}
+
+function openSecurityState(raw: string, key: Buffer): SecurityState {
+  const envelope = JSON.parse(raw) as {
+    format?: unknown;
+    iv?: unknown;
+    tag?: unknown;
+    ciphertext?: unknown;
+  };
+  if (
+    envelope.format !== 'baseera-aes-256-gcm-security-v1' ||
+    typeof envelope.iv !== 'string' ||
+    typeof envelope.tag !== 'string' ||
+    typeof envelope.ciphertext !== 'string'
+  ) throw new Error('Unsupported encrypted security-state format');
+
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    key,
+    Buffer.from(envelope.iv, 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
+  const plaintext = Buffer.concat([
+    decipher.update(Buffer.from(envelope.ciphertext, 'base64')),
+    decipher.final(),
+  ]).toString('utf8');
+  const parsed = JSON.parse(plaintext) as Partial<SecurityState>;
+
+  if (
+    parsed.version !== 1 ||
+    !parsed.revokedSessions ||
+    typeof parsed.revokedSessions !== 'object' ||
+    Array.isArray(parsed.revokedSessions) ||
+    !parsed.rateLimitBuckets ||
+    typeof parsed.rateLimitBuckets.auth !== 'object' ||
+    typeof parsed.rateLimitBuckets.ai !== 'object' ||
+    !Array.isArray(parsed.auditEvents)
+  ) throw new Error('Invalid decrypted security-state structure');
+
+  return {
+    version: 1,
+    revokedSessions: parsed.revokedSessions as Record<string, number>,
+    rateLimitBuckets: {
+      auth: parsed.rateLimitBuckets.auth as Record<string, number[]>,
+      ai: parsed.rateLimitBuckets.ai as Record<string, number[]>,
+    },
+    auditEvents: (parsed.auditEvents as Array<Partial<AuditEvent>>).map((event) => ({
+      ...event,
+      actorLabel: typeof event.actorLabel === 'string' ? event.actorLabel : 'هوية غير متحققة',
+    })) as AuditEvent[],
+  };
+}
+
+function persistSecurityState(): boolean {
+  const key = getStoreEncryptionKey();
+  if (!key) return false;
+  const tempPath = `${SECURITY_STATE_PATH}.tmp`;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
+    fs.writeFileSync(tempPath, sealSecurityState(securityState, key), {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    fs.chmodSync(tempPath, 0o600);
+    fs.renameSync(tempPath, SECURITY_STATE_PATH);
+    fs.chmodSync(SECURITY_STATE_PATH, 0o600);
+    return true;
+  } catch {
+    try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
+    console.error('Unable to persist encrypted authentication/revocation/audit state; protected APIs are being disabled.');
+    securityStateReady = false;
+    return false;
+  }
+}
+
+/** Corrupt or unreadable security state is a hard failure: never silently reset revocations or counters. */
+function initializeSecurityState(): boolean {
+  const key = getStoreEncryptionKey();
+  if (!key) {
+    securityStateReady = false;
+    return false;
+  }
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+    fs.chmodSync(DATA_DIR, 0o700);
+    if (!fs.existsSync(SECURITY_STATE_PATH)) {
+      securityState = emptySecurityState();
+      if (!persistSecurityState()) return false;
+    } else {
+      securityState = openSecurityState(fs.readFileSync(SECURITY_STATE_PATH, 'utf8'), key);
+    }
+
+    const now = Date.now();
+    for (const [id, expiry] of Object.entries(securityState.revokedSessions)) {
+      if (!Number.isFinite(expiry) || expiry <= now) delete securityState.revokedSessions[id];
+    }
+    for (const kind of ['auth', 'ai'] as const) {
+      for (const [ip, timestamps] of Object.entries(securityState.rateLimitBuckets[kind])) {
+        const retained = Array.isArray(timestamps)
+          ? timestamps.filter((timestamp) => Number.isFinite(timestamp) && now - timestamp < 60_000)
+          : [];
+        if (retained.length === 0) delete securityState.rateLimitBuckets[kind][ip];
+        else securityState.rateLimitBuckets[kind][ip] = retained;
+      }
+    }
+    if (securityState.auditEvents.length > 5000) {
+      securityState.auditEvents = securityState.auditEvents.slice(-5000);
+    }
+    securityStateReady = true;
+    return persistSecurityState();
+  } catch {
+    securityStateReady = false;
+    console.error('Encrypted security state could not be loaded. Authentication is disabled until the store is repaired.');
+    return false;
+  }
+}
+
+function consumePersistentRateLimit(
+  kind: 'auth' | 'ai',
+  key: string,
+  maxAttempts: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSeconds: number; available: boolean } {
+  if (!securityStateReady) {
+    return { allowed: false, retryAfterSeconds: 60, available: false };
+  }
+  const now = Date.now();
+  const previous = securityState.rateLimitBuckets[kind][key] || [];
+  const active = previous.filter((timestamp) => now - timestamp < windowMs);
+  if (active.length >= maxAttempts) {
+    const oldest = active[0] || now;
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((windowMs - (now - oldest)) / 1000)),
+      available: true,
+    };
+  }
+
+  securityState.rateLimitBuckets[kind][key] = [...active, now];
+  // Keep persistence bounded if an attacker rotates source addresses.
+  const keys = Object.keys(securityState.rateLimitBuckets[kind]);
+  if (keys.length > 5000) {
+    for (const oldKey of keys.slice(0, keys.length - 5000)) {
+      delete securityState.rateLimitBuckets[kind][oldKey];
+    }
+  }
+  if (!persistSecurityState()) {
+    securityState.rateLimitBuckets[kind][key] = previous;
+    return { allowed: false, retryAfterSeconds: 60, available: false };
+  }
+  return { allowed: true, retryAfterSeconds: 0, available: true };
+}
+
+function appendAuditEvent(event: Omit<AuditEvent, 'eventId' | 'timestamp'>): boolean {
+  if (!securityStateReady) return false;
+  const priorEvents = securityState.auditEvents;
+  securityState.auditEvents = [
+    ...priorEvents,
+    {
+      ...event,
+      eventId: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+    },
+  ].slice(-5000);
+  if (persistSecurityState()) return true;
+  securityState.auditEvents = priorEvents;
+  return false;
+}
+
+function auditForRequest(
+  req: express.Request,
+  action: string,
+  subjectId: string | undefined,
+  changedFields: string[]
+): boolean {
+  const session = (req as any).clinicalSession as VerifiedClinicalSession | undefined;
+  if (!session) return false;
+  return appendAuditEvent({
+    tenantId: session.tenantId,
+    sessionId: session.sessionId,
+    role: session.role,
+    actorLabel: session.clinicianName,
+    action,
+    subjectId,
+    changedFields: [...new Set(changedFields)].sort(),
+    outcome: 'success',
+  });
+}
+
+function readTrustedProxyHops(): number {
+  const raw = (process.env.TRUST_PROXY_HOPS || '0').trim();
+  if (!raw || [...raw].some((character) => character < '0' || character > '9')) {
+    throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5.');
+  }
+  const hops = Number(raw);
+  if (!Number.isInteger(hops) || hops < 0 || hops > 5) {
+    throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5.');
+  }
+  return hops;
+}
+
 function constantTimeStringEqual(a: string, b: string): boolean {
   const left = Buffer.from(a, 'utf8');
   const right = Buffer.from(b, 'utf8');
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-const PATCHABLE_STUDENT_FIELDS = new Set<string>([
-  'sessionStatus', 'sessionRoleLabel',
-  'lastScreenedDate', 'passageId', 'dialectRegionAr',
-  'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
-  'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
-  'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
-  'calibrationAccuracyPercent', 'calibrationValidationMethod',
-  'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
-  'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
-  'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
-  'problematicWords', 'fixations', 'comprehensionScore',
-  'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
-  'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-  'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
-]);
+// PATCH is intentionally limited to non-derived profile fields. Measurement outputs and
+// screening scores must be derived server-side from validated task evidence.
+const studentPatchSchema = z.object({
+  gradeLevel: z.number().int().min(1).max(12).optional(),
+  ageYears: z.number().int().min(4).max(21).optional(),
+  passageId: z.string().trim().min(1).max(120)
+    .refine((value) => ARABIC_READING_PASSAGES.some((passage) => passage.id === value), {
+      message: 'Unknown reading passage ID.',
+    }).optional(),
+  dialectRegionAr: z.string().trim().min(1).max(100).optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, {
+  message: 'At least one editable profile field is required.',
+});
+
+const subitizingSubmissionSchema = z.object({
+  dotCount: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  chosen: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+}).strict();
+
+const numberLineSubmissionSchema = z.object({
+  target: z.union([z.literal(37), z.literal(156)]),
+  userEstimate: z.number().finite().min(0).max(200),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+  scaleMin: z.literal(0),
+  scaleMax: z.union([z.literal(100), z.literal(200)]),
+}).strict();
+
+const transcodingSubmissionSchema = z.object({
+  targetNumber: z.union([z.literal(47), z.literal(83), z.literal(69)]),
+  selectedNumber: z.number().int().min(0).max(999),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+}).strict();
+
+const mathAssessmentSchema = z.object({
+  subitizingTrials: z.array(subitizingSubmissionSchema).length(4),
+  numberLineTrials: z.array(numberLineSubmissionSchema).length(2),
+  transcodingTrials: z.array(transcodingSubmissionSchema).length(3),
+}).strict().superRefine((value, ctx) => {
+  const dotCounts = value.subitizingTrials.map((trial) => trial.dotCount);
+  if (new Set(dotCounts).size !== 4) {
+    ctx.addIssue({ code: 'custom', path: ['subitizingTrials'], message: 'Each dot count must be represented once.' });
+  }
+
+  const numberLineTargets = value.numberLineTrials.map((trial) => trial.target);
+  if (new Set(numberLineTargets).size !== 2) {
+    ctx.addIssue({ code: 'custom', path: ['numberLineTrials'], message: 'Both fixed number-line targets are required exactly once.' });
+  }
+  for (const [index, trial] of value.numberLineTrials.entries()) {
+    const expectedScale = trial.target === 37 ? 100 : 200;
+    if (
+      trial.scaleMax !== expectedScale ||
+      trial.userEstimate < trial.scaleMin ||
+      trial.userEstimate > trial.scaleMax
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['numberLineTrials', index], message: 'Invalid estimate range for the fixed target.' });
+    }
+  }
+
+  const allowedChoices: Record<number, number[]> = {
+    47: [47, 74, 49],
+    83: [83, 38, 63],
+    69: [69, 96, 66],
+  };
+  const transcodingTargets = value.transcodingTrials.map((trial) => trial.targetNumber);
+  if (new Set(transcodingTargets).size !== 3) {
+    ctx.addIssue({ code: 'custom', path: ['transcodingTrials'], message: 'Each fixed transcoding target is required exactly once.' });
+  }
+  for (const [index, trial] of value.transcodingTrials.entries()) {
+    if (!allowedChoices[trial.targetNumber]?.includes(trial.selectedNumber)) {
+      ctx.addIssue({ code: 'custom', path: ['transcodingTrials', index, 'selectedNumber'], message: 'Selected option is not available for this fixed task.' });
+    }
+  }
+});
+
+const arabicDialectSchema = z.enum(['msa', 'gulf', 'egyptian', 'levantine', 'maghrebi']);
+
+const wordFixationEvidenceSchema = z.object({
+  wordIndex: z.number().int().min(0).max(1000),
+  word: z.string().min(1).max(100),
+  durationMs: z.number().int().min(0).max(120_000),
+  visits: z.number().int().min(0).max(1000),
+  regressedFromIndex: z.number().int().min(0).max(1000).optional(),
+  blinks: z.number().int().min(0).max(10_000).optional(),
+  observed: z.boolean().optional(),
+}).strict();
+
+const readingEvidenceShape = {
+  passageId: z.string().trim().min(1).max(120),
+  dialectCode: arabicDialectSchema.default('msa'),
+  dialectRegionAr: z.string().trim().min(1).max(100).optional(),
+  readingDurationSeconds: z.number().finite().min(4).max(3600),
+  blinkCount: z.number().int().min(0).max(10_000),
+  fixations: z.array(wordFixationEvidenceSchema).min(1).max(1000),
+  comprehensionAnswers: z.array(z.number().int().min(0).max(20)).min(1).max(20),
+  spokenTranscript: z.string().max(20_000).optional().default(''),
+  speechRecognitionUsed: z.boolean().optional().default(false),
+  guardianConsentGiven: z.literal(true),
+  guardianConsentRecordedAt: z.string().refine((value) => Number.isFinite(Date.parse(value)), {
+    message: 'Invalid consent timestamp',
+  }),
+  guardianConsentSource: z.string().trim().min(1).max(300),
+  guardianAudioConsentGiven: z.boolean().optional().default(false),
+  guardianAudioConsentRecordedAt: z.string().optional().refine(
+    (value) => value === undefined || Number.isFinite(Date.parse(value)),
+    { message: 'Invalid audio-consent timestamp' }
+  ),
+  calibrationAccuracyPercent: z.number().int().min(0).max(99),
+  calibrationValidationMethod: z.enum(['independent-holdout', 'leave-one-point-out']),
+};
+
+const readingSessionEvidenceSchema = z.object(readingEvidenceShape).strict().superRefine((value, ctx) => {
+  if (value.speechRecognitionUsed && (
+    !value.guardianAudioConsentGiven ||
+    !value.guardianAudioConsentRecordedAt
+  )) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['guardianAudioConsentGiven'],
+      message: 'Explicit timestamped audio consent is required.',
+    });
+  }
+});
+
+const studentCreateEvidenceSchema = z.object({
+  id: z.string().regex(/^[a-zA-Z0-9._:-]{1,120}$/),
+  name: z.string().trim().min(1).max(120),
+  schoolName: z.string().trim().min(1).max(160),
+  gradeLevel: z.number().int().min(1).max(12),
+  ageYears: z.number().int().min(4).max(21),
+  ...readingEvidenceShape,
+}).strict().superRefine((value, ctx) => {
+  if (value.speechRecognitionUsed && (
+    !value.guardianAudioConsentGiven ||
+    !value.guardianAudioConsentRecordedAt
+  )) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['guardianAudioConsentGiven'],
+      message: 'Explicit timestamped audio consent is required.',
+    });
+  }
+});
+
+type ReadingEvidence = z.infer<typeof readingSessionEvidenceSchema>;
+
+function deriveServerReadingMetrics(
+  evidence: ReadingEvidence,
+  gradeLevel: number
+): { metrics: ReturnType<typeof calculateEyeTrackingMetrics>; comprehensionScore: number; clinicalReport: StudentRecord['clinicalReport']; oral: ReturnType<typeof evaluateOralReadingAlignment> | null; passageWords: string[] } | { error: string; statusCode: 400 | 422 } {
+  const passage = ARABIC_READING_PASSAGES.find((item) => item.id === evidence.passageId);
+  if (!passage) return { error: 'نص القراءة غير معروف؛ أُرفضت أدلة الجلسة.', statusCode: 400 };
+  if (evidence.fixations.length !== passage.words.length) {
+    return { error: 'عدد سجلات الكلمات لا يطابق نص القراءة المحدد.', statusCode: 400 };
+  }
+  for (let index = 0; index < passage.words.length; index += 1) {
+    const fixation = evidence.fixations[index];
+    if (
+      fixation.wordIndex !== index ||
+      fixation.word !== passage.words[index] ||
+      fixation.visits === 0 && fixation.durationMs > 0
+    ) {
+      return { error: 'تسلسل كلمات التثبيت لا يطابق النص؛ رُفضت البيانات المعدلة.', statusCode: 400 };
+    }
+  }
+  for (const fixation of evidence.fixations) {
+    if (
+      typeof fixation.regressedFromIndex === 'number' &&
+      fixation.regressedFromIndex >= passage.words.length
+    ) {
+      return { error: 'مؤشر حركة العين خارج حدود النص.', statusCode: 400 };
+    }
+  }
+  if (evidence.comprehensionAnswers.length !== passage.comprehensionQuestions.length) {
+    return { error: 'عدد إجابات الفهم لا يطابق أسئلة النص.', statusCode: 400 };
+  }
+  for (let index = 0; index < evidence.comprehensionAnswers.length; index += 1) {
+    const answer = evidence.comprehensionAnswers[index];
+    if (answer >= passage.comprehensionQuestions[index].options.length) {
+      return { error: 'إجابة فهم خارج خيارات السؤال.', statusCode: 400 };
+    }
+  }
+
+  const spokenTranscript = evidence.spokenTranscript.trim();
+  const oral = spokenTranscript
+    ? evaluateOralReadingAlignment(
+        passage.words,
+        spokenTranscript,
+        evidence.readingDurationSeconds,
+        0,
+        evidence.dialectCode
+      )
+    : null;
+  const oralInput = oral ? {
+    assessed: true,
+    wcpm: oral.wcpm,
+    accuracyPercent: oral.accuracyPercent,
+    werPercent: oral.werPercent,
+    phoneticSubstitutionCount: oral.phoneticSubstitutionCount,
+    dialectVariantCount: oral.dialectVariantCount,
+    omissionCount: oral.omittedWordsCount,
+    misreadWords: oral.alignment
+      .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+      .map((item) => item.spokenWord ? `${item.targetWord} (نُطقت: ${item.spokenWord})` : item.targetWord),
+  } : null;
+
+  const fixations = evidence.fixations as WordFixation[];
+  const metrics = calculateEyeTrackingMetrics(
+    fixations,
+    evidence.readingDurationSeconds,
+    gradeLevel,
+    evidence.blinkCount,
+    passage.words.length,
+    oralInput
+  );
+  if (
+    metrics.observedWordCount < 4 ||
+    metrics.gazeCoveragePercent < 25 ||
+    !metrics.isSufficientGazeData
+  ) {
+    return {
+      error: 'بيانات النظر غير كافية لإصدار نتيجة محفوظة؛ يلزم رصد 4 كلمات وتغطية 25% على الأقل.',
+      statusCode: 422,
+    };
+  }
+  const comprehensionCorrect = evidence.comprehensionAnswers.filter(
+    (answer, index) => answer === passage.comprehensionQuestions[index].correctIndex
+  ).length;
+  const comprehensionScore = Math.round(
+    (comprehensionCorrect / passage.comprehensionQuestions.length) * 100
+  );
+  const oralSummary = oral
+    ? ` وُزنت المطابقة الصوتية للخادم: ${oral.accuracyPercent}%، ومعدل خطأ الكلمات ${oral.werPercent}%.`
+    : ' لم يُرسل نص قراءة منطوقة لهذه الجلسة.';
+  const clinicalReport: StudentRecord['clinicalReport'] = {
+    clinicalSummary: `نتيجة فرز استرشادي محسوبة على الخادم: ${metrics.observedWordCount}/${metrics.totalPassageWordCount} كلمة مرصودة، وطلاقة ${metrics.wpm} كلمة/دقيقة، ومؤشر خطورة استدلالي ${metrics.dyslexiaRiskScore}/100.${oralSummary} لا تمثل النتيجة تشخيصًا طبيًا أو معيارًا معياريًا.`,
+    ocularMotorAnalysis: `متوسط التثبيت ${metrics.avgFixationMs} مللي ثانية، والتغطية المرصودة ${metrics.gazeCoveragePercent}%. مؤشرات وصفية من جلسة واحدة وليست تشخيصًا.`,
+    orthographicAndPhonologicalPatterns: metrics.problematicWords.length
+      ? `كلمات تستحق المراجعة في هذه الجلسة: ${metrics.problematicWords.join('، ')}.`
+      : 'لم تُحدد كلمات بارزة وفق قواعد الفرز الحالية.',
+    dyscalculiaSpatialAnalysis: 'لم يجر اختبار الحساب ضمن جلسة القراءة هذه.',
+    interventionExercises: [],
+    classroomAccommodations: [],
+  };
+  return { metrics, comprehensionScore, clinicalReport, oral, passageWords: passage.words };
+}
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
   // Migrate records written by older builds, where heuristic indices were mislabeled as percentiles.
@@ -268,9 +767,9 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
     res: express.Response,
     next: express.NextFunction
   ) => {
-    if (!isClinicalAuthConfigured() || !clinicalStoreReady) {
+    if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
       res.status(503).json({
-        error: 'يلزم ضبط الأسرار وتهيئة مخزن سريري مشفر قابل للقراءة والكتابة قبل تفعيل بيانات الطلاب.',
+        error: 'يلزم إعداد الأسرار وتهيئة مخازن الطلاب والأمن المشفرة قبل تفعيل بيانات الطلاب.',
       });
       return;
     }
@@ -279,12 +778,11 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
       (req.headers['x-clinical-session-token'] as string) ||
       '';
     const verifiedSession = verifyClinicalSessionToken(rawHeader, CLINICAL_SESSION_SECRET);
-    const now = Date.now();
-    for (const [sessionId, expiresAt] of REVOKED_CLINICAL_SESSIONS) {
-      if (expiresAt <= now) REVOKED_CLINICAL_SESSIONS.delete(sessionId);
-    }
+    const revokedUntil = verifiedSession
+      ? securityState.revokedSessions[verifiedSession.sessionId]
+      : undefined;
     const activeSession = verifiedSession &&
-      !REVOKED_CLINICAL_SESSIONS.has(verifiedSession.sessionId)
+      !(typeof revokedUntil === 'number' && revokedUntil > Date.now())
       ? verifiedSession
       : null;
     const authResult = authorizeSessionScope(activeSession, requiredScope);
@@ -300,58 +798,48 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
   };
 }
 
-// Rate-limit credential attempts independently from paid AI requests.
-const authAttemptBuckets = new Map<string, number[]>();
+// Persistent sliding-window limiter. Source IPs are interpreted after Express has applied
+// only the explicitly configured trusted-proxy hop count.
 function authRateLimiter(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
-  const now = Date.now();
-  const windowMs = 60_000;
-  const maxAttemptsPerMinute = 8;
-  const attempts = (authAttemptBuckets.get(clientIp) || []).filter(
-    (ts) => now - ts < windowMs
-  );
-  if (attempts.length >= maxAttemptsPerMinute) {
-    res.setHeader('Retry-After', '60');
+  const result = consumePersistentRateLimit('auth', clientIp, 8, 60_000);
+  if (!result.available) {
+    res.status(503).json({ error: 'تعذر حفظ حالة الحماية؛ تسجيل الدخول متوقف مؤقتًا.' });
+    return;
+  }
+  if (!result.allowed) {
+    res.setHeader('Retry-After', String(result.retryAfterSeconds));
     res.status(429).json({
       error: 'محاولات تسجيل الدخول كثيرة. يرجى الانتظار قبل المحاولة مجددًا.',
     });
     return;
   }
-  attempts.push(now);
-  authAttemptBuckets.set(clientIp, attempts);
   next();
 }
 
-// Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
-const rateLimitBuckets = new Map<string, number[]>();
+// Persistent sliding-window limiter for paid AI endpoints.
 function aiRateLimiter(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
-  // Do not trust client-supplied X-Forwarded-For unless a trusted proxy is explicitly configured.
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
-  const now = Date.now();
-  const windowMs = 60_000;
-  const maxRequestsPerMinute = 20;
-
-  const history = (rateLimitBuckets.get(clientIp) || []).filter(
-    (ts) => now - ts < windowMs
-  );
-  if (history.length >= maxRequestsPerMinute) {
-    res.setHeader('Retry-After', '60');
+  const result = consumePersistentRateLimit('ai', clientIp, 20, 60_000);
+  if (!result.available) {
+    res.status(503).json({ error: 'تعذر حفظ حالة الحماية؛ خدمات التحليل متوقفة مؤقتًا.' });
+    return;
+  }
+  if (!result.allowed) {
+    res.setHeader('Retry-After', String(result.retryAfterSeconds));
     res.status(429).json({
-      error:
-        'تم تجاوز الحد الأقصى لطلبات الذكاء الاصطناعي في الدقيقة لحماية الخدمة. يرجى المحاولة بعد قليل.',
+      error: 'تم تجاوز عدد طلبات التحليل المسموح به. يرجى الانتظار قبل المحاولة مجددًا.',
     });
     return;
   }
-  history.push(now);
-  rateLimitBuckets.set(clientIp, history);
   next();
 }
 
@@ -373,7 +861,11 @@ function getGenAIClient(): GoogleGenAI | null {
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT || 3000);
+  app.set('trust proxy', readTrustedProxyHops());
 
+  if (!initializeSecurityState()) {
+    console.error('Encrypted security-state initialization failed; protected endpoints will return 503.');
+  }
   app.use(express.json({ limit: '5mb' }));
 
   let studentsDb: StudentRecord[] = loadPersistedStudents();
@@ -408,6 +900,18 @@ async function startServer() {
       60 * 60 * 1000,
       credential.tenantId
     );
+    if (!appendAuditEvent({
+      tenantId: session.tenantId,
+      sessionId: session.sessionId,
+      role: session.role,
+      actorLabel: session.clinicianName,
+      action: 'auth.login',
+      changedFields: [],
+      outcome: 'success',
+    })) {
+      res.status(503).json({ error: 'تعذر تسجيل حدث الدخول في سجل التدقيق؛ لم تُصدر الجلسة.' });
+      return;
+    }
     res.json(session);
   });
 
@@ -421,7 +925,30 @@ async function startServer() {
 
   app.post('/api/auth/logout', requireClinicalAuth('students:read'), (req, res) => {
     const session = (req as any).clinicalSession as VerifiedClinicalSession;
-    REVOKED_CLINICAL_SESSIONS.set(session.sessionId, session.expiresAt);
+    const previousExpiry = securityState.revokedSessions[session.sessionId];
+    const previousEvents = securityState.auditEvents;
+    securityState.revokedSessions[session.sessionId] = session.expiresAt;
+    securityState.auditEvents = [
+      ...previousEvents,
+      {
+        eventId: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        tenantId: session.tenantId,
+        sessionId: session.sessionId,
+        role: session.role,
+        actorLabel: session.clinicianName,
+        action: 'auth.logout',
+        changedFields: [],
+        outcome: 'success' as const,
+      },
+    ].slice(-5000);
+    if (!persistSecurityState()) {
+      if (previousExpiry === undefined) delete securityState.revokedSessions[session.sessionId];
+      else securityState.revokedSessions[session.sessionId] = previousExpiry;
+      securityState.auditEvents = previousEvents;
+      res.status(503).json({ error: 'تعذر حفظ إبطال الجلسة؛ لم يؤكد الخادم تسجيل الخروج.' });
+      return;
+    }
     res.status(204).end();
   });
 
@@ -435,65 +962,133 @@ async function startServer() {
     });
   });
 
+  app.get('/api/audit-events', requireClinicalAuth('students:read'), (req, res) => {
+    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    if (session.role !== 'clinician') {
+      res.status(403).json({ error: 'سجل التدقيق متاح للأخصائيين المخوّلين فقط.' });
+      return;
+    }
+    const requestedLimit = Number(req.query.limit ?? 100);
+    const limit = Number.isInteger(requestedLimit) ? Math.max(1, Math.min(200, requestedLimit)) : 100;
+    const events = securityState.auditEvents
+      .filter((event) => event.tenantId === session.tenantId)
+      .slice(-limit)
+      .reverse();
+    res.json({ events, encryptedAtRest: true });
+  });
+
   app.post(
     '/api/students',
     requireClinicalAuth('students:write'),
     (req, res) => {
-      const incoming = req.body as StudentRecord;
       const session = (req as any).clinicalSession as VerifiedClinicalSession;
-      if (!incoming || typeof incoming.id !== 'string' ||
-          !/^[a-zA-Z0-9._:-]{1,120}$/.test(incoming.id) ||
-          typeof incoming.name !== 'string' || !incoming.name.trim() ||
-          incoming.name.length > 120) {
-        res.status(400).json({ error: 'بيانات جلسة الطالب غير مكتملة أو غير صالحة.' });
-        return;
-      }
-      // Creation cannot replace any existing ID, regardless of school/tenant.
-      if (studentsDb.some((student) => student.id === incoming.id)) {
-        res.status(409).json({ error: 'معرّف الطالب موجود بالفعل؛ رُفض استبدال سجل موجود.' });
-        return;
-      }
-      if (incoming.isDemoRecord === true) {
-        res.status(400).json({ error: 'لا يمكن حفظ سجل عرض تجريبي كسجل طالب.' });
-        return;
-      }
-      const newRecord: StudentRecord = {
-        ...incoming,
-        id: incoming.id,
-        name: incoming.name.trim(),
-        tenantId: session.tenantId,
-        isDemoRecord: false,
-      };
-
-      const consentCheck = validateExplicitGuardianConsent(newRecord.guardianConsentGiven);
-      const consentTimeValid = typeof newRecord.guardianConsentRecordedAt === 'string' &&
-        Number.isFinite(Date.parse(newRecord.guardianConsentRecordedAt));
-      const consentSourceValid = typeof newRecord.guardianConsentSource === 'string' &&
-        newRecord.guardianConsentSource.trim().length > 0;
-      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
-        res.status(403).json({
-          error: consentCheck.valid
-            ? 'يلزم تسجيل وقت الموافقة ومصدرها قبل حفظ الجلسة.'
-            : consentCheck.errorAr,
+      const parsed = studentCreateEvidenceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'بيانات إنشاء الملف أو أدلة القراءة غير صالحة.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
         });
         return;
       }
-      if (newRecord.speechRecognitionUsed === true && (
-        newRecord.guardianAudioConsentGiven !== true ||
-        typeof newRecord.guardianAudioConsentRecordedAt !== 'string' ||
-        !Number.isFinite(Date.parse(newRecord.guardianAudioConsentRecordedAt))
-      )) {
-        res.status(403).json({ error: 'رُصد استخدام التعرف الصوتي دون سجل موافقة صوتية منفصل صالح؛ رُفض حفظ الجلسة.' });
+      const incoming = parsed.data;
+      const existingId = studentsDb.find((student) => student.id === incoming.id);
+      if (existingId && existingId.tenantId !== session.tenantId) {
+        res.status(404).json({ error: 'تعذر إنشاء السجل بهذا المعرّف.' });
+        return;
+      }
+      if (existingId) {
+        res.status(409).json({ error: 'معرّف الطالب موجود بالفعل؛ رُفض استبدال سجل موجود.' });
         return;
       }
 
+      const derived = deriveServerReadingMetrics(incoming, incoming.gradeLevel);
+      if ('error' in derived) {
+        res.status(derived.statusCode).json({ error: derived.error });
+        return;
+      }
+      const { metrics, comprehensionScore, clinicalReport, oral } = derived;
+      const now = new Date();
+      const newRecord: StudentRecord = {
+        id: incoming.id,
+        name: incoming.name,
+        schoolName: incoming.schoolName,
+        tenantId: session.tenantId,
+        isDemoRecord: false,
+        sessionStatus: 'completed',
+        sessionCompletedAt: now.toISOString(),
+        sessionRoleLabel: 'جلسة فرز',
+        assessmentHistory: [],
+        gradeLevel: incoming.gradeLevel,
+        ageYears: incoming.ageYears,
+        lastScreenedDate: now.toLocaleString('ar-EG', {
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        }),
+        passageId: incoming.passageId,
+        dialectRegionAr: incoming.dialectRegionAr || incoming.dialectCode,
+        dialectCode: incoming.dialectCode,
+        readingDurationSeconds: incoming.readingDurationSeconds,
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: incoming.guardianConsentRecordedAt,
+        guardianConsentSource: incoming.guardianConsentSource,
+        guardianAudioConsentGiven: incoming.guardianAudioConsentGiven,
+        guardianAudioConsentRecordedAt: incoming.guardianAudioConsentRecordedAt,
+        speechRecognitionUsed: incoming.speechRecognitionUsed,
+        wpm: metrics.wpm,
+        avgFixationMs: metrics.avgFixationMs,
+        regressionRate: metrics.regressionRate,
+        regressionCount: metrics.regressionCount,
+        blinkCount: metrics.blinkCount,
+        blinksPerMinute: metrics.blinksPerMinute,
+        visualStrainLevel: metrics.visualStrainLevel,
+        visualStrainLabelAr: metrics.visualStrainLabelAr,
+        gazeCoveragePercent: metrics.gazeCoveragePercent,
+        observedWordCount: metrics.observedWordCount,
+        totalPassageWordCount: metrics.totalPassageWordCount,
+        calibrationAccuracyPercent: incoming.calibrationAccuracyPercent,
+        calibrationValidationMethod: incoming.calibrationValidationMethod,
+        oralReadingAssessed: Boolean(oral),
+        spokenTranscript: incoming.spokenTranscript,
+        oralWcpm: oral?.wcpm ?? null,
+        oralAccuracyPercent: oral?.accuracyPercent ?? null,
+        oralWerPercent: oral?.werPercent ?? null,
+        phoneticSubstitutionCount: oral?.phoneticSubstitutionCount ?? 0,
+        dialectVariantCount: oral?.dialectVariantCount ?? 0,
+        omissionCount: oral?.omittedWordsCount ?? 0,
+        dyslexiaRiskScore: metrics.dyslexiaRiskScore,
+        readingHeuristicIndicator: metrics.heuristicIndicator,
+        readingRiskLevel: metrics.riskLevel,
+        readingRiskLabelAr: metrics.riskLabelAr,
+        problematicWords: metrics.problematicWords,
+        fixations: incoming.fixations as WordFixation[],
+        comprehensionScore,
+        dyscalculiaAssessed: false,
+        subitizingAccuracy: null,
+        avgSubitizingMs: null,
+        numberLinePAE: null,
+        transcodingAccuracy: null,
+        reversalErrorCount: null,
+        dyscalculiaRiskScore: null,
+        mathHeuristicIndicator: null,
+        mathRiskLevel: 'unassessed',
+        mathRiskLabelAr: 'لم يجر اختبار الحساب بعد',
+        clinicalReport,
+      };
       const nextRecords = [newRecord, ...studentsDb];
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ السجل في التخزين المشفر.' });
         return;
       }
+      if (!auditForRequest(req, 'student.create', newRecord.id, Object.keys(newRecord))) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and student-create rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل إنشاء السجل في سجل التدقيق المشفر.' });
+        return;
+      }
       studentsDb = nextRecords;
-      res.status(201).json({ student: newRecord, persisted: true });
+      res.status(201).json({ student: newRecord, persisted: true, scoring: 'server-derived' });
     }
   );
 
@@ -511,64 +1106,27 @@ async function startServer() {
         res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
         return;
       }
-      const incoming = req.body as Record<string, unknown> | null;
-      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
-        res.status(400).json({ error: 'بيانات جلسة المتابعة غير صالحة.' });
-        return;
-      }
-
-      const sessionFields = new Set([
-        'sessionRoleLabel', 'passageId', 'dialectRegionAr',
-        'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
-        'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
-        'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
-        'calibrationAccuracyPercent', 'calibrationValidationMethod',
-        'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
-        'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
-        'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
-        'problematicWords', 'fixations', 'comprehensionScore',
-        'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
-        'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-        'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
-        'guardianConsentGiven', 'guardianConsentRecordedAt', 'guardianConsentSource',
-        'guardianAudioConsentGiven', 'guardianAudioConsentRecordedAt', 'speechRecognitionUsed',
-      ]);
-      const forbidden = Object.keys(incoming).filter((key) => !sessionFields.has(key));
-      if (forbidden.length > 0) {
+      const parsed = readingSessionEvidenceSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
-          error: 'ترسل جلسة المتابعة حقولاً غير مسموح بها؛ هوية الطالب والمدرسة والتاريخ يديرها الخادم.',
-          rejectedFields: forbidden,
+          error: 'بيانات جلسة المتابعة أو أدلة القراءة غير صالحة. لا تقبل نقاط الخطر المرسلة من العميل.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
         });
         return;
       }
-
-      const consentCheck = validateExplicitGuardianConsent(incoming.guardianConsentGiven);
-      const consentTimeValid = typeof incoming.guardianConsentRecordedAt === 'string' &&
-        Number.isFinite(Date.parse(incoming.guardianConsentRecordedAt));
-      const consentSourceValid = typeof incoming.guardianConsentSource === 'string' &&
-        incoming.guardianConsentSource.trim().length > 0;
-      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
-        res.status(403).json({
-          error: consentCheck.valid
-            ? 'يلزم تسجيل موافقة جديدة بوقت ومصدر قبل حفظ جلسة المتابعة.'
-            : consentCheck.errorAr,
-        });
-        return;
-      }
-      if (incoming.speechRecognitionUsed === true && (
-        incoming.guardianAudioConsentGiven !== true ||
-        typeof incoming.guardianAudioConsentRecordedAt !== 'string' ||
-        !Number.isFinite(Date.parse(incoming.guardianAudioConsentRecordedAt))
-      )) {
-        res.status(403).json({ error: 'استخدام التعرف الصوتي يتطلب موافقة صوتية منفصلة بوقت صالح.' });
-        return;
-      }
-
+      const incoming = parsed.data;
       const current = studentsDb[idx];
-      const nowIso = new Date().toISOString();
+      const derived = deriveServerReadingMetrics(incoming, current.gradeLevel);
+      if ('error' in derived) {
+        res.status(derived.statusCode).json({ error: derived.error });
+        return;
+      }
+      const { metrics, comprehensionScore, clinicalReport, oral } = derived;
+      const now = new Date();
+      const nowIso = now.toISOString();
       const previousSnapshot = current.sessionStatus === 'completed'
         ? {
-            sessionId: current.id,
+            sessionId: `${current.id}-${current.sessionCompletedAt || current.lastScreenedDate || nowIso}`,
             completedAt: current.sessionCompletedAt || current.lastScreenedDate || nowIso,
             passageId: current.passageId,
             wpm: current.wpm,
@@ -586,12 +1144,8 @@ async function startServer() {
             mathRiskLevel: current.mathRiskLevel,
           }
         : null;
-      const updates = Object.fromEntries(
-        Object.entries(incoming).filter(([key]) => sessionFields.has(key))
-      ) as Partial<StudentRecord>;
       const updatedRecord: StudentRecord = {
         ...current,
-        ...updates,
         id: current.id,
         name: current.name,
         schoolName: current.schoolName,
@@ -599,10 +1153,49 @@ async function startServer() {
         isDemoRecord: false,
         sessionStatus: 'completed',
         sessionCompletedAt: nowIso,
-        lastScreenedDate: new Date().toLocaleString('ar-EG', {
+        lastScreenedDate: now.toLocaleString('ar-EG', {
           year: 'numeric', month: '2-digit', day: '2-digit',
           hour: '2-digit', minute: '2-digit',
         }),
+        passageId: incoming.passageId,
+        dialectCode: incoming.dialectCode,
+        dialectRegionAr: incoming.dialectRegionAr || incoming.dialectCode,
+        readingDurationSeconds: incoming.readingDurationSeconds,
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: incoming.guardianConsentRecordedAt,
+        guardianConsentSource: incoming.guardianConsentSource,
+        guardianAudioConsentGiven: incoming.guardianAudioConsentGiven,
+        guardianAudioConsentRecordedAt: incoming.guardianAudioConsentRecordedAt,
+        speechRecognitionUsed: incoming.speechRecognitionUsed,
+        spokenTranscript: incoming.spokenTranscript,
+        blinkCount: metrics.blinkCount,
+        blinksPerMinute: metrics.blinksPerMinute,
+        visualStrainLevel: metrics.visualStrainLevel,
+        visualStrainLabelAr: metrics.visualStrainLabelAr,
+        wpm: metrics.wpm,
+        avgFixationMs: metrics.avgFixationMs,
+        regressionRate: metrics.regressionRate,
+        regressionCount: metrics.regressionCount,
+        gazeCoveragePercent: metrics.gazeCoveragePercent,
+        observedWordCount: metrics.observedWordCount,
+        totalPassageWordCount: metrics.totalPassageWordCount,
+        calibrationAccuracyPercent: incoming.calibrationAccuracyPercent,
+        calibrationValidationMethod: incoming.calibrationValidationMethod,
+        oralReadingAssessed: Boolean(oral),
+        oralWcpm: oral?.wcpm ?? null,
+        oralAccuracyPercent: oral?.accuracyPercent ?? null,
+        oralWerPercent: oral?.werPercent ?? null,
+        phoneticSubstitutionCount: oral?.phoneticSubstitutionCount ?? 0,
+        dialectVariantCount: oral?.dialectVariantCount ?? 0,
+        omissionCount: oral?.omittedWordsCount ?? 0,
+        dyslexiaRiskScore: metrics.dyslexiaRiskScore,
+        readingHeuristicIndicator: metrics.heuristicIndicator,
+        readingRiskLevel: metrics.riskLevel,
+        readingRiskLabelAr: metrics.riskLabelAr,
+        problematicWords: metrics.problematicWords,
+        fixations: incoming.fixations as WordFixation[],
+        comprehensionScore,
+        clinicalReport,
         assessmentHistory: previousSnapshot
           ? [...(current.assessmentHistory || []), previousSnapshot]
           : [...(current.assessmentHistory || [])],
@@ -613,8 +1206,95 @@ async function startServer() {
         res.status(503).json({ error: 'تعذر حفظ جلسة المتابعة في التخزين المشفر.' });
         return;
       }
+      if (!auditForRequest(req, 'student.session.complete', updatedRecord.id, [
+        'readingEvidence',
+        'wpm', 'dyslexiaRiskScore', 'readingRiskLevel', 'comprehensionScore',
+        'guardianConsentGiven', 'guardianConsentRecordedAt', 'guardianConsentSource',
+        'guardianAudioConsentGiven', 'guardianAudioConsentRecordedAt',
+      ])) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and repeat-session rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل جلسة المتابعة في سجل التدقيق المشفر.' });
+        return;
+      }
       studentsDb = nextRecords;
-      res.status(200).json({ student: updatedRecord, persisted: true });
+      res.status(200).json({ student: updatedRecord, persisted: true, scoring: 'server-derived' });
+    }
+  );
+
+  app.post(
+    '/api/students/:id/math-assessment',
+    requireClinicalAuth('students:write'),
+    (req, res) => {
+      const { id } = req.params;
+      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const idx = studentsDb.findIndex((student) =>
+        student.id === id && student.tenantId === session.tenantId
+      );
+      if (idx < 0) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
+        return;
+      }
+      const parsed = mathAssessmentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'أدلة مهام الحساب غير صالحة؛ لم تُقبل أي درجة مشتقة من العميل.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
+        });
+        return;
+      }
+
+      const subitizingTrials: SubitizingTrialResult[] = parsed.data.subitizingTrials.map((trial) => ({
+        dotCount: trial.dotCount,
+        correct: trial.chosen === trial.dotCount,
+        reactionTimeMs: trial.reactionTimeMs,
+      }));
+      const numberLineTrials: NumberLineTrialResult[] = parsed.data.numberLineTrials.map((trial) => ({ ...trial }));
+      const reverseAnswers: Record<number, number> = { 47: 74, 83: 38, 69: 96 };
+      const transcodingTrials: TranscodingTrialResult[] = parsed.data.transcodingTrials.map((trial) => ({
+        targetNumber: trial.targetNumber,
+        selectedNumber: trial.selectedNumber,
+        isReversalError: reverseAnswers[trial.targetNumber] === trial.selectedNumber,
+        reactionTimeMs: trial.reactionTimeMs,
+      }));
+      const computed = calculateDyscalculiaMetrics(subitizingTrials, numberLineTrials, transcodingTrials);
+      const current = studentsDb[idx];
+      const updatedRecord: StudentRecord = {
+        ...current,
+        dyscalculiaAssessed: true,
+        subitizingAccuracy: computed.subitizingAccuracy,
+        avgSubitizingMs: computed.avgSubitizingMs,
+        numberLinePAE: computed.numberLinePAE,
+        transcodingAccuracy: computed.transcodingAccuracy,
+        reversalErrorCount: computed.reversalErrorCount,
+        dyscalculiaRiskScore: computed.dyscalculiaRiskScore,
+        mathHeuristicIndicator: computed.heuristicIndicator,
+        mathRiskLevel: computed.riskLevel,
+        mathRiskLabelAr: computed.riskLabelAr,
+      };
+      const nextRecords = [...studentsDb];
+      nextRecords[idx] = updatedRecord;
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ نتيجة مهام الحساب في التخزين المشفر.' });
+        return;
+      }
+      const derivedFields = [
+        'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs',
+        'numberLinePAE', 'transcodingAccuracy', 'reversalErrorCount',
+        'dyscalculiaRiskScore', 'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr',
+      ];
+      if (!auditForRequest(req, 'student.math-assessment', id, derivedFields)) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and math-assessment rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل نتيجة الحساب في سجل التدقيق المشفر.' });
+        return;
+      }
+      studentsDb = nextRecords;
+      res.status(200).json({ student: updatedRecord, persisted: true, scoring: 'server-derived' });
     }
   );
 
@@ -623,33 +1303,35 @@ async function startServer() {
     requireClinicalAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
-      const updates = req.body as Partial<StudentRecord> | null;
       const session = (req as any).clinicalSession as VerifiedClinicalSession;
-      const idx = studentsDb.findIndex((s) => s.id === id && s.tenantId === session.tenantId);
-      if (idx === -1) {
+      const idx = studentsDb.findIndex((student) => student.id === id && student.tenantId === session.tenantId);
+      if (idx < 0) {
         res.status(404).json({ error: 'سجل الطالب غير موجود.' });
         return;
       }
-      if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
-        res.status(400).json({ error: 'جسم التحديث غير صالح.' });
-        return;
-      }
-
-      const keys = Object.keys(updates);
-      const forbidden = keys.filter((key) => !PATCHABLE_STUDENT_FIELDS.has(key));
-      if (forbidden.length > 0) {
+      const parsed = studentPatchSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
-          error: 'يتضمن التحديث حقول هوية أو موافقة أو حقولاً غير قابلة للتعديل.',
-          rejectedFields: forbidden,
+          error: 'التحديث غير صالح أو يحاول تعديل نتائج مشتقة/حقول غير مسموحة.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
         });
         return;
       }
 
+      const updates = parsed.data;
       const updatedRecord = { ...studentsDb[idx], ...updates };
       const nextRecords = [...studentsDb];
       nextRecords[idx] = updatedRecord;
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ السجل المشفر. تحقق من إعدادات التخزين وصلاحيات الملفات.' });
+        return;
+      }
+      if (!auditForRequest(req, 'student.profile.update', id, Object.keys(updates))) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and profile-update rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل تعديل الملف في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;
@@ -671,6 +1353,14 @@ async function startServer() {
       const nextRecords = studentsDb.filter((s) => !(s.id === id && s.tenantId === session.tenantId));
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ التغيير في التخزين المشفر.' });
+        return;
+      }
+      if (!auditForRequest(req, 'student.delete', id, ['record'])) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and delete rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل حذف السجل في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;

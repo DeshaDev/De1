@@ -26,7 +26,7 @@ import {
 } from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
-import { DyscalculiaLabView } from './components/DyscalculiaLabView';
+import { DyscalculiaLabView, MathAssessmentSubmission } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
@@ -179,55 +179,36 @@ export default function App() {
   });
 
   // Only screening/session fields are sent to the append-only session endpoint.
+  // Send raw, allow-listed evidence only. The server calculates reading scores and labels.
   const sessionPayloadFromRecord = (record: StudentRecord) => ({
-    sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
     dialectRegionAr: record.dialectRegionAr,
-    wpm: record.wpm,
-    avgFixationMs: record.avgFixationMs,
-    regressionRate: record.regressionRate,
-    regressionCount: record.regressionCount,
+    dialectCode: record.dialectCode || 'msa',
+    readingDurationSeconds: record.readingDurationSeconds,
     blinkCount: record.blinkCount,
-    blinksPerMinute: record.blinksPerMinute,
-    visualStrainLevel: record.visualStrainLevel,
-    visualStrainLabelAr: record.visualStrainLabelAr,
-    gazeCoveragePercent: record.gazeCoveragePercent,
-    observedWordCount: record.observedWordCount,
-    totalPassageWordCount: record.totalPassageWordCount,
-    calibrationAccuracyPercent: record.calibrationAccuracyPercent,
-    calibrationValidationMethod: record.calibrationValidationMethod,
-    oralReadingAssessed: record.oralReadingAssessed,
-    spokenTranscript: record.spokenTranscript,
-    oralWcpm: record.oralWcpm,
-    oralAccuracyPercent: record.oralAccuracyPercent,
-    oralWerPercent: record.oralWerPercent,
-    phoneticSubstitutionCount: record.phoneticSubstitutionCount,
-    dialectVariantCount: record.dialectVariantCount,
-    omissionCount: record.omissionCount,
-    dyslexiaRiskScore: record.dyslexiaRiskScore,
-    readingHeuristicIndicator: record.readingHeuristicIndicator,
-    readingRiskLevel: record.readingRiskLevel,
-    readingRiskLabelAr: record.readingRiskLabelAr,
-    problematicWords: record.problematicWords,
     fixations: record.fixations,
-    comprehensionScore: record.comprehensionScore,
-    dyscalculiaAssessed: record.dyscalculiaAssessed,
-    subitizingAccuracy: record.subitizingAccuracy,
-    avgSubitizingMs: record.avgSubitizingMs,
-    numberLinePAE: record.numberLinePAE,
-    transcodingAccuracy: record.transcodingAccuracy,
-    reversalErrorCount: record.reversalErrorCount,
-    dyscalculiaRiskScore: record.dyscalculiaRiskScore,
-    mathHeuristicIndicator: record.mathHeuristicIndicator,
-    mathRiskLevel: record.mathRiskLevel,
-    mathRiskLabelAr: record.mathRiskLabelAr,
-    clinicalReport: record.clinicalReport,
+    comprehensionAnswers: record.comprehensionAnswers,
+    spokenTranscript: record.spokenTranscript || '',
     guardianConsentGiven: record.guardianConsentGiven === true,
     guardianConsentRecordedAt: record.guardianConsentRecordedAt,
     guardianConsentSource: record.guardianConsentSource,
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
     guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
     speechRecognitionUsed: record.speechRecognitionUsed === true,
+    calibrationAccuracyPercent: record.calibrationAccuracyPercent,
+    calibrationValidationMethod:
+      record.calibrationValidationMethod?.includes('Independent Holdout')
+        ? 'independent-holdout'
+        : 'leave-one-point-out',
+  });
+
+  const createPayloadFromRecord = (record: StudentRecord) => ({
+    id: record.id,
+    name: record.name,
+    schoolName: record.schoolName || 'لم تُحدّد المدرسة',
+    gradeLevel: record.gradeLevel,
+    ageYears: record.ageYears,
+    ...sessionPayloadFromRecord(record),
   });
 
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
@@ -285,10 +266,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const createPayload = {
-        ...completedRecord,
-        guardianConsentGiven: completedRecord.guardianConsentGiven === true,
-      };
+      const createPayload = createPayloadFromRecord(completedRecord);
       let response = previous && !previous.isDemoRecord
         ? await sendSave(`/api/students/${encodeURIComponent(completedRecord.id)}/sessions`, sessionPayloadFromRecord(completedRecord))
         : await sendSave('/api/students', createPayload);
@@ -425,7 +403,7 @@ export default function App() {
 
   const handleUpdateStudentMath = async (
     studentId: string,
-    updated: Partial<StudentRecord>
+    assessment: MathAssessmentSubmission
   ) => {
     if (!clinicalSession || clinicalSession.role !== 'clinician') {
       setAiStatusBanner(clinicalSession
@@ -436,24 +414,24 @@ export default function App() {
     }
     try {
       const response = await authenticatedFetch(
-        `/api/students/${encodeURIComponent(studentId)}`,
+        `/api/students/${encodeURIComponent(studentId)}/math-assessment`,
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated),
+          body: JSON.stringify(assessment),
         }
       );
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setAiStatusBanner(data?.error || 'لم يُحفظ تحديث السجل في الخادم.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.student) {
+        setAiStatusBanner(data?.error || 'لم تُحفظ نتيجة الحساب المحسوبة على الخادم.');
         return;
       }
-      setStudents((prev) =>
-        prev.map((student) => (student.id === studentId ? { ...student, ...updated } : student))
-      );
-      setAiStatusBanner('تم حفظ تحديث السجل في التخزين المشفر.');
+      setStudents((prev) => prev.map((student) =>
+        student.id === studentId ? data.student as StudentRecord : student
+      ));
+      setAiStatusBanner('حُفظت نتيجة الحساب بعد أن حسبها الخادم من المحاولات المرسلة.');
     } catch {
-      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم تُحفظ نتيجة الحساب.');
     }
   };
 
@@ -610,15 +588,9 @@ export default function App() {
           });
           let pendingSave = existingPending
             ? await sendSave(`/api/students/${encodeURIComponent(pendingServerRecord.id)}/sessions`, sessionPayload)
-            : await sendSave('/api/students', {
-                ...pendingServerRecord,
-                guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
-              });
+            : await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
           if (pendingSave.status === 404 && existingPending) {
-            pendingSave = await sendSave('/api/students', {
-              ...pendingServerRecord,
-              guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
-            });
+            pendingSave = await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
           }
           if (pendingSave.ok) {
             const saved = await pendingSave.json().catch(() => ({}));

@@ -19,13 +19,19 @@ import {
   calculateDyscalculiaMetrics,
 } from '../utils/clinicalMetrics';
 
+export interface MathAssessmentSubmission {
+  subitizingTrials: Array<{ dotCount: number; chosen: number; reactionTimeMs: number }>;
+  numberLineTrials: NumberLineTrialResult[];
+  transcodingTrials: Array<{ targetNumber: number; selectedNumber: number; reactionTimeMs: number }>;
+}
+
 interface DyscalculiaLabViewProps {
   students: StudentRecord[];
   selectedStudentId: string;
   onSelectStudent: (id: string) => void;
   onUpdateStudentMath: (
     studentId: string,
-    updated: Partial<StudentRecord>
+    assessment: MathAssessmentSubmission
   ) => void;
   onOpenFinalReport?: () => void;
 }
@@ -371,18 +377,26 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       return;
     }
     setValidationError('');
-    onUpdateStudentMath(activeStudent.id, {
-      dyscalculiaAssessed: true,
-      subitizingAccuracy: computedMetrics.subitizingAccuracy,
-      avgSubitizingMs: computedMetrics.avgSubitizingMs,
-      numberLinePAE: computedMetrics.numberLinePAE,
-      transcodingAccuracy: computedMetrics.transcodingAccuracy,
-      reversalErrorCount: computedMetrics.reversalErrorCount,
-      dyscalculiaRiskScore: computedMetrics.dyscalculiaRiskScore,
-      mathHeuristicIndicator: computedMetrics.heuristicIndicator,
-      mathRiskLevel: computedMetrics.riskLevel,
-      mathRiskLabelAr: computedMetrics.riskLabelAr,
-    });
+    const assessment: MathAssessmentSubmission = {
+      subitizingTrials: SUBITIZING_PATTERNS.map((pattern) => {
+        const selected = subitizingSelections[pattern.id];
+        return {
+          dotCount: pattern.targetCount,
+          chosen: selected.chosen,
+          reactionTimeMs: selected.rtMs,
+        };
+      }),
+      numberLineTrials,
+      transcodingTrials: TRANSCODING_ITEMS.map((item) => {
+        const selected = transcodingSelections[item.id];
+        return {
+          targetNumber: item.targetNumber,
+          selectedNumber: selected.value,
+          reactionTimeMs: selected.rtMs,
+        };
+      }),
+    };
+    onUpdateStudentMath(activeStudent.id, assessment);
     setSaveMessage(
       `تم تحديث ملف الطالب (${activeStudent.name}) بمؤشر الفرز الحسابي (${computedMetrics.dyscalculiaRiskScore}/100 - ${computedMetrics.riskLabelAr} · PAE=${computedMetrics.numberLinePAE}%).`
     );
