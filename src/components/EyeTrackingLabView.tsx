@@ -1207,6 +1207,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       setCameraActive(false);
       return;
     }
+    if (!guardianConsent) {
+      setCameraError('قبل تشغيل الكاميرا، يلزم تسجيل موافقة ولي الأمر على جلسة الفحص.');
+      return;
+    }
+    setCameraError('');
     await startCameraWithDevice(selectedDeviceId || undefined);
   };
 
@@ -2784,6 +2789,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     setGuardianConsent(accepted);
                     setGuardianConsentRecordedAt(accepted ? new Date().toISOString() : undefined);
                     if (!accepted) {
+                      if (streamRef.current) {
+                        streamRef.current.getTracks().forEach((track) => track.stop());
+                        streamRef.current = null;
+                      }
+                      setCameraActive(false);
                       setGuardianAudioConsent(false);
                       setGuardianAudioConsentRecordedAt(undefined);
                     }
