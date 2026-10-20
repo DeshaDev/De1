@@ -13,6 +13,7 @@ import {
   verifyClinicalSessionToken,
   authorizeSessionScope,
   validateExplicitGuardianConsent,
+  VerifiedClinicalSession,
 } from './src/utils/clinicalSecurity';
 
 dotenv.config();
@@ -91,7 +92,7 @@ function constantTimeStringEqualfunction constantTimeStringEqual(a: string, b: s
 }
 
 const PATCHABLE_STUDENT_FIELDS = new Set<string>([
-  'sessionStatus', 'sessionRoleLabel', 'assessmentHistory',
+  'sessionStatus', 'sessionRoleLabel',
   'lastScreenedDate', 'passageId', 'dialectRegionAr',
   'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
   'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
@@ -496,13 +497,135 @@ async function startServer() {
     }
   );
 
+  // Store repeat screenings as sessions attached to the existing student identity.
+  app.post(
+    '/api/students/:id/sessions',
+    requireClinicalAuth('students:write'),
+    (req, res) => {
+      const { id } = req.params;
+      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const idx = studentsDb.findIndex((student) =>
+        student.id === id && student.tenantId === session.tenantId
+      );
+      if (idx < 0) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
+        return;
+      }
+      const incoming = req.body as Record<string, unknown> | null;
+      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+        res.status(400).json({ error: 'بيانات جلسة المتابعة غير صالحة.' });
+        return;
+      }
+
+      const sessionFields = new Set([
+        'sessionRoleLabel', 'passageId', 'dialectRegionAr',
+        'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
+        'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
+        'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
+        'calibrationAccuracyPercent', 'calibrationValidationMethod',
+        'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
+        'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
+        'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
+        'problematicWords', 'fixations', 'comprehensionScore',
+        'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
+        'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
+        'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
+        'guardianConsentGiven', 'guardianConsentRecordedAt', 'guardianConsentSource',
+        'guardianAudioConsentGiven', 'guardianAudioConsentRecordedAt', 'speechRecognitionUsed',
+      ]);
+      const forbidden = Object.keys(incoming).filter((key) => !sessionFields.has(key));
+      if (forbidden.length > 0) {
+        res.status(400).json({
+          error: 'ترسل جلسة المتابعة حقولاً غير مسموح بها؛ هوية الطالب والمدرسة والتاريخ يديرها الخادم.',
+          rejectedFields: forbidden,
+        });
+        return;
+      }
+
+      const consentCheck = validateExplicitGuardianConsent(incoming.guardianConsentGiven);
+      const consentTimeValid = typeof incoming.guardianConsentRecordedAt === 'string' &&
+        Number.isFinite(Date.parse(incoming.guardianConsentRecordedAt));
+      const consentSourceValid = typeof incoming.guardianConsentSource === 'string' &&
+        incoming.guardianConsentSource.trim().length > 0;
+      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
+        res.status(403).json({
+          error: consentCheck.valid
+            ? 'يلزم تسجيل موافقة جديدة بوقت ومصدر قبل حفظ جلسة المتابعة.'
+            : consentCheck.errorAr,
+        });
+        return;
+      }
+      if (incoming.speechRecognitionUsed === true && (
+        incoming.guardianAudioConsentGiven !== true ||
+        typeof incoming.guardianAudioConsentRecordedAt !== 'string' ||
+        !Number.isFinite(Date.parse(incoming.guardianAudioConsentRecordedAt))
+      )) {
+        res.status(403).json({ error: 'استخدام التعرف الصوتي يتطلب موافقة صوتية منفصلة بوقت صالح.' });
+        return;
+      }
+
+      const current = studentsDb[idx];
+      const nowIso = new Date().toISOString();
+      const previousSnapshot = current.sessionStatus === 'completed'
+        ? {
+            sessionId: current.id,
+            completedAt: current.sessionCompletedAt || current.lastScreenedDate || nowIso,
+            passageId: current.passageId,
+            wpm: current.wpm,
+            avgFixationMs: current.avgFixationMs,
+            regressionRate: current.regressionRate,
+            comprehensionScore: current.comprehensionScore,
+            problematicWords: [...(current.problematicWords || [])],
+            dyslexiaRiskScore: current.dyslexiaRiskScore,
+            readingHeuristicIndicator: current.readingHeuristicIndicator,
+            readingRiskLevel: current.readingRiskLevel,
+            subitizingAccuracy: current.subitizingAccuracy,
+            numberLinePAE: current.numberLinePAE,
+            transcodingAccuracy: current.transcodingAccuracy,
+            dyscalculiaRiskScore: current.dyscalculiaRiskScore,
+            mathRiskLevel: current.mathRiskLevel,
+          }
+        : null;
+      const updates = Object.fromEntries(
+        Object.entries(incoming).filter(([key]) => sessionFields.has(key))
+      ) as Partial<StudentRecord>;
+      const updatedRecord: StudentRecord = {
+        ...current,
+        ...updates,
+        id: current.id,
+        name: current.name,
+        schoolName: current.schoolName,
+        tenantId: current.tenantId,
+        isDemoRecord: false,
+        sessionStatus: 'completed',
+        sessionCompletedAt: nowIso,
+        lastScreenedDate: new Date().toLocaleString('ar-EG', {
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        }),
+        assessmentHistory: previousSnapshot
+          ? [...(current.assessmentHistory || []), previousSnapshot]
+          : [...(current.assessmentHistory || [])],
+      };
+      const nextRecords = [...studentsDb];
+      nextRecords[idx] = updatedRecord;
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ جلسة المتابعة في التخزين المشفر.' });
+        return;
+      }
+      studentsDb = nextRecords;
+      res.status(200).json({ student: updatedRecord, persisted: true });
+    }
+  );
+
   app.patch(
     '/api/students/:id',
     requireClinicalAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
       const updates = req.body as Partial<StudentRecord> | null;
-      const idx = studentsDb.findIndex((s) => s.id === id);
+      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const idx = studentsDb.findIndex((s) => s.id === id && s.tenantId === session.tenantId);
       if (idx === -1) {
         res.status(404).json({ error: 'سجل الطالب غير موجود.' });
         return;
@@ -539,7 +662,13 @@ async function startServer() {
     requireClinicalAuth('students:delete'),
     (req, res) => {
       const { id } = req.params;
-      const nextRecords = studentsDb.filter((s) => s.id !== id);
+      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const existsInTenant = studentsDb.some((s) => s.id === id && s.tenantId === session.tenantId);
+      if (!existsInTenant) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود.' });
+        return;
+      }
+      const nextRecords = studentsDb.filter((s) => !(s.id === id && s.tenantId === session.tenantId));
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ التغيير في التخزين المشفر.' });
         return;
