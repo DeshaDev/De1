@@ -1502,6 +1502,37 @@ export default function App() {
                   </div>
                 </div>
 
+                {selectedStudent.assessmentHistory && selectedStudent.assessmentHistory.length > 0 && (
+                  <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
+                    <div>
+                      <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
+                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>هذه جلسات سابقة لنفس الملف. قارن النتائج الوصفية مع مراعاة اختلاف النص والجهاز وظروف الجلسة؛ ليست مقارنة معيارية أو تشخيصًا.</p>
+                    </div>
+                    <ol className='space-y-3'>
+                      {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
+                        <li key={snapshot.sessionId} className='rounded-xl border border-slate-200 bg-white p-4'>
+                          <div className='flex flex-wrap items-center justify-between gap-2'>
+                            <span className='text-xs font-bold text-slate-900'>الجلسة السابقة {selectedStudent.assessmentHistory!.length - index}</span>
+                            <time dateTime={snapshot.completedAt} className='text-xs text-slate-500'>
+                              {Number.isFinite(Date.parse(snapshot.completedAt)) ? new Date(snapshot.completedAt).toLocaleString('ar-EG') : 'تاريخ غير متاح'}
+                            </time>
+                          </div>
+                          <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
+                            <span>الطلاقة: <strong>{snapshot.wpm} كلمة/دقيقة</strong></span>
+                            <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
+                            <span>مؤشر القراءة: <strong>{snapshot.readingHeuristicIndicator}/100</strong></span>
+                            <span>الحساب: <strong>{snapshot.mathRiskLevel === 'unassessed' ? 'لم يُقيّم' : snapshot.mathRiskLevel + ' · ' + (snapshot.numberLinePAE ?? '—') + '% خطأ'}</strong></span>
+                          </div>
+                          {snapshot.problematicWords.length > 0 && (
+                            <p className='mt-2 text-xs leading-relaxed text-slate-600'>
+                              كلمات استهدفتها الجلسة: {snapshot.problematicWords.join('، ')}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
                 {/* Hairline-Divided 2x2 Analytical Matrix (Zero Card-in-Card Nesting) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200 border-b border-slate-200">
                   <div className="p-6 sm:p-8 space-y-6">
