@@ -325,6 +325,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [micActive, setMicActive] = useState<boolean>(false);
   const [micVolume, setMicVolume] = useState<number>(0);
   const [spokenTranscript, setSpokenTranscript] = useState<string>('');
+  const [speechRecognitionUsed, setSpeechRecognitionUsed] = useState<boolean>(false);
   const [speechRecStatus, setSpeechRecStatus] = useState<
     'idle' | 'listening' | 'unsupported' | 'error'
   >('idle');
@@ -1329,6 +1330,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       };
       rec.start();
       recognitionRef.current = rec;
+      setSpeechRecognitionUsed(true);
       setMicActive(true);
       setSpeechRecStatus('listening');
     } catch {
@@ -2020,6 +2022,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
           guardianAudioConsentGiven: guardianAudioConsent,
           guardianAudioConsentRecordedAt: guardianAudioConsent ? guardianAudioConsentRecordedAt : undefined,
+          speechRecognitionUsed,
           oralReadingAssessed: hasSpokenTranscript,
           gradeLevel,
           wpm: eyeMetrics.wpm,
@@ -2071,6 +2074,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
       guardianAudioConsentGiven: guardianAudioConsent,
       guardianAudioConsentRecordedAt: guardianAudioConsent ? guardianAudioConsentRecordedAt : undefined,
+      speechRecognitionUsed,
       wpm: eyeMetrics.wpm,
       avgFixationMs: eyeMetrics.avgFixationMs,
       regressionRate: eyeMetrics.regressionRate,
