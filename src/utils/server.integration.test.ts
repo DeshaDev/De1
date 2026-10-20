@@ -102,10 +102,13 @@ after(async () => {
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
 });
 
-async function login(accessCode: string, roleClaim = 'clinician') {
+async function login(accessCode: string, roleClaim = 'clinician', spoofedForwardedFor?: string) {
   return fetch(`${baseUrl}/api/auth/session`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(spoofedForwardedFor ? { 'X-Forwarded-For': spoofedForwardedFor } : {}),
+    },
     body: JSON.stringify({ accessCode, role: roleClaim, clinicianName: 'اختبار تكامل' }),
   });
 }
@@ -410,7 +413,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
 
   // Persisted login throttling remains in force after a process restart.
   for (let index = 0; index < 8; index += 1) {
-    await login(`invalid-integration-secret-${index}-long-enough-123456`);
+    await login(`invalid-integration-secret-${index}-long-enough-123456`, 'clinician', `198.51.100.${index + 1}`);
   }
   assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
 
