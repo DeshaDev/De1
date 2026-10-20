@@ -4,6 +4,8 @@ export interface ClinicalSessionInfo {
   token: string;
   role: ClinicalRole;
   clinicianName: string;
+  tenantId: string;
+  sessionId: string;
   scopes: string[];
   issuedAt?: number;
   expiresAt: number;
