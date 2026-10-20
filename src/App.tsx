@@ -1611,7 +1611,7 @@ export default function App() {
                     type="button"
                     disabled={isGeneratingAI || clinicalSession?.role !== 'clinician'}
                     title={clinicalSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
-                    onClick={handleRegenerateAIClinicalReport>
+                    onClick={handleRegenerateAIClinicalReport}
                     className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
