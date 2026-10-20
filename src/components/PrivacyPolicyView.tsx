@@ -25,12 +25,18 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
       </article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
         <div className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" /> الموافقة</div>
-        <p className="text-sm leading-7 text-slate-700">إقرار الواجهة ليس توقيعًا إلكترونيًا أو سير موافقات مؤسسيًا مُدقّقًا. يُفترض تسجيل وقت الموافقة ومصدرها عند حفظ جلسة مكتملة. إذا لم تُسجّل الموافقة، يجب ألا يبدأ الفحص أو حفظ التقرير.</p>
+        <p className="text-sm leading-7 text-slate-700">إقرار الواجهة إدخال من مشغّل التطبيق، وليس توقيعًا إلكترونيًا من ولي الأمر ولا سير موافقات مؤسسيًا مُدقّقًا. يسجل الخادم وقت الإقرار ومصدره كما أدخلهما العميل، ولا يتحقق مستقلًا من هوية صاحب الموافقة. لا تستخدم بيانات طفل حقيقية قبل بناء مسار موافقة موثّق ومراجعته.</p>
       </article>
       <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
         <div className="flex items-center gap-2 font-bold text-slate-900"><Trash2 className="h-5 w-5 text-rose-700" aria-hidden="true" /> السجلات والحذف</div>
         <p className="text-sm leading-7 text-slate-700">السجلات على الخادم محمية بالمصادقة والتشفير عند ضبط الأسرار المطلوبة. قد تبقى بيانات الجلسة مؤقتًا في حالة الواجهة أثناء الاستخدام. سجّل الدخول واستخدم وظيفة الحذف، ثم تحقّق من رسالة نجاح الخادم؛ لا تُعدّ وجود السجل في الواجهة دليلًا على حفظه.</p>
       </article>
+    </section>
+
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+      <h2 className="font-bold text-slate-900">اتصالات الشبكة الخارجية</h2>
+      <p className="text-sm leading-7 text-slate-700">أزلنا تحميل Google Fonts وخط OpenDyslexic الخارجي؛ تعتمد الواجهة الآن على خطوط النظام. ما زال نموذج MediaPipe للوجه يُحمّل من <span dir="ltr">storage.googleapis.com</span>، ويمكن عند تعذّر الملفات المحلية استخدام WebAssembly من <span dir="ltr">cdn.jsdelivr.net</span>. وقد يعالج المتصفح الصوت عبر خدمة خارجية عند استخدام التعرف الصوتي، ويُرسل نص التحليل إلى Google Gemini عند تفعيل مفتاح الخدمة وطلب تقرير. راجع هذه الاتصالات وسياسة المؤسسة قبل التعامل مع بيانات حقيقية.</p>
+      <p className="text-sm leading-7 text-slate-700">تفصل المصادقة سجلات المدارس بحسب رمز مستقل لكل مدرسة ولكل دور. هذا عزل برمجي داخل نموذج أولي أحادي الخادم، وليس بديلًا عن مراجعة بنية النشر متعددة النسخ أو سجل إبطال موزّع.</p>
     </section>
 
     <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-2">
