@@ -46,6 +46,8 @@ interface AuditEvent {
   tenantId: string;
   sessionId: string;
   role: ClinicalRole;
+  /** Self-declared label from login, not verified individual identity. */
+  actorLabel: string;
   action: string;
   subjectId?: string;
   changedFields: string[];
@@ -195,7 +197,10 @@ function openSecurityState(raw: string, key: Buffer): SecurityState {
       auth: parsed.rateLimitBuckets.auth as Record<string, number[]>,
       ai: parsed.rateLimitBuckets.ai as Record<string, number[]>,
     },
-    auditEvents: parsed.auditEvents as AuditEvent[],
+    auditEvents: (parsed.auditEvents as Array<Partial<AuditEvent>>).map((event) => ({
+      ...event,
+      actorLabel: typeof event.actorLabel === 'string' ? event.actorLabel : 'هوية غير متحققة',
+    })) as AuditEvent[],
   };
 }
 
@@ -328,6 +333,7 @@ function auditForRequest(
     tenantId: session.tenantId,
     sessionId: session.sessionId,
     role: session.role,
+    actorLabel: session.clinicianName,
     action,
     subjectId,
     changedFields: [...new Set(changedFields)].sort(),
@@ -895,6 +901,7 @@ async function startServer() {
       tenantId: session.tenantId,
       sessionId: session.sessionId,
       role: session.role,
+      actorLabel: session.clinicianName,
       action: 'auth.login',
       changedFields: [],
       outcome: 'success',
@@ -926,6 +933,7 @@ async function startServer() {
         tenantId: session.tenantId,
         sessionId: session.sessionId,
         role: session.role,
+        actorLabel: session.clinicianName,
         action: 'auth.logout',
         changedFields: [],
         outcome: 'success' as const,
