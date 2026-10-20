@@ -915,7 +915,7 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الفرز الاسترشادي ${selectedStudent.readingHeuristicIndicator}/100`}
+                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الأداء الاستدلالي ${selectedStudent.readingHeuristicIndicator}/100 (الأعلى = أداء أفضل)`}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
@@ -1447,7 +1447,7 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        مؤشر الفرز القرائي للطالب →
+                        مؤشر الأداء الاستدلالي للقراءة → (الأعلى = أفضل)
                       </text>
 
                       {students.map((stu) => {
@@ -1517,10 +1517,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      مؤشر فرز {selectedStudent.readingHeuristicIndicator}/100 قراءة ·{' '}
+                      أداء قرائي استدلالي {selectedStudent.readingHeuristicIndicator}/100 ·{' '}
                       {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `مؤشر فرز ${selectedStudent.mathHeuristicIndicator}/100 حساب`
+                        ? `أداء حسابي استدلالي ${selectedStudent.mathHeuristicIndicator}/100`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
