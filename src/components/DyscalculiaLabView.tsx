@@ -335,6 +335,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const handleResetTest = () => {
     Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
     subitizingTimersRef.current = {};
+    const now = performance.now();
     trialStartTimestampRef.current = {};
     setVisibleSubitizingIds({});
     setReadySubitizingIds({});
