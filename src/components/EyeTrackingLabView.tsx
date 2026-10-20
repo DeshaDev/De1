@@ -2101,6 +2101,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       dialectRegionAr: selectedDialectProfile.labelAr,
       dialectCode: selectedDialect,
       readingDurationSeconds: durationSec,
+      comprehensionAnswers: selectedPassage.comprehensionQuestions.map((_, index) => answers[index]),
       guardianConsentGiven: guardianConsent,
       guardianConsentRecordedAt: guardianConsent ? guardianConsentRecordedAt || new Date().toISOString() : undefined,
       guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
@@ -2138,7 +2139,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       readingRiskLevel: eyeMetrics.riskLevel,
       readingRiskLabelAr: eyeMetrics.riskLabelAr,
       problematicWords: eyeMetrics.problematicWords,
-      fixations: fixations.filter((f) => f.observed && f.durationMs > 0),
+      // Keep all passage positions, including unobserved words, so the server can verify order and coverage.
+      fixations,
       comprehensionScore,
       dyscalculiaAssessed: false,
       subitizingAccuracy: null,
