@@ -334,7 +334,7 @@ function auditForRequest(
 
 function readTrustedProxyHops(): number {
   const raw = (process.env.TRUST_PROXY_HOPS || '0').trim();
-  if (!/^\\d+$/.test(raw)) {
+  if (!raw || [...raw].some((character) => character < '0' || character > '9')) {
     throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5.');
   }
   const hops = Number(raw);
@@ -776,6 +776,21 @@ async function startServer() {
     });
   });
 
+  app.get('/api/audit-events', requireClinicalAuth('students:read'), (req, res) => {
+    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    if (session.role !== 'clinician') {
+      res.status(403).json({ error: 'سجل التدقيق متاح للأخصائيين المخوّلين فقط.' });
+      return;
+    }
+    const requestedLimit = Number(req.query.limit ?? 100);
+    const limit = Number.isInteger(requestedLimit) ? Math.max(1, Math.min(200, requestedLimit)) : 100;
+    const events = securityState.auditEvents
+      .filter((event) => event.tenantId === session.tenantId)
+      .slice(-limit)
+      .reverse();
+    res.json({ events, encryptedAtRest: true });
+  });
+
   app.post(
     '/api/students',
     requireClinicalAuth('students:write'),
@@ -789,8 +804,13 @@ async function startServer() {
         res.status(400).json({ error: 'بيانات جلسة الطالب غير مكتملة أو غير صالحة.' });
         return;
       }
-      // Creation cannot replace any existing ID, regardless of school/tenant.
-      if (studentsDb.some((student) => student.id === incoming.id)) {
+      // Do not disclose whether an ID belongs to a different tenant.
+      const existingId = studentsDb.find((student) => student.id === incoming.id);
+      if (existingId && existingId.tenantId !== session.tenantId) {
+        res.status(404).json({ error: 'تعذر إنشاء السجل بهذا المعرّف.' });
+        return;
+      }
+      if (existingId) {
         res.status(409).json({ error: 'معرّف الطالب موجود بالفعل؛ رُفض استبدال سجل موجود.' });
         return;
       }
@@ -831,6 +851,14 @@ async function startServer() {
       const nextRecords = [newRecord, ...studentsDb];
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ السجل في التخزين المشفر.' });
+        return;
+      }
+      if (!auditForRequest(req, 'student.create', newRecord.id, Object.keys(newRecord))) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and student-store rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل إنشاء السجل في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;
@@ -954,8 +982,90 @@ async function startServer() {
         res.status(503).json({ error: 'تعذر حفظ جلسة المتابعة في التخزين المشفر.' });
         return;
       }
+      if (!auditForRequest(req, 'student.session.complete', updatedRecord.id, Object.keys(updates))) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and repeat-session rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل جلسة المتابعة في سجل التدقيق المشفر.' });
+        return;
+      }
       studentsDb = nextRecords;
       res.status(200).json({ student: updatedRecord, persisted: true });
+    }
+  );
+
+  app.post(
+    '/api/students/:id/math-assessment',
+    requireClinicalAuth('students:write'),
+    (req, res) => {
+      const { id } = req.params;
+      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const idx = studentsDb.findIndex((student) =>
+        student.id === id && student.tenantId === session.tenantId
+      );
+      if (idx < 0) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
+        return;
+      }
+      const parsed = mathAssessmentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'أدلة مهام الحساب غير صالحة؛ لم تُقبل أي درجة مشتقة من العميل.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
+        });
+        return;
+      }
+
+      const subitizingTrials: SubitizingTrialResult[] = parsed.data.subitizingTrials.map((trial) => ({
+        dotCount: trial.dotCount,
+        correct: trial.chosen === trial.dotCount,
+        reactionTimeMs: trial.reactionTimeMs,
+      }));
+      const numberLineTrials: NumberLineTrialResult[] = parsed.data.numberLineTrials.map((trial) => ({ ...trial }));
+      const reverseAnswers: Record<number, number> = { 47: 74, 83: 38, 69: 96 };
+      const transcodingTrials: TranscodingTrialResult[] = parsed.data.transcodingTrials.map((trial) => ({
+        targetNumber: trial.targetNumber,
+        selectedNumber: trial.selectedNumber,
+        isReversalError: reverseAnswers[trial.targetNumber] === trial.selectedNumber,
+        reactionTimeMs: trial.reactionTimeMs,
+      }));
+      const computed = calculateDyscalculiaMetrics(subitizingTrials, numberLineTrials, transcodingTrials);
+      const current = studentsDb[idx];
+      const updatedRecord: StudentRecord = {
+        ...current,
+        dyscalculiaAssessed: true,
+        subitizingAccuracy: computed.subitizingAccuracy,
+        avgSubitizingMs: computed.avgSubitizingMs,
+        numberLinePAE: computed.numberLinePAE,
+        transcodingAccuracy: computed.transcodingAccuracy,
+        reversalErrorCount: computed.reversalErrorCount,
+        dyscalculiaRiskScore: computed.dyscalculiaRiskScore,
+        mathHeuristicIndicator: computed.heuristicIndicator,
+        mathRiskLevel: computed.riskLevel,
+        mathRiskLabelAr: computed.riskLabelAr,
+      };
+      const nextRecords = [...studentsDb];
+      nextRecords[idx] = updatedRecord;
+      if (!savePersistedStudents(nextRecords)) {
+        res.status(503).json({ error: 'تعذر حفظ نتيجة مهام الحساب في التخزين المشفر.' });
+        return;
+      }
+      const derivedFields = [
+        'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs',
+        'numberLinePAE', 'transcodingAccuracy', 'reversalErrorCount',
+        'dyscalculiaRiskScore', 'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr',
+      ];
+      if (!auditForRequest(req, 'student.math-assessment', id, derivedFields)) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and math-assessment rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل نتيجة الحساب في سجل التدقيق المشفر.' });
+        return;
+      }
+      studentsDb = nextRecords;
+      res.status(200).json({ student: updatedRecord, persisted: true, scoring: 'server-derived' });
     }
   );
 
@@ -964,33 +1074,35 @@ async function startServer() {
     requireClinicalAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
-      const updates = req.body as Partial<StudentRecord> | null;
       const session = (req as any).clinicalSession as VerifiedClinicalSession;
-      const idx = studentsDb.findIndex((s) => s.id === id && s.tenantId === session.tenantId);
-      if (idx === -1) {
+      const idx = studentsDb.findIndex((student) => student.id === id && student.tenantId === session.tenantId);
+      if (idx < 0) {
         res.status(404).json({ error: 'سجل الطالب غير موجود.' });
         return;
       }
-      if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
-        res.status(400).json({ error: 'جسم التحديث غير صالح.' });
-        return;
-      }
-
-      const keys = Object.keys(updates);
-      const forbidden = keys.filter((key) => !PATCHABLE_STUDENT_FIELDS.has(key));
-      if (forbidden.length > 0) {
+      const parsed = studentPatchSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
-          error: 'يتضمن التحديث حقول هوية أو موافقة أو حقولاً غير قابلة للتعديل.',
-          rejectedFields: forbidden,
+          error: 'التحديث غير صالح أو يحاول تعديل نتائج مشتقة/حقول غير مسموحة.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
         });
         return;
       }
 
+      const updates = parsed.data;
       const updatedRecord = { ...studentsDb[idx], ...updates };
       const nextRecords = [...studentsDb];
       nextRecords[idx] = updatedRecord;
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ السجل المشفر. تحقق من إعدادات التخزين وصلاحيات الملفات.' });
+        return;
+      }
+      if (!auditForRequest(req, 'student.profile.update', id, Object.keys(updates))) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and profile-update rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل تعديل الملف في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;
@@ -1012,6 +1124,14 @@ async function startServer() {
       const nextRecords = studentsDb.filter((s) => !(s.id === id && s.tenantId === session.tenantId));
       if (!savePersistedStudents(nextRecords)) {
         res.status(503).json({ error: 'تعذر حفظ التغيير في التخزين المشفر.' });
+        return;
+      }
+      if (!auditForRequest(req, 'student.delete', id, ['record'])) {
+        if (!savePersistedStudents(studentsDb)) {
+          studentsDb = nextRecords;
+          console.error('Audit persistence failed and delete rollback also failed.');
+        }
+        res.status(503).json({ error: 'تعذر تسجيل حذف السجل في سجل التدقيق المشفر.' });
         return;
       }
       studentsDb = nextRecords;
