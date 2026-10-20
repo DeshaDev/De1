@@ -1021,11 +1021,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       answeredSubitizingCount +
                       answeredNumberLineCount +
                       answeredTranscodingCount
-                    } / 8 مهام`}
+                    } / 9 مهام`}
               </span>
             </div>
 
-            {answeredSubitizingCount === 3 &&
+            {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
             answeredNumberLineCount === 2 &&
             answeredTranscodingCount === 3 ? (
               <>
