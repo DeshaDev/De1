@@ -401,3 +401,16 @@
   .no-print, header, footer { display: none !important; }
   .print-report-root * { break-inside: avoid; }
 }
+
+
+@layer base {
+  :where(button, [role="button"], input[type="checkbox"], input[type="radio"], select) {
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  :where(button, [role="button"], a, input, select, textarea):focus-visible {
+    outline: 3px solid #0284C7;
+    outline-offset: 2px;
+  }
+}
