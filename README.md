@@ -102,7 +102,11 @@ cp .env.example .env
 # مثال توضيحي فقط (استبدل القيم بأسرار عشوائية مستقلة بطول 24 حرفًا على الأقل):
 # {"school_a":{"clinician":"REPLACE_WITH_RANDOM_SECRET_A1","educator_readonly":"REPLACE_WITH_RANDOM_SECRET_A2"},"school_b":{"clinician":"REPLACE_WITH_RANDOM_SECRET_B1","educator_readonly":"REPLACE_WITH_RANDOM_SECRET_B2"}}
 # يحدد الخادم المدرسة والدور من الرمز المطابق؛ لا يقبل الدور المرسل من المتصفح.
+# TRUST_PROXY_HOPS=0 عند الوصول المباشر. اضبطه على عدد الوكلاء الموثوقين فقط إذا كانوا
+# يستبدلون X-Forwarded-For الوارد من العملاء؛ لا تخمّن العدد.
 # أبقِ CLINICAL_SESSION_SECRET وCLINICAL_STORE_ENCRYPTION_KEY منفصلين عن جميع رموز الدخول.
+# يُخزَّن إبطال الجلسات وحدود الطلبات وسجل التدقيق في security-state.json مشفّرًا داخل CLINICAL_DATA_DIR.
+# يجب أن يكون دليل البيانات على قرص دائم بصلاحيات مقيدة؛ النسخ المتعددة للخادم تحتاج مخزنًا مشتركًا مثل Redis/قاعدة بيانات.
 # لإنشاء مفتاح تخزين AES-256 من 32 بايت: openssl rand -hex 32
 
 # تشغيل الخادم وواجهة التطوير على المنفذ 3000
