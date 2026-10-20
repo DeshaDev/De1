@@ -2099,6 +2099,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       lastScreenedDate: new Date().toLocaleString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       passageId: selectedPassage.id,
       dialectRegionAr: selectedDialectProfile.labelAr,
+      dialectCode: selectedDialect,
+      readingDurationSeconds: durationSec,
       guardianConsentGiven: guardianConsent,
       guardianConsentRecordedAt: guardianConsent ? guardianConsentRecordedAt || new Date().toISOString() : undefined,
       guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
