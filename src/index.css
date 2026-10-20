@@ -2,9 +2,9 @@
 
 @layer base {
   :root {
-    --font-display: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
-    --font-sans: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
-    --font-mono: 'IBM Plex Mono', 'IBM Plex Sans Arabic', monospace;
+    --font-display: 'Tahoma', 'Arial', sans-serif;
+    --font-sans: 'Tahoma', 'Arial', sans-serif;
+    --font-mono: 'Consolas', 'Courier New', monospace;
 
     --surface-canvas: #FAF6EE;
     --surface-card: #FFFDF9;
