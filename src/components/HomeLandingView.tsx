@@ -1166,7 +1166,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             { id: 'eye-lab' as AppTabId, title: 'القراءة وتتبع العين', description: 'جرّب المعايرة والقراءة الجهرية، وراجع جودة البيانات قبل تفسير المؤشرات.' },
             { id: 'dyscalculia-lab' as AppTabId, title: 'مهام الحساب', description: 'استكشف التمييز الكمي وتقدير الموقع على خط الأعداد وترميز الأرقام.' },
             { id: 'adaptive-reader' as AppTabId, title: 'القارئ العربي الميسّر', description: 'جرّب التشكيل والتباعد والتقطيع والتلوين لتحسين سهولة عرض النص.' },
-            { id: 'algorithms-lab' as AppTabId, title: 'المنهجية والحدود', description: 'اطّلع على المؤشرات المستخدمة وما لا يمكن استنتاجه من النموذج الحالي.' },
+            { id: 'algorithms-lab' as AppTabId, title: 'المختبر التقني', description: 'استكشف أدوات وخوارزميات تجريبية. حدود الاستخدام والخصوصية موضحة في صفحة الخصوصية.' },
           ].map((feature) => (
             <button
               key={feature.id}
