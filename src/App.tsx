@@ -814,7 +814,7 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      مؤشر الفرز الاسترشادي {selectedStudent.readingHeuristicIndicator}/100
+                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الفرز الاسترشادي ${selectedStudent.readingHeuristicIndicator}/100`}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
@@ -825,7 +825,7 @@ export default function App() {
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
                         : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
-                    · فهم {selectedStudent.comprehensionScore}%
+                    · {selectedStudent.sessionStatus === 'in_progress' ? 'الفهم غير مُقيَّم' : `الفهم ${selectedStudent.comprehensionScore}%`}
                   </div>
                 </div>
 
@@ -849,17 +849,19 @@ export default function App() {
                             : 'text-[#059669]'
                       }`}
                     >
-                      {selectedStudent.avgFixationMs >= 400
-                        ? '■ تثبيت مطوّل'
-                        : selectedStudent.avgFixationMs >= 320
-                          ? '▲ تثبيت متوسط'
-                          : 'ضمن العرض التجريبي'}
+                      {selectedStudent.sessionStatus === 'in_progress'
+                        ? 'لا توجد قياسات بعد'
+                        : selectedStudent.avgFixationMs >= 400
+                          ? '■ تثبيت مطوّل'
+                          : selectedStudent.avgFixationMs >= 320
+                            ? '▲ تثبيت متوسط'
+                            : 'ضمن العرض التجريبي'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
                     الرمش:{' '}
                     <span className="font-mono tabular-nums font-semibold text-slate-900">
-                      {selectedStudent.blinksPerMinute ?? 16}
+                      {selectedStudent.sessionStatus === 'in_progress' || selectedStudent.blinksPerMinute == null ? '—' : selectedStudent.blinksPerMinute}
                     </span>{' '}
                     رمشة/دقيقة
                   </div>
