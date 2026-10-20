@@ -272,6 +272,10 @@ export default function App() {
       setShowClinicalLogin(true);
       return;
     }
+    if (clinicalSession.role !== 'clinician') {
+      setAiStatusBanner('هذا الحساب للقراءة فقط؛ اكتملت النتيجة محليًا ولم تُحفظ في سجل المدرسة. استخدم رمز أخصائي مخوّل للحفظ.');
+      return;
+    }
     setAiStatusBanner(
       `تم إنهاء جلسة الفحص للطالب (${completedRecord.name}) محليًا؛ جارٍ محاولة حفظها في الخادم.`
     );
@@ -322,6 +326,10 @@ export default function App() {
     grade: number,
     roleLabel: string
   ) => {
+    if (clinicalSession?.role === 'educator_readonly') {
+      setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
+      return;
+    }
     const cleanName = name.trim().replace(/\s+/g, ' ');
     if (!cleanName) {
       setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
@@ -419,9 +427,11 @@ export default function App() {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط؛ لا يمكن حفظ تحديثات سجل الطالب.'
+        : 'يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     try {
@@ -448,9 +458,11 @@ export default function App() {
   };
 
   const handleDeleteStudentRecord = async (studentId: string) => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط؛ لا يمكن حذف سجلات الطلاب.'
+        : 'يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     if (students.length <= 1) return;
@@ -479,9 +491,11 @@ export default function App() {
   };
 
   const handleRegenerateAIClinicalReport = async () => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط ولا يتيح إنشاء تقارير على الخادم.'
+        : 'يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     if (
@@ -779,7 +793,7 @@ export default function App() {
         </div>
       </header>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
-        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName}. تحقق من حالة كل عملية حفظ.` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${clinicalSession.tenantId}` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
         {clinicalSession ? (
           <button type="button" onClick={() => { void (async () => { await logoutClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم إبطال الجلسة على الخادم وتسجيل الخروج محليًا.'); })(); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
         ) : (
@@ -1116,7 +1130,7 @@ export default function App() {
                       : 'وضع الجلسة'}
                   </span>
                 </span>
-                {students.length > 1 && (
+                {students.length > 1 && clinicalSession?.role === 'clinician' && (
                   <button
                     type="button"
                     onClick={() =>
@@ -1595,8 +1609,9 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    disabled={isGeneratingAI}
-                    onClick={handleRegenerateAIClinicalReport}
+                    disabled={isGeneratingAI || clinicalSession?.role !== 'clinician'}
+                    title={clinicalSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
+                    onClick={handleRegenerateAIClinicalReport>
                     className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
