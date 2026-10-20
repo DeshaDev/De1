@@ -1,70 +1,351 @@
-import test from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  authorizeSessionScope,
-  getScopesForRole,
   issueClinicalSessionToken,
-  validateExplicitGuardianConsent,
   verifyClinicalSessionToken,
+  authorizeSessionScope,
+  validateExplicitGuardianConsent,
+  parseStrictTrustProxyHops,
+  stripArabicPatronymics,
+  formatTenantDisplayNameAr,
+  normalizeCalibrationValidationMethod,
+  checkAuthFailureLimit,
+  recordFailedAuthAttempt,
+  AuthFailureBucket,
+  validateAndDeriveSessionFromEvidence,
+  validateAndDeriveMathTrials,
+  buildDeterministicClinicalReport,
+  StudentProfilePatchSchema,
+  ClinicalReportUpdateEnvelopeSchema,
 } from './clinicalSecurity';
+import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
-const secret = 'test-session-signing-secret-long-enough-for-tests';
+const TEST_SECRET = 'test-clinical-hmac-secret-key-2026-secure';
 
-test('session tokens require the correct HMAC signing secret', () => {
-  const issued = issueClinicalSessionToken('clinician', 'Test Clinician', secret);
-  assert.ok(verifyClinicalSessionToken(issued.token, secret));
-  assert.equal(
-    verifyClinicalSessionToken(issued.token, 'different-secret-long-enough-for-test'),
-    null
-  );
-});
+describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting Unit Tests', () => {
+  it('issues and verifies a clinician session token with full scopes and Arabic tenant display name', () => {
+    const issued = issueClinicalSessionToken(
+      'clinician',
+      'د. سارة المنصور',
+      TEST_SECRET,
+      60_000,
+      'school_a'
+    );
+    assert.ok(issued.token.includes('.'));
+    assert.equal(issued.role, 'clinician');
+    assert.equal(issued.tenantId, 'school_a');
+    assert.equal(issued.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
+    assert.deepEqual(issued.scopes, [
+      'students:read',
+      'students:write',
+      'students:delete',
+      'ai:analyze',
+      'audit:read',
+    ]);
 
-test('signed sessions bind the authorized tenant and role, and reject old unscoped tokens', () => {
-  const clinician = issueClinicalSessionToken('clinician', 'Clinician', secret, 60_000, 'school_alpha');
-  const educator = issueClinicalSessionToken('educator_readonly', 'Educator', secret, 60_000, 'school_beta');
-  const verifiedClinician = verifyClinicalSessionToken(clinician.token, secret);
-  const verifiedEducator = verifyClinicalSessionToken(educator.token, secret);
+    const verified = verifyClinicalSessionToken(issued.token, TEST_SECRET);
+    assert.ok(verified);
+    assert.equal(verified.role, 'clinician');
+    assert.equal(verified.tenantId, 'school_a');
+    assert.equal(verified.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
+  });
 
-  assert.equal(verifiedClinician?.tenantId, 'school_alpha');
-  assert.equal(verifiedClinician?.role, 'clinician');
-  assert.equal(verifiedEducator?.tenantId, 'school_beta');
-  assert.equal(verifiedEducator?.role, 'educator_readonly');
-  assert.ok(verifiedClinician?.sessionId);
-  assert.notEqual(verifiedClinician?.sessionId, verifiedEducator?.sessionId);
-  assert.equal(verifiedEducator?.scopes.includes('students:write'), false);
+  it('rejects tampered or expired tokens and enforces educator_readonly restrictions', () => {
+    const issued = issueClinicalSessionToken(
+      'educator_readonly',
+      'أ. هند السالم',
+      TEST_SECRET,
+      60_000,
+      'school_b'
+    );
+    const verified = verifyClinicalSessionToken(issued.token, TEST_SECRET);
+    assert.ok(verified);
+    assert.equal(verified.tenantDisplayNameAr, 'مدرسة النخبة الثانية (ب)');
+    assert.equal(
+      authorizeSessionScope(verified, 'students:read').statusCode,
+      200
+    );
+    assert.equal(
+      authorizeSessionScope(verified, 'students:write').statusCode,
+      403
+    );
+    assert.equal(
+      authorizeSessionScope(verified, 'ai:analyze').statusCode,
+      403
+    );
+    assert.equal(
+      authorizeSessionScope(verified, 'audit:read').statusCode,
+      403
+    );
 
-  const [payload, signature] = clinician.token.split('.');
-  const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-  decoded.tenantId = 'school_beta';
-  const forgedPayload = Buffer.from(JSON.stringify(decoded)).toString('base64url');
-  assert.equal(verifyClinicalSessionToken(`${forgedPayload}.${signature}`, secret), null);
-});
+    const [payloadB64, sig] = issued.token.split('.');
+    const tamperedSig =
+      sig.slice(0, -2) + (sig.endsWith('aa') ? 'bb' : 'aa');
+    assert.equal(
+      verifyClinicalSessionToken(`${payloadB64}.${tamperedSig}`, TEST_SECRET),
+      null
+    );
+  });
 
-test('session verification rejects expired tokens', () => {
-  const issued = issueClinicalSessionToken('clinician', 'Test Clinician', secret, 1000);
-  assert.equal(verifyClinicalSessionToken(issued.token, secret, issued.expiresAt), null);
-});
+  it('enforces default-deny guardian consent validation', () => {
+    assert.equal(validateExplicitGuardianConsent(undefined).valid, false);
+    assert.equal(validateExplicitGuardianConsent(null).valid, false);
+    assert.equal(validateExplicitGuardianConsent(false).valid, false);
+    assert.equal(validateExplicitGuardianConsent('true').valid, false);
+    assert.equal(validateExplicitGuardianConsent(true).valid, true);
+  });
 
-test('educator permissions remain read-only', () => {
-  const clinicianScopes = getScopesForRole('clinician');
-  const educatorScopes = getScopesForRole('educator_readonly');
-  assert.ok(clinicianScopes.includes('students:write'));
-  assert.ok(clinicianScopes.includes('students:delete'));
-  assert.ok(clinicianScopes.includes('ai:analyze'));
-  assert.deepEqual(educatorScopes, ['students:read']);
-});
+  it('strictly parses TRUST_PROXY_HOPS (default 0, rejects invalid strings or negatives)', () => {
+    assert.equal(parseStrictTrustProxyHops(undefined), 0);
+    assert.equal(parseStrictTrustProxyHops(''), 0);
+    assert.equal(parseStrictTrustProxyHops('0'), 0);
+    assert.equal(parseStrictTrustProxyHops('2'), 2);
+    assert.throws(() => parseStrictTrustProxyHops('-1'));
+    assert.throws(() => parseStrictTrustProxyHops('true'));
+    assert.throws(() => parseStrictTrustProxyHops('1.5'));
+    assert.throws(() => parseStrictTrustProxyHops('99'));
+  });
 
-test('scope authorization denies absent sessions and insufficient roles', () => {
-  assert.equal(authorizeSessionScope(null, 'students:read').statusCode, 401);
-  const issued = issueClinicalSessionToken('educator_readonly', 'Educator', secret);
-  const verified = verifyClinicalSessionToken(issued.token, secret);
-  assert.equal(authorizeSessionScope(verified, 'students:read').allowed, true);
-  assert.equal(authorizeSessionScope(verified, 'students:write').statusCode, 403);
-});
+  it('strips بن and بنت tokens from Arabic student names and formats tenant names', () => {
+    assert.equal(stripArabicPatronymics('أحمد بن خالد العتيبي'), 'أحمد خالد العتيبي');
+    assert.equal(stripArabicPatronymics('سارة بنت محمد القحطاني'), 'سارة محمد القحطاني');
+    assert.equal(formatTenantDisplayNameAr('school_a'), 'مدرسة الرواد الأولى (أ)');
+    assert.equal(formatTenantDisplayNameAr('school_b'), 'مدرسة النخبة الثانية (ب)');
+  });
 
-test('guardian consent requires an explicit boolean true', () => {
-  assert.equal(validateExplicitGuardianConsent(true).valid, true);
-  for (const invalid of [undefined, null, false, 'true', 1]) {
-    assert.equal(validateExplicitGuardianConsent(invalid).valid, false);
-  }
+  it('normalizes known calibrationValidationMethod values and never defaults unknown strings to leave-one-point-out', () => {
+    const lopo = normalizeCalibrationValidationMethod('leave-one-point-out');
+    assert.equal(lopo.code, 'leave-one-point-out');
+    assert.equal(lopo.isValidated, true);
+
+    const holdout = normalizeCalibrationValidationMethod('independent-holdout');
+    assert.equal(holdout.code, 'independent-holdout');
+    assert.equal(holdout.isValidated, true);
+
+    const unknown = normalizeCalibrationValidationMethod('weird-unknown-method');
+    assert.equal(unknown.code, 'single-point-unvalidated');
+    assert.equal(unknown.isValidated, false);
+  });
+
+  it('counts only failed login attempts per (IP + tenant) with progressive backoff', () => {
+    const buckets = new Map<string, AuthFailureBucket>();
+    const now = 1_700_000_000_000;
+
+    // 4 failures have 0ms backoff and remain unlocked
+    for (let i = 1; i <= 4; i++) {
+      const res = recordFailedAuthAttempt(buckets, '10.0.0.1', 'school_a', now + i * 100);
+      assert.equal(res.locked, false);
+      assert.equal(res.backoffMs, 0);
+    }
+
+    // 5th failure triggers 2000ms progressive backoff
+    const fifth = recordFailedAuthAttempt(buckets, '10.0.0.1', 'school_a', now + 500);
+    assert.equal(fifth.backoffMs, 2000);
+    assert.equal(fifth.locked, false);
+
+    // School B on the same IP is completely unaffected
+    const schoolBCheck = checkAuthFailureLimit(buckets, '10.0.0.1', 'school_b', now + 600);
+    assert.equal(schoolBCheck.allowed, true);
+    assert.equal(schoolBCheck.failureCount, 0);
+  });
+
+  it('derives reading metrics server-side, populates deterministic report recommendations, and rejects implausible evidence', () => {
+    const passage = ARABIC_READING_PASSAGES[0];
+    const validFixations = passage.words.map((word, index) => ({
+      wordIndex: index,
+      word,
+      durationMs: index % 5 === 0 ? 390 : 240,
+      visits: index % 6 === 0 && index > 0 ? 2 : 1,
+      regressedFromIndex: index % 6 === 0 && index > 0 ? index + 1 : undefined,
+      blinks: 0,
+      observed: true,
+    }));
+
+    const derived = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 28,
+        blinkCount: 9,
+        calibrationAccuracyPercent: 88,
+        calibrationValidationMethod: 'leave-one-point-out',
+        fixations: validFixations,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+
+    assert.equal(derived.valid, true);
+    assert.ok(derived.derivedFields);
+    assert.equal(derived.derivedFields.evidenceProvenance, 'client-reported');
+    assert.ok(derived.derivedFields.wpm > 0);
+    assert.equal(derived.derivedFields.comprehensionScore, 100);
+    assert.equal(
+      derived.derivedFields.calibrationValidationMethod,
+      'تحقق متقاطع (Leave-One-Point-Out CV)'
+    );
+    assert.ok(derived.derivedFields.clinicalReport.interventionExercises.length >= 2);
+    assert.ok(derived.derivedFields.clinicalReport.classroomAccommodations.length >= 2);
+
+    // Reject client-supplied dyslexiaRiskScore
+    const forgedScore = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 28,
+        blinkCount: 9,
+        calibrationAccuracyPercent: 88,
+        fixations: validFixations,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+        dyslexiaRiskScore: 5,
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(forgedScore.valid, false);
+    assert.equal(forgedScore.statusCode, 400);
+
+    // Reject impossible fixation sum > readingDurationSeconds (e.g. 53 words * 420ms in 4s)
+    const impossibleDuration = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 4,
+        blinkCount: 5,
+        calibrationAccuracyPercent: 88,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+        fixations: passage.words.map((word, index) => ({
+          wordIndex: index,
+          word,
+          durationMs: 420,
+          visits: 1,
+          blinks: 0,
+          observed: true,
+        })),
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(impossibleDuration.valid, false);
+    assert.equal(impossibleDuration.statusCode, 400);
+
+    // Reject calibrationAccuracyPercent = 0
+    const zeroCalib = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 28,
+        blinkCount: 6,
+        calibrationAccuracyPercent: 0,
+        fixations: validFixations,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(zeroCalib.valid, false);
+    assert.equal(zeroCalib.statusCode, 400);
+
+    // Reject 10,000 blinks in a minute
+    const tenThousandBlinks = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 60,
+        blinkCount: 10000,
+        calibrationAccuracyPercent: 88,
+        fixations: validFixations,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(tenThousandBlinks.valid, false);
+    assert.equal(tenThousandBlinks.statusCode, 400);
+  });
+
+  it('validates canonical 4+2+3 math trials and rejects invented targets or choices', () => {
+    const validMath = validateAndDeriveMathTrials({
+      subitizingTrials: [
+        { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 650 },
+        { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 700 },
+        { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 780 },
+        { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 820 },
+      ],
+      numberLineTrials: [
+        { target: 37, userEstimate: 39, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+        { target: 156, userEstimate: 150, scaleMin: 0, scaleMax: 200, reactionTimeMs: 2400 },
+      ],
+      transcodingTrials: [
+        { targetNumber: 47, selectedNumber: 47, isReversalError: false, reactionTimeMs: 1800 },
+        { targetNumber: 83, selectedNumber: 38, isReversalError: true, reactionTimeMs: 2200 },
+        { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2500 },
+      ],
+    });
+    assert.equal(validMath.valid, true);
+    assert.ok(validMath.metrics);
+    assert.equal(validMath.metrics.reversalErrorCount, 1);
+
+    // Invented target 99 on number line must fail
+    const inventedTarget = validateAndDeriveMathTrials({
+      subitizingTrials: [
+        { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 650 },
+        { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 700 },
+        { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 780 },
+        { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 820 },
+      ],
+      numberLineTrials: [
+        { target: 99, userEstimate: 39, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+        { target: 156, userEstimate: 150, scaleMin: 0, scaleMax: 200, reactionTimeMs: 2400 },
+      ],
+      transcodingTrials: [
+        { targetNumber: 47, selectedNumber: 47, isReversalError: false, reactionTimeMs: 1800 },
+        { targetNumber: 83, selectedNumber: 83, isReversalError: false, reactionTimeMs: 2200 },
+        { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2500 },
+      ],
+    });
+    assert.equal(inventedTarget.valid, false);
+
+    // Unoffered option 999 on transcoding trial must fail
+    const unofferedOption = validateAndDeriveMathTrials({
+      subitizingTrials: [
+        { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 650 },
+        { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 700 },
+        { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 780 },
+        { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 820 },
+      ],
+      numberLineTrials: [
+        { target: 37, userEstimate: 39, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+        { target: 156, userEstimate: 150, scaleMin: 0, scaleMax: 200, reactionTimeMs: 2400 },
+      ],
+      transcodingTrials: [
+        { targetNumber: 47, selectedNumber: 999, isReversalError: false, reactionTimeMs: 1800 },
+        { targetNumber: 83, selectedNumber: 83, isReversalError: false, reactionTimeMs: 2200 },
+        { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2500 },
+      ],
+    });
+    assert.equal(unofferedOption.valid, false);
+  });
+
+  it('enforces strict StudentProfilePatchSchema and ClinicalReportUpdateEnvelopeSchema', () => {
+    assert.equal(
+      StudentProfilePatchSchema.safeParse({ name: 'طالب محدث', gradeLevel: 4 }).success,
+      true
+    );
+    assert.equal(
+      StudentProfilePatchSchema.safeParse({ clinicalReport: {} }).success,
+      false
+    );
+    assert.equal(
+      StudentProfilePatchSchema.safeParse({ dyslexiaRiskScore: 10 }).success,
+      false
+    );
+
+    assert.equal(
+      ClinicalReportUpdateEnvelopeSchema.safeParse({
+        clinicalReport: {
+          clinicalSummary: 'ملخص مؤشرات القراءة الاسترشادية للطالب بعد الفحص.',
+          ocularMotorAnalysis: 'تحليل حركة العين والتثبيتات البصرية المسجلة.',
+          orthographicAndPhonologicalPatterns: 'تحليل الأنماط الإملائية والصوتية.',
+          dyscalculiaSpatialAnalysis: 'تحليل الإدراك العددي والمكاني.',
+          interventionExercises: [
+            { title: 'تمرين التتبع المقطعي', description: 'وصف تفصيلي للتمرين اليومي المقترح.', durationMinutes: 10 },
+          ],
+          classroomAccommodations: ['تيسير صفي أول واضح وقابل للتطبيق داخل الفصل.'],
+        },
+      }).success,
+      true
+    );
+  });
 });

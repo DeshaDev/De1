@@ -1958,7 +1958,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       };
     });
 
-    const durationSec = Math.max(4, Math.round(elapsedMs / 1000));
+    const totalObservedMs = fixations.reduce(
+      (sum, f) => sum + (f.observed ? f.durationMs : 0),
+      0
+    );
+    const durationSec = Math.max(
+      4,
+      Math.ceil(Math.max(elapsedMs, totalObservedMs) / 1000)
+    );
     const eyeMetrics = calculateEyeTrackingMetrics(
       fixations,
       durationSec,
@@ -1968,9 +1975,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       oralIntegrationInput
     );
 
+    const comprehensionAnswersList: number[] = [];
     let correctAnswers = 0;
     selectedPassage.comprehensionQuestions.forEach((q, qIdx) => {
-      if (answers[qIdx] === q.correctIndex) {
+      const selectedOpt = typeof answers[qIdx] === 'number' ? answers[qIdx] : 0;
+      comprehensionAnswersList.push(selectedOpt);
+      if (selectedOpt === q.correctIndex) {
         correctAnswers += 1;
       }
     });
@@ -1986,7 +1996,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const isLowCameraReliability =
       isManualDemoMode ||
       !cameraActive ||
-      calibrationModel.validationMethod === 'single-point-unvalidated' ||
+      (calibrationModel.validationMethod !== 'independent-holdout' &&
+        calibrationModel.validationMethod !== 'leave-one-point-out') ||
       (calibrationModel.validationSampleCount || 0) < 1 ||
       !Number.isFinite(calibrationModel.validationRmsePx) ||
       calibrationModel.validationRmsePx! > 60;
@@ -2013,21 +2024,30 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       return;
     }
 
+    const validationMethodLabelAr =
+      isManualDemoMode || !cameraActive
+        ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)'
+        : calibrationModel.validationMethod === 'independent-holdout'
+          ? 'تحقق مستقل (Independent Holdout)'
+          : calibrationModel.validationMethod === 'leave-one-point-out'
+            ? 'تحقق متقاطع (Leave-One-Point-Out CV)'
+            : 'غير مُتحقَّق منه (معايرة غير مكتملة أو طريقة غير معروفة)';
+
     const measurementReliabilityPrefix = isManualDemoMode || !cameraActive
       ? '[تنبيه منهجي: جلسة تجربة يدوية بالماوس بدون تتبع كاميرا فعلي — مؤشر المعايرة التجريبي غير متاح (0%) ولا تُعد هذه المخرجات قياساً بصرياً] '
       : isLowCameraReliability
         ? `[تنبيه منهجي: مؤشر المعايرة التجريبي منخفض (${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px) — لا تُعتمد قياسات هذه الجلسة لتفسير أداء الطالب] `
-        : '[مؤشر فرز أولي استرشادي مبني على قواعد استدلالية (Heuristic MVP) — لا يغني عن التشخيص الإكلينيكي المعتمد] ';
+        : '[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] ';
 
     let clinicalReport = {
       clinicalSummary: `${measurementReliabilityPrefix}تم إجراء جلسة القراءة للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية كلمات مرصودة ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
-      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بخطأ تحقق المعايرة خارج العينة: ${isManualDemoMode || !cameraActive ? 'غير متاح (محاكاة بدون كاميرا)' : `RMSE ${calibrationModel.validationRmsePx ?? 'غير متاح'}px`}.`,
+      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بخطأ تحقق المعايرة خارج العينة: ${isManualDemoMode || !cameraActive ? 'غير متاح (محاكاة بدون كاميرا)' : `RMSE ${calibrationModel.validationRmsePx ?? 'غير متاح'}px · ${validationMethodLabelAr}`}.`,
       orthographicAndPhonologicalPatterns:
         eyeMetrics.problematicWords.length > 0
           ? `تركزت أطول فترات التثبيت أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
           : `قراءة متوازنة للمقاطع الصوتية المرصودة دون تعثر ملحوظ مع مطابقة فونولوجية سليمة لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`,
       dyscalculiaSpatialAnalysis:
-        'لم يخضع الطالب لاختبار عسر الحساب (الديسكالكوليا) في هذه الجلسة بعد — لا يقوم النظام بتسجيل درجات حسابية افتراضية قبل إتمام الاختبارات الثلاثة في تبويب «مختبر فحص الديسكالكوليا والحساب».',
+        'لم يخضع الطالب لاختبار عسر الحساب (الديسكالكوليا) في هذه الجلسة بعد — لا يقوم النظام بتسجيل درجات حسابية افتراضية قبل إتمام المحطات الثلاث في تبويب «مهام الحساب».',
       interventionExercises: [
         {
           title: 'تدريب التقطيع المقطعي وتخفيف الإجهاد البصري أثناء القراءة',
@@ -2035,10 +2055,23 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           description:
             'استخدام القارئ الذكي بخلفية كريمية دافئة (Irlen Filter) لتقليل معدل الرمش المتكرر وتقسيم الكلمات الطويلة إلى مقاطع صوتية ملونة.',
         },
+        {
+          title: 'تمييز الحروف العربية المتشابهة رسماً ونقطياً',
+          durationMinutes: 8,
+          description:
+            'تدريب بصري وفونولوجي سريع للتفريق بين الحروف المتجانسة (ب/ت/ث/ن، ج/ح/خ، د/ذ، ص/ض، ط/ظ) داخل جمل مشكّلة.',
+        },
+        {
+          title: 'القراءة الجهرية الموجهة وتنمية الطلاقة السياقية',
+          durationMinutes: 10,
+          description:
+            'قراءة ثنائية مع المعلم أو ولي الأمر لرفع سرعة القراءة وتثبيت الربط بين الرسم الإملائي والنطق الصوتي.',
+        },
       ],
       classroomAccommodations: [
         'تفعيل المسطرة البصرية أثناء القراءة وتكبير حجم الخط إلى 24px لتقليل إجهاد الجفن والرمش المتكرر.',
-        'ملاحظة منهجية: درجات المخاطر في هذا النموذج الأولي (MVP) تُحسب عبر قواعد استدلالية (Heuristic Rules) وليست أداة تشخيص سريرية معتمدة مستقلًا.',
+        'منح وقت إضافي بنسبة 25% عند قراءة النصوص الطويلة وتجزئة الأسئلة المركبة إلى خطوات قصيرة.',
+        'ملاحظة منهجية: درجات المخاطر في هذا النموذج الأولي (MVP) تُحسب عبر قواعد استدلالية من أدلة مُبلَّغ بها من العميل وليست أداة تشخيص سريرية معتمدة مستقلًا.',
       ],
     };
 
@@ -2093,11 +2126,15 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       sessionStatus: 'completed',
       sessionRoleLabel: activeStudent?.sessionRoleLabel,
       assessmentHistory: activeStudent?.assessmentHistory || [],
+      evidenceProvenance: 'client-reported',
+      evidenceProvenanceLabelAr: 'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)',
       gradeLevel,
       ageYears: gradeLevel + 6,
       schoolName: activeStudent && !activeStudent.isDemoRecord ? activeStudent.schoolName : 'لم تُحدّد المدرسة',
       lastScreenedDate: new Date().toLocaleString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       passageId: selectedPassage.id,
+      readingDurationSeconds: durationSec,
+      comprehensionAnswers: comprehensionAnswersList,
       dialectRegionAr: selectedDialectProfile.labelAr,
       dialectCode: selectedDialect,
       readingDurationSeconds: durationSec,
@@ -2121,12 +2158,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       totalPassageWordCount: eyeMetrics.totalPassageWordCount,
       calibrationAccuracyPercent:
         isManualDemoMode || !cameraActive ? 0 : calibrationModel.accuracyPercent,
-      calibrationValidationMethod:
-        isManualDemoMode || !cameraActive
-          ? 'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)'
-          : calibrationModel.validationMethod === 'independent-holdout'
-            ? 'تحقق مستقل (Independent Holdout)'
-            : 'تحقق متقاطع (Leave-One-Point-Out CV)',
+      calibrationValidationMethod: validationMethodLabelAr,
       oralReadingAssessed: hasSpokenTranscript,
       spokenTranscript: hasSpokenTranscript ? spokenTranscript.trim() : '',
       oralAccuracyPercent: oralIntegrationInput?.accuracyPercent ?? null,

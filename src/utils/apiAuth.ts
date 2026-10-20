@@ -5,10 +5,34 @@ export interface ClinicalSessionInfo {
   role: ClinicalRole;
   clinicianName: string;
   tenantId: string;
+  tenantDisplayNameAr?: string;
   sessionId: string;
   scopes: string[];
   issuedAt?: number;
   expiresAt: number;
+}
+
+const TENANT_DISPLAY_FALLBACKS: Record<string, string> = {
+  default: 'مدرسة الرواد الابتدائية',
+  school_a: 'مدرسة الرواد الأولى (أ)',
+  school_b: 'مدرسة النخبة الثانية (ب)',
+  school_alpha: 'مدرسة ألف النموذجية',
+  school_beta: 'مدرسة باء النموذجية',
+};
+
+export function getTenantDisplayLabelAr(session: ClinicalSessionInfo): string {
+  if (session.tenantDisplayNameAr && session.tenantDisplayNameAr.trim()) {
+    return session.tenantDisplayNameAr.trim();
+  }
+  const cleanId = (session.tenantId || '').trim();
+  if (TENANT_DISPLAY_FALLBACKS[cleanId]) {
+    return TENANT_DISPLAY_FALLBACKS[cleanId];
+  }
+  const matchSuffix = cleanId.match(/^school[_-]([a-zA-Z0-9]+)$/i);
+  if (matchSuffix) {
+    return `مدرسة القطاع (${matchSuffix[1].toUpperCase()})`;
+  }
+  return cleanId ? `مدرسة (${cleanId})` : 'المدرسة المعتمدة';
 }
 
 const SESSION_STORAGE_KEY = 'baseera_clinical_session_v1';
@@ -31,10 +55,12 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
       typeof parsed.sessionId === 'string' &&
       /^[a-f0-9]{32}$/.test(parsed.sessionId)
     ) {
-      cachedSession = parsed;
-      return parsed;
+      cachedSession = {
+        ...parsed,
+        tenantDisplayNameAr: getTenantDisplayLabelAr(parsed),
+      };
+      return cachedSession;
     }
-    // Old sessions have no tenant-bound claims and must be re-issued.
     window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // Ignore session storage errors and keep the client signed out.
@@ -58,15 +84,22 @@ export async function loginClinicalSession(
     const data = (await response.json()) as ClinicalSessionInfo;
     if (!data?.token || !data.expiresAt) return null;
 
-    cachedSession = data;
+    const enriched: ClinicalSessionInfo = {
+      ...data,
+      tenantDisplayNameAr: getTenantDisplayLabelAr(data),
+    };
+    cachedSession = enriched;
     if (typeof window !== 'undefined') {
       try {
-        window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+        window.sessionStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify(enriched)
+        );
       } catch {
         // The in-memory session remains usable for this tab.
       }
     }
-    return data;
+    return enriched;
   } catch {
     return null;
   }
@@ -101,7 +134,6 @@ export function clearClinicalSession(): void {
 }
 
 export async function ensureClinicalSession(): Promise<ClinicalSessionInfo | null> {
-  // Authentication is explicit. Never mint a session from a bundled credential.
   return getStoredClinicalSession();
 }
 

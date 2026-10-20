@@ -1,4 +1,9 @@
-import { WordFixation } from '../utils/clinicalMetrics';
+import {
+  WordFixation,
+  SubitizingTrialResult,
+  NumberLineTrialResult,
+  TranscodingTrialResult,
+} from '../utils/clinicalMetrics';
 
 export interface ClinicalReport {
   clinicalSummary: string;
@@ -61,6 +66,12 @@ export interface StudentAssessmentSnapshot {
   mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
 }
 
+export interface StudentMathTrialsPayload {
+  subitizingTrials: SubitizingTrialResult[];
+  numberLineTrials: NumberLineTrialResult[];
+  transcodingTrials: TranscodingTrialResult[];
+}
+
 export interface StudentRecord {
   id: string;
   /** Set by the server from the signed session; never trusted from client input. */
@@ -71,11 +82,16 @@ export interface StudentRecord {
   sessionCompletedAt?: string;
   sessionRoleLabel?: string;
   assessmentHistory?: StudentAssessmentSnapshot[];
+  /** Explicit provenance tag distinguishing client-reported session evidence from synthetic demos. */
+  evidenceProvenance?: 'client-reported' | 'demo-synthetic';
+  evidenceProvenanceLabelAr?: string;
   gradeLevel: number;
   ageYears: number;
   schoolName: string;
   lastScreenedDate: string;
   passageId: string;
+  readingDurationSeconds?: number;
+  comprehensionAnswers?: number[];
   dialectRegionAr?: string;
   dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
   /** Elapsed screen-reading duration in seconds; sent as evidence for server-side scoring. */
@@ -121,6 +137,7 @@ export interface StudentRecord {
   comprehensionScore: number; // 0-100
   // Dyscalculia metrics (explicitly supports unassessed state until Dyscalculia Lab is completed)
   dyscalculiaAssessed?: boolean;
+  mathTrials?: StudentMathTrialsPayload;
   subitizingAccuracy: number | null;
   avgSubitizingMs: number | null;
   numberLinePAE: number | null;

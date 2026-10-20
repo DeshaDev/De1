@@ -22,11 +22,12 @@ import {
   logoutClinicalSession,
   getStoredClinicalSession,
   loginClinicalSession,
+  getTenantDisplayLabelAr,
   ClinicalSessionInfo,
 } from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
-import { DyscalculiaLabView, MathAssessmentSubmission } from './components/DyscalculiaLabView';
+import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
@@ -100,8 +101,9 @@ export default function App() {
     }
   }, [surfaceTheme, spacingMode]);
 
-  // Load persistent student records from RBAC-protected server on mount
+  // Load persistent student records from RBAC-protected server when an authenticated session is stored
   useEffect(() => {
+    if (!clinicalSession?.token) return;
     let cancelled = false;
     authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
@@ -125,7 +127,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [clinicalSession?.token]);
 
   const selectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0];
@@ -178,36 +180,53 @@ export default function App() {
     mathRiskLevel: record.mathRiskLevel,
   });
 
-  // Only screening/session fields are sent to the append-only session endpoint.
-  // Send raw, allow-listed evidence only. The server calculates reading scores and labels.
+  // Only raw evidence & consent fields are sent to the server; scores and reports are derived server-side.
   const sessionPayloadFromRecord = (record: StudentRecord) => ({
+    sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
     dialectRegionAr: record.dialectRegionAr,
-    dialectCode: record.dialectCode || 'msa',
-    readingDurationSeconds: record.readingDurationSeconds,
-    blinkCount: record.blinkCount,
+    readingDurationSeconds:
+      record.readingDurationSeconds ??
+      Math.max(
+        4,
+        Math.ceil(
+          (record.fixations || []).reduce(
+            (sum, f) => sum + (f.observed ? f.durationMs : 0),
+            0
+          ) / 1000
+        ) + 2
+      ),
+    blinkCount: record.blinkCount ?? 8,
+    calibrationAccuracyPercent: record.calibrationAccuracyPercent ?? 86,
+    ...(record.calibrationValidationMethod
+      ? { calibrationValidationMethod: record.calibrationValidationMethod }
+      : {}),
+    oralReadingAssessed: record.oralReadingAssessed,
+    spokenTranscript: record.spokenTranscript,
+    phoneticSubstitutionCount: record.phoneticSubstitutionCount,
+    dialectVariantCount: record.dialectVariantCount,
+    omissionCount: record.omissionCount,
     fixations: record.fixations,
-    comprehensionAnswers: record.comprehensionAnswers,
-    spokenTranscript: record.spokenTranscript || '',
+    ...(record.comprehensionAnswers
+      ? { comprehensionAnswers: record.comprehensionAnswers }
+      : {}),
+    dyscalculiaAssessed: record.dyscalculiaAssessed,
+    ...(record.mathTrials ? { mathTrials: record.mathTrials } : {}),
     guardianConsentGiven: record.guardianConsentGiven === true,
     guardianConsentRecordedAt: record.guardianConsentRecordedAt,
     guardianConsentSource: record.guardianConsentSource,
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
     guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
     speechRecognitionUsed: record.speechRecognitionUsed === true,
-    calibrationAccuracyPercent: record.calibrationAccuracyPercent,
-    calibrationValidationMethod:
-      record.calibrationValidationMethod?.includes('Independent Holdout')
-        ? 'independent-holdout'
-        : 'leave-one-point-out',
   });
 
-  const createPayloadFromRecord = (record: StudentRecord) => ({
+  const studentCreatePayloadFromRecord = (record: StudentRecord) => ({
     id: record.id,
     name: record.name,
-    schoolName: record.schoolName || 'لم تُحدّد المدرسة',
     gradeLevel: record.gradeLevel,
     ageYears: record.ageYears,
+    schoolName: record.schoolName,
+    sessionStatus: record.sessionStatus || 'completed',
     ...sessionPayloadFromRecord(record),
   });
 
@@ -266,7 +285,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const createPayload = createPayloadFromRecord(completedRecord);
+      const createPayload = studentCreatePayloadFromRecord(completedRecord);
       let response = previous && !previous.isDemoRecord
         ? await sendSave(`/api/students/${encodeURIComponent(completedRecord.id)}/sessions`, sessionPayloadFromRecord(completedRecord))
         : await sendSave('/api/students', createPayload);
@@ -308,7 +327,11 @@ export default function App() {
       setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
       return;
     }
-    const cleanName = name.trim().replace(/\s+/g, ' ');
+    const cleanName = name
+      .trim()
+      .replace(/(?:^|\s)(?:بن|بنت)(?=\s|$)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (!cleanName) {
       setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
       return;
@@ -403,35 +426,65 @@ export default function App() {
 
   const handleUpdateStudentMath = async (
     studentId: string,
-    assessment: MathAssessmentSubmission
+    updated: Partial<StudentRecord>
   ) => {
     if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setStudents((prev) =>
+        prev.map((student) =>
+          student.id === studentId ? { ...student, ...updated } : student
+        )
+      );
       setAiStatusBanner(clinicalSession
-        ? 'رمزك للقراءة فقط؛ لا يمكن حفظ تحديثات سجل الطالب.'
-        : 'يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
+        ? 'رمزك للقراءة فقط؛ حُفظت النتيجة محليًا فقط ولم تُحفظ في الخادم.'
+        : 'حُفظت نتيجة الحساب محليًا؛ سجّل الدخول لحفظ تحديثات سجل الطالب في الخادم.');
       if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     try {
-      const response = await authenticatedFetch(
-        `/api/students/${encodeURIComponent(studentId)}/math-assessment`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(assessment),
-        }
-      );
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.student) {
-        setAiStatusBanner(data?.error || 'لم تُحفظ نتيجة الحساب المحسوبة على الخادم.');
+      const response = updated.mathTrials
+        ? await authenticatedFetch(
+            `/api/students/${encodeURIComponent(studentId)}/math`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ mathTrials: updated.mathTrials }),
+            }
+          )
+        : await authenticatedFetch(
+            `/api/students/${encodeURIComponent(studentId)}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...(updated.name ? { name: updated.name } : {}),
+                ...(updated.schoolName ? { schoolName: updated.schoolName } : {}),
+                ...(typeof updated.gradeLevel === 'number'
+                  ? { gradeLevel: updated.gradeLevel }
+                  : {}),
+                ...(typeof updated.ageYears === 'number'
+                  ? { ageYears: updated.ageYears }
+                  : {}),
+              }),
+            }
+          );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAiStatusBanner(data?.error || 'لم يُحفظ تحديث السجل في الخادم.');
         return;
       }
-      setStudents((prev) => prev.map((student) =>
-        student.id === studentId ? data.student as StudentRecord : student
-      ));
-      setAiStatusBanner('حُفظت نتيجة الحساب بعد أن حسبها الخادم من المحاولات المرسلة.');
+      const savedData = await response.json().catch(() => ({}));
+      setStudents((prev) =>
+        prev.map((student) =>
+          student.id === studentId
+            ? savedData?.student
+              ? { ...student, ...savedData.student }
+              : { ...student, ...updated }
+            : student
+        )
+      );
+      setAiStatusBanner('تم اشتقاق وحفظ تحديث السجل في التخزين المشفر على الخادم.');
     } catch {
-      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم تُحفظ نتيجة الحساب.');
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
     }
   };
 
@@ -523,23 +576,44 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data?.report) {
-          setStudents((prev) =>
-            prev.map((s) =>
-              s.id === selectedStudent.id
-                ? { ...s, clinicalReport: data.report }
-                : s
-            )
-          );
-          await authenticatedFetch(
-            `/api/students/${encodeURIComponent(selectedStudent.id)}`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ clinicalReport: data.report }),
+          if (!selectedStudent.isDemoRecord) {
+            const persistRes = await authenticatedFetch(
+              `/api/students/${encodeURIComponent(selectedStudent.id)}/clinical-report`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clinicalReport: data.report }),
+              }
+            );
+            if (!persistRes.ok) {
+              const errData = await persistRes.json().catch(() => ({}));
+              setAiStatusBanner(
+                errData?.error ||
+                  'صدر التقرير من خدمة التحليل، لكن فشل حفظه في سجل الطالب على الخادم.'
+              );
+              return;
             }
-          ).catch(() => {});
+            const persisted = await persistRes.json().catch(() => ({}));
+            setStudents((prev) =>
+              prev.map((s) =>
+                s.id === selectedStudent.id
+                  ? persisted?.student
+                    ? { ...s, ...persisted.student }
+                    : { ...s, clinicalReport: data.report }
+                  : s
+              )
+            );
+          } else {
+            setStudents((prev) =>
+              prev.map((s) =>
+                s.id === selectedStudent.id
+                  ? { ...s, clinicalReport: data.report }
+                  : s
+              )
+            );
+          }
           setAiStatusBanner(
-            `تم تحديث تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
+            `تم تحديث وحفظ تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
           );
         }
       } else {
@@ -581,6 +655,7 @@ export default function App() {
             student.id === pendingServerRecord.id && !student.isDemoRecord
           );
           const sessionPayload = sessionPayloadFromRecord(pendingServerRecord);
+          const createPayload = studentCreatePayloadFromRecord(pendingServerRecord);
           const sendSave = (url: string, body: unknown) => authenticatedFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -588,9 +663,9 @@ export default function App() {
           });
           let pendingSave = existingPending
             ? await sendSave(`/api/students/${encodeURIComponent(pendingServerRecord.id)}/sessions`, sessionPayload)
-            : await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
+            : await sendSave('/api/students', createPayload);
           if (pendingSave.status === 404 && existingPending) {
-            pendingSave = await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
+            pendingSave = await sendSave('/api/students', createPayload);
           }
           if (pendingSave.ok) {
             const saved = await pendingSave.json().catch(() => ({}));
@@ -765,7 +840,7 @@ export default function App() {
         </div>
       </header>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
-        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${clinicalSession.tenantId}` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${getTenantDisplayLabelAr(clinicalSession)}` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
         {clinicalSession ? (
           <button type="button" onClick={() => { void (async () => { await logoutClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم إبطال الجلسة على الخادم وتسجيل الخروج محليًا.'); })(); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
         ) : (
@@ -1531,8 +1606,11 @@ export default function App() {
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <div className="text-xs text-slate-500 mb-1">
-                      تقرير الفرز الأولي الاسترشادي (مؤشرات تربوية غير تشخيصية)
+                    <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
+                      <span>تقرير الفرز الأولي الاسترشادي (مؤشرات تربوية غير تشخيصية)</span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية مرجعية' : 'مُبلَّغ بها من العميل (معايرة وفحوص معقولية خادمية)')}
+                      </span>
                     </div>
                     <h2 className="text-xl font-bold text-slate-900">
                       تقرير المؤشرات القرائية وخطة المساندة المقترحة —{' '}
@@ -1681,25 +1759,31 @@ export default function App() {
                       أنشطة المساندة القرائية اليومية المقترحة
                     </h3>
                     <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white overflow-hidden">
-                      {selectedStudent.clinicalReport.interventionExercises.map(
-                        (ex, idx) => (
-                          <div
-                            key={idx}
-                            className="p-4 flex items-start justify-between gap-4"
-                          >
-                            <div className="space-y-1">
-                              <div className="text-xs font-bold text-slate-900">
-                                {idx + 1}. {ex.title}
+                      {selectedStudent.clinicalReport.interventionExercises.length > 0 ? (
+                        selectedStudent.clinicalReport.interventionExercises.map(
+                          (ex, idx) => (
+                            <div
+                              key={idx}
+                              className="p-4 flex items-start justify-between gap-4"
+                            >
+                              <div className="space-y-1">
+                                <div className="text-xs font-bold text-slate-900">
+                                  {idx + 1}. {ex.title}
+                                </div>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                  {ex.description}
+                                </p>
                               </div>
-                              <p className="text-xs text-slate-600 leading-relaxed">
-                                {ex.description}
-                              </p>
+                              <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7] shrink-0">
+                                {ex.durationMinutes} دقائق
+                              </span>
                             </div>
-                            <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7] shrink-0">
-                              {ex.durationMinutes} دقائق
-                            </span>
-                          </div>
+                          )
                         )
+                      ) : (
+                        <div className="p-4 text-xs text-slate-600 leading-relaxed">
+                          ستظهر أنشطة المساندة اليومية المخصصة تلقائيًا فور إتمام جلسة القراءة وحساب مؤشرات الفرز.
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1710,13 +1794,19 @@ export default function App() {
                         التيسيرات الصفية والمدرسية الموصى بها
                       </h3>
                       <ul className="space-y-2.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-5">
-                        {selectedStudent.clinicalReport.classroomAccommodations.map(
-                          (acc, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="text-[#0284C7] font-bold">·</span>
-                              <span>{acc}</span>
-                            </li>
+                        {selectedStudent.clinicalReport.classroomAccommodations.length > 0 ? (
+                          selectedStudent.clinicalReport.classroomAccommodations.map(
+                            (acc, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="text-[#0284C7] font-bold">·</span>
+                                <span>{acc}</span>
+                              </li>
+                            )
                           )
+                        ) : (
+                          <li className="text-slate-600 leading-relaxed">
+                            ستظهر التيسيرات الصفية المقترحة فور إتمام جلسة الفحص القرائي والحسابي.
+                          </li>
                         )}
                       </ul>
                     </div>

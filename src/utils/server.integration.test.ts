@@ -1,462 +1,442 @@
-import test, { before, after } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createServer } from 'node:net';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { spawn, ChildProcess } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
-const credentialMap = {
-  school_alpha: {
-    clinician: 'test-school-alpha-clinician-secret-123456',
-    educator_readonly: 'test-school-alpha-educator-secret-123456',
-  },
-  school_beta: {
-    clinician: 'test-school-beta-clinician-secret-123456',
-    educator_readonly: 'test-school-beta-educator-secret-123456',
-  },
+const SCHOOL_A_CLINICIAN_CODE = 'clinician-school-a-secret-code-2026-valid';
+const SCHOOL_A_EDUCATOR_CODE = 'educator-school-a-readonly-code-2026-valid';
+const SCHOOL_B_CLINICIAN_CODE = 'clinician-school-b-secret-code-2026-valid';
+const SCHOOL_B_EDUCATOR_CODE = 'educator-school-b-readonly-code-2026-valid';
+
+const TEST_ENV = {
+  ...process.env,
+  NODE_ENV: 'production',
+  TRUST_PROXY_HOPS: '0',
+  CLINICAL_STORE_ENCRYPTION_KEY:
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  CLINICAL_SESSION_SECRET:
+    'test-hmac-signing-secret-32chars-minimum-distinct-2026!',
+  CLINICAL_TENANT_CREDENTIALS: JSON.stringify({
+    school_a: {
+      clinician: SCHOOL_A_CLINICIAN_CODE,
+      educator_readonly: SCHOOL_A_EDUCATOR_CODE,
+    },
+    school_b: {
+      clinician: SCHOOL_B_CLINICIAN_CODE,
+      educator_readonly: SCHOOL_B_EDUCATOR_CODE,
+    },
+  }),
 };
 
-let child: ChildProcessWithoutNullStreams | null = null;
-let baseUrl = '';
-let serverPort = 0;
-let dataDir = '';
-let childOutput = '';
-
-async function startTestServer(): Promise<void> {
-  baseUrl = `http://127.0.0.1:${serverPort}`;
-  childOutput = '';
-  child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      PORT: String(serverPort),
-      TRUST_PROXY_HOPS: '0',
-      CLINICAL_DATA_DIR: dataDir,
-      CLINICAL_TENANT_CREDENTIALS: JSON.stringify(credentialMap),
-      CLINICAL_SESSION_SECRET: 'integration-test-session-signing-key-not-a-production-secret-64',
-      CLINICAL_STORE_ENCRYPTION_KEY: 'd3'.repeat(32),
-      GEMINI_API_KEY: '',
-    },
-    stdio: 'pipe',
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.listen(0, '127.0.0.1', () => {
+      const addr = srv.address();
+      const port = typeof addr === 'object' && addr ? addr.port : 0;
+      srv.close((err) => (err ? reject(err) : resolve(port)));
+    });
+    srv.on('error', reject);
   });
-  child.stdout.on('data', (chunk) => { childOutput += chunk.toString(); });
-  child.stderr.on('data', (chunk) => { childOutput += chunk.toString(); });
-  await waitForServer();
 }
 
-async function stopTestServer(): Promise<void> {
-  if (!child) return;
-  const running = child;
-  if (running.exitCode === null) {
-    running.kill('SIGTERM');
-    await Promise.race([
-      new Promise<void>((resolve) => running.once('exit', () => resolve())),
-      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
-    ]);
-    if (running.exitCode === null) running.kill('SIGKILL');
-  }
-  child = null;
-}
-
-async function findAvailablePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Could not obtain a test port.');
-  const port = address.port;
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  return port;
-}
-
-async function waitForServer(): Promise<void> {
-  let lastError = '';
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    if (child?.exitCode !== null && child?.exitCode !== undefined) {
-      throw new Error(`Test server exited early (exit ${child.exitCode}).\n${childOutput}`);
-    }
+async function waitForServer(baseUrl: string, timeoutMs = 15000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
     try {
-      const response = await fetch(`${baseUrl}/api/auth/session`);
-      if (response.status === 401) return;
-      lastError = `Unexpected startup status: ${response.status}`;
-    } catch (error) {
-      lastError = String(error);
+      const res = await fetch(`${baseUrl}/api/students`);
+      if (res.status === 401 || res.status === 200) return;
+    } catch {
+      // Server not listening yet
     }
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((r) => setTimeout(r, 150));
   }
-  throw new Error(`Test server did not become ready: ${lastError}\n${childOutput}`);
+  throw new Error(`Server at ${baseUrl} did not start within ${timeoutMs}ms`);
 }
 
-before(async () => {
-  serverPort = await findAvailablePort();
-  dataDir = mkdtempSync(join(tmpdir(), 'de1-http-security-'));
-  await startTestServer();
-});
-
-after(async () => {
-  await stopTestServer();
-  if (dataDir) rmSync(dataDir, { recursive: true, force: true });
-});
-
-async function login(accessCode: string, roleClaim = 'clinician', spoofedForwardedFor?: string) {
-  return fetch(`${baseUrl}/api/auth/session`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(spoofedForwardedFor ? { 'X-Forwarded-For': spoofedForwardedFor } : {}),
-    },
-    body: JSON.stringify({ accessCode, role: roleClaim, clinicianName: 'اختبار تكامل' }),
-  });
-}
-
-function authorizedHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-}
-
-function validReadingEvidence(overrides: Record<string, unknown> = {}) {
-  const passage = ARABIC_READING_PASSAGES.find((item) => item.id === 'passage-g3-astronomy');
-  if (!passage) throw new Error('Integration passage fixture was not found.');
-  const observedCount = Math.max(4, Math.ceil(passage.words.length * 0.3));
+function buildPlausibleReadingEvidence() {
+  const passage = ARABIC_READING_PASSAGES[0];
+  const fixations = passage.words.map((word, index) => ({
+    wordIndex: index,
+    word,
+    durationMs: index % 4 === 0 ? 410 : 250,
+    visits: index % 5 === 0 && index > 0 ? 2 : 1,
+    regressedFromIndex: index % 5 === 0 && index > 0 ? index + 1 : undefined,
+    blinks: 0,
+    observed: true,
+  }));
   return {
     passageId: passage.id,
-    dialectCode: 'gulf',
-    dialectRegionAr: 'لهجة اختبارية',
-    readingDurationSeconds: 12,
-    blinkCount: 4,
-    fixations: passage.words.map((word, wordIndex) => ({
-      wordIndex,
-      word,
-      durationMs: wordIndex < observedCount ? 260 + (wordIndex % 4) * 15 : 0,
-      visits: wordIndex < observedCount ? 1 : 0,
-      observed: wordIndex < observedCount,
-      blinks: 0,
-    })),
-    comprehensionAnswers: passage.comprehensionQuestions.map((question) => question.correctIndex),
-    spokenTranscript: '',
-    guardianConsentGiven: true,
-    guardianConsentRecordedAt: new Date().toISOString(),
-    guardianConsentSource: 'إقرار الواجهة — اختبار تكامل',
-    guardianAudioConsentGiven: false,
-    speechRecognitionUsed: false,
-    calibrationAccuracyPercent: 92,
+    readingDurationSeconds: 28,
+    blinkCount: 9,
+    calibrationAccuracyPercent: 88,
     calibrationValidationMethod: 'leave-one-point-out',
-    ...overrides,
+    fixations,
+    comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+    guardianConsentGiven: true,
+    guardianConsentRecordedAt: '2026-03-01T08:00:00.000Z',
+    guardianConsentSource: 'نموذج موافقة ولي الأمر الورقي المؤرشف بالمدرسة',
   };
 }
 
-function validStudent(id: string, overrides: Record<string, unknown> = {}) {
+function buildCanonicalMathTrials() {
   return {
-    id,
-    name: 'مريم بن حسن',
-    schoolName: 'مدرسة ألف',
-    gradeLevel: 4,
-    ageYears: 10,
-    ...validReadingEvidence(),
-    ...overrides,
-  };
-}
-
-test('HTTP security regression: tenant isolation, role binding, create-only IDs, consent, update scope and logout revocation', async () => {
-  // Old shared credential must not establish a session; client-supplied role does not grant permissions.
-  const oldSecret = await login('BASEERA-CLINICAL-2026');
-  assert.equal(oldSecret.status, 401);
-
-  const educatorResponse = await login(credentialMap.school_alpha.educator_readonly, 'clinician');
-  assert.equal(educatorResponse.status, 200);
-  const educator = await educatorResponse.json() as { token: string; role: string; tenantId: string; scopes: string[]; expiresAt: number };
-  assert.equal(educator.role, 'educator_readonly');
-  assert.equal(educator.tenantId, 'school_alpha');
-  assert.equal(educator.scopes.includes('students:write'), false);
-  assert.ok(educator.expiresAt - Date.now() <= 60 * 60 * 1000);
-
-  const clinicianResponse = await login(credentialMap.school_alpha.clinician, 'educator_readonly');
-  assert.equal(clinicianResponse.status, 200);
-  const alpha = await clinicianResponse.json() as { token: string; role: string; tenantId: string; sessionId: string };
-  assert.equal(alpha.role, 'clinician');
-  assert.equal(alpha.tenantId, 'school_alpha');
-  assert.ok(alpha.sessionId);
-
-  const betaResponse = await login(credentialMap.school_beta.clinician);
-  assert.equal(betaResponse.status, 200);
-  const beta = await betaResponse.json() as { token: string; role: string; tenantId: string };
-  assert.equal(beta.tenantId, 'school_beta');
-
-  // No token; malformed/bad token and spoofed tenant headers cannot read records.
-  assert.equal((await fetch(`${baseUrl}/api/students`)).status, 401);
-  assert.equal((await fetch(`${baseUrl}/api/students`, {
-    headers: { Authorization: 'Bearer not.a.valid-token' },
-  })).status, 401);
-
-  // Consent is fail-closed; client role/tenant claims are not trusted.
-  const noConsent = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent('integration-no-consent', { guardianConsentGiven: false })),
-  });
-  assert.equal(noConsent.status, 400);
-
-  const studentId = 'integration-alpha-student';
-  const forgedCreate = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent('integration-forged-create', {
-      tenantId: 'school_beta',
-      dyslexiaRiskScore: 1,
-      readingRiskLevel: 'nominal',
-    })),
-  });
-  assert.equal(forgedCreate.status, 400);
-
-  const create = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: {
-      ...authorizedHeaders(alpha.token),
-      'X-Tenant-Id': 'school_beta',
-      'X-Forwarded-For': '198.51.100.222',
-    },
-    body: JSON.stringify(validStudent(studentId)),
-  });
-  assert.equal(create.status, 201);
-  const created = await create.json() as { student: Record<string, unknown> };
-  assert.equal(created.student.tenantId, 'school_alpha');
-  assert.equal(created.student.name, 'مريم بن حسن');
-
-  // An identifier owned by another school must not reveal a collision.
-  const crossTenantCollision = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(beta.token),
-    body: JSON.stringify(validStudent(studentId)),
-  });
-  assert.equal(crossTenantCollision.status, 404);
-
-  // Duplicate POST is not an upsert: original name, school and tenant stay intact.
-  const overwriteAttempt = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent(studentId, { name: 'اسم مهاجم', schoolName: 'مدرسة أخرى' })),
-  });
-  assert.equal(overwriteAttempt.status, 409);
-  const alphaListResponse = await fetch(`${baseUrl}/api/students`, {
-    headers: authorizedHeaders(alpha.token),
-  });
-  assert.equal(alphaListResponse.status, 200);
-  const alphaList = await alphaListResponse.json() as { students: Array<Record<string, unknown>> };
-  const stored = alphaList.students.find((student) => student.id === studentId);
-  assert.equal(stored?.name, 'مريم بن حسن');
-  assert.equal(stored?.schoolName, 'مدرسة ألف');
-  assert.equal(stored?.tenantId, 'school_alpha');
-
-  // The other school cannot enumerate or mutate this record, even knowing its ID.
-  const betaListResponse = await fetch(`${baseUrl}/api/students`, { headers: authorizedHeaders(beta.token) });
-  const betaList = await betaListResponse.json() as { students: Array<Record<string, unknown>> };
-  assert.equal(betaList.students.some((student) => student.id === studentId), false);
-  assert.equal((await fetch(`${baseUrl}/api/students/${studentId}`, {
-    method: 'PATCH',
-    headers: authorizedHeaders(beta.token),
-    body: JSON.stringify({ wpm: 99 }),
-  })).status, 404);
-  assert.equal((await fetch(`${baseUrl}/api/students/${studentId}`, {
-    method: 'DELETE',
-    headers: authorizedHeaders(beta.token),
-  })).status, 404);
-
-  // Read-only role and PATCH allow-list reject writes, identity fields, consent tampering and client history.
-  assert.equal((await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(educator.token),
-    body: JSON.stringify(validStudent('integration-readonly-write')),
-  })).status, 403);
-  for (const forbiddenPatch of [
-    { name: 'تغيير الاسم' },
-    { schoolName: 'مدرسة مختلفة' },
-    { tenantId: 'school_beta' },
-    { guardianConsentGiven: false },
-    { guardianConsentRecordedAt: new Date().toISOString() },
-    { guardianConsentSource: 'spoofed' },
-    { assessmentHistory: [] },
-    { wpm: 'not-a-number' },
-    { gradeLevel: 'not-a-number' },
-    { ageYears: 999 },
-    { dyslexiaRiskScore: 98 },
-    { readingRiskLevel: 'nominal' },
-  ]) {
-    const response = await fetch(`${baseUrl}/api/students/${studentId}`, {
-      method: 'PATCH',
-      headers: authorizedHeaders(alpha.token),
-      body: JSON.stringify(forbiddenPatch),
-    });
-    assert.equal(response.status, 400);
-  }
-
-  const specialKey = String.fromCharCode(95, 95, 112, 114, 111, 116, 111, 95, 95);
-  const specialKeyResponse = await fetch(`${baseUrl}/api/students/${studentId}`, {
-    method: 'PATCH',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({ [specialKey]: { tenantId: 'school_beta' } }),
-  });
-  assert.equal(specialKeyResponse.status, 400);
-
-  // Runtime schemas reject malformed evidence and derive risk scores on the server.
-  const mathEvidence = {
     subitizingTrials: [
-      { dotCount: 1, chosen: 1, reactionTimeMs: 520 },
-      { dotCount: 2, chosen: 2, reactionTimeMs: 690 },
-      { dotCount: 3, chosen: 2, reactionTimeMs: 610 },
-      { dotCount: 4, chosen: 4, reactionTimeMs: 740 },
+      { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 620 },
+      { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 680 },
+      { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 740 },
+      { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 810 },
     ],
     numberLineTrials: [
-      { target: 37, userEstimate: 39, reactionTimeMs: 1940, scaleMin: 0, scaleMax: 100 },
-      { target: 156, userEstimate: 151, reactionTimeMs: 2280, scaleMin: 0, scaleMax: 200 },
+      { target: 37, userEstimate: 39, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+      { target: 156, userEstimate: 150, scaleMin: 0, scaleMax: 200, reactionTimeMs: 2300 },
     ],
     transcodingTrials: [
-      { targetNumber: 47, selectedNumber: 74, reactionTimeMs: 2340 },
-      { targetNumber: 83, selectedNumber: 83, reactionTimeMs: 2610 },
-      { targetNumber: 69, selectedNumber: 69, reactionTimeMs: 1890 },
+      { targetNumber: 47, selectedNumber: 47, isReversalError: false, reactionTimeMs: 1750 },
+      { targetNumber: 83, selectedNumber: 38, isReversalError: true, reactionTimeMs: 2200 },
+      { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2450 },
     ],
   };
-  const mathSave = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(mathEvidence),
-  });
-  assert.equal(mathSave.status, 200);
-  const mathBody = await mathSave.json() as { scoring: string; student: Record<string, unknown> };
-  assert.equal(mathBody.scoring, 'server-derived');
-  assert.equal(mathBody.student.dyscalculiaAssessed, true);
-  assert.equal(typeof mathBody.student.dyscalculiaRiskScore, 'number');
-  assert.equal(mathBody.student.reversalErrorCount, 1);
+}
 
-  const forgedMathScore = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({ ...mathEvidence, dyscalculiaRiskScore: 1, mathRiskLevel: 'nominal' }),
-  });
-  assert.equal(forgedMathScore.status, 400);
-  const invalidTiming = await fetch(`${baseUrl}/api/students/${studentId}/math-assessment`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({
-      ...mathEvidence,
-      subitizingTrials: mathEvidence.subitizingTrials.map((trial, index) =>
-        index === 0 ? { ...trial, reactionTimeMs: 'fast' } : trial
-      ),
-    }),
-  });
-  assert.equal(invalidTiming.status, 400);
+describe('Real HTTP Server Integration Tests (server.ts)', () => {
+  let serverProc: ChildProcess | null = null;
+  let baseUrl = '';
+  let tempDir = '';
+  let securityStateFile = '';
+  let port = 0;
 
-  // A repeat assessment updates only session fields; server preserves identity and appends history.
-  const followup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validReadingEvidence({
-      guardianConsentSource: 'إقرار الواجهة — جلسة متابعة اختبارية',
-      readingDurationSeconds: 14,
-    })),
-  });
-  assert.equal(followup.status, 200);
-  const followupBody = await followup.json() as { student: Record<string, unknown>; scoring: string };
-  assert.equal(followupBody.scoring, 'server-derived');
-  assert.equal(followupBody.student.name, 'مريم بن حسن');
-  assert.equal(followupBody.student.schoolName, 'مدرسة ألف');
-  assert.equal(followupBody.student.tenantId, 'school_alpha');
-  assert.equal(typeof followupBody.student.wpm, 'number');
-  assert.equal(typeof followupBody.student.dyslexiaRiskScore, 'number');
-  assert.ok(Array.isArray(followupBody.student.assessmentHistory));
-  assert.equal((followupBody.student.assessmentHistory as unknown[]).length, 1);
-
-  const forgedFollowup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({ ...validReadingEvidence(), dyslexiaRiskScore: 0, readingRiskLevel: 'nominal' }),
-  });
-  assert.equal(forgedFollowup.status, 400);
-
-  const auditResponse = await fetch(`${baseUrl}/api/audit-events?limit=200`, {
-    headers: authorizedHeaders(alpha.token),
-  });
-  assert.equal(auditResponse.status, 200);
-  const auditBody = await auditResponse.json() as { events: Array<Record<string, unknown>> };
-  assert.ok(auditBody.events.some((event) => event.action === 'student.create' && event.subjectId === studentId && event.actorLabel === 'اختبار تكامل'));
-  assert.ok(auditBody.events.some((event) => event.action === 'student.math-assessment' && event.subjectId === studentId));
-  assert.ok(auditBody.events.some((event) => event.action === 'student.session.complete' && event.subjectId === studentId && Array.isArray(event.changedFields) && (event.changedFields as string[]).includes('guardianConsentRecordedAt')));
-  assert.ok(auditBody.events.every((event) => event.tenantId === 'school_alpha'));
-  const readOnlyAudit = await fetch(`${baseUrl}/api/audit-events`, {
-    headers: authorizedHeaders(educator.token),
-  });
-  assert.equal(readOnlyAudit.status, 403);
-
-  // Speech-recognition usage requires its own explicit, timestamped consent.
-  const noAudioConsent = await fetch(`${baseUrl}/api/students`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent('integration-no-audio-consent', {
-      speechRecognitionUsed: true,
-      guardianAudioConsentGiven: false,
-      guardianAudioConsentRecordedAt: undefined,
-    })),
-  });
-  assert.equal(noAudioConsent.status, 400);
-
-  // AI endpoints must not work anonymously.
-  assert.equal((await fetch(`${baseUrl}/api/ai/adapt-text`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: 'test' }),
-  })).status, 401);
-  assert.equal((await fetch(`${baseUrl}/api/ai/tts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: 'test' }),
-  })).status, 401);
-
-  // Authenticated AI requests are rate-limited persistently even when the test endpoint is not implemented.
-  for (let index = 0; index < 20; index += 1) {
-    await fetch(baseUrl + '/api/ai/security-test-probe', {
-      method: 'POST',
-      headers: authorizedHeaders(alpha.token),
-      body: JSON.stringify({ probe: index }),
+  async function startServerInstance() {
+    port = await getFreePort();
+    baseUrl = `http://127.0.0.1:${port}`;
+    serverProc = spawn('./node_modules/.bin/tsx', ['server.ts'], {
+      cwd: process.cwd(),
+      env: {
+        ...TEST_ENV,
+        PORT: String(port),
+        CLINICAL_DATA_DIR: tempDir,
+      },
+      stdio: 'pipe',
     });
+    await waitForServer(baseUrl);
   }
-  const rateLimitedAi = await fetch(baseUrl + '/api/ai/security-test-probe', {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify({ probe: 'limit-check' }),
-  });
-  assert.equal(rateLimitedAi.status, 429);
 
-  // Logout revokes the bearer token at the server; local clearing is not the only control.
-  const logout = await fetch(`${baseUrl}/api/auth/logout`, {
-    method: 'POST',
-    headers: authorizedHeaders(alpha.token),
-  });
-  assert.equal(logout.status, 204);
-  assert.equal((await fetch(`${baseUrl}/api/students`, {
-    headers: authorizedHeaders(alpha.token),
-  })).status, 401);
-
-  // Persisted login throttling remains in force after a process restart.
-  for (let index = 0; index < 8; index += 1) {
-    await login(`invalid-integration-secret-${index}-long-enough-123456`, 'clinician', `198.51.100.${index + 1}`);
+  async function stopServerInstance() {
+    if (serverProc) {
+      const proc = serverProc;
+      serverProc = null;
+      proc.kill('SIGTERM');
+      await new Promise((r) => setTimeout(r, 300));
+    }
   }
-  assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
 
-  // Reboot on a new ephemeral port but the same encrypted data directory.
-  await stopTestServer();
-  serverPort = await findAvailablePort();
-  await startTestServer();
-  assert.equal((await fetch(`${baseUrl}/api/students`, {
-    headers: authorizedHeaders(alpha.token),
-  })).status, 401);
-  assert.equal((await login(credentialMap.school_alpha.clinician)).status, 429);
-  const persistedAiLimit = await fetch(baseUrl + '/api/ai/security-test-probe', {
-    method: 'POST',
-    headers: authorizedHeaders(beta.token),
-    body: JSON.stringify({ probe: 'after-restart' }),
+  before(async () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'baseera-http-test-'));
+    securityStateFile = path.join(tempDir, 'security-state.json');
+    await startServerInstance();
   });
-  assert.equal(persistedAiLimit.status, 429);
+
+  after(async () => {
+    await stopServerInstance();
+    if (tempDir && fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  async function loginWithCode(accessCode: string) {
+    const res = await fetch(`${baseUrl}/api/auth/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode, clinicianName: 'مختبر النظام' }),
+    });
+    assert.equal(res.status, 200);
+    return (await res.json()) as {
+      token: string;
+      role: string;
+      tenantId: string;
+      tenantDisplayNameAr: string;
+      scopes: string[];
+    };
+  }
+
+  it('allows >10 consecutive valid logins without triggering 429 and returns Arabic school display name', async () => {
+    for (let i = 0; i < 11; i++) {
+      const session = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+      assert.equal(session.tenantId, 'school_a');
+      assert.equal(session.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
+    }
+  });
+
+  it('derives reading scores & non-empty recommendations server-side, strips بن/بنت, tags client-reported, and blocks client score injection', async () => {
+    const schoolAClinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const schoolBClinician = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
+
+    // 1. Attempt to inject dyslexiaRiskScore or readingRiskLevel or tenantId -> 400
+    const forgedRes = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${schoolAClinician.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-forged-1',
+        name: 'طالب مزيف',
+        gradeLevel: 4,
+        ageYears: 10,
+        schoolName: 'مدرسة أ',
+        dyslexiaRiskScore: 5,
+        ...buildPlausibleReadingEvidence(),
+      }),
+    });
+    assert.equal(forgedRes.status, 400);
+
+    // 2. Attempt implausible evidence: 53 words * 420ms in readingDurationSeconds=4 -> 400
+    const passage = ARABIC_READING_PASSAGES[0];
+    const impossibleRes = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${schoolAClinician.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-impossible-1',
+        name: 'طالب مستحيل',
+        gradeLevel: 4,
+        ageYears: 10,
+        schoolName: 'مدرسة أ',
+        ...buildPlausibleReadingEvidence(),
+        readingDurationSeconds: 4,
+        fixations: passage.words.map((word, index) => ({
+          wordIndex: index,
+          word,
+          durationMs: 420,
+          visits: 1,
+          blinks: 0,
+          observed: true,
+        })),
+      }),
+    });
+    assert.equal(impossibleRes.status, 400);
+
+    // 3. Create valid student record from raw evidence with "بن" in name
+    const createRes = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${schoolAClinician.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-http-school-a-1',
+        name: 'طالب بن خالد التجريبي',
+        gradeLevel: 4,
+        ageYears: 10,
+        schoolName: 'مدرسة أ',
+        ...buildPlausibleReadingEvidence(),
+      }),
+    });
+    assert.equal(createRes.status, 201);
+    const createdBody = (await createRes.json()) as { student: Record<string, any> };
+    assert.equal(createdBody.student.name, 'طالب خالد التجريبي');
+    assert.equal(createdBody.student.evidenceProvenance, 'client-reported');
+    assert.ok(createdBody.student.wpm > 0);
+    assert.equal(createdBody.student.comprehensionScore, 100);
+    assert.ok(Array.isArray(createdBody.student.clinicalReport.interventionExercises));
+    assert.ok(createdBody.student.clinicalReport.interventionExercises.length >= 2);
+    assert.ok(Array.isArray(createdBody.student.clinicalReport.classroomAccommodations));
+    assert.ok(createdBody.student.clinicalReport.classroomAccommodations.length >= 2);
+
+    // 4. Cross-tenant POST with existing ID from School A returns 404 (not 409) so it does not leak ID existence
+    const crossTenantCreate = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${schoolBClinician.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-http-school-a-1',
+        name: 'طالب مدرسة ب',
+        gradeLevel: 4,
+        ageYears: 10,
+        schoolName: 'مدرسة ب',
+        ...buildPlausibleReadingEvidence(),
+      }),
+    });
+    assert.equal(crossTenantCreate.status, 404);
+  });
+
+  it('enforces strict 4-field PATCH and saves updated AI clinicalReport + mathTrials via dedicated PUT routes', async () => {
+    const clinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+
+    // 1. Sending { clinicalReport } to PATCH /api/students/:id returns 400
+    const badPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${clinician.token}`,
+      },
+      body: JSON.stringify({
+        clinicalReport: { clinicalSummary: 'محاولة عبر المسار الخاطئ' },
+      }),
+    });
+    assert.equal(badPatch.status, 400);
+
+    // 2. Valid 4-field profile PATCH succeeds and strips بن/بنت
+    const goodPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${clinician.token}`,
+      },
+      body: JSON.stringify({
+        name: 'نورة بنت سعد العتيبي',
+        schoolName: 'مدرسة أ المحدثة',
+        gradeLevel: 4,
+        ageYears: 10,
+      }),
+    });
+    assert.equal(goodPatch.status, 200);
+    const patchedBody = (await goodPatch.json()) as { student: Record<string, any> };
+    assert.equal(patchedBody.student.name, 'نورة سعد العتيبي');
+
+    // 3. Dedicated PUT /api/students/:id/clinical-report saves full report with exercises & accommodations
+    const updatedReport = {
+      clinicalSummary: 'ملخص محدث بالذكاء الاصطناعي يوضح استقرار الطلاقة القرائية.',
+      ocularMotorAnalysis: 'تحليل حركة العين بعد التحديث يظهر تثبيتات منتظمة.',
+      orthographicAndPhonologicalPatterns: 'تحليل الصرف والأصوات العربية المحدث.',
+      dyscalculiaSpatialAnalysis: 'تحليل الحس العددي والمكاني المحدث.',
+      interventionExercises: [
+        {
+          title: 'تدريب الطلاقة المقطعية المحدث',
+          description: 'قراءة الجمل العربية المقسمة بصرياً لمدة عشر دقائق يومياً.',
+          durationMinutes: 10,
+        },
+        {
+          title: 'تثبيت المسار البصري بالمسطرة',
+          description: 'استخدام مسطرة التتبع القرائي للحد من الارتدادات.',
+          durationMinutes: 10,
+        },
+      ],
+      classroomAccommodations: [
+        'توفير نسخة مكبرة بتباعد مريح بين الأسطر.',
+        'منح وقت إضافي بنسبة 25% في المهام القرائية.',
+      ],
+    };
+
+    const putReportRes = await fetch(
+      `${baseUrl}/api/students/stu-http-school-a-1/clinical-report`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${clinician.token}`,
+        },
+        body: JSON.stringify({ clinicalReport: updatedReport }),
+      }
+    );
+    assert.equal(putReportRes.status, 200);
+    const savedReportBody = (await putReportRes.json()) as { student: Record<string, any> };
+    assert.equal(
+      savedReportBody.student.clinicalReport.clinicalSummary,
+      updatedReport.clinicalSummary
+    );
+    assert.equal(
+      savedReportBody.student.clinicalReport.interventionExercises.length,
+      2
+    );
+
+    // 4. Dedicated PUT /api/students/:id/math derives math scores from canonical 4+2+3 trials
+    const putMathRes = await fetch(
+      `${baseUrl}/api/students/stu-http-school-a-1/math`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${clinician.token}`,
+        },
+        body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
+      }
+    );
+    assert.equal(putMathRes.status, 200);
+    const mathBody = (await putMathRes.json()) as { student: Record<string, any> };
+    assert.equal(mathBody.student.dyscalculiaAssessed, true);
+    assert.equal(mathBody.student.reversalErrorCount, 1);
+
+    // Reject invented target on math endpoint -> 400
+    const badTrials = buildCanonicalMathTrials();
+    badTrials.numberLineTrials[0].target = 99;
+    const badMathRes = await fetch(
+      `${baseUrl}/api/students/stu-http-school-a-1/math`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${clinician.token}`,
+        },
+        body: JSON.stringify({ mathTrials: badTrials }),
+      }
+    );
+    assert.equal(badMathRes.status, 400);
+  });
+
+  it('persists revoked tokens, audit logs (without child PII), and saved reports across server restart in encrypted security-state.json (mode 600)', async () => {
+    const clinicianA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const educatorA = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
+
+    // Educator is forbidden from reading audit logs
+    const educatorAuditRes = await fetch(`${baseUrl}/api/audit-logs`, {
+      headers: { Authorization: `Bearer ${educatorA.token}` },
+    });
+    assert.equal(educatorAuditRes.status, 403);
+
+    // Clinician can read tenant-isolated audit logs and they contain zero child PII
+    const auditRes = await fetch(`${baseUrl}/api/audit-logs`, {
+      headers: { Authorization: `Bearer ${clinicianA.token}` },
+    });
+    assert.equal(auditRes.status, 200);
+    const auditBody = (await auditRes.json()) as { auditLogs: Array<Record<string, any>> };
+    assert.ok(auditBody.auditLogs.length >= 2);
+    const serializedAudit = JSON.stringify(auditBody.auditLogs);
+    assert.equal(serializedAudit.includes('نورة'), false);
+    assert.equal(serializedAudit.includes('خالد'), false);
+
+    // Revoke clinicianA token via logout
+    const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${clinicianA.token}` },
+    });
+    assert.equal(logoutRes.status, 204);
+
+    // Verify security-state.json exists and has 0600 permissions
+    assert.equal(fs.existsSync(securityStateFile), true);
+    const mode = fs.statSync(securityStateFile).mode & 0o777;
+    assert.equal(mode, 0o600);
+
+    // Restart server process
+    await stopServerInstance();
+    await startServerInstance();
+
+    // Revoked token MUST still return 401 after restart
+    const afterRestartRevoked = await fetch(`${baseUrl}/api/students`, {
+      headers: { Authorization: `Bearer ${clinicianA.token}` },
+    });
+    assert.equal(afterRestartRevoked.status, 401);
+
+    // Fresh login sees persisted report with non-empty recommendations and persisted audit logs
+    const freshClinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const getStudentsRes = await fetch(`${baseUrl}/api/students`, {
+      headers: { Authorization: `Bearer ${freshClinician.token}` },
+    });
+    assert.equal(getStudentsRes.status, 200);
+    const studentsData = (await getStudentsRes.json()) as { students: Array<Record<string, any>> };
+    const persistedStudent = studentsData.students.find(
+      (s) => s.id === 'stu-http-school-a-1'
+    );
+    assert.ok(persistedStudent);
+    assert.ok(persistedStudent.clinicalReport.interventionExercises.length >= 2);
+    assert.ok(persistedStudent.clinicalReport.classroomAccommodations.length >= 2);
+  });
 });

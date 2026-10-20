@@ -1,4 +1,23 @@
 import crypto from 'crypto';
+import { z } from 'zod';
+import {
+  ARABIC_READING_PASSAGES,
+  ClinicalReport,
+  StudentMathTrialsPayload,
+} from '../data/seedData';
+import {
+  WordFixation,
+  SubitizingTrialResult,
+  NumberLineTrialResult,
+  TranscodingTrialResult,
+  calculateEyeTrackingMetrics,
+  calculateDyscalculiaMetrics,
+} from './clinicalMetrics';
+import {
+  ARABIC_DIALECT_PROFILES,
+  ArabicDialectCode,
+  evaluateOralReadingAlignment,
+} from './dyslexiaEngines';
 
 export type ClinicalRole = 'clinician' | 'educator_readonly';
 
@@ -6,7 +25,8 @@ export type ClinicalScope =
   | 'students:read'
   | 'students:write'
   | 'students:delete'
-  | 'ai:analyze';
+  | 'ai:analyze'
+  | 'audit:read';
 
 export interface VerifiedClinicalSession {
   token: string;
@@ -14,6 +34,8 @@ export interface VerifiedClinicalSession {
   clinicianName: string;
   /** Tenant identity is part of the signed token and cannot be supplied by the browser. */
   tenantId: string;
+  /** Human-readable Arabic school name for UI display instead of raw internal tenantId. */
+  tenantDisplayNameAr: string;
   /** Unique server-recognized session ID used for logout revocation. */
   sessionId: string;
   scopes: ClinicalScope[];
@@ -27,12 +49,119 @@ const ROLE_SCOPES: Record<ClinicalRole, ClinicalScope[]> = {
     'students:write',
     'students:delete',
     'ai:analyze',
+    'audit:read',
   ],
   educator_readonly: ['students:read'],
 };
 
+const TENANT_DISPLAY_NAME_MAP: Record<string, string> = {
+  default: 'مدرسة الرواد الابتدائية',
+  school_a: 'مدرسة الرواد الأولى (أ)',
+  school_b: 'مدرسة النخبة الثانية (ب)',
+  school_alpha: 'مدرسة ألف النموذجية',
+  school_beta: 'مدرسة باء النموذجية',
+};
+
+export function formatTenantDisplayNameAr(
+  tenantId: string,
+  customDisplayNameAr?: string
+): string {
+  if (customDisplayNameAr && customDisplayNameAr.trim()) {
+    return customDisplayNameAr.trim();
+  }
+  const cleanId = (tenantId || '').trim();
+  if (TENANT_DISPLAY_NAME_MAP[cleanId]) {
+    return TENANT_DISPLAY_NAME_MAP[cleanId];
+  }
+  const matchSuffix = cleanId.match(/^school[_-]([a-zA-Z0-9]+)$/i);
+  if (matchSuffix) {
+    return `مدرسة القطاع (${matchSuffix[1].toUpperCase()})`;
+  }
+  return cleanId ? `مدرسة (${cleanId})` : 'المدرسة المعتمدة';
+}
+
+export function stripArabicPatronymics(rawName: string): string {
+  return (rawName || '')
+    .replace(/(?:^|\s)(?:بن|بنت)(?=\s|$)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function getScopesForRole(role: ClinicalRole): ClinicalScope[] {
   return ROLE_SCOPES[role] || ROLE_SCOPES.educator_readonly;
+}
+
+/**
+ * Strictly parses TRUST_PROXY_HOPS environment variable.
+ * Defaults to 0 when unset/empty; throws on any invalid or non-integer value.
+ */
+export function parseStrictTrustProxyHops(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === '') return 0;
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(
+      `Invalid TRUST_PROXY_HOPS value "${raw}": must be an integer between 0 and 10.`
+    );
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 10) {
+    throw new Error(
+      `Out-of-range TRUST_PROXY_HOPS value "${raw}": must be between 0 and 10.`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Strictly normalizes calibrationValidationMethod without ever defaulting unknown strings to 'leave-one-point-out'.
+ */
+export function normalizeCalibrationValidationMethod(
+  rawMethod: unknown,
+  isManualOrNoCamera = false
+): {
+  code:
+    | 'independent-holdout'
+    | 'leave-one-point-out'
+    | 'single-point-unvalidated';
+  labelAr: string;
+  isValidated: boolean;
+} {
+  if (isManualOrNoCamera) {
+    return {
+      code: 'single-point-unvalidated',
+      labelAr:
+        'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)',
+      isValidated: false,
+    };
+  }
+  if (typeof rawMethod === 'string') {
+    const trimmed = rawMethod.trim();
+    if (
+      trimmed === 'independent-holdout' ||
+      trimmed === 'تحقق مستقل (Independent Holdout)'
+    ) {
+      return {
+        code: 'independent-holdout',
+        labelAr: 'تحقق مستقل (Independent Holdout)',
+        isValidated: true,
+      };
+    }
+    if (
+      trimmed === 'leave-one-point-out' ||
+      trimmed === 'تحقق متقاطع (Leave-One-Point-Out CV)'
+    ) {
+      return {
+        code: 'leave-one-point-out',
+        labelAr: 'تحقق متقاطع (Leave-One-Point-Out CV)',
+        isValidated: true,
+      };
+    }
+  }
+  return {
+    code: 'single-point-unvalidated',
+    labelAr: 'غير مُتحقَّق منه (معايرة غير مكتملة أو طريقة غير معروفة)',
+    isValidated: false,
+  };
 }
 
 /**
@@ -43,7 +172,8 @@ export function issueClinicalSessionToken(
   clinicianName: string,
   secret: string,
   ttlMs: number = 60 * 60 * 1000,
-  tenantId = 'default'
+  tenantId = 'default',
+  customTenantDisplayNameAr?: string
 ): VerifiedClinicalSession {
   if (role !== 'clinician' && role !== 'educator_readonly') {
     throw new Error('Invalid clinical role');
@@ -56,20 +186,26 @@ export function issueClinicalSessionToken(
   const expiresAt = issuedAt + ttlMs;
   const scopes = getScopesForRole(role);
   const sessionId = crypto.randomBytes(16).toString('hex');
+  const tenantDisplayNameAr = formatTenantDisplayNameAr(
+    tenantId,
+    customTenantDisplayNameAr
+  );
 
   const payloadObj = {
     role,
     clinicianName: clinicianName.trim() || 'أخصائي التقييم',
     tenantId,
+    tenantDisplayNameAr,
     sessionId,
     scopes,
     issuedAt,
     expiresAt,
   };
 
-  const payloadBase64 = Buffer.from(JSON.stringify(payloadObj), 'utf8').toString(
-    'base64url'
-  );
+  const payloadBase64 = Buffer.from(
+    JSON.stringify(payloadObj),
+    'utf8'
+  ).toString('base64url');
   const signature = crypto
     .createHmac('sha256', secret)
     .update(payloadBase64)
@@ -80,6 +216,7 @@ export function issueClinicalSessionToken(
     role,
     clinicianName: payloadObj.clinicianName,
     tenantId,
+    tenantDisplayNameAr,
     sessionId,
     scopes,
     issuedAt,
@@ -130,15 +267,31 @@ export function verifyClinicalSessionToken(
       !/^[a-f0-9]{32}$/.test(parsed.sessionId) ||
       typeof parsed.issuedAt !== 'number' ||
       !Array.isArray(parsed.scopes) ||
-      parsed.scopes.some((scope: unknown) => !ROLE_SCOPES[parsed.role as ClinicalRole].includes(scope as ClinicalScope))
-    ) return null;
+      parsed.scopes.some(
+        (scope: unknown) =>
+          !ROLE_SCOPES[parsed.role as ClinicalRole].includes(
+            scope as ClinicalScope
+          )
+      )
+    )
+      return null;
     // Re-derive scopes from the role rather than trusting mutable claims in a signed token.
     const scopes = getScopesForRole(parsed.role as ClinicalRole);
+    const tenantDisplayNameAr = formatTenantDisplayNameAr(
+      parsed.tenantId,
+      typeof parsed.tenantDisplayNameAr === 'string'
+        ? parsed.tenantDisplayNameAr
+        : undefined
+    );
     return {
       token: trimmed,
       role: parsed.role,
-      clinicianName: typeof parsed.clinicianName === 'string' ? parsed.clinicianName : 'مستخدم',
+      clinicianName:
+        typeof parsed.clinicianName === 'string'
+          ? parsed.clinicianName
+          : 'مستخدم',
       tenantId: parsed.tenantId,
+      tenantDisplayNameAr,
       sessionId: parsed.sessionId,
       scopes,
       issuedAt: parsed.issuedAt,
@@ -179,9 +332,10 @@ export function authorizeSessionScope(
  * Rejects any request where `guardianConsentGiven` is missing (`undefined`), `null`, `false`, or non-boolean.
  * Only explicit boolean `true` is accepted.
  */
-export function validateExplicitGuardianConsent(
-  consentField: unknown
-): { valid: boolean; errorAr?: string } {
+export function validateExplicitGuardianConsent(consentField: unknown): {
+  valid: boolean;
+  errorAr?: string;
+} {
   if (consentField !== true) {
     return {
       valid: false,
@@ -190,4 +344,1094 @@ export function validateExplicitGuardianConsent(
     };
   }
   return { valid: true };
+}
+
+// ============================================================================
+// Failure-Only Auth Rate Limiter with (IP + Tenant) Scoping & Progressive Backoff
+// ============================================================================
+
+export interface AuthFailureBucket {
+  failures: number[];
+  lockedUntilMs: number;
+}
+
+const AUTH_FAILURE_WINDOW_MS = 60_000;
+const MAX_FREE_FAILURES = 4;
+
+export function calculateProgressiveBackoffMs(failureCount: number): number {
+  if (failureCount <= MAX_FREE_FAILURES) return 0;
+  if (failureCount === 5) return 2_000;
+  if (failureCount === 6) return 4_000;
+  if (failureCount === 7) return 8_000;
+  // 8th failure = 15s, 9th = 30s, 10th+ = 60s max
+  return Math.min(60_000, 15_000 * Math.pow(2, failureCount - 8));
+}
+
+export function getAuthBucketKey(clientIp: string, tenantKey?: string): string {
+  const safeIp = (clientIp || 'local').trim() || 'local';
+  const safeTenant =
+    tenantKey && /^[a-zA-Z0-9_-]{1,80}$/.test(tenantKey.trim())
+      ? tenantKey.trim()
+      : 'unscoped';
+  return `${safeIp}::${safeTenant}`;
+}
+
+export function checkAuthFailureLimit(
+  buckets: Map<string, AuthFailureBucket>,
+  clientIp: string,
+  tenantKey?: string,
+  nowMs: number = Date.now()
+): { allowed: boolean; retryAfterSeconds: number; failureCount: number } {
+  const key = getAuthBucketKey(clientIp, tenantKey);
+  const existing = buckets.get(key);
+  if (!existing) {
+    return { allowed: true, retryAfterSeconds: 0, failureCount: 0 };
+  }
+  const activeFailures = existing.failures.filter(
+    (ts) => nowMs - ts < AUTH_FAILURE_WINDOW_MS
+  );
+  if (activeFailures.length === 0 && existing.lockedUntilMs <= nowMs) {
+    buckets.delete(key);
+    return { allowed: true, retryAfterSeconds: 0, failureCount: 0 };
+  }
+  if (existing.lockedUntilMs > nowMs && activeFailures.length >= 8) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((existing.lockedUntilMs - nowMs) / 1000)
+    );
+    return {
+      allowed: false,
+      retryAfterSeconds,
+      failureCount: activeFailures.length,
+    };
+  }
+  if (activeFailures.length >= 8) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(
+        (activeFailures[activeFailures.length - 1] +
+          AUTH_FAILURE_WINDOW_MS -
+          nowMs) /
+          1000
+      )
+    );
+    return {
+      allowed: false,
+      retryAfterSeconds,
+      failureCount: activeFailures.length,
+    };
+  }
+  return {
+    allowed: true,
+    retryAfterSeconds: 0,
+    failureCount: activeFailures.length,
+  };
+}
+
+export function recordFailedAuthAttempt(
+  buckets: Map<string, AuthFailureBucket>,
+  clientIp: string,
+  tenantKey?: string,
+  nowMs: number = Date.now()
+): {
+  locked: boolean;
+  retryAfterSeconds: number;
+  backoffMs: number;
+  failureCount: number;
+} {
+  const key = getAuthBucketKey(clientIp, tenantKey);
+  const existing = buckets.get(key) || { failures: [], lockedUntilMs: 0 };
+  const activeFailures = existing.failures.filter(
+    (ts) => nowMs - ts < AUTH_FAILURE_WINDOW_MS
+  );
+  activeFailures.push(nowMs);
+  const backoffMs = calculateProgressiveBackoffMs(activeFailures.length);
+  const lockedUntilMs =
+    backoffMs > 0
+      ? Math.max(existing.lockedUntilMs, nowMs + backoffMs)
+      : existing.lockedUntilMs;
+  buckets.set(key, { failures: activeFailures, lockedUntilMs });
+
+  const locked = activeFailures.length >= 8;
+  const retryAfterSeconds = locked
+    ? Math.max(1, Math.ceil((lockedUntilMs - nowMs) / 1000))
+    : Math.ceil(backoffMs / 1000);
+  return {
+    locked,
+    retryAfterSeconds,
+    backoffMs,
+    failureCount: activeFailures.length,
+  };
+}
+
+// ============================================================================
+// Strict Zod Schemas for Profile PATCH, Clinical Report Update, and Evidence
+// ============================================================================
+
+/**
+ * Strict 4-field student profile PATCH schema:
+ * Accepts ONLY `name`, `schoolName`, `gradeLevel`, `ageYears`.
+ * Rejects derived scores (`dyslexiaRiskScore`, `readingRiskLevel`), `tenantId`, `clinicalReport`, consent, and history.
+ */
+export const StudentProfilePatchSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'اسم الطالب يجب أن يتكون من حرفين على الأقل.')
+      .max(120, 'اسم الطالب لا يتجاوز 120 حرفاً.')
+      .optional(),
+    schoolName: z
+      .string()
+      .trim()
+      .min(2, 'اسم المدرسة يجب أن يتكون من حرفين على الأقل.')
+      .max(160, 'اسم المدرسة لا يتجاوز 160 حرفاً.')
+      .optional(),
+    gradeLevel: z.number().int().min(1).max(6).optional(),
+    ageYears: z.number().int().min(6).max(16).optional(),
+  })
+  .strict()
+  .refine((val) => Object.keys(val).length > 0, {
+    message: 'يجب إرسال حقل ملف شخصي واحد على الأقل للتحديث.',
+  });
+
+/**
+ * Strict schema for saving an updated clinical report (`PUT /api/students/:id/report`).
+ * Requires non-empty exercises and accommodations so saved reports never render blank sections.
+ */
+export const ClinicalReportSchema = z
+  .object({
+    clinicalSummary: z.string().trim().min(10).max(5000),
+    ocularMotorAnalysis: z.string().trim().min(10).max(5000),
+    orthographicAndPhonologicalPatterns: z.string().trim().min(10).max(5000),
+    dyscalculiaSpatialAnalysis: z.string().trim().min(10).max(5000),
+    interventionExercises: z
+      .array(
+        z
+          .object({
+            title: z.string().trim().min(3).max(240),
+            durationMinutes: z.number().int().min(1).max(120),
+            description: z.string().trim().min(5).max(1500),
+          })
+          .strict()
+      )
+      .min(1, 'يجب أن يتضمن التقرير تمرين مساندة واحداً على الأقل.')
+      .max(10),
+    classroomAccommodations: z
+      .array(z.string().trim().min(5).max(600))
+      .min(1, 'يجب أن يتضمن التقرير تيسيراً صفياً واحداً على الأقل.')
+      .max(12),
+  })
+  .strict();
+
+export const ClinicalReportUpdateEnvelopeSchema = z
+  .object({
+    clinicalReport: ClinicalReportSchema,
+  })
+  .strict();
+
+// Fixed Math Trial Specifications (4 Subitizing + 2 Number Line + 3 Transcoding)
+const ALLOWED_SUBITIZING_TARGETS = [1, 2, 3, 4] as const;
+const ALLOWED_SUBITIZING_OPTIONS = new Set([1, 2, 3, 4]);
+
+const ALLOWED_NUMBER_LINE_SPEC: Record<
+  number,
+  { scaleMin: number; scaleMax: number }
+> = {
+  37: { scaleMin: 0, scaleMax: 100 },
+  156: { scaleMin: 0, scaleMax: 200 },
+};
+
+const ALLOWED_TRANSCODING_SPEC: Record<
+  number,
+  { options: Set<number>; reversalDistractor: number }
+> = {
+  47: { options: new Set([47, 74, 49]), reversalDistractor: 74 },
+  83: { options: new Set([38, 83, 63]), reversalDistractor: 38 },
+  69: { options: new Set([69, 96, 66]), reversalDistractor: 96 },
+};
+
+export function validateAndDeriveMathTrials(rawMath: unknown): {
+  valid: boolean;
+  errorAr?: string;
+  trials?: StudentMathTrialsPayload;
+  metrics?: ReturnType<typeof calculateDyscalculiaMetrics>;
+} {
+  if (!rawMath || typeof rawMath !== 'object' || Array.isArray(rawMath)) {
+    return {
+      valid: false,
+      errorAr: 'بيانات محاولات الحساب غير صالحة أو مفقودة.',
+    };
+  }
+  const obj = rawMath as Record<string, unknown>;
+  const subRaw = obj.subitizingTrials ?? obj.subitizing;
+  const nlRaw = obj.numberLineTrials ?? obj.numberLine;
+  const trRaw = obj.transcodingTrials ?? obj.transcoding;
+
+  if (!Array.isArray(subRaw) || subRaw.length !== 4) {
+    return {
+      valid: false,
+      errorAr:
+        'يجب إرسال 4 محاولات ثابتة بالضبط لاختبار تمييز الكميات الفوري (الأهداف 1، 2، 3، 4).',
+    };
+  }
+  if (!Array.isArray(nlRaw) || nlRaw.length !== 2) {
+    return {
+      valid: false,
+      errorAr:
+        'يجب إرسال محاولتين ثابتتين بالضبط لاختبار خط الأعداد (الهدف 37 على 0-100 والهدف 156 على 0-200).',
+    };
+  }
+  if (!Array.isArray(trRaw) || trRaw.length !== 3) {
+    return {
+      valid: false,
+      errorAr:
+        'يجب إرسال 3 محاولات ثابتة بالضبط لاختبار ترميز الأرقام العربية (الأهداف 47، 83، 69).',
+    };
+  }
+
+  const seenSubTargets = new Set<number>();
+  const subitizingTrials: SubitizingTrialResult[] = [];
+  for (const item of subRaw) {
+    if (!item || typeof item !== 'object') {
+      return { valid: false, errorAr: 'محاولة تمييز كميات غير صالحة.' };
+    }
+    const rec = item as Record<string, unknown>;
+    const dotCount = Number(rec.dotCount ?? rec.targetCount);
+    const chosen =
+      rec.chosen !== undefined || rec.selectedCount !== undefined
+        ? Number(rec.chosen ?? rec.selectedCount)
+        : undefined;
+    const rtMs = Number(rec.reactionTimeMs);
+
+    if (
+      !Number.isInteger(dotCount) ||
+      !ALLOWED_SUBITIZING_TARGETS.includes(dotCount as 1 | 2 | 3 | 4) ||
+      seenSubTargets.has(dotCount)
+    ) {
+      return {
+        valid: false,
+        errorAr: `هدف تمييز الكميات (${String(rec.dotCount)}) غير مسموح أو مكرر؛ الأهداف المعتمدة هي 1 و2 و3 و4 فقط.`,
+      };
+    }
+    if (
+      chosen !== undefined &&
+      (!Number.isInteger(chosen) || !ALLOWED_SUBITIZING_OPTIONS.has(chosen))
+    ) {
+      return {
+        valid: false,
+        errorAr: `الخيار المختار في تمييز الكميات (${String(chosen)}) غير معروض ضمن الخيارات المسموحة (1-4).`,
+      };
+    }
+    if (chosen === undefined && typeof rec.correct !== 'boolean') {
+      return {
+        valid: false,
+        errorAr:
+          'يلزم تحديد الخيار المختار (chosen) أو نتيجة المطابقة في كل محاولة تمييز كميات.',
+      };
+    }
+    if (!Number.isFinite(rtMs) || rtMs < 150 || rtMs > 15_000) {
+      return {
+        valid: false,
+        errorAr:
+          'زمن الاستجابة في تمييز الكميات خارج النطاق الفسيولوجي المعقول (150ms–15000ms).',
+      };
+    }
+    const derivedCorrect =
+      chosen !== undefined ? chosen === dotCount : Boolean(rec.correct);
+    if (
+      chosen !== undefined &&
+      typeof rec.correct === 'boolean' &&
+      rec.correct !== derivedCorrect
+    ) {
+      return {
+        valid: false,
+        errorAr: 'تعارض بين الخيار المختار وحقل الصحة في تمييز الكميات.',
+      };
+    }
+    seenSubTargets.add(dotCount);
+    subitizingTrials.push({
+      dotCount,
+      correct: derivedCorrect,
+      reactionTimeMs: Math.round(rtMs),
+    });
+  }
+
+  const seenNlTargets = new Set<number>();
+  const numberLineTrials: NumberLineTrialResult[] = [];
+  for (const item of nlRaw) {
+    if (!item || typeof item !== 'object') {
+      return { valid: false, errorAr: 'محاولة خط أعداد غير صالحة.' };
+    }
+    const rec = item as Record<string, unknown>;
+    const target = Number(rec.target);
+    const spec = ALLOWED_NUMBER_LINE_SPEC[target];
+    if (!spec || seenNlTargets.has(target)) {
+      return {
+        valid: false,
+        errorAr: `هدف خط الأعداد (${String(rec.target)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 37 و156 فقط.`,
+      };
+    }
+    const scaleMin =
+      rec.scaleMin === undefined ? spec.scaleMin : Number(rec.scaleMin);
+    const scaleMax =
+      rec.scaleMax === undefined ? spec.scaleMax : Number(rec.scaleMax);
+    const userEstimate = Number(rec.userEstimate);
+    const rtMs = Number(rec.reactionTimeMs);
+
+    if (scaleMin !== spec.scaleMin || scaleMax !== spec.scaleMax) {
+      return {
+        valid: false,
+        errorAr: `مدى خط الأعداد للهدف ${target} يجب أن يكون ${spec.scaleMin}–${spec.scaleMax}.`,
+      };
+    }
+    if (
+      !Number.isFinite(userEstimate) ||
+      userEstimate < spec.scaleMin ||
+      userEstimate > spec.scaleMax
+    ) {
+      return {
+        valid: false,
+        errorAr: `تقدير الطالب (${String(rec.userEstimate)}) خارج مدى خط الأعداد (${spec.scaleMin}–${spec.scaleMax}).`,
+      };
+    }
+    if (!Number.isFinite(rtMs) || rtMs < 150 || rtMs > 30_000) {
+      return {
+        valid: false,
+        errorAr:
+          'زمن الاستجابة في خط الأعداد خارج النطاق المعقول (150ms–30000ms).',
+      };
+    }
+    seenNlTargets.add(target);
+    numberLineTrials.push({
+      target,
+      userEstimate,
+      reactionTimeMs: Math.round(rtMs),
+      scaleMin: spec.scaleMin,
+      scaleMax: spec.scaleMax,
+    });
+  }
+
+  const seenTrTargets = new Set<number>();
+  const transcodingTrials: TranscodingTrialResult[] = [];
+  for (const item of trRaw) {
+    if (!item || typeof item !== 'object') {
+      return { valid: false, errorAr: 'محاولة ترميز أرقام غير صالحة.' };
+    }
+    const rec = item as Record<string, unknown>;
+    const targetNumber = Number(rec.targetNumber);
+    const selectedNumber = Number(rec.selectedNumber);
+    const rtMs = Number(rec.reactionTimeMs);
+    const spec = ALLOWED_TRANSCODING_SPEC[targetNumber];
+
+    if (!spec || seenTrTargets.has(targetNumber)) {
+      return {
+        valid: false,
+        errorAr: `هدف ترميز الأرقام (${String(rec.targetNumber)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 47 و83 و69 فقط.`,
+      };
+    }
+    if (
+      !Number.isInteger(selectedNumber) ||
+      !spec.options.has(selectedNumber)
+    ) {
+      return {
+        valid: false,
+        errorAr: `الخيار المختار (${String(rec.selectedNumber)}) للهدف ${targetNumber} غير معروض ضمن الخيارات المعتمدة.`,
+      };
+    }
+    if (!Number.isFinite(rtMs) || rtMs < 150 || rtMs > 20_000) {
+      return {
+        valid: false,
+        errorAr:
+          'زمن الاستجابة في ترميز الأرقام خارج النطاق المعقول (150ms–20000ms).',
+      };
+    }
+    const derivedReversal = selectedNumber === spec.reversalDistractor;
+    if (
+      typeof rec.isReversalError === 'boolean' &&
+      rec.isReversalError !== derivedReversal
+    ) {
+      return {
+        valid: false,
+        errorAr: 'تعارض بين الرقم المختار وحقل خطأ العكس المكاني.',
+      };
+    }
+    seenTrTargets.add(targetNumber);
+    transcodingTrials.push({
+      targetNumber,
+      selectedNumber,
+      isReversalError: derivedReversal,
+      reactionTimeMs: Math.round(rtMs),
+    });
+  }
+
+  const metrics = calculateDyscalculiaMetrics(
+    subitizingTrials,
+    numberLineTrials,
+    transcodingTrials
+  );
+  return {
+    valid: true,
+    trials: { subitizingTrials, numberLineTrials, transcodingTrials },
+    metrics,
+  };
+}
+
+/**
+ * Generates a complete, deterministic, rule-based ClinicalReport on the server
+ * with NON-EMPTY `interventionExercises` and `classroomAccommodations` (Fixing Finding 1).
+ */
+export function buildDeterministicClinicalReport(params: {
+  studentName: string;
+  gradeLevel: number;
+  dialectLabelAr: string;
+  gazeCoveragePercent: number;
+  observedWordCount: number;
+  totalPassageWordCount: number;
+  wpm: number;
+  avgFixationMs: number;
+  regressionRate: number;
+  regressionCount: number;
+  blinkCount: number;
+  blinksPerMinute: number;
+  visualStrainLabelAr: string;
+  calibrationAccuracyPercent: number;
+  calibrationValidationLabelAr: string;
+  problematicWords: string[];
+  oralReadingAssessed: boolean;
+  oralAccuracyPercent: number | null;
+  phoneticSubstitutionCount: number;
+  dialectVariantCount: number;
+  dyscalculiaAssessed: boolean;
+  numberLinePAE: number | null;
+  subitizingAccuracy: number | null;
+  reversalErrorCount: number | null;
+}): ClinicalReport {
+  const highReadingRisk =
+    params.avgFixationMs > 350 || params.regressionRate > 22;
+  const isMathTested =
+    params.dyscalculiaAssessed && typeof params.numberLinePAE === 'number';
+  const highMathRisk =
+    isMathTested &&
+    ((params.numberLinePAE ?? 0) > 12 || (params.reversalErrorCount ?? 0) > 0);
+
+  const oralText = params.oralReadingAssessed
+    ? ` أظهر تحليل القراءة الجهرية (${params.dialectLabelAr}) دقة مطابقة فونولوجية ${params.oralAccuracyPercent ?? 0}% (إبدالات ديسلكسية: ${params.phoneticSubstitutionCount}، بدائل لهجية مقبولة: ${params.dialectVariantCount}).`
+    : ' (لم يتم تفعيل تسجيل القراءة الجهرية بالميكروفون في هذه الجلسة).';
+
+  const targetWordsSample =
+    params.problematicWords.slice(0, 4).join('، ') ||
+    'الكلمات متعددة المقاطع';
+
+  const exercises: ClinicalReport['interventionExercises'] = [
+    {
+      title: 'تدريب التتبع الإيقاعي بالمقاطع الصوتية الملونة',
+      durationMinutes: 10,
+      description: `قراءة فقرات متدرجة مع تفعيل المسطرة البصرية وتقسيم الكلمات المستهدفة (${targetWordsSample}) إلى مقاطع صوتية ملونة لتخفيف عبء فك الترميز البصري.`,
+    },
+    {
+      title: 'تمييز الحروف العربية المتشابهة رسماً ونقطياً',
+      durationMinutes: 8,
+      description:
+        'تدريب بصري وفونولوجي سريع للتفريق بين الحروف المتجانسة (ب/ت/ث/ن، ج/ح/خ، د/ذ، ص/ض، ط/ظ) داخل جمل مشكّلة.',
+    },
+  ];
+
+  if (isMathTested) {
+    exercises.push({
+      title: highMathRisk
+        ? 'معايرة خط الأعداد الذهني وتثبيت خانتي الآحاد والعشرات'
+        : 'تعزيز الطلاقة الكمية والتمثيل المكاني على خط الأعداد (0-200)',
+      durationMinutes: 10,
+      description: highMathRisk
+        ? `تدريب ملموس لتقليص الانحراف المكاني على خط الأعداد (PAE الحالي ${params.numberLinePAE}%) ومعالجة عكس ترتيب الآحاد والعشرات (${params.reversalErrorCount ?? 0} أخطاء).`
+        : `أنشطة إثرائية لربط الكميات النقطية السريعة (${params.subitizingAccuracy}%) بموقعها المكاني الدقيق على خط الأعداد.`,
+    });
+  } else {
+    exercises.push({
+      title: 'القراءة الجهرية الموجهة وتنمية الحصيلة المعجمية',
+      durationMinutes: 10,
+      description:
+        'قراءة ثنائية مع المعلم أو ولي الأمر لرفع الطلاقة القرائية وتثبيت الربط بين الرسم الإملائي والنطق الصوتي.',
+    });
+  }
+
+  const accommodations: string[] = [
+    'استخدام خط عربي واضح وكبير (Readex Pro أو IBM Plex Sans Arabic بحجم 22–24px) مع تباعد أسطر 1.8 وخلفية كريمية دافئة لتقليل الإجهاد البصري.',
+    'تزويد الطالب بالمسطرة البصرية (Reading Ruler) لعزل السطر المقروء ومنع القفز أو التراجع البصري بين الأسطر.',
+  ];
+
+  if (highMathRisk) {
+    accommodations.push(
+      'توفير خط أعداد مرئي وشبكة مربعات ملونة لتمييز خانة الآحاد عن العشرات أثناء حل المسائل الحسابية.'
+    );
+  } else {
+    accommodations.push(
+      'منح وقت إضافي بنسبة 25% عند قراءة النصوص الطويلة وتجزئة الأسئلة المركبة إلى خطوات قصيرة.'
+    );
+  }
+
+  accommodations.push(
+    'تنبيه منهجي وإخلاء مسؤولية: هذه المؤشرات مبنية على أدلة مُبلَّغ بها من العميل وقواعد فرز استدلالية (Heuristic Screening) ولا تُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.'
+  );
+
+  return {
+    clinicalSummary: `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
+      highReadingRisk
+        ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
+        : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
+    }`,
+    ocularMotorAnalysis: `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
+      params.problematicWords.length > 0
+        ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
+        : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
+    }`,
+    orthographicAndPhonologicalPatterns: `${
+      highReadingRisk
+        ? 'يُلاحظ تأنٍّ في معالجة الكلمات التي تشتمل على حروف متجانسة نقطياً (ب/ت/ث، ج/ح/خ) والمقاطع المشددة أو المتصلة بضمائر، مما يستدعي تفعيل التقطيع المقطعي الملون.'
+        : 'قدرة متوازنة على الربط بين الرسم الإملائي والتمثيل الصوتي للمقاطع العربية المشكّلة.'
+    }${oralText}`,
+    dyscalculiaSpatialAnalysis: !isMathTested
+      ? 'لم يخضع الطالب لاختبار عسر الحساب (الديسكالكوليا) في هذه الجلسة بعد — لا يقوم النظام بتسجيل درجات حسابية افتراضية قبل إتمام المحطات الثلاث في تبويب «مهام الحساب».'
+      : highMathRisk
+        ? `بلغ معدل الخطأ المطلق المطبّع في خط الأعداد (PAE) ${params.numberLinePAE}% مع دقة إدراك كمي فوري ${params.subitizingAccuracy}% ورصد ${params.reversalErrorCount ?? 0} أخطاء في ترتيب الآحاد والعشرات، مما يدل على حاجة لتدريب الحس المكاني للأعداد.`
+        : `أداء متوازن في الإدراك الكمي الفوري (${params.subitizingAccuracy}%) وتمثيل خط الأعداد الذهني بنسبة خطأ منخفضة (${params.numberLinePAE}%).`,
+    interventionExercises: exercises,
+    classroomAccommodations: accommodations,
+  };
+}
+
+// ============================================================================
+// Server-Side Plausibility & Evidence Derivation for Reading + Math Sessions
+// ============================================================================
+
+const FORBIDDEN_CLIENT_SCORE_FIELDS = new Set([
+  'tenantId',
+  'dyslexiaRiskScore',
+  'readingHeuristicIndicator',
+  'readingRiskLevel',
+  'readingRiskLabelAr',
+  'dyscalculiaRiskScore',
+  'mathHeuristicIndicator',
+  'mathRiskLevel',
+  'mathRiskLabelAr',
+  'assessmentHistory',
+  'evidenceProvenance',
+  'evidenceProvenanceLabelAr',
+]);
+
+export interface DerivedSessionEvidenceResult {
+  valid: boolean;
+  statusCode?: 400 | 422;
+  errorAr?: string;
+  rejectedFields?: string[];
+  derivedFields?: {
+    passageId: string;
+    readingDurationSeconds: number;
+    comprehensionAnswers: number[];
+    comprehensionScore: number;
+    dialectRegionAr: string;
+    wpm: number;
+    avgFixationMs: number;
+    regressionRate: number;
+    regressionCount: number;
+    blinkCount: number;
+    blinksPerMinute: number;
+    visualStrainLevel: 'nominal' | 'moderate' | 'high' | 'severe';
+    visualStrainLabelAr: string;
+    gazeCoveragePercent: number;
+    observedWordCount: number;
+    totalPassageWordCount: number;
+    calibrationAccuracyPercent: number;
+    calibrationValidationMethod: string;
+    oralReadingAssessed: boolean;
+    spokenTranscript: string;
+    oralWcpm: number | null;
+    oralAccuracyPercent: number | null;
+    oralWerPercent: number | null;
+    phoneticSubstitutionCount: number;
+    dialectVariantCount: number;
+    omissionCount: number;
+    dyslexiaRiskScore: number;
+    readingHeuristicIndicator: number;
+    readingRiskLevel: 'nominal' | 'moderate' | 'high';
+    readingRiskLabelAr: string;
+    problematicWords: string[];
+    fixations: WordFixation[];
+    dyscalculiaAssessed: boolean;
+    mathTrials?: StudentMathTrialsPayload;
+    subitizingAccuracy: number | null;
+    avgSubitizingMs: number | null;
+    numberLinePAE: number | null;
+    transcodingAccuracy: number | null;
+    reversalErrorCount: number | null;
+    dyscalculiaRiskScore: number | null;
+    mathHeuristicIndicator: number | null;
+    mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
+    mathRiskLabelAr: string;
+    evidenceProvenance: 'client-reported';
+    evidenceProvenanceLabelAr: string;
+    clinicalReport: ClinicalReport;
+  };
+}
+
+export function validateAndDeriveSessionFromEvidence(
+  rawBody: Record<string, unknown>,
+  studentMeta: { name: string; gradeLevel: number }
+): DerivedSessionEvidenceResult {
+  // 1. Reject any attempt by the client to supply derived risk scores, levels, or tenantId
+  const forbiddenPresent = Object.keys(rawBody).filter((k) =>
+    FORBIDDEN_CLIENT_SCORE_FIELDS.has(k)
+  );
+  if (forbiddenPresent.length > 0) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr:
+        'لا يُسمح للعميل بإرسال الدرجات أو مستويات الخطورة أو معرّف المدرسة؛ يقوم الخادم باشتقاق جميع المؤشرات من أدلة الجلسة.',
+      rejectedFields: forbiddenPresent,
+    };
+  }
+
+  const evidenceObj =
+    rawBody.evidence &&
+    typeof rawBody.evidence === 'object' &&
+    !Array.isArray(rawBody.evidence)
+      ? (rawBody.evidence as Record<string, unknown>)
+      : rawBody;
+
+  const passageId = String(
+    evidenceObj.passageId ?? rawBody.passageId ?? ''
+  ).trim();
+  const passage = ARABIC_READING_PASSAGES.find((p) => p.id === passageId);
+  if (!passage) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: 'معرّف نص القراءة (passageId) غير موجود في النصوص المعتمدة.',
+    };
+  }
+
+  // 2. Validate Calibration Plausibility (Minimum 70% accuracy + validated method)
+  const calibrationAccuracyPercent = Number(
+    evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent
+  );
+  if (
+    !Number.isFinite(calibrationAccuracyPercent) ||
+    calibrationAccuracyPercent < 70 ||
+    calibrationAccuracyPercent > 100
+  ) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr:
+        'دقة التحقق من معايرة الكاميرا أقل من الحد الأدنى المطلوب (70%) أو خارج النطاق (70–100%).',
+    };
+  }
+
+  const rawCalMethod =
+    evidenceObj.calibrationValidationMethod ??
+    rawBody.calibrationValidationMethod ??
+    'independent-holdout';
+  const normalizedCalMethod = normalizeCalibrationValidationMethod(
+    rawCalMethod,
+    false
+  );
+  if (!normalizedCalMethod.isValidated) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr:
+        'طريقة التحقق من المعايرة غير صالحة أو غير مكتملة؛ يلزم تحقق مستقل (independent-holdout) أو تقاطعي (leave-one-point-out).',
+    };
+  }
+
+  // 3. Validate Fixations Array & Plausibility against Passage and Reading Duration
+  const rawFixations = evidenceObj.fixations ?? rawBody.fixations;
+  if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة.',
+    };
+  }
+
+  const seenWordIndices = new Set<number>();
+  const validatedFixations: WordFixation[] = [];
+  let totalObservedFixationMs = 0;
+  let wordBlinksSum = 0;
+
+  for (const item of rawFixations) {
+    if (!item || typeof item !== 'object') {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: 'عنصر تثبيت بصري غير صالح.',
+      };
+    }
+    const f = item as Record<string, unknown>;
+    const wordIndex = Number(f.wordIndex);
+    const durationMs = Number(f.durationMs);
+    const visits = Number(f.visits);
+    const blinks = f.blinks === undefined ? 0 : Number(f.blinks);
+    const observed = f.observed !== false && durationMs > 0 && visits > 0;
+
+    if (
+      !Number.isInteger(wordIndex) ||
+      wordIndex < 0 ||
+      wordIndex >= passage.words.length ||
+      seenWordIndices.has(wordIndex)
+    ) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: `فهرس الكلمة (${String(f.wordIndex)}) خارج حدود النص أو مكرر.`,
+      };
+    }
+    seenWordIndices.add(wordIndex);
+
+    if (!observed) {
+      continue;
+    }
+
+    if (
+      !Number.isFinite(durationMs) ||
+      durationMs < 40 ||
+      durationMs > 10_000 ||
+      !Number.isInteger(visits) ||
+      visits < 1 ||
+      visits > 50 ||
+      !Number.isInteger(blinks) ||
+      blinks < 0 ||
+      blinks > 25
+    ) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr:
+          'قيم زمن التثبيت أو عدد الزيارات أو الرمشات للكلمة خارج الحدود الفيزيائية المعقولة.',
+      };
+    }
+
+    let regressedFromIndex: number | undefined;
+    if (
+      f.regressedFromIndex !== undefined &&
+      f.regressedFromIndex !== null
+    ) {
+      const regIdx = Number(f.regressedFromIndex);
+      if (
+        !Number.isInteger(regIdx) ||
+        regIdx < 0 ||
+        regIdx >= passage.words.length
+      ) {
+        return {
+          valid: false,
+          statusCode: 400,
+          errorAr: 'فهرس التراجع البصري (regressedFromIndex) غير صالح.',
+        };
+      }
+      regressedFromIndex = regIdx;
+    }
+
+    totalObservedFixationMs += Math.round(durationMs);
+    wordBlinksSum += blinks;
+    validatedFixations.push({
+      wordIndex,
+      word: passage.words[wordIndex],
+      durationMs: Math.round(durationMs),
+      visits,
+      regressedFromIndex,
+      blinks,
+      observed: true,
+    });
+  }
+
+  const minRequiredWords = Math.max(4, Math.ceil(passage.words.length * 0.25));
+  if (validatedFixations.length < minRequiredWords) {
+    return {
+      valid: false,
+      statusCode: 422,
+      errorAr: `تغطية تتبع العين غير كافية: رُصدت ${validatedFixations.length} كلمات من أصل ${passage.words.length} (الحد الأدنى ${minRequiredWords} كلمات / 25%).`,
+    };
+  }
+
+  // 4. Reading Duration & Total Fixation Sum Plausibility Check (Finding 2: sum(fixations) <= readingDurationSeconds * 1000)
+  const rawDuration =
+    evidenceObj.readingDurationSeconds ?? rawBody.readingDurationSeconds;
+  const readingDurationSeconds = Number(rawDuration);
+  if (
+    !Number.isFinite(readingDurationSeconds) ||
+    readingDurationSeconds < 4 ||
+    readingDurationSeconds > 1800
+  ) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr:
+        'مدة القراءة الفعلية (readingDurationSeconds) مطلوبة ويجب أن تكون بين 4 و1800 ثانية.',
+    };
+  }
+
+  if (totalObservedFixationMs > readingDurationSeconds * 1000) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: `بيانات غير معقولة فيزيائياً: مجموع أزمنة التثبيت البصري (${(totalObservedFixationMs / 1000).toFixed(1)} ثانية) يتجاوز مدة القراءة الكلية (${readingDurationSeconds} ثانية).`,
+    };
+  }
+
+  // 5. Blink Count & Physiological Blink Rate Ceiling (<= 120 blinks/min) (Finding 2)
+  const rawBlinkCount =
+    evidenceObj.blinkCount ?? rawBody.blinkCount ?? wordBlinksSum;
+  const blinkCount = Number(rawBlinkCount);
+  if (!Number.isInteger(blinkCount) || blinkCount < 0) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: 'عدد الرمشات (blinkCount) يجب أن يكون عدداً صحيحاً غير سالب.',
+    };
+  }
+  const effectiveBlinkCount = Math.max(blinkCount, wordBlinksSum);
+  const computedBlinksPerMinute = Math.round(
+    (effectiveBlinkCount / readingDurationSeconds) * 60
+  );
+  if (computedBlinksPerMinute > 120) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: `معدل الرمش المُبلَّغ به (${computedBlinksPerMinute} رمشة/دقيقة) يتجاوز السقف الفسيولوجي المعقول (120 رمشة/دقيقة).`,
+    };
+  }
+
+  // 6. Comprehension Answers Validation & Score Derivation
+  const rawCompAnswers =
+    evidenceObj.comprehensionAnswers ?? rawBody.comprehensionAnswers;
+  if (
+    !Array.isArray(rawCompAnswers) ||
+    rawCompAnswers.length !== passage.comprehensionQuestions.length
+  ) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: `يجب إرسال إجابات أسئلة الفهم القرائي (${passage.comprehensionQuestions.length} إجابات) لاشتقاق درجة الفهم على الخادم.`,
+    };
+  }
+  const comprehensionAnswers: number[] = [];
+  let correctCompCount = 0;
+  for (let i = 0; i < passage.comprehensionQuestions.length; i++) {
+    const ans = Number(rawCompAnswers[i]);
+    const maxOpt = passage.comprehensionQuestions[i].options.length - 1;
+    if (!Number.isInteger(ans) || ans < 0 || ans > maxOpt) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: `إجابة سؤال الفهم رقم ${i + 1} خارج نطاق الخيارات المتاحة (0–${maxOpt}).`,
+      };
+    }
+    comprehensionAnswers.push(ans);
+    if (ans === passage.comprehensionQuestions[i].correctIndex) {
+      correctCompCount += 1;
+    }
+  }
+  const comprehensionScore = Math.round(
+    (correctCompCount / passage.comprehensionQuestions.length) * 100
+  );
+
+  // 7. Optional Oral Reading Alignment Derivation
+  const dialectRegionAr =
+    typeof (evidenceObj.dialectRegionAr ?? rawBody.dialectRegionAr) === 'string'
+      ? String(evidenceObj.dialectRegionAr ?? rawBody.dialectRegionAr)
+          .trim()
+          .slice(0, 80)
+      : 'الفصحى المعيارية / الخليجية';
+  const dialectProfile =
+    ARABIC_DIALECT_PROFILES.find(
+      (d) =>
+        d.labelAr === dialectRegionAr ||
+        d.code === (evidenceObj.dialectCode as ArabicDialectCode)
+    ) || ARABIC_DIALECT_PROFILES[1];
+
+  const spokenTranscript =
+    typeof (evidenceObj.spokenTranscript ?? rawBody.spokenTranscript) ===
+    'string'
+      ? String(evidenceObj.spokenTranscript ?? rawBody.spokenTranscript)
+          .trim()
+          .slice(0, 4000)
+      : '';
+  const oralReadingAssessed =
+    Boolean(evidenceObj.oralReadingAssessed ?? rawBody.oralReadingAssessed) &&
+    spokenTranscript.length > 0;
+
+  const oralSlice = oralReadingAssessed
+    ? passage.words.slice(
+        0,
+        Math.min(
+          passage.words.length,
+          Math.max(6, spokenTranscript.split(/\s+/).filter(Boolean).length)
+        )
+      )
+    : [];
+  const oralMetrics = oralReadingAssessed
+    ? evaluateOralReadingAlignment(
+        oralSlice,
+        spokenTranscript,
+        Math.max(6, readingDurationSeconds),
+        0,
+        dialectProfile.code
+      )
+    : null;
+
+  const oralIntegration =
+    oralReadingAssessed && oralMetrics
+      ? {
+          assessed: true,
+          wcpm: oralMetrics.wcpm,
+          accuracyPercent: oralMetrics.accuracyPercent,
+          werPercent: oralMetrics.werPercent,
+          phoneticSubstitutionCount: oralMetrics.phoneticSubstitutionCount,
+          dialectVariantCount: oralMetrics.dialectVariantCount,
+          omissionCount: oralMetrics.omittedWordsCount,
+          misreadWords: oralMetrics.alignment
+            .filter(
+              (a) =>
+                a.status === 'phonetic_substitution' || a.status === 'omitted'
+            )
+            .map((a) =>
+              a.spokenWord
+                ? `${a.targetWord} (نُطقت: ${a.spokenWord})`
+                : a.targetWord
+            ),
+        }
+      : null;
+
+  // 8. Server-Side Eye-Tracking & Reading Risk Derivation
+  const eyeMetrics = calculateEyeTrackingMetrics(
+    validatedFixations,
+    readingDurationSeconds,
+    studentMeta.gradeLevel,
+    effectiveBlinkCount,
+    passage.words.length,
+    oralIntegration
+  );
+
+  // 9. Optional Math Trials Validation & Derivation
+  const rawMathTrials =
+    evidenceObj.mathTrials ??
+    rawBody.mathTrials ??
+    (rawBody.dyscalculiaAssessed === true ? evidenceObj : null);
+  let dyscalculiaAssessed = false;
+  let mathTrials: StudentMathTrialsPayload | undefined;
+  let subitizingAccuracy: number | null = null;
+  let avgSubitizingMs: number | null = null;
+  let numberLinePAE: number | null = null;
+  let transcodingAccuracy: number | null = null;
+  let reversalErrorCount: number | null = null;
+  let dyscalculiaRiskScore: number | null = null;
+  let mathHeuristicIndicator: number | null = null;
+  let mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed' =
+    'unassessed';
+  let mathRiskLabelAr = 'لم يُجرَ اختبار الحساب بعد';
+
+  if (rawMathTrials !== null && rawMathTrials !== undefined) {
+    const mathValidation = validateAndDeriveMathTrials(rawMathTrials);
+    if (!mathValidation.valid || !mathValidation.metrics) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: mathValidation.errorAr || 'بيانات مهام الحساب غير صالحة.',
+      };
+    }
+    dyscalculiaAssessed = true;
+    mathTrials = mathValidation.trials;
+    subitizingAccuracy = mathValidation.metrics.subitizingAccuracy;
+    avgSubitizingMs = mathValidation.metrics.avgSubitizingMs;
+    numberLinePAE = mathValidation.metrics.numberLinePAE;
+    transcodingAccuracy = mathValidation.metrics.transcodingAccuracy;
+    reversalErrorCount = mathValidation.metrics.reversalErrorCount;
+    dyscalculiaRiskScore = mathValidation.metrics.dyscalculiaRiskScore;
+    mathHeuristicIndicator = mathValidation.metrics.heuristicIndicator;
+    mathRiskLevel = mathValidation.metrics.riskLevel;
+    mathRiskLabelAr = mathValidation.metrics.riskLabelAr;
+  }
+
+  const clinicalReport = buildDeterministicClinicalReport({
+    studentName: studentMeta.name,
+    gradeLevel: studentMeta.gradeLevel,
+    dialectLabelAr: dialectRegionAr,
+    gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
+    observedWordCount: eyeMetrics.observedWordCount,
+    totalPassageWordCount: eyeMetrics.totalPassageWordCount,
+    wpm: eyeMetrics.wpm,
+    avgFixationMs: eyeMetrics.avgFixationMs,
+    regressionRate: eyeMetrics.regressionRate,
+    regressionCount: eyeMetrics.regressionCount,
+    blinkCount: eyeMetrics.blinkCount,
+    blinksPerMinute: eyeMetrics.blinksPerMinute,
+    visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
+    calibrationAccuracyPercent: Math.round(calibrationAccuracyPercent),
+    calibrationValidationLabelAr: normalizedCalMethod.labelAr,
+    problematicWords: eyeMetrics.problematicWords,
+    oralReadingAssessed,
+    oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
+    phoneticSubstitutionCount: oralIntegration?.phoneticSubstitutionCount ?? 0,
+    dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
+    dyscalculiaAssessed,
+    numberLinePAE,
+    subitizingAccuracy,
+    reversalErrorCount,
+  });
+
+  return {
+    valid: true,
+    derivedFields: {
+      passageId: passage.id,
+      readingDurationSeconds,
+      comprehensionAnswers,
+      comprehensionScore,
+      dialectRegionAr,
+      wpm: eyeMetrics.wpm,
+      avgFixationMs: eyeMetrics.avgFixationMs,
+      regressionRate: eyeMetrics.regressionRate,
+      regressionCount: eyeMetrics.regressionCount,
+      blinkCount: eyeMetrics.blinkCount,
+      blinksPerMinute: eyeMetrics.blinksPerMinute,
+      visualStrainLevel: eyeMetrics.visualStrainLevel,
+      visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
+      gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
+      observedWordCount: eyeMetrics.observedWordCount,
+      totalPassageWordCount: eyeMetrics.totalPassageWordCount,
+      calibrationAccuracyPercent: Math.round(calibrationAccuracyPercent),
+      calibrationValidationMethod: normalizedCalMethod.labelAr,
+      oralReadingAssessed,
+      spokenTranscript: oralReadingAssessed ? spokenTranscript : '',
+      oralWcpm: oralIntegration?.wcpm ?? null,
+      oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
+      oralWerPercent: oralIntegration?.werPercent ?? null,
+      phoneticSubstitutionCount:
+        oralIntegration?.phoneticSubstitutionCount ?? 0,
+      dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
+      omissionCount: oralIntegration?.omissionCount ?? 0,
+      dyslexiaRiskScore: eyeMetrics.dyslexiaRiskScore,
+      readingHeuristicIndicator: eyeMetrics.heuristicIndicator,
+      readingRiskLevel: eyeMetrics.riskLevel,
+      readingRiskLabelAr: eyeMetrics.riskLabelAr,
+      problematicWords: eyeMetrics.problematicWords,
+      fixations: validatedFixations,
+      dyscalculiaAssessed,
+      mathTrials,
+      subitizingAccuracy,
+      avgSubitizingMs,
+      numberLinePAE,
+      transcodingAccuracy,
+      reversalErrorCount,
+      dyscalculiaRiskScore,
+      mathHeuristicIndicator,
+      mathRiskLevel,
+      mathRiskLabelAr,
+      evidenceProvenance: 'client-reported',
+      evidenceProvenanceLabelAr:
+        'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)',
+      clinicalReport,
+    },
+  };
 }
