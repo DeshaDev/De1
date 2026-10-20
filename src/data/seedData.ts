@@ -66,6 +66,7 @@ export interface StudentRecord {
   name: string;
   isDemoRecord?: boolean;
   sessionStatus?: 'in_progress' | 'completed';
+  sessionCompletedAt?: string;
   sessionRoleLabel?: string;
   assessmentHistory?: StudentAssessmentSnapshot[];
   gradeLevel: number;
