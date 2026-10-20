@@ -72,7 +72,7 @@ const VALIDATION_TARGETS = [
   { id: 102, label: 'تحقق مستقل V2', xPct: 66, yPct: 65 },
 ];
 
-const SAMPLES_PER_TARGET = 3;
+const SAMPLES_PER_TARGET = 2;
 
 export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   onCompleteSession,
@@ -1741,6 +1741,27 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   ]);
 
   const handleStartReadingStage = () => {
+    if (isManualDemoMode) {
+      setCalibrationWarning('وضع المحاكاة اليدوية للعرض التقني فقط ولا يسمح ببدء جلسة قياس أو إصدار تقرير.');
+      return;
+    }
+    if (!cameraActive) {
+      setCalibrationWarning('شغّل الكاميرا وتأكد من ظهور الوجه قبل بدء القراءة.');
+      return;
+    }
+    const validationRmsePx = calibrationModel.validationRmsePx;
+    if (
+      fullySampledTargetsCount < CALIBRATION_TARGETS.length ||
+      calibrationModel.validationMethod === 'single-point-unvalidated' ||
+      !Number.isFinite(validationRmsePx) ||
+      (calibrationModel.validationSampleCount || 0) < 1 ||
+      validationRmsePx > 60
+    ) {
+      setCalibrationWarning(
+        `لا تبدأ القراءة قبل اجتياز فحص المعايرة التقني: أكمل نقطتيْن لكل هدف، وتأكد أن RMSE خارج العينة لا يتجاوز 60 بكسل. النتيجة الحالية: RMSE ${Number.isFinite(validationRmsePx) ? validationRmsePx : 'غير متاح'} بكسل؛ هذا حد تقني تجريبي وليس معيارًا سريريًا معتمدًا.`
+      );
+      return;
+    }
     if (!studentName.trim()) {
       setNameError('يرجى إدخال اسم الطالب الثلاثي قبل بدء جلسة الفحص البصري.');
       return;
@@ -1754,9 +1775,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       return;
     }
 
-    if (completedTargetsCount < 5) {
+    if (fullySampledTargetsCount < CALIBRATION_TARGETS.length) {
       setCalibrationWarning(
-        'يرجى إتمام معايرة النقاط الخمس أولاً: شغّل الكاميرا، ثم انظر بعينيك إلى كل نقطة واضغط عليها ٣ مرات لتسجيل إحداثيات بؤبؤ عينك الحقيقية.'
+        'يرجى إتمام النقاط الخمس؛ انظر إلى كل نقطة واضغط عليها مرتين لتسجيل عينات المعايرة.'
       );
       return;
     }
@@ -1964,8 +1985,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     const isLowCameraReliability =
       isManualDemoMode ||
       !cameraActive ||
-      !Number.isFinite(calibrationModel.accuracyPercent) ||
-      calibrationModel.accuracyPercent < 70;
+      calibrationModel.validationMethod === 'single-point-unvalidated' ||
+      (calibrationModel.validationSampleCount || 0) < 1 ||
+      !Number.isFinite(calibrationModel.validationRmsePx) ||
+      calibrationModel.validationRmsePx! > 60;
 
     // Match the server-side evidence gate before showing any report in the client.
     const hasValidGazeCoverage =
@@ -1984,7 +2007,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     }
     if (isLowCameraReliability) {
       setIsAnalyzing(false);
-      setCalibrationWarning('تم حجب التقرير لأن تتبع الكاميرا تجريبي أو أن مؤشر التحقق التجريبي من المعايرة أقل من 70%. حسّن الإضاءة وأعد المعايرة بالكاميرا الفعلية.');
+      setCalibrationWarning(`تم حجب التقرير لأن المعايرة لم تجتز حد RMSE التقني (60 بكسل). الخطأ الحالي: ${calibrationModel.validationRmsePx ?? 'غير متاح'} بكسل. أعد المعايرة قبل بدء قراءة جديدة.`);
       setStage('setup');
       return;
     }
@@ -1997,7 +2020,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
     let clinicalReport = {
       clinicalSummary: `${measurementReliabilityPrefix}تم إجراء جلسة القراءة للطالب (${studentName.trim()} · ${selectedDialectProfile.labelAr}) بتغطية كلمات مرصودة ${eyeMetrics.gazeCoveragePercent}% (${eyeMetrics.observedWordCount}/${eyeMetrics.totalPassageWordCount} كلمة) وسرعة قراءة ${eyeMetrics.wpm} كلمة/دقيقة ومتوسط تثبيت ${eyeMetrics.avgFixationMs}ms ومعدل رمش ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr}).${oralSummaryClause}`,
-      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بمؤشر المعايرة التجريبي خارج نقاط التدريب ${isManualDemoMode || !cameraActive ? '0% (وضع محاكاة يدوية بدون كاميرا)' : `${calibrationModel.accuracyPercent}% (RMSE: ${calibrationModel.validationRmsePx ?? 0}px)`}.`,
+      ocularMotorAnalysis: `${measurementReliabilityPrefix}سُجلت بيانات التثبيت على ${eyeMetrics.observedWordCount} كلمة دون تعبئة افتراضية للكلمات غير المرصودة. بلغت نسبة التراجع ${eyeMetrics.regressionRate}% (${eyeMetrics.regressionCount} قفزة تراجعية)، وسُجّل إجمالي ${eyeMetrics.blinkCount} رمشة عين بمعدل ${eyeMetrics.blinksPerMinute} رمشة/دقيقة (${eyeMetrics.visualStrainLabelAr})، بخطأ تحقق المعايرة خارج العينة: ${isManualDemoMode || !cameraActive ? 'غير متاح (محاكاة بدون كاميرا)' : `RMSE ${calibrationModel.validationRmsePx ?? 'غير متاح'}px`}.`,
       orthographicAndPhonologicalPatterns:
         eyeMetrics.problematicWords.length > 0
           ? `تركزت أطول فترات التثبيت أو التعثر الفونولوجي عند الكلمات: (${eyeMetrics.problematicWords.join('، ')}) مع مراعاة الخصائص الفونولوجية لـ (${selectedDialectProfile.labelAr}).${oralSummaryClause}`
@@ -2237,24 +2260,27 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   لوحة معايرة ربط بؤبؤ العين بالشاشة (5 نقاط + نقطتي تحقق مستقلتين)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  شغّل الكاميرا ثم انظر بعينيك إلى كل نقطة واضغط عليها (٣ نقرات لكل نقطة) لتدريب نموذج الانحدار البصري.
+                  شغّل الكاميرا ثم انظر إلى كل نقطة واضغط عليها مرتين لتسجيل عينات المعايرة.
                 </p>
               </div>
               <span
                 className={`text-xs font-mono tabular-nums font-semibold px-2.5 py-1 rounded-md border shrink-0 ${
                   isManualDemoMode
                     ? 'bg-amber-50 border-amber-200 text-amber-800'
-                    : completedTargetsCount === 5 &&
-                        calibrationModel.accuracyPercent >= 70
+                    : fullySampledTargetsCount === CALIBRATION_TARGETS.length &&
+                        calibrationModel.validationMethod !== 'single-point-unvalidated' &&
+                        (calibrationModel.validationSampleCount || 0) > 0 &&
+                        Number.isFinite(calibrationModel.validationRmsePx) &&
+                        (calibrationModel.validationRmsePx || 0) <= 60
                       ? 'bg-emerald-50 border-emerald-200 text-[#059669]'
                       : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}
               >
                 {isManualDemoMode
-                  ? `وضع محاكاة يدوية (${completedTargetsCount}/5 نقاط · مؤشر المعايرة التجريبي 0%)`
-                  : completedTargetsCount === 5
-                    ? `مكتمل (${completedTargetsCount}/5 · مؤشر التحقق التجريبي ${calibrationModel.accuracyPercent}% · RMSE ${calibrationModel.validationRmsePx ?? 0}px)`
-                    : `قيد المعايرة (${completedTargetsCount}/5 نقاط · ${calibrationSamples.length}/15 عينة)`}
+                  ? `محاكاة يدوية للعرض فقط (${fullySampledTargetsCount}/5 أهداف)`
+                  : fullySampledTargetsCount === CALIBRATION_TARGETS.length
+                    ? `مكتمل (${fullySampledTargetsCount}/5 أهداف · RMSE خارج العينة ${calibrationModel.validationRmsePx ?? 'غير متاح'}px)`
+                    : `قيد المعايرة (${fullySampledTargetsCount}/5 أهداف · ${calibrationSamples.length}/10 عينات)`}
               </span>
             </div>
 
@@ -2305,14 +2331,17 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </button>
             </div>
 
-            {completedTargetsCount === 5 &&
+            {fullySampledTargetsCount === CALIBRATION_TARGETS.length &&
               !isManualDemoMode &&
-              calibrationModel.accuracyPercent < 70 && (
+              (calibrationModel.validationMethod === 'single-point-unvalidated' ||
+                (calibrationModel.validationSampleCount || 0) < 1 ||
+                !Number.isFinite(calibrationModel.validationRmsePx) ||
+                (calibrationModel.validationRmsePx || 0) > 60) && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                   <span>
-                    <strong>تنبيه مؤشر المعايرة التجريبي ({calibrationModel.accuracyPercent}%):</strong>{' '}
-                    خطأ التقدير في نقاط التحقق ({calibrationModel.validationRmsePx ?? 0}px). هذه النسبة مؤشر داخلي تجريبي وليست مقياساً معيارياً لدقة النظر؛ لا تعتمد عليها وحدها لتفسير أداء الطالب.
+                    <strong>فحص المعايرة غير مجتاز:</strong>{' '}
+                    RMSE خارج العينة = {calibrationModel.validationRmsePx ?? 'غير متاح'} بكسل. يجب ألا يتجاوز 60 بكسل قبل بدء القراءة؛ هذا حد تقني تجريبي لا يثبت الدقة السريرية.
                   </span>
                 </div>
               )}
@@ -2829,7 +2858,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             >
               <Play className="w-4 h-4" />
               <span>
-                بدء القراءة الحية ورصد التثبيتات ({completedTargetsCount}/5 نقاط معايرة)
+                بدء القراءة بعد اجتياز فحص المعايرة ({fullySampledTargetsCount}/5 أهداف)
               </span>
             </button>
           </div>
