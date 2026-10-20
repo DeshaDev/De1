@@ -280,6 +280,8 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     { guardianConsentSource: 'spoofed' },
     { assessmentHistory: [] },
     { wpm: 'not-a-number' },
+    { gradeLevel: 'not-a-number' },
+    { ageYears: 999 },
     { dyslexiaRiskScore: 98 },
     { readingRiskLevel: 'nominal' },
   ]) {
@@ -381,7 +383,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   const auditBody = await auditResponse.json() as { events: Array<Record<string, unknown>> };
   assert.ok(auditBody.events.some((event) => event.action === 'student.create' && event.subjectId === studentId && event.actorLabel === 'اختبار تكامل'));
   assert.ok(auditBody.events.some((event) => event.action === 'student.math-assessment' && event.subjectId === studentId));
-  assert.ok(auditBody.events.some((event) => event.action === 'student.session.complete' && event.subjectId === studentId));
+  assert.ok(auditBody.events.some((event) => event.action === 'student.session.complete' && event.subjectId === studentId && Array.isArray(event.changedFields) && (event.changedFields as string[]).includes('guardianConsentRecordedAt')));
   assert.ok(auditBody.events.every((event) => event.tenantId === 'school_alpha'));
   const readOnlyAudit = await fetch(`${baseUrl}/api/audit-events`, {
     headers: authorizedHeaders(educator.token),
