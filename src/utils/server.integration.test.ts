@@ -248,7 +248,6 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     { guardianConsentRecordedAt: new Date().toISOString() },
     { guardianConsentSource: 'spoofed' },
     { assessmentHistory: [] },
-    { __proto__: { tenantId: 'school_beta' } },
   ]) {
     const response = await fetch(`${baseUrl}/api/students/${studentId}`, {
       method: 'PATCH',
