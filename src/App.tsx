@@ -1630,6 +1630,7 @@ export default function App() {
           <AdaptiveReaderView
             problematicWords={selectedStudent.problematicWords || []}
             studentName={selectedStudent.name}
+            passageId={selectedStudent.passageId}
           />
         )}
 
