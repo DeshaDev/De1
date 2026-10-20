@@ -26,7 +26,7 @@ import {
 } from './utils/apiAuth';
 import { ScanpathViewer } from './components/ScanpathViewer';
 import { EyeTrackingLabView } from './components/EyeTrackingLabView';
-import { DyscalculiaLabView } from './components/DyscalculiaLabView';
+import { DyscalculiaLabView, MathAssessmentSubmission } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
@@ -425,7 +425,7 @@ export default function App() {
 
   const handleUpdateStudentMath = async (
     studentId: string,
-    updated: Partial<StudentRecord>
+    assessment: MathAssessmentSubmission
   ) => {
     if (!clinicalSession || clinicalSession.role !== 'clinician') {
       setAiStatusBanner(clinicalSession
@@ -436,24 +436,24 @@ export default function App() {
     }
     try {
       const response = await authenticatedFetch(
-        `/api/students/${encodeURIComponent(studentId)}`,
+        `/api/students/${encodeURIComponent(studentId)}/math-assessment`,
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated),
+          body: JSON.stringify(assessment),
         }
       );
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setAiStatusBanner(data?.error || 'لم يُحفظ تحديث السجل في الخادم.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.student) {
+        setAiStatusBanner(data?.error || 'لم تُحفظ نتيجة الحساب المحسوبة على الخادم.');
         return;
       }
-      setStudents((prev) =>
-        prev.map((student) => (student.id === studentId ? { ...student, ...updated } : student))
-      );
-      setAiStatusBanner('تم حفظ تحديث السجل في التخزين المشفر.');
+      setStudents((prev) => prev.map((student) =>
+        student.id === studentId ? data.student as StudentRecord : student
+      ));
+      setAiStatusBanner('حُفظت نتيجة الحساب بعد أن حسبها الخادم من المحاولات المرسلة.');
     } catch {
-      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ لم تُحفظ نتيجة الحساب.');
     }
   };
 
