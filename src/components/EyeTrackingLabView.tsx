@@ -1753,6 +1753,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     if (
       fullySampledTargetsCount < CALIBRATION_TARGETS.length ||
       calibrationModel.validationMethod === 'single-point-unvalidated' ||
+      typeof validationRmsePx !== 'number' ||
       !Number.isFinite(validationRmsePx) ||
       (calibrationModel.validationSampleCount || 0) < 1 ||
       validationRmsePx > 60
