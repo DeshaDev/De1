@@ -350,21 +350,77 @@ function constantTimeStringEqual(a: string, b: string): boolean {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-const PATCHABLE_STUDENT_FIELDS = new Set<string>([
-  'sessionStatus', 'sessionRoleLabel',
-  'lastScreenedDate', 'passageId', 'dialectRegionAr',
-  'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
-  'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
-  'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
-  'calibrationAccuracyPercent', 'calibrationValidationMethod',
-  'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
-  'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
-  'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
-  'problematicWords', 'fixations', 'comprehensionScore',
-  'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
-  'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-  'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
-]);
+// PATCH is intentionally limited to non-derived profile fields. Measurement outputs and
+// screening scores must be derived server-side from validated task evidence.
+const studentPatchSchema = z.object({
+  gradeLevel: z.number().int().min(1).max(12).optional(),
+  ageYears: z.number().int().min(4).max(21).optional(),
+  passageId: z.string().trim().min(1).max(120).optional(),
+  dialectRegionAr: z.string().trim().min(1).max(100).optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, {
+  message: 'At least one editable profile field is required.',
+});
+
+const subitizingSubmissionSchema = z.object({
+  dotCount: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  chosen: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+}).strict();
+
+const numberLineSubmissionSchema = z.object({
+  target: z.union([z.literal(37), z.literal(156)]),
+  userEstimate: z.number().finite().min(0).max(200),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+  scaleMin: z.literal(0),
+  scaleMax: z.union([z.literal(100), z.literal(200)]),
+}).strict();
+
+const transcodingSubmissionSchema = z.object({
+  targetNumber: z.union([z.literal(47), z.literal(83), z.literal(69)]),
+  selectedNumber: z.number().int().min(0).max(999),
+  reactionTimeMs: z.number().int().min(1).max(120_000),
+}).strict();
+
+const mathAssessmentSchema = z.object({
+  subitizingTrials: z.array(subitizingSubmissionSchema).length(4),
+  numberLineTrials: z.array(numberLineSubmissionSchema).length(2),
+  transcodingTrials: z.array(transcodingSubmissionSchema).length(3),
+}).strict().superRefine((value, ctx) => {
+  const dotCounts = value.subitizingTrials.map((trial) => trial.dotCount);
+  if (new Set(dotCounts).size !== 4) {
+    ctx.addIssue({ code: 'custom', path: ['subitizingTrials'], message: 'Each dot count must be represented once.' });
+  }
+
+  const numberLineTargets = value.numberLineTrials.map((trial) => trial.target);
+  if (new Set(numberLineTargets).size !== 2) {
+    ctx.addIssue({ code: 'custom', path: ['numberLineTrials'], message: 'Both fixed number-line targets are required exactly once.' });
+  }
+  for (const [index, trial] of value.numberLineTrials.entries()) {
+    const expectedScale = trial.target === 37 ? 100 : 200;
+    if (
+      trial.scaleMax !== expectedScale ||
+      trial.userEstimate < trial.scaleMin ||
+      trial.userEstimate > trial.scaleMax
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['numberLineTrials', index], message: 'Invalid estimate range for the fixed target.' });
+    }
+  }
+
+  const allowedChoices: Record<number, number[]> = {
+    47: [47, 74, 49],
+    83: [83, 38, 63],
+    69: [69, 96, 66],
+  };
+  const transcodingTargets = value.transcodingTrials.map((trial) => trial.targetNumber);
+  if (new Set(transcodingTargets).size !== 3) {
+    ctx.addIssue({ code: 'custom', path: ['transcodingTrials'], message: 'Each fixed transcoding target is required exactly once.' });
+  }
+  for (const [index, trial] of value.transcodingTrials.entries()) {
+    if (!allowedChoices[trial.targetNumber]?.includes(trial.selectedNumber)) {
+      ctx.addIssue({ code: 'custom', path: ['transcodingTrials', index, 'selectedNumber'], message: 'Selected option is not available for this fixed task.' });
+    }
+  }
+});
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
   // Migrate records written by older builds, where heuristic indices were mislabeled as percentiles.
