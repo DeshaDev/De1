@@ -53,6 +53,7 @@ function constantTimeStringEqual(a: string, b: string): boolean {
 }
 
 const PATCHABLE_STUDENT_FIELDS = new Set<string>([
+  'sessionStatus', 'sessionRoleLabel', 'assessmentHistory',
   'lastScreenedDate', 'passageId', 'dialectRegionAr',
   'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
   'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
@@ -409,8 +410,20 @@ async function startServer() {
       const consentCheck = validateExplicitGuardianConsent(
         newRecord.guardianConsentGiven
       );
-      if (!consentCheck.valid) {
-        res.status(403).json({ error: consentCheck.errorAr });
+      const consentTimeValid = typeof newRecord.guardianConsentRecordedAt === 'string' &&
+        Number.isFinite(Date.parse(newRecord.guardianConsentRecordedAt));
+      const consentSourceValid = typeof newRecord.guardianConsentSource === 'string' &&
+        newRecord.guardianConsentSource.trim().length > 0;
+      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
+        res.status(403).json({ error: consentCheck.valid ? 'يلزم تسجيل وقت الموافقة ومصدرها قبل حفظ الجلسة.' : consentCheck.errorAr });
+        return;
+      }
+      if (newRecord.speechRecognitionUsed === true && (
+        newRecord.guardianAudioConsentGiven !== true ||
+        typeof newRecord.guardianAudioConsentRecordedAt !== 'string' ||
+        !Number.isFinite(Date.parse(newRecord.guardianAudioConsentRecordedAt))
+      )) {
+        res.status(403).json({ error: 'رُصد استخدام التعرف الصوتي دون سجل موافقة صوتية منفصل صالح؛ رُفض حفظ الجلسة.' });
         return;
       }
 
@@ -530,6 +543,11 @@ async function startServer() {
       const {
         studentName,
         guardianConsentGiven, // NO default `= true`! Must be explicitly verified as `=== true`
+        guardianConsentRecordedAt,
+        guardianConsentSource,
+        guardianAudioConsentGiven,
+        guardianAudioConsentRecordedAt,
+        speechRecognitionUsed = false,
         gradeLevel,
         wpm,
         avgFixationMs,
@@ -562,10 +580,22 @@ async function startServer() {
       // Strict Default-Deny Consent Check: rejects missing (`undefined`), `null`, or `false`
       const consentValidation =
         validateExplicitGuardianConsent(guardianConsentGiven);
-      if (!consentValidation.valid) {
+      const consentTimestampValid = typeof guardianConsentRecordedAt === 'string' &&
+        Number.isFinite(Date.parse(guardianConsentRecordedAt));
+      const consentSourceValid = typeof guardianConsentSource === 'string' &&
+        guardianConsentSource.trim().length > 0;
+      if (!consentValidation.valid || !consentTimestampValid || !consentSourceValid) {
         res.status(403).json({
-          error: consentValidation.errorAr,
+          error: consentValidation.valid ? 'يلزم تسجيل وقت الموافقة ومصدرها قبل إنشاء التقرير.' : consentValidation.errorAr,
         });
+        return;
+      }
+      if (speechRecognitionUsed === true && (
+        guardianAudioConsentGiven !== true ||
+        typeof guardianAudioConsentRecordedAt !== 'string' ||
+        !Number.isFinite(Date.parse(guardianAudioConsentRecordedAt))
+      )) {
+        res.status(403).json({ error: 'استخدام التعرف الصوتي لا يتضمن موافقة صوتية منفصلة مسجلة.' });
         return;
       }
 

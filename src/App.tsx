@@ -28,6 +28,7 @@ import { EyeTrackingLabView } from './components/EyeTrackingLabView';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -147,6 +148,10 @@ export default function App() {
       s.schoolName.includes(searchQuery.trim());
     if (!matchesSearch) return false;
 
+    // Incomplete sessions are not yet classifiable as high-risk or within-average.
+    if (s.sessionStatus === 'in_progress') {
+      return riskFilter === 'all';
+    }
     if (riskFilter === 'high') {
       return s.readingRiskLevel === 'high' || s.mathRiskLevel === 'high';
     }
@@ -159,38 +164,85 @@ export default function App() {
     return true;
   });
 
+  const snapshotCompletedSession = (record: StudentRecord) => ({
+    sessionId: `session-${record.id}-${Date.now()}`,
+    completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
+    passageId: record.passageId,
+    wpm: record.wpm,
+    avgFixationMs: record.avgFixationMs,
+    regressionRate: record.regressionRate,
+    comprehensionScore: record.comprehensionScore,
+    problematicWords: [...(record.problematicWords || [])],
+    dyslexiaRiskScore: record.dyslexiaRiskScore,
+    readingHeuristicIndicator: record.readingHeuristicIndicator,
+    readingRiskLevel: record.readingRiskLevel,
+    subitizingAccuracy: record.subitizingAccuracy,
+    numberLinePAE: record.numberLinePAE,
+    transcodingAccuracy: record.transcodingAccuracy,
+    dyscalculiaRiskScore: record.dyscalculiaRiskScore,
+    mathRiskLevel: record.mathRiskLevel,
+  });
+
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
+    const previous = students.find((student) => student.id === newRecord.id);
+    const history = [...(previous?.assessmentHistory || [])];
+    if (previous?.sessionStatus === 'completed') {
+      history.push(snapshotCompletedSession(previous));
+    }
+    const consentRecordedAt =
+      newRecord.guardianConsentGiven === true
+        ? newRecord.guardianConsentRecordedAt || new Date().toISOString()
+        : undefined;
+    const completedAt = new Date().toISOString();
+    const completedRecord: StudentRecord = {
+      ...newRecord,
+      sessionStatus: 'completed',
+      sessionCompletedAt: completedAt,
+      assessmentHistory: history,
+      lastScreenedDate: new Date().toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      guardianConsentRecordedAt: consentRecordedAt,
+      guardianConsentSource:
+        newRecord.guardianConsentGiven === true
+          ? newRecord.guardianConsentSource || 'إقرار صريح داخل واجهة الفحص'
+          : undefined,
+    };
     setStudents((prev) => [
-      newRecord,
-      ...prev.filter((s) => s.id !== newRecord.id),
+      completedRecord,
+      ...prev.filter((student) => student.id !== completedRecord.id),
     ]);
-    setSelectedStudentId(newRecord.id);
+    setSelectedStudentId(completedRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
     if (!clinicalSession) {
-      setPendingServerRecord(newRecord);
-      setAiStatusBanner('اكتملت الجلسة محليًا، لكنها لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان.');
+      setPendingServerRecord(completedRecord);
+      setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها في التخزين المشفر.');
       setShowClinicalLogin(true);
       return;
     }
     setAiStatusBanner(
-      `تم إنشاء جلسة الفحص للطالب (${newRecord.name}) محليًا؛ لم يتأكد حفظها في الخادم بعد.`
+      `تم إنهاء جلسة الفحص للطالب (${completedRecord.name}) محليًا؛ جارٍ محاولة حفظها في الخادم.`
     );
     try {
       const response = await authenticatedFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newRecord,
-          guardianConsentGiven: newRecord.guardianConsentGiven === true,
+          ...completedRecord,
+          guardianConsentGiven: completedRecord.guardianConsentGiven === true,
         }),
       });
       if (response.ok) {
         setIsPersistedStoreLoaded(true);
-        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${newRecord.name}) في التخزين المشفر.`);
+        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${completedRecord.name}) في التخزين المشفر.`);
       } else {
         const data = await response.json().catch(() => ({}));
-        setPendingServerRecord(newRecord);
+        setPendingServerRecord(completedRecord);
         setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم. بقيت نسخة محلية لإعادة المحاولة بعد تسجيل الدخول.');
         if (response.status === 401) {
           clearClinicalSession();
@@ -199,8 +251,8 @@ export default function App() {
         }
       }
     } catch {
-      setPendingServerRecord(newRecord);
-      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود محليًا فقط ولم يُحفظ في الخادم.');
+      setPendingServerRecord(completedRecord);
+      setAiStatusBanner('تعذر الاتصال بالخادم؛ السجل موجود على هذا الجهاز فقط ولم يُحفظ في الخادم.');
     }
   };
 
@@ -209,29 +261,86 @@ export default function App() {
     grade: number,
     roleLabel: string
   ) => {
-    const cleanName = (name.trim() || 'نواف عبد العزيز القحطاني')
-      .replace(/\s+(بن|بنت)\s+/g, ' ')
-      .trim();
-    const existing = students.find((s) => s.name === cleanName);
+    const cleanName = name.trim().replace(/\\s+(بن|بنت)\\s+/g, ' ').trim();
+    if (!cleanName) {
+      setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
+      return;
+    }
+    const existing = students.find(
+      (student) =>
+        !student.isDemoRecord &&
+        student.name.trim().replace(/\\s+/g, ' ') === cleanName.replace(/\\s+/g, ' ')
+    );
     if (existing) {
+      if (existing.sessionStatus === 'completed') {
+        const resumedRecord: StudentRecord = {
+          ...existing,
+          sessionStatus: 'in_progress',
+          sessionCompletedAt: undefined,
+          sessionRoleLabel: roleLabel,
+          assessmentHistory: [...(existing.assessmentHistory || []), snapshotCompletedSession(existing)],
+          guardianConsentGiven: false,
+          guardianConsentRecordedAt: undefined,
+          guardianConsentSource: undefined,
+          guardianAudioConsentGiven: false,
+          guardianAudioConsentRecordedAt: undefined,
+          speechRecognitionUsed: false,
+          lastScreenedDate: '',
+        };
+        setStudents((prev) => prev.map((student) => student.id === existing.id ? resumedRecord : student));
+      }
       setSelectedStudentId(existing.id);
     } else {
-      const template = students[0];
-      const newMockStudent: StudentRecord = {
-        ...template,
-        id: `stu-mock-${Date.now()}`,
+      const newStudent: StudentRecord = {
+        id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
         name: cleanName,
+        sessionStatus: 'in_progress',
+        sessionRoleLabel: roleLabel,
+        assessmentHistory: [],
         gradeLevel: grade,
-        schoolName: `جلسة فحص (${roleLabel})`,
-        isDemoRecord: false,
+        ageYears: grade + 6,
+        schoolName: 'لم تُحدّد المدرسة',
+        lastScreenedDate: '',
+        passageId: ARABIC_READING_PASSAGES.find((passage) => passage.gradeLevel === grade)?.id || ARABIC_READING_PASSAGES[0].id,
         guardianConsentGiven: false,
+        guardianConsentRecordedAt: undefined,
+        guardianConsentSource: undefined,
+        wpm: 0,
+        avgFixationMs: 0,
+        regressionRate: 0,
+        regressionCount: 0,
+        dyslexiaRiskScore: 0,
+        readingHeuristicIndicator: 0,
+        readingRiskLevel: 'nominal',
+        readingRiskLabelAr: 'لم يُستكمل الفحص بعد',
+        problematicWords: [],
+        fixations: [],
+        comprehensionScore: 0,
+        dyscalculiaAssessed: false,
+        subitizingAccuracy: null,
+        avgSubitizingMs: null,
+        numberLinePAE: null,
+        transcodingAccuracy: null,
+        reversalErrorCount: null,
+        dyscalculiaRiskScore: null,
+        mathHeuristicIndicator: null,
+        mathRiskLevel: 'unassessed',
+        mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
+        clinicalReport: {
+          clinicalSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
+          ocularMotorAnalysis: 'لا توجد بيانات نظر مكتملة لهذه الجلسة.',
+          orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر نص منطوق فعلي.',
+          dyscalculiaSpatialAnalysis: 'لم يُستكمل فحص الحساب بعد.',
+          interventionExercises: [],
+          classroomAccommodations: [],
+        },
       };
-      setStudents((prev) => [newMockStudent, ...prev]);
-      setSelectedStudentId(newMockStudent.id);
+      setStudents((prev) => [newStudent, ...prev]);
+      setSelectedStudentId(newStudent.id);
     }
     setActiveTab('eye-lab');
     setAiStatusBanner(
-      `تم تسجيل الطالب «${cleanName}» (الصف ${grade}) — ابدأ الآن معايرة الكاميرا وفحص القراءة.`
+      `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لا تُعرض نتيجة فرز قبل إكمال الجلسة.`
     );
   };
 
@@ -314,8 +423,12 @@ export default function App() {
       setShowClinicalLogin(true);
       return;
     }
-    if (selectedStudent.guardianConsentGiven !== true) {
-      setAiStatusBanner('لا يمكن إنشاء التقرير قبل تسجيل موافقة صريحة من ولي الأمر.');
+    if (
+      selectedStudent.guardianConsentGiven !== true ||
+      !selectedStudent.guardianConsentRecordedAt ||
+      !selectedStudent.guardianConsentSource
+    ) {
+      setAiStatusBanner('لا يمكن إنشاء التقرير قبل وجود موافقة صريحة مسجلة بوقت ومصدر. أعد أخذ الموافقة داخل جلسة جديدة.');
       return;
     }
     setIsGeneratingAI(true);
@@ -327,6 +440,11 @@ export default function App() {
         body: JSON.stringify({
           studentName: selectedStudent.name,
           guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
+          guardianConsentRecordedAt: selectedStudent.guardianConsentRecordedAt,
+          guardianConsentSource: selectedStudent.guardianConsentSource,
+          guardianAudioConsentGiven: selectedStudent.guardianAudioConsentGiven === true,
+          guardianAudioConsentRecordedAt: selectedStudent.guardianAudioConsentRecordedAt,
+          speechRecognitionUsed: selectedStudent.speechRecognitionUsed === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
@@ -601,6 +719,7 @@ export default function App() {
           { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
           { id: 'algorithms-lab', label: 'المنهجية والحدود' },
+          { id: 'privacy', label: 'الخصوصية' },
           { id: 'dashboard', label: 'التقرير والمؤشرات' },
         ].map((item) => (
           <button
@@ -713,22 +832,24 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.wpm}{' '}
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.wpm}{' '}
                       <span className="text-xs font-normal text-slate-500">
                         كلمة/د
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      مؤشر الفرز الاسترشادي {selectedStudent.readingHeuristicIndicator}/100
+                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الفرز الاسترشادي ${selectedStudent.readingHeuristicIndicator}/100`}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
-                    {selectedStudent.readingRiskLevel === 'high'
+                    {selectedStudent.sessionStatus === 'in_progress'
+                      ? 'الجلسة غير مكتملة — لا توجد نتيجة'
+                      : selectedStudent.readingRiskLevel === 'high'
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
                         : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
-                    · فهم {selectedStudent.comprehensionScore}%
+                    · {selectedStudent.sessionStatus === 'in_progress' ? 'الفهم غير مُقيَّم' : `الفهم ${selectedStudent.comprehensionScore}%`}
                   </div>
                 </div>
 
@@ -738,7 +859,7 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.avgFixationMs}{' '}
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.avgFixationMs}{' '}
                       <span className="text-xs font-normal text-slate-500">
                         ms
                       </span>
@@ -752,17 +873,19 @@ export default function App() {
                             : 'text-[#059669]'
                       }`}
                     >
-                      {selectedStudent.avgFixationMs >= 400
-                        ? '■ تثبيت مطوّل'
-                        : selectedStudent.avgFixationMs >= 320
-                          ? '▲ تثبيت متوسط'
-                          : 'ضمن العرض التجريبي'}
+                      {selectedStudent.sessionStatus === 'in_progress'
+                        ? 'لا توجد قياسات بعد'
+                        : selectedStudent.avgFixationMs >= 400
+                          ? '■ تثبيت مطوّل'
+                          : selectedStudent.avgFixationMs >= 320
+                            ? '▲ تثبيت متوسط'
+                            : 'ضمن العرض التجريبي'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
                     الرمش:{' '}
                     <span className="font-mono tabular-nums font-semibold text-slate-900">
-                      {selectedStudent.blinksPerMinute ?? 16}
+                      {selectedStudent.sessionStatus === 'in_progress' || selectedStudent.blinksPerMinute == null ? '—' : selectedStudent.blinksPerMinute}
                     </span>{' '}
                     رمشة/دقيقة
                   </div>
@@ -774,7 +897,7 @@ export default function App() {
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.regressionRate}%
+                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : `${selectedStudent.regressionRate}%`}
                     </span>
                     <span
                       className={`text-xs font-semibold ${
@@ -785,14 +908,17 @@ export default function App() {
                             : 'text-[#059669]'
                       }`}
                     >
-                      {selectedStudent.regressionRate > 22
-                        ? '■ تراجع مرتفع'
-                        : '● مسح بصري مستقر'}
+                      {selectedStudent.sessionStatus === 'in_progress'
+                        ? 'لا توجد قياسات بعد'
+                        : selectedStudent.regressionRate > 22
+                          ? '■ تراجع مرتفع'
+                          : '● مسح بصري مستقر'}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1 truncate">
-                    {selectedStudent.visualStrainLabelAr ||
-                      'استقرار حركة العين أثناء القراءة'}
+                    {selectedStudent.sessionStatus === 'in_progress'
+                      ? 'ستظهر الملاحظة بعد إكمال الجلسة'
+                      : selectedStudent.visualStrainLabelAr || 'لا توجد ملاحظة مسجلة'}
                   </div>
                 </div>
 
@@ -1059,10 +1185,10 @@ export default function App() {
                                   </div>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900 font-medium">
-                                  {stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
+                                  {stu.sessionStatus === 'in_progress' ? '—' : stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900">
-                                  {stu.avgFixationMs}ms
+                                  {stu.sessionStatus === 'in_progress' ? '—' : `${stu.avgFixationMs}ms`}
                                 </td>
                                 <td className="py-3.5 px-3">
                                   <span
@@ -1074,7 +1200,9 @@ export default function App() {
                                           : 'text-[#059669] font-medium'
                                     }
                                   >
-                                    {stu.readingRiskLevel === 'high'
+                                    {stu.sessionStatus === 'in_progress'
+                                      ? 'لم يُستكمل الفحص'
+                                      : stu.readingRiskLevel === 'high'
                                       ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
                                         ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
@@ -1337,7 +1465,7 @@ export default function App() {
 
             {/* SUB-VIEW 3: AI SCREENING REPORT & INDIVIDUALIZED SUPPORT PLAN */}
             {dashboardSubView === 'report' && (
-              <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">
@@ -1349,6 +1477,44 @@ export default function App() {
                     </h2>
                   </div>
 
+                  <div className="no-print flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    طباعة التقرير / حفظ PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const shareText = [
+                        `تقرير فرز تربوي استرشادي — ${selectedStudent.name}`,
+                        `الصف: ${selectedStudent.gradeLevel}`,
+                        `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
+                        `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
+                        `الكلمات المستهدفة للتدريب: ${(selectedStudent.problematicWords || []).join('، ') || 'لم تُحدد بعد'}`,
+                        'هذا التقرير استرشادي وغير تشخيصي.',
+                      ].join('\n');
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({ title: 'تقرير بصيرة الاسترشادي', text: shareText });
+                        } else if (navigator.clipboard?.writeText) {
+                          await navigator.clipboard.writeText(shareText);
+                          setAiStatusBanner('نُسخ ملخص التقرير إلى الحافظة للمشاركة.');
+                        } else {
+                          setAiStatusBanner('المشاركة المباشرة غير مدعومة في هذا المتصفح. استخدم طباعة التقرير لحفظه PDF.');
+                        }
+                      } catch (error) {
+                        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                          setAiStatusBanner('تعذرت المشاركة من المتصفح. يمكنك طباعة التقرير وحفظه PDF.');
+                        }
+                      }
+                    }}
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    مشاركة الملخص
+                  </button>
                   <button
                     type="button"
                     disabled={isGeneratingAI}
@@ -1362,8 +1528,40 @@ export default function App() {
                         : 'تحديث التقرير بالذكاء الاصطناعي'}
                     </span>
                   </button>
+                  </div>
                 </div>
 
+                {selectedStudent.assessmentHistory && selectedStudent.assessmentHistory.length > 0 && (
+                  <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
+                    <div>
+                      <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
+                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>هذه جلسات سابقة لنفس الملف. قارن النتائج الوصفية مع مراعاة اختلاف النص والجهاز وظروف الجلسة؛ ليست مقارنة معيارية أو تشخيصًا.</p>
+                    </div>
+                    <ol className='space-y-3'>
+                      {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
+                        <li key={snapshot.sessionId} className='rounded-xl border border-slate-200 bg-white p-4'>
+                          <div className='flex flex-wrap items-center justify-between gap-2'>
+                            <span className='text-xs font-bold text-slate-900'>الجلسة السابقة {selectedStudent.assessmentHistory!.length - index}</span>
+                            <time dateTime={snapshot.completedAt} className='text-xs text-slate-500'>
+                              {Number.isFinite(Date.parse(snapshot.completedAt)) ? new Date(snapshot.completedAt).toLocaleString('ar-EG') : 'تاريخ غير متاح'}
+                            </time>
+                          </div>
+                          <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
+                            <span>الطلاقة: <strong>{snapshot.wpm} كلمة/دقيقة</strong></span>
+                            <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
+                            <span>مؤشر القراءة: <strong>{snapshot.readingHeuristicIndicator}/100</strong></span>
+                            <span>الحساب: <strong>{snapshot.mathRiskLevel === 'unassessed' ? 'لم يُقيّم' : snapshot.mathRiskLevel + ' · ' + (snapshot.numberLinePAE ?? '—') + '% خطأ'}</strong></span>
+                          </div>
+                          {(snapshot.problematicWords || []).length > 0 && (
+                            <p className='mt-2 text-xs leading-relaxed text-slate-600'>
+                              كلمات استهدفتها الجلسة: {(snapshot.problematicWords || []).join('، ')}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
                 {/* Hairline-Divided 2x2 Analytical Matrix (Zero Card-in-Card Nesting) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200 border-b border-slate-200">
                   <div className="p-6 sm:p-8 space-y-6">
@@ -1497,12 +1695,19 @@ export default function App() {
         )}
 
         {/* VIEW 4: SMART ADAPTIVE DYSLEXIA READER & DYSLEXICO STUDIO */}
-        {activeTab === 'adaptive-reader' && <AdaptiveReaderView />}
+        {activeTab === 'adaptive-reader' && (
+          <AdaptiveReaderView
+            problematicWords={selectedStudent.problematicWords || []}
+            studentName={selectedStudent.name}
+            passageId={selectedStudent.passageId}
+          />
+        )}
 
         {/* VIEW 5: CLINICAL ALGORITHMS & ADAPTIVE IRT / PYGAZE ML LAB */}
         {activeTab === 'algorithms-lab' && (
           <ClinicalAlgorithmsView selectedStudent={selectedStudent} />
         )}
+        {activeTab === 'privacy' && <PrivacyPolicyView />}
         </div>
       </main>
 
@@ -1543,6 +1748,14 @@ export default function App() {
               className="hover:text-slate-900 cursor-pointer"
             >
               القارئ الميسّر
+            </button>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('privacy')}
+              className="hover:text-slate-900 cursor-pointer"
+            >
+              سياسة الخصوصية
             </button>
             <span aria-hidden="true">·</span>
             <button

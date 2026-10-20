@@ -80,7 +80,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   onProceedToMathLab,
 }) => {
   const [studentName, setStudentName] = useState(
-    activeStudent?.name || 'نواف عبد العزيز القحطاني'
+    activeStudent?.isDemoRecord ? '' : activeStudent?.name || ''
   );
   const [gradeLevel, setGradeLevel] = useState<number>(
     activeStudent?.gradeLevel || 3
@@ -88,7 +88,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
   useEffect(() => {
     if (activeStudent) {
-      setStudentName(activeStudent.name);
+      setStudentName(activeStudent.isDemoRecord ? '' : activeStudent.name);
       setGradeLevel(activeStudent.gradeLevel);
     }
   }, [activeStudent?.id, activeStudent?.name, activeStudent?.gradeLevel]);
@@ -98,9 +98,19 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     ARABIC_READING_PASSAGES[0].id
   );
   const [guardianConsent, setGuardianConsent] = useState<boolean>(false);
+  const [guardianConsentRecordedAt, setGuardianConsentRecordedAt] = useState<string | undefined>(undefined);
+  const [guardianAudioConsent, setGuardianAudioConsent] = useState<boolean>(false);
+  const [guardianAudioConsentRecordedAt, setGuardianAudioConsentRecordedAt] = useState<string | undefined>(undefined);
   const [nameError, setNameError] = useState<string>('');
   const [calibrationWarning, setCalibrationWarning] = useState<string>('');
   const [readingCoverageError, setReadingCoverageError] = useState<string>('');
+
+  useEffect(() => {
+    setGuardianConsent(false);
+    setGuardianConsentRecordedAt(undefined);
+    setGuardianAudioConsent(false);
+    setGuardianAudioConsentRecordedAt(undefined);
+  }, [activeStudent?.id]);
 
   const [stage, setStage] = useState<'setup' | 'reading' | 'comprehension'>(
     'setup'
@@ -315,6 +325,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [micActive, setMicActive] = useState<boolean>(false);
   const [micVolume, setMicVolume] = useState<number>(0);
   const [spokenTranscript, setSpokenTranscript] = useState<string>('');
+  const [speechRecognitionUsed, setSpeechRecognitionUsed] = useState<boolean>(false);
+  const [isTranscriptPreset, setIsTranscriptPreset] = useState<boolean>(false);
   const [speechRecStatus, setSpeechRecStatus] = useState<
     'idle' | 'listening' | 'unsupported' | 'error'
   >('idle');
@@ -1195,6 +1207,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       setCameraActive(false);
       return;
     }
+    if (!guardianConsent) {
+      setCameraError('قبل تشغيل الكاميرا، يلزم تسجيل موافقة ولي الأمر على جلسة الفحص.');
+      return;
+    }
+    setCameraError('');
     await startCameraWithDevice(selectedDeviceId || undefined);
   };
 
@@ -1222,6 +1239,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       setMicActive(false);
       setMicVolume(0);
       setSpeechRecStatus('idle');
+      return;
+    }
+
+    if (!guardianConsent || !guardianAudioConsent) {
+      setSpeechRecStatus('error');
+      setSpeechRecErrorMsg('يجب أولًا تسجيل موافقة ولي الأمر على الجلسة، ثم الموافقة المنفصلة على استخدام التعرف الصوتي الذي قد يعالج الكلام عبر خدمة المتصفح. يمكنك إدخال النص المنطوق يدويًا بدلًا من ذلك.');
       return;
     }
 
@@ -1279,6 +1302,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           transcript += event.results[i][0].transcript + ' ';
         }
         setSpokenTranscript(transcript.trim());
+        setIsTranscriptPreset(false);
         setSpeechRecStatus('listening');
       };
       rec.onerror = (event: any) => {
@@ -1313,6 +1337,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       };
       rec.start();
       recognitionRef.current = rec;
+      setSpeechRecognitionUsed(true);
       setMicActive(true);
       setSpeechRecStatus('listening');
     } catch {
@@ -1802,7 +1827,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   );
 
   // Evaluate Oral Reading Alignment ONLY when a real spoken transcript exists (never fake 100% with passage slice)
-  const hasSpokenTranscript = spokenTranscript.trim().length > 0;
+  const hasSpokenTranscript = spokenTranscript.trim().length > 0 && !isTranscriptPreset;
   const activeOralWordsSlice = hasSpokenTranscript
     ? selectedPassage.words.slice(
         0,
@@ -2000,6 +2025,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         body: JSON.stringify({
           studentName: studentName.trim(),
           guardianConsentGiven: guardianConsent,
+          guardianConsentRecordedAt: guardianConsent ? guardianConsentRecordedAt || new Date().toISOString() : undefined,
+          guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
+          guardianAudioConsentGiven: guardianAudioConsent,
+          guardianAudioConsentRecordedAt: guardianAudioConsent ? guardianAudioConsentRecordedAt : undefined,
+          speechRecognitionUsed,
+          oralReadingAssessed: hasSpokenTranscript,
           gradeLevel,
           wpm: eyeMetrics.wpm,
           avgFixationMs: eyeMetrics.avgFixationMs,
@@ -2013,7 +2044,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
           dialectRegionAr: selectedDialectProfile.labelAr,
           problematicWords: eyeMetrics.problematicWords,
-          oralReadingAssessed: hasSpokenTranscript,
           oralAccuracyPercent: oralIntegrationInput?.accuracyPercent ?? null,
           oralWerPercent: oralIntegrationInput?.werPercent ?? null,
           phoneticSubstitutionCount:
@@ -2034,15 +2064,23 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     } catch {}
 
     const newRecord: StudentRecord = {
-      id: `stu-${Date.now()}`,
+      id: activeStudent && !activeStudent.isDemoRecord ? activeStudent.id : `stu-${Date.now()}`,
       name: studentName.trim(),
+      sessionStatus: 'completed',
+      sessionRoleLabel: activeStudent?.sessionRoleLabel,
+      assessmentHistory: activeStudent?.assessmentHistory || [],
       gradeLevel,
       ageYears: gradeLevel + 6,
-      schoolName: 'مدرسة الرواد النموذجية - فحص مباشر',
-      lastScreenedDate: '٢٠٢٦/١٠/١٩ (الآن)',
+      schoolName: activeStudent && !activeStudent.isDemoRecord ? activeStudent.schoolName : 'لم تُحدّد المدرسة',
+      lastScreenedDate: new Date().toLocaleString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
       passageId: selectedPassage.id,
       dialectRegionAr: selectedDialectProfile.labelAr,
       guardianConsentGiven: guardianConsent,
+      guardianConsentRecordedAt: guardianConsent ? guardianConsentRecordedAt || new Date().toISOString() : undefined,
+      guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,
+      guardianAudioConsentGiven: guardianAudioConsent,
+      guardianAudioConsentRecordedAt: guardianAudioConsent ? guardianAudioConsentRecordedAt : undefined,
+      speechRecognitionUsed,
       wpm: eyeMetrics.wpm,
       avgFixationMs: eyeMetrics.avgFixationMs,
       regressionRate: eyeMetrics.regressionRate,
@@ -2747,10 +2785,19 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   type="checkbox"
                   checked={guardianConsent}
                   onChange={(e) => {
-                    setGuardianConsent(e.target.checked);
-                    if (e.target.checked && calibrationWarning) {
-                      setCalibrationWarning('');
+                    const accepted = e.target.checked;
+                    setGuardianConsent(accepted);
+                    setGuardianConsentRecordedAt(accepted ? new Date().toISOString() : undefined);
+                    if (!accepted) {
+                      if (streamRef.current) {
+                        streamRef.current.getTracks().forEach((track) => track.stop());
+                        streamRef.current = null;
+                      }
+                      setCameraActive(false);
+                      setGuardianAudioConsent(false);
+                      setGuardianAudioConsentRecordedAt(undefined);
                     }
+                    if (accepted && calibrationWarning) setCalibrationWarning('');
                   }}
                   className="mt-0.5 accent-[#059669]"
                 />
@@ -2758,6 +2805,20 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   <strong className="text-slate-900">موافقة ولي الأمر وحماية الخصوصية:</strong>{' '}
                   أقرّ بموافقة ولي الأمر على إجراء الفحص الأولي الاسترشادي مع حماية سرية بيانات الطالب.
                 </span>
+              </label>
+              <label className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-950 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={guardianAudioConsent}
+                  disabled={!guardianConsent}
+                  onChange={(e) => {
+                    const accepted = e.target.checked;
+                    setGuardianAudioConsent(accepted);
+                    setGuardianAudioConsentRecordedAt(accepted ? new Date().toISOString() : undefined);
+                  }}
+                  className="mt-0.5 accent-amber-700"
+                />
+                <span><strong>موافقة منفصلة على التعرف الصوتي (اختيارية):</strong> قد يستخدم Chrome أو Edge خدمة خارجية لتحويل الكلام إلى نص؛ لا يمكن افتراض أن المعالجة محلية. عند عدم الموافقة، اتركها غير محددة وأدخل النص يدويًا لاحقًا. لا يتم تسجيل ملف صوتي داخل بصيرة، لكن هذا لا يضمن أن خدمة المتصفح لا ترسل الصوت لمعالجته.</span>
               </label>
             </div>
 
@@ -3056,6 +3117,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onClick={() => {
                       setSelectedDialect(preset.dialect);
                       setSpokenTranscript(preset.sample);
+                      setIsTranscriptPreset(true);
                     }}
                     className="px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
                   >
@@ -3077,6 +3139,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
               <div className="lg:col-span-8">
+                {isTranscriptPreset && (
+                  <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs leading-relaxed text-amber-950">
+                    هذه عينة اصطناعية لاختبار محاذاة اللهجة وليست قراءة طالب. لن تُحسب أو تُحفظ بوصفها عينة فعلية ما لم تستبدلها بنص القراءة المرصود.
+                  </p>
+                )}
                 <label
                   htmlFor="manual-spoken-transcript-input"
                   className="sr-only"
@@ -3087,8 +3154,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   id="manual-spoken-transcript-input"
                   type="text"
                   value={spokenTranscript}
-                  onChange={(e) => setSpokenTranscript(e.target.value)}
-                  placeholder="النص المنطوق للطالب (يُحدَّث تلقائياً عبر الميكروفون أو يُكتب يدوياً هنا)..."
+                  onChange={(e) => {
+                    setSpokenTranscript(e.target.value);
+                    setIsTranscriptPreset(false);
+                  }}
+                  placeholder="اكتب ما قرأه الطالب فعلًا، أو استخدم التعرف الصوتي بموافقة ولي الأمر..."
                   className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                 />
               </div>

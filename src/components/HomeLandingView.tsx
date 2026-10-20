@@ -21,7 +21,8 @@ export type AppTabId =
   | 'dyscalculia-lab'
   | 'adaptive-reader'
   | 'dashboard'
-  | 'algorithms-lab';
+  | 'algorithms-lab'
+  | 'privacy';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];
@@ -459,7 +460,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
   const handleQuickStartSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = mockName.trim() || 'عمر خالد الدوسري';
+    const cleanName = mockName.trim();
+    if (!cleanName) {
+      setRegistrationNotice('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم اسم طفل حقيقي.');
+      return;
+    }
     const roleLabel =
       mockRole === 'student' ? 'تجربة كطالب' : 'تجربة كمختص';
     setRegistrationNotice(`تم تسجيل «${cleanName}» — جاري فتح الخطوة ٢...`);
@@ -599,14 +604,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   </div>
                 </div>
                 <span className="text-[11px] font-bold text-[#15803D] bg-[#ECFDF5] border border-emerald-200 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  مباشر · الصف {activeStudent.gradeLevel}
+                  مثال تفاعلي · الصف {activeStudent.gradeLevel}
                 </span>
               </div>
 
               {/* Open Interactive Arabic Storybook Page with Gaze & Voice Tracking */}
               <div className="rounded-2xl bg-gradient-to-br from-[#FAF6EE] via-[#FFFDF9] to-[#ECFDF5]/60 border border-[#E5DEC9] p-4 sm:p-5 space-y-4">
                 <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>نص القراءة: «الفَلّاحُ وَالسّاقِيَةُ»</span>
+                  <span>نص عرض توضيحي: «الفَلّاحُ وَالسّاقِيَةُ»</span>
                   <span className="font-mono tabular-nums text-emerald-800 font-semibold">
                     {activeSim.wpm} كلمة/د · تثبيت {activeNode.fixationMs}ms
                   </span>
@@ -653,7 +658,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                       ))}
                     </div>
                     <div className="text-xs">
-                      <span className="text-slate-500">نطق الطالب: </span>
+                      <span className="text-slate-500">مثال نطق: </span>
                       <strong className="text-slate-900">
                         «{activeNode.spoken}»
                       </strong>
@@ -679,7 +684,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-slate-500 font-medium">الطالب:</span>
-                  {students.slice(0, 3).map((stu) => {
+                  {students.filter((stu) => stu.isDemoRecord).slice(0, 3).map((stu) => {
                     const isSelected = stu.id === activeStudent.id;
                     return (
                       <button
@@ -1215,7 +1220,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {students.slice(0, 3).map((stu) => {
+                {students.filter((stu) => stu.isDemoRecord).slice(0, 3).map((stu) => {
                   const isCurrent = stu.id === activeStudent.id;
                   return (
                     <div
@@ -1325,7 +1330,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     type="text"
                     value={mockName}
                     onChange={(e) => setMockName(e.target.value)}
-                    placeholder="مثال: نواف عبد العزيز القحطاني"
+                    placeholder="اسم مستعار للتجربة"
+                    autoComplete="off"
+                    required
+                    maxLength={100}
                     className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#15803D]"
                   />
                 </div>
