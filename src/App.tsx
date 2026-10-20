@@ -19,6 +19,7 @@ import {
 import {
   authenticatedFetch,
   clearClinicalSession,
+  logoutClinicalSession,
   getStoredClinicalSession,
   loginClinicalSession,
   ClinicalSessionInfo,
@@ -105,16 +106,10 @@ export default function App() {
     authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (
-          !cancelled &&
-          data &&
-          Array.isArray(data.students) &&
-          data.students.length > 0
-        ) {
-          const normalized = data.students.map((s: StudentRecord) => ({
-            ...s,
-            name: (s.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim(),
-          }));
+        if (!cancelled && data && Array.isArray(data.students)) {
+          const normalized: StudentRecord[] = data.students.length > 0
+            ? data.students.map((s: StudentRecord) => ({ ...s }))
+            : INITIAL_STUDENTS;
           setStudents(normalized);
           setSelectedStudentId((prev) =>
             normalized.some((s: StudentRecord) => s.id === prev)
@@ -183,6 +178,58 @@ export default function App() {
     mathRiskLevel: record.mathRiskLevel,
   });
 
+  // Only screening/session fields are sent to the append-only session endpoint.
+  const sessionPayloadFromRecord = (record: StudentRecord) => ({
+    sessionRoleLabel: record.sessionRoleLabel,
+    passageId: record.passageId,
+    dialectRegionAr: record.dialectRegionAr,
+    wpm: record.wpm,
+    avgFixationMs: record.avgFixationMs,
+    regressionRate: record.regressionRate,
+    regressionCount: record.regressionCount,
+    blinkCount: record.blinkCount,
+    blinksPerMinute: record.blinksPerMinute,
+    visualStrainLevel: record.visualStrainLevel,
+    visualStrainLabelAr: record.visualStrainLabelAr,
+    gazeCoveragePercent: record.gazeCoveragePercent,
+    observedWordCount: record.observedWordCount,
+    totalPassageWordCount: record.totalPassageWordCount,
+    calibrationAccuracyPercent: record.calibrationAccuracyPercent,
+    calibrationValidationMethod: record.calibrationValidationMethod,
+    oralReadingAssessed: record.oralReadingAssessed,
+    spokenTranscript: record.spokenTranscript,
+    oralWcpm: record.oralWcpm,
+    oralAccuracyPercent: record.oralAccuracyPercent,
+    oralWerPercent: record.oralWerPercent,
+    phoneticSubstitutionCount: record.phoneticSubstitutionCount,
+    dialectVariantCount: record.dialectVariantCount,
+    omissionCount: record.omissionCount,
+    dyslexiaRiskScore: record.dyslexiaRiskScore,
+    readingHeuristicIndicator: record.readingHeuristicIndicator,
+    readingRiskLevel: record.readingRiskLevel,
+    readingRiskLabelAr: record.readingRiskLabelAr,
+    problematicWords: record.problematicWords,
+    fixations: record.fixations,
+    comprehensionScore: record.comprehensionScore,
+    dyscalculiaAssessed: record.dyscalculiaAssessed,
+    subitizingAccuracy: record.subitizingAccuracy,
+    avgSubitizingMs: record.avgSubitizingMs,
+    numberLinePAE: record.numberLinePAE,
+    transcodingAccuracy: record.transcodingAccuracy,
+    reversalErrorCount: record.reversalErrorCount,
+    dyscalculiaRiskScore: record.dyscalculiaRiskScore,
+    mathHeuristicIndicator: record.mathHeuristicIndicator,
+    mathRiskLevel: record.mathRiskLevel,
+    mathRiskLabelAr: record.mathRiskLabelAr,
+    clinicalReport: record.clinicalReport,
+    guardianConsentGiven: record.guardianConsentGiven === true,
+    guardianConsentRecordedAt: record.guardianConsentRecordedAt,
+    guardianConsentSource: record.guardianConsentSource,
+    guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
+    guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
+    speechRecognitionUsed: record.speechRecognitionUsed === true,
+  });
+
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
     const previous = students.find((student) => student.id === newRecord.id);
     const history = [...(previous?.assessmentHistory || [])];
@@ -225,19 +272,37 @@ export default function App() {
       setShowClinicalLogin(true);
       return;
     }
+    if (clinicalSession.role !== 'clinician') {
+      setAiStatusBanner('هذا الحساب للقراءة فقط؛ اكتملت النتيجة محليًا ولم تُحفظ في سجل المدرسة. استخدم رمز أخصائي مخوّل للحفظ.');
+      return;
+    }
     setAiStatusBanner(
       `تم إنهاء جلسة الفحص للطالب (${completedRecord.name}) محليًا؛ جارٍ محاولة حفظها في الخادم.`
     );
     try {
-      const response = await authenticatedFetch('/api/students', {
+      const sendSave = (url: string, body: unknown) => authenticatedFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...completedRecord,
-          guardianConsentGiven: completedRecord.guardianConsentGiven === true,
-        }),
+        body: JSON.stringify(body),
       });
+      const createPayload = {
+        ...completedRecord,
+        guardianConsentGiven: completedRecord.guardianConsentGiven === true,
+      };
+      let response = previous && !previous.isDemoRecord
+        ? await sendSave(`/api/students/${encodeURIComponent(completedRecord.id)}/sessions`, sessionPayloadFromRecord(completedRecord))
+        : await sendSave('/api/students', createPayload);
+      // A local, not-yet-persisted record has no server session route; only then attempt create.
+      if (response.status === 404 && previous && !previous.isDemoRecord) {
+        response = await sendSave('/api/students', createPayload);
+      }
       if (response.ok) {
+        const saved = await response.json().catch(() => ({}));
+        if (saved?.student) {
+          setStudents((prev) => prev.map((student) =>
+            student.id === saved.student.id && !student.isDemoRecord ? saved.student : student
+          ));
+        }
         setIsPersistedStoreLoaded(true);
         setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${completedRecord.name}) في التخزين المشفر.`);
       } else {
@@ -261,7 +326,11 @@ export default function App() {
     grade: number,
     roleLabel: string
   ) => {
-    const cleanName = name.trim().replace(/\\s+(بن|بنت)\\s+/g, ' ').trim();
+    if (clinicalSession?.role === 'educator_readonly') {
+      setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
+      return;
+    }
+    const cleanName = name.trim().replace(/\s+/g, ' ');
     if (!cleanName) {
       setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
       return;
@@ -358,9 +427,11 @@ export default function App() {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط؛ لا يمكن حفظ تحديثات سجل الطالب.'
+        : 'يلزم تسجيل الدخول قبل حفظ تحديثات سجل الطالب.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     try {
@@ -387,9 +458,11 @@ export default function App() {
   };
 
   const handleDeleteStudentRecord = async (studentId: string) => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط؛ لا يمكن حذف سجلات الطلاب.'
+        : 'يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     if (students.length <= 1) return;
@@ -418,9 +491,11 @@ export default function App() {
   };
 
   const handleRegenerateAIClinicalReport = async () => {
-    if (!clinicalSession) {
-      setAiStatusBanner('يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
-      setShowClinicalLogin(true);
+    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+      setAiStatusBanner(clinicalSession
+        ? 'رمزك للقراءة فقط ولا يتيح إنشاء تقارير على الخادم.'
+        : 'يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
+      if (!clinicalSession) setShowClinicalLogin(true);
       return;
     }
     if (
@@ -520,37 +595,53 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         let loadedStudents: StudentRecord[] = Array.isArray(data?.students)
-          ? data.students.map((student: StudentRecord) => ({
-              ...student,
-              name: (student.name || '').replace(/\s+(بن|بنت)\s+/g, ' ').trim(),
-            }))
+          ? data.students.map((student: StudentRecord) => ({ ...student }))
           : [];
 
         if (pendingServerRecord) {
-          const pendingSave = await authenticatedFetch('/api/students', {
+          const existingPending = loadedStudents.find((student) =>
+            student.id === pendingServerRecord.id && !student.isDemoRecord
+          );
+          const sessionPayload = sessionPayloadFromRecord(pendingServerRecord);
+          const sendSave = (url: string, body: unknown) => authenticatedFetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: JSON.stringify(body),
+          });
+          let pendingSave = existingPending
+            ? await sendSave(`/api/students/${encodeURIComponent(pendingServerRecord.id)}/sessions`, sessionPayload)
+            : await sendSave('/api/students', {
+                ...pendingServerRecord,
+                guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
+              });
+          if (pendingSave.status === 404 && existingPending) {
+            pendingSave = await sendSave('/api/students', {
               ...pendingServerRecord,
               guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
-            }),
-          });
+            });
+          }
           if (pendingSave.ok) {
+            const saved = await pendingSave.json().catch(() => ({}));
+            const savedRecord: StudentRecord = saved?.student || {
+              ...pendingServerRecord,
+              tenantId: session.tenantId,
+            };
             loadedStudents = [
-              pendingServerRecord,
-              ...loadedStudents.filter((student) => student.id !== pendingServerRecord.id),
+              savedRecord,
+              ...loadedStudents.filter((student) => student.id !== savedRecord.id),
             ];
             setPendingServerRecord(null);
-            setSelectedStudentId(pendingServerRecord.id);
-            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${pendingServerRecord.name} في التخزين المشفر.`);
+            setSelectedStudentId(savedRecord.id);
+            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${savedRecord.name} في التخزين المشفر.`);
           } else {
             const saveError = await pendingSave.json().catch(() => ({}));
             setAiStatusBanner(saveError?.error || 'تم تسجيل الدخول، لكن تعذر حفظ الجلسة المعلّقة.');
           }
         }
 
-        setStudents(loadedStudents);
-        if (loadedStudents.length > 0 && !pendingServerRecord) setSelectedStudentId(loadedStudents[0].id);
+        const visibleStudents = loadedStudents.length > 0 ? loadedStudents : INITIAL_STUDENTS;
+        setStudents(visibleStudents);
+        if (visibleStudents.length > 0 && !pendingServerRecord) setSelectedStudentId(visibleStudents[0].id);
         setIsPersistedStoreLoaded(true);
       } else {
         const data = await response.json().catch(() => ({}));
@@ -585,8 +676,8 @@ export default function App() {
             onSubmit={(event) => { event.preventDefault(); void handleClinicalLogin(); }}
             className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
           >
-            <h2 id="clinical-login-title" className="text-lg font-bold">تسجيل دخول الأخصائي</h2>
-            <p className="text-sm text-slate-600">أدخل رمز الوصول الذي أعدّه مسؤول النظام. لا يوجد رمز افتراضي داخل التطبيق.</p>
+            <h2 id="clinical-login-title" className="text-lg font-bold">تسجيل دخول المستخدم المخوّل</h2>
+            <p className="text-sm text-slate-600">أدخل رمز المدرسة والدور الذي سلّمه لك مسؤول النظام. تحدد صلاحية الرمز المدرسة والدور تلقائيًا؛ لا يمكن اختيار دور أعلى من صلاحيتك.</p>
             <label className="block space-y-1 text-sm font-medium">
               <span>رمز الوصول</span>
               <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setClinicalAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
@@ -673,7 +764,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            المنهجية والحدود
+            المختبر التقني
           </button>
           <button
             type="button"
@@ -702,9 +793,9 @@ export default function App() {
         </div>
       </header>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
-        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName}. تحقق من حالة كل عملية حفظ.` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${clinicalSession.tenantId}` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
         {clinicalSession ? (
-          <button type="button" onClick={() => { clearClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم تسجيل الخروج؛ ستبقى التغييرات محلية ما لم يُسجل الدخول.'); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
+          <button type="button" onClick={() => { void (async () => { await logoutClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم إبطال الجلسة على الخادم وتسجيل الخروج محليًا.'); })(); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
         ) : (
           <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول لحفظ السجلات</button>
         )}
@@ -718,7 +809,7 @@ export default function App() {
           { id: 'eye-lab', label: 'فحص القراءة والعين' },
           { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
-          { id: 'algorithms-lab', label: 'المنهجية والحدود' },
+          { id: 'algorithms-lab', label: 'المختبر التقني' },
           { id: 'privacy', label: 'الخصوصية' },
           { id: 'dashboard', label: 'التقرير والمؤشرات' },
         ].map((item) => (
@@ -838,7 +929,7 @@ export default function App() {
                       </span>
                     </span>
                     <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الفرز الاسترشادي ${selectedStudent.readingHeuristicIndicator}/100`}
+                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الأداء الاستدلالي ${selectedStudent.readingHeuristicIndicator}/100 (الأعلى = أداء أفضل)`}
                     </span>
                   </div>
                   <div className="text-xs text-slate-600 pt-1">
@@ -1039,7 +1130,7 @@ export default function App() {
                       : 'وضع الجلسة'}
                   </span>
                 </span>
-                {students.length > 1 && (
+                {students.length > 1 && clinicalSession?.role === 'clinician' && (
                   <button
                     type="button"
                     onClick={() =>
@@ -1370,7 +1461,7 @@ export default function App() {
                         fill="#475569"
                         textAnchor="middle"
                       >
-                        مؤشر الفرز القرائي للطالب →
+                        مؤشر الأداء الاستدلالي للقراءة → (الأعلى = أفضل)
                       </text>
 
                       {students.map((stu) => {
@@ -1440,10 +1531,10 @@ export default function App() {
                   <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
                     <span>انقر على أي نقطة لتحديد الطالب</span>
                     <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      مؤشر فرز {selectedStudent.readingHeuristicIndicator}/100 قراءة ·{' '}
+                      أداء قرائي استدلالي {selectedStudent.readingHeuristicIndicator}/100 ·{' '}
                       {selectedStudent.mathHeuristicIndicator !== null &&
                       selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `مؤشر فرز ${selectedStudent.mathHeuristicIndicator}/100 حساب`
+                        ? `أداء حسابي استدلالي ${selectedStudent.mathHeuristicIndicator}/100`
                         : 'الحساب غير مُقيَّم'}
                     </span>
                   </div>
@@ -1489,7 +1580,8 @@ export default function App() {
                     type="button"
                     onClick={async () => {
                       const shareText = [
-                        `تقرير فرز تربوي استرشادي — ${selectedStudent.name}`,
+                        'تقرير فرز تربوي استرشادي — ملخص مجهول الهوية',
+                        'اسم الطالب: محذوف للخصوصية',
                         `الصف: ${selectedStudent.gradeLevel}`,
                         `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
                         `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
@@ -1517,7 +1609,8 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    disabled={isGeneratingAI}
+                    disabled={isGeneratingAI || clinicalSession?.role !== 'clinician'}
+                    title={clinicalSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
                     onClick={handleRegenerateAIClinicalReport}
                     className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >

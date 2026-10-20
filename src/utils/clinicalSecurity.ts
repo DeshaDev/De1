@@ -12,6 +12,10 @@ export interface VerifiedClinicalSession {
   token: string;
   role: ClinicalRole;
   clinicianName: string;
+  /** Tenant identity is part of the signed token and cannot be supplied by the browser. */
+  tenantId: string;
+  /** Unique server-recognized session ID used for logout revocation. */
+  sessionId: string;
   scopes: ClinicalScope[];
   issuedAt: number;
   expiresAt: number;
@@ -38,20 +42,29 @@ export function issueClinicalSessionToken(
   role: ClinicalRole,
   clinicianName: string,
   secret: string,
-  ttlMs: number = 12 * 60 * 60 * 1000
+  ttlMs: number = 60 * 60 * 1000,
+  tenantId = 'default'
 ): VerifiedClinicalSession {
+  if (role !== 'clinician' && role !== 'educator_readonly') {
+    throw new Error('Invalid clinical role');
+  }
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(tenantId)) {
+    throw new Error('Invalid tenant ID');
+  }
+
   const issuedAt = Date.now();
   const expiresAt = issuedAt + ttlMs;
   const scopes = getScopesForRole(role);
-  const nonce = crypto.randomBytes(12).toString('hex');
+  const sessionId = crypto.randomBytes(16).toString('hex');
 
   const payloadObj = {
     role,
-    clinicianName: clinicianName.trim() || 'أخصائي التقييم المعتمد',
+    clinicianName: clinicianName.trim() || 'أخصائي التقييم',
+    tenantId,
+    sessionId,
     scopes,
     issuedAt,
     expiresAt,
-    nonce,
   };
 
   const payloadBase64 = Buffer.from(JSON.stringify(payloadObj), 'utf8').toString(
@@ -66,6 +79,8 @@ export function issueClinicalSessionToken(
     token: `${payloadBase64}.${signature}`,
     role,
     clinicianName: payloadObj.clinicianName,
+    tenantId,
+    sessionId,
     scopes,
     issuedAt,
     expiresAt,
@@ -104,13 +119,28 @@ export function verifyClinicalSessionToken(
     const parsed = JSON.parse(
       Buffer.from(payloadBase64, 'base64url').toString('utf8')
     );
-    if (!parsed || typeof parsed.expiresAt !== 'number') return null;
-    if (parsed.expiresAt <= nowMs) return null;
+    if (
+      !parsed ||
+      typeof parsed.expiresAt !== 'number' ||
+      parsed.expiresAt <= nowMs ||
+      (parsed.role !== 'clinician' && parsed.role !== 'educator_readonly') ||
+      typeof parsed.tenantId !== 'string' ||
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(parsed.tenantId) ||
+      typeof parsed.sessionId !== 'string' ||
+      !/^[a-f0-9]{32}$/.test(parsed.sessionId) ||
+      typeof parsed.issuedAt !== 'number' ||
+      !Array.isArray(parsed.scopes) ||
+      parsed.scopes.some((scope: unknown) => !ROLE_SCOPES[parsed.role as ClinicalRole].includes(scope as ClinicalScope))
+    ) return null;
+    // Re-derive scopes from the role rather than trusting mutable claims in a signed token.
+    const scopes = getScopesForRole(parsed.role as ClinicalRole);
     return {
       token: trimmed,
       role: parsed.role,
-      clinicianName: parsed.clinicianName,
-      scopes: Array.isArray(parsed.scopes) ? parsed.scopes : [],
+      clinicianName: typeof parsed.clinicianName === 'string' ? parsed.clinicianName : 'مستخدم',
+      tenantId: parsed.tenantId,
+      sessionId: parsed.sessionId,
+      scopes,
       issuedAt: parsed.issuedAt,
       expiresAt: parsed.expiresAt,
     };

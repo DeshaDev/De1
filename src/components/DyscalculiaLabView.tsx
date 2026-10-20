@@ -397,9 +397,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="text-xs text-slate-500 mb-1">
               فحص الحس العددي والترميز المكاني للأعداد
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 font-display">
+            <h1 className="text-2xl font-bold text-slate-900 font-display">
               مهام استكشافية للإدراك العددي
-            </h2>
+            </h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -1017,7 +1017,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
                 answeredNumberLineCount === 2 &&
                 answeredTranscodingCount === 3
-                  ? `مؤشر الفرز الاسترشادي ${computedMetrics.heuristicIndicator}/100`
+                  ? `مؤشر الأداء الاستدلالي ${computedMetrics.heuristicIndicator}/100 (الأعلى = أداء أفضل)`
                   : `${
                       answeredSubitizingCount +
                       answeredNumberLineCount +

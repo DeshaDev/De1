@@ -453,9 +453,9 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             <div className="text-xs text-slate-500 mb-1">
               مؤشرات استرشادية · محاذاة قراءة · نموذج IRT توضيحي غير معاير
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 font-display">
+            <h1 className="text-2xl font-bold text-slate-900 font-display">
               مختبر المؤشرات البصرية والصوتية
-            </h2>
+            </h1>
           </div>
 
           <button
