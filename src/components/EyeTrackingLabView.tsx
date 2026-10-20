@@ -326,6 +326,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [micVolume, setMicVolume] = useState<number>(0);
   const [spokenTranscript, setSpokenTranscript] = useState<string>('');
   const [speechRecognitionUsed, setSpeechRecognitionUsed] = useState<boolean>(false);
+  const [isTranscriptPreset, setIsTranscriptPreset] = useState<boolean>(false);
   const [speechRecStatus, setSpeechRecStatus] = useState<
     'idle' | 'listening' | 'unsupported' | 'error'
   >('idle');
@@ -1296,6 +1297,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
           transcript += event.results[i][0].transcript + ' ';
         }
         setSpokenTranscript(transcript.trim());
+        setIsTranscriptPreset(false);
         setSpeechRecStatus('listening');
       };
       rec.onerror = (event: any) => {
@@ -1820,7 +1822,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   );
 
   // Evaluate Oral Reading Alignment ONLY when a real spoken transcript exists (never fake 100% with passage slice)
-  const hasSpokenTranscript = spokenTranscript.trim().length > 0;
+  const hasSpokenTranscript = spokenTranscript.trim().length > 0 && !isTranscriptPreset;
   const activeOralWordsSlice = hasSpokenTranscript
     ? selectedPassage.words.slice(
         0,
@@ -3106,6 +3108,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     onClick={() => {
                       setSelectedDialect(preset.dialect);
                       setSpokenTranscript(preset.sample);
+                      setIsTranscriptPreset(true);
                     }}
                     className="px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-sky-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
                   >
@@ -3127,6 +3130,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
               <div className="lg:col-span-8">
+                {isTranscriptPreset && (
+                  <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs leading-relaxed text-amber-950">
+                    هذه عينة اصطناعية لاختبار محاذاة اللهجة وليست قراءة طالب. لن تُحسب أو تُحفظ بوصفها عينة فعلية ما لم تستبدلها بنص القراءة المرصود.
+                  </p>
+                )}
                 <label
                   htmlFor="manual-spoken-transcript-input"
                   className="sr-only"
@@ -3137,8 +3145,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   id="manual-spoken-transcript-input"
                   type="text"
                   value={spokenTranscript}
-                  onChange={(e) => setSpokenTranscript(e.target.value)}
-                  placeholder="النص المنطوق للطالب (يُحدَّث تلقائياً عبر الميكروفون أو يُكتب يدوياً هنا)..."
+                  onChange={(e) => {
+                    setSpokenTranscript(e.target.value);
+                    setIsTranscriptPreset(false);
+                  }}
+                  placeholder="اكتب ما قرأه الطالب فعلًا، أو استخدم التعرف الصوتي بموافقة ولي الأمر..."
                   className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-[#0284C7]"
                 />
               </div>
