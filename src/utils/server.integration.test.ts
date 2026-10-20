@@ -208,7 +208,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
       'X-Tenant-Id': 'school_beta',
       'X-Forwarded-For': '198.51.100.222',
     },
-    body: JSON.stringify(validStudent(studentId, { tenantId: 'school_beta' })),
+    body: JSON.stringify(validStudent(studentId)),
   });
   assert.equal(create.status, 201);
   const created = await create.json() as { student: Record<string, unknown> };
@@ -227,7 +227,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   const overwriteAttempt = await fetch(`${baseUrl}/api/students`, {
     method: 'POST',
     headers: authorizedHeaders(alpha.token),
-    body: JSON.stringify(validStudent(studentId, { name: 'اسم مهاجم', schoolName: 'مدرسة أخرى', tenantId: 'school_beta' })),
+    body: JSON.stringify(validStudent(studentId, { name: 'اسم مهاجم', schoolName: 'مدرسة أخرى' })),
   });
   assert.equal(overwriteAttempt.status, 409);
   const alphaListResponse = await fetch(`${baseUrl}/api/students`, {
@@ -355,6 +355,13 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   assert.equal(typeof followupBody.student.dyslexiaRiskScore, 'number');
   assert.ok(Array.isArray(followupBody.student.assessmentHistory));
   assert.equal((followupBody.student.assessmentHistory as unknown[]).length, 1);
+
+  const forgedFollowup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ ...validReadingEvidence(), dyslexiaRiskScore: 0, readingRiskLevel: 'nominal' }),
+  });
+  assert.equal(forgedFollowup.status, 400);
 
   const auditResponse = await fetch(`${baseUrl}/api/audit-events?limit=200`, {
     headers: authorizedHeaders(alpha.token),
