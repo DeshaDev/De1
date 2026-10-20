@@ -179,15 +179,15 @@ export default function App() {
   });
 
   // Only screening/session fields are sent to the append-only session endpoint.
+  // Send raw, allow-listed evidence only. The server calculates reading scores and labels.
   const sessionPayloadFromRecord = (record: StudentRecord) => ({
-    sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
     dialectRegionAr: record.dialectRegionAr,
     dialectCode: record.dialectCode || 'msa',
     readingDurationSeconds: record.readingDurationSeconds,
     blinkCount: record.blinkCount,
     fixations: record.fixations,
-    comprehensionScore: record.comprehensionScore,
+    comprehensionAnswers: record.comprehensionAnswers,
     spokenTranscript: record.spokenTranscript || '',
     guardianConsentGiven: record.guardianConsentGiven === true,
     guardianConsentRecordedAt: record.guardianConsentRecordedAt,
@@ -195,6 +195,20 @@ export default function App() {
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
     guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
     speechRecognitionUsed: record.speechRecognitionUsed === true,
+    calibrationAccuracyPercent: record.calibrationAccuracyPercent,
+    calibrationValidationMethod:
+      record.calibrationValidationMethod?.includes('Independent Holdout')
+        ? 'independent-holdout'
+        : 'leave-one-point-out',
+  });
+
+  const createPayloadFromRecord = (record: StudentRecord) => ({
+    id: record.id,
+    name: record.name,
+    schoolName: record.schoolName || 'لم تُحدّد المدرسة',
+    gradeLevel: record.gradeLevel,
+    ageYears: record.ageYears,
+    ...sessionPayloadFromRecord(record),
   });
 
   const handleCompleteNewSession = async (newRecord: StudentRecord) => {
@@ -252,10 +266,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const createPayload = {
-        ...completedRecord,
-        guardianConsentGiven: completedRecord.guardianConsentGiven === true,
-      };
+      const createPayload = createPayloadFromRecord(completedRecord);
       let response = previous && !previous.isDemoRecord
         ? await sendSave(`/api/students/${encodeURIComponent(completedRecord.id)}/sessions`, sessionPayloadFromRecord(completedRecord))
         : await sendSave('/api/students', createPayload);
@@ -577,15 +588,9 @@ export default function App() {
           });
           let pendingSave = existingPending
             ? await sendSave(`/api/students/${encodeURIComponent(pendingServerRecord.id)}/sessions`, sessionPayload)
-            : await sendSave('/api/students', {
-                ...pendingServerRecord,
-                guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
-              });
+            : await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
           if (pendingSave.status === 404 && existingPending) {
-            pendingSave = await sendSave('/api/students', {
-              ...pendingServerRecord,
-              guardianConsentGiven: pendingServerRecord.guardianConsentGiven === true,
-            });
+            pendingSave = await sendSave('/api/students', createPayloadFromRecord(pendingServerRecord));
           }
           if (pendingSave.ok) {
             const saved = await pendingSave.json().catch(() => ({}));
