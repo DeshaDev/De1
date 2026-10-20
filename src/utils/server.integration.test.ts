@@ -201,6 +201,17 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   assert.equal(noConsent.status, 400);
 
   const studentId = 'integration-alpha-student';
+  const forgedCreate = await fetch(`${baseUrl}/api/students`, {
+    method: 'POST',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify(validStudent('integration-forged-create', {
+      tenantId: 'school_beta',
+      dyslexiaRiskScore: 1,
+      readingRiskLevel: 'nominal',
+    })),
+  });
+  assert.equal(forgedCreate.status, 400);
+
   const create = await fetch(`${baseUrl}/api/students`, {
     method: 'POST',
     headers: {
@@ -368,7 +379,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   });
   assert.equal(auditResponse.status, 200);
   const auditBody = await auditResponse.json() as { events: Array<Record<string, unknown>> };
-  assert.ok(auditBody.events.some((event) => event.action === 'student.create' && event.subjectId === studentId));
+  assert.ok(auditBody.events.some((event) => event.action === 'student.create' && event.subjectId === studentId && event.actorLabel === 'اختبار تكامل'));
   assert.ok(auditBody.events.some((event) => event.action === 'student.math-assessment' && event.subjectId === studentId));
   assert.ok(auditBody.events.some((event) => event.action === 'student.session.complete' && event.subjectId === studentId));
   assert.ok(auditBody.events.every((event) => event.tenantId === 'school_alpha'));
