@@ -1737,7 +1737,7 @@ export default function App() {
             <span aria-hidden="true">·</span>
             <button
               type="button"
-              onClick={() => setActiveTab('dashboard')
+              onClick={() => setActiveTab('dashboard')}
               className="hover:text-slate-900 cursor-pointer"
             >
               التقرير النهائي والنتائج
