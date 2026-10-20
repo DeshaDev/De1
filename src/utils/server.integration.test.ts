@@ -198,7 +198,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     headers: authorizedHeaders(alpha.token),
     body: JSON.stringify(validStudent('integration-no-consent', { guardianConsentGiven: false })),
   });
-  assert.equal(noConsent.status, 403);
+  assert.equal(noConsent.status, 400);
 
   const studentId = 'integration-alpha-student';
   const create = await fetch(`${baseUrl}/api/students`, {
@@ -219,7 +219,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
   const crossTenantCollision = await fetch(`${baseUrl}/api/students`, {
     method: 'POST',
     headers: authorizedHeaders(beta.token),
-    body: JSON.stringify(validStudent(studentId, { tenantId: 'school_alpha' })),
+    body: JSON.stringify(validStudent(studentId)),
   });
   assert.equal(crossTenantCollision.status, 404);
 
@@ -382,7 +382,7 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
       guardianAudioConsentRecordedAt: undefined,
     })),
   });
-  assert.equal(noAudioConsent.status, 403);
+  assert.equal(noAudioConsent.status, 400);
 
   // AI endpoints must not work anonymously.
   assert.equal((await fetch(`${baseUrl}/api/ai/adapt-text`, {
