@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, ShieldCheck, Mic, Camera, Trash2 } from 'lucide-react';
+import { ShieldCheck, Mic, Camera, Trash2 } from 'lucide-react';
 
 interface PrivacyPolicyViewProps {}
 
