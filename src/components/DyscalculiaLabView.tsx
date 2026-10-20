@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Calculator,
   CheckCircle2,
@@ -38,45 +38,34 @@ const SUBITIZING_PATTERNS: {
 }[] = [
   {
     id: 1,
-    targetCount: 5,
-    dots: [
-      { cx: 70, cy: 50 },
-      { cx: 170, cy: 55 },
-      { cx: 120, cy: 95 },
-      { cx: 65, cy: 140 },
-      { cx: 175, cy: 138 },
-    ],
-    options: [4, 5, 6, 7],
+    targetCount: 1,
+    dots: [{ cx: 120, cy: 90 }],
+    options: [1, 2, 3, 4],
   },
   {
     id: 2,
-    targetCount: 6,
-    dots: [
-      { cx: 60, cy: 55 },
-      { cx: 120, cy: 48 },
-      { cx: 185, cy: 62 },
-      { cx: 75, cy: 135 },
-      { cx: 135, cy: 142 },
-      { cx: 190, cy: 130 },
-    ],
-    options: [5, 6, 7, 8],
+    targetCount: 2,
+    dots: [{ cx: 82, cy: 65 }, { cx: 158, cy: 115 }],
+    options: [1, 2, 3, 4],
   },
   {
     id: 3,
-    targetCount: 7,
+    targetCount: 3,
+    dots: [{ cx: 120, cy: 48 }, { cx: 72, cy: 130 }, { cx: 168, cy: 130 }],
+    options: [1, 2, 3, 4],
+  },
+  {
+    id: 4,
+    targetCount: 4,
     dots: [
-      { cx: 55, cy: 45 },
-      { cx: 115, cy: 42 },
-      { cx: 180, cy: 50 },
-      { cx: 90, cy: 95 },
-      { cx: 155, cy: 98 },
-      { cx: 65, cy: 145 },
-      { cx: 140, cy: 148 },
+      { cx: 75, cy: 55 },
+      { cx: 165, cy: 55 },
+      { cx: 75, cy: 130 },
+      { cx: 165, cy: 130 },
     ],
-    options: [5, 6, 7, 9],
+    options: [1, 2, 3, 4],
   },
 ];
-
 const TRANSCODING_ITEMS: {
   id: number;
   spokenText: string;
@@ -136,11 +125,16 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [subitizingSelections, setSubitizingSelections] = useState<
     Record<number, { chosen: number; rtMs: number }>
   >({});
-  const trialStartTimestampRef = useRef<Record<number, number>>({
-    1: performance.now(),
-    2: performance.now(),
-    3: performance.now(),
-  });
+  const trialStartTimestampRef = useRef<Record<number, number>>({});
+  const [visibleSubitizingIds, setVisibleSubitizingIds] = useState<Record<number, boolean>>({});
+  const [readySubitizingIds, setReadySubitizingIds] = useState<Record<number, boolean>>({});
+  const subitizingTimersRef = useRef<Record<number, number>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
 
   // 2. Spatial Number Line state
   const [estimate37Draft, setEstimate37Draft] = useState<number>(50);
@@ -168,8 +162,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [validationError, setValidationError] = useState<string>('');
 
   const handleSelectSubitizing = (patternId: number, chosenCount: number) => {
-    const startTs =
-      trialStartTimestampRef.current[patternId] || performance.now() - 950;
+    if (!readySubitizingIds[patternId] || visibleSubitizingIds[patternId]) return;
+    const startTs = trialStartTimestampRef.current[patternId] || performance.now();
     const elapsed = Math.max(
       220,
       Math.min(4500, Math.round(performance.now() - startTs))
@@ -183,12 +177,22 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   };
 
   const handleRestartSubitizingTimer = (patternId: number) => {
-    trialStartTimestampRef.current[patternId] = performance.now();
+    const existingTimer = subitizingTimersRef.current[patternId];
+    if (existingTimer) window.clearTimeout(existingTimer);
     setSubitizingSelections((prev) => {
       const copy = { ...prev };
       delete copy[patternId];
       return copy;
     });
+    setReadySubitizingIds((prev) => ({ ...prev, [patternId]: false }));
+    setVisibleSubitizingIds((prev) => ({ ...prev, [patternId]: true }));
+    // Reaction time starts only after the 800 ms exposure ends.
+    subitizingTimersRef.current[patternId] = window.setTimeout(() => {
+      setVisibleSubitizingIds((prev) => ({ ...prev, [patternId]: false }));
+      setReadySubitizingIds((prev) => ({ ...prev, [patternId]: true }));
+      trialStartTimestampRef.current[patternId] = performance.now();
+      delete subitizingTimersRef.current[patternId];
+    }, 800);
   };
 
   const handleRecordNumberLineEstimate = (
@@ -527,7 +531,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   </p>
                 </div>
                 <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7]">
-                  المكتمل: {answeredSubitizingCount}/3
+                  المكتمل: {answeredSubitizingCount}/{SUBITIZING_PATTERNS.length}
                 </span>
               </div>
 
@@ -560,13 +564,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         ) : (
                           <button
                             type="button"
-                            onClick={() =>
-                              handleRestartSubitizingTimer(pattern.id)
-                            }
-                            className="text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer"
+                            onClick={() => handleRestartSubitizingTimer(pattern.id)}
+                            className="min-h-11 text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Timer className="w-3 h-3" />
-                            <span>جاهز</span>
+                            <span>عرض النقاط (0.8 ثانية)</span>
                           </button>
                         )}
                       </div>
@@ -577,7 +579,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         role="img"
                         aria-label={`مصفوفة نقاط للاختبار رقم ${pattern.id}`}
                       >
-                        {pattern.dots.map((d, dIdx) => (
+                        {visibleSubitizingIds[pattern.id] && pattern.dots.map((d, dIdx) => (
                           <circle
                             key={dIdx}
                             cx={d.cx}
@@ -588,16 +590,24 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         ))}
                       </svg>
 
+                      <div className="min-h-6 text-center text-xs text-slate-500" aria-live="polite">
+                        {visibleSubitizingIds[pattern.id]
+                          ? 'احفظ عدد النقاط — ستختفي الآن'
+                          : readySubitizingIds[pattern.id] && !isAnswered
+                            ? 'كم نقطة رأيت؟ اختر إجابتك.'
+                            : isAnswered
+                              ? 'أُسجلت الإجابة لهذا العرض.'
+                              : 'اضغط «عرض النقاط» لبدء المحاولة.'}
+                      </div>
                       <div className="grid grid-cols-4 gap-2">
                         {pattern.options.map((opt) => (
                           <button
                             key={opt}
                             type="button"
-                            onClick={() =>
-                              handleSelectSubitizing(pattern.id, opt)
-                            }
+                            disabled={!readySubitizingIds[pattern.id] || visibleSubitizingIds[pattern.id] || isAnswered}
+                            onClick={() => handleSelectSubitizing(pattern.id, opt)}
                             aria-label={`اختيار العدد ${opt} للمصفوفة ${pattern.id}`}
-                            className={`py-2.5 text-sm font-mono tabular-nums font-semibold rounded-lg border transition-colors cursor-pointer ${
+                            className={`min-h-11 py-2.5 text-sm font-mono tabular-nums font-semibold rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                               isAnswered && sel.chosen === opt
                                 ? isCorrect
                                   ? 'bg-[#059669] text-white border-[#059669]'
