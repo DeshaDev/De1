@@ -80,6 +80,8 @@ export interface StudentRecord {
   dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
   /** Elapsed screen-reading duration in seconds; sent as evidence for server-side scoring. */
   readingDurationSeconds?: number;
+  /** Raw answer indices for server-side comprehension scoring. */
+  comprehensionAnswers?: number[];
   guardianConsentGiven?: boolean;
   guardianConsentRecordedAt?: string;
   guardianConsentSource?: string;
