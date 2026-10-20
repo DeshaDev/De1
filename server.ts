@@ -8,11 +8,14 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { z } from 'zod';
 import {
   calculateDyscalculiaMetrics,
+  calculateEyeTrackingMetrics,
+  WordFixation,
   SubitizingTrialResult,
   NumberLineTrialResult,
   TranscodingTrialResult,
 } from './src/utils/clinicalMetrics';
-import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { evaluateOralReadingAlignment } from './src/utils/dyslexiaEngines';
 import {
   ClinicalRole,
   ClinicalScope,
@@ -421,6 +424,178 @@ const mathAssessmentSchema = z.object({
     }
   }
 });
+
+const arabicDialectSchema = z.enum(['msa', 'gulf', 'egyptian', 'levantine', 'maghrebi']);
+
+const wordFixationEvidenceSchema = z.object({
+  wordIndex: z.number().int().min(0).max(1000),
+  word: z.string().min(1).max(100),
+  durationMs: z.number().int().min(0).max(120_000),
+  visits: z.number().int().min(0).max(1000),
+  regressedFromIndex: z.number().int().min(0).max(1000).optional(),
+  blinks: z.number().int().min(0).max(10_000).optional(),
+  observed: z.boolean().optional(),
+}).strict();
+
+const readingEvidenceShape = {
+  passageId: z.string().trim().min(1).max(120),
+  dialectCode: arabicDialectSchema.default('msa'),
+  dialectRegionAr: z.string().trim().min(1).max(100).optional(),
+  readingDurationSeconds: z.number().finite().min(4).max(3600),
+  blinkCount: z.number().int().min(0).max(10_000),
+  fixations: z.array(wordFixationEvidenceSchema).min(1).max(1000),
+  comprehensionAnswers: z.array(z.number().int().min(0).max(20)).min(1).max(20),
+  spokenTranscript: z.string().max(20_000).optional().default(''),
+  speechRecognitionUsed: z.boolean().optional().default(false),
+  guardianConsentGiven: z.literal(true),
+  guardianConsentRecordedAt: z.string().refine((value) => Number.isFinite(Date.parse(value)), {
+    message: 'Invalid consent timestamp',
+  }),
+  guardianConsentSource: z.string().trim().min(1).max(300),
+  guardianAudioConsentGiven: z.boolean().optional().default(false),
+  guardianAudioConsentRecordedAt: z.string().optional().refine(
+    (value) => value === undefined || Number.isFinite(Date.parse(value)),
+    { message: 'Invalid audio-consent timestamp' }
+  ),
+  calibrationAccuracyPercent: z.number().int().min(0).max(99),
+  calibrationValidationMethod: z.enum(['independent-holdout', 'leave-one-point-out']),
+};
+
+const readingSessionEvidenceSchema = z.object(readingEvidenceShape).strict().superRefine((value, ctx) => {
+  if (value.speechRecognitionUsed && (
+    !value.guardianAudioConsentGiven ||
+    !value.guardianAudioConsentRecordedAt
+  )) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['guardianAudioConsentGiven'],
+      message: 'Explicit timestamped audio consent is required.',
+    });
+  }
+});
+
+const studentCreateEvidenceSchema = z.object({
+  id: z.string().regex(/^[a-zA-Z0-9._:-]{1,120}$/),
+  name: z.string().trim().min(1).max(120),
+  schoolName: z.string().trim().min(1).max(160),
+  gradeLevel: z.number().int().min(1).max(12),
+  ageYears: z.number().int().min(4).max(21),
+  ...readingEvidenceShape,
+}).strict().superRefine((value, ctx) => {
+  if (value.speechRecognitionUsed && (
+    !value.guardianAudioConsentGiven ||
+    !value.guardianAudioConsentRecordedAt
+  )) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['guardianAudioConsentGiven'],
+      message: 'Explicit timestamped audio consent is required.',
+    });
+  }
+});
+
+type ReadingEvidence = z.infer<typeof readingSessionEvidenceSchema>;
+
+function deriveServerReadingMetrics(
+  evidence: ReadingEvidence,
+  gradeLevel: number
+): { metrics: ReturnType<typeof calculateEyeTrackingMetrics>; comprehensionScore: number; clinicalReport: StudentRecord['clinicalReport']; oral: ReturnType<typeof evaluateOralReadingAlignment> | null; passageWords: string[] } | { error: string; statusCode: 400 | 422 } {
+  const passage = ARABIC_READING_PASSAGES.find((item) => item.id === evidence.passageId);
+  if (!passage) return { error: 'نص القراءة غير معروف؛ أُرفضت أدلة الجلسة.', statusCode: 400 };
+  if (evidence.fixations.length !== passage.words.length) {
+    return { error: 'عدد سجلات الكلمات لا يطابق نص القراءة المحدد.', statusCode: 400 };
+  }
+  for (let index = 0; index < passage.words.length; index += 1) {
+    const fixation = evidence.fixations[index];
+    if (
+      fixation.wordIndex !== index ||
+      fixation.word !== passage.words[index] ||
+      fixation.visits === 0 && fixation.durationMs > 0
+    ) {
+      return { error: 'تسلسل كلمات التثبيت لا يطابق النص؛ رُفضت البيانات المعدلة.', statusCode: 400 };
+    }
+  }
+  for (const fixation of evidence.fixations) {
+    if (
+      typeof fixation.regressedFromIndex === 'number' &&
+      fixation.regressedFromIndex >= passage.words.length
+    ) {
+      return { error: 'مؤشر حركة العين خارج حدود النص.', statusCode: 400 };
+    }
+  }
+  if (evidence.comprehensionAnswers.length !== passage.comprehensionQuestions.length) {
+    return { error: 'عدد إجابات الفهم لا يطابق أسئلة النص.', statusCode: 400 };
+  }
+  for (let index = 0; index < evidence.comprehensionAnswers.length; index += 1) {
+    const answer = evidence.comprehensionAnswers[index];
+    if (answer >= passage.comprehensionQuestions[index].options.length) {
+      return { error: 'إجابة فهم خارج خيارات السؤال.', statusCode: 400 };
+    }
+  }
+
+  const spokenTranscript = evidence.spokenTranscript.trim();
+  const oral = spokenTranscript
+    ? evaluateOralReadingAlignment(
+        passage.words,
+        spokenTranscript,
+        evidence.readingDurationSeconds,
+        0,
+        evidence.dialectCode
+      )
+    : null;
+  const oralInput = oral ? {
+    assessed: true,
+    wcpm: oral.wcpm,
+    accuracyPercent: oral.accuracyPercent,
+    werPercent: oral.werPercent,
+    phoneticSubstitutionCount: oral.phoneticSubstitutionCount,
+    dialectVariantCount: oral.dialectVariantCount,
+    omissionCount: oral.omittedWordsCount,
+    misreadWords: oral.alignment
+      .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+      .map((item) => item.spokenWord ? `${item.targetWord} (نُطقت: ${item.spokenWord})` : item.targetWord),
+  } : null;
+
+  const fixations = evidence.fixations as WordFixation[];
+  const metrics = calculateEyeTrackingMetrics(
+    fixations,
+    evidence.readingDurationSeconds,
+    gradeLevel,
+    evidence.blinkCount,
+    passage.words.length,
+    oralInput
+  );
+  if (
+    metrics.observedWordCount < 4 ||
+    metrics.gazeCoveragePercent < 25 ||
+    !metrics.isSufficientGazeData
+  ) {
+    return {
+      error: 'بيانات النظر غير كافية لإصدار نتيجة محفوظة؛ يلزم رصد 4 كلمات وتغطية 25% على الأقل.',
+      statusCode: 422,
+    };
+  }
+  const comprehensionCorrect = evidence.comprehensionAnswers.filter(
+    (answer, index) => answer === passage.comprehensionQuestions[index].correctIndex
+  ).length;
+  const comprehensionScore = Math.round(
+    (comprehensionCorrect / passage.comprehensionQuestions.length) * 100
+  );
+  const oralSummary = oral
+    ? ` وُزنت المطابقة الصوتية للخادم: ${oral.accuracyPercent}%، ومعدل خطأ الكلمات ${oral.werPercent}%.`
+    : ' لم يُرسل نص قراءة منطوقة لهذه الجلسة.';
+  const clinicalReport: StudentRecord['clinicalReport'] = {
+    clinicalSummary: `نتيجة فرز استرشادي محسوبة على الخادم: ${metrics.observedWordCount}/${metrics.totalPassageWordCount} كلمة مرصودة، وطلاقة ${metrics.wpm} كلمة/دقيقة، ومؤشر خطورة استدلالي ${metrics.dyslexiaRiskScore}/100.${oralSummary} لا تمثل النتيجة تشخيصًا طبيًا أو معيارًا معياريًا.`,
+    ocularMotorAnalysis: `متوسط التثبيت ${metrics.avgFixationMs} مللي ثانية، والتغطية المرصودة ${metrics.gazeCoveragePercent}%. مؤشرات وصفية من جلسة واحدة وليست تشخيصًا.`,
+    orthographicAndPhonologicalPatterns: metrics.problematicWords.length
+      ? `كلمات تستحق المراجعة في هذه الجلسة: ${metrics.problematicWords.join('، ')}.`
+      : 'لم تُحدد كلمات بارزة وفق قواعد الفرز الحالية.',
+    dyscalculiaSpatialAnalysis: 'لم يجر اختبار الحساب ضمن جلسة القراءة هذه.',
+    interventionExercises: [],
+    classroomAccommodations: [],
+  };
+  return { metrics, comprehensionScore, clinicalReport, oral, passageWords: passage.words };
+}
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
   // Migrate records written by older builds, where heuristic indices were mislabeled as percentiles.
