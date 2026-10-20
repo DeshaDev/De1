@@ -400,8 +400,12 @@ export default function App() {
       setShowClinicalLogin(true);
       return;
     }
-    if (selectedStudent.guardianConsentGiven !== true) {
-      setAiStatusBanner('لا يمكن إنشاء التقرير قبل تسجيل موافقة صريحة من ولي الأمر.');
+    if (
+      selectedStudent.guardianConsentGiven !== true ||
+      !selectedStudent.guardianConsentRecordedAt ||
+      !selectedStudent.guardianConsentSource
+    ) {
+      setAiStatusBanner('لا يمكن إنشاء التقرير قبل وجود موافقة صريحة مسجلة بوقت ومصدر. أعد أخذ الموافقة داخل جلسة جديدة.');
       return;
     }
     setIsGeneratingAI(true);
@@ -413,6 +417,11 @@ export default function App() {
         body: JSON.stringify({
           studentName: selectedStudent.name,
           guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
+          guardianConsentRecordedAt: selectedStudent.guardianConsentRecordedAt,
+          guardianConsentSource: selectedStudent.guardianConsentSource,
+          guardianAudioConsentGiven: selectedStudent.guardianAudioConsentGiven === true,
+          guardianAudioConsentRecordedAt: selectedStudent.guardianAudioConsentRecordedAt,
+          speechRecognitionUsed: selectedStudent.speechRecognitionUsed === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           avgFixationMs: selectedStudent.avgFixationMs,
@@ -1457,7 +1466,7 @@ export default function App() {
                         `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
                         `الكلمات المستهدفة للتدريب: ${(selectedStudent.problematicWords || []).join('، ') || 'لم تُحدد بعد'}`,
                         'هذا التقرير استرشادي وغير تشخيصي.',
-                      ].join('\\n');
+                      ].join('\n');
                       try {
                         if (navigator.share) {
                           await navigator.share({ title: 'تقرير بصيرة الاسترشادي', text: shareText });
