@@ -1095,64 +1095,27 @@ async function startServer() {
         res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
         return;
       }
-      const incoming = req.body as Record<string, unknown> | null;
-      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
-        res.status(400).json({ error: 'بيانات جلسة المتابعة غير صالحة.' });
-        return;
-      }
-
-      const sessionFields = new Set([
-        'sessionRoleLabel', 'passageId', 'dialectRegionAr',
-        'wpm', 'avgFixationMs', 'regressionRate', 'regressionCount',
-        'blinkCount', 'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
-        'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
-        'calibrationAccuracyPercent', 'calibrationValidationMethod',
-        'oralReadingAssessed', 'spokenTranscript', 'oralWcpm', 'oralAccuracyPercent',
-        'oralWerPercent', 'phoneticSubstitutionCount', 'dialectVariantCount', 'omissionCount',
-        'dyslexiaRiskScore', 'readingHeuristicIndicator', 'readingRiskLevel', 'readingRiskLabelAr',
-        'problematicWords', 'fixations', 'comprehensionScore',
-        'dyscalculiaAssessed', 'subitizingAccuracy', 'avgSubitizingMs', 'numberLinePAE',
-        'transcodingAccuracy', 'reversalErrorCount', 'dyscalculiaRiskScore',
-        'mathHeuristicIndicator', 'mathRiskLevel', 'mathRiskLabelAr', 'clinicalReport',
-        'guardianConsentGiven', 'guardianConsentRecordedAt', 'guardianConsentSource',
-        'guardianAudioConsentGiven', 'guardianAudioConsentRecordedAt', 'speechRecognitionUsed',
-      ]);
-      const forbidden = Object.keys(incoming).filter((key) => !sessionFields.has(key));
-      if (forbidden.length > 0) {
+      const parsed = readingSessionEvidenceSchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
-          error: 'ترسل جلسة المتابعة حقولاً غير مسموح بها؛ هوية الطالب والمدرسة والتاريخ يديرها الخادم.',
-          rejectedFields: forbidden,
+          error: 'بيانات جلسة المتابعة أو أدلة القراءة غير صالحة. لا تقبل نقاط الخطر المرسلة من العميل.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
         });
         return;
       }
-
-      const consentCheck = validateExplicitGuardianConsent(incoming.guardianConsentGiven);
-      const consentTimeValid = typeof incoming.guardianConsentRecordedAt === 'string' &&
-        Number.isFinite(Date.parse(incoming.guardianConsentRecordedAt));
-      const consentSourceValid = typeof incoming.guardianConsentSource === 'string' &&
-        incoming.guardianConsentSource.trim().length > 0;
-      if (!consentCheck.valid || !consentTimeValid || !consentSourceValid) {
-        res.status(403).json({
-          error: consentCheck.valid
-            ? 'يلزم تسجيل موافقة جديدة بوقت ومصدر قبل حفظ جلسة المتابعة.'
-            : consentCheck.errorAr,
-        });
-        return;
-      }
-      if (incoming.speechRecognitionUsed === true && (
-        incoming.guardianAudioConsentGiven !== true ||
-        typeof incoming.guardianAudioConsentRecordedAt !== 'string' ||
-        !Number.isFinite(Date.parse(incoming.guardianAudioConsentRecordedAt))
-      )) {
-        res.status(403).json({ error: 'استخدام التعرف الصوتي يتطلب موافقة صوتية منفصلة بوقت صالح.' });
-        return;
-      }
-
+      const incoming = parsed.data;
       const current = studentsDb[idx];
-      const nowIso = new Date().toISOString();
+      const derived = deriveServerReadingMetrics(incoming, current.gradeLevel);
+      if ('error' in derived) {
+        res.status(derived.statusCode).json({ error: derived.error });
+        return;
+      }
+      const { metrics, comprehensionScore, clinicalReport, oral } = derived;
+      const now = new Date();
+      const nowIso = now.toISOString();
       const previousSnapshot = current.sessionStatus === 'completed'
         ? {
-            sessionId: current.id,
+            sessionId: `${current.id}-${current.sessionCompletedAt || current.lastScreenedDate || nowIso}`,
             completedAt: current.sessionCompletedAt || current.lastScreenedDate || nowIso,
             passageId: current.passageId,
             wpm: current.wpm,
@@ -1170,12 +1133,8 @@ async function startServer() {
             mathRiskLevel: current.mathRiskLevel,
           }
         : null;
-      const updates = Object.fromEntries(
-        Object.entries(incoming).filter(([key]) => sessionFields.has(key))
-      ) as Partial<StudentRecord>;
       const updatedRecord: StudentRecord = {
         ...current,
-        ...updates,
         id: current.id,
         name: current.name,
         schoolName: current.schoolName,
@@ -1183,10 +1142,49 @@ async function startServer() {
         isDemoRecord: false,
         sessionStatus: 'completed',
         sessionCompletedAt: nowIso,
-        lastScreenedDate: new Date().toLocaleString('ar-EG', {
+        lastScreenedDate: now.toLocaleString('ar-EG', {
           year: 'numeric', month: '2-digit', day: '2-digit',
           hour: '2-digit', minute: '2-digit',
         }),
+        passageId: incoming.passageId,
+        dialectCode: incoming.dialectCode,
+        dialectRegionAr: incoming.dialectRegionAr || incoming.dialectCode,
+        readingDurationSeconds: incoming.readingDurationSeconds,
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: incoming.guardianConsentRecordedAt,
+        guardianConsentSource: incoming.guardianConsentSource,
+        guardianAudioConsentGiven: incoming.guardianAudioConsentGiven,
+        guardianAudioConsentRecordedAt: incoming.guardianAudioConsentRecordedAt,
+        speechRecognitionUsed: incoming.speechRecognitionUsed,
+        spokenTranscript: incoming.spokenTranscript,
+        blinkCount: metrics.blinkCount,
+        blinksPerMinute: metrics.blinksPerMinute,
+        visualStrainLevel: metrics.visualStrainLevel,
+        visualStrainLabelAr: metrics.visualStrainLabelAr,
+        wpm: metrics.wpm,
+        avgFixationMs: metrics.avgFixationMs,
+        regressionRate: metrics.regressionRate,
+        regressionCount: metrics.regressionCount,
+        gazeCoveragePercent: metrics.gazeCoveragePercent,
+        observedWordCount: metrics.observedWordCount,
+        totalPassageWordCount: metrics.totalPassageWordCount,
+        calibrationAccuracyPercent: incoming.calibrationAccuracyPercent,
+        calibrationValidationMethod: incoming.calibrationValidationMethod,
+        oralReadingAssessed: Boolean(oral),
+        oralWcpm: oral?.wcpm ?? null,
+        oralAccuracyPercent: oral?.accuracyPercent ?? null,
+        oralWerPercent: oral?.werPercent ?? null,
+        phoneticSubstitutionCount: oral?.phoneticSubstitutionCount ?? 0,
+        dialectVariantCount: oral?.dialectVariantCount ?? 0,
+        omissionCount: oral?.omittedWordsCount ?? 0,
+        dyslexiaRiskScore: metrics.dyslexiaRiskScore,
+        readingHeuristicIndicator: metrics.heuristicIndicator,
+        readingRiskLevel: metrics.riskLevel,
+        readingRiskLabelAr: metrics.riskLabelAr,
+        problematicWords: metrics.problematicWords,
+        fixations: incoming.fixations as WordFixation[],
+        comprehensionScore,
+        clinicalReport,
         assessmentHistory: previousSnapshot
           ? [...(current.assessmentHistory || []), previousSnapshot]
           : [...(current.assessmentHistory || [])],
@@ -1197,7 +1195,10 @@ async function startServer() {
         res.status(503).json({ error: 'تعذر حفظ جلسة المتابعة في التخزين المشفر.' });
         return;
       }
-      if (!auditForRequest(req, 'student.session.complete', updatedRecord.id, Object.keys(updates))) {
+      if (!auditForRequest(req, 'student.session.complete', updatedRecord.id, [
+        'readingEvidence',
+        'wpm', 'dyslexiaRiskScore', 'readingRiskLevel', 'comprehensionScore',
+      ])) {
         if (!savePersistedStudents(studentsDb)) {
           studentsDb = nextRecords;
           console.error('Audit persistence failed and repeat-session rollback also failed.');
@@ -1206,7 +1207,7 @@ async function startServer() {
         return;
       }
       studentsDb = nextRecords;
-      res.status(200).json({ student: updatedRecord, persisted: true });
+      res.status(200).json({ student: updatedRecord, persisted: true, scoring: 'server-derived' });
     }
   );
 
