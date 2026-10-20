@@ -148,6 +148,10 @@ export default function App() {
       s.schoolName.includes(searchQuery.trim());
     if (!matchesSearch) return false;
 
+    // Incomplete sessions are not yet classifiable as high-risk or within-average.
+    if (s.sessionStatus === 'in_progress') {
+      return riskFilter === 'all';
+    }
     if (riskFilter === 'high') {
       return s.readingRiskLevel === 'high' || s.mathRiskLevel === 'high';
     }
