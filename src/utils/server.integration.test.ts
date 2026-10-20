@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
 const credentialMap = {
   school_alpha: {
@@ -117,6 +118,37 @@ function authorizedHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+function validReadingEvidence(overrides: Record<string, unknown> = {}) {
+  const passage = ARABIC_READING_PASSAGES.find((item) => item.id === 'passage-g3-astronomy');
+  if (!passage) throw new Error('Integration passage fixture was not found.');
+  const observedCount = Math.max(4, Math.ceil(passage.words.length * 0.3));
+  return {
+    passageId: passage.id,
+    dialectCode: 'gulf',
+    dialectRegionAr: 'لهجة اختبارية',
+    readingDurationSeconds: 12,
+    blinkCount: 4,
+    fixations: passage.words.map((word, wordIndex) => ({
+      wordIndex,
+      word,
+      durationMs: wordIndex < observedCount ? 260 + (wordIndex % 4) * 15 : 0,
+      visits: wordIndex < observedCount ? 1 : 0,
+      observed: wordIndex < observedCount,
+      blinks: 0,
+    })),
+    comprehensionAnswers: passage.comprehensionQuestions.map((question) => question.correctIndex),
+    spokenTranscript: '',
+    guardianConsentGiven: true,
+    guardianConsentRecordedAt: new Date().toISOString(),
+    guardianConsentSource: 'إقرار الواجهة — اختبار تكامل',
+    guardianAudioConsentGiven: false,
+    speechRecognitionUsed: false,
+    calibrationAccuracyPercent: 92,
+    calibrationValidationMethod: 'leave-one-point-out',
+    ...overrides,
+  };
+}
+
 function validStudent(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
@@ -124,44 +156,7 @@ function validStudent(id: string, overrides: Record<string, unknown> = {}) {
     schoolName: 'مدرسة ألف',
     gradeLevel: 4,
     ageYears: 10,
-    lastScreenedDate: '2026-10-20',
-    passageId: 'passage-g3-astronomy',
-    sessionStatus: 'completed',
-    sessionCompletedAt: new Date().toISOString(),
-    guardianConsentGiven: true,
-    guardianConsentRecordedAt: new Date().toISOString(),
-    guardianConsentSource: 'إقرار الواجهة — اختبار تكامل',
-    guardianAudioConsentGiven: false,
-    speechRecognitionUsed: false,
-    wpm: 41,
-    avgFixationMs: 430,
-    regressionRate: 22,
-    regressionCount: 4,
-    dyslexiaRiskScore: 72,
-    readingHeuristicIndicator: 28,
-    readingRiskLevel: 'high',
-    readingRiskLabelAr: 'مؤشر فرز استرشادي مرتفع',
-    problematicWords: ['الكواكب'],
-    fixations: [],
-    comprehensionScore: 60,
-    dyscalculiaAssessed: false,
-    subitizingAccuracy: null,
-    avgSubitizingMs: null,
-    numberLinePAE: null,
-    transcodingAccuracy: null,
-    reversalErrorCount: null,
-    dyscalculiaRiskScore: null,
-    mathHeuristicIndicator: null,
-    mathRiskLevel: 'unassessed',
-    mathRiskLabelAr: 'لم يجر اختبار الحساب',
-    clinicalReport: {
-      clinicalSummary: 'ملخص اختبار تقني اصطناعي',
-      ocularMotorAnalysis: 'بيانات اصطناعية',
-      orthographicAndPhonologicalPatterns: 'بيانات اصطناعية',
-      dyscalculiaSpatialAnalysis: 'لم يجر اختبار الحساب',
-      interventionExercises: [],
-      classroomAccommodations: [],
-    },
+    ...validReadingEvidence(),
     ...overrides,
   };
 }
