@@ -37,6 +37,15 @@ interface WordBreakdownItem {
 
 const DEFAULT_ADAPTIVE_TEXT = ARABIC_READING_PASSAGES[0].words.join(' ');
 
+interface AdaptiveReaderViewProps {
+  problematicWords?: string[];
+  studentName?: string;
+  passageId?: string;
+}
+
+const normalizeArabicWord = (value: string) =>
+  value.replace(/[\\u064B-\\u065F\\u0670ـ]/g, '').replace(/[.,،؛:!?؟]/g, '').trim();
+
 const DYSLEXICO_PRESETS: {
   id: string;
   label: string;
@@ -64,16 +73,21 @@ const DYSLEXICO_PRESETS: {
   },
 ];
 
-export const AdaptiveReaderView: React.FC = () => {
+export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
+  problematicWords = [],
+  studentName,
+  passageId,
+}) => {
   // Progressive Disclosure Studio Mode ('reader' | 'dyslexico')
   const [studioMode, setStudioMode] = useState<'reader' | 'dyslexico'>(
     'reader'
   );
 
-  const [selectedPassageId, setSelectedPassageId] = useState<string>(
-    ARABIC_READING_PASSAGES[0].id
-  );
-  const [text, setText] = useState<string>(DEFAULT_ADAPTIVE_TEXT);
+  const initialPassage = ARABIC_READING_PASSAGES.find((passage) => passage.id === passageId) || ARABIC_READING_PASSAGES[0];
+  const personalizedDefaultText = initialPassage.words.join(' ');
+  const normalizedProblemWords = new Set(problematicWords.map(normalizeArabicWord).filter(Boolean));
+  const [selectedPassageId, setSelectedPassageId] = useState<string>(initialPassage.id);
+  const [text, setText] = useState<string>(personalizedDefaultText);
   const [syllableMode, setSyllableMode] = useState<boolean>(true);
   const [letterColorMode, setLetterColorMode] = useState<boolean>(false);
   const [readingRuler, setReadingRuler] = useState<boolean>(true);
@@ -371,9 +385,11 @@ export const AdaptiveReaderView: React.FC = () => {
   };
 
   const renderWordWithAssist = (word: string) => {
-    const bottomHeavyClass = openDyslexicMode
-      ? 'font-opendyslexic border-b-2 border-slate-900/15 pb-0.5'
-      : '';
+    const isProblematic = normalizedProblemWords.has(normalizeArabicWord(word));
+    const bottomHeavyClass = [
+      openDyslexicMode ? 'reading-assist-emphasis border-b-2 border-slate-900/15 pb-0.5' : '',
+      isProblematic ? 'bg-amber-100 text-amber-950 ring-1 ring-amber-300 rounded-md px-1 font-bold' : '',
+    ].filter(Boolean).join(' ');
 
     if (syllableMode) {
       const syllables = segmentArabicWordIntoSyllables(word);
@@ -498,7 +514,15 @@ export const AdaptiveReaderView: React.FC = () => {
           </div>
         </div>
 
-        {/* Contextual Toolbar for Reader Mode */}
+        {problematicWords.length > 0 && (
+        <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
+          <h3 className="text-sm font-bold text-amber-950">تدريب موجه من جلسة {studentName ? `«${studentName}»` : 'القراءة السابقة'}</h3>
+          <p className="text-xs leading-relaxed text-amber-900">الكلمات التالية رُصدت ضمن الكلمات المستهدفة في الجلسة السابقة. تمييزها هنا أداة تدريبية فقط، ولا يعني بمفرده وجود اضطراب.</p>
+          <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
+        </section>
+      )}
+
+      {/* Contextual Toolbar for Reader Mode */}
         {studioMode === 'reader' && (
           <div className="px-6 sm:px-8 py-4 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -582,7 +606,7 @@ export const AdaptiveReaderView: React.FC = () => {
                 <span>
                   انقر على أي سطر لتثبيت المسطرة البصرية عليه ·{' '}
                   {openDyslexicMode
-                    ? 'خط OpenDyslexic مفعّل'
+                    ? 'التمييز البصري للكلمات مفعّل'
                     : 'الخط القياسي مفعّل'}
                 </span>
                 <span className="font-mono tabular-nums">
@@ -605,7 +629,7 @@ export const AdaptiveReaderView: React.FC = () => {
                         lineHeight: lineHeightRatio,
                       }}
                       className={`p-3.5 rounded-xl transition-opacity cursor-pointer flex flex-wrap gap-x-3 gap-y-2 ${
-                        openDyslexicMode ? 'font-opendyslexic' : 'font-display'
+                        openDyslexicMode ? 'reading-assist-emphasis' : 'font-display'
                       } ${
                         isFocusedLine
                           ? readingRuler
@@ -676,7 +700,7 @@ export const AdaptiveReaderView: React.FC = () => {
                   htmlFor="custom-arabic-text"
                   className="block text-xs font-semibold text-slate-700"
                 >
-                  أدخل أي نص مخصص لتطبيق خط OpenDyslexic والتقطيع المقطعي والمسطرة البصرية عليه:
+                  يمكنك تعديل نص القراءة؛ ستظهر الكلمات التي تعثّر فيها الطالب في آخر جلسة مميزة بلون مختلف.
                 </label>
                 <div className="flex gap-2">
                   <textarea
@@ -688,7 +712,7 @@ export const AdaptiveReaderView: React.FC = () => {
                   />
                   <button
                     type="button"
-                    onClick={() => setText(DEFAULT_ADAPTIVE_TEXT)}
+                    onClick={() => setText(personalizedDefaultText)}
                     aria-label="استعادة النص الافتراضي"
                     className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
@@ -724,10 +748,10 @@ export const AdaptiveReaderView: React.FC = () => {
               >
                 <div>
                   <div className="text-xs font-semibold">
-                    خط OpenDyslexic ذو الثقل السفلي
+                    تمييز بصري للكلمات
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    زيادة ثقل قاعدة الحرف لمنع تدويره ذهنياً
+                    حد سفلي للكلمات للمساعدة على تتبع حدودها؛ لا يُحمّل خطًا خارجيًا.
                   </div>
                 </div>
                 <span className="text-xs font-mono font-semibold text-[#0284C7]">
