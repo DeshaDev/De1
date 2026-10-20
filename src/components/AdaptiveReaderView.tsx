@@ -472,9 +472,9 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
             <div className="text-xs text-slate-500 mb-1">
               بيئة القراءة المساندة والتحليل اللغوي الثلاثي
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 font-display">
+            <h1 className="text-2xl font-bold text-slate-900 font-display">
               القارئ العربي الميسّر ومحلل الكلمات اللغوي (Dyslexico Studio)
-            </h2>
+            </h1>
           </div>
 
           {/* 2-Mode Segmented Studio Switcher */}
