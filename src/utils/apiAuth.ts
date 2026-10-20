@@ -23,10 +23,19 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
     const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ClinicalSessionInfo;
-    if (parsed?.token && parsed.expiresAt > Date.now() + 10_000) {
+    if (
+      parsed?.token &&
+      parsed.expiresAt > Date.now() + 10_000 &&
+      typeof parsed.tenantId === 'string' &&
+      /^[a-zA-Z0-9_-]{1,80}$/.test(parsed.tenantId) &&
+      typeof parsed.sessionId === 'string' &&
+      /^[a-f0-9]{32}$/.test(parsed.sessionId)
+    ) {
       cachedSession = parsed;
       return parsed;
     }
+    // Old sessions have no tenant-bound claims and must be re-issued.
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // Ignore session storage errors and keep the client signed out.
   }
