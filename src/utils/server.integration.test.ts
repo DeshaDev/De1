@@ -19,8 +19,46 @@ const credentialMap = {
 
 let child: ChildProcessWithoutNullStreams | null = null;
 let baseUrl = '';
+let serverPort = 0;
 let dataDir = '';
 let childOutput = '';
+
+async function startTestServer(): Promise<void> {
+  baseUrl = `http://127.0.0.1:${serverPort}`;
+  childOutput = '';
+  child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      PORT: String(serverPort),
+      TRUST_PROXY_HOPS: '0',
+      CLINICAL_DATA_DIR: dataDir,
+      CLINICAL_TENANT_CREDENTIALS: JSON.stringify(credentialMap),
+      CLINICAL_SESSION_SECRET: 'integration-test-session-signing-key-not-a-production-secret-64',
+      CLINICAL_STORE_ENCRYPTION_KEY: 'd3'.repeat(32),
+      GEMINI_API_KEY: '',
+    },
+    stdio: 'pipe',
+  });
+  child.stdout.on('data', (chunk) => { childOutput += chunk.toString(); });
+  child.stderr.on('data', (chunk) => { childOutput += chunk.toString(); });
+  await waitForServer();
+}
+
+async function stopTestServer(): Promise<void> {
+  if (!child) return;
+  const running = child;
+  if (running.exitCode === null) {
+    running.kill('SIGTERM');
+    await Promise.race([
+      new Promise<void>((resolve) => running.once('exit', () => resolve())),
+      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
+    ]);
+    if (running.exitCode === null) running.kill('SIGKILL');
+  }
+  child = null;
+}
 
 async function findAvailablePort(): Promise<number> {
   const server = createServer();
@@ -54,37 +92,13 @@ async function waitForServer(): Promise<void> {
 }
 
 before(async () => {
-  const port = await findAvailablePort();
+  serverPort = await findAvailablePort();
   dataDir = mkdtempSync(join(tmpdir(), 'de1-http-security-'));
-  baseUrl = `http://127.0.0.1:${port}`;
-  child = spawn(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'server.ts'], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      PORT: String(port),
-      CLINICAL_DATA_DIR: dataDir,
-      CLINICAL_TENANT_CREDENTIALS: JSON.stringify(credentialMap),
-      CLINICAL_SESSION_SECRET: 'integration-test-session-signing-key-not-a-production-secret-64',
-      CLINICAL_STORE_ENCRYPTION_KEY: 'd3'.repeat(32),
-      GEMINI_API_KEY: '',
-    },
-    stdio: 'pipe',
-  });
-  child.stdout.on('data', (chunk) => { childOutput += chunk.toString(); });
-  child.stderr.on('data', (chunk) => { childOutput += chunk.toString(); });
-  await waitForServer();
+  await startTestServer();
 });
 
 after(async () => {
-  if (child && child.exitCode === null) {
-    child.kill('SIGTERM');
-    await Promise.race([
-      new Promise<void>((resolve) => child?.once('exit', () => resolve())),
-      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
-    ]);
-    if (child.exitCode === null) child.kill('SIGKILL');
-  }
+  await stopTestServer();
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
 });
 
