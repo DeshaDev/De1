@@ -61,6 +61,23 @@ export async function loginClinicalSession(
   }
 }
 
+/** Revoke the current token on the server, then clear it locally even if offline. */
+export async function logoutClinicalSession(): Promise<void> {
+  const session = getStoredClinicalSession();
+  try {
+    if (session?.token) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+    }
+  } catch {
+    // The local session is always cleared; the server token will expire within one hour.
+  } finally {
+    clearClinicalSession();
+  }
+}
+
 export function clearClinicalSession(): void {
   cachedSession = null;
   if (typeof window !== 'undefined') {
