@@ -527,9 +527,9 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
     res: express.Response,
     next: express.NextFunction
   ) => {
-    if (!isClinicalAuthConfigured() || !clinicalStoreReady) {
+    if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
       res.status(503).json({
-        error: 'يلزم ضبط الأسرار وتهيئة مخزن سريري مشفر قابل للقراءة والكتابة قبل تفعيل بيانات الطلاب.',
+        error: 'يلزم إعداد الأسرار وتهيئة مخازن الطلاب والأمن المشفرة قبل تفعيل بيانات الطلاب.',
       });
       return;
     }
@@ -538,12 +538,11 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
       (req.headers['x-clinical-session-token'] as string) ||
       '';
     const verifiedSession = verifyClinicalSessionToken(rawHeader, CLINICAL_SESSION_SECRET);
-    const now = Date.now();
-    for (const [sessionId, expiresAt] of REVOKED_CLINICAL_SESSIONS) {
-      if (expiresAt <= now) REVOKED_CLINICAL_SESSIONS.delete(sessionId);
-    }
+    const revokedUntil = verifiedSession
+      ? securityState.revokedSessions[verifiedSession.sessionId]
+      : undefined;
     const activeSession = verifiedSession &&
-      !REVOKED_CLINICAL_SESSIONS.has(verifiedSession.sessionId)
+      !(typeof revokedUntil === 'number' && revokedUntil > Date.now())
       ? verifiedSession
       : null;
     const authResult = authorizeSessionScope(activeSession, requiredScope);
@@ -559,58 +558,48 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
   };
 }
 
-// Rate-limit credential attempts independently from paid AI requests.
-const authAttemptBuckets = new Map<string, number[]>();
+// Persistent sliding-window limiter. Source IPs are interpreted after Express has applied
+// only the explicitly configured trusted-proxy hop count.
 function authRateLimiter(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
-  const now = Date.now();
-  const windowMs = 60_000;
-  const maxAttemptsPerMinute = 8;
-  const attempts = (authAttemptBuckets.get(clientIp) || []).filter(
-    (ts) => now - ts < windowMs
-  );
-  if (attempts.length >= maxAttemptsPerMinute) {
-    res.setHeader('Retry-After', '60');
+  const result = consumePersistentRateLimit('auth', clientIp, 8, 60_000);
+  if (!result.available) {
+    res.status(503).json({ error: 'تعذر حفظ حالة الحماية؛ تسجيل الدخول متوقف مؤقتًا.' });
+    return;
+  }
+  if (!result.allowed) {
+    res.setHeader('Retry-After', String(result.retryAfterSeconds));
     res.status(429).json({
       error: 'محاولات تسجيل الدخول كثيرة. يرجى الانتظار قبل المحاولة مجددًا.',
     });
     return;
   }
-  attempts.push(now);
-  authAttemptBuckets.set(clientIp, attempts);
   next();
 }
 
-// Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
-const rateLimitBuckets = new Map<string, number[]>();
+// Persistent sliding-window limiter for paid AI endpoints.
 function aiRateLimiter(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
-  // Do not trust client-supplied X-Forwarded-For unless a trusted proxy is explicitly configured.
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
-  const now = Date.now();
-  const windowMs = 60_000;
-  const maxRequestsPerMinute = 20;
-
-  const history = (rateLimitBuckets.get(clientIp) || []).filter(
-    (ts) => now - ts < windowMs
-  );
-  if (history.length >= maxRequestsPerMinute) {
-    res.setHeader('Retry-After', '60');
+  const result = consumePersistentRateLimit('ai', clientIp, 20, 60_000);
+  if (!result.available) {
+    res.status(503).json({ error: 'تعذر حفظ حالة الحماية؛ خدمات التحليل متوقفة مؤقتًا.' });
+    return;
+  }
+  if (!result.allowed) {
+    res.setHeader('Retry-After', String(result.retryAfterSeconds));
     res.status(429).json({
-      error:
-        'تم تجاوز الحد الأقصى لطلبات الذكاء الاصطناعي في الدقيقة لحماية الخدمة. يرجى المحاولة بعد قليل.',
+      error: 'تم تجاوز عدد طلبات التحليل المسموح به. يرجى الانتظار قبل المحاولة مجددًا.',
     });
     return;
   }
-  history.push(now);
-  rateLimitBuckets.set(clientIp, history);
   next();
 }
 
@@ -632,7 +621,11 @@ function getGenAIClient(): GoogleGenAI | null {
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT || 3000);
+  app.set('trust proxy', readTrustedProxyHops());
 
+  if (!initializeSecurityState()) {
+    console.error('Encrypted security-state initialization failed; protected endpoints will return 503.');
+  }
   app.use(express.json({ limit: '5mb' }));
 
   let studentsDb: StudentRecord[] = loadPersistedStudents();
@@ -667,6 +660,17 @@ async function startServer() {
       60 * 60 * 1000,
       credential.tenantId
     );
+    if (!appendAuditEvent({
+      tenantId: session.tenantId,
+      sessionId: session.sessionId,
+      role: session.role,
+      action: 'auth.login',
+      changedFields: [],
+      outcome: 'success',
+    })) {
+      res.status(503).json({ error: 'تعذر تسجيل حدث الدخول في سجل التدقيق؛ لم تُصدر الجلسة.' });
+      return;
+    }
     res.json(session);
   });
 
@@ -680,7 +684,29 @@ async function startServer() {
 
   app.post('/api/auth/logout', requireClinicalAuth('students:read'), (req, res) => {
     const session = (req as any).clinicalSession as VerifiedClinicalSession;
-    REVOKED_CLINICAL_SESSIONS.set(session.sessionId, session.expiresAt);
+    const previousExpiry = securityState.revokedSessions[session.sessionId];
+    const previousEvents = securityState.auditEvents;
+    securityState.revokedSessions[session.sessionId] = session.expiresAt;
+    securityState.auditEvents = [
+      ...previousEvents,
+      {
+        eventId: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        tenantId: session.tenantId,
+        sessionId: session.sessionId,
+        role: session.role,
+        action: 'auth.logout',
+        changedFields: [],
+        outcome: 'success' as const,
+      },
+    ].slice(-5000);
+    if (!persistSecurityState()) {
+      if (previousExpiry === undefined) delete securityState.revokedSessions[session.sessionId];
+      else securityState.revokedSessions[session.sessionId] = previousExpiry;
+      securityState.auditEvents = previousEvents;
+      res.status(503).json({ error: 'تعذر حفظ إبطال الجلسة؛ لم يؤكد الخادم تسجيل الخروج.' });
+      return;
+    }
     res.status(204).end();
   });
 
