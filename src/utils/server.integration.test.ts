@@ -257,6 +257,14 @@ test('HTTP security regression: tenant isolation, role binding, create-only IDs,
     assert.equal(response.status, 400);
   }
 
+  const specialKey = String.fromCharCode(95, 95, 112, 114, 111, 116, 111, 95, 95);
+  const specialKeyResponse = await fetch(`${baseUrl}/api/students/${studentId}`, {
+    method: 'PATCH',
+    headers: authorizedHeaders(alpha.token),
+    body: JSON.stringify({ [specialKey]: { tenantId: 'school_beta' } }),
+  });
+  assert.equal(specialKeyResponse.status, 400);
+
   // A repeat assessment updates only session fields; server preserves identity and appends history.
   const followup = await fetch(`${baseUrl}/api/students/${studentId}/sessions`, {
     method: 'POST',
