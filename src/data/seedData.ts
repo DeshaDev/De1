@@ -63,6 +63,8 @@ export interface StudentAssessmentSnapshot {
 
 export interface StudentRecord {
   id: string;
+  /** Set by the server from the signed session; never trusted from client input. */
+  tenantId?: string;
   name: string;
   isDemoRecord?: boolean;
   sessionStatus?: 'in_progress' | 'completed';
