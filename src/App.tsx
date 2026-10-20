@@ -696,6 +696,7 @@ export default function App() {
           { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
           { id: 'algorithms-lab', label: 'المنهجية والحدود' },
+          { id: 'privacy', label: 'الخصوصية' },
           { id: 'dashboard', label: 'التقرير والمؤشرات' },
         ].map((item) => (
           <button
@@ -1525,9 +1526,9 @@ export default function App() {
                             <span>مؤشر القراءة: <strong>{snapshot.readingHeuristicIndicator}/100</strong></span>
                             <span>الحساب: <strong>{snapshot.mathRiskLevel === 'unassessed' ? 'لم يُقيّم' : snapshot.mathRiskLevel + ' · ' + (snapshot.numberLinePAE ?? '—') + '% خطأ'}</strong></span>
                           </div>
-                          {snapshot.problematicWords.length > 0 && (
+                          {(snapshot.problematicWords || []).length > 0 && (
                             <p className='mt-2 text-xs leading-relaxed text-slate-600'>
-                              كلمات استهدفتها الجلسة: {snapshot.problematicWords.join('، ')}
+                              كلمات استهدفتها الجلسة: {(snapshot.problematicWords || []).join('، ')}
                             </p>
                           )}
                         </li>
