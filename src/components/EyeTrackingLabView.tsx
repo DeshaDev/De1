@@ -1373,6 +1373,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         calibrationModelRef.current = emptyCalibration;
         recentPupilBufferRef.current = [];
         lastEyeQualityUpdateRef.current = 0;
+        eyePipelineMeterRef.current = {
+          windowStartedAt: 0,
+          framesInWindow: 0,
+          totalFrames: 0,
+          processingMsInWindow: 0,
+          lastLandmarkerMs: 0,
+          lastPixelReadMs: 0,
+        };
         setCameraDiagnostics({
           sourceWidth: videoRef.current?.videoWidth || trackSettings?.width || 0,
           sourceHeight: videoRef.current?.videoHeight || trackSettings?.height || 0,
@@ -2033,12 +2041,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   if (cameraDiagnostics.sourceWidth < 640 || cameraDiagnostics.sourceHeight < 480) {
     cameraPreflightIssues.push('الدقة المستلمة أقل من 640×480');
   }
-  if (cameraDiagnostics.measuredFrameRate < 15) {
-    cameraPreflightIssues.push(
-      cameraDiagnostics.measuredFrameRate > 0
-        ? 'معدل استدعاءات عرض الفيديو أقل من 15/ث؛ يلزم فحص أداء المحرك بشكل منفصل'
-        : 'جارٍ قياس تحديث إطارات الفيديو'
-    );
+  if (
+    cameraDiagnostics.reportedFrameRate !== null &&
+    cameraDiagnostics.reportedFrameRate < 15
+  ) {
+    cameraPreflightIssues.push('الكاميرا تعلن عن معدل أقل من 15 إطارًا/ثانية');
   }
   if (!cameraDiagnostics.eyeProcessingFps || cameraDiagnostics.eyeProcessingFps < 15) {
     cameraPreflightIssues.push(
@@ -3329,6 +3336,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     <p className="mt-1 text-[10px] leading-4 text-slate-500">
                       محرك المعالم: {cameraDiagnostics.landmarkerDelegate ?? 'جارٍ التحديد'} · آخر استدلال MediaPipe: {cameraDiagnostics.lastLandmarkerMs !== undefined ? `${cameraDiagnostics.lastLandmarkerMs} ms` : 'جارٍ القياس'} · آخر قراءة بكسلات: {cameraDiagnostics.lastPixelReadMs !== undefined ? `${cameraDiagnostics.lastPixelReadMs} ms` : 'جارٍ القياس'}
                     </p>
+                    {cameraDiagnostics.measuredFrameRate > 0 && cameraDiagnostics.measuredFrameRate < 15 && (
+                      <p className="mt-1 text-[10px] leading-4 text-amber-800">
+                        معدل استدعاءات عرض الفيديو منخفض. سنقارنه بمعدل معالجة تتبع العين قبل الحكم على الكاميرا.
+                      </p>
+                    )}
                   </div>
                   <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold border ${
                     cameraPreflightPassed
@@ -3349,7 +3361,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     </div>
                   </div>
                   <div className="rounded-lg bg-white border border-slate-200 p-2">
-                    <div className="text-[10px] text-slate-500">FPS المقاس</div>
+                    <div className="text-[10px] text-slate-500">FPS عرض الفيديو</div>
                     <div className="mt-1 text-xs font-mono font-bold text-slate-900">
                       {cameraDiagnostics.measuredFrameRate > 0
                         ? cameraDiagnostics.measuredFrameRate.toFixed(1)
