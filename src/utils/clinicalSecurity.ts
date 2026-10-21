@@ -347,8 +347,8 @@ export function validateExplicitGuardianConsent(consentField: unknown): {
 }
 
 // ============================================================================
-// Failure-Only Auth Rate Limiter with (IP + Tenant) Scoping & Progressive Backoff
-// ============================================================================
+ // High-entropy access-code validation and IP-scoped authentication throttling
+ // ============================================================================
 
 export interface AuthFailureBucket {
   failures: number[];
@@ -357,6 +357,40 @@ export interface AuthFailureBucket {
 
 const AUTH_FAILURE_WINDOW_MS = 60_000;
 const MAX_FREE_FAILURES = 4;
+
+/**
+ * Access codes must match the output shape of "openssl rand -hex 24".
+ * This rejects passphrases, predictable prefixes/sequences, low symbol diversity,
+ * and obvious repeated patterns. It is a configuration sanity check, not proof
+ * that an operator actually used a cryptographically secure generator.
+ */
+export function isStrongClinicalAccessCode(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^[a-f0-9]{48}$/.test(value)) return false;
+
+  const counts = new Map<string, number>();
+  for (const char of value) counts.set(char, (counts.get(char) || 0) + 1);
+  if (counts.size < 12) return false;
+
+  const shannonEntropy = [...counts.values()].reduce((sum, count) => {
+    const probability = count / value.length;
+    return sum - probability * Math.log2(probability);
+  }, 0);
+  if (shannonEntropy < 3.2) return false;
+
+  // Reject a short pattern repeated to fill the key (e.g. "0123456789abcdef" x 3).
+  for (let period = 1; period <= 24; period++) {
+    let repeats = true;
+    for (let index = period; index < value.length; index++) {
+      if (value[index] !== value[index % period]) {
+        repeats = false;
+        break;
+      }
+    }
+    if (repeats) return false;
+  }
+
+  return true;
+}
 
 export function calculateProgressiveBackoffMs(failureCount: number): number {
   if (failureCount <= MAX_FREE_FAILURES) return 0;
@@ -374,6 +408,38 @@ export function getAuthBucketKey(clientIp: string, _tenantKey?: string): string 
   // Never partition failed guesses by a tenant hint supplied by the unauthenticated client.
   const safeIp = (clientIp || 'local').trim() || 'local';
   return `${safeIp}::unscoped`;
+}
+
+/**
+ * Applies a short, bounded delay to requests from an IP with recent failed
+ * attempts. This is deliberately a delay, not a hard lock: valid credentials
+ * are still accepted after the delay, avoiding permanent school lockout.
+ * Invalid attempts remain subject to checkAuthFailureLimit's rolling-window cap.
+ */
+export function getAuthThrottleDelayMs(
+  buckets: Map<string, AuthFailureBucket>,
+  clientIp: string,
+  tenantKey?: string,
+  nowMs: number = Date.now()
+): number {
+  const existing = buckets.get(getAuthBucketKey(clientIp, tenantKey));
+  if (!existing) return 0;
+
+  const activeFailures = existing.failures.filter(
+    (timestamp) => nowMs - timestamp < AUTH_FAILURE_WINDOW_MS
+  );
+  if (activeFailures.length === 0) return 0;
+
+  const lockRemainingMs = Math.max(0, existing.lockedUntilMs - nowMs);
+  if (activeFailures.length < MAX_FREE_FAILURES + 1) {
+    return Math.min(2_000, lockRemainingMs);
+  }
+
+  // A serial per-IP queue plus this bounded delay prevents a burst of correct
+  // credentials from bypassing an active throttle, without making the delay
+  // grow unbounded or permanently rejecting a valid credential.
+  const progressiveDelayMs = calculateProgressiveBackoffMs(activeFailures.length);
+  return Math.min(2_000, Math.max(progressiveDelayMs, lockRemainingMs));
 }
 
 export function checkAuthFailureLimit(
