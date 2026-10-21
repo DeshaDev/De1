@@ -136,6 +136,21 @@ test('fitGazeCalibrationModel fits linear screen mapping and predicts gaze coord
   assert.ok(Math.abs(predicted.y - 450) < 15);
 });
 
+test('fitGazeCalibrationModel preserves negative horizontal and vertical slopes', () => {
+  const reversedSamples = [
+    { pointId: 1, normX: 0.2, normY: 0.2, screenX: 800, screenY: 800, arenaXPct: 80, arenaYPct: 80 },
+    { pointId: 2, normX: 0.8, normY: 0.2, screenX: 200, screenY: 800, arenaXPct: 20, arenaYPct: 80 },
+    { pointId: 3, normX: 0.2, normY: 0.8, screenX: 800, screenY: 200, arenaXPct: 80, arenaYPct: 20 },
+    { pointId: 4, normX: 0.8, normY: 0.8, screenX: 200, screenY: 200, arenaXPct: 20, arenaYPct: 20 },
+    { pointId: 5, normX: 0.5, normY: 0.5, screenX: 500, screenY: 500, arenaXPct: 50, arenaYPct: 50 },
+  ];
+  const model = fitGazeCalibrationModel(reversedSamples);
+  assert.ok(model.scaleX < 0, `Expected negative X slope; got ${model.scaleX}`);
+  assert.ok(model.scaleY < 0, `Expected negative Y slope; got ${model.scaleY}`);
+  assert.ok((model.arenaScaleX ?? 0) < 0);
+  assert.ok((model.arenaScaleY ?? 0) < 0);
+});
+
 test('hitTestWordBoxes detects direct hit and nearest foveal word box', () => {
   const boxes = [
     { wordIndex: 0, left: 800, top: 200, right: 880, bottom: 245 },
