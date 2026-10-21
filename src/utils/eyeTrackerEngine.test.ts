@@ -9,6 +9,8 @@ import {
   hitTestWordBoxes,
   BlinkDetectorStateMachine,
   evaluateBlinkRateClinical,
+  measureEyeRegionQuality,
+  evaluateGazeResponse,
 } from './eyeTrackerEngine.ts';
 
 test('extractPupilFeaturesFromFrame locates dark pupil centroids accurately and detects virtual gray frames', () => {
@@ -58,6 +60,65 @@ test('extractPupilFeaturesFromFrame locates dark pupil centroids accurately and 
   const virtualResult = extractPupilFeaturesFromFrame(grayRgba, width, height);
   assert.equal(virtualResult.isVirtualOrBlankFrame, true);
   assert.equal(virtualResult.confidence, 0);
+});
+
+test('measureEyeRegionQuality distinguishes a detailed eye crop from a flat or unusable crop', () => {
+  const width = 100;
+  const height = 60;
+  const sharp = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const value = Math.floor(x / 4) % 2 === 0 ? 42 : 210;
+      const offset = (y * width + x) * 4;
+      sharp[offset] = value;
+      sharp[offset + 1] = value;
+      sharp[offset + 2] = value;
+      sharp[offset + 3] = 255;
+    }
+  }
+  const detailed = measureEyeRegionQuality(sharp, width, height, {
+    x: 10, y: 12, width: 70, height: 30,
+  });
+  assert.equal(detailed.status, 'good');
+  assert.ok(detailed.contrastStdDev > 20);
+  assert.ok(detailed.edgeEnergy > 3);
+
+  const flat = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < flat.length; i += 4) {
+    flat[i] = 128;
+    flat[i + 1] = 128;
+    flat[i + 2] = 128;
+    flat[i + 3] = 255;
+  }
+  const unusable = measureEyeRegionQuality(flat, width, height, {
+    x: 10, y: 12, width: 70, height: 30,
+  });
+  assert.equal(unusable.status, 'poor');
+  assert.ok(unusable.issues.includes('low-contrast'));
+});
+
+test('evaluateGazeResponse requires measurable horizontal and vertical response', () => {
+  const responsive = evaluateGazeResponse([
+    { targetId: 201, rawX: 0.43, rawY: 0.50 },
+    { targetId: 202, rawX: 0.50, rawY: 0.50 },
+    { targetId: 203, rawX: 0.57, rawY: 0.50 },
+    { targetId: 204, rawX: 0.50, rawY: 0.46 },
+    { targetId: 205, rawX: 0.50, rawY: 0.54 },
+  ]);
+  assert.equal(responsive.passed, true);
+  assert.ok(responsive.horizontalDelta >= 0.12);
+  assert.ok(responsive.verticalDelta >= 0.08);
+
+  const stationary = evaluateGazeResponse([
+    { targetId: 201, rawX: 0.5, rawY: 0.5 },
+    { targetId: 202, rawX: 0.5, rawY: 0.5 },
+    { targetId: 203, rawX: 0.501, rawY: 0.5 },
+    { targetId: 204, rawX: 0.5, rawY: 0.5 },
+    { targetId: 205, rawX: 0.5, rawY: 0.501 },
+  ]);
+  assert.equal(stationary.passed, false);
+  assert.equal(stationary.horizontalResponsive, false);
+  assert.equal(stationary.verticalResponsive, false);
 });
 
 test('computeIrisGazeFromLandmarks tracks horizontal AND vertical iris movement and displaces green dots properly', () => {
