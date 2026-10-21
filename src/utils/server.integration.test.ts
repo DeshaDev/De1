@@ -202,7 +202,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     ] as const) {
       const response = await fetch(`${baseUrl}${route}`, { method });
       assert.equal(response.status, 404);
-      assert.match(response.headers.get('content-type') || '', /application\\/json/);
+      assert.match(response.headers.get('content-type') || '', /application\/json/);
       const body = (await response.json()) as { error: string };
       assert.equal(body.error, 'مسار API غير موجود.');
     }
@@ -211,7 +211,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'DELETE',
     });
     assert.equal(deleteUnknownPage.status, 404);
-    assert.match(deleteUnknownPage.headers.get('content-type') || '', /application\\/json/);
+    assert.match(deleteUnknownPage.headers.get('content-type') || '', /application\/json/);
     assert.equal(
       ((await deleteUnknownPage.json()) as { error: string }).error,
       'المسار غير موجود.'
