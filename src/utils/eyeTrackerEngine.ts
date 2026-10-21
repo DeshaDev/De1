@@ -18,6 +18,31 @@ export interface EyeBox {
   height: number;
 }
 
+export interface EyeRegionQuality {
+  widthPx: number;
+  heightPx: number;
+  meanLuma: number;
+  contrastStdDev: number;
+  edgeEnergy: number;
+  status: 'good' | 'fair' | 'poor';
+  issues: string[];
+}
+
+export interface GazeResponseSample {
+  targetId: number;
+  rawX: number;
+  rawY: number;
+}
+
+export interface GazeResponseEvaluation {
+  horizontalDelta: number;
+  verticalDelta: number;
+  horizontalResponsive: boolean;
+  verticalResponsive: boolean;
+  passed: boolean;
+  missingTargetIds: number[];
+}
+
 export interface PupilFrameFeatures {
   leftEye: EyePoint;
   rightEye: EyePoint;
@@ -188,6 +213,146 @@ const WG_EYE_INDICES = {
 
 function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
+}
+
+/**
+ * Measure the native camera pixels in a detected eye crop. These values are
+ * technical image-quality indicators, not medical or diagnostic scores.
+ */
+export function measureEyeRegionQuality(
+  rgba: Uint8ClampedArray,
+  frameWidth: number,
+  frameHeight: number,
+  box: EyeBox
+): EyeRegionQuality {
+  const left = Math.max(0, Math.floor(box.x));
+  const top = Math.max(0, Math.floor(box.y));
+  const right = Math.min(frameWidth, Math.ceil(box.x + box.width));
+  const bottom = Math.min(frameHeight, Math.ceil(box.y + box.height));
+  const widthPx = Math.max(0, right - left);
+  const heightPx = Math.max(0, bottom - top);
+  const invalid = (): EyeRegionQuality => ({
+    widthPx,
+    heightPx,
+    meanLuma: 0,
+    contrastStdDev: 0,
+    edgeEnergy: 0,
+    status: 'poor',
+    issues: ['invalid-region'],
+  });
+
+  if (
+    !rgba ||
+    frameWidth < 2 ||
+    frameHeight < 2 ||
+    rgba.length < frameWidth * frameHeight * 4 ||
+    widthPx < 2 ||
+    heightPx < 2
+  ) return invalid();
+
+  const lumaAt = (x: number, y: number): number => {
+    const offset = (y * frameWidth + x) * 4;
+    return 0.299 * rgba[offset] + 0.587 * rgba[offset + 1] + 0.114 * rgba[offset + 2];
+  };
+
+  const step = Math.max(1, Math.floor(Math.min(widthPx, heightPx) / 40));
+  let sum = 0;
+  let sumSquares = 0;
+  let samples = 0;
+  let edgeSum = 0;
+  let edgeSamples = 0;
+
+  for (let y = top; y < bottom; y += step) {
+    for (let x = left; x < right; x += step) {
+      const luma = lumaAt(x, y);
+      sum += luma;
+      sumSquares += luma * luma;
+      samples += 1;
+      if (x + step < right) {
+        edgeSum += Math.abs(lumaAt(x + step, y) - luma);
+        edgeSamples += 1;
+      }
+      if (y + step < bottom) {
+        edgeSum += Math.abs(lumaAt(x, y + step) - luma);
+        edgeSamples += 1;
+      }
+    }
+  }
+
+  if (samples < 8) return invalid();
+  const meanLuma = sum / samples;
+  const contrastStdDev = Math.sqrt(Math.max(0, sumSquares / samples - meanLuma * meanLuma));
+  const edgeEnergy = edgeSamples > 0 ? edgeSum / edgeSamples : 0;
+  const issues: string[] = [];
+  if (widthPx < 28 || heightPx < 12) issues.push('small-eye-region');
+  if (meanLuma < 25) issues.push('underexposed');
+  else if (meanLuma > 235) issues.push('overexposed');
+  if (contrastStdDev < 8) issues.push('low-contrast');
+  if (edgeEnergy < 1.2) issues.push('low-detail-or-blur');
+
+  let status: EyeRegionQuality['status'] = 'good';
+  if (
+    widthPx < 28 ||
+    heightPx < 12 ||
+    meanLuma < 25 ||
+    meanLuma > 235 ||
+    contrastStdDev < 8 ||
+    edgeEnergy < 1.2
+  ) {
+    status = 'poor';
+  } else if (
+    widthPx < 40 ||
+    heightPx < 18 ||
+    meanLuma < 40 ||
+    meanLuma > 220 ||
+    contrastStdDev < 15 ||
+    edgeEnergy < 3
+  ) {
+    status = 'fair';
+  }
+
+  return {
+    widthPx,
+    heightPx,
+    meanLuma: Math.round(meanLuma * 10) / 10,
+    contrastStdDev: Math.round(contrastStdDev * 10) / 10,
+    edgeEnergy: Math.round(edgeEnergy * 10) / 10,
+    status,
+    issues,
+  };
+}
+
+/**
+ * Check whether raw gaze features respond to known left/right and up/down
+ * viewing changes before fitting a screen calibration. Thresholds are
+ * conservative engineering heuristics and must be tuned on real devices.
+ *
+ * Target IDs: 201=left, 202=center, 203=right, 204=top, 205=bottom.
+ */
+export function evaluateGazeResponse(
+  samples: GazeResponseSample[],
+  minHorizontalDelta = 0.012,
+  minVerticalDelta = 0.008
+): GazeResponseEvaluation {
+  const byId = new Map(samples.map((sample) => [sample.targetId, sample]));
+  const requiredIds = [201, 202, 203, 204, 205];
+  const missingTargetIds = requiredIds.filter((id) => !byId.has(id));
+  const left = byId.get(201);
+  const right = byId.get(203);
+  const top = byId.get(204);
+  const bottom = byId.get(205);
+  const horizontalDelta = left && right ? Math.abs(right.rawX - left.rawX) : 0;
+  const verticalDelta = top && bottom ? Math.abs(bottom.rawY - top.rawY) : 0;
+  const horizontalResponsive = !missingTargetIds.length && horizontalDelta >= minHorizontalDelta;
+  const verticalResponsive = !missingTargetIds.length && verticalDelta >= minVerticalDelta;
+  return {
+    horizontalDelta: Math.round(horizontalDelta * 10000) / 10000,
+    verticalDelta: Math.round(verticalDelta * 10000) / 10000,
+    horizontalResponsive,
+    verticalResponsive,
+    passed: horizontalResponsive && verticalResponsive && missingTargetIds.length === 0,
+    missingTargetIds,
+  };
 }
 
 function softNormalize(delta: number, halfSpan: number): number {
