@@ -1004,29 +1004,30 @@ function fitBaseGazeParameters(samples: CalibrationSample[]) {
   const rawScaleX = varX > 1e-6 ? covX / (varX + 1e-7) : 1400;
   const rawScaleY = varY > 1e-6 ? covY / (varY + 1e-7) : 900;
 
-  const scaleX = Math.max(
-    120,
-    Math.min(28000, rawScaleX > 80 ? rawScaleX : 1400)
-  );
+  const preserveMeasuredSlope = (
+    measured: number,
+    minimumMagnitude: number,
+    maximumMagnitude: number,
+    fallback: number
+  ): number => {
+    if (!Number.isFinite(measured) || Math.abs(measured) < minimumMagnitude) {
+      return fallback;
+    }
+    return Math.sign(measured) * Math.min(maximumMagnitude, Math.abs(measured));
+  };
+
+  // A mirrored camera or tracker may validly reverse either screen axis.
+  const scaleX = preserveMeasuredSlope(rawScaleX, 80, 28000, 1400);
   const offsetX = meanScreenX - scaleX * meanNormX;
 
-  const scaleY = Math.max(
-    100,
-    Math.min(20000, rawScaleY > 60 ? rawScaleY : 900)
-  );
+  const scaleY = preserveMeasuredSlope(rawScaleY, 60, 20000, 900);
   const offsetY = meanScreenY - scaleY * meanNormY;
 
   const rawArenaScaleX = varX > 1e-6 ? covArenaX / (varX + 1e-7) : 110;
   const rawArenaScaleY = varY > 1e-6 ? covArenaY / (varY + 1e-7) : 110;
-  const arenaScaleX = Math.max(
-    50,
-    Math.min(2400, rawArenaScaleX > 15 ? rawArenaScaleX : 110)
-  );
+  const arenaScaleX = preserveMeasuredSlope(rawArenaScaleX, 15, 2400, 110);
   const arenaOffsetX = meanArenaX - arenaScaleX * meanNormX;
-  const arenaScaleY = Math.max(
-    50,
-    Math.min(2400, rawArenaScaleY > 15 ? rawArenaScaleY : 110)
-  );
+  const arenaScaleY = preserveMeasuredSlope(rawArenaScaleY, 15, 2400, 110);
   const arenaOffsetY = meanArenaY - arenaScaleY * meanNormY;
 
   return {
