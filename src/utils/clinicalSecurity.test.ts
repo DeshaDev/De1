@@ -11,6 +11,8 @@ import {
   normalizeCalibrationValidationMethod,
   checkAuthFailureLimit,
   recordFailedAuthAttempt,
+  getAuthThrottleDelayMs,
+  isStrongClinicalAccessCode,
   AuthFailureBucket,
   validateAndDeriveSessionFromEvidence,
   validateAndDeriveMathTrials,
@@ -125,6 +127,27 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     const unknown = normalizeCalibrationValidationMethod('weird-unknown-method');
     assert.equal(unknown.code, 'single-point-unvalidated');
     assert.equal(unknown.isValidated, false);
+  });
+
+  it('accepts only high-diversity 48-character hex access codes and rejects predictable tokens', () => {
+    assert.equal(
+      isStrongClinicalAccessCode('3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d'),
+      true
+    );
+    assert.equal(isStrongClinicalAccessCode('A-clinician-secret-0123456789abc'), false);
+    assert.equal(isStrongClinicalAccessCode('a'.repeat(48)), false);
+    assert.equal(isStrongClinicalAccessCode('0123456789abcdef'.repeat(3)), false);
+    assert.equal(isStrongClinicalAccessCode('f'.repeat(47)), false);
+  });
+
+  it('applies a bounded soft delay while a failed-attempt bucket is active', () => {
+    const buckets = new Map<string, AuthFailureBucket>();
+    const now = 1_700_000_000_000;
+    for (let i = 1; i <= 8; i++) {
+      recordFailedAuthAttempt(buckets, '10.0.0.9', undefined, now + i);
+    }
+    assert.equal(getAuthThrottleDelayMs(buckets, '10.0.0.9', undefined, now + 1_000), 2_000);
+    assert.equal(getAuthThrottleDelayMs(buckets, '10.0.0.9', undefined, now + 61_000), 0);
   });
 
   it('counts failed guesses per IP, ignores client tenant hints, and bounds storage', () => {
