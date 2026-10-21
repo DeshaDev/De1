@@ -90,8 +90,6 @@ export interface StudentRecord {
   schoolName: string;
   lastScreenedDate: string;
   passageId: string;
-  readingDurationSeconds?: number;
-  comprehensionAnswers?: number[];
   dialectRegionAr?: string;
   dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
   /** Elapsed screen-reading duration in seconds; sent as evidence for server-side scoring. */
