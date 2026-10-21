@@ -171,7 +171,26 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     }
   });
 
-  it('derives reading scores & non-empty recommendations server-side, strips بن/بنت, tags client-reported, and blocks client score injection', async () => {
+  it('does not allow client tenant hints to bypass throttling or lock out a valid secret', async () => {
+    for (let i = 0; i < 8; i++) {
+      const res = await fetch(`${baseUrl}/api/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: `attacker_tenant_${i}` }),
+      });
+      assert.equal(res.status, 401);
+    }
+    const ninthWrongAttempt = await fetch(`${baseUrl}/api/auth/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: 'school_a' }),
+    });
+    assert.equal(ninthWrongAttempt.status, 429);
+    const validAfterFailures = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    assert.equal(validAfterFailures.tenantId, 'school_a');
+  });
+
+  it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
     const schoolAClinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
     const schoolBClinician = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
 
@@ -222,7 +241,34 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(impossibleRes.status, 400);
 
-    // 3. Create valid student record from raw evidence with "بن" in name
+    // A full elementary passage in six seconds must fail the WPM plausibility ceiling.
+    const tooFastRes = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${schoolAClinician.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-too-fast-1',
+        name: 'قارئ سريع بصورة غير معقولة',
+        gradeLevel: 4,
+        ageYears: 10,
+        schoolName: 'مدرسة أ',
+        ...buildPlausibleReadingEvidence(),
+        readingDurationSeconds: 6,
+        fixations: passage.words.map((word, index) => ({
+          wordIndex: index,
+          word,
+          durationMs: 40,
+          visits: 1,
+          blinks: 0,
+          observed: true,
+        })),
+      }),
+    });
+    assert.equal(tooFastRes.status, 400);
+
+    // 3. Create valid student record from raw evidence and preserve the full name, including "بن".
     const createRes = await fetch(`${baseUrl}/api/students`, {
       method: 'POST',
       headers: {
@@ -240,7 +286,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(createRes.status, 201);
     const createdBody = (await createRes.json()) as { student: Record<string, any> };
-    assert.equal(createdBody.student.name, 'طالب خالد التجريبي');
+    assert.equal(createdBody.student.name, 'طالب بن خالد التجريبي');
     assert.equal(createdBody.student.evidenceProvenance, 'client-reported');
     assert.ok(createdBody.student.wpm > 0);
     assert.equal(createdBody.student.comprehensionScore, 100);
@@ -284,7 +330,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(badPatch.status, 400);
 
-    // 2. Valid 4-field profile PATCH succeeds and strips بن/بنت
+    // 2. Valid 4-field profile PATCH succeeds and preserves the supplied Arabic name.
     const goodPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
       method: 'PATCH',
       headers: {
@@ -300,7 +346,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(goodPatch.status, 200);
     const patchedBody = (await goodPatch.json()) as { student: Record<string, any> };
-    assert.equal(patchedBody.student.name, 'نورة سعد العتيبي');
+    assert.equal(patchedBody.student.name, 'نورة بنت سعد العتيبي');
 
     // 3. Dedicated PUT /api/students/:id/clinical-report saves full report with exercises & accommodations
     const updatedReport = {
@@ -347,6 +393,18 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       savedReportBody.student.clinicalReport.interventionExercises.length,
       2
     );
+    for (const [method, route] of [
+      ['PUT', '/api/students/stu-http-school-a-1/report'],
+      ['POST', '/api/students/stu-http-school-a-1/report'],
+      ['POST', '/api/students/stu-http-school-a-1/clinical-report'],
+    ] as const) {
+      const deprecatedRes = await fetch(`${baseUrl}${route}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+        body: JSON.stringify({ clinicalReport: updatedReport }),
+      });
+      assert.equal(deprecatedRes.status, 404);
+    }
 
     // 4. Dedicated PUT /api/students/:id/math derives math scores from canonical 4+2+3 trials
     const putMathRes = await fetch(
@@ -364,6 +422,31 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const mathBody = (await putMathRes.json()) as { student: Record<string, any> };
     assert.equal(mathBody.student.dyscalculiaAssessed, true);
     assert.equal(mathBody.student.reversalErrorCount, 1);
+    const forgedEnvelopeRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+      body: JSON.stringify({ mathTrials: buildCanonicalMathTrials(), mathRiskLevel: 'nominal' }),
+    });
+    assert.equal(forgedEnvelopeRes.status, 400);
+    const forgedNested = JSON.parse(JSON.stringify(buildCanonicalMathTrials()));
+    forgedNested.subitizingTrials[0].mathRiskLevel = 'nominal';
+    const forgedNestedRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+      body: JSON.stringify({ mathTrials: forgedNested }),
+    });
+    assert.equal(forgedNestedRes.status, 400);
+    for (const [method, route] of [
+      ['POST', '/api/students/stu-http-school-a-1/math'],
+      ['POST', '/api/students/stu-http-school-a-1/math-assessment'],
+    ] as const) {
+      const deprecatedRes = await fetch(`${baseUrl}${route}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+        body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
+      });
+      assert.equal(deprecatedRes.status, 404);
+    }
 
     // Reject invented target on math endpoint -> 400
     const badTrials = buildCanonicalMathTrials();
@@ -438,5 +521,6 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.ok(persistedStudent);
     assert.ok(persistedStudent.clinicalReport.interventionExercises.length >= 2);
     assert.ok(persistedStudent.clinicalReport.classroomAccommodations.length >= 2);
+    assert.equal(persistedStudent.name, 'نورة بنت سعد العتيبي');
   });
 });
