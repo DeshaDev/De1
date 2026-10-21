@@ -327,11 +327,7 @@ export default function App() {
       setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
       return;
     }
-    const cleanName = name
-      .trim()
-      .replace(/(?:^|\s)(?:بن|بنت)(?=\s|$)/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const cleanName = name.trim().replace(/\s+/g, ' ');
     if (!cleanName) {
       setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
       return;
