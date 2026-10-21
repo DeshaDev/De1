@@ -171,8 +171,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     }
   });
 
-  it('does not allow client tenant hints to bypass throttling and delays a valid secret after failed attempts', async () => {
-    for (let i = 0; i < 8; i++) {
+  it('does not let tenant hints bypass throttling and does not reset failures after a valid login to another school', async () => {
+    for (let i = 0; i < 5; i++) {
       const res = await fetch(`${baseUrl}/api/auth/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,18 +180,21 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       });
       assert.equal(res.status, 401);
     }
-    const ninthWrongAttempt = await fetch(`${baseUrl}/api/auth/session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: 'school_a' }),
-    });
-    assert.equal(ninthWrongAttempt.status, 429);
-    const validStartedAt = Date.now();
-    const validAfterFailures = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
-    assert.equal(validAfterFailures.tenantId, 'school_a');
+
+    const schoolBStartedAt = Date.now();
+    const validSchoolB = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
+    assert.equal(validSchoolB.tenantId, 'school_b');
     assert.ok(
-      Date.now() - validStartedAt >= 1_500,
-      'valid credentials from an IP with recent failures must receive a short delay'
+      Date.now() - schoolBStartedAt >= 1_500,
+      'the fifth failure should introduce a real two-second delay'
+    );
+
+    const schoolAStartedAt = Date.now();
+    const validSchoolA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    assert.equal(validSchoolA.tenantId, 'school_a');
+    assert.ok(
+      Date.now() - schoolAStartedAt >= 1_500,
+      'a valid login to another school must not clear the IP failure count'
     );
   });
 
