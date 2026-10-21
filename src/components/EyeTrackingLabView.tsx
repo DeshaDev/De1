@@ -253,7 +253,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       validationMethod: 'single-point-unvalidated',
       anchors: [],
     });
-  const [activeTargetId, setActiveTargetId] = useState<number>(3);
+  const [activeTargetId, setActiveTargetId] = useState<number>(5);
 
   // Live On-Screen Gaze Cursor (Reticle) & Arena Gaze Dot (%) — Driven 100% by Real Eye Coordinates
   const [showGazeReticle, setShowGazeReticle] = useState<boolean>(true);
@@ -2387,7 +2387,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 }`}
               >
                 {isManualDemoMode
-                  ? `محاكاة يدوية للعرض فقط (${fullySampledTargetsCount}/5 أهداف)`
+                  ? `محاكاة يدوية للعرض فقط (${fullySampledTargetsCount}/9 أهداف)`
                   : fullySampledTargetsCount === CALIBRATION_TARGETS.length
                     ? `مكتمل (${fullySampledTargetsCount}/9 أهداف · RMSE خارج العينة ${calibrationModel.validationRmsePx ?? 'غير متاح'}px)`
                     : `قيد المعايرة (${fullySampledTargetsCount}/9 أهداف · ${calibrationSamples.length}/${CALIBRATION_TARGETS.length * SAMPLES_PER_TARGET} عينات)`}
@@ -2463,7 +2463,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
             )}
 
-            {/* Interactive 5-Point Calibration Target Box */}
+            {/* Full-viewport calibration target layer */}
             <div
               ref={calibrationArenaRef}
               className={isFullscreenCalibration
@@ -2520,7 +2520,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
 
               {/* LIVE GREEN GAZE DOT INSIDE CALIBRATION ARENA */}
-              {showGazeReticle && cameraActive && pupilFeatures.faceDetected && (
+              {showGazeReticle && isFullscreenCalibration && cameraActive && pupilFeatures.faceDetected && (
                 <div
                   style={{
                     left: `${arenaGazePct.xPct}%`,
@@ -2551,7 +2551,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }}
                     type="button"
                     disabled={!isFullscreenCalibration || isDone}
-                    onClick={(e) => handleSampleCalibrationPoint(pt, e)
+                    onClick={(e) => handleSampleCalibrationPoint(pt, e)}
                     style={{ left: `${pt.xPct}%`, top: `${pt.yPct}%` }}
                     aria-label={`نقطة معايرة ${pt.label} (${clicks} من ${SAMPLES_PER_TARGET})`}
                     className={`-translate-x-1/2 -translate-y-1/2 absolute w-15 h-15 rounded-full border-2 flex flex-col items-center justify-center transition-all hover:scale-105 cursor-pointer z-10 ${
@@ -2581,7 +2581,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     key={vt.id}
                     type="button"
                     disabled={!isFullscreenCalibration || isValDone}
-                    onClick={(e) => handleSampleValidationPoint(vt, e)
+                    onClick={(e) => handleSampleValidationPoint(vt, e)}
                     style={{ left: `${vt.xPct}%`, top: `${vt.yPct}%` }}
                     aria-label={`نقطة ${vt.label} خارج التدريب (${vClicks})`}
                     className={`-translate-x-1/2 -translate-y-1/2 absolute w-13 h-13 rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all hover:scale-105 cursor-pointer z-10 ${
