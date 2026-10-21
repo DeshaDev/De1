@@ -807,16 +807,17 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         const video = videoRef.current;
 
         if (canvas) {
-          // Process native camera pixels instead of silently downscaling 720p to the
-          // 640x360 canvas defaults. CSS controls only how this canvas is displayed.
-          if (
-            video &&
-            video.videoWidth > 0 &&
-            video.videoHeight > 0 &&
-            (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight)
-          ) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+          // Keep the camera stream at its native resolution for MediaPipe, but
+          // cap CPU pixel analysis at 640x360. Full-resolution getImageData() on
+          // every frame can monopolize the main thread and starve video/UI updates.
+          if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+            const scale = Math.min(1, 640 / video.videoWidth, 360 / video.videoHeight);
+            const processingWidth = Math.max(1, Math.round(video.videoWidth * scale));
+            const processingHeight = Math.max(1, Math.round(video.videoHeight * scale));
+            if (canvas.width !== processingWidth || canvas.height !== processingHeight) {
+              canvas.width = processingWidth;
+              canvas.height = processingHeight;
+            }
           }
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           const width = canvas.width;
@@ -843,7 +844,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               Boolean(streamRef.current);
 
             if (hasLiveVideo && video) {
-              // 1. Draw mirrored live webcam frame onto the full-resolution offscreen buffer
+              // 1. Draw the mirrored frame at the capped pixel-analysis resolution
               offCtx.save();
               offCtx.scale(-1, 1);
               offCtx.drawImage(video, -width, 0, width, height);
@@ -1330,11 +1331,13 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 deviceId: { exact: deviceIdToUse },
                 width: { ideal: 1280 },
                 height: { ideal: 720 },
+                frameRate: { ideal: 30, max: 30 },
               }
             : {
                 facingMode: 'user',
                 width: { ideal: 1280 },
                 height: { ideal: 720 },
+                frameRate: { ideal: 30, max: 30 },
               },
         };
 
@@ -1345,10 +1348,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          if (canvasRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
-            canvasRef.current.width = videoRef.current.videoWidth;
-            canvasRef.current.height = videoRef.current.videoHeight;
-          }
+          // The optical loop sizes the analysis canvas to its processing cap.
         }
 
         // A camera change invalidates previously collected calibration and response samples.
