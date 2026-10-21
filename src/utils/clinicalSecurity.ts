@@ -347,8 +347,8 @@ export function validateExplicitGuardianConsent(consentField: unknown): {
 }
 
 // ============================================================================
- // High-entropy access-code validation and IP-scoped authentication throttling
- // ============================================================================
+// High-entropy access-code validation and IP-scoped authentication throttling
+// ============================================================================
 
 export interface AuthFailureBucket {
   failures: number[];
