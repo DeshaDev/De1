@@ -42,9 +42,14 @@ import {
   OneEuroFilter,
   BlinkDetectorStateMachine,
   evaluateBlinkRateClinical,
+  measureEyeRegionQuality,
+  evaluateGazeResponse,
   CalibrationSample,
   GazeCalibrationModel,
   PupilFrameFeatures,
+  EyeRegionQuality,
+  GazeResponseSample,
+  GazeResponseEvaluation,
 } from '../utils/eyeTrackerEngine';
 import {
   ARABIC_DIALECT_PROFILES,
@@ -81,6 +86,27 @@ const VALIDATION_TARGETS = [
 const SAMPLES_PER_TARGET = 2;
 const MIN_STABLE_CALIBRATION_FRAMES = 8;
 const MAX_CALIBRATION_SPREAD = 0.16;
+
+// Used before calibration to verify that gaze features move in both screen axes.
+const GAZE_RESPONSE_TARGETS = [
+  { id: 201, label: 'انظر إلى اليسار', xPct: 12, yPct: 50 },
+  { id: 202, label: 'انظر إلى المنتصف', xPct: 50, yPct: 50 },
+  { id: 203, label: 'انظر إلى اليمين', xPct: 88, yPct: 50 },
+  { id: 204, label: 'انظر إلى الأعلى', xPct: 50, yPct: 20 },
+  { id: 205, label: 'انظر إلى الأسفل', xPct: 50, yPct: 80 },
+];
+
+interface CameraStreamDiagnostics {
+  sourceWidth: number;
+  sourceHeight: number;
+  reportedFrameRate: number | null;
+  measuredFrameRate: number;
+  measuredFrames: number;
+  deviceLabel: string;
+  trackReadyState: string;
+  leftEyeQuality: EyeRegionQuality | null;
+  rightEyeQuality: EyeRegionQuality | null;
+}
 
 function medianValue(values: number[]): number {
   const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
@@ -142,6 +168,28 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
+  const [cameraDiagnostics, setCameraDiagnostics] = useState<CameraStreamDiagnostics>({
+    sourceWidth: 0,
+    sourceHeight: 0,
+    reportedFrameRate: null,
+    measuredFrameRate: 0,
+    measuredFrames: 0,
+    deviceLabel: '',
+    trackReadyState: 'off',
+    leftEyeQuality: null,
+    rightEyeQuality: null,
+  });
+  const [isGazeResponseCheckOpen, setIsGazeResponseCheckOpen] = useState<boolean>(false);
+  const [activeGazeResponseTargetIndex, setActiveGazeResponseTargetIndex] = useState<number>(0);
+  const [gazeResponseSamples, setGazeResponseSamples] = useState<GazeResponseSample[]>([]);
+  const [gazeResponseEvaluation, setGazeResponseEvaluation] = useState<GazeResponseEvaluation | null>(null);
+  const cameraFrameMeterRef = useRef({
+    lastVideoTime: -1,
+    windowStartedAt: 0,
+    framesInWindow: 0,
+    totalFrames: 0,
+  });
+  const lastEyeQualityUpdateRef = useRef<number>(0);
   const [mediapipeStatus, setMediapipeStatus] = useState<
     'idle' | 'loading' | 'ready' | 'fallback'
   >('idle');
@@ -741,6 +789,17 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         const video = videoRef.current;
 
         if (canvas) {
+          // Process native camera pixels instead of silently downscaling 720p to the
+          // 640x360 canvas defaults. CSS controls only how this canvas is displayed.
+          if (
+            video &&
+            video.videoWidth > 0 &&
+            video.videoHeight > 0 &&
+            (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight)
+          ) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           const width = canvas.width;
           const height = canvas.height;
@@ -766,6 +825,35 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               Boolean(streamRef.current);
 
             if (hasLiveVideo && video) {
+              // Estimate received/decoded FPS from unique video frames, not requestAnimationFrame rate.
+              const meter = cameraFrameMeterRef.current;
+              if (video.currentTime !== meter.lastVideoTime) {
+                meter.lastVideoTime = video.currentTime;
+                if (meter.windowStartedAt === 0) meter.windowStartedAt = now;
+                meter.framesInWindow += 1;
+                meter.totalFrames += 1;
+                const elapsedMs = now - meter.windowStartedAt;
+                if (elapsedMs >= 1000) {
+                  const measuredFrameRate = (meter.framesInWindow * 1000) / elapsedMs;
+                  const track = streamRef.current?.getVideoTracks()[0];
+                  const settings = track?.getSettings();
+                  setCameraDiagnostics((previous) => ({
+                    ...previous,
+                    sourceWidth: video.videoWidth || previous.sourceWidth,
+                    sourceHeight: video.videoHeight || previous.sourceHeight,
+                    reportedFrameRate: typeof settings?.frameRate === 'number'
+                      ? settings.frameRate
+                      : previous.reportedFrameRate,
+                    measuredFrameRate: Math.round(measuredFrameRate * 10) / 10,
+                    measuredFrames: meter.totalFrames,
+                    deviceLabel: track?.label || previous.deviceLabel,
+                    trackReadyState: track?.readyState || previous.trackReadyState,
+                  }));
+                  meter.windowStartedAt = now;
+                  meter.framesInWindow = 0;
+                }
+              }
+
               // 1. Draw mirrored live webcam frame onto the full-resolution offscreen buffer
               offCtx.save();
               offCtx.scale(-1, 1);
@@ -986,6 +1074,36 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
                 setPupilFeatures(extracted);
 
+                // Sample native-resolution eye crops a few times per second. These checks
+                // describe image usability; they are not a medical/clinical quality score.
+                if (now - lastEyeQualityUpdateRef.current >= 400) {
+                  lastEyeQualityUpdateRef.current = now;
+                  const track = streamRef.current?.getVideoTracks()[0];
+                  const settings = track?.getSettings();
+                  const hasLandmarkEyeRegions =
+                    extracted.trackingSource === 'mediapipe-iris' && extracted.faceDetected;
+                  setCameraDiagnostics((previous) => ({
+                    ...previous,
+                    sourceWidth: video?.videoWidth || settings?.width || previous.sourceWidth,
+                    sourceHeight: video?.videoHeight || settings?.height || previous.sourceHeight,
+                    reportedFrameRate: typeof settings?.frameRate === 'number'
+                      ? settings.frameRate
+                      : previous.reportedFrameRate,
+                    deviceLabel: track?.label || previous.deviceLabel,
+                    trackReadyState: track?.readyState || previous.trackReadyState,
+                    leftEyeQuality: hasLandmarkEyeRegions
+                      ? measureEyeRegionQuality(
+                          frameImgData.data, width, height, extracted.leftEyeBox
+                        )
+                      : null,
+                    rightEyeQuality: hasLandmarkEyeRegions
+                      ? measureEyeRegionQuality(
+                          frameImgData.data, width, height, extracted.rightEyeBox
+                        )
+                      : null,
+                  }));
+                }
+
                 // Draw tight WebGazer Eye-Patch Bounding Boxes on the offscreen frame
                 offCtx.strokeStyle = extracted.isBlinking
                   ? 'rgba(245, 158, 11, 0.95)'
@@ -1203,10 +1321,53 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
+        const videoTrack = stream.getVideoTracks()[0];
+        const trackSettings = videoTrack?.getSettings();
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
+          if (canvasRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
+            canvasRef.current.width = videoRef.current.videoWidth;
+            canvasRef.current.height = videoRef.current.videoHeight;
+          }
         }
+
+        // A camera change invalidates previously collected calibration and response samples.
+        setIsFullscreenCalibration(false);
+        setIsGazeResponseCheckOpen(false);
+        setGazeResponseSamples([]);
+        setGazeResponseEvaluation(null);
+        setActiveGazeResponseTargetIndex(0);
+        setTargetClicks({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+        setValidationClicks({ 101: 0, 102: 0, 103: 0, 104: 0 });
+        setCalibrationSamples([]);
+        setValidationSamples([]);
+        const emptyCalibration: GazeCalibrationModel = {
+          isCalibrated: false,
+          scaleX: 1200, offsetX: 100, scaleY: 700, offsetY: 80,
+          arenaScaleX: 100, arenaOffsetX: 0, arenaScaleY: 100, arenaOffsetY: 0,
+          accuracyPercent: 0, sampleCount: 0, validationRmsePx: 0,
+          inSampleRmsePx: 0, validationSampleCount: 0,
+          validationMethod: 'single-point-unvalidated', anchors: [],
+        };
+        setCalibrationModel(emptyCalibration);
+        calibrationModelRef.current = emptyCalibration;
+        recentPupilBufferRef.current = [];
+        cameraFrameMeterRef.current = {
+          lastVideoTime: -1, windowStartedAt: 0, framesInWindow: 0, totalFrames: 0,
+        };
+        lastEyeQualityUpdateRef.current = 0;
+        setCameraDiagnostics({
+          sourceWidth: videoRef.current?.videoWidth || trackSettings?.width || 0,
+          sourceHeight: videoRef.current?.videoHeight || trackSettings?.height || 0,
+          reportedFrameRate: typeof trackSettings?.frameRate === 'number' ? trackSettings.frameRate : null,
+          measuredFrameRate: 0,
+          measuredFrames: 0,
+          deviceLabel: videoTrack?.label || '',
+          trackReadyState: videoTrack?.readyState || 'live',
+          leftEyeQuality: null,
+          rightEyeQuality: null,
+        });
         setCameraActive(true);
         await refreshCameraDevices();
       } catch {
@@ -1722,6 +1883,92 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     (t) => (validationClicks[t.id] || 0) >= 1
   ).length;
 
+  const cameraPreflightIssues: string[] = [];
+  if (!cameraActive) cameraPreflightIssues.push('الكاميرا غير متصلة');
+  if (cameraDiagnostics.sourceWidth < 640 || cameraDiagnostics.sourceHeight < 480) {
+    cameraPreflightIssues.push('الدقة المستلمة أقل من 640×480');
+  }
+  if (cameraDiagnostics.measuredFrameRate < 15) {
+    cameraPreflightIssues.push(
+      cameraDiagnostics.measuredFrameRate > 0
+        ? 'معدل الإطارات المستلمة أقل من 15 إطارًا/ثانية'
+        : 'جارٍ قياس معدل الإطارات'
+    );
+  }
+  if (mediapipeStatus !== 'ready') cameraPreflightIssues.push('محرك معالم العين غير جاهز');
+  if (!pupilFeatures.faceDetected || pupilFeatures.confidence < 40) {
+    cameraPreflightIssues.push('لم يُرصد الوجه والعينان بثقة كافية');
+  }
+  if (!cameraDiagnostics.leftEyeQuality || !cameraDiagnostics.rightEyeQuality) {
+    cameraPreflightIssues.push('بانتظار قياس صورة منطقتَي العين');
+  } else if (
+    cameraDiagnostics.leftEyeQuality.status === 'poor' ||
+    cameraDiagnostics.rightEyeQuality.status === 'poor'
+  ) {
+    cameraPreflightIssues.push('تفاصيل إحدى العينين ضعيفة: حسّن الإضاءة/التركيز أو قرّب الوجه');
+  }
+  const cameraPreflightPassed = cameraPreflightIssues.length === 0;
+  const gazeResponsePassed = gazeResponseEvaluation?.passed === true;
+  const canBeginCalibration = cameraPreflightPassed && gazeResponsePassed;
+
+  const handleStartGazeResponseCheck = () => {
+    if (!cameraActive || !pupilFeaturesRef.current.faceDetected || mediapipeStatus !== 'ready') {
+      setCalibrationWarning('يلزم بث حي مع رصد العينين بواسطة MediaPipe قبل اختبار استجابة النظر.');
+      return;
+    }
+    setCalibrationWarning('');
+    setIsFullscreenCalibration(false);
+    setGazeResponseSamples([]);
+    setGazeResponseEvaluation(null);
+    setActiveGazeResponseTargetIndex(0);
+    recentPupilBufferRef.current = [];
+    setIsGazeResponseCheckOpen(true);
+  };
+
+  const handleCaptureGazeResponseTarget = (target: (typeof GAZE_RESPONSE_TARGETS)[number]) => {
+    if (!isGazeResponseCheckOpen) return;
+    const buffer = recentPupilBufferRef.current.slice(-12);
+    if (
+      buffer.length < MIN_STABLE_CALIBRATION_FRAMES ||
+      !pupilFeaturesRef.current.faceDetected ||
+      pupilFeaturesRef.current.trackingSource !== 'mediapipe-iris'
+    ) {
+      setCalibrationWarning('لا توجد عينات مستقرة كافية. ثبّت النظر على الهدف وانتظر نصف ثانية تقريبًا ثم اضغطه.');
+      return;
+    }
+    if (
+      valueSpread(buffer.map((sample) => sample.rawX)) > MAX_CALIBRATION_SPREAD ||
+      valueSpread(buffer.map((sample) => sample.rawY)) > MAX_CALIBRATION_SPREAD
+    ) {
+      recentPupilBufferRef.current = [];
+      setCalibrationWarning('إشارة العين ما زالت متذبذبة. حافظ على الرأس ثابتًا وثبّت النظر على الهدف ثم أعد المحاولة.');
+      return;
+    }
+
+    const sample: GazeResponseSample = {
+      targetId: target.id,
+      rawX: medianValue(buffer.map((point) => point.rawX)),
+      rawY: medianValue(buffer.map((point) => point.rawY)),
+    };
+    const nextSamples = [...gazeResponseSamples, sample];
+    setGazeResponseSamples(nextSamples);
+    recentPupilBufferRef.current = [];
+    setCalibrationWarning('');
+
+    if (activeGazeResponseTargetIndex >= GAZE_RESPONSE_TARGETS.length - 1) {
+      const evaluation = evaluateGazeResponse(nextSamples);
+      setGazeResponseEvaluation(evaluation);
+      setIsGazeResponseCheckOpen(false);
+      setCalibrationWarning(
+        evaluation.passed
+          ? 'اجتاز تتبع العين اختبار الاستجابة الأولي في الاتجاهين. الخطوة التالية هي المعايرة ثم التحقق المستقل.'
+          : 'لم يجتز تتبع العين اختبار الاستجابة الأولي. لا تبدأ المعايرة؛ راجع جودة العينين وثبات الرأس ثم أعد الاختبار.'
+      );
+    } else {
+      setActiveGazeResponseTargetIndex((index) => index + 1);
+    }
+  };
+
   // Real-time Foveal Word Hit-Testing Loop during Reading Stage (20Hz / 50ms)
   useEffect(() => {
     if (stage !== 'reading' || !isReadingActive) return;
@@ -1807,6 +2054,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const handleStartReadingStage = () => {
     if (isManualDemoMode) {
       setCalibrationWarning('وضع المحاكاة اليدوية للعرض التقني فقط ولا يسمح ببدء جلسة قياس أو إصدار تقرير.');
+      return;
+    }
+    if (!cameraPreflightPassed || !gazeResponsePassed) {
+      setCalibrationWarning(
+        !cameraPreflightPassed
+          ? `فحص الكاميرا غير مكتمل: ${cameraPreflightIssues.join('؛ ')}.`
+          : 'أكمل اختبار استجابة النظر في الاتجاهين قبل بدء جلسة القراءة.'
+      );
       return;
     }
     if (!cameraActive) {
@@ -2365,8 +2620,16 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
               <button
                 type="button"
-                disabled={!cameraActive || !pupilFeatures.faceDetected || isManualDemoMode}
+                disabled={!canBeginCalibration || isManualDemoMode}
                 onClick={() => {
+                  if (!canBeginCalibration) {
+                    setCalibrationWarning(
+                      !cameraPreflightPassed
+                        ? `فحص الكاميرا غير مكتمل: ${cameraPreflightIssues.join('؛ ')}.`
+                        : 'أكمل اختبار استجابة النظر أولًا.'
+                    );
+                    return;
+                  }
                   void handleResetCalibration().then(() => setIsFullscreenCalibration(true));
                 }}
                 className="text-xs font-semibold px-3 py-2 rounded-lg border border-sky-300 bg-sky-50 text-sky-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-sky-100"
@@ -2460,6 +2723,57 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-950 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
                 <span>{calibrationWarning}</span>
+              </div>
+            )}
+
+            {isGazeResponseCheckOpen && (
+              <div className="fixed inset-0 z-[10000] h-[100dvh] w-[100vw] overflow-hidden bg-slate-950 text-white">
+                <div className="absolute inset-x-4 top-4 z-20 flex items-start justify-between gap-3">
+                  <div className="max-w-2xl rounded-xl border border-slate-700 bg-slate-900/95 px-4 py-3 shadow-xl">
+                    <p className="text-sm font-bold">اختبار استجابة العين قبل المعايرة</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-200">
+                      {GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex]?.label}. حرّك عينيك فقط قدر الإمكان وأبقِ الرأس ثابتًا، ثم انتظر حتى تثبت النظرة واضغط الهدف.
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      الهدف {activeGazeResponseTargetIndex + 1} من {GAZE_RESPONSE_TARGETS.length} · لا تُستخدم هذه العينات لتدريب المعايرة.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsGazeResponseCheckOpen(false);
+                      setGazeResponseSamples([]);
+                      setGazeResponseEvaluation(null);
+                      recentPupilBufferRef.current = [];
+                      setCalibrationWarning('أُلغي اختبار استجابة النظر؛ يجب إكماله بنجاح قبل المعايرة.');
+                    }}
+                    className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs font-semibold hover:bg-slate-800"
+                  >
+                    إلغاء الاختبار
+                  </button>
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                  <div className="h-px w-full bg-slate-400" />
+                  <div className="absolute h-full w-px bg-slate-400" />
+                </div>
+                {GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex] && (
+                  <button
+                    type="button"
+                    aria-label={GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex].label}
+                    onClick={() => handleCaptureGazeResponseTarget(GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex])}
+                    style={{
+                      left: `${GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex].xPct}%`,
+                      top: `${GAZE_RESPONSE_TARGETS[activeGazeResponseTargetIndex].yPct}%`,
+                    }}
+                    className="absolute z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-4 border-sky-300 bg-sky-400/20 text-xs font-bold shadow-[0_0_35px_rgba(56,189,248,0.35)]"
+                  >
+                    <span className="text-2xl">+</span>
+                    <span className="text-[9px]">اضغط بعد الثبات</span>
+                  </button>
+                )}
+                <div className="absolute inset-x-4 bottom-4 text-center text-[11px] text-slate-400">
+                  العينة تُرفض إذا كان الوجه غير مرصود أو كانت إشارة العين متذبذبة.
+                </div>
               </div>
             )}
 
@@ -2795,7 +3109,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     width={640}
                     height={360}
                     data-testid="pupil-cv-canvas"
-                    className="w-full max-w-[380px] h-36 rounded-lg object-cover border border-slate-800"
+                    className="w-full max-w-[380px] aspect-video h-auto rounded-lg object-contain border border-slate-800"
                   />
                   {!cameraActive && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 text-center px-4 rounded-lg">
@@ -2844,6 +3158,143 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Camera quality is measured from the active track and native eye-region pixels. */}
+              <section className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 space-y-3" aria-labelledby="camera-preflight-title">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 id="camera-preflight-title" className="text-xs font-bold text-slate-900">
+                      فحص جودة بث الكاميرا قبل المعايرة
+                    </h4>
+                    <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                      الدقة من الفيديو المستلم، وFPS من الإطارات المتغيرة فعليًا؛ مؤشرات العين تقنية تقريبية وليست تقييمًا سريريًا.
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold border ${
+                    cameraPreflightPassed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}>
+                    {cameraPreflightPassed ? 'البث جاهز مبدئيًا' : 'الفحص غير مكتمل'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">الدقة المستلمة</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.sourceWidth > 0
+                        ? `${cameraDiagnostics.sourceWidth}×${cameraDiagnostics.sourceHeight}`
+                        : 'بانتظار الفيديو'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">FPS المقاس</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.measuredFrameRate > 0
+                        ? cameraDiagnostics.measuredFrameRate.toFixed(1)
+                        : 'جارٍ القياس'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">معدل المسار المعلن</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.reportedFrameRate
+                        ? `${cameraDiagnostics.reportedFrameRate} fps`
+                        : 'غير متاح'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">إطارات مقاسة</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.measuredFrames}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {([
+                    ['العين اليمنى', cameraDiagnostics.rightEyeQuality],
+                    ['العين اليسرى', cameraDiagnostics.leftEyeQuality],
+                  ] as const).map(([label, quality]) => (
+                    <div key={label} className="rounded-lg bg-white border border-slate-200 p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-slate-800">{label}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                          quality?.status === 'good'
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : quality?.status === 'fair'
+                              ? 'bg-sky-50 text-sky-800'
+                              : 'bg-amber-50 text-amber-800'
+                        }`}>
+                          {quality?.status === 'good'
+                            ? 'جيدة مبدئيًا'
+                            : quality?.status === 'fair'
+                              ? 'مقبولة مع تحفظ'
+                              : 'ضعيفة / غير متاحة'}
+                        </span>
+                      </div>
+                      {quality ? (
+                        <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-slate-600 font-mono">
+                          <span>منطقة العين: {quality.widthPx}×{quality.heightPx}px</span>
+                          <span>سطوع: {quality.meanLuma.toFixed(0)}/255</span>
+                          <span>تباين: {quality.contrastStdDev.toFixed(1)}</span>
+                          <span>تفاصيل الحواف: {quality.edgeEnergy.toFixed(1)}</span>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[10px] text-slate-500">
+                          بانتظار رصد الوجه والعينين باستخدام MediaPipe.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {cameraPreflightIssues.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                    <p className="text-[10px] font-bold text-amber-900">ما الذي يمنع اجتياز الفحص؟</p>
+                    <ul className="mt-1 list-disc pr-4 space-y-0.5 text-[10px] text-amber-900">
+                      {cameraPreflightIssues.map((issue) => <li key={issue}>{issue}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-2">
+                  <div className="text-[10px] leading-4 text-slate-500">
+                    لا تُعتبر علامة رصد البؤبؤ وحدها دليلًا على قياس اتجاه النظر.
+                    {cameraDiagnostics.deviceLabel ? <div>المسار: {cameraDiagnostics.deviceLabel}</div> : null}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!cameraActive || !pupilFeatures.faceDetected || mediapipeStatus !== 'ready' || isManualDemoMode}
+                    onClick={handleStartGazeResponseCheck}
+                    className="shrink-0 rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-[11px] font-bold text-sky-900 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {gazeResponseEvaluation ? 'إعادة اختبار استجابة النظر' : 'اختبار استجابة النظر (5 أهداف)'}
+                  </button>
+                </div>
+
+                {gazeResponseEvaluation && (
+                  <div className={`rounded-lg border p-2.5 ${
+                    gazeResponseEvaluation.passed
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                      : 'border-red-200 bg-red-50 text-red-900'
+                  }`}>
+                    <div className="text-[11px] font-bold">
+                      {gazeResponseEvaluation.passed
+                        ? 'استجابة أفقية ورأسية مرصودة'
+                        : 'الاستجابة المرصودة غير كافية — لا تبدأ المعايرة'}
+                    </div>
+                    <div className="mt-1 grid grid-cols-2 gap-2 text-[10px] font-mono">
+                      <span>تغيّر الإشارة الأفقية: Δ {gazeResponseEvaluation.horizontalDelta.toFixed(4)}</span>
+                      <span>تغيّر الإشارة الرأسية: Δ {gazeResponseEvaluation.verticalDelta.toFixed(4)}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] leading-4">
+                      هذه مقارنة بين قياسات العين عند الأهداف، وليست دقة النظر بالبكسل. حدود الاستجابة المستخدمة عتبات هندسية أولية يجب معايرتها على أجهزة وأشخاص حقيقيين.
+                    </p>
+                  </div>
+                )}
+              </section>
 
               {cameraError && (
                 <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
