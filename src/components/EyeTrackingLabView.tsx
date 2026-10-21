@@ -59,20 +59,41 @@ interface EyeTrackingLabViewProps {
 }
 
 const CALIBRATION_TARGETS = [
-  { id: 1, label: 'أعلى اليمين', xPct: 82, yPct: 20 },
-  { id: 2, label: 'أعلى اليسار', xPct: 18, yPct: 20 },
-  { id: 3, label: 'المركز البؤري', xPct: 50, yPct: 50 },
-  { id: 4, label: 'أسفل اليمين', xPct: 82, yPct: 80 },
-  { id: 5, label: 'أسفل اليسار', xPct: 18, yPct: 80 },
+  { id: 1, label: 'أعلى اليسار', xPct: 12, yPct: 18 },
+  { id: 2, label: 'أعلى المنتصف', xPct: 50, yPct: 18 },
+  { id: 3, label: 'أعلى اليمين', xPct: 88, yPct: 18 },
+  { id: 4, label: 'منتصف اليسار', xPct: 12, yPct: 50 },
+  { id: 5, label: 'المركز', xPct: 50, yPct: 50 },
+  { id: 6, label: 'منتصف اليمين', xPct: 88, yPct: 50 },
+  { id: 7, label: 'أسفل اليسار', xPct: 12, yPct: 82 },
+  { id: 8, label: 'أسفل المنتصف', xPct: 50, yPct: 82 },
+  { id: 9, label: 'أسفل اليمين', xPct: 88, yPct: 82 },
 ];
 
-// Independent held-out validation targets (NEVER used to train affine/RBF calibration weights)
+// Spatially interleaved validation points; none is used to train the predictor.
 const VALIDATION_TARGETS = [
-  { id: 101, label: 'تحقق مستقل V1', xPct: 34, yPct: 35 },
-  { id: 102, label: 'تحقق مستقل V2', xPct: 66, yPct: 65 },
+  { id: 101, label: 'تحقق مستقل V1', xPct: 32, yPct: 34 },
+  { id: 102, label: 'تحقق مستقل V2', xPct: 68, yPct: 34 },
+  { id: 103, label: 'تحقق مستقل V3', xPct: 32, yPct: 66 },
+  { id: 104, label: 'تحقق مستقل V4', xPct: 68, yPct: 66 },
 ];
 
 const SAMPLES_PER_TARGET = 2;
+const MIN_STABLE_CALIBRATION_FRAMES = 8;
+const MAX_CALIBRATION_SPREAD = 0.16;
+
+function medianValue(values: number[]): number {
+  const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (sorted.length === 0) return 0.5;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function valueSpread(values: number[]): number {
+  return values.length < 2 ? 0 : Math.max(...values) - Math.min(...values);
+}
 
 export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   onCompleteSession,
@@ -198,17 +219,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
   // Real Multi-Sample Calibration State (Starts at 0/5) + Independent Held-Out Validation Samples
   const [targetClicks, setTargetClicks] = useState<Record<number, number>>({
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 0,
-    5: 0,
+    1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0,
   });
   const [validationClicks, setValidationClicks] = useState<
     Record<number, number>
   >({
-    101: 0,
-    102: 0,
+    101: 0, 102: 0, 103: 0, 104: 0,
   });
   const [calibrationSamples, setCalibrationSamples] = useState<
     CalibrationSample[]
@@ -217,6 +233,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     CalibrationSample[]
   >([]);
   const [isManualDemoMode, setIsManualDemoMode] = useState<boolean>(false);
+  const [isFullscreenCalibration, setIsFullscreenCalibration] = useState<boolean>(false);
   const [calibrationModel, setCalibrationModel] =
     useState<GazeCalibrationModel>({
       isCalibrated: false,
@@ -236,7 +253,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       validationMethod: 'single-point-unvalidated',
       anchors: [],
     });
-  const [activeTargetId, setActiveTargetId] = useState<number>(3);
+  const [activeTargetId, setActiveTargetId] = useState<number>(5);
 
   // Live On-Screen Gaze Cursor (Reticle) & Arena Gaze Dot (%) — Driven 100% by Real Eye Coordinates
   const [showGazeReticle, setShowGazeReticle] = useState<boolean>(true);
@@ -256,7 +273,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const oneEuroXRef = useRef<OneEuroFilter>(new OneEuroFilter(1.15, 22.0, 1.0));
   const oneEuroYRef = useRef<OneEuroFilter>(new OneEuroFilter(1.15, 22.0, 1.0));
   const recentPupilBufferRef = useRef<
-    { normX: number; normY: number; rawX: number; rawY: number }[]
+    { normX: number; normY: number; rawX: number; rawY: number; confidence: number }[]
   >([]);
   const binocularZoomRef = useRef<boolean>(binocularZoomEnabled);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -449,6 +466,24 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         warmupSamples: [],
       };
       smoothedNormRef.current = { x: 0.5, y: 0.5 };
+      recentPupilBufferRef.current = [];
+      oneEuroXRef.current.reset();
+      oneEuroYRef.current.reset();
+      setTargetClicks({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      setValidationClicks({ 101: 0, 102: 0, 103: 0, 104: 0 });
+      setCalibrationSamples([]);
+      setValidationSamples([]);
+      setActiveTargetId(5);
+      const recenteredModel: GazeCalibrationModel = {
+        isCalibrated: false, scaleX: 1200, offsetX: 100, scaleY: 700, offsetY: 80,
+        arenaScaleX: 100, arenaOffsetX: 0, arenaScaleY: 100, arenaOffsetY: 0,
+        accuracyPercent: 0, sampleCount: 0, validationRmsePx: 0,
+        inSampleRmsePx: 0, validationSampleCount: 0,
+        validationMethod: 'single-point-unvalidated', anchors: [],
+      };
+      setCalibrationModel(recenteredModel);
+      calibrationModelRef.current = recenteredModel;
+      setCalibrationWarning('تغيّر مرجع العين؛ أُعيد ضبط العينات. أعد معايرة الشاشة بالكامل قبل بدء القراءة.');
       setArenaGazePct({ xPct: 50, yPct: 50 });
     }
   }, []);
@@ -804,15 +839,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     }
 
                     extracted = computeIrisGazeFromLandmarks(lm, width, height, {
-                      baselineX:
-                        calibrationModelRef.current.empiricalRawCenterX ??
-                        eyeBaselineRef.current.x,
-                      baselineY:
-                        calibrationModelRef.current.empiricalRawCenterY ??
-                        eyeBaselineRef.current.y,
-                      spanX: calibrationModelRef.current.empiricalRawSpanX,
-                      spanY: calibrationModelRef.current.empiricalRawSpanY,
-                      sensitivity: eyeSensitivityRef.current,
+                      baselineX: eyeBaselineRef.current.x,
+                    baselineY: eyeBaselineRef.current.y,
+                    // Keep the feature coordinate system fixed while samples accumulate.
+                    sensitivity: eyeSensitivityRef.current,
                       rgba: frameImgData.data,
                     });
 
@@ -933,17 +963,25 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   y: filteredY,
                 };
 
-                // Push into rolling 4-frame stabilization buffer for blink/tremor-resistant calibration clicks
-                if (!extracted.isBlinking) {
+                // Only retain stable, visible eye frames. Lost/low-quality frames invalidate the window.
+                if (
+                  extracted.faceDetected &&
+                  extracted.confidence >= 40 &&
+                  !extracted.isBlinking &&
+                  !extracted.isVirtualOrBlankFrame
+                ) {
                   recentPupilBufferRef.current.push({
                     normX: filteredX,
                     normY: filteredY,
                     rawX: extracted.rawCombinedX,
                     rawY: extracted.rawCombinedY,
+                    confidence: extracted.confidence,
                   });
-                  if (recentPupilBufferRef.current.length > 4) {
+                  if (recentPupilBufferRef.current.length > 12) {
                     recentPupilBufferRef.current.shift();
                   }
+                } else {
+                  recentPupilBufferRef.current = [];
                 }
 
                 setPupilFeatures(extracted);
@@ -1366,6 +1404,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       const isHeadless =
         navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
 
+      if (!isFullscreenCalibration) {
+        setCalibrationWarning('ابدأ معايرة الشاشة الكاملة أولًا؛ النقاط داخل اللوحة الصغيرة لا تغطي مجال النظر المطلوب.');
+        return;
+      }
+      if ((targetClicks[target.id] || 0) >= SAMPLES_PER_TARGET) return;
+
       if (
         !isHeadless &&
         !isManualDemoMode &&
@@ -1398,24 +1442,27 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         );
       }
 
-      // Compute stabilized pupil position across the last 4 camera frames (100% pure observed eye signal)
-      const buf = recentPupilBufferRef.current;
-      const avgNormX =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.normX, 0) / buf.length
-          : pupilFeaturesRef.current.combinedNormX;
-      const avgNormY =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.normY, 0) / buf.length
-          : pupilFeaturesRef.current.combinedNormY;
-      const avgRawX =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.rawX, 0) / buf.length
-          : pupilFeaturesRef.current.rawCombinedX;
-      const avgRawY =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.rawY, 0) / buf.length
-          : pupilFeaturesRef.current.rawCombinedY;
+      // Use the median of a stable fixation window; never silently fall back to one noisy frame.
+      const buf = recentPupilBufferRef.current.slice(-12);
+      const hasRealCameraGaze =
+        cameraActive && pupilFeaturesRef.current.faceDetected && !isManualDemoMode;
+      if (hasRealCameraGaze && buf.length < MIN_STABLE_CALIBRATION_FRAMES) {
+        setCalibrationWarning('لم تُجمع عينات عين مستقرة كفاية. انظر إلى النقطة بثبات نصف ثانية تقريبًا ثم اضغطها مجددًا.');
+        return;
+      }
+      if (
+        hasRealCameraGaze &&
+        (valueSpread(buf.map((p) => p.normX)) > MAX_CALIBRATION_SPREAD ||
+          valueSpread(buf.map((p) => p.normY)) > MAX_CALIBRATION_SPREAD)
+      ) {
+        recentPupilBufferRef.current = [];
+        setCalibrationWarning('حركة العين ما زالت متذبذبة. ثبّت النظر على النقطة ثم أعد المحاولة.');
+        return;
+      }
+      const avgNormX = hasRealCameraGaze ? medianValue(buf.map((p) => p.normX)) : target.xPct / 100;
+      const avgNormY = hasRealCameraGaze ? medianValue(buf.map((p) => p.normY)) : target.yPct / 100;
+      const avgRawX = hasRealCameraGaze ? medianValue(buf.map((p) => p.rawX)) : target.xPct / 100;
+      const avgRawY = hasRealCameraGaze ? medianValue(buf.map((p) => p.rawY)) : target.yPct / 100;
 
       // 1. Feed real WebGazer eye patches + screen coordinates into WebGazer.js Ridge Regression model
       if (cameraActive && pupilFeaturesRef.current.faceDetected) {
@@ -1466,9 +1513,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         return updatedClicks;
       });
 
-      // 3. Record 100% pure observed camera coordinates when camera is active (never blend target.xPct into camera samples!)
-      const hasRealCameraGaze =
-        cameraActive && pupilFeaturesRef.current.faceDetected && !isManualDemoMode;
+      // Target coordinates label the observation only; they are never used as gaze features.
       const pureNormX = hasRealCameraGaze ? avgNormX : target.xPct / 100;
       const pureNormY = hasRealCameraGaze ? avgNormY : target.yPct / 100;
 
@@ -1517,8 +1562,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
         return updatedSamples;
       });
+      recentPupilBufferRef.current = [];
     },
-    [cameraActive, isManualDemoMode, validationSamples]
+    [cameraActive, isManualDemoMode, validationSamples, isFullscreenCalibration, targetClicks]
   );
 
   /**
@@ -1532,6 +1578,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
     ) => {
       const isHeadless =
         navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
+      if (!isFullscreenCalibration) {
+        setCalibrationWarning('نقاط التحقق المستقلة تُسجَّل في وضع معايرة الشاشة الكاملة فقط.');
+        return;
+      }
+      if ((validationClicks[target.id] || 0) >= 1) return;
       if (
         !isHeadless &&
         !isManualDemoMode &&
@@ -1562,19 +1613,24 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         );
       }
 
-      const buf = recentPupilBufferRef.current;
-      const avgNormX =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.normX, 0) / buf.length
-          : pupilFeaturesRef.current.combinedNormX;
-      const avgNormY =
-        buf.length > 0
-          ? buf.reduce((s, p) => s + p.normY, 0) / buf.length
-          : pupilFeaturesRef.current.combinedNormY;
+      const buf = recentPupilBufferRef.current.slice(-12);
       const hasRealCameraGaze =
         cameraActive && pupilFeaturesRef.current.faceDetected && !isManualDemoMode;
-      const pureNormX = hasRealCameraGaze ? avgNormX : target.xPct / 100;
-      const pureNormY = hasRealCameraGaze ? avgNormY : target.yPct / 100;
+      if (hasRealCameraGaze && buf.length < MIN_STABLE_CALIBRATION_FRAMES) {
+        setCalibrationWarning('لم تُجمع عينات مستقرة كفاية لنقطة التحقق. ثبّت النظر على الهدف ثم أعد المحاولة.');
+        return;
+      }
+      if (
+        hasRealCameraGaze &&
+        (valueSpread(buf.map((p) => p.normX)) > MAX_CALIBRATION_SPREAD ||
+          valueSpread(buf.map((p) => p.normY)) > MAX_CALIBRATION_SPREAD)
+      ) {
+        recentPupilBufferRef.current = [];
+        setCalibrationWarning('العين تتحرك أثناء التحقق. ثبّت النظر على النقطة المستقلة ثم أعد المحاولة.');
+        return;
+      }
+      const pureNormX = hasRealCameraGaze ? medianValue(buf.map((p) => p.normX)) : target.xPct / 100;
+      const pureNormY = hasRealCameraGaze ? medianValue(buf.map((p) => p.normY)) : target.yPct / 100;
 
       setValidationClicks((prev) => ({
         ...prev,
@@ -1606,13 +1662,21 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         calibrationModelRef.current = finalModel;
         return nextVal;
       });
+      recentPupilBufferRef.current = [];
     },
-    [cameraActive, isManualDemoMode, calibrationSamples]
+    [cameraActive, isManualDemoMode, calibrationSamples, isFullscreenCalibration, validationClicks]
   );
 
   const handleResetCalibration = async () => {
     setCalibrationWarning('');
-    handleRecenterEyeBaseline();
+    const rawX = pupilFeaturesRef.current.rawCombinedX;
+    const rawY = pupilFeaturesRef.current.rawCombinedY;
+    if (Number.isFinite(rawX) && Number.isFinite(rawY)) {
+      eyeBaselineRef.current = { x: rawX, y: rawY, initialized: true, warmupSamples: [] };
+    }
+    recentPupilBufferRef.current = [];
+    oneEuroXRef.current.reset();
+    oneEuroYRef.current.reset();
     try {
       await webgazer.clearData();
       if (wgRegressorRef.current) {
@@ -1620,11 +1684,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }
     } catch {}
     setWgRawPrediction(null);
-    setTargetClicks({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-    setValidationClicks({ 101: 0, 102: 0 });
+    setTargetClicks({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+    setValidationClicks({ 101: 0, 102: 0, 103: 0, 104: 0 });
     setCalibrationSamples([]);
     setValidationSamples([]);
-    setActiveTargetId(3);
+    setActiveTargetId(5);
     setArenaGazePct({ xPct: 50, yPct: 50 });
     const resetModel: GazeCalibrationModel = {
       isCalibrated: false,
@@ -1755,11 +1819,12 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       calibrationModel.validationMethod === 'single-point-unvalidated' ||
       typeof validationRmsePx !== 'number' ||
       !Number.isFinite(validationRmsePx) ||
-      (calibrationModel.validationSampleCount || 0) < 1 ||
+      completedValidationCount < VALIDATION_TARGETS.length ||
+      (calibrationModel.validationSampleCount || 0) < VALIDATION_TARGETS.length ||
       validationRmsePx > 60
     ) {
       setCalibrationWarning(
-        `لا تبدأ القراءة قبل اجتياز فحص المعايرة التقني: أكمل نقطتيْن لكل هدف، وتأكد أن RMSE خارج العينة لا يتجاوز 60 بكسل. النتيجة الحالية: RMSE ${Number.isFinite(validationRmsePx) ? validationRmsePx : 'غير متاح'} بكسل؛ هذا حد تقني تجريبي وليس معيارًا سريريًا معتمدًا.`
+        `لا تبدأ القراءة قبل اجتياز فحص المعايرة: أكمل عينتيْن لكل هدف من الأهداف التسعة، ثم سجّل نقاط التحقق الأربع المستقلة. RMSE الحالي: ${Number.isFinite(validationRmsePx) ? validationRmsePx : 'غير متاح'} بكسل؛ الحد 60 بكسل تجريبي وليس معيارًا سريريًا معتمدًا.`
       );
       return;
     }
@@ -1776,9 +1841,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       return;
     }
 
-    if (fullySampledTargetsCount < CALIBRATION_TARGETS.length) {
+    if (fullySampledTargetsCount < CALIBRATION_TARGETS.length || completedValidationCount < VALIDATION_TARGETS.length) {
       setCalibrationWarning(
-        'يرجى إتمام النقاط الخمس؛ انظر إلى كل نقطة واضغط عليها مرتين لتسجيل عينات المعايرة.'
+        'يرجى إتمام الأهداف التسعة مرتين ثم تسجيل نقاط التحقق الأربع المستقلة.'
       );
       return;
     }
@@ -2249,7 +2314,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   : 'text-slate-600'
               }`}
             >
-              ١. الكاميرا والمعايرة ({completedTargetsCount}/5)
+              ١. الكاميرا والمعايرة ({completedTargetsCount}/9)
             </span>
             <span
               className={`px-3 py-1.5 rounded-lg transition-all ${
@@ -2292,12 +2357,22 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
                 <h3 className="text-base font-bold text-slate-900 font-display">
-                  لوحة معايرة ربط بؤبؤ العين بالشاشة (5 نقاط + نقطتي تحقق مستقلتين)
+                  معايرة حركة العين على الشاشة (9 نقاط تدريب + 4 نقاط تحقق مستقلة)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  شغّل الكاميرا ثم انظر إلى كل نقطة واضغط عليها مرتين لتسجيل عينات المعايرة.
+                  تُجرى المعايرة على كامل الشاشة حتى تتوزع الأهداف على مجال النظر الفعلي.
                 </p>
               </div>
+              <button
+                type="button"
+                disabled={!cameraActive || !pupilFeatures.faceDetected || isManualDemoMode}
+                onClick={() => {
+                  void handleResetCalibration().then(() => setIsFullscreenCalibration(true));
+                }}
+                className="text-xs font-semibold px-3 py-2 rounded-lg border border-sky-300 bg-sky-50 text-sky-900 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-sky-100"
+              >
+                بدء معايرة الشاشة الكاملة
+              </button>
               <span
                 className={`text-xs font-mono tabular-nums font-semibold px-2.5 py-1 rounded-md border shrink-0 ${
                   isManualDemoMode
@@ -2312,10 +2387,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 }`}
               >
                 {isManualDemoMode
-                  ? `محاكاة يدوية للعرض فقط (${fullySampledTargetsCount}/5 أهداف)`
+                  ? `محاكاة يدوية للعرض فقط (${fullySampledTargetsCount}/9 أهداف)`
                   : fullySampledTargetsCount === CALIBRATION_TARGETS.length
-                    ? `مكتمل (${fullySampledTargetsCount}/5 أهداف · RMSE خارج العينة ${calibrationModel.validationRmsePx ?? 'غير متاح'}px)`
-                    : `قيد المعايرة (${fullySampledTargetsCount}/5 أهداف · ${calibrationSamples.length}/10 عينات)`}
+                    ? `مكتمل (${fullySampledTargetsCount}/9 أهداف · RMSE خارج العينة ${calibrationModel.validationRmsePx ?? 'غير متاح'}px)`
+                    : `قيد المعايرة (${fullySampledTargetsCount}/9 أهداف · ${calibrationSamples.length}/${CALIBRATION_TARGETS.length * SAMPLES_PER_TARGET} عينات)`}
               </span>
             </div>
 
@@ -2388,11 +2463,55 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
             )}
 
-            {/* Interactive 5-Point Calibration Target Box */}
+            {/* Full-viewport calibration target layer */}
             <div
               ref={calibrationArenaRef}
-              className="relative h-80 bg-[#0F172A] rounded-xl overflow-hidden border border-slate-800 select-none"
+              className={isFullscreenCalibration
+                ? "fixed inset-0 z-[9999] h-[100dvh] w-[100vw] rounded-none overflow-hidden border-0 bg-[#0F172A] select-none"
+                : "relative h-80 bg-[#0F172A] rounded-xl overflow-hidden border border-slate-800 select-none"}
             >
+              {isFullscreenCalibration ? (
+                <div className="absolute inset-x-4 top-3 z-40 flex items-start justify-between gap-3 text-white">
+                  <div className="max-w-2xl rounded-xl border border-slate-600 bg-slate-900/95 px-4 py-3 shadow-lg">
+                    <p className="text-sm font-bold">انظر إلى النقطة ثم اضغطها بعد ثبات النظر</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-200">
+                      ثبّت الرأس وحافظ على مسافة وإضاءة ثابتتين. التدريب: {calibrationSamples.length}/{CALIBRATION_TARGETS.length * SAMPLES_PER_TARGET} عينة · التحقق المستقل: {completedValidationCount}/{VALIDATION_TARGETS.length}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      جودة رصد العين: {pupilFeatures.confidence}% {pupilFeatures.faceDetected ? '· الوجه مرصود' : '· لم يُرصد الوجه بوضوح'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allPointsDone =
+                        fullySampledTargetsCount === CALIBRATION_TARGETS.length &&
+                        completedValidationCount === VALIDATION_TARGETS.length;
+                      setIsFullscreenCalibration(false);
+                      if (!allPointsDone) {
+                        void handleResetCalibration();
+                      } else {
+                        setCalibrationWarning(
+                          (calibrationModel.validationRmsePx ?? Infinity) <= 60
+                            ? 'اكتملت العينات والتحقّق المستقل. راجع خطأ التحقق قبل بدء القراءة.'
+                            : 'اكتملت العينات لكن فحص الدقة لم يُجتز. أعد المعايرة قبل بدء القراءة.'
+                        );
+                      }
+                    }}
+                    className="shrink-0 rounded-lg border border-slate-500 bg-slate-900/95 px-3 py-2 text-xs font-semibold hover:bg-slate-800"
+                  >
+                    {fullySampledTargetsCount === CALIBRATION_TARGETS.length && completedValidationCount === VALIDATION_TARGETS.length
+                      ? 'إنهاء المعايرة'
+                      : 'إلغاء وإعادة الضبط'}
+                  </button>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-8 text-center text-slate-300">
+                  <Target className="h-8 w-8 text-sky-300" />
+                  <p className="text-sm font-semibold text-white">المعايرة الحقيقية يجب أن تغطي الشاشة كاملة</p>
+                  <p className="max-w-md text-xs leading-5">النقاط هنا للمعاينة فقط. شغّل الكاميرا وابدأ معايرة الشاشة الكاملة لتسجيل أهداف موزعة على كامل مجال النظر.</p>
+                </div>
+              )}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-15">
                 <div className="w-full h-px bg-slate-400" />
               </div>
@@ -2401,7 +2520,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               </div>
 
               {/* LIVE GREEN GAZE DOT INSIDE CALIBRATION ARENA */}
-              {showGazeReticle && cameraActive && pupilFeatures.faceDetected && (
+              {showGazeReticle && isFullscreenCalibration && cameraActive && pupilFeatures.faceDetected && (
                 <div
                   style={{
                     left: `${arenaGazePct.xPct}%`,
@@ -2419,7 +2538,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                 </div>
               )}
 
-              {CALIBRATION_TARGETS.map((pt) => {
+              {isFullscreenCalibration && CALIBRATION_TARGETS.map((pt) => {
                 const clicks = targetClicks[pt.id] || 0;
                 const isDone = clicks >= SAMPLES_PER_TARGET;
                 const isActiveTarget = activeTargetId === pt.id && !isDone;
@@ -2431,6 +2550,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       targetButtonsRef.current[pt.id] = el;
                     }}
                     type="button"
+                    disabled={!isFullscreenCalibration || isDone}
                     onClick={(e) => handleSampleCalibrationPoint(pt, e)}
                     style={{ left: `${pt.xPct}%`, top: `${pt.yPct}%` }}
                     aria-label={`نقطة معايرة ${pt.label} (${clicks} من ${SAMPLES_PER_TARGET})`}
@@ -2453,13 +2573,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               })}
 
               {/* 2 Independent Held-Out Validation Points (V1 & V2) */}
-              {VALIDATION_TARGETS.map((vt) => {
+              {isFullscreenCalibration && VALIDATION_TARGETS.map((vt) => {
                 const vClicks = validationClicks[vt.id] || 0;
                 const isValDone = vClicks >= 1;
                 return (
                   <button
                     key={vt.id}
                     type="button"
+                    disabled={!isFullscreenCalibration || isValDone}
                     onClick={(e) => handleSampleValidationPoint(vt, e)}
                     style={{ left: `${vt.xPct}%`, top: `${vt.yPct}%` }}
                     aria-label={`نقطة ${vt.label} خارج التدريب (${vClicks})`}
@@ -2487,7 +2608,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   الشاشة: ({Math.round(gazeScreenPos.x)}px, {Math.round(gazeScreenPos.y)}px)
                 </span>
                 <span>
-                  · تدريب: {calibrationSamples.length}/15 · تحقق مستقل: {completedValidationCount}/2
+                  · تدريب: {calibrationSamples.length}/{CALIBRATION_TARGETS.length * SAMPLES_PER_TARGET} · تحقق مستقل: {completedValidationCount}/{VALIDATION_TARGETS.length}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -2504,7 +2625,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   onClick={handleResetCalibration}
                   className="text-[#0284C7] hover:underline font-semibold cursor-pointer"
                 >
-                  إعادة ضبط المعايرة ({fullySampledTargetsCount}/5)
+                  إعادة ضبط المعايرة ({fullySampledTargetsCount}/9)
                 </button>
               </div>
             </div>
@@ -2893,7 +3014,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
             >
               <Play className="w-4 h-4" />
               <span>
-                بدء القراءة بعد اجتياز فحص المعايرة ({fullySampledTargetsCount}/5 أهداف)
+                بدء القراءة بعد اجتياز فحص المعايرة ({fullySampledTargetsCount}/9 أهداف)
               </span>
             </button>
           </div>
