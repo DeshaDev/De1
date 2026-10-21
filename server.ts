@@ -474,7 +474,7 @@ function loadSecurityState(): void {
       const lockedUntilMs = typeof bucket.lockedUntilMs === 'number' ? bucket.lockedUntilMs : 0;
       if (recent.length === 0 && lockedUntilMs <= now) continue;
       const existing = failedAuthBuckets.get(unifiedKey);
-      const mergedFailures = [...(existing?.failures || []), ...recent].sort((a, b) => a - b).slice(-8);
+      const mergedFailures = [...(existing?.failures || []), ...recent].sort((a, b) => a - b).slice(-10);
       failedAuthBuckets.delete(unifiedKey);
       failedAuthBuckets.set(unifiedKey, {
         failures: mergedFailures,
@@ -676,15 +676,9 @@ async function startServer() {
         await new Promise<void>((resolve) => setTimeout(resolve, throttleDelayMs));
       }
 
-      // A successful authentication resets prior failures for this IP. If the
-      // encrypted state cannot be rewritten, preserve the prior in-memory bucket;
-      // the valid credential is still allowed because storage readiness was checked.
-      const bucketKey = getAuthBucketKey(clientIp);
-      const previousBucket = failedAuthBuckets.get(bucketKey);
-      if (previousBucket) {
-        failedAuthBuckets.delete(bucketKey);
-        if (!saveSecurityState()) failedAuthBuckets.set(bucketKey, previousBucket);
-      }
+      // A successful authentication does not clear prior failures. The IP-wide
+      // rolling window expires them naturally, even if credentials for different
+      // schools are successfully used from the same address.
 
       const safeClinicianName =
         typeof clinicianName === 'string'
