@@ -644,9 +644,8 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
   loadSecurityState();
 
-  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint
-  // Counts FAILED attempts only, scoped by (IP + tenantId) with progressive backoff (Fixing Finding 3 & Finding 4).
-  // Authentication is IP-scoped; unauthenticated tenant hints never influence throttling.
+  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint.
+  // Failed attempts are IP-scoped; unauthenticated tenant hints never influence throttling.
   app.post('/api/auth/session', async (req, res) => {
     if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
       res.status(503).json({
