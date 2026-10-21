@@ -1325,7 +1325,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         const trackSettings = videoTrack?.getSettings();
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
+          await videoRef.current.play();
           if (canvasRef.current && videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
             canvasRef.current.width = videoRef.current.videoWidth;
             canvasRef.current.height = videoRef.current.videoHeight;
@@ -1371,9 +1371,27 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         setCameraActive(true);
         await refreshCameraDevices();
       } catch {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
         setCameraActive(false);
+        setGazeResponseSamples([]);
+        setGazeResponseEvaluation(null);
+        setIsGazeResponseCheckOpen(false);
+        setCameraDiagnostics({
+          sourceWidth: 0,
+          sourceHeight: 0,
+          reportedFrameRate: null,
+          measuredFrameRate: 0,
+          measuredFrames: 0,
+          deviceLabel: '',
+          trackReadyState: 'off',
+          leftEyeQuality: null,
+          rightEyeQuality: null,
+        });
         setCameraError(
-          'يرجى السماح بإذن كاميرا الويب في المتصفح لتشغيل محرك WebGazer.js وتتبع بؤبؤ العين الفعلي.'
+          'تعذّر بدء بث الكاميرا. تحقّق من إذن الكاميرا، وأغلق التطبيقات الأخرى التي قد تستخدمها، ثم أعد المحاولة.'
         );
       }
     },
@@ -1403,7 +1421,43 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       lastLandmarksRef.current = null;
+      lastVideoTimeRef.current = -1;
+      recentPupilBufferRef.current = [];
       setCameraActive(false);
+      setIsGazeResponseCheckOpen(false);
+      setGazeResponseSamples([]);
+      setGazeResponseEvaluation(null);
+      setCalibrationSamples([]);
+      setValidationSamples([]);
+      setTargetClicks({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
+      setValidationClicks({ 101: 0, 102: 0, 103: 0, 104: 0 });
+      setCalibrationModel({
+        isCalibrated: false,
+        scaleX: 1200, offsetX: 100, scaleY: 700, offsetY: 80,
+        arenaScaleX: 100, arenaOffsetX: 0, arenaScaleY: 100, arenaOffsetY: 0,
+        accuracyPercent: 0, sampleCount: 0, validationRmsePx: 0,
+        inSampleRmsePx: 0, validationSampleCount: 0,
+        validationMethod: 'single-point-unvalidated', anchors: [],
+      });
+      calibrationModelRef.current = {
+        isCalibrated: false,
+        scaleX: 1200, offsetX: 100, scaleY: 700, offsetY: 80,
+        arenaScaleX: 100, arenaOffsetX: 0, arenaScaleY: 100, arenaOffsetY: 0,
+        accuracyPercent: 0, sampleCount: 0, validationRmsePx: 0,
+        inSampleRmsePx: 0, validationSampleCount: 0,
+        validationMethod: 'single-point-unvalidated', anchors: [],
+      };
+      setCameraDiagnostics({
+        sourceWidth: 0,
+        sourceHeight: 0,
+        reportedFrameRate: null,
+        measuredFrameRate: 0,
+        measuredFrames: 0,
+        deviceLabel: '',
+        trackReadyState: 'off',
+        leftEyeQuality: null,
+        rightEyeQuality: null,
+      });
       return;
     }
     if (!guardianConsent) {
@@ -2737,6 +2791,11 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     <p className="mt-1 text-[10px] text-slate-400">
                       الهدف {activeGazeResponseTargetIndex + 1} من {GAZE_RESPONSE_TARGETS.length} · لا تُستخدم هذه العينات لتدريب المعايرة.
                     </p>
+                    {calibrationWarning && (
+                      <p role="alert" className="mt-2 rounded-lg border border-amber-400/40 bg-amber-950/70 p-2 text-[11px] leading-4 text-amber-100">
+                        {calibrationWarning}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
