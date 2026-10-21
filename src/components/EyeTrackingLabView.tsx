@@ -106,6 +106,11 @@ interface CameraStreamDiagnostics {
   trackReadyState: string;
   leftEyeQuality: EyeRegionQuality | null;
   rightEyeQuality: EyeRegionQuality | null;
+  eyeProcessingFps?: number;
+  avgFrameProcessingMs?: number;
+  lastLandmarkerMs?: number;
+  lastPixelReadMs?: number;
+  landmarkerDelegate?: 'GPU' | 'CPU' | 'unknown';
 }
 
 function medianValue(values: number[]): number {
@@ -184,6 +189,14 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [gazeResponseSamples, setGazeResponseSamples] = useState<GazeResponseSample[]>([]);
   const [gazeResponseEvaluation, setGazeResponseEvaluation] = useState<GazeResponseEvaluation | null>(null);
   const lastEyeQualityUpdateRef = useRef<number>(0);
+  const eyePipelineMeterRef = useRef({
+    windowStartedAt: 0,
+    framesInWindow: 0,
+    totalFrames: 0,
+    processingMsInWindow: 0,
+    lastLandmarkerMs: 0,
+    lastPixelReadMs: 0,
+  });
   const [mediapipeStatus, setMediapipeStatus] = useState<
     'idle' | 'loading' | 'ready' | 'fallback'
   >('idle');
@@ -608,6 +621,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         try {
           const landmarker = await loadWithWasmRoot(wasmRoot, delegate);
           faceLandmarkerRef.current = landmarker;
+          setCameraDiagnostics((previous) => ({
+            ...previous,
+            landmarkerDelegate: delegate,
+          }));
           setMediapipeStatus('ready');
           return landmarker;
         } catch {
@@ -616,6 +633,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }
     }
 
+    setCameraDiagnostics((previous) => ({
+      ...previous,
+      landmarkerDelegate: 'unknown',
+    }));
     setMediapipeStatus('fallback');
     return null;
   }, []);
@@ -779,6 +800,9 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       const minInterval = isHeadless ? 80 : 28;
       if (now - lastFrameTime >= minInterval) {
         lastFrameTime = now;
+        const processingStartedAt = performance.now();
+        let frameLandmarkerMs = 0;
+        let framePixelReadMs = 0;
         const canvas = canvasRef.current;
         const video = videoRef.current;
 
@@ -825,17 +849,21 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               offCtx.drawImage(video, -width, 0, width, height);
               offCtx.restore();
 
+              const pixelReadStartedAt = performance.now();
               const frameImgData = offCtx.getImageData(0, 0, width, height);
+              framePixelReadMs = performance.now() - pixelReadStartedAt;
 
               // 2. MediaPipe 478-landmark 3D Iris + Glint-Rejected Dark-Pupil Core + Scleral Reflectance + 6-Point EAR
               if (faceLandmarkerRef.current) {
                 try {
                   if (video.currentTime !== lastVideoTimeRef.current) {
                     lastVideoTimeRef.current = video.currentTime;
+                    const landmarkerStartedAt = performance.now();
                     const mpResult = faceLandmarkerRef.current.detectForVideo(
                       video,
                       performance.now()
                     );
+                    frameLandmarkerMs = performance.now() - landmarkerStartedAt;
                     if (
                       mpResult.faceLandmarks &&
                       mpResult.faceLandmarks.length > 0
@@ -1238,6 +1266,30 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               ctx.strokeRect(16, 16, width - 32, height - 32);
             }
           }
+        }
+
+        const finishedAt = performance.now();
+        const meter = eyePipelineMeterRef.current;
+        if (meter.windowStartedAt === 0) meter.windowStartedAt = finishedAt;
+        meter.framesInWindow += 1;
+        meter.totalFrames += 1;
+        meter.processingMsInWindow += finishedAt - processingStartedAt;
+        if (frameLandmarkerMs > 0) meter.lastLandmarkerMs = frameLandmarkerMs;
+        if (framePixelReadMs > 0) meter.lastPixelReadMs = framePixelReadMs;
+        const meterElapsedMs = finishedAt - meter.windowStartedAt;
+        if (meterElapsedMs >= 1000) {
+          const eyeProcessingFps = (meter.framesInWindow * 1000) / meterElapsedMs;
+          const avgFrameProcessingMs = meter.processingMsInWindow / meter.framesInWindow;
+          setCameraDiagnostics((previous) => ({
+            ...previous,
+            eyeProcessingFps: Math.round(eyeProcessingFps * 10) / 10,
+            avgFrameProcessingMs: Math.round(avgFrameProcessingMs * 10) / 10,
+            lastLandmarkerMs: Math.round(meter.lastLandmarkerMs * 10) / 10,
+            lastPixelReadMs: Math.round(meter.lastPixelReadMs * 10) / 10,
+          }));
+          meter.windowStartedAt = finishedAt;
+          meter.framesInWindow = 0;
+          meter.processingMsInWindow = 0;
         }
       }
       rafRef.current = window.requestAnimationFrame(processFrame);
@@ -1984,8 +2036,15 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   if (cameraDiagnostics.measuredFrameRate < 15) {
     cameraPreflightIssues.push(
       cameraDiagnostics.measuredFrameRate > 0
-        ? 'معدل الإطارات المستلمة أقل من 15 إطارًا/ثانية'
-        : 'جارٍ قياس معدل الإطارات'
+        ? 'معدل استدعاءات عرض الفيديو أقل من 15/ث؛ يلزم فحص أداء المحرك بشكل منفصل'
+        : 'جارٍ قياس تحديث إطارات الفيديو'
+    );
+  }
+  if (!cameraDiagnostics.eyeProcessingFps || cameraDiagnostics.eyeProcessingFps < 15) {
+    cameraPreflightIssues.push(
+      cameraDiagnostics.eyeProcessingFps && cameraDiagnostics.eyeProcessingFps > 0
+        ? `محرك تتبع العين يعالج ${cameraDiagnostics.eyeProcessingFps} إطارًا/ث فقط؛ لا تبدأ المعايرة قبل تحسين الأداء`
+        : 'جارٍ قياس عدد الإطارات التي يعالجها محرك العين'
     );
   }
   if (mediapipeStatus !== 'ready') cameraPreflightIssues.push('محرك معالم العين غير جاهز');
@@ -3265,7 +3324,10 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       فحص جودة بث الكاميرا قبل المعايرة
                     </h4>
                     <p className="mt-1 text-[10px] leading-4 text-slate-500">
-                      الدقة من إطارات الفيديو الفعلية؛ معدل الفيديو المقاس منفصل عن معدل الإطارات الذي تعلنه الكاميرا. مؤشرات العين تقنية تقريبية وليست تقييمًا سريريًا.
+                      معدل عرض الفيديو منفصل عن معدل معالجة تتبع العين؛ انخفاض أحدهما لا يثبت أن مستشعر الكاميرا نفسه هو السبب.
+                    </p>
+                    <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                      محرك المعالم: {cameraDiagnostics.landmarkerDelegate ?? 'جارٍ التحديد'} · آخر استدلال MediaPipe: {cameraDiagnostics.lastLandmarkerMs !== undefined ? `${cameraDiagnostics.lastLandmarkerMs} ms` : 'جارٍ القياس'} · آخر قراءة بكسلات: {cameraDiagnostics.lastPixelReadMs !== undefined ? `${cameraDiagnostics.lastPixelReadMs} ms` : 'جارٍ القياس'}
                     </p>
                   </div>
                   <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold border ${
@@ -3303,9 +3365,25 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                     </div>
                   </div>
                   <div className="rounded-lg bg-white border border-slate-200 p-2">
-                    <div className="text-[10px] text-slate-500">إطارات مقاسة</div>
+                    <div className="text-[10px] text-slate-500">إطارات عرض الفيديو</div>
                     <div className="mt-1 text-xs font-mono font-bold text-slate-900">
                       {cameraDiagnostics.measuredFrames}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">معالجة تتبع العين</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.eyeProcessingFps
+                        ? `${cameraDiagnostics.eyeProcessingFps} fps`
+                        : 'جارٍ القياس'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white border border-slate-200 p-2">
+                    <div className="text-[10px] text-slate-500">متوسط زمن المعالجة</div>
+                    <div className="mt-1 text-xs font-mono font-bold text-slate-900">
+                      {cameraDiagnostics.avgFrameProcessingMs !== undefined
+                        ? `${cameraDiagnostics.avgFrameProcessingMs} ms`
+                        : 'جارٍ القياس'}
                     </div>
                   </div>
                 </div>
