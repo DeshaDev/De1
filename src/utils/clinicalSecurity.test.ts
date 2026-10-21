@@ -140,14 +140,32 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(isStrongClinicalAccessCode('f'.repeat(47)), false);
   });
 
-  it('applies a bounded soft delay while a failed-attempt bucket is active', () => {
-    const buckets = new Map<string, AuthFailureBucket>();
+  it('applies progressive IP throttling from 2s at five failures through 60s at ten', () => {
     const now = 1_700_000_000_000;
-    for (let i = 1; i <= 8; i++) {
-      recordFailedAuthAttempt(buckets, '10.0.0.9', undefined, now + i);
+    const expectedDelayByFailureCount = new Map<number, number>([
+      [1, 0], [2, 0], [3, 0], [4, 0],
+      [5, 2_000], [6, 4_000], [7, 8_000],
+      [8, 15_000], [9, 30_000], [10, 60_000],
+    ]);
+
+    for (const [failureCount, expectedDelayMs] of expectedDelayByFailureCount) {
+      const buckets = new Map<string, AuthFailureBucket>();
+      for (let i = 1; i <= failureCount; i++) {
+        recordFailedAuthAttempt(buckets, '10.0.0.9', undefined, now + i);
+      }
+      assert.equal(
+        getAuthThrottleDelayMs(buckets, '10.0.0.9', undefined, now + 20),
+        expectedDelayMs,
+        `unexpected delay after ${failureCount} consecutive failed attempts`
+      );
     }
-    assert.equal(getAuthThrottleDelayMs(buckets, '10.0.0.9', undefined, now + 1_000), 2_000);
-    assert.equal(getAuthThrottleDelayMs(buckets, '10.0.0.9', undefined, now + 61_000), 0);
+
+    const expired = new Map<string, AuthFailureBucket>();
+    for (let i = 1; i <= 10; i++) {
+      recordFailedAuthAttempt(expired, '10.0.0.10', undefined, now + i);
+    }
+    assert.equal(getAuthThrottleDelayMs(expired, '10.0.0.10', undefined, now + 61_000), 0);
+    assert.equal(expired.size, 0, 'expired failures should be discarded by window expiry');
   });
 
   it('counts failed guesses per IP, ignores client tenant hints, and bounds storage', () => {
@@ -175,7 +193,7 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
       recordFailedAuthAttempt(manyHints, '10.0.0.2', `attacker_tenant_${i}`, now + i);
     }
     assert.equal(manyHints.size, 1);
-    assert.equal([...manyHints.values()][0].failures.length, 8);
+    assert.equal([...manyHints.values()][0].failures.length, 10);
   });
 
   it('derives reading metrics server-side, populates deterministic report recommendations, and rejects implausible evidence', () => {
