@@ -171,33 +171,6 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     }
   });
 
-  it('does not let tenant hints bypass throttling and does not reset failures after a valid login to another school', async () => {
-    for (let i = 0; i < 5; i++) {
-      const res = await fetch(`${baseUrl}/api/auth/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: `attacker_tenant_${i}` }),
-      });
-      assert.equal(res.status, 401);
-    }
-
-    const schoolBStartedAt = Date.now();
-    const validSchoolB = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
-    assert.equal(validSchoolB.tenantId, 'school_b');
-    assert.ok(
-      Date.now() - schoolBStartedAt >= 1_500,
-      'the fifth failure should introduce a real two-second delay'
-    );
-
-    const schoolAStartedAt = Date.now();
-    const validSchoolA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
-    assert.equal(validSchoolA.tenantId, 'school_a');
-    assert.ok(
-      Date.now() - schoolAStartedAt >= 1_500,
-      'a valid login to another school must not clear the IP failure count'
-    );
-  });
-
   it('returns JSON 404 for unknown API routes and never serves the SPA shell to non-GET requests', async () => {
     for (const [method, route] of [
       ['GET', '/api/route-that-does-not-exist'],
@@ -553,5 +526,32 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.ok(persistedStudent.clinicalReport.interventionExercises.length >= 2);
     assert.ok(persistedStudent.clinicalReport.classroomAccommodations.length >= 2);
     assert.equal(persistedStudent.name, 'نورة بنت سعد العتيبي');
+  });
+
+  it('does not let tenant hints bypass throttling and does not reset failures after a valid login to another school', async () => {
+    for (let i = 0; i < 5; i++) {
+      const res = await fetch(`${baseUrl}/api/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: `attacker_tenant_${i}` }),
+      });
+      assert.equal(res.status, 401);
+    }
+
+    const schoolBStartedAt = Date.now();
+    const validSchoolB = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
+    assert.equal(validSchoolB.tenantId, 'school_b');
+    assert.ok(
+      Date.now() - schoolBStartedAt >= 1_500,
+      'the fifth failure should introduce a real two-second delay'
+    );
+
+    const schoolAStartedAt = Date.now();
+    const validSchoolA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    assert.equal(validSchoolA.tenantId, 'school_a');
+    assert.ok(
+      Date.now() - schoolAStartedAt >= 1_500,
+      'a valid login to another school must not clear the IP failure count'
+    );
   });
 });
