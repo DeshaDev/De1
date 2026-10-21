@@ -402,7 +402,7 @@ export function calculateProgressiveBackoffMs(failureCount: number): number {
 }
 
 const MAX_AUTH_FAILURE_BUCKETS = 5_000;
-const MAX_AUTH_FAILURES_PER_BUCKET = 8;
+const MAX_AUTH_FAILURES_PER_BUCKET = 10;
 
 export function getAuthBucketKey(clientIp: string, _tenantKey?: string): string {
   // Never partition failed guesses by a tenant hint supplied by the unauthenticated client.
@@ -411,10 +411,10 @@ export function getAuthBucketKey(clientIp: string, _tenantKey?: string): string 
 }
 
 /**
- * Applies a short, bounded delay to requests from an IP with recent failed
- * attempts. This is deliberately a delay, not a hard lock: valid credentials
- * are still accepted after the delay, avoiding permanent school lockout.
- * Invalid attempts remain subject to checkAuthFailureLimit's rolling-window cap.
+ * Applies progressive delay to any request from an IP with recent failed
+ * attempts, whether the submitted credential is valid or invalid.
+ * This is a soft delay rather than a hard lock: valid credentials remain usable
+ * after the delay. It rises from 2s to 60s as active failures rise from five to ten.
  */
 export function getAuthThrottleDelayMs(
   buckets: Map<string, AuthFailureBucket>,
@@ -422,24 +422,22 @@ export function getAuthThrottleDelayMs(
   tenantKey?: string,
   nowMs: number = Date.now()
 ): number {
-  const existing = buckets.get(getAuthBucketKey(clientIp, tenantKey));
+  const key = getAuthBucketKey(clientIp, tenantKey);
+  const existing = buckets.get(key);
   if (!existing) return 0;
 
   const activeFailures = existing.failures.filter(
-    (timestamp) => nowMs - timestamp < AUTH_FAILURE_WINDOW_MS
+    (timestamp) => nowMs - timestamp >= 0 && nowMs - timestamp < AUTH_FAILURE_WINDOW_MS
   );
-  if (activeFailures.length === 0) return 0;
-
-  const lockRemainingMs = Math.max(0, existing.lockedUntilMs - nowMs);
-  if (activeFailures.length < MAX_FREE_FAILURES + 1) {
-    return Math.min(2_000, lockRemainingMs);
+  if (activeFailures.length === 0) {
+    // Rolling-window expiry is natural cleanup, not a successful-login reset.
+    if (existing.lockedUntilMs <= nowMs) buckets.delete(key);
+    return Math.min(60_000, Math.max(0, existing.lockedUntilMs - nowMs));
   }
 
-  // A serial per-IP queue plus this bounded delay prevents a burst of correct
-  // credentials from bypassing an active throttle, without making the delay
-  // grow unbounded or permanently rejecting a valid credential.
   const progressiveDelayMs = calculateProgressiveBackoffMs(activeFailures.length);
-  return Math.min(2_000, Math.max(progressiveDelayMs, lockRemainingMs));
+  const lockRemainingMs = Math.max(0, existing.lockedUntilMs - nowMs);
+  return Math.min(60_000, Math.max(progressiveDelayMs, lockRemainingMs));
 }
 
 export function checkAuthFailureLimit(
@@ -460,7 +458,7 @@ export function checkAuthFailureLimit(
     buckets.delete(key);
     return { allowed: true, retryAfterSeconds: 0, failureCount: 0 };
   }
-  if (existing.lockedUntilMs > nowMs && activeFailures.length >= 8) {
+  if (existing.lockedUntilMs > nowMs && activeFailures.length >= MAX_AUTH_FAILURES_PER_BUCKET) {
     const retryAfterSeconds = Math.max(
       1,
       Math.ceil((existing.lockedUntilMs - nowMs) / 1000)
@@ -471,7 +469,7 @@ export function checkAuthFailureLimit(
       failureCount: activeFailures.length,
     };
   }
-  if (activeFailures.length >= 8) {
+  if (activeFailures.length >= MAX_AUTH_FAILURES_PER_BUCKET) {
     const retryAfterSeconds = Math.max(
       1,
       Math.ceil(
