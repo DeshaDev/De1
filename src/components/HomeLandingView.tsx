@@ -1184,262 +1184,118 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
       </section>
 
-      {/* =====================================================================
-          SECTION 4: QUICK STUDENT LIFECYCLE & DEMO PORTAL
-          (1-Click Ready Gulf/Arabic Profiles + New Student Registration + 4-Step Map)
-          ===================================================================== */}
+      {/* SECTION 4: SIMPLIFIED START */}
       <section
         id="quick-student-portal"
-        className="rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-10 shadow-xs space-y-8 scroll-mt-24"
+        className="rounded-[2rem] bg-white border border-slate-200 p-5 sm:p-8 shadow-xs space-y-6 scroll-mt-24"
       >
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
-          <div className="space-y-1.5">
-            <div className="text-xs font-bold text-[#15803D]">
-              مسار تجريبي تفاعلي
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
-              جرّب المسار بملف تجريبي أو أنشئ سجلاً للاختبار
-            </h2>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-600">
-            تسير الرحلة في ٤ خطوات: اختيار الملف ← القراءة والعين ← الحساب ← التقرير. الملفات المعروضة تجريبية، ولا تمثل نتائج طلاب حقيقيين. لا تُدخل بيانات أطفال حقيقية في هذه النسخة.
+        <div className="max-w-3xl space-y-2">
+          <div className="text-xs font-bold text-[#15803D]">ابدأ من هنا</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+            اختر طريقة التجربة
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            يمكنك استكشاف نموذج جاهز أولاً، أو إنشاء ملف تجريبي باسم مستعار. لا تستخدم بيانات أطفال حقيقية. المؤشرات المعروضة استرشادية وليست تشخيصاً.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Right Column (7 cols): 3 Ready Student Profiles + New Student Form */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">
-                  أ) اختر ملفاً تجريبياً (بيانات اصطناعية):
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  النتائج المعروضة أمثلة توضيحية وليست تشخيصاً
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {students.filter((stu) => stu.isDemoRecord).slice(0, 3).map((stu) => {
-                  const isCurrent = stu.id === activeStudent.id;
-                  return (
-                    <div
-                      key={stu.id}
-                      className={`p-3.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-3 ${
-                        isCurrent
-                          ? 'bg-emerald-50/70 border-[#15803D]'
-                          : 'bg-slate-50 border-slate-200 hover:border-[#15803D]'
-                      }`}
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 leading-snug">
-                          {stu.name}
-                        </div>
-                        <div className="text-[11px] text-slate-600 mt-1">
-                          الصف {stu.gradeLevel} ·{' '}
-                          <span
-                            className={`font-semibold ${
-                              stu.readingRiskLevel === 'high'
-                                ? 'text-[#DC2626]'
-                                : stu.readingRiskLevel === 'moderate'
-                                  ? 'text-[#D97706]'
-                                  : 'text-[#059669]'
-                            }`}
-                          >
-                            {stu.readingRiskLevel === 'high'
-                              ? 'مؤشر تجريبي مرتفع'
-                              : stu.readingRiskLevel === 'moderate'
-                                ? 'مؤشر تجريبي متوسط'
-                                : 'مثال تجريبي'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-1.5 pt-2 border-t border-slate-200/80">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onSelectExistingDemoJourney(stu.id, 'eye-lab')
-                          }
-                          className="flex-1 py-1.5 px-2 bg-[#15803D] hover:bg-[#166534] text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer text-center whitespace-nowrap"
-                        >
-                          بدء الفحص ←
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onSelectStudentReport(stu.id)}
-                          aria-label={`عرض التقرير النهائي للطالب ${stu.name}`}
-                          className="py-1.5 px-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0"
-                        >
-                          <FileText className="w-3 h-3 text-[#15803D] shrink-0" />
-                          <span>التقرير</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* New Student Registration Form */}
-            <form
-              onSubmit={handleQuickStartSubmit}
-              className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <UserPlus className="w-4 h-4 text-[#15803D]" />
-                  <span>ب) أو أنشئ سجلاً للاختبار دون بيانات شخصية حقيقية:</span>
-                </span>
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setMockRole('student')}
-                    className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
-                      mockRole === 'student'
-                        ? 'bg-[#15803D] text-white'
-                        : 'text-slate-600'
-                    }`}
-                  >
-                    تجربة كطالب
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMockRole('specialist')}
-                    className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
-                      mockRole === 'specialist'
-                        ? 'bg-[#15803D] text-white'
-                        : 'text-slate-600'
-                    }`}
-                  >
-                    تجربة كمختص
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="mock-user-name"
-                    className="block text-[11px] font-semibold text-slate-700 mb-1"
-                  >
-                    اسم الطالب الثلاثي
-                  </label>
-                  <input
-                    id="mock-user-name"
-                    type="text"
-                    value={mockName}
-                    onChange={(e) => setMockName(e.target.value)}
-                    placeholder="اسم مستعار للتجربة"
-                    autoComplete="off"
-                    required
-                    maxLength={100}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#15803D]"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="mock-user-grade"
-                    className="block text-[11px] font-semibold text-slate-700 mb-1"
-                  >
-                    الصف الدراسي
-                  </label>
-                  <select
-                    id="mock-user-grade"
-                    value={mockGrade}
-                    onChange={(e) => setMockGrade(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#15803D]"
-                  >
-                    <option value={2}>الصف الثاني الابتدائي</option>
-                    <option value={3}>الصف الثالث الابتدائي</option>
-                    <option value={4}>الصف الرابع الابتدائي</option>
-                    <option value={5}>الصف الخامس الابتدائي</option>
-                    <option value={6}>الصف السادس الابتدائي</option>
-                  </select>
-                </div>
-              </div>
-
-              {registrationNotice && (
-                <div className="text-xs font-semibold text-[#059669]">
-                  {registrationNotice}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#15803D] text-white text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {students.filter((stu) => stu.isDemoRecord).slice(0, 3).map((stu) => {
+            const isCurrent = stu.id === activeStudent.id;
+            return (
+              <div
+                key={stu.id}
+                className={`rounded-2xl border p-4 flex flex-col gap-3 ${isCurrent ? 'bg-emerald-50 border-emerald-400' : 'bg-slate-50 border-slate-200'}`}
               >
-                <span>تسجيل الطالب والانتقال إلى فحص القراءة والعين</span>
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
-
-          {/* Left Column (5 cols): The 4 Sequential Stations Map */}
-          <div className="lg:col-span-5 flex flex-col justify-between bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-slate-900">
-                خريطة رحلة المستخدم (٤ محطات واضحة)
-              </h3>
-              <p className="text-xs text-slate-500">
-                انقر على أي محطة للانتقال إليها مباشرة:
-              </p>
-            </div>
-
-            <div className="space-y-2.5">
-              {[
-                {
-                  step: '٠١',
-                  title: 'اختيار أو تسجيل الطالب',
-                  desc: 'تحديد حساب الطالب والصف الدراسي لبدء الجلسة.',
-                  tab: 'home' as AppTabId,
-                  active: true,
-                },
-                {
-                  step: '٠٢',
-                  title: 'فحص القراءة وتتبع العين',
-                  desc: 'معايرة الكاميرا وقراءة الفقرة بصوت مسموع.',
-                  tab: 'eye-lab' as AppTabId,
-                  active: false,
-                },
-                {
-                  step: '٠٣',
-                  title: 'فحص الحساب وخط الأعداد',
-                  desc: 'قياس التقدير الكمي والتمييز السريع للكميات.',
-                  tab: 'dyscalculia-lab' as AppTabId,
-                  active: false,
-                },
-                {
-                  step: '٠٤',
-                  title: 'التقرير النهائي والقارئ الميسّر',
-                  desc: 'استلام التقرير الموحد وتدريب الطالب قرائياً.',
-                  tab: 'dashboard' as AppTabId,
-                  active: false,
-                },
-              ].map((item) => (
-                <button
-                  key={item.step}
-                  type="button"
-                  onClick={() => onNavigateTab(item.tab)}
-                  className={`w-full p-3 rounded-xl border text-right transition-all flex items-start gap-3 cursor-pointer ${
-                    item.active
-                      ? 'bg-emerald-50/90 border-[#15803D]'
-                      : 'bg-white border-slate-200 hover:border-[#15803D]'
-                  }`}
-                >
-                  <span className="px-2 py-1 rounded-lg bg-[#15803D] text-white font-mono text-xs font-bold shrink-0">
-                    {item.step}
-                  </span>
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-bold text-slate-900">
-                      {item.title}
-                    </div>
-                    <p className="text-[11px] text-slate-600">{item.desc}</p>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">{stu.name}</div>
+                  <div className="mt-1 text-xs text-slate-600">
+                    الصف {stu.gradeLevel} · {stu.readingRiskLevel === 'high' ? 'مثال بمؤشرات مرتفعة' : stu.readingRiskLevel === 'moderate' ? 'مثال بمؤشرات متوسطة' : 'مثال توضيحي'}
                   </div>
-                </button>
-              ))}
+                </div>
+                <div className="flex gap-2 mt-auto">
+                  <button
+                    type="button"
+                    onClick={() => onSelectExistingDemoJourney(stu.id, 'eye-lab')}
+                    className="flex-1 rounded-xl bg-[#15803D] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#166534] transition-colors cursor-pointer"
+                  >
+                    جرّب هذا المثال
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectStudentReport(stu.id)}
+                    aria-label={`عرض التقرير التوضيحي لـ${stu.name}`}
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    التقرير
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <details className="rounded-2xl border border-slate-200 bg-slate-50">
+          <summary className="cursor-pointer list-none px-4 py-3.5 flex items-center justify-between gap-3 text-sm font-bold text-slate-900">
+            <span className="inline-flex items-center gap-2"><UserPlus className="w-4 h-4 text-[#15803D]" /> إنشاء ملف تجريبي جديد</span>
+            <span className="text-xs font-medium text-slate-500">اختياري · افتح</span>
+          </summary>
+          <form onSubmit={handleQuickStartSubmit} className="border-t border-slate-200 p-4 sm:p-5 space-y-4">
+            <p className="text-xs leading-relaxed text-slate-600">
+              استخدم اسماً مستعاراً فقط. إنشاء الملف يفتح جلسة القراءة والعين، ولا يعني أن بياناته حُفظت في الخادم.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label htmlFor="mock-user-name" className="block text-xs font-semibold text-slate-700 mb-1.5">اسم مستعار للتجربة</label>
+                <input
+                  id="mock-user-name"
+                  type="text"
+                  value={mockName}
+                  onChange={(e) => setMockName(e.target.value)}
+                  placeholder="مثال: الطالب التجريبي"
+                  autoComplete="off"
+                  required
+                  maxLength={100}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#15803D]"
+                />
+              </div>
+              <div>
+                <label htmlFor="mock-user-grade" className="block text-xs font-semibold text-slate-700 mb-1.5">الصف الدراسي</label>
+                <select
+                  id="mock-user-grade"
+                  value={mockGrade}
+                  onChange={(e) => setMockGrade(Number(e.target.value))}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#15803D]"
+                >
+                  <option value={2}>الثاني الابتدائي</option>
+                  <option value={3}>الثالث الابتدائي</option>
+                  <option value={4}>الرابع الابتدائي</option>
+                  <option value={5}>الخامس الابتدائي</option>
+                  <option value={6}>السادس الابتدائي</option>
+                </select>
+              </div>
             </div>
-          </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-600">الدور:</span>
+                <button type="button" aria-pressed={mockRole === 'student'} onClick={() => setMockRole('student')} className={`rounded-lg px-3 py-2 font-semibold cursor-pointer ${mockRole === 'student' ? 'bg-emerald-700 text-white' : 'bg-white border border-slate-300 text-slate-700'}`}>طالب</button>
+                <button type="button" aria-pressed={mockRole === 'specialist'} onClick={() => setMockRole('specialist')} className={`rounded-lg px-3 py-2 font-semibold cursor-pointer ${mockRole === 'specialist' ? 'bg-emerald-700 text-white' : 'bg-white border border-slate-300 text-slate-700'}`}>مختص</button>
+              </div>
+              <button type="submit" className="rounded-xl bg-[#18181B] hover:bg-[#15803D] px-5 py-3 text-sm font-bold text-white transition-colors inline-flex items-center justify-center gap-2 cursor-pointer">
+                بدء جلسة القراءة والعين <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+            {registrationNotice && <p role="status" className="text-xs font-semibold text-emerald-700">{registrationNotice}</p>}
+          </form>
+        </details>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 pt-4 text-xs text-slate-600">
+          <span className="font-bold text-slate-800">بعدها:</span>
+          <button type="button" onClick={() => onNavigateTab('eye-lab')} className="font-semibold text-[#15803D] hover:underline cursor-pointer">١. القراءة والعين</button>
+          <span aria-hidden="true" className="text-slate-300">←</span>
+          <button type="button" onClick={() => onNavigateTab('dyscalculia-lab')} className="font-semibold text-[#15803D] hover:underline cursor-pointer">٢. مهام الحساب</button>
+          <span aria-hidden="true" className="text-slate-300">←</span>
+          <button type="button" onClick={() => onNavigateTab('dashboard')} className="font-semibold text-[#15803D] hover:underline cursor-pointer">٣. مراجعة التقرير</button>
         </div>
       </section>
 
