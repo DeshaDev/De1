@@ -19,9 +19,9 @@ import {
   stripArabicPatronymics,
   formatTenantDisplayNameAr,
   checkAuthFailureLimit,
+  getAuthBucketKey,
   recordFailedAuthAttempt,
   StudentProfilePatchSchema,
-  ClinicalReportSchema,
   ClinicalReportUpdateEnvelopeSchema,
   validateAndDeriveMathTrials,
   validateAndDeriveSessionFromEvidence,
@@ -216,7 +216,7 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
   delete normalized.readingPercentile;
   delete normalized.mathPercentile;
 
-  const cleanName = stripArabicPatronymics(normalized.name || '');
+  const cleanName = (normalized.name || '').trim().replace(/\s+/g, ' ');
   const cleanSchool = (normalized.schoolName || '').trim();
   const cleanSummary = normalized.clinicalReport?.clinicalSummary
     ? normalized.clinicalReport.clinicalSummary
@@ -457,16 +457,26 @@ function loadSecurityState(): void {
       }
     }
     failedAuthBuckets.clear();
-    for (const [k, b] of Object.entries(decoded.data.failedAuthBuckets || {})) {
-      if (b && Array.isArray(b.failures)) {
-        const recent = b.failures.filter(
-          (ts) => typeof ts === 'number' && now - ts < 60_000
-        );
-        const lockedUntilMs =
-          typeof b.lockedUntilMs === 'number' ? b.lockedUntilMs : 0;
-        if (recent.length > 0 || lockedUntilMs > now) {
-          failedAuthBuckets.set(k, { failures: recent, lockedUntilMs });
-        }
+    // Migrate legacy IP+tenant keys to one IP-only bucket per client address.
+    for (const [legacyKey, bucket] of Object.entries(decoded.data.failedAuthBuckets || {})) {
+      if (!bucket || !Array.isArray(bucket.failures)) continue;
+      const separator = legacyKey.lastIndexOf('::');
+      const clientIp = separator >= 0 ? legacyKey.slice(0, separator) : legacyKey;
+      const unifiedKey = getAuthBucketKey(clientIp);
+      const recent = bucket.failures.filter((ts) => typeof ts === 'number' && now - ts < 60_000);
+      const lockedUntilMs = typeof bucket.lockedUntilMs === 'number' ? bucket.lockedUntilMs : 0;
+      if (recent.length === 0 && lockedUntilMs <= now) continue;
+      const existing = failedAuthBuckets.get(unifiedKey);
+      const mergedFailures = [...(existing?.failures || []), ...recent].sort((a, b) => a - b).slice(-8);
+      failedAuthBuckets.delete(unifiedKey);
+      failedAuthBuckets.set(unifiedKey, {
+        failures: mergedFailures,
+        lockedUntilMs: Math.max(existing?.lockedUntilMs || 0, lockedUntilMs),
+      });
+      while (failedAuthBuckets.size > 5_000) {
+        const oldestKey = failedAuthBuckets.keys().next().value;
+        if (oldestKey === undefined) break;
+        failedAuthBuckets.delete(oldestKey);
       }
     }
     aiRateLimitBuckets.clear();
@@ -640,17 +650,7 @@ async function startServer() {
 
     const clientIp = req.ip || req.socket.remoteAddress || 'local';
     const now = Date.now();
-    const {
-      accessCode,
-      clinicianName = 'مستخدم بصيرة',
-      tenantId: requestedTenantHint,
-    } = req.body || {};
-
-    const hintTenantKey =
-      typeof requestedTenantHint === 'string' &&
-      /^[a-zA-Z0-9_-]{1,80}$/.test(requestedTenantHint.trim())
-        ? requestedTenantHint.trim()
-        : 'unscoped';
+    const { accessCode, clinicianName = 'مستخدم بصيرة' } = req.body || {};
 
     const credential =
       typeof accessCode === 'string'
@@ -660,13 +660,9 @@ async function startServer() {
         : undefined;
 
     if (!credential) {
-      // Check if this (IP + tenantHint) bucket is already locked before recording another failure
-      const preCheck = checkAuthFailureLimit(
-        failedAuthBuckets,
-        clientIp,
-        hintTenantKey,
-        now
-      );
+      // The tenant is intentionally not taken from unauthenticated request data.
+      // All failed credentials from this IP share one bounded bucket.
+      const preCheck = checkAuthFailureLimit(failedAuthBuckets, clientIp, undefined, now);
       if (!preCheck.allowed) {
         res.setHeader('Retry-After', String(preCheck.retryAfterSeconds));
         res.status(429).json({
@@ -677,12 +673,7 @@ async function startServer() {
         return;
       }
 
-      const failStatus = recordFailedAuthAttempt(
-        failedAuthBuckets,
-        clientIp,
-        hintTenantKey,
-        now
-      );
+      const failStatus = recordFailedAuthAttempt(failedAuthBuckets, clientIp, undefined, now);
       if (!saveSecurityState()) {
         res.status(503).json({
           error: 'تعذر حفظ حالة الأمان المشفرة؛ تم إيقاف المصادقة مؤقتاً.',
@@ -698,24 +689,8 @@ async function startServer() {
       return;
     }
 
-    // Valid credential matched: check only the target school's bucket (so an unscoped attacker or another school never locks out a valid school login)
-    const tenantPreCheck = checkAuthFailureLimit(
-      failedAuthBuckets,
-      clientIp,
-      credential.tenantId,
-      now
-    );
-    if (!tenantPreCheck.allowed) {
-      res.setHeader('Retry-After', String(tenantPreCheck.retryAfterSeconds));
-      res.status(429).json({
-        error:
-          'تم إيقاف محاولات الدخول لهذه المدرسة مؤقتاً بسبب محاولات فاشلة متكررة. يرجى الانتظار.',
-        retryAfterSeconds: tenantPreCheck.retryAfterSeconds,
-      });
-      return;
-    }
-
-    // Successful login: do NOT increment failure bucket and do NOT rewrite security-state.json unnecessarily (Fixing Finding 3 & Finding 4)
+    // A valid secret is matched against provisioned credentials first and is not blocked
+    // by unauthenticated failed attempts. Successful logins never increment rate-limit state.
     const safeClinicianName =
       typeof clinicianName === 'string'
         ? clinicianName.trim().slice(0, 100)
@@ -807,7 +782,7 @@ async function startServer() {
       const id = typeof incoming.id === 'string' ? incoming.id.trim() : '';
       const rawName =
         typeof incoming.name === 'string' ? incoming.name.trim() : '';
-      const cleanName = stripArabicPatronymics(rawName);
+      const cleanName = rawName.replace(/\s+/g, ' ');
       const schoolName =
         typeof incoming.schoolName === 'string' && incoming.schoolName.trim()
           ? incoming.schoolName.trim().slice(0, 160)
@@ -1150,11 +1125,14 @@ async function startServer() {
       return;
     }
 
-    const trialsPayload =
-      rawBody.mathTrials && typeof rawBody.mathTrials === 'object'
-        ? rawBody.mathTrials
-        : rawBody;
-    const mathValidation = validateAndDeriveMathTrials(trialsPayload);
+    if (
+      Object.keys(rawBody).length !== 1 ||
+      !Object.prototype.hasOwnProperty.call(rawBody, 'mathTrials')
+    ) {
+      res.status(400).json({ error: 'يقبل مسار الحساب كائن mathTrials فقط دون حقول إضافية.' });
+      return;
+    }
+    const mathValidation = validateAndDeriveMathTrials(rawBody.mathTrials);
     if (!mathValidation.valid || !mathValidation.metrics || !mathValidation.trials) {
       res.status(400).json({
         error: mathValidation.errorAr || 'بيانات مهام الحساب غير صالحة.',
@@ -1230,11 +1208,6 @@ async function startServer() {
     res.status(200).json({ student: updatedRecord, persisted: true });
   };
 
-  app.post(
-    '/api/students/:id/math',
-    requireClinicalAuth('students:write'),
-    handleMathTrialsUpdate
-  );
   app.put(
     '/api/students/:id/math',
     requireClinicalAuth('students:write'),
@@ -1277,10 +1250,7 @@ async function startServer() {
       return;
     }
 
-    const parsedEnvelope =
-      'clinicalReport' in rawBody
-        ? ClinicalReportUpdateEnvelopeSchema.safeParse(rawBody)
-        : ClinicalReportSchema.safeParse(rawBody);
+    const parsedEnvelope = ClinicalReportUpdateEnvelopeSchema.safeParse(rawBody);
     if (!parsedEnvelope.success) {
       res.status(400).json({
         error:
@@ -1290,10 +1260,7 @@ async function startServer() {
       return;
     }
 
-    const validatedReport =
-      'clinicalReport' in parsedEnvelope.data
-        ? parsedEnvelope.data.clinicalReport
-        : parsedEnvelope.data;
+    const validatedReport = parsedEnvelope.data.clinicalReport;
 
     const updatedRecord: StudentRecord = {
       ...current,
@@ -1321,21 +1288,6 @@ async function startServer() {
   };
 
   app.put(
-    '/api/students/:id/report',
-    requireClinicalAuth('students:write'),
-    handleUpdateClinicalReport
-  );
-  app.post(
-    '/api/students/:id/report',
-    requireClinicalAuth('students:write'),
-    handleUpdateClinicalReport
-  );
-  app.put(
-    '/api/students/:id/clinical-report',
-    requireClinicalAuth('students:write'),
-    handleUpdateClinicalReport
-  );
-  app.post(
     '/api/students/:id/clinical-report',
     requireClinicalAuth('students:write'),
     handleUpdateClinicalReport
@@ -1379,11 +1331,11 @@ async function startServer() {
       const cleanUpdates = {
         ...parsed.data,
         ...(parsed.data.name !== undefined
-          ? { name: stripArabicPatronymics(parsed.data.name) }
+          ? { name: parsed.data.name.trim().replace(/\s+/g, ' ') }
           : {}),
       };
       if (cleanUpdates.name !== undefined && cleanUpdates.name.length < 2) {
-        res.status(400).json({ error: 'اسم الطالب بعد التنقيح قصير جداً.' });
+        res.status(400).json({ error: 'اسم الطالب بعد توحيد المسافات قصير جداً.' });
         return;
       }
 
