@@ -106,7 +106,7 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.throws(() => parseStrictTrustProxyHops('99'));
   });
 
-  it('strips بن and بنت tokens from Arabic student names and formats tenant names', () => {
+  it('keeps patronymic minimization as a separate helper for anonymized AI prompts', () => {
     assert.equal(stripArabicPatronymics('أحمد بن خالد العتيبي'), 'أحمد خالد العتيبي');
     assert.equal(stripArabicPatronymics('سارة بنت محمد القحطاني'), 'سارة محمد القحطاني');
     assert.equal(formatTenantDisplayNameAr('school_a'), 'مدرسة الرواد الأولى (أ)');
@@ -127,7 +127,7 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(unknown.isValidated, false);
   });
 
-  it('counts only failed login attempts per (IP + tenant) with progressive backoff', () => {
+  it('counts failed guesses per IP, ignores client tenant hints, and bounds storage', () => {
     const buckets = new Map<string, AuthFailureBucket>();
     const now = 1_700_000_000_000;
 
@@ -143,10 +143,16 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(fifth.backoffMs, 2000);
     assert.equal(fifth.locked, false);
 
-    // School B on the same IP is completely unaffected
-    const schoolBCheck = checkAuthFailureLimit(buckets, '10.0.0.1', 'school_b', now + 600);
-    assert.equal(schoolBCheck.allowed, true);
-    assert.equal(schoolBCheck.failureCount, 0);
+    // A different client-supplied school hint cannot create a clean bucket.
+    const sameIpDifferentHint = checkAuthFailureLimit(buckets, '10.0.0.1', 'school_b', now + 600);
+    assert.equal(sameIpDifferentHint.allowed, true);
+    assert.equal(sameIpDifferentHint.failureCount, 5);
+    const manyHints = new Map<string, AuthFailureBucket>();
+    for (let i = 0; i < 2_300; i++) {
+      recordFailedAuthAttempt(manyHints, '10.0.0.2', `attacker_tenant_${i}`, now + i);
+    }
+    assert.equal(manyHints.size, 1);
+    assert.equal([...manyHints.values()][0].failures.length, 8);
   });
 
   it('derives reading metrics server-side, populates deterministic report recommendations, and rejects implausible evidence', () => {
@@ -223,6 +229,29 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     );
     assert.equal(impossibleDuration.valid, false);
     assert.equal(impossibleDuration.statusCode, 400);
+
+    // Reject an implausible full-passage reading pace in six seconds.
+    const tooFastReading = validateAndDeriveSessionFromEvidence(
+      {
+        passageId: passage.id,
+        readingDurationSeconds: 6,
+        blinkCount: 3,
+        calibrationAccuracyPercent: 88,
+        calibrationValidationMethod: 'leave-one-point-out',
+        fixations: passage.words.map((word, wordIndex) => ({
+          wordIndex,
+          word,
+          durationMs: 40,
+          visits: 1,
+          blinks: 0,
+          observed: true,
+        })),
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(tooFastReading.valid, false);
+    assert.equal(tooFastReading.statusCode, 400);
 
     // Reject calibrationAccuracyPercent = 0
     const zeroCalib = validateAndDeriveSessionFromEvidence(

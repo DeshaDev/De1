@@ -725,7 +725,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
           </div>
 
           {/* 4 Cols: Assistive Controls Deck */}
-          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 space-y-5 sticky top-24 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 space-y-5 lg:sticky lg:top-28 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
             <div className="pb-3 border-b border-slate-200">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
                 <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />

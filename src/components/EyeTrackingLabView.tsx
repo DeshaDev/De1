@@ -2137,8 +2137,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       comprehensionAnswers: comprehensionAnswersList,
       dialectRegionAr: selectedDialectProfile.labelAr,
       dialectCode: selectedDialect,
-      readingDurationSeconds: durationSec,
-      comprehensionAnswers: selectedPassage.comprehensionQuestions.map((_, index) => answers[index]),
       guardianConsentGiven: guardianConsent,
       guardianConsentRecordedAt: guardianConsent ? guardianConsentRecordedAt || new Date().toISOString() : undefined,
       guardianConsentSource: guardianConsent ? 'إقرار صريح داخل مختبر القراءة' : undefined,

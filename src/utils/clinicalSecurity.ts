@@ -367,13 +367,13 @@ export function calculateProgressiveBackoffMs(failureCount: number): number {
   return Math.min(60_000, 15_000 * Math.pow(2, failureCount - 8));
 }
 
-export function getAuthBucketKey(clientIp: string, tenantKey?: string): string {
+const MAX_AUTH_FAILURE_BUCKETS = 5_000;
+const MAX_AUTH_FAILURES_PER_BUCKET = 8;
+
+export function getAuthBucketKey(clientIp: string, _tenantKey?: string): string {
+  // Never partition failed guesses by a tenant hint supplied by the unauthenticated client.
   const safeIp = (clientIp || 'local').trim() || 'local';
-  const safeTenant =
-    tenantKey && /^[a-zA-Z0-9_-]{1,80}$/.test(tenantKey.trim())
-      ? tenantKey.trim()
-      : 'unscoped';
-  return `${safeIp}::${safeTenant}`;
+  return `${safeIp}::unscoped`;
 }
 
 export function checkAuthFailureLimit(
@@ -445,14 +445,22 @@ export function recordFailedAuthAttempt(
     (ts) => nowMs - ts < AUTH_FAILURE_WINDOW_MS
   );
   activeFailures.push(nowMs);
-  const backoffMs = calculateProgressiveBackoffMs(activeFailures.length);
+  // Keep both the per-IP history and the number of IP buckets bounded.
+  const boundedFailures = activeFailures.slice(-MAX_AUTH_FAILURES_PER_BUCKET);
+  const backoffMs = calculateProgressiveBackoffMs(boundedFailures.length);
   const lockedUntilMs =
     backoffMs > 0
       ? Math.max(existing.lockedUntilMs, nowMs + backoffMs)
       : existing.lockedUntilMs;
-  buckets.set(key, { failures: activeFailures, lockedUntilMs });
+  buckets.delete(key);
+  buckets.set(key, { failures: boundedFailures, lockedUntilMs });
+  while (buckets.size > MAX_AUTH_FAILURE_BUCKETS) {
+    const oldestKey = buckets.keys().next().value;
+    if (oldestKey === undefined) break;
+    buckets.delete(oldestKey);
+  }
 
-  const locked = activeFailures.length >= 8;
+  const locked = boundedFailures.length >= MAX_AUTH_FAILURES_PER_BUCKET;
   const retryAfterSeconds = locked
     ? Math.max(1, Math.ceil((lockedUntilMs - nowMs) / 1000))
     : Math.ceil(backoffMs / 1000);
@@ -564,9 +572,14 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
     };
   }
   const obj = rawMath as Record<string, unknown>;
-  const subRaw = obj.subitizingTrials ?? obj.subitizing;
-  const nlRaw = obj.numberLineTrials ?? obj.numberLine;
-  const trRaw = obj.transcodingTrials ?? obj.transcoding;
+  const allowedTopLevelKeys = new Set(['subitizingTrials', 'numberLineTrials', 'transcodingTrials']);
+  const unexpectedTopLevelKeys = Object.keys(obj).filter((key) => !allowedTopLevelKeys.has(key));
+  if (unexpectedTopLevelKeys.length > 0) {
+    return { valid: false, errorAr: `حقول غير مسموح بها في بيانات الحساب: ${unexpectedTopLevelKeys.join(', ')}.` };
+  }
+  const subRaw = obj.subitizingTrials;
+  const nlRaw = obj.numberLineTrials;
+  const trRaw = obj.transcodingTrials;
 
   if (!Array.isArray(subRaw) || subRaw.length !== 4) {
     return {
@@ -597,6 +610,12 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
       return { valid: false, errorAr: 'محاولة تمييز كميات غير صالحة.' };
     }
     const rec = item as Record<string, unknown>;
+    const unexpectedKeys = Object.keys(rec).filter(
+      (key) => !['dotCount', 'targetCount', 'chosen', 'selectedCount', 'correct', 'reactionTimeMs'].includes(key)
+    );
+    if (unexpectedKeys.length > 0) {
+      return { valid: false, errorAr: `حقول غير مسموح بها في محاولة تمييز الكميات: ${unexpectedKeys.join(', ')}.` };
+    }
     const dotCount = Number(rec.dotCount ?? rec.targetCount);
     const chosen =
       rec.chosen !== undefined || rec.selectedCount !== undefined
@@ -664,6 +683,12 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
       return { valid: false, errorAr: 'محاولة خط أعداد غير صالحة.' };
     }
     const rec = item as Record<string, unknown>;
+    const unexpectedKeys = Object.keys(rec).filter(
+      (key) => !['target', 'userEstimate', 'scaleMin', 'scaleMax', 'reactionTimeMs'].includes(key)
+    );
+    if (unexpectedKeys.length > 0) {
+      return { valid: false, errorAr: `حقول غير مسموح بها في محاولة خط الأعداد: ${unexpectedKeys.join(', ')}.` };
+    }
     const target = Number(rec.target);
     const spec = ALLOWED_NUMBER_LINE_SPEC[target];
     if (!spec || seenNlTargets.has(target)) {
@@ -719,6 +744,12 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
       return { valid: false, errorAr: 'محاولة ترميز أرقام غير صالحة.' };
     }
     const rec = item as Record<string, unknown>;
+    const unexpectedKeys = Object.keys(rec).filter(
+      (key) => !['targetNumber', 'selectedNumber', 'isReversalError', 'reactionTimeMs'].includes(key)
+    );
+    if (unexpectedKeys.length > 0) {
+      return { valid: false, errorAr: `حقول غير مسموح بها في محاولة ترميز الأرقام: ${unexpectedKeys.join(', ')}.` };
+    }
     const targetNumber = Number(rec.targetNumber);
     const selectedNumber = Number(rec.selectedNumber);
     const rtMs = Number(rec.reactionTimeMs);
@@ -1172,6 +1203,16 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
+  // Abuse/plausibility ceiling, not a clinical norm: reject implausible reported pace.
+  const observedReadingWpm = (validatedFixations.length * 60) / readingDurationSeconds;
+  if (observedReadingWpm > 300) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: `سرعة القراءة المستنتجة (${Math.round(observedReadingWpm)} كلمة/دقيقة) تتجاوز حد المعقولية التقني (300 كلمة/دقيقة).`,
+    };
+  }
+
   if (totalObservedFixationMs > readingDurationSeconds * 1000) {
     return {
       valid: false,
@@ -1315,10 +1356,7 @@ export function validateAndDeriveSessionFromEvidence(
   );
 
   // 9. Optional Math Trials Validation & Derivation
-  const rawMathTrials =
-    evidenceObj.mathTrials ??
-    rawBody.mathTrials ??
-    (rawBody.dyscalculiaAssessed === true ? evidenceObj : null);
+  const rawMathTrials = evidenceObj.mathTrials ?? rawBody.mathTrials ?? null;
   let dyscalculiaAssessed = false;
   let mathTrials: StudentMathTrialsPayload | undefined;
   let subitizingAccuracy: number | null = null;
