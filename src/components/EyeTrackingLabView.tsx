@@ -1047,6 +1047,16 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                   const settings = track?.getSettings();
                   const hasLandmarkEyeRegions =
                     extracted.trackingSource === 'mediapipe-iris' && extracted.faceDetected;
+                  const leftEyeQuality = hasLandmarkEyeRegions
+                    ? measureEyeRegionQuality(
+                        frameImgData.data, width, height, extracted.leftEyeBox
+                      )
+                    : null;
+                  const rightEyeQuality = hasLandmarkEyeRegions
+                    ? measureEyeRegionQuality(
+                        frameImgData.data, width, height, extracted.rightEyeBox
+                      )
+                    : null;
                   setCameraDiagnostics((previous) => ({
                     ...previous,
                     sourceWidth: video?.videoWidth || settings?.width || previous.sourceWidth,
@@ -1056,16 +1066,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       : previous.reportedFrameRate,
                     deviceLabel: track?.label || previous.deviceLabel,
                     trackReadyState: track?.readyState || previous.trackReadyState,
-                    leftEyeQuality: hasLandmarkEyeRegions
-                      ? measureEyeRegionQuality(
-                          frameImgData.data, width, height, extracted.leftEyeBox
-                        )
-                      : null,
-                    rightEyeQuality: hasLandmarkEyeRegions
-                      ? measureEyeRegionQuality(
-                          frameImgData.data, width, height, extracted.rightEyeBox
-                        )
-                      : null,
+                    leftEyeQuality,
+                    rightEyeQuality,
                   }));
                 }
 
