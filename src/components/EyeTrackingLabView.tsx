@@ -1364,11 +1364,8 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
 
   useEffect(() => {
     startOpticalLoop();
-    const isHeadless =
-      navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
-    if (!isHeadless && typeof navigator.mediaDevices?.getUserMedia === 'function') {
-      startCameraWithDevice();
-    }
+    // Do not open the webcam automatically on mount. The user must record
+    // guardian consent and explicitly start the camera from the preview controls.
     return () => {
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       if (streamRef.current) {
@@ -1378,7 +1375,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         micStreamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [startOpticalLoop, startCameraWithDevice]);
+  }, [startOpticalLoop]);
 
   // Measure frames delivered by the video element independently from the eye-processing loop.
   // requestVideoFrameCallback is preferred; requestAnimationFrame + currentTime is the fallback.
