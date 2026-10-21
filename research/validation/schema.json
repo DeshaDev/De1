@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Baseera validation record",
+  "description": "One JSONL record per audio or gaze measurement. Do not store direct identifiers or raw child media here.",
+  "type": "object",
+  "required": ["schema_version", "sample_id", "participant_id", "session_id", "modality", "split"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "sample_id": { "type": "string", "minLength": 1 },
+    "participant_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "modality": { "enum": ["audio", "gaze", "camera_quality"] },
+    "split": { "enum": ["development", "validation", "test", "synthetic"] },
+    "consent_status": { "enum": ["approved", "not_applicable_synthetic", "not_approved"] },
+    "reference_text": { "type": "string" },
+    "hypothesis_text": { "type": "string" },
+    "target_x_px": { "type": "number" },
+    "target_y_px": { "type": "number" },
+    "predicted_x_px": { "type": "number" },
+    "predicted_y_px": { "type": "number" },
+    "reference_gaze_x_px": { "type": "number" },
+    "reference_gaze_y_px": { "type": "number" },
+    "reviewer_label": { "type": "string" },
+    "reviewer_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "exclusion_reason": { "type": "string" },
+    "notes": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "modality": { "const": "audio" } }, "required": ["modality"] },
+      "then": { "required": ["reference_text", "hypothesis_text"] }
+    },
+    {
+      "if": { "properties": { "modality": { "const": "gaze" } }, "required": ["modality"] },
+      "then": { "required": ["target_x_px", "target_y_px", "predicted_x_px", "predicted_y_px"] }
+    }
+  ],
+  "additionalProperties": true
+}
