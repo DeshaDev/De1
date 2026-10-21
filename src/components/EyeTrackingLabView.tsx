@@ -183,12 +183,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
   const [activeGazeResponseTargetIndex, setActiveGazeResponseTargetIndex] = useState<number>(0);
   const [gazeResponseSamples, setGazeResponseSamples] = useState<GazeResponseSample[]>([]);
   const [gazeResponseEvaluation, setGazeResponseEvaluation] = useState<GazeResponseEvaluation | null>(null);
-  const cameraFrameMeterRef = useRef({
-    lastVideoTime: -1,
-    windowStartedAt: 0,
-    framesInWindow: 0,
-    totalFrames: 0,
-  });
   const lastEyeQualityUpdateRef = useRef<number>(0);
   const [mediapipeStatus, setMediapipeStatus] = useState<
     'idle' | 'loading' | 'ready' | 'fallback'
@@ -825,35 +819,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
               Boolean(streamRef.current);
 
             if (hasLiveVideo && video) {
-              // Estimate received/decoded FPS from unique video frames, not requestAnimationFrame rate.
-              const meter = cameraFrameMeterRef.current;
-              if (video.currentTime !== meter.lastVideoTime) {
-                meter.lastVideoTime = video.currentTime;
-                if (meter.windowStartedAt === 0) meter.windowStartedAt = now;
-                meter.framesInWindow += 1;
-                meter.totalFrames += 1;
-                const elapsedMs = now - meter.windowStartedAt;
-                if (elapsedMs >= 1000) {
-                  const measuredFrameRate = (meter.framesInWindow * 1000) / elapsedMs;
-                  const track = streamRef.current?.getVideoTracks()[0];
-                  const settings = track?.getSettings();
-                  setCameraDiagnostics((previous) => ({
-                    ...previous,
-                    sourceWidth: video.videoWidth || previous.sourceWidth,
-                    sourceHeight: video.videoHeight || previous.sourceHeight,
-                    reportedFrameRate: typeof settings?.frameRate === 'number'
-                      ? settings.frameRate
-                      : previous.reportedFrameRate,
-                    measuredFrameRate: Math.round(measuredFrameRate * 10) / 10,
-                    measuredFrames: meter.totalFrames,
-                    deviceLabel: track?.label || previous.deviceLabel,
-                    trackReadyState: track?.readyState || previous.trackReadyState,
-                  }));
-                  meter.windowStartedAt = now;
-                  meter.framesInWindow = 0;
-                }
-              }
-
               // 1. Draw mirrored live webcam frame onto the full-resolution offscreen buffer
               offCtx.save();
               offCtx.scale(-1, 1);
@@ -1353,9 +1318,6 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
         setCalibrationModel(emptyCalibration);
         calibrationModelRef.current = emptyCalibration;
         recentPupilBufferRef.current = [];
-        cameraFrameMeterRef.current = {
-          lastVideoTime: -1, windowStartedAt: 0, framesInWindow: 0, totalFrames: 0,
-        };
         lastEyeQualityUpdateRef.current = 0;
         setCameraDiagnostics({
           sourceWidth: videoRef.current?.videoWidth || trackSettings?.width || 0,
@@ -1415,6 +1377,84 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
       }
     };
   }, [startOpticalLoop, startCameraWithDevice]);
+
+  // Measure frames delivered by the video element independently from the eye-processing loop.
+  // requestVideoFrameCallback is preferred; requestAnimationFrame + currentTime is the fallback.
+  useEffect(() => {
+    if (!cameraActive) return;
+    const videoElement = videoRef.current as (HTMLVideoElement & {
+      requestVideoFrameCallback?: (callback: (now: number, metadata: unknown) => void) => number;
+      cancelVideoFrameCallback?: (handle: number) => void;
+    }) | null;
+    if (!videoElement) return;
+
+    let active = true;
+    let totalFrames = 0;
+    let framesInWindow = 0;
+    let windowStartedAt = performance.now();
+    let lastVideoTime = -1;
+    let fallbackRaf: number | null = null;
+    let videoCallbackId: number | null = null;
+
+    const publishFrameRate = (now: number) => {
+      if (!active) return;
+      totalFrames += 1;
+      framesInWindow += 1;
+      const elapsedMs = now - windowStartedAt;
+      if (elapsedMs >= 1000) {
+        const measuredFrameRate = (framesInWindow * 1000) / elapsedMs;
+        const track = streamRef.current?.getVideoTracks()[0];
+        const settings = track?.getSettings();
+        setCameraDiagnostics((previous) => ({
+          ...previous,
+          sourceWidth: videoElement.videoWidth || settings?.width || previous.sourceWidth,
+          sourceHeight: videoElement.videoHeight || settings?.height || previous.sourceHeight,
+          reportedFrameRate: typeof settings?.frameRate === 'number'
+            ? settings.frameRate
+            : previous.reportedFrameRate,
+          measuredFrameRate: Math.round(measuredFrameRate * 10) / 10,
+          measuredFrames: totalFrames,
+          deviceLabel: track?.label || previous.deviceLabel,
+          trackReadyState: track?.readyState || previous.trackReadyState,
+        }));
+        windowStartedAt = now;
+        framesInWindow = 0;
+      }
+    };
+
+    if (typeof videoElement.requestVideoFrameCallback === 'function') {
+      const onVideoFrame = (now: number) => {
+        publishFrameRate(now);
+        if (active) videoCallbackId = videoElement.requestVideoFrameCallback!(onVideoFrame);
+      };
+      videoCallbackId = videoElement.requestVideoFrameCallback(onVideoFrame);
+    } else {
+      const pollVideoFrames = (now: number) => {
+        if (!active) return;
+        if (
+          videoElement.readyState >= 2 &&
+          videoElement.videoWidth > 0 &&
+          videoElement.currentTime !== lastVideoTime
+        ) {
+          lastVideoTime = videoElement.currentTime;
+          publishFrameRate(now);
+        }
+        fallbackRaf = window.requestAnimationFrame(pollVideoFrames);
+      };
+      fallbackRaf = window.requestAnimationFrame(pollVideoFrames);
+    }
+
+    return () => {
+      active = false;
+      if (fallbackRaf !== null) window.cancelAnimationFrame(fallbackRaf);
+      if (
+        videoCallbackId !== null &&
+        typeof videoElement.cancelVideoFrameCallback === 'function'
+      ) {
+        videoElement.cancelVideoFrameCallback(videoCallbackId);
+      }
+    };
+  }, [cameraActive]);
 
   const handleToggleCamera = async () => {
     if (cameraActive && streamRef.current) {
@@ -3226,7 +3266,7 @@ export const EyeTrackingLabView: React.FC<EyeTrackingLabViewProps> = ({
                       فحص جودة بث الكاميرا قبل المعايرة
                     </h4>
                     <p className="mt-1 text-[10px] leading-4 text-slate-500">
-                      الدقة من الفيديو المستلم، وFPS من الإطارات المتغيرة فعليًا؛ مؤشرات العين تقنية تقريبية وليست تقييمًا سريريًا.
+                      الدقة من إطارات الفيديو الفعلية؛ معدل الفيديو المقاس منفصل عن معدل الإطارات الذي تعلنه الكاميرا. مؤشرات العين تقنية تقريبية وليست تقييمًا سريريًا.
                     </p>
                   </div>
                   <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold border ${
