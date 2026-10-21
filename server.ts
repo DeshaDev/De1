@@ -21,6 +21,8 @@ import {
   checkAuthFailureLimit,
   getAuthBucketKey,
   recordFailedAuthAttempt,
+  getAuthThrottleDelayMs,
+  isStrongClinicalAccessCode,
   StudentProfilePatchSchema,
   ClinicalReportUpdateEnvelopeSchema,
   validateAndDeriveMathTrials,
@@ -78,6 +80,12 @@ interface PersistedSecurityState {
 const REVOKED_CLINICAL_SESSIONS = new Map<string, number>();
 const failedAuthBuckets = new Map<string, AuthFailureBucket>();
 const aiRateLimitBuckets = new Map<string, number[]>();
+// Invalid login attempts are serialized per IP so parallel requests cannot all
+// pass through an empty failure bucket at once. Valid credentials use a priority
+// path with a short delay, so an attacker cannot queue them behind a long backlog.
+const authAttemptTails = new Map<string, Promise<void>>();
+const pendingAuthAttempts = new Map<string, number>();
+const MAX_PENDING_AUTH_ATTEMPTS_PER_IP = 16;
 let auditLogsDb: ClinicalAuditLogEntry[] = [];
 
 interface TenantCredential {
@@ -119,8 +127,7 @@ function getTenantCredentialEntries(): TenantCredential[] {
       for (const role of ['clinician', 'educator_readonly'] as const) {
         const accessCode = credentials[role];
         if (
-          typeof accessCode !== 'string' ||
-          accessCode.length < 24 ||
+          !isStrongClinicalAccessCode(accessCode) ||
           seenCodes.has(accessCode)
         )
           return [];
@@ -637,9 +644,9 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
   loadSecurityState();
 
-  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint
-  // Counts FAILED attempts only, scoped by (IP + tenantId) with progressive backoff (Fixing Finding 3 & Finding 4).
-  app.post('/api/auth/session', (req, res) => {
+  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint.
+  // Failed attempts are IP-scoped; unauthenticated tenant hints never influence throttling.
+  app.post('/api/auth/session', async (req, res) => {
     if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
       res.status(503).json({
         error:
@@ -649,9 +656,7 @@ async function startServer() {
     }
 
     const clientIp = req.ip || req.socket.remoteAddress || 'local';
-    const now = Date.now();
     const { accessCode, clinicianName = 'مستخدم بصيرة' } = req.body || {};
-
     const credential =
       typeof accessCode === 'string'
         ? getTenantCredentialEntries().find(({ accessCode: expected }) =>
@@ -659,9 +664,79 @@ async function startServer() {
           )
         : undefined;
 
-    if (!credential) {
-      // The tenant is intentionally not taken from unauthenticated request data.
-      // All failed credentials from this IP share one bounded bucket.
+    if (credential) {
+      // Priority path: valid credentials are never rejected just because an
+      // attacker has filled the invalid-attempt queue for this IP.
+      const pending = pendingAuthAttempts.get(clientIp) || 0;
+      const throttleDelayMs = Math.max(
+        getAuthThrottleDelayMs(failedAuthBuckets, clientIp, undefined, Date.now()),
+        pending > 0 ? 2_000 : 0
+      );
+      if (throttleDelayMs > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, throttleDelayMs));
+      }
+
+      // A successful authentication resets prior failures for this IP. If the
+      // encrypted state cannot be rewritten, preserve the prior in-memory bucket;
+      // the valid credential is still allowed because storage readiness was checked.
+      const bucketKey = getAuthBucketKey(clientIp);
+      const previousBucket = failedAuthBuckets.get(bucketKey);
+      if (previousBucket) {
+        failedAuthBuckets.delete(bucketKey);
+        if (!saveSecurityState()) failedAuthBuckets.set(bucketKey, previousBucket);
+      }
+
+      const safeClinicianName =
+        typeof clinicianName === 'string'
+          ? clinicianName.trim().slice(0, 100)
+          : '';
+      const session = issueClinicalSessionToken(
+        credential.role,
+        safeClinicianName ||
+          (credential.role === 'clinician' ? 'أخصائي التقييم' : 'معلم'),
+        CLINICAL_SESSION_SECRET,
+        60 * 60 * 1000,
+        credential.tenantId,
+        credential.tenantDisplayNameAr
+      );
+      res.json(session);
+      return;
+    }
+
+    // Keep a small, serialized invalid-attempt queue. Excess bursts get 429,
+    // but they cannot consume the valid-credential priority path above.
+    const pending = pendingAuthAttempts.get(clientIp) || 0;
+    if (pending >= MAX_PENDING_AUTH_ATTEMPTS_PER_IP) {
+      res.setHeader('Retry-After', '1');
+      res.status(429).json({
+        error: 'طلبات تسجيل الدخول المتزامنة كثيرة. يرجى الانتظار ثم المحاولة مجدداً.',
+        retryAfterSeconds: 1,
+      });
+      return;
+    }
+
+    const previous = authAttemptTails.get(clientIp) || Promise.resolve();
+    let releaseQueueSlot!: () => void;
+    const queueSlot = new Promise<void>((resolve) => {
+      releaseQueueSlot = resolve;
+    });
+    const tail = previous.then(() => queueSlot);
+    authAttemptTails.set(clientIp, tail);
+    pendingAuthAttempts.set(clientIp, pending + 1);
+
+    await previous;
+    try {
+      const throttleDelayMs = getAuthThrottleDelayMs(
+        failedAuthBuckets,
+        clientIp,
+        undefined,
+        Date.now()
+      );
+      if (throttleDelayMs > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, throttleDelayMs));
+      }
+
+      const now = Date.now();
       const preCheck = checkAuthFailureLimit(failedAuthBuckets, clientIp, undefined, now);
       if (!preCheck.allowed) {
         res.setHeader('Retry-After', String(preCheck.retryAfterSeconds));
@@ -673,7 +748,7 @@ async function startServer() {
         return;
       }
 
-      const failStatus = recordFailedAuthAttempt(failedAuthBuckets, clientIp, undefined, now);
+      const failStatus = recordFailedAuthAttempt(failedAuthBuckets, clientIp, undefined, Date.now());
       if (!saveSecurityState()) {
         res.status(503).json({
           error: 'تعذر حفظ حالة الأمان المشفرة؛ تم إيقاف المصادقة مؤقتاً.',
@@ -686,25 +761,15 @@ async function startServer() {
       res.status(401).json({
         error: 'رمز الدخول غير صحيح أو غير مرتبط بصلاحيات مدرسة.',
       });
-      return;
+    } finally {
+      releaseQueueSlot();
+      const remaining = (pendingAuthAttempts.get(clientIp) || 1) - 1;
+      if (remaining <= 0) pendingAuthAttempts.delete(clientIp);
+      else pendingAuthAttempts.set(clientIp, remaining);
+      if (authAttemptTails.get(clientIp) === tail) {
+        authAttemptTails.delete(clientIp);
+      }
     }
-
-    // A valid secret is matched against provisioned credentials first and is not blocked
-    // by unauthenticated failed attempts. Successful logins never increment rate-limit state.
-    const safeClinicianName =
-      typeof clinicianName === 'string'
-        ? clinicianName.trim().slice(0, 100)
-        : '';
-    const session = issueClinicalSessionToken(
-      credential.role,
-      safeClinicianName ||
-        (credential.role === 'clinician' ? 'أخصائي التقييم' : 'معلم'),
-      CLINICAL_SESSION_SECRET,
-      60 * 60 * 1000,
-      credential.tenantId,
-      credential.tenantDisplayNameAr
-    );
-    res.json(session);
   });
 
   app.get(
@@ -1838,6 +1903,11 @@ ${mathContextLine}
     }
   });
 
+  // Unknown API routes must never fall through to the SPA index.html.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'مسار API غير موجود.' });
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -1848,10 +1918,22 @@ ${mathContextLine}
   } else {
     const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
-    app.use((_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    // Only browser GET navigation requests may receive the SPA shell.
+    app.get('*', (req, res, next) => {
+      if (req.method !== 'GET') {
+        next();
+        return;
+      }
+      res.sendFile(path.join(distPath, 'index.html'), (error) => {
+        if (error) next(error);
+      });
     });
   }
+
+  // Final not-found handler for unmatched non-API routes and non-GET methods.
+  app.use((_req, res) => {
+    res.status(404).json({ error: 'المسار غير موجود.' });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Baseera Clinical Server running on http://localhost:${PORT}`);

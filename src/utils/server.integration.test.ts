@@ -7,10 +7,10 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
-const SCHOOL_A_CLINICIAN_CODE = 'clinician-school-a-secret-code-2026-valid';
-const SCHOOL_A_EDUCATOR_CODE = 'educator-school-a-readonly-code-2026-valid';
-const SCHOOL_B_CLINICIAN_CODE = 'clinician-school-b-secret-code-2026-valid';
-const SCHOOL_B_EDUCATOR_CODE = 'educator-school-b-readonly-code-2026-valid';
+const SCHOOL_A_CLINICIAN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
+const SCHOOL_A_EDUCATOR_CODE = 'f0ab09100c10d620b00517b933ab8c45109b7c8eab249f34';
+const SCHOOL_B_CLINICIAN_CODE = '3a105ca0e52fb126fd4ed59979ea6ac2e8ddcd0f0edfcd53';
+const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368';
 
 const TEST_ENV = {
   ...process.env,
@@ -171,7 +171,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     }
   });
 
-  it('does not allow client tenant hints to bypass throttling or lock out a valid secret', async () => {
+  it('does not allow client tenant hints to bypass throttling and delays a valid secret after failed attempts', async () => {
     for (let i = 0; i < 8; i++) {
       const res = await fetch(`${baseUrl}/api/auth/session`, {
         method: 'POST',
@@ -186,8 +186,36 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       body: JSON.stringify({ accessCode: 'definitely-wrong-access-code', tenantId: 'school_a' }),
     });
     assert.equal(ninthWrongAttempt.status, 429);
+    const validStartedAt = Date.now();
     const validAfterFailures = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
     assert.equal(validAfterFailures.tenantId, 'school_a');
+    assert.ok(
+      Date.now() - validStartedAt >= 1_500,
+      'valid credentials from an IP with recent failures must receive a short delay'
+    );
+  });
+
+  it('returns JSON 404 for unknown API routes and never serves the SPA shell to non-GET requests', async () => {
+    for (const [method, route] of [
+      ['GET', '/api/route-that-does-not-exist'],
+      ['DELETE', '/api/route-that-does-not-exist'],
+    ] as const) {
+      const response = await fetch(`${baseUrl}${route}`, { method });
+      assert.equal(response.status, 404);
+      assert.match(response.headers.get('content-type') || '', /application\/json/);
+      const body = (await response.json()) as { error: string };
+      assert.equal(body.error, 'مسار API غير موجود.');
+    }
+
+    const deleteUnknownPage = await fetch(`${baseUrl}/route-that-does-not-exist`, {
+      method: 'DELETE',
+    });
+    assert.equal(deleteUnknownPage.status, 404);
+    assert.match(deleteUnknownPage.headers.get('content-type') || '', /application\/json/);
+    assert.equal(
+      ((await deleteUnknownPage.json()) as { error: string }).error,
+      'المسار غير موجود.'
+    );
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
