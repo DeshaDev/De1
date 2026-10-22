@@ -1668,7 +1668,7 @@ export default function App() {
 
         {activeTab === 'adaptive-reader' && (
           <AdaptiveReaderView
-            problematicWords={selectedStudent.problematicWords || []}
+            problematicWords={selectedStudent.sessionStatus === 'completed' && selectedStudent.teacherVerified === true && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}
           />
