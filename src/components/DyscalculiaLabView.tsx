@@ -143,6 +143,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [numberLineSelections, setNumberLineSelections] = useState<
     Record<number, { estimate: number; rtMs: number }>
   >({});
+  const [numberLineTouched, setNumberLineTouched] = useState<Record<number, boolean>>({});
   const numberLineStartRef = useRef<Record<number, number>>({
     1: performance.now(),
     2: performance.now(),
@@ -215,6 +216,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
         rtMs: prev[trialId]?.rtMs ? prev[trialId].rtMs : elapsed,
       },
     }));
+    setNumberLineTouched((prev) => ({ ...prev, [trialId]: false }));
     setValidationError('');
     setSaveMessage('');
   };
@@ -762,14 +764,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       )}
                       <button
                         type="button"
-                        onClick={() =>
-                          handleRecordNumberLineEstimate(1, estimate37Draft)
-                        }
-                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-lg transition-colors cursor-pointer"
+                        disabled={!numberLineTouched[1]}
+                        onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
+                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        {numberLineSelections[1]
-                          ? 'تحديث التقدير'
-                          : 'تثبيت التقدير (1)'}
+                        {numberLineSelections[1] ? 'تثبيت التعديل (1)' : 'تثبيت التقدير (1)'}
                       </button>
                     </div>
                   </div>
@@ -786,9 +785,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       value={estimate37Draft}
                       onPointerDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
                       onKeyDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
-                      onChange={(e) =>
-                        handleRecordNumberLineEstimate(1, Number(e.target.value))
-                      }
+                      onChange={(e) => {
+                        setEstimate37Draft(Number(e.target.value));
+                        setNumberLineTouched((prev) => ({ ...prev, 1: true }));
+                      }}
                       className="w-full accent-[#0284C7] cursor-pointer"
                     />
                     <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
@@ -838,14 +838,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       )}
                       <button
                         type="button"
-                        onClick={() =>
-                          handleRecordNumberLineEstimate(2, estimate156Draft)
-                        }
-                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-lg transition-colors cursor-pointer"
+                        disabled={!numberLineTouched[2]}
+                        onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
+                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        {numberLineSelections[2]
-                          ? 'تحديث التقدير'
-                          : 'تثبيت التقدير (2)'}
+                        {numberLineSelections[2] ? 'تثبيت التعديل (2)' : 'تثبيت التقدير (2)'}
                       </button>
                     </div>
                   </div>
@@ -862,9 +859,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       value={estimate156Draft}
                       onPointerDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
                       onKeyDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
-                      onChange={(e) =>
-                        handleRecordNumberLineEstimate(2, Number(e.target.value))
-                      }
+                      onChange={(e) => {
+                        setEstimate156Draft(Number(e.target.value));
+                        setNumberLineTouched((prev) => ({ ...prev, 2: true }));
+                      }}
                       className="w-full accent-[#0284C7] cursor-pointer"
                     />
                     <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
