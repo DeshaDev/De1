@@ -68,16 +68,19 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     Boolean(activeStudent?.guardianConsentGiven)
   );
   const [guardianConsentRecordedAt, setGuardianConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianConsentRecordedAt || (activeStudent?.guardianConsentGiven ? new Date().toISOString() : undefined)
+    activeStudent?.guardianConsentRecordedAt
   );
   const [audioConsentChecked, setAudioConsentChecked] = useState(
     Boolean(activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
   );
   const [guardianAudioConsentRecordedAt, setGuardianAudioConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianAudioConsentRecordedAt ||
-      ((activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven) ? new Date().toISOString() : undefined)
+    activeStudent?.guardianAudioConsentRecordedAt
   );
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
+  const effectiveGuardianConsentTimestamp = guardianConsentRecordedAt || activeStudent?.guardianConsentRecordedAt;
+  const effectiveAudioConsentTimestamp = guardianAudioConsentRecordedAt || activeStudent?.guardianAudioConsentRecordedAt;
+  const hasValidGuardianConsentRecord = Boolean(effectiveGuardianConsentTimestamp && Number.isFinite(Date.parse(effectiveGuardianConsentTimestamp)));
+  const hasValidAudioConsentRecord = Boolean(effectiveAudioConsentTimestamp && Number.isFinite(Date.parse(effectiveAudioConsentTimestamp)));
 
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
@@ -257,7 +260,8 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   };
 
   // Finish reading, stop timer and stop speech recognition & audio recorder
-  const handleFinishReading = () => {
+  const handleFinishReading = async () => {
+    const readingFinishedAt = Date.now();
     isReadingActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
@@ -281,18 +285,38 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     }
 
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore error on stop
-      }
-      recognitionRef.current = null;
+      const recognition = recognitionRef.current;
+      await new Promise<void>(resolve => {
+        let settled = false;
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+        const settle = () => {
+          if (settled) return;
+          settled = true;
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          resolve();
+        };
+        const previousOnEnd = recognition.onend;
+        recognition.onend = (event: any) => {
+          try {
+            if (typeof previousOnEnd === 'function') previousOnEnd(event);
+          } finally {
+            settle();
+          }
+        };
+        timeoutHandle = setTimeout(settle, 1200);
+        try {
+          recognition.stop();
+        } catch {
+          settle();
+        }
+      });
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
     }
 
     const elapsedSec = Math.max(
       4,
-      Math.round((Date.now() - readingStartTimestampRef.current) / 1000)
+      Math.round((readingFinishedAt - readingStartTimestampRef.current) / 1000)
     );
     setFinalDurationSec(elapsedSec);
 
@@ -464,7 +488,8 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       oralReadingAssessed: readingMode === 'oral_audio',
       oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
       teacherVerified: readingMode === 'oral_audio' && teacherVerified,
-      spokenTranscript: readingMode === 'oral_audio' ? spokenTranscript : undefined,
+      assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
+      spokenTranscript: readingMode === 'oral_audio' ? (spokenTranscriptRef.current || spokenTranscript).trim() : undefined,
       comprehensionScore: scorePercent,
       correctAnswersCount: correctCount,
       totalQuestionsCount: questions.length,
@@ -492,10 +517,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
     const audioConsentGranted = readingMode === 'oral_audio' && audioConsentChecked;
     const effectiveAudioConsentRecordedAt = audioConsentGranted
-      ? (guardianAudioConsentRecordedAt || baseStudent.guardianAudioConsentRecordedAt || nowIso)
+      ? (guardianAudioConsentRecordedAt || baseStudent.guardianAudioConsentRecordedAt)
       : undefined;
     const effectiveGuardianConsentRecordedAt = guardianConsentChecked
-      ? (guardianConsentRecordedAt || baseStudent.guardianConsentRecordedAt || nowIso)
+      ? (guardianConsentRecordedAt || baseStudent.guardianConsentRecordedAt)
       : undefined;
 
     const audioRecordingStarted =
@@ -505,7 +530,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     const updatedRecord: StudentRecord = {
       ...baseStudent,
       passageId: passage.id,
-      assessmentModality: 'reading_only',
+      assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
       dialect: studentDialect,
       dialectCode: studentDialect,
       dialectRegionAr:
@@ -534,17 +559,14 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       sessionStatus: 'completed',
       sessionCompletedAt: nowIso,
       comprehensionAnswers: answersArray,
-      guardianConsentGiven: Boolean(baseStudent.guardianConsentGiven || guardianConsentChecked),
+      guardianConsentGiven: Boolean(effectiveGuardianConsentRecordedAt && (baseStudent.guardianConsentGiven || guardianConsentChecked)),
       guardianConsentRecordedAt: effectiveGuardianConsentRecordedAt,
-      guardianConsentSource:
-        baseStudent.guardianConsentSource || (guardianConsentChecked ? 'إقرار موثق بمختبر القراءة' : undefined),
-      guardianAudioConsentGiven: Boolean(
-        baseStudent.guardianAudioConsentGiven || audioConsentGranted
-      ),
+      guardianConsentSource: effectiveGuardianConsentRecordedAt
+        ? (baseStudent.guardianConsentSource || (guardianConsentChecked ? 'إقرار موثق بمختبر القراءة' : undefined))
+        : undefined,
+      guardianAudioConsentGiven: Boolean(effectiveAudioConsentRecordedAt && (baseStudent.guardianAudioConsentGiven || audioConsentGranted)),
       guardianAudioConsentRecordedAt: effectiveAudioConsentRecordedAt,
-      audioRecordingConsentGiven: Boolean(
-        baseStudent.audioRecordingConsentGiven || audioConsentGranted
-      ),
+      audioRecordingConsentGiven: Boolean(effectiveAudioConsentRecordedAt && (baseStudent.audioRecordingConsentGiven || audioConsentGranted)),
     };
 
     onCompleteSession(updatedRecord);
@@ -783,7 +805,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             {/* Start Button */}
             <button
               onClick={handleStartReading}
-              disabled={!guardianConsentChecked || (readingMode === 'oral_audio' && !audioConsentChecked)}
+              disabled={!guardianConsentChecked || !hasValidGuardianConsentRecord || (readingMode === 'oral_audio' && (!audioConsentChecked || !hasValidAudioConsentRecord))}
               className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
             >
               <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
