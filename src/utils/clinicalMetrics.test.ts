@@ -14,7 +14,7 @@ import {
   validateExplicitGuardianConsent,
 } from './clinicalSecurity.ts';
 
-test('calculateEyeTrackingMetrics identifies high dyslexia risk on slow reading with frequent regressions', () => {
+test('calculateEyeTrackingMetrics reports observed reading/gaze values without classifying dyslexia risk', () => {
   const fixations = [
     { wordIndex: 0, word: 'يَقرَأُ', durationMs: 520, visits: 3, regressedFromIndex: 2 },
     { wordIndex: 1, word: 'الطَّالِبُ', durationMs: 490, visits: 2, regressedFromIndex: 3 },
@@ -23,18 +23,19 @@ test('calculateEyeTrackingMetrics identifies high dyslexia risk on slow reading 
     { wordIndex: 4, word: 'عَالٍ.', durationMs: 410, visits: 1 },
   ];
 
-  // 5 words in 12 seconds = 25 WPM (well below Grade 3 benchmark of 85 WPM)
+  // A short set of observations can produce descriptive measures, not a diagnostic estimate.
   const result = calculateEyeTrackingMetrics(fixations, 12, 3);
 
   assert.equal(result.wpm, 25);
   assert.ok(result.regressionCount >= 5);
-  assert.equal(result.riskLevel, 'high');
-  assert.ok(result.dyslexiaRiskScore >= 62);
+  assert.equal(result.riskLevel, 'unassessed');
+  assert.equal(result.dyslexiaRiskScore, null);
+  assert.equal(result.heuristicIndicator, null);
   assert.ok(result.problematicWords.includes('يَقرَأُ'));
   assert.ok(result.problematicWords.includes('بِتَركِيزٍ'));
 });
 
-test('calculateEyeTrackingMetrics classifies fluent reader with low regressions as nominal', () => {
+test('calculateEyeTrackingMetrics does not turn low regression counts into a normal-risk label', () => {
   const fixations = [
     { wordIndex: 0, word: 'تُشْرِقُ', durationMs: 210, visits: 1 },
     { wordIndex: 1, word: 'الشَّمْسُ', durationMs: 195, visits: 1 },
@@ -49,8 +50,9 @@ test('calculateEyeTrackingMetrics classifies fluent reader with low regressions 
 
   assert.ok(result.wpm >= 90);
   assert.equal(result.regressionCount, 0);
-  assert.equal(result.riskLevel, 'nominal');
-  assert.ok(result.heuristicIndicator >= 70);
+  assert.equal(result.riskLevel, 'unassessed');
+  assert.equal(result.dyslexiaRiskScore, null);
+  assert.equal(result.heuristicIndicator, null);
 });
 
 test('calculateDyscalculiaMetrics reports measured task observations without inventing a risk classification', () => {
@@ -136,7 +138,7 @@ test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions
     { wordIndex: 4, word: 'الفلكي', durationMs: 225, visits: 1, observed: true },
   ];
 
-  // 1. Dialect variants only -> should NOT increase risk score
+  // Dialect annotations remain available as observations; no risk score is produced.
   const withDialectOnly = calculateEyeTrackingMetrics(
     normalGaze,
     4,
@@ -154,10 +156,11 @@ test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions
       misreadWords: [],
     }
   );
-  assert.equal(withDialectOnly.riskLevel, 'nominal');
+  assert.equal(withDialectOnly.riskLevel, 'unassessed');
+  assert.equal(withDialectOnly.dyslexiaRiskScore, null);
   assert.equal(withDialectOnly.dialectVariantCount, 3);
 
-  // 2. Phonetic dyslexia substitutions + omissions -> MUST increase risk score and merge problematic words
+  // Potential transcript errors are carried forward for human review, not converted to a dyslexia-risk score.
   const withPhoneticErrors = calculateEyeTrackingMetrics(
     normalGaze,
     4,
@@ -175,10 +178,8 @@ test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions
       misreadWords: ['طلاب (نُطقت: تلاب)', 'المنظار (نُطقت: المنضار)'],
     }
   );
-  assert.ok(
-    withPhoneticErrors.heuristicIndicator < withDialectOnly.heuristicIndicator,
-    'Phonetic substitutions and omissions must lower the screening heuristic indicator / increase risk'
-  );
+  assert.equal(withPhoneticErrors.heuristicIndicator, null);
+  assert.equal(withPhoneticErrors.riskLevel, 'unassessed');
   assert.ok(
     withPhoneticErrors.problematicWords.some((w) => w.includes('تلاب')),
     'Phonetic error words must be merged into problematicWords'
