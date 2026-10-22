@@ -448,7 +448,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>خطة المعلم والأخصائي (IEP)</span>
+          <span>خطة الدعم للمعلم</span>
         </button>
 
         <button
@@ -639,7 +639,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 mb-2 inline-block">
-                  ملف خطة الدعم التربوي الفردي الاسترشادية (IEP)
+                  خطة دعم تعليمي قابلة للتخصيص
                 </span>
                 <h2 className="text-3xl font-black mb-1">
                   تقرير الفرز التربوي الاسترشادي: {studentData.studentName}
