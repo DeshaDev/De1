@@ -122,7 +122,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const gradeTargetWpm = useMemo(() => {
     switch (studentData.grade) {
       case 1:
-        return { p25: 15, median: 25, p75: 35, label: '١٥ - ٣٥ ك/د (مؤشر استرشادي أولي)' };
+        return { p25: 15, median: 25, p75: 35, label: '١٥ - ٣٥ ك/د (مؤشر استرشادي تجريبي أولي — خارج عينة دراسة 2024)' };
       case 2:
         return { p25: 20, median: 35, p75: 50, label: '٢٠ - ٥٠ CWPM (وسيط دراسة 2024: ٣٥)' };
       case 3:
@@ -550,8 +550,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
                     ? typeof studentData.reading.wcpm === 'number'
-                      ? `طلاقة الكلمات الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، وسرعة إجمالية ${studentData.reading.wpm} ك/د، واستيعاب ${studentData.reading.comprehensionScore}% للنص (المستهدف: ${gradeTargetWpm.label}).`
-                      : `سرعة قراءة صامتة بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                      ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                      : `سرعة قراءة صامتة تقديرية (بناءً على زمن إتمام النص) بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -813,7 +813,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </tbody>
               </table>
               <p className="text-[11px] text-slate-500 mt-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
-                * <strong>تنبيه منهجي استرشادي:</strong> مؤشرات سرعة القراءة (WPM) ومعدلات الكلمات الصحيحة (WCPM) ومستويات الإتقان هي معايير تربوية أولية استرشادية مستخلصة من أبحاث القراءة العربية التجريبية لتوجيه الخطط المساندة، ولا تُعد معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
+                * <strong>تنبيه منهجي استرشادي ومقارنة معيارية:</strong> مؤشرات الكلمات الصحيحة في الدقيقة (WCPM) مستخلصة من المئينات التجريبية لدراسة CBM-ORF العربية (2024، N=414) للصفوف من 2 إلى 6 (المعتمدة على متوسط 3 نصوص)، بينما هذا التقييم يعتمد جلسة نص فردية استرشادية. الصف الأول خارج نطاق العينة المعيارية لدراسة 2024 ويُعامل كمؤشر أولي تجريبي. ولا تُعد هذه النتائج معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
               </p>
             </div>
           </div>

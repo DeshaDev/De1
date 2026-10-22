@@ -1037,6 +1037,7 @@ export interface DerivedSessionEvidenceResult {
     readingDurationSeconds: number;
     comprehensionAnswers: number[];
     comprehensionScore: number;
+    dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
     dialectRegionAr: string;
     wpm: number;
     avgFixationMs: number;
@@ -1409,19 +1410,17 @@ export function validateAndDeriveSessionFromEvidence(
     (correctCompCount / passage.comprehensionQuestions.length) * 100
   );
 
-  // 7. Optional Oral Reading Alignment Derivation
-  const dialectRegionAr =
-    typeof (evidenceObj.dialectRegionAr ?? rawBody.dialectRegionAr) === 'string'
-      ? String(evidenceObj.dialectRegionAr ?? rawBody.dialectRegionAr)
-          .trim()
-          .slice(0, 80)
-      : 'الفصحى المعيارية / الخليجية';
+  // 7. Optional Oral Reading Alignment Derivation & Teacher Verification
+  const rawDialectCode = (evidenceObj.dialectCode ?? rawBody.dialectCode ?? rawBody.dialect) as ArabicDialectCode | undefined;
   const dialectProfile =
     ARABIC_DIALECT_PROFILES.find(
       (d) =>
-        d.labelAr === dialectRegionAr ||
-        d.code === (evidenceObj.dialectCode as ArabicDialectCode)
+        (rawDialectCode && d.code === rawDialectCode) ||
+        (typeof evidenceObj.dialectRegionAr === 'string' && d.labelAr === evidenceObj.dialectRegionAr) ||
+        (typeof rawBody.dialectRegionAr === 'string' && d.labelAr === rawBody.dialectRegionAr)
     ) || ARABIC_DIALECT_PROFILES[1];
+
+  const dialectRegionAr = dialectProfile.labelAr;
 
   const spokenTranscript =
     typeof (evidenceObj.spokenTranscript ?? rawBody.spokenTranscript) ===
@@ -1430,42 +1429,101 @@ export function validateAndDeriveSessionFromEvidence(
           .trim()
           .slice(0, 4000)
       : '';
+
+  // Teacher Human-in-the-Loop review validation
+  const isTeacherVerified = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
+  const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
+
+  let validatedTeacherAlignment: Array<{
+    word: string;
+    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+  }> | undefined = undefined;
+
+  let teacherCorrectWordsCount = 0;
+  let teacherDialectVariantCount = 0;
+  let teacherSubstitutionCount = 0;
+  let teacherOmissionCount = 0;
+  let teacherWcpm: number | null = null;
+  let teacherAccuracyPercent: number | null = null;
+
+  if (isTeacherVerified) {
+    if (!Array.isArray(rawVerifiedWords) || rawVerifiedWords.length !== passage.words.length) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: `مصفوفة مراجعة المعلم غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة تماماً للنص المرجعي.`,
+      };
+    }
+
+    const validStatuses = new Set(['correct', 'dialect_variant', 'phonetic_substitution', 'omitted']);
+    for (let i = 0; i < passage.words.length; i++) {
+      const item = rawVerifiedWords[i] as any;
+      if (!item || typeof item !== 'object' || item.word !== passage.words[i] || !validStatuses.has(item.status)) {
+        return {
+          valid: false,
+          statusCode: 400,
+          errorAr: `كلمة مراجعة المعلم عند الفهرس ${i} (${String(item?.word)}) غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
+        };
+      }
+      if (item.status === 'correct') teacherCorrectWordsCount++;
+      else if (item.status === 'dialect_variant') teacherDialectVariantCount++;
+      else if (item.status === 'phonetic_substitution') teacherSubstitutionCount++;
+      else if (item.status === 'omitted') teacherOmissionCount++;
+    }
+
+    validatedTeacherAlignment = rawVerifiedWords as Array<{
+      word: string;
+      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+    }>;
+
+    const effectiveTeacherWords = teacherCorrectWordsCount + teacherDialectVariantCount;
+    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
+    teacherWcpm = Math.min(220, Math.max(0, Math.round(effectiveTeacherWords / durationMin)));
+    teacherAccuracyPercent = Math.min(100, Math.max(0, Math.round((effectiveTeacherWords / passage.words.length) * 100)));
+  }
+
   const oralReadingAssessed =
-    Boolean(evidenceObj.oralReadingAssessed ?? rawBody.oralReadingAssessed) &&
-    spokenTranscript.length > 0;
+    isTeacherVerified ||
+    (Boolean(evidenceObj.oralReadingAssessed ?? rawBody.oralReadingAssessed) &&
+      spokenTranscript.length > 0);
 
   // Always evaluate oral reading alignment against the FULL reference passage words
   // to avoid artificially inflating accuracy if the child read only a fraction of the text.
-  const oralMetrics = oralReadingAssessed
-    ? evaluateOralReadingAlignment(
-        passage.words,
-        spokenTranscript,
-        Math.max(6, readingDurationSeconds),
-        0,
-        dialectProfile.code
-      )
-    : null;
+  const oralMetrics =
+    spokenTranscript.length > 0
+      ? evaluateOralReadingAlignment(
+          passage.words,
+          spokenTranscript,
+          Math.max(6, readingDurationSeconds),
+          0,
+          dialectProfile.code
+        )
+      : null;
 
   const oralIntegration =
-    oralReadingAssessed && oralMetrics
+    oralReadingAssessed
       ? {
           assessed: true,
-          wcpm: oralMetrics.wcpm,
-          accuracyPercent: oralMetrics.accuracyPercent,
-          werPercent: oralMetrics.werPercent,
-          phoneticSubstitutionCount: oralMetrics.phoneticSubstitutionCount,
-          dialectVariantCount: oralMetrics.dialectVariantCount,
-          omissionCount: oralMetrics.omittedWordsCount,
-          misreadWords: oralMetrics.alignment
-            .filter(
-              (a) =>
-                a.status === 'phonetic_substitution' || a.status === 'omitted'
-            )
-            .map((a) =>
-              a.spokenWord
-                ? `${a.targetWord} (نُطقت: ${a.spokenWord})`
-                : a.targetWord
-            ),
+          wcpm: isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null),
+          accuracyPercent: isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null),
+          werPercent: oralMetrics?.werPercent ?? null,
+          phoneticSubstitutionCount: isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
+          dialectVariantCount: isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
+          omissionCount: isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
+          misreadWords: isTeacherVerified && validatedTeacherAlignment
+            ? validatedTeacherAlignment
+                .filter(a => a.status === 'phonetic_substitution' || a.status === 'omitted')
+                .map(a => a.word)
+            : (oralMetrics?.alignment
+                .filter(
+                  (a) =>
+                    a.status === 'phonetic_substitution' || a.status === 'omitted'
+                )
+                .map((a) =>
+                  a.spokenWord
+                    ? `${a.targetWord} (نُطقت: ${a.spokenWord})`
+                    : a.targetWord
+                ) || []),
         }
       : null;
 
@@ -1596,6 +1654,7 @@ export function validateAndDeriveSessionFromEvidence(
       readingDurationSeconds,
       comprehensionAnswers,
       comprehensionScore,
+      dialectCode: dialectProfile.code,
       dialectRegionAr,
       wpm: derivedWpm,
       avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
@@ -1621,26 +1680,21 @@ export function validateAndDeriveSessionFromEvidence(
       oralWcpm: oralIntegration?.wcpm ?? null,
       oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
       oralWerPercent: oralIntegration?.werPercent ?? null,
-      teacherVerified: Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified),
-      teacherVerificationTimestamp:
-        typeof (rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp) === 'string'
-          ? String(rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp)
-          : undefined,
+      teacherVerified: isTeacherVerified,
+      teacherVerificationTimestamp: isTeacherVerified
+        ? (typeof (rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp) === 'string'
+            ? String(rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp)
+            : new Date().toISOString())
+        : undefined,
       teacherVerifierRole:
         typeof (rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole) === 'string'
           ? String(rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole)
-          : undefined,
+          : (isTeacherVerified ? 'معلم / أخصائي قرائي معتمد' : undefined),
       teacherWordOverridesCount:
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
           ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)
-          : undefined,
-      verifiedWordsAlignment:
-        Array.isArray(rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment)
-          ? ((rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment) as Array<{
-              word: string;
-              status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
-            }>)
-          : undefined,
+          : (isTeacherVerified ? 0 : undefined),
+      verifiedWordsAlignment: validatedTeacherAlignment,
       phoneticSubstitutionCount:
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,

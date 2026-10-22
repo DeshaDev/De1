@@ -115,6 +115,7 @@ export interface StudentRecord {
   }>;
   guardianAudioConsentGiven?: boolean;
   audioRecordingConsentGiven?: boolean;
+  audioRecordingStarted?: boolean;
   guardianAudioConsentRecordedAt?: string;
   speechRecognitionUsed?: boolean;
   // Dyslexia / Eye-Tracking & Blink Rate metrics

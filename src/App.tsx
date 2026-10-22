@@ -191,6 +191,7 @@ export default function App() {
   const sessionPayloadFromRecord = (record: StudentRecord) => ({
     sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
+    dialectCode: record.dialectCode || record.dialect || 'egyptian',
     dialectRegionAr: record.dialectRegionAr,
     assessmentModality: record.assessmentModality || 'reading_only',
     readingDurationSeconds:
@@ -234,8 +235,13 @@ export default function App() {
     guardianConsentRecordedAt: record.guardianConsentRecordedAt || (record.guardianConsentGiven ? new Date().toISOString() : undefined),
     guardianConsentSource: record.guardianConsentSource || (record.guardianConsentGiven ? 'إقرار ولي الأمر والمدرسة' : undefined),
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
-    guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
+    guardianAudioConsentRecordedAt:
+      record.guardianAudioConsentRecordedAt ||
+      (record.guardianAudioConsentGiven
+        ? (record.sessionCompletedAt || new Date().toISOString())
+        : undefined),
     speechRecognitionUsed: record.speechRecognitionUsed === true,
+    audioRecordingStarted: record.audioRecordingStarted === true,
   });
 
   const studentCreatePayloadFromRecord = (record: StudentRecord) => ({

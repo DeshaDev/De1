@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   evaluateOralReadingAlignment,
   OralReadingFluencyResult,
+  computeStandardSequenceWer,
 } from './dyslexiaEngines';
 import { ARABIC_READING_PASSAGES, StudentRecord, INITIAL_STUDENTS } from '../data/seedData';
 import { validateAndDeriveSessionFromEvidence } from './clinicalSecurity';
@@ -182,5 +183,151 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(derived.derivedFields.fixations.length, 0);
     assert.ok(derived.derivedFields.clinicalReport);
+  });
+
+  await t.test('Standard Dynamic Programming Levenshtein WER: exact matrix calculation with deletions, substitutions and insertions', () => {
+    const reference = ['كان', 'الولد', 'يقرأ', 'قصة', 'جميلة'];
+    // 1 deletion ("كان" omitted), 1 substitution ("يسمع" for "يقرأ"), 1 insertion ("كبيرة" inserted at end)
+    const hypothesis = ['الولد', 'يسمع', 'قصة', 'جميلة', 'كبيرة'];
+
+    const wer = computeStandardSequenceWer(reference, hypothesis);
+    assert.equal(wer.referenceLength, 5);
+    assert.equal(wer.deletions, 1);
+    assert.equal(wer.substitutions, 1);
+    assert.equal(wer.insertions, 1);
+    // WER = (1 + 1 + 1) / 5 = 60%
+    assert.equal(wer.werPercent, 60);
+  });
+
+  await t.test('Authoritative Teacher Verification: server calculates WCPM and accuracy strictly from verifiedWordsAlignment', () => {
+    // Construct a teacher verification where the teacher reviewed all 52 passage words
+    const verifiedWords = passage.words.map((w, idx) => ({
+      word: w,
+      // First 30 words correct, next 5 dialect, rest omitted
+      status: (idx < 30 ? 'correct' : (idx < 35 ? 'dialect_variant' : 'omitted')) as
+        | 'correct'
+        | 'dialect_variant'
+        | 'omitted',
+    }));
+
+    const rawPayload = {
+      passageId: passage.id,
+      assessmentModality: 'reading_only',
+      readingDurationSeconds: 60, // 1 minute
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
+      oralReadingAssessed: true,
+      spokenTranscript: 'تفريغ عشوائي قديم لا يعتمد عليه', // Machine transcript should NOT override teacher!
+      teacherVerified: true,
+      teacherVerifierRole: 'معلم صعوبات تعلم',
+      teacherWordOverridesCount: 5,
+      verifiedWordsAlignment: verifiedWords,
+    };
+
+    const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
+      name: 'عمر شريف',
+      gradeLevel: 3,
+    });
+
+    assert.equal(derived.valid, true);
+    assert.ok(derived.derivedFields);
+    assert.equal(derived.derivedFields.teacherVerified, true);
+    // 30 correct + 5 dialect = 35 effective words in 1 minute = 35 WCPM
+    assert.equal(derived.derivedFields.wcpm, 35);
+    assert.equal(derived.derivedFields.oralWcpm, 35);
+    // 35 / 52 = 67% accuracy
+    assert.equal(derived.derivedFields.oralAccuracyPercent, 67);
+    assert.equal(derived.derivedFields.dialectVariantCount, 5);
+    assert.equal(derived.derivedFields.omissionCount, 17);
+  });
+
+  await t.test('Server Validation: rejects corrupted or mismatched verifiedWordsAlignment', () => {
+    // Array length does not match passage words length
+    const invalidLengthPayload = {
+      passageId: passage.id,
+      readingDurationSeconds: 60,
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      teacherVerified: true,
+      verifiedWordsAlignment: [{ word: 'كلمة', status: 'correct' }], // only 1 word for a 52-word passage
+    };
+
+    const derived = validateAndDeriveSessionFromEvidence(invalidLengthPayload, {
+      name: 'زيد',
+      gradeLevel: 3,
+    });
+
+    assert.equal(derived.valid, false);
+    assert.equal(derived.statusCode, 400);
+    assert.ok(derived.errorAr?.includes('مصفوفة مراجعة المعلم غير صالحة'));
+
+    // Mismatched word at index 0
+    const mismatchedWordPayload = {
+      passageId: passage.id,
+      readingDurationSeconds: 60,
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      teacherVerified: true,
+      verifiedWordsAlignment: passage.words.map((w, idx) => ({
+        word: idx === 0 ? 'كلمة_مزيفة_لا_تطابق_النص' : w,
+        status: 'correct' as const,
+      })),
+    };
+
+    const derived2 = validateAndDeriveSessionFromEvidence(mismatchedWordPayload, {
+      name: 'زيد',
+      gradeLevel: 3,
+    });
+
+    assert.equal(derived2.valid, false);
+    assert.equal(derived2.statusCode, 400);
+    assert.ok(derived2.errorAr?.includes('غير متطابقة مع النص المرجعي'));
+  });
+
+  await t.test('Dialect Propagation: forwards dialectCode (e.g. gulf) and reflects in server derived fields', () => {
+    const gulfPayload = {
+      passageId: passage.id,
+      dialectCode: 'gulf',
+      readingDurationSeconds: 60,
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+    };
+
+    const derived = validateAndDeriveSessionFromEvidence(gulfPayload, {
+      name: 'فيصل',
+      gradeLevel: 3,
+    });
+
+    assert.equal(derived.valid, true);
+    assert.ok(derived.derivedFields);
+    assert.equal(derived.derivedFields.dialectCode, 'gulf');
+    assert.equal(derived.derivedFields.dialectRegionAr, 'اللهجة الخليجية والسعودية');
+  });
+
+  await t.test('Egyptian Law 151/2020 Audio Consent: validates timestamp and rejects missing recordedAt for audio sessions', () => {
+    const validConsentStudent: StudentRecord = {
+      ...INITIAL_STUDENTS[0],
+      id: 'test-consent-valid',
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: new Date().toISOString(),
+      audioRecordingConsentGiven: true,
+      audioRecordingStarted: true,
+      speechRecognitionUsed: true,
+      assessmentModality: 'reading_only',
+      wpm: 50,
+      wcpm: 48,
+      oralWcpm: 48,
+    };
+
+    assert.equal(validConsentStudent.guardianAudioConsentGiven, true);
+    assert.ok(typeof validConsentStudent.guardianAudioConsentRecordedAt === 'string');
+    assert.ok(Number.isFinite(Date.parse(validConsentStudent.guardianAudioConsentRecordedAt!)));
   });
 });

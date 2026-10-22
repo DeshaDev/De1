@@ -968,6 +968,8 @@ async function startServer() {
           typeof incoming.guardianAudioConsentRecordedAt === 'string'
             ? incoming.guardianAudioConsentRecordedAt
             : undefined,
+        audioRecordingConsentGiven: incoming.guardianAudioConsentGiven === true,
+        audioRecordingStarted: incoming.audioRecordingStarted === true,
         speechRecognitionUsed: incoming.speechRecognitionUsed === true,
         ...derived.derivedFields,
       };
@@ -1133,6 +1135,8 @@ async function startServer() {
           typeof incoming.guardianAudioConsentRecordedAt === 'string'
             ? incoming.guardianAudioConsentRecordedAt
             : undefined,
+        audioRecordingConsentGiven: incoming.guardianAudioConsentGiven === true,
+        audioRecordingStarted: incoming.audioRecordingStarted === true,
         speechRecognitionUsed: incoming.speechRecognitionUsed === true,
         assessmentHistory: previousSnapshot
           ? [...(current.assessmentHistory || []), previousSnapshot]

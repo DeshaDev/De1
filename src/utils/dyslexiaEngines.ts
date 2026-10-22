@@ -2512,10 +2512,104 @@ export interface OralReadingFluencyResult {
   phoneticSubstitutionCount: number;
   omittedWordsCount: number;
   insertionCount?: number;
+  substitutionsCount?: number;
+  deletionsCount?: number;
   accuracyPercent: number;
-  werPercent: number; // Word Error Rate: (S + D + I) / N
+  werPercent: number; // Standard Levenshtein Word Error Rate: (S + D + I) / N
+  standardWerPercent?: number;
   hesitationPauseCount: number;
   alignment: OralWordAlignmentItem[];
+}
+
+/**
+ * Standard Levenshtein Dynamic Programming Word Error Rate (WER) algorithm.
+ * Operates on normalized sequence tokens using an exact DP matrix and backtrace
+ * to objectively count minimum edit operations: Substitutions (S), Deletions (D), and Insertions (I).
+ */
+export function computeStandardSequenceWer(
+  referenceTokens: string[],
+  hypothesisTokens: string[]
+): {
+  werPercent: number;
+  substitutions: number;
+  deletions: number;
+  insertions: number;
+  referenceLength: number;
+} {
+  const normalize = (tok: string) =>
+    tok.replace(/[.,!?،؟؛:"«»()[\]\u064B-\u0652\u0670]/g, '').trim();
+
+  const refClean = referenceTokens.map(normalize).filter(Boolean);
+  const hypClean = hypothesisTokens.map(normalize).filter(Boolean);
+  const n = refClean.length;
+  const m = hypClean.length;
+
+  if (n === 0) {
+    return {
+      werPercent: m === 0 ? 0 : 100,
+      substitutions: 0,
+      deletions: 0,
+      insertions: m,
+      referenceLength: 0,
+    };
+  }
+
+  // DP table: d[i][j] is the minimum distance between refClean[0..i-1] and hypClean[0..j-1]
+  const d: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 0; i <= n; i++) d[i][0] = i;
+  for (let j = 0; j <= m; j++) d[0][j] = j;
+
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      if (refClean[i - 1] === hypClean[j - 1]) {
+        d[i][j] = d[i - 1][j - 1];
+      } else {
+        d[i][j] = Math.min(
+          d[i - 1][j] + 1,     // deletion from reference
+          d[i][j - 1] + 1,     // insertion into reference
+          d[i - 1][j - 1] + 1  // substitution
+        );
+      }
+    }
+  }
+
+  // Backtrace to count exact substitutions, deletions, and insertions
+  let i = n;
+  let j = m;
+  let substitutions = 0;
+  let deletions = 0;
+  let insertions = 0;
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && refClean[i - 1] === hypClean[j - 1]) {
+      i--;
+      j--;
+    } else if (i > 0 && j > 0 && d[i][j] === d[i - 1][j - 1] + 1) {
+      substitutions++;
+      i--;
+      j--;
+    } else if (i > 0 && d[i][j] === d[i - 1][j] + 1) {
+      deletions++;
+      i--;
+    } else if (j > 0 && d[i][j] === d[i][j - 1] + 1) {
+      insertions++;
+      j--;
+    } else {
+      if (i > 0) { deletions++; i--; }
+      else if (j > 0) { insertions++; j--; }
+    }
+  }
+
+  const totalErrors = substitutions + deletions + insertions;
+  const werPercent = Math.min(100, Math.round((totalErrors / n) * 100));
+
+  return {
+    werPercent,
+    substitutions,
+    deletions,
+    insertions,
+    referenceLength: n,
+  };
 }
 
 /**
@@ -2660,14 +2754,9 @@ export function evaluateOralReadingAlignment(
   const wcpm = Math.round(correctWordsCount / safeDurationMin);
   const accuracyPercent = Math.round((correctWordsCount / totalWords) * 100);
 
-  // Standard Levenshtein-based Word Error Rate (WER = (S + D + I) / N):
-  // S = Phonetic substitutions, D = Omissions / unread words, I = Insertions / unaligned tokens
-  const matchedTokensCount = correctWordsCount + phoneticSubstitutionCount;
-  const insertionCount = Math.max(0, spokenTokens.length - matchedTokensCount);
-  const werPercent = Math.min(
-    100,
-    Math.round(((phoneticSubstitutionCount + omittedWordsCount + insertionCount) / totalWords) * 100)
-  );
+  // Exact Dynamic Programming sequence alignment WER calculation:
+  // Evaluates purely objective transcription error between reference words and spoken tokens
+  const standardWerResult = computeStandardSequenceWer(referenceWords, spokenTokens);
 
   return {
     wcpm,
@@ -2676,9 +2765,12 @@ export function evaluateOralReadingAlignment(
     dialectVariantCount,
     phoneticSubstitutionCount,
     omittedWordsCount,
-    insertionCount,
+    insertionCount: standardWerResult.insertions,
+    substitutionsCount: standardWerResult.substitutions,
+    deletionsCount: standardWerResult.deletions,
     accuracyPercent,
-    werPercent,
+    werPercent: standardWerResult.werPercent,
+    standardWerPercent: standardWerResult.werPercent,
     hesitationPauseCount,
     alignment,
   };

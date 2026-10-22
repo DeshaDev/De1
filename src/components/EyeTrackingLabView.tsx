@@ -40,6 +40,7 @@ import {
   OralReadingFluencyResult,
   OralWordAlignmentItem,
   ArabicDialectCode,
+  ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
 
 interface Props {
@@ -91,6 +92,9 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const activeStreamRef = useRef<MediaStream | null>(null);
+  const isReadingActiveRef = useRef<boolean>(false);
+  const audioPlaybackUrlRef = useRef<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   // Teacher verification & Human-in-the-Loop review state
@@ -136,10 +140,15 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   // Start reading timer & speech recognition if oral mode
   const handleStartReading = () => {
     readingStartTimestampRef.current = Date.now();
+    isReadingActiveRef.current = true;
     setReadingSeconds(0);
     setIsReadingActive(true);
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
+    if (audioPlaybackUrlRef.current) {
+      URL.revokeObjectURL(audioPlaybackUrlRef.current);
+      audioPlaybackUrlRef.current = null;
+    }
     setAudioPlaybackUrl(null);
     setStage('reading');
 
@@ -157,6 +166,12 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then(stream => {
+          // If session finished or user navigated while awaiting permission prompt, abort immediately
+          if (!isReadingActiveRef.current) {
+            stream.getTracks().forEach(t => t.stop());
+            return;
+          }
+          activeStreamRef.current = stream;
           audioChunksRef.current = [];
           const recorder = new MediaRecorder(stream);
           recorder.ondataavailable = e => {
@@ -166,9 +181,13 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
             if (blob.size > 0) {
               const url = URL.createObjectURL(blob);
+              audioPlaybackUrlRef.current = url;
               setAudioPlaybackUrl(url);
             }
-            stream.getTracks().forEach(t => t.stop());
+            if (activeStreamRef.current) {
+              activeStreamRef.current.getTracks().forEach(t => t.stop());
+              activeStreamRef.current = null;
+            }
           };
           recorder.start();
           mediaRecorderRef.current = recorder;
@@ -228,6 +247,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Finish reading, stop timer and stop speech recognition & audio recorder
   const handleFinishReading = () => {
+    isReadingActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
 
@@ -238,6 +258,15 @@ export const EyeTrackingLabView: React.FC<Props> = ({
         // ignore
       }
       mediaRecorderRef.current = null;
+    }
+
+    if (activeStreamRef.current) {
+      try {
+        activeStreamRef.current.getTracks().forEach(t => t.stop());
+      } catch {
+        // ignore
+      }
+      activeStreamRef.current = null;
     }
 
     if (recognitionRef.current) {
@@ -256,12 +285,22 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     );
     setFinalDurationSec(elapsedSec);
 
-    // Calculate real WPM strictly from measured duration
-    const calculatedWpm = Math.max(
-      15,
-      Math.min(220, Math.round((passage.words.length / elapsedSec) * 60))
-    );
-    setMeasuredWpm(calculatedWpm);
+    // Calculate real WPM strictly from measured evidence:
+    // For oral reading: measured from actual spoken words read per minute
+    // For timed silent reading: rate of completing the reference passage
+    if (readingMode === 'oral_audio') {
+      const spokenTokens = (spokenTranscript || '').trim().split(/\s+/).filter(Boolean);
+      const calculatedWpm = spokenTokens.length > 0
+        ? Math.round((spokenTokens.length / elapsedSec) * 60)
+        : 0;
+      setMeasuredWpm(calculatedWpm);
+    } else {
+      const calculatedWpm = Math.max(
+        10,
+        Math.min(300, Math.round((passage.words.length / elapsedSec) * 60))
+      );
+      setMeasuredWpm(calculatedWpm);
+    }
 
     // If oral audio mode, transition to Teacher Verification stage
     if (readingMode === 'oral_audio') {
@@ -438,10 +477,23 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       readingMode === 'oral_audio' &&
       Boolean(spokenTranscript && spokenTranscript.trim().length > 0);
 
+    const audioConsentGranted = readingMode === 'oral_audio' && audioConsentChecked;
+    const guardianAudioConsentRecordedAt =
+      baseStudent.guardianAudioConsentRecordedAt ||
+      (audioConsentGranted ? nowIso : undefined);
+    const audioRecordingStarted =
+      readingMode === 'oral_audio' &&
+      (audioChunksRef.current.length > 0 || Boolean(audioPlaybackUrl));
+
     const updatedRecord: StudentRecord = {
       ...baseStudent,
       passageId: passage.id,
       assessmentModality: 'reading_only',
+      dialect: studentDialect,
+      dialectCode: studentDialect,
+      dialectRegionAr:
+        ARABIC_DIALECT_PROFILES.find(d => d.code === studentDialect)?.labelAr ||
+        'اللهجة المصرية',
       readingDurationSeconds: finalDurationSec,
       wpm: measuredWpm,
       wcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
@@ -455,6 +507,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       verifiedWordsAlignment: verifiedWords,
       spokenTranscript: readingMode === 'oral_audio' ? spokenTranscript : undefined,
       speechRecognitionUsed: hasAudioCaptured,
+      audioRecordingStarted,
       fixations: [],
       calibrationAccuracyPercent: undefined,
       calibrationValidationMethod: undefined,
@@ -470,20 +523,54 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       guardianConsentSource:
         baseStudent.guardianConsentSource || (guardianConsentChecked ? 'إقرار موثق بمختبر القراءة' : undefined),
       guardianAudioConsentGiven: Boolean(
-        baseStudent.guardianAudioConsentGiven || (readingMode === 'oral_audio' && audioConsentChecked)
+        baseStudent.guardianAudioConsentGiven || audioConsentGranted
       ),
+      guardianAudioConsentRecordedAt,
       audioRecordingConsentGiven: Boolean(
-        baseStudent.audioRecordingConsentGiven || (readingMode === 'oral_audio' && audioConsentChecked)
+        baseStudent.audioRecordingConsentGiven || audioConsentGranted
       ),
     };
 
     onCompleteSession(updatedRecord);
   };
 
-  // Clean timer on unmount
+  // Clean timer, audio recorder, speech recognition, and tracks on unmount
   useEffect(() => {
     return () => {
+      isReadingActiveRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          // ignore
+        }
+        mediaRecorderRef.current = null;
+      }
+      if (activeStreamRef.current) {
+        try {
+          activeStreamRef.current.getTracks().forEach(t => t.stop());
+        } catch {
+          // ignore
+        }
+        activeStreamRef.current = null;
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+        recognitionRef.current = null;
+      }
+      if (audioPlaybackUrlRef.current) {
+        try {
+          URL.revokeObjectURL(audioPlaybackUrlRef.current);
+        } catch {
+          // ignore
+        }
+        audioPlaybackUrlRef.current = null;
+      }
     };
   }, []);
 
