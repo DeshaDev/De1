@@ -80,6 +80,7 @@ export interface TactileAssessmentResult {
 export interface ReadingAssessmentResult {
   passageId: string;
   passageTitle: string;
+  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
   gradeLevel: number;
   wordCount: number;
   durationSeconds: number;
@@ -210,6 +211,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         tactileResults: prev?.tactileResults || null,
         readingResults: results,
         eyeTrackingResults: {
+          assessmentModality: results.assessmentModality,
+          spokenTranscript: results.spokenTranscript || '',
           wpm: results.wpm,
           wcpm: results.wcpm,
           readingDurationSeconds: results.durationSeconds,
