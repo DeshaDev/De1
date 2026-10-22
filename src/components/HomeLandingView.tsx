@@ -274,21 +274,21 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
     headline: 'إعداد فوري وآمن للجلسة بضوابط خصوصية صارمة وموافقة ولي الأمر.',
     description:
       'تفعيل سلس لمستشعرات الفحص مع تأكيد موافقة ولي الأمر وحفظ سرية بيانات الطالب محلياً، دون حفظ أو نقل أي تسجيلات فيديو.',
-    privacyNote: 'معالجة محلية 100% داخل المتصفح دون نقل الفيديو الخام للخوادم.',
+    privacyNote: 'معالجة بث الكاميرا محلياً داخل المتصفح دون نقل أو تخزين الفيديو الخام.',
     waveBars: [18, 22, 16, 24, 20, 18, 22, 16, 20, 24, 18, 16, 22, 20, 18],
     actionLabel: 'الانتقال إلى إعداد الجلسة',
     targetTab: 'eye-lab',
   },
   {
     id: 'student-begins',
-    tabLabel: 'المعايرة البصرية',
-    kicker: 'المرحلة ٠٢: ضبط محور النظر',
-    headline: 'معايرة ذكية وسريعة لحركة بؤبؤ العين والتثبيت البصري.',
+    tabLabel: 'التهيئة وتتبع القراءة',
+    kicker: 'المرحلة ٠٢: تتبع مسار القراءة',
+    headline: 'رصد فوري لمسار القراءة وتتبع الكلمات المقروءة.',
     description:
-      'تتبع تلقائي عالي الدقة يربط حركة البؤبؤ بإحداثيات الشاشة عبر نقاط تدريبية مدروسة تضمن جودة القياس قبل القراءة.',
-    privacyNote: 'تُحوَّل إشارات الكاميرا لحظياً إلى إحداثيات رقمية سريعة ومحمية.',
+      'تتبع تقديري يربط حركة البؤبؤ بالكلمات المشكولة مع قياس زمن القراءة ومعدل الارتداد الاسترشادي دون ادعاءات معايرة زائفة.',
+    privacyNote: 'مؤشر استكشافي تجريبي دون تسجيل الفيديو الخام.',
     waveBars: [26, 38, 30, 48, 42, 34, 52, 44, 36, 46, 32, 40, 28, 36, 24],
-    actionLabel: 'بدء المعايرة البصرية',
+    actionLabel: 'بدء جلسة القراءة',
     targetTab: 'eye-lab',
   },
   {
@@ -340,9 +340,9 @@ const TRUST_CENTER_QUESTIONS: TrustQuestionItem[] = [
   {
     id: 'biometrics',
     question: 'هل تسجّل بصيرة صور الوجه أو ترسل بث الكاميرا للخوادم؟',
-    answerTitle: 'معالجة محلية 100% داخل المتصفح (Zero-Video Storage).',
+    answerTitle: 'خصوصية الكاميرا داخل المتصفح (Zero-Video Storage).',
     answerBody:
-      'تطبق بصيرة أعلى معايير الخصوصية بالتصميم؛ تُعالج إشارات العين لحظياً داخل جهاز المستخدم عبر محركات الرؤية الحاسوبية دون حفظ أو نقل أي تسجيلات فيديو أو صور خام للخوادم نهائياً.',
+      'تطبق بصيرة معايير خصوصية صارمة: معالجة إشارات الكاميرا وحركة العين تتم لحظياً داخل متصفح المستخدم دون حفظ أو نقل أي تسجيلات فيديو للخوادم نهائياً. أما الوظائف المساندة مثل التكيّف النصي والصوتي فتعمل عبر خدمات ذكاء اصطناعي مشفرة وآمنة.',
   },
   {
     id: 'consent',
@@ -587,12 +587,12 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {/* 3 Value Pillars for Reviewers and Investors */}
               <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-200/70">
                 <div className="p-3.5 rounded-2xl bg-white/80 border border-slate-200/80 text-right shadow-2xs">
-                  <div className="text-[11px] font-medium text-slate-500">دقة المعايرة</div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">معايرة بؤبؤية ثلاثية</div>
+                  <div className="text-[11px] font-medium text-slate-500">الفرز التربوي</div>
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">مؤشرات فرز ثلاثية المحاور</div>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white/80 border border-slate-200/80 text-right shadow-2xs">
                   <div className="text-[11px] font-medium text-slate-500">حماية البيانات</div>
-                  <div className="text-xs sm:text-sm font-bold text-[#15803D] mt-0.5">معالجة محلية 100%</div>
+                  <div className="text-xs sm:text-sm font-bold text-[#15803D] mt-0.5">Zero-Video للكاميرا</div>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white/80 border border-slate-200/80 text-right shadow-2xs">
                   <div className="text-[11px] font-medium text-slate-500">المرجعية اللغوية</div>
@@ -1191,7 +1191,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             { id: 'dyscalculia-lab' as AppTabId, title: 'مهام الحساب', description: 'قياس التمييز الكمي الفوري وتقدير خط الأعداد وكشف أخطاء عكس الخانات.' },
             { id: 'remediation-gym' as AppTabId, title: 'صالة التدريب والتأهيل', description: 'ألعاب وتمارين تفاعلية يومية لعلاج اللبس الفونولوجي والقفزات التراجعية وعكس الأرقام.' },
             { id: 'adaptive-reader' as AppTabId, title: 'القارئ العربي الميسّر', description: 'أدوات تقطيع مقطعي وتلوين فونولوجي وتركيز بصري لتسهيل القراءة.' },
-            { id: 'algorithms-lab' as AppTabId, title: 'المختبر التقني', description: 'استكشاف نماذج الاستدلال وخوارزميات المعايرة البصرية وتحليل الإشارات.' },
+            { id: 'algorithms-lab' as AppTabId, title: 'المختبر التقني', description: 'استكشاف نماذج الاستدلال وخوارزميات تتبع حركة العين وتحليل الإشارات.' },
           ].map((feature) => (
             <button
               key={feature.id}
@@ -1423,7 +1423,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 {
                   step: '٠٢',
                   title: 'فحص القراءة وتتبع العين',
-                  desc: 'معايرة الكاميرا وقراءة الفقرة بصوت مسموع.',
+                  desc: 'جلسة قراءة الفقرة ورصد مسار الكلمات بصوت مسموع.',
                   tab: 'eye-lab' as AppTabId,
                   active: false,
                 },

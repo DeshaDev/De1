@@ -971,17 +971,23 @@ export function buildDeterministicClinicalReport(params: {
     'تنبيه منهجي وإخلاء مسؤولية: هذه المؤشرات مبنية على أدلة مُبلَّغ بها من العميل وقواعد فرز استدلالية (Heuristic Screening) ولا تُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.'
   );
 
+  const isVoiceOnly = params.assessmentModality === 'voice_only';
+
   return {
-    clinicalSummary: `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
-      highReadingRisk
-        ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
-        : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
-    }`,
-    ocularMotorAnalysis: `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
-      params.problematicWords.length > 0
-        ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
-        : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
-    }`,
+    clinicalSummary: isVoiceOnly
+      ? `[مؤشر فرز قرائي صوتي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر التقييم الشفهي للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة.${oralText} تقع المؤشرات الصوتية ضمن النطاق الاسترشادي ويوصى بالمتابعة التربوية المعتادة.`
+      : `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
+          highReadingRisk
+            ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
+            : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
+        }`,
+    ocularMotorAnalysis: isVoiceOnly
+      ? 'تم إجراء الجلسة بنمط القراءة الجهرية الشفهية فقط دون تفعيل تتبع بؤبؤ العين بالكاميرا، وبالتالي لم تُسجل بيانات التثبيت أو القفزات التراجعية البصرية (Regressions).'
+      : `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
+          params.problematicWords.length > 0
+            ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
+            : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
+        }`,
     orthographicAndPhonologicalPatterns: `${
       highReadingRisk
         ? 'يُلاحظ تأنٍّ في معالجة الكلمات التي تشتمل على حروف متجانسة نقطياً (ب/ت/ث، ج/ح/خ) والمقاطع المشددة أو المتصلة بضمائر، مما يستدعي تفعيل التقطيع المقطعي الملون.'
@@ -1038,7 +1044,7 @@ export interface DerivedSessionEvidenceResult {
     gazeCoveragePercent: number;
     observedWordCount: number;
     totalPassageWordCount: number;
-    calibrationAccuracyPercent: number;
+    calibrationAccuracyPercent?: number;
     calibrationValidationMethod: string;
     oralReadingAssessed: boolean;
     spokenTranscript: string;
@@ -1113,10 +1119,10 @@ export function validateAndDeriveSessionFromEvidence(
     evidenceObj.assessmentModality === 'voice_only' ||
     rawBody.assessmentModality === 'voice_only';
 
-  let calibrationAccuracyPercent = 100;
+  let calibrationAccuracyPercent: number | undefined = undefined;
   let normalizedCalMethod = {
-    isValidated: true,
-    labelAr: 'تقييم قراءة جهرية صوتي (Amira ORF)',
+    isValidated: false,
+    labelAr: 'غير منطبق (جلسة صوتية)',
     normalizedMethod: 'voice-first-orf' as const,
   };
 
@@ -1169,20 +1175,8 @@ export function validateAndDeriveSessionFromEvidence(
   let wordBlinksSum = 0;
 
   if (isVoiceOnlyModality && (!Array.isArray(rawFixations) || rawFixations.length === 0)) {
-    const rawDur = evidenceObj.readingDurationSeconds ?? rawBody.readingDurationSeconds ?? 25;
-    const durSec = Math.max(4, Math.min(600, Number(rawDur) || 25));
-    const perWordMs = Math.round((durSec * 1000) / Math.max(1, passage.words.length));
-    passage.words.forEach((w, idx) => {
-      validatedFixations.push({
-        wordIndex: idx,
-        word: w,
-        durationMs: perWordMs,
-        visits: 1,
-        observed: true,
-        blinks: 0,
-      });
-      totalObservedFixationMs += perWordMs;
-    });
+    // Voice-only modality without raw fixations: do NOT fabricate synthetic fixations.
+    // Genuinely return empty fixations array and zero ocular duration.
   } else {
     if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
       return {
@@ -1447,14 +1441,16 @@ export function validateAndDeriveSessionFromEvidence(
       : null;
 
   // 8. Server-Side Eye-Tracking & Reading Risk Derivation
-  const eyeMetrics = calculateEyeTrackingMetrics(
-    validatedFixations,
-    readingDurationSeconds,
-    studentMeta.gradeLevel,
-    effectiveBlinkCount,
-    passage.words.length,
-    oralIntegration
-  );
+  const eyeMetrics = !isVoiceOnlyModality && validatedFixations.length > 0
+    ? calculateEyeTrackingMetrics(
+        validatedFixations,
+        readingDurationSeconds,
+        studentMeta.gradeLevel,
+        effectiveBlinkCount,
+        passage.words.length,
+        oralIntegration
+      )
+    : null;
 
   // 9. Optional Math Trials Validation & Derivation
   const rawMathTrials = evidenceObj.mathTrials ?? rawBody.mathTrials ?? null;
@@ -1493,27 +1489,39 @@ export function validateAndDeriveSessionFromEvidence(
     mathRiskLabelAr = mathValidation.metrics.riskLabelAr;
   }
 
+  const derivedWpm = eyeMetrics
+    ? eyeMetrics.wpm
+    : Math.round((passage.words.length / readingDurationSeconds) * 60);
+
   const clinicalReport = buildDeterministicClinicalReport({
     studentName: studentMeta.name,
     gradeLevel: studentMeta.gradeLevel,
     dialectLabelAr: dialectRegionAr,
-    gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
-    observedWordCount: eyeMetrics.observedWordCount,
-    totalPassageWordCount: eyeMetrics.totalPassageWordCount,
-    wpm: eyeMetrics.wpm,
-    avgFixationMs: eyeMetrics.avgFixationMs,
-    regressionRate: eyeMetrics.regressionRate,
-    regressionCount: eyeMetrics.regressionCount,
-    blinkCount: eyeMetrics.blinkCount,
-    blinksPerMinute: eyeMetrics.blinksPerMinute,
-    visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
-    calibrationAccuracyPercent: Math.round(calibrationAccuracyPercent),
+    gazeCoveragePercent: eyeMetrics ? eyeMetrics.gazeCoveragePercent : 0,
+    observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
+    totalPassageWordCount: passage.words.length,
+    wpm: derivedWpm,
+    avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
+    regressionRate: eyeMetrics ? eyeMetrics.regressionRate : 0,
+    regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
+    blinkCount: eyeMetrics ? eyeMetrics.blinkCount : 0,
+    blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
+    visualStrainLabelAr: eyeMetrics
+      ? eyeMetrics.visualStrainLabelAr
+      : 'غير منطبق (جلسة صوتية)',
+    calibrationAccuracyPercent:
+      calibrationAccuracyPercent !== undefined
+        ? Math.round(calibrationAccuracyPercent)
+        : 0,
     calibrationValidationLabelAr: normalizedCalMethod.labelAr,
-    problematicWords: eyeMetrics.problematicWords,
+    problematicWords: eyeMetrics
+      ? eyeMetrics.problematicWords
+      : (oralIntegration?.misreadWords || []),
     oralReadingAssessed,
     oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
     phoneticSubstitutionCount: oralIntegration?.phoneticSubstitutionCount ?? 0,
     dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
+    assessmentModality: isVoiceOnlyModality ? 'voice_only' : 'eye_voice',
     dyscalculiaAssessed,
     numberLinePAE,
     subitizingAccuracy,
@@ -1529,18 +1537,23 @@ export function validateAndDeriveSessionFromEvidence(
       comprehensionAnswers,
       comprehensionScore,
       dialectRegionAr,
-      wpm: eyeMetrics.wpm,
-      avgFixationMs: eyeMetrics.avgFixationMs,
-      regressionRate: eyeMetrics.regressionRate,
-      regressionCount: eyeMetrics.regressionCount,
-      blinkCount: eyeMetrics.blinkCount,
-      blinksPerMinute: eyeMetrics.blinksPerMinute,
-      visualStrainLevel: eyeMetrics.visualStrainLevel,
-      visualStrainLabelAr: eyeMetrics.visualStrainLabelAr,
-      gazeCoveragePercent: eyeMetrics.gazeCoveragePercent,
-      observedWordCount: eyeMetrics.observedWordCount,
-      totalPassageWordCount: eyeMetrics.totalPassageWordCount,
-      calibrationAccuracyPercent: Math.round(calibrationAccuracyPercent),
+      wpm: derivedWpm,
+      avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
+      regressionRate: eyeMetrics ? eyeMetrics.regressionRate : 0,
+      regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
+      blinkCount: eyeMetrics ? eyeMetrics.blinkCount : 0,
+      blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
+      visualStrainLevel: eyeMetrics ? eyeMetrics.visualStrainLevel : 'nominal',
+      visualStrainLabelAr: eyeMetrics
+        ? eyeMetrics.visualStrainLabelAr
+        : 'غير منطبق (جلسة صوتية)',
+      gazeCoveragePercent: eyeMetrics ? eyeMetrics.gazeCoveragePercent : 0,
+      observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
+      totalPassageWordCount: passage.words.length,
+      calibrationAccuracyPercent:
+        calibrationAccuracyPercent !== undefined
+          ? Math.round(calibrationAccuracyPercent)
+          : undefined,
       calibrationValidationMethod: normalizedCalMethod.labelAr,
       oralReadingAssessed,
       spokenTranscript: oralReadingAssessed ? spokenTranscript : '',
@@ -1551,11 +1564,17 @@ export function validateAndDeriveSessionFromEvidence(
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
       omissionCount: oralIntegration?.omissionCount ?? 0,
-      dyslexiaRiskScore: eyeMetrics.dyslexiaRiskScore,
-      readingHeuristicIndicator: eyeMetrics.heuristicIndicator,
-      readingRiskLevel: eyeMetrics.riskLevel,
-      readingRiskLabelAr: eyeMetrics.riskLabelAr,
-      problematicWords: eyeMetrics.problematicWords,
+      dyslexiaRiskScore: eyeMetrics
+        ? eyeMetrics.dyslexiaRiskScore
+        : (oralIntegration ? Math.max(10, Math.min(90, Math.round(100 - (oralIntegration.accuracyPercent ?? 75)))) : 40),
+      readingHeuristicIndicator: eyeMetrics
+        ? eyeMetrics.heuristicIndicator
+        : (oralIntegration?.accuracyPercent ?? 75),
+      readingRiskLevel: eyeMetrics ? eyeMetrics.riskLevel : 'nominal',
+      readingRiskLabelAr: eyeMetrics ? eyeMetrics.riskLabelAr : 'فرز صوتي استرشادي',
+      problematicWords: eyeMetrics
+        ? eyeMetrics.problematicWords
+        : (oralIntegration?.misreadWords || []),
       fixations: validatedFixations,
       dyscalculiaAssessed,
       mathTrials,

@@ -233,6 +233,24 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.ok(derived.derivedFields.clinicalReport.interventionExercises.length >= 2);
     assert.ok(derived.derivedFields.clinicalReport.classroomAccommodations.length >= 2);
 
+    // Voice-only modality test: should NOT produce synthetic fixations
+    const voiceOnlySession = validateAndDeriveSessionFromEvidence(
+      {
+        assessmentModality: 'voice_only',
+        passageId: passage.id,
+        readingDurationSeconds: 30,
+        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب صوتي', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(voiceOnlySession.valid, true);
+    assert.ok(voiceOnlySession.derivedFields);
+    assert.deepEqual(voiceOnlySession.derivedFields.fixations, []);
+    assert.equal(voiceOnlySession.derivedFields.calibrationAccuracyPercent, undefined);
+    assert.equal(voiceOnlySession.derivedFields.avgFixationMs, 0);
+    assert.equal(voiceOnlySession.derivedFields.regressionRate, 0);
+    assert.ok(voiceOnlySession.derivedFields.wpm > 0);
+
     // Reject client-supplied dyslexiaRiskScore
     const forgedScore = validateAndDeriveSessionFromEvidence(
       {

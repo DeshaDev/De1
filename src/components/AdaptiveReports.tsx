@@ -1,33 +1,28 @@
 /**
- * Adaptive AI Reports System (بصيرة - منظومة التقارير الذكية التكيفية)
- * Comprehensive Triple-Report: Parents, Educators & IEP Specialists, and Adaptive Remediation Games
- * Synthesizes multi-modal inputs: Eye Tracking, Arabic Speech Phonology, and Tactile Numerical Cognition
+ * Adaptive Multi-Axis Screening Reports (تقارير الفرز التربوي الاسترشادي متعدد المحاور)
+ * Tri-modal evaluation: Voice Phonology + Tactile Math + Reading Session
+ * Educational screening portfolio: Parent, Specialist/Teacher (IEP), and Targeted Games.
+ * NOTE: Strictly prevents report fabrication when no assessments have been completed.
+ * Diagnostic overclaims (DSM-5 / ICD-11) removed per clinical validation standards.
  */
 
 import React, { useState, useMemo } from 'react';
 import {
-  FileText,
-  Users,
-  Gamepad2,
-  Printer,
-  Brain,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Target,
   Sparkles,
-  Timer,
-  ChevronLeft,
+  Printer,
   Volume2,
-  Award,
-  BookOpen,
+  VolumeX,
   Eye,
-  Hand,
   Mic,
-  Activity,
-  Layers,
-  ShieldCheck,
+  Hand,
+  ChevronLeft,
+  Calendar,
+  Clock,
+  Gamepad2,
   Check,
+  AlertCircle,
+  ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
@@ -45,40 +40,53 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const [activeView, setActiveView] = useState<'parent' | 'teacher' | 'games'>('parent');
   const [isSpeakingSummary, setIsSpeakingSummary] = useState(false);
 
-  // Synthesize student data from props, assessment context, or rich default
+  // Check if ANY real assessment data has been gathered
+  const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
+  const hasTactileData = Boolean(currentAssessment?.tactileResults?.summary);
+  const hasEyeData = Boolean(
+    currentAssessment?.eyeTrackingResults || (student && student.sessionStatus === 'completed')
+  );
+  const hasAnyAssessmentData = hasSpeechData || hasTactileData || hasEyeData;
+
+  // Synthesize student data from active assessment context or completed student record
   const studentData = useMemo(() => {
-    const studentName = student?.name || currentAssessment?.studentName || 'أحمد محمد الشمري';
+    const studentName = student?.name || currentAssessment?.studentName || 'الطالب المستهدف';
     const age = student?.ageYears || currentAssessment?.age || 9;
     const grade = student?.gradeLevel || 3;
     const date = new Date().toLocaleDateString('ar-SA');
 
-    // Speech data
-    const speechSummary = currentAssessment?.speechResults?.summary || {
-      averageConfidence: student?.readingHeuristicIndicator ? Math.min(95, student.readingHeuristicIndicator + 10) : 76,
-      totalPauses: 4,
-      wordsNeedingImprovement: 2,
-      problematicLetters: ['ب ↔ ت', 'ت ↔ ط', 'س ↔ ص'],
-      diacriticErrors: 1,
-      hesitationMs: 480,
-    };
+    // Speech data (only present if actually assessed)
+    const speechSummary = currentAssessment?.speechResults?.summary || null;
 
-    // Tactile data
-    const tactileSummary = currentAssessment?.tactileResults?.summary || {
-      averageReactionTime: 1.45,
-      correctAnswers: 5,
-      totalTasks: 6,
-      hesitationCount: 3,
-      weakAreas: ['خط الأعداد والتمثيل الذهني (PAE)', 'المقارنة المكانية السريعة'],
-    };
+    // Tactile data (only present if actually assessed)
+    const tactileSummary = currentAssessment?.tactileResults?.summary || null;
 
     // Eye tracking data
-    const eyeSummary = {
-      wcpm: student?.wpm || 58,
-      avgFixationMs: student?.avgFixationMs || 340,
-      regressionRate: student?.regressionRate ? Math.round(student.regressionRate * 100) : 26,
-      gazeCoverage: 88,
-      visualStrain: 'معتدل (إجهاد بصري خفيف عند الانتقال السطري)',
-    };
+    let eyeSummary: {
+      wcpm: number;
+      avgFixationMs: number;
+      regressionRate: number;
+      gazeCoverage: number;
+      visualStrain: string;
+    } | null = null;
+
+    if (currentAssessment?.eyeTrackingResults) {
+      eyeSummary = {
+        wcpm: currentAssessment.eyeTrackingResults.wpm || 55,
+        avgFixationMs: 310,
+        regressionRate: currentAssessment.eyeTrackingResults.regressionRate || 0,
+        gazeCoverage: 80,
+        visualStrain: 'مؤشر استرشادي من جلسة القراءة',
+      };
+    } else if (student && student.sessionStatus === 'completed') {
+      eyeSummary = {
+        wcpm: student.wpm || 55,
+        avgFixationMs: student.avgFixationMs || 310,
+        regressionRate: student.regressionRate ? Math.round(student.regressionRate * 100) : 18,
+        gazeCoverage: 85,
+        visualStrain: student.visualStrainLabelAr || 'ضمن النطاق المعتاد',
+      };
+    }
 
     return {
       studentName,
@@ -92,50 +100,64 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     };
   }, [student, currentAssessment]);
 
-  // Comprehensive Risk Score Calculation (0 - 100)
+  // Comprehensive Educational Screening Risk Indicator (0 - 100)
+  // Computed strictly from available modules; does not fabricate unassessed modules
   const riskCalculation = useMemo(() => {
     let riskPoints = 0;
+    let assessedWeights = 0;
 
-    // Eye tracking risk factors
-    if (studentData.eye.regressionRate > 25) riskPoints += 15;
-    if (studentData.eye.wcpm < 65) riskPoints += 15;
-    if (studentData.eye.avgFixationMs > 320) riskPoints += 10;
+    // Eye tracking risk factors (if assessed)
+    if (studentData.eye) {
+      assessedWeights += 35;
+      if (studentData.eye.regressionRate > 25) riskPoints += 15;
+      if (studentData.eye.wcpm < 60) riskPoints += 12;
+      if (studentData.eye.avgFixationMs > 340) riskPoints += 8;
+    }
 
-    // Speech phonology risk factors
-    if (studentData.speech.averageConfidence < 80) riskPoints += 15;
-    if (studentData.speech.problematicLetters.length >= 2) riskPoints += 15;
-    if (studentData.speech.hesitationMs > 500) riskPoints += 10;
+    // Speech phonology risk factors (if assessed)
+    if (studentData.speech) {
+      assessedWeights += 35;
+      if (studentData.speech.averageConfidence < 80) riskPoints += 15;
+      if (studentData.speech.problematicLetters.length >= 2) riskPoints += 12;
+      if (studentData.speech.hesitationMs > 500) riskPoints += 8;
+    }
 
-    // Tactile & math risk factors
-    const mathSuccessRate = (studentData.tactile.correctAnswers / Math.max(1, studentData.tactile.totalTasks)) * 100;
-    if (mathSuccessRate < 70) riskPoints += 10;
-    if (studentData.tactile.averageReactionTime > 1.8) riskPoints += 10;
+    // Tactile & math risk factors (if assessed)
+    if (studentData.tactile) {
+      assessedWeights += 30;
+      const mathSuccessRate =
+        (studentData.tactile.correctAnswers / Math.max(1, studentData.tactile.totalTasks)) * 100;
+      if (mathSuccessRate < 70) riskPoints += 15;
+      if (studentData.tactile.averageReactionTime > 1.8) riskPoints += 15;
+    }
 
-    const clampedScore = Math.min(95, Math.max(15, riskPoints));
+    // Normalized score out of 100 based on modules actually assessed
+    const normalizedScore =
+      assessedWeights > 0 ? Math.round((riskPoints / assessedWeights) * 100) : 25;
 
     let band: 'low' | 'moderate' | 'high' = 'low';
     let bandLabel = 'مؤشرات اعتيادية (ضمن النطاق النمائي الطبيعي)';
     let badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
 
-    if (clampedScore >= 60) {
+    if (normalizedScore >= 60) {
       band = 'high';
-      bandLabel = 'مؤشرات مرتفعة (يوصى بالتدخل التربوي الفردي المساند)';
+      bandLabel = 'مؤشرات تباين مرتفعة (يوصى بمساندة صفية وتدخل فردي)';
       badgeColor = 'bg-red-100 text-red-800 border-red-300';
-    } else if (clampedScore >= 35) {
+    } else if (normalizedScore >= 35) {
       band = 'moderate';
-      bandLabel = 'مؤشرات معتدلة (تتطلب مساندة صفية وتدريبات منزلية محددة)';
+      bandLabel = 'مؤشرات تباين معتدلة (تتطلب تمارين تدريبية مستهدفة)';
       badgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
     }
 
     return {
-      score: clampedScore,
+      score: normalizedScore,
       band,
       bandLabel,
       badgeColor,
     };
   }, [studentData]);
 
-  // Audio speech synthesis summary for parents
+  // Dynamic audio speech synthesis summary for parents
   const speakParentSummary = () => {
     if (!('speechSynthesis' in window)) return;
     if (isSpeakingSummary) {
@@ -144,7 +166,23 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       return;
     }
 
-    const text = `مرحباً بكم. هذا الملخص الصوتي لنتائج تقييم الطالب ${studentData.studentName}. أظهر الطالب مستوى ذكاء وتفاعل حركي ممتاز. نوصي بالتركيز على تدريبات التمييز بين الحروف المتشابهة مثل الباء والتاء، واستخدام مسطرة القراءة الملونة لتسهيل تتبع السطور.`;
+    const observations: string[] = [];
+    if (studentData.speech) {
+      observations.push(`بلغت دقة النطق الصوتي ${studentData.speech.averageConfidence}%`);
+    }
+    if (studentData.tactile) {
+      observations.push(
+        `أنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام لمسية عددية`
+      );
+    }
+    if (studentData.eye) {
+      observations.push(`وبلغت سرعة القراءة ${studentData.eye.wcpm} كلمة في الدقيقة`);
+    }
+
+    const text = `مرحباً بكم. هذا ملخص صوتي استرشادي لنتائج تقييم الطالب ${studentData.studentName}. ${
+      observations.length > 0 ? observations.join('، ') + '.' : ''
+    } نوصي بالاطلاع على خطة التدريبات المخصصة في هذا التقرير لدعم التطور القرائي والحسابي للطالب.`;
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
     utterance.rate = 0.9;
@@ -160,7 +198,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     {
       id: 'letter-hunt',
       title: 'صائد النقاط والحروف المتشابهة (ب / ت / ث / ن)',
-      description: 'لعبة تفاعلية مرحة لتدريب الوعي البصري-الفونيمي والتمييز السريع بين مواضع النقاط والأصوات.',
+      description:
+        'لعبة تفاعلية مرحة لتدريب الوعي البصري-الفونيمي والتمييز السريع بين مواضع النقاط والأصوات.',
       targetSkill: 'الوعي الفونيمي والخلط البصري (Visual Homographs)',
       difficulty: 'متوسط' as const,
       duration: '10 دقائق يومياً',
@@ -170,7 +209,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     {
       id: 'syllable-train',
       title: 'قطار المقاطع الصوتية والمدود الطويلة',
-      description: 'تركيب الكلمات من المقاطع الصوتية والحركات لتنمية الطلاقة وكسر تردد الاستدعاء الصوتي.',
+      description:
+        'تركيب الكلمات من المقاطع الصوتية والحركات لتنمية الطلاقة وكسر تردد الاستدعاء الصوتي.',
       targetSkill: 'التقطيع المقطعي والطلاقة (Syllable Segmentation & VOT)',
       difficulty: 'سهل' as const,
       duration: '8 دقائق يومياً',
@@ -191,13 +231,99 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       id: 'colored-reader',
       title: 'القارئ العربي الميسر الذكي',
       description: 'قراءة نصوص مشكولة مع مسطرة التظليل البصري والتلوين الديناميكي للحروف المتشابهة.',
-      targetSkill: 'التتبع البصري الإيقاعي وخفض الارتدادات (Saccadic Control)',
+      targetSkill: 'التتبع البصري الإيقاعي وخفض الارتدادات (Reading Flow)',
       difficulty: 'متدرج' as const,
       duration: '15 دقيقة يومياً',
       tabTarget: 'adaptive-reader',
       iconColor: 'bg-teal-500 text-white',
     },
   ];
+
+  // EMPTY STATE: Prevent rendering fake diagnostic reports when no tests have run
+  if (!hasAnyAssessmentData) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-12 select-none font-sans" dir="rtl">
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 md:p-12 text-center shadow-sm">
+          <div className="w-20 h-20 mx-auto bg-amber-50 border border-amber-200 rounded-3xl flex items-center justify-center mb-6">
+            <AlertCircle className="w-10 h-10 text-amber-600" />
+          </div>
+
+          <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 mb-3">
+            حالة التقرير: في انتظار إجراء الاختبارات
+          </span>
+
+          <h2 className="text-3xl font-black text-slate-900 mb-3">
+            لم يُجرَ أي تقييم بعد للطالب
+          </h2>
+          <p className="text-base text-slate-600 max-w-xl mx-auto mb-8 leading-relaxed">
+            التزاماً بمعايير النزاهة العلمية والشفافية التربوية، لا تُولّد منصة «بصيرة» تقارير أو مؤشرات مخاطر افتراضية بدون قياس فعلي. يرجى البدء بأحد محاور الفرز أدناه:
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 text-right">
+            {/* 1. Speech Analysis Card */}
+            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-indigo-300 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4">
+                  <Mic className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1">تحليل النطق العربي</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  فحص الوعي الفونولوجي، أزواج الحروف المتشابهة صوتياً، ومعدل التردد والتوقف.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateTab && onNavigateTab('arabic-speech-analysis')}
+                className="mt-6 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>بدء فحص النطق</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 2. Tactile Math Card */}
+            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-purple-300 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
+                  <Hand className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1">التحليل اللمسي والحساب</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  قياس تقدير خط الأعداد (PAE)، إدراك الكميات الفوري، وسرعة الاستجابة الحركية.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateTab && onNavigateTab('tactile-analytics')}
+                className="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>بدء فحص الحساب</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 3. Reading Session Card */}
+            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-emerald-300 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
+                  <Eye className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1">جلسة قراءة النص</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  قياس سرعة القراءة والطلاقة والارتدادات البصرية الاسترشادية على الكلمات المشكولة.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateTab && onNavigateTab('professional-eye-tracking')}
+                className="mt-6 w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>بدء جلسة القراءة</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-8 select-none font-sans" dir="rtl">
@@ -206,13 +332,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            منظومة التقارير الشاملة التكيفية بالذكاء الاصطناعي
+            منظومة الفرز التربوي الشامل وخطط الدعم
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            تقرير التقييم الشامل وخطة التدخل الفردية (IEP)
+            تقرير الفرز التربوي الاسترشادي وخطة التدخل الفردية (IEP)
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            دمج متكامل لنتائج تتبع العين، التحليل الفونولوجي الصوتي، والحس العددي اللمسي للطالب:{' '}
+            مؤشرات فرز تكيفية مستندة إلى أداء الطالب:{' '}
             <span className="font-bold text-teal-700">{studentData.studentName}</span> (الصف{' '}
             {studentData.grade} الابتدائي - {studentData.date})
           </p>
@@ -222,7 +348,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => window.print()}
-            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-300 shadow-sm transition-colors flex items-center gap-2 text-sm"
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-300 shadow-sm transition-colors flex items-center gap-2 text-sm cursor-pointer"
           >
             <Printer className="w-4 h-4 text-slate-500" />
             <span>طباعة التقرير (PDF)</span>
@@ -230,42 +356,50 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         </div>
       </div>
 
+      {/* Scientific Transparency Notice */}
+      <div className="mb-6 p-4 rounded-2xl bg-slate-100 border border-slate-200 text-right">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-slate-700 leading-relaxed">
+            <span className="font-bold block mb-0.5">إخلاء مسؤولية تربوي وتوجيه منهجي:</span>
+            هذا التقرير هو أداة فرز تربوي استرشادي (Educational Screening) لتحديد مجالات القوة والاحتياج، وتصميم خطط الدعم داخل الصف والمنزل. لا يُعتبر هذا التقرير تشخيصاً طبياً أو إكلينيكياً نهائياً لعسر القراءة أو الحساب، وتجب إحالة الحالات ذات المؤشرات المرتفعة لمختص معتمد لإجراء الاختبارات المعيارية.
+          </div>
+        </div>
+      </div>
+
       {/* THREE-VIEW NAVIGATION TABS */}
       <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl mb-8 max-w-xl mx-auto">
         <button
           onClick={() => setActiveView('parent')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
             activeView === 'parent'
               ? 'bg-white text-teal-800 shadow-md shadow-slate-200/50'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Users className="w-4 h-4" />
-          <span>تقرير ولي الأمر</span>
+          <span>تقرير ولي الأمر المبسط</span>
         </button>
 
         <button
           onClick={() => setActiveView('teacher')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
             activeView === 'teacher'
               ? 'bg-white text-teal-800 shadow-md shadow-slate-200/50'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <FileText className="w-4 h-4" />
-          <span>تقرير الأخصائي و IEP</span>
+          <span>خطة المعلم والأخصائي (IEP)</span>
         </button>
 
         <button
           onClick={() => setActiveView('games')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
             activeView === 'games'
               ? 'bg-white text-teal-800 shadow-md shadow-slate-200/50'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Gamepad2 className="w-4 h-4" />
-          <span>الألعاب الموجهة</span>
+          <span>الألعاب التكيفية والتدريب</span>
         </button>
       </div>
 
@@ -274,186 +408,148 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       {/* ========================================================================= */}
       {activeView === 'parent' && (
         <div className="space-y-8 animate-fadeIn">
-          {/* Friendly Hero Banner */}
-          <div className="bg-gradient-to-br from-teal-700 via-emerald-800 to-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
-              <div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur mb-2 inline-block">
-                  دليل ولي الأمر للفهم والمساندة المنزلية
-                </span>
-                <h2 className="text-3xl font-black mb-2">
-                  عزيزي ولي أمر الطالب {studentData.studentName}
-                </h2>
-                <p className="text-sm text-teal-100 max-w-xl leading-relaxed">
-                  صُمم هذا التقرير بلغة واضحة وبسيطة لمساعدتكم على فهم نمط تعلّم طفلكم ونقاط قوته المتميزة،
-                  مع خطوات عملية يومية مدتها 15 دقيقة فقط لتطوير مهارات القراءة والحساب.
-                </p>
+          {/* Audio Speech Summary Bar */}
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-3xl p-6 border border-teal-200 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md shrink-0">
+                <Volume2 className="w-6 h-6" />
               </div>
-
-              <button
-                onClick={speakParentSummary}
-                className={`px-5 py-3 rounded-2xl font-bold flex items-center gap-2 text-sm shadow-md transition-all shrink-0 ${
-                  isSpeakingSummary
-                    ? 'bg-amber-400 text-slate-900 animate-pulse'
-                    : 'bg-white text-teal-900 hover:bg-teal-50'
-                }`}
-              >
-                <Volume2 className="w-4 h-4" />
-                <span>{isSpeakingSummary ? 'إيقاف الملخص الصوتي' : 'استمع للملخص الصوتي'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Child Strengths vs Areas to Support */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Strengths Card */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900">نقاط القوة المتميزة لدى طفلك</h3>
-                  <p className="text-xs text-slate-500">قدرات إيجابية تميز أداءه في الفحص</p>
-                </div>
-              </div>
-
-              <div className="space-y-3.5">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      الفهم والاستيعاب السمعي العالي
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      يستوعب القصص والمعاني بذكاء عند الاستماع إليها، ولديه حصيلة لغوية ممتازة.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      سرعة التفاعل الحركي واللمسي
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      زمن رد الفعل سريع (1.4 ثانية)، ولديه شغف كبير بالتفاعل مع الأجهزة اللوحية.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      المحاولة والإصرار وعدم الاستسلام
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      أظهر روحاً إيجابية عالية ورغبة في تصويب الإجابات وتكرار المحاولات.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Areas for Growth Card */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900">مجالات المساندة والتطوير</h3>
-                  <p className="text-xs text-slate-500">مهارات تحتاج تدريباً ممتعاً ومنتظماً</p>
-                </div>
-              </div>
-
-              <div className="space-y-3.5">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100">
-                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      التمييز بين الحروف المتشابهة في النقاط
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      يحدث خلط أحياناً بين (ب / ت / ث) أو بين (ت / ط)، وهذا أمر شائع جداً ويعالج بالألعاب التفاعلية.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100">
-                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      تخفيف الارتداد البصري بين الأسطر
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      تتراجع عيناه للخلف أحياناً لتأكيد الكلمة السابقة، ويساعد استخدام مسطرة القراءة في توجيه نظره.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100">
-                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      تقدير الأعداد على خط الأعداد
-                    </span>
-                    <span className="text-xs text-slate-600">
-                      يحتاج لتمرين بصري يوضح تسلسل الأعداد كخط قطار متدرج من 0 إلى 100.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actionable 15-Minute Daily Home Program */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center">
-                <Timer className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900">
-                  برنامج المساندة المنزلية اليومي (15 دقيقة فقط)
+              <div className="text-right">
+                <h3 className="font-extrabold text-slate-900 text-base mb-1">
+                  القارئ الصوتي الذكي لولي الأمر
                 </h3>
-                <p className="text-xs text-slate-500">خطوات بسيطة تحقق أثراً ملحوظاً خلال 4 أسابيع</p>
+                <p className="text-xs text-slate-600">
+                  استمع لملخص صوتي باللغة العربية يشرح نتائج الفرز الاسترشادي للطالب وأبرز التوصيات المنزلية.
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (1 - 5)</span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">لعبة صيد النقاط بالصلصال</h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  تشكيل حروف (ب/ت/ث) بالصلصال ووضع النقاط كأزرار للتثبيت الحسي.
+            <button
+              onClick={speakParentSummary}
+              className="px-6 py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-2xl transition-all shadow-md flex items-center gap-2 text-sm shrink-0 cursor-pointer"
+            >
+              {isSpeakingSummary ? (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  <span>إيقاف القراءة</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  <span>تشغيل الملخص الصوتي</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Child Screening Summary Card */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-6 mb-6 gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 mb-1">
+                  ملخص مؤشرات الطالب: {studentData.studentName}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  تاريخ الفحص: {studentData.date} · المرحلة: الصف {studentData.grade} الابتدائي
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (6 - 10)</span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">القراءة بمؤشر الإصبع</h4>
+              {/* Status Band Pill */}
+              <div className={`px-4 py-2 rounded-2xl border text-xs font-bold ${riskCalculation.badgeColor}`}>
+                {riskCalculation.bandLabel}
+              </div>
+            </div>
+
+            {/* Tri-Modal Progress Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {/* 1. Speech */}
+              <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-right">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <Mic className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-indigo-700 font-mono">
+                    {studentData.speech ? `${studentData.speech.averageConfidence}% دقة` : 'لم يُجرَ'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">الوعي الصوتي والنطق</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  تتبع السطر بإصبعه أو بمسطرة ملونة لمنع تشتت العين والقفز السطري.
+                  {studentData.speech
+                    ? `أظهر دقة نطق ${studentData.speech.averageConfidence}% مع رصد ${studentData.speech.wordsNeedingImprovement} كلمات تحتاج لتعزيز التمييز النطقي.`
+                    : 'لم يكتمل فحص النطق في هذه الجلسة بعد.'}
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (11 - 13)</span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">خط الأعداد بالخطوات</h4>
+              {/* 2. Reading */}
+              <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-right">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <Eye className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-emerald-700 font-mono">
+                    {studentData.eye ? `${studentData.eye.wcpm} كلمة/دقيقة` : 'لم تُجرَ'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة القرائية</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  رسم خط أعداد على الأرض والمشي عليه لمعرفة موقع (25، 50، 75).
+                  {studentData.eye
+                    ? `سرعة قراءة بلغت ${studentData.eye.wcpm} كلمة/دقيقة مع ارتدادات استرشادية بنسبة ${studentData.eye.regressionRate}%.`
+                    : 'لم تكتمل جلسة القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (14 - 15)</span>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">التعزيز الإيجابي والثناء</h4>
+              {/* 3. Tactile Math */}
+              <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-100 text-right">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                    <Hand className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-purple-700 font-mono">
+                    {studentData.tactile
+                      ? `${studentData.tactile.correctAnswers}/${studentData.tactile.totalTasks} مهام`
+                      : 'لم يُجرَ'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">الحس العددي واللمسي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  شكر الطالب على مجهوده ووضع ملصق نجمة على لوحة الإنجاز اليومية.
+                  {studentData.tactile
+                    ? `إنجاز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام بمتوسط استجابة ${studentData.tactile.averageReactionTime} ثانية.`
+                    : 'لم يكتمل فحص الحساب في هذه الجلسة بعد.'}
                 </p>
+              </div>
+            </div>
+
+            {/* Parent 15-Minute Daily Routine Plan */}
+            <div className="border-t border-slate-100 pt-6">
+              <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-teal-600" />
+                <span>الخطة المنزلية المقترحة (١٥ دقيقة يومياً)</span>
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+                  <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (١ - ٥)</span>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">صيد النقاط والحروف</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    لعبة تمييز مواضع النقاط بين الحروف المتشابهة (ب، ت، ث، ن) باستخدام بطاقات ملونة.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+                  <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (٦ - ١٠)</span>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">القراءة بالمسطرة الرقمية</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    قراءة نص قصير في القارئ الميسر مع تفعيل مسطرة السطر لتسهيل التتبع ومنع القفز.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+                  <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (١١ - ١٥)</span>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">خط الأعداد والتعزيز</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    تخمين موقع رقم على خط أعداد بسيط مع تقديم الثناء المعنوي على الجهد المبذول.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -461,22 +557,22 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* VIEW 2: TEACHER & SPECIALIST IEP REPORT (تقرير الأخصائي والمعلم) */}
+      {/* VIEW 2: TEACHER & SPECIALIST IEP REPORT (خطة الأخصائي والمعلم) */}
       {/* ========================================================================= */}
       {activeView === 'teacher' && (
         <div className="space-y-8 animate-fadeIn">
-          {/* Clinical Header Banner */}
+          {/* Header Banner */}
           <div className="bg-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-xl">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 mb-2 inline-block">
-                  ملف خطة الدعم التربوي الفردي (Clinical IEP Portfolio)
+                  ملف خطة الدعم التربوي الفردي الاسترشادية (IEP)
                 </span>
                 <h2 className="text-3xl font-black mb-1">
-                  التقرير التشخيصي متعدد المحاور: {studentData.studentName}
+                  تقرير الفرز التربوي الاسترشادي متعدد المحاور: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  متوافق مع محددات التشخيص المبكر (DSM-5 & ICD-11) ومنهجية Amira Learning
+                  مؤشرات فرز استرشادية لخطط التدخل والدعم الصفي — لا يُعتد بها كتشخيص سريري مستقل دون تقييم أخصائي معتمد
                 </p>
               </div>
 
@@ -488,30 +584,38 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
-          {/* Tri-Modal Clinical Metrics Table */}
+          {/* Tri-Modal Metrics Table */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* 1. Eye Tracking */}
+            {/* 1. Reading & Eye */}
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-4 text-emerald-700 font-bold text-sm">
                 <Eye className="w-5 h-5" />
-                <span>المحور الأول: تتبع العين والقراءة</span>
+                <span>المحور الأول: القراءة والطلاقة</span>
               </div>
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-500">سرعة القراءة (WCPM):</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.eye.wcpm} ك/د</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.eye ? `${studentData.eye.wcpm} ك/د` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">متوسط زمن التثبيت (Fixation):</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.eye.avgFixationMs} ms</span>
+                  <span className="text-slate-500">متوسط زمن التثبيت:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.eye ? `${studentData.eye.avgFixationMs} ms` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">معدل الارتدادات العكسية:</span>
-                  <span className="font-mono font-bold text-amber-600">{studentData.eye.regressionRate}%</span>
+                  <span className="text-slate-500">معدل الارتداد الاسترشادي:</span>
+                  <span className="font-mono font-bold text-amber-600">
+                    {studentData.eye ? `${studentData.eye.regressionRate}%` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">التغطية البصرية للكلمات:</span>
-                  <span className="font-mono font-bold text-emerald-600">{studentData.eye.gazeCoverage}%</span>
+                  <span className="text-slate-500">حالة المؤشر البصري:</span>
+                  <span className="font-mono font-bold text-emerald-600">
+                    {studentData.eye ? 'مكتمل' : 'لم يُجرَ'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -520,26 +624,32 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-4 text-indigo-700 font-bold text-sm">
                 <Mic className="w-5 h-5" />
-                <span>المحور الثاني: النطق والوعي الفونولوجي</span>
+                <span>المحور الثاني: النطق والوعي الصوتي</span>
               </div>
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-500">دقة النطق الفونولوجي:</span>
-                  <span className="font-mono font-bold text-indigo-700">{studentData.speech.averageConfidence}%</span>
+                  <span className="font-mono font-bold text-indigo-700">
+                    {studentData.speech ? `${studentData.speech.averageConfidence}%` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-500">كمون البدء الصوتي (VOT):</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.speech.hesitationMs} ms</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.speech ? `${studentData.speech.hesitationMs} ms` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">أزواج الحروف المشوشة:</span>
+                  <span className="text-slate-500">أزواج الحروف المرصودة:</span>
                   <span className="font-bold text-amber-600">
-                    {studentData.speech.problematicLetters.join('، ') || 'لا يوجد'}
+                    {studentData.speech?.problematicLetters?.join('، ') || 'لا يوجد'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">التوقفات داخل الكلمة:</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.speech.totalPauses} توقفات</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.speech ? `${studentData.speech.totalPauses} توقفات` : 'غير متاح'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -553,20 +663,26 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-500">زمن الاستجابة الحركية:</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.tactile.averageReactionTime} ث</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.tactile ? `${studentData.tactile.averageReactionTime} ث` : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-500">المهام المنجزة بنجاح:</span>
                   <span className="font-mono font-bold text-purple-700">
-                    {studentData.tactile.correctAnswers} / {studentData.tactile.totalTasks}
+                    {studentData.tactile
+                      ? `${studentData.tactile.correctAnswers} / ${studentData.tactile.totalTasks}`
+                      : 'غير متاح'}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">تردد المسار والارتداد:</span>
-                  <span className="font-mono font-bold text-slate-800">{studentData.tactile.hesitationCount}</span>
+                  <span className="text-slate-500">معدل التردد الحركي:</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {studentData.tactile ? studentData.tactile.hesitationCount : 'غير متاح'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">مجال الضعف الأساسي:</span>
+                  <span className="text-slate-500">مجال التركيز الأساسي:</span>
                   <span className="font-bold text-amber-600">خط الأعداد (PAE)</span>
                 </div>
               </div>
@@ -576,7 +692,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           {/* Individualized Education Program (IEP) Goals */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-6">
-              خطة الأهداف التربوية الفردية المقاسة (SMART IEP Goals)
+              خطة الأهداف التربوية الفردية المقترحة (SMART IEP Goals)
             </h3>
 
             <div className="space-y-4">
@@ -585,13 +701,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
                     الهدف الفونولوجي والقرائي
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: 6 أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  أن يميز الطالب نطقاً وقراءةً بين الحروف المتشابهة (ب/ت/ث) بنسبة دقة لا تقل عن 90% في 10 محاولات متتالية.
+                  أن يميز الطالب نطقاً وقراءة بين الحروف المتشابهة (ب/ت/ث) بنسبة دقة لا تقل عن ٩٠% في ١٠ محاولات متتالية.
                 </p>
                 <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> استخدام التغذية الراجعة الصوتية اللحظية، التقطيع المقطعي، والتمييز اللوني للنقاط.
+                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> استخدام التغذية الراجعة الصوتية اللحظية، التقطيع المقطعي، والتمييز اللوني لمواضع النقاط.
                 </div>
               </div>
 
@@ -600,10 +716,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
                     هدف التتبع البصري والطلاقة
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: 8 أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٨ أسابيع</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  رفع معدل القراءة الجهرية من 58 إلى 75 كلمة بالدقيقة، مع خفض الارتداد البصري بين الأسطر إلى أقل من 15%.
+                  رفع معدل القراءة الجهرية تدريجياً بنسبة ٢٠%، مع تقليل التردد بين السطور.
                 </p>
                 <div className="text-xs text-slate-600">
                   <span className="font-bold text-slate-700">استراتيجية التدريس:</span> توظيف مسطرة القراءة الرقمية (Reading Ruler)، وتكبير التباعد بين السطور بنسبة 1.5x.
@@ -615,13 +731,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800">
                     هدف الحس العددي والرياضيات
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: 6 أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  خفض نسبة الخطأ المطلق (PAE) في تقدير مواقع الأعداد على خط الأعداد (0 - 100) لتكون أقل من 8%.
+                  خفض نسبة الخطأ في تقدير مواقع الأعداد على خط الأعداد (0 - 100) لتكون أقل من ١٠%.
                 </p>
                 <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> التدريب الحركي التفاعلي على خط الأعداد الممسوح والمقارنة المكانية بالصور التجسيدية.
+                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> التدريب الحركي التفاعلي على خط الأعداد والمقارنة المكانية بالصور التجسيدية.
                 </div>
               </div>
             </div>
@@ -635,11 +751,11 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">منح وقت إضافي بنسبة 25% في الاختبارات التحريرية</span>
+                <span className="text-slate-800">منح وقت إضافي بنسبة 25% في المهام التحريرية</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">استخدام خط عربي واضح بحجم كبير (16pt على الأقل)</span>
+                <span className="text-slate-800">استخدام خط عربي واضح بحجم مريح (18pt على الأقل)</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -647,7 +763,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">إتاحة خيار الاختبار الشفوي عند تقييم الفهم والاستيعاب</span>
+                <span className="text-slate-800">إتاحة خيار التقييم الشفوي عند قياس الفهم والاستيعاب</span>
               </div>
             </div>
           </div>
@@ -661,10 +777,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         <div className="space-y-8 animate-fadeIn">
           {/* Games Hero Banner */}
           <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-teal-800 rounded-3xl p-8 md:p-10 text-white shadow-xl">
-            <h2 className="text-3xl font-black mb-2">الألعاب التكيفية المخصصة للطالب</h2>
+            <h2 className="text-3xl font-black mb-2">الألعاب التكيفية الداعمة للطالب</h2>
             <p className="text-sm text-indigo-100 max-w-xl leading-relaxed">
-              تم توليد هذه الألعاب آلياً بالذكاء الاصطناعي بناءً على نقاط الضعف المرصودة في فحص النطق وحركة العين،
-              لتوفير تدريب علاجي مكثف بقالب ألعاب محبب وشيق.
+              تم اختيار هذه الألعاب بناءً على مؤشرات الأداء المرصودة لتقديم تدريب مهاري مكثف بقالب تفاعلي مشجع.
             </p>
           </div>
 
@@ -677,7 +792,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               >
                 <div>
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-2xl ${game.iconColor} flex items-center justify-center font-bold shadow-sm`}>
+                    <div
+                      className={`w-12 h-12 rounded-2xl ${game.iconColor} flex items-center justify-center font-bold shadow-sm`}
+                    >
                       <Gamepad2 className="w-6 h-6" />
                     </div>
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
@@ -706,7 +823,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                       onNavigateTab(game.tabTarget);
                     }
                   }}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm"
+                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm cursor-pointer"
                 >
                   <span>بدء اللعبة في الصالة العلاجية</span>
                   <ChevronLeft className="w-4 h-4" />
