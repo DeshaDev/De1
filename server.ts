@@ -1870,8 +1870,6 @@ ${mathContextLine}
   // 2b. Optional AI-assisted educational activity planner; not a diagnostic or validated treatment engine.
   app.post('/api/remediation/generate-personalized-session', async (req, res) => {
     const {
-      studentId,
-      studentName,
       gradeLevel = 3,
       dialect = 'msa',
       problematicWords = [],
@@ -1895,7 +1893,7 @@ ${mathContextLine}
     if (ai) {
       try {
         const prompt = `أنت مساعد تربوي لإنشاء أنشطة تعليمية عربية للقراءة والحس العددي. أنشئ خطة تدريب تعليمية، لا تشخيصًا ولا علاجًا سريريًا، ولا تدّع أنها برنامج علاجي معتمد أو أنها تعتمد على بيانات لم تصل إليك.
-الطالب ${studentName || 'طالب'} في الصف ${gradeLevel}، ولهجته المفضلة ${dialect}.
+الطفل في الصف ${gradeLevel}، واللهجة المفضلة ${dialect}. لا تحتاج إلى اسم الطفل أو أي مُعرّف شخصي.
 سياق الأهداف: ${targetContext}
 قائمة العمل: [${effectiveWords.join('، ')}].
 
@@ -2008,7 +2006,7 @@ ${mathContextLine}
 
     // Deterministic grade-level educational fallback if the model is unavailable.
     const deterministicSession = generateAdaptiveRemediationPlan({
-      studentName: String(studentName || 'الطالب'),
+      studentName: 'الطالب',
       gradeLevel: Number(gradeLevel),
       effectiveWords,
     });
