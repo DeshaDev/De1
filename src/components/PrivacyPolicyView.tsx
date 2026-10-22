@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Mic, Trash2, Lock, Cpu, Scale, FileText, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Mic, Trash2, Lock, Cpu, Scale, FileText, Info } from 'lucide-react';
 
 interface PrivacyPolicyViewProps {}
 
@@ -8,29 +8,29 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
     <header className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-xs">
       <div className="flex items-center gap-2 text-emerald-800">
         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-        <span className="text-sm font-bold">ميثاق الخصوصية وحوكمة بيانات الطلاب وحمايتها</span>
+        <span className="text-sm font-bold">معلومات الخصوصية وحدود النسخة الحالية</span>
       </div>
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
-        سياسة الأمان والامتثال والخصوصية في منصة «بصيرة»
+        كيف تتعامل «بصيرة» مع البيانات
       </h1>
       <p className="text-sm leading-7 text-slate-700">
-        تلتزم منصة بصيرة بتطبيق أعلى معايير الأمان والخصوصية بالتصميم (Privacy-by-Design)، والامتثال الصارم لقانون حماية البيانات الشخصية المصري رقم 151 لسنة 2020 ولائحته التنفيذية الصادرة بالقرار رقم 816 لسنة 2025 (خاصة المادة 15 المتعلقة بحماية البيانات الحساسة للأطفال).
+        تشرح هذه الصفحة السلوك الذي أمكن التحقق منه في النسخة البرمجية الحالية، ولا تمثل شهادة امتثال قانوني أو تدقيقًا أمنيًا مستقلًا. بيانات الأطفال تُعامل بحذر خاص؛ قبل تشغيل الخدمة مع طلاب حقيقيين، يلزم مراجعة الإعدادات الفعلية وممارسات المؤسسة ومزودي الخدمات مع مختص قانوني وأمني.
       </p>
     </header>
 
-    {/* Law 151/2020 & Exec Reg 816/2025 Banner */}
+    {/* Legal context and implementation boundaries */}
     <section className="rounded-3xl border border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 p-6 space-y-3 shadow-xs">
       <div className="flex items-center gap-2 font-bold text-teal-950">
         <Scale className="h-5 w-5 text-teal-700" />
-        <h2 className="text-base font-extrabold">الامتثال التشريعي لقانون حماية البيانات الشخصية المصري (151/2020) واللائحة 816/2025</h2>
+        <h2 className="text-base font-extrabold">المتطلبات القانونية ومسؤولية التطبيق</h2>
       </div>
       <p className="text-xs leading-relaxed text-slate-700">
-        تُصنّف البيانات التعليمية والنمائية وصعوبات التعلم للأطفال بوصفها <strong>«بيانات حساسة»</strong>. بناءً على المادة (15) من اللائحة التنفيذية:
+        يتضمن القانون المصري رقم 151 لسنة 2020 ولائحته التنفيذية رقم 816 لسنة 2025 متطلبات تتعلق بالتعامل مع البيانات الشخصية وبيانات الأطفال. هذه النسخة لم تحصل على شهادة امتثال؛ ولا يكفي ظهور خانة موافقة في الواجهة لإثبات استيفاء جميع المتطلبات.
       </p>
       <ul className="list-disc space-y-1.5 pr-5 text-xs text-slate-700 leading-relaxed">
-        <li><strong>الموافقة الصريحة المسبقة:</strong> لا يتم فتح أي جلسة قياس أو حفظ أي مؤشر إلا بعد توثيق موافقة ولي الأمر الرسمية، وتسجيل اسم ولي الأمر وصفته القانونية والطابع الزمني.</li>
-        <li><strong>موافقة منفصلة للتسجيل الصوتي:</strong> يُشترط إقرار اختياري مستقل لتسجيل الصوت أثناء القراءة الجهرية، مع إمكانية إتمام القياس بنمط القراءة الصامتة دون تشغيل الميكروفون.</li>
-        <li><strong>المعالجة التفسيرية للذكاء الاصطناعي:</strong> عند الاستعانة بنماذج الذكاء الاصطناعي التوليدي (Google Gemini) لبناء التوصيات الصفية، يتم تجريد البيانات بالكامل من أي معرفات شخصية (Pseudonymized Context).</li>
+        <li><strong>تسجيل الموافقة:</strong> يتحقق النظام من وجود إقرار موافقة ولي الأمر وطابع زمني ومصدر مُدخل في سجل الجلسة. لا يتحقق هذا وحده من الهوية القانونية للموافق أو من كفاية الموافقة قانونيًا.</li>
+        <li><strong>الصوت:</strong> يُطلب إقرار منفصل قبل وضع القراءة الجهرية. يختلف التعامل مع الصوت في Web Speech API حسب المتصفح ومزوّد الخدمة، فلا تفترض أن الصوت يُعالَج محليًا بالكامل.</li>
+        <li><strong>ميزات الذكاء الاصطناعي:</strong> توليد أنشطة التدريب يرسل الصف واللهجة وكلمات مستهدفة راجعها المعلّم، دون اسم الطفل أو رقم سجله. وقد ترسل ميزات أخرى مثل تبسيط النص أو تحويله إلى صوت النص الذي يختاره المستخدم إلى مزوّد خارجي عند تفعيل الخدمة؛ تجنب إدراج أسماء أو معرفات في النصوص.</li>
       </ul>
     </section>
 
@@ -38,7 +38,7 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 space-y-4 shadow-xs">
       <div className="flex items-center gap-2 text-slate-900 font-bold">
         <FileText className="h-5 w-5 text-teal-700" />
-        <h2 className="text-lg font-black">مصفوفة حوكمة ومعالجة البيانات (Data Mapping Matrix)</h2>
+        <h2 className="text-lg font-black">ملخص أنواع البيانات واستخدامها</h2>
       </div>
 
       <div className="overflow-x-auto">
@@ -47,50 +47,50 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
             <tr className="border-b border-slate-200 text-slate-500 font-bold bg-slate-50">
               <th className="py-3 px-3 rounded-r-xl">فئة البيانات</th>
               <th className="py-3 px-3">الغرض من المعالجة</th>
-              <th className="py-3 px-3">السند القانوني</th>
-              <th className="py-3 px-3">فترة الاحتفاظ</th>
+              <th className="py-3 px-3">حالة الموافقة</th>
+              <th className="py-3 px-3">الحفظ والحذف</th>
               <th className="py-3 px-3 rounded-l-xl">المعالجة السحابية والطرف الثالث</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             <tr>
               <td className="py-3.5 px-3 font-bold text-slate-900">هوية الطالب المدرسية (الاسم، الصف، العمر)</td>
-              <td className="py-3.5 px-3 text-slate-600">تخصيص التقارير ومقارنة الطلاقة بالمعايير الصفية</td>
-              <td className="py-3.5 px-3 text-emerald-800 font-bold">موافقة ولي الأمر المسبقة</td>
-              <td className="py-3.5 px-3 text-slate-600">عام دراسي واحد أو الحذف الفوري</td>
-              <td className="py-3.5 px-3 text-slate-500">مخزنة محلياً ومشفرة بخادم المؤسسة فقط</td>
+              <td className="py-3.5 px-3 text-slate-600">إدارة سجل الطالب وربط بيانات الجلسة به داخل مساحة المعلّم</td>
+              <td className="py-3.5 px-3 text-slate-600">يُسجّل الإقرار والطابع الزمني والمصدر المدخل؛ على المؤسسة التحقق من صحته</td>
+              <td className="py-3.5 px-3 text-slate-600">تظل السجلات حتى حذفها يدويًا؛ لا يثبت الكود وجود حذف تلقائي بعد عام</td>
+              <td className="py-3.5 px-3 text-slate-500">يحتاج الحفظ المحمي على الخادم إلى إعداد مفتاح التشفير؛ وإلا تُعطّل مسارات الحفظ المحمية</td>
             </tr>
 
             <tr>
               <td className="py-3.5 px-3 font-bold text-slate-900">بيانات القراءة (الزمن، WPM، WCPM، الفهم)</td>
-              <td className="py-3.5 px-3 text-slate-600">قياس الطلاقة ومراجعة المعلم الإشرافية</td>
-              <td className="py-3.5 px-3 text-emerald-800 font-bold">الموافقة الصريحة لولي الأمر</td>
-              <td className="py-3.5 px-3 text-slate-600">عام دراسي واحد لمتابعة التقدم</td>
-              <td className="py-3.5 px-3 text-slate-500">لا تشارك مع أي طرف خارجي لأغراض تجارية</td>
+              <td className="py-3.5 px-3 text-slate-600">عرض زمن الجلسة وإجابات الفهم ومراجعة المعلّم</td>
+              <td className="py-3.5 px-3 text-slate-600">يتطلب إقرار ولي الأمر قبل بدء الجلسة المحفوظة</td>
+              <td className="py-3.5 px-3 text-slate-600">يمكن للمستخدم المخوّل حذف سجل الطالب؛ لا توجد مدة انتهاء تلقائية مضمونة هنا</td>
+              <td className="py-3.5 px-3 text-slate-500">البيانات التي تدخل مسارات الذكاء الاصطناعي قد تنتقل إلى الخدمة الخارجية المحددة؛ راجع كل ميزة قبل الاستخدام</td>
             </tr>
 
             <tr>
               <td className="py-3.5 px-3 font-bold text-slate-900">التسجيل الصوتي المؤقت والنص المنطوق</td>
-              <td className="py-3.5 px-3 text-slate-600">محاذاة الكلمات واكتشاف الإبدالات اللفظية</td>
-              <td className="py-3.5 px-3 text-emerald-800 font-bold">إقرار صوتي صريح ومستقل</td>
-              <td className="py-3.5 px-3 text-slate-600">تنتهي بانتهاء الجلسة ومراجعة المعلم</td>
-              <td className="py-3.5 px-3 text-slate-500">استخدام Web Speech API في المتصفح؛ يختلف مكان معالجة الصوت بحسب المتصفح ومزوّد الخدمة، ولا تفترض المنصة أن المعالجة محلية بالكامل</td>
+              <td className="py-3.5 px-3 text-slate-600">مراجعة الكلمات في الصوت الجهري عند تفعيل الميزة</td>
+              <td className="py-3.5 px-3 text-slate-600">يطلب التطبيق إقرارًا صوتيًا منفصلًا</td>
+              <td className="py-3.5 px-3 text-slate-600">ملف التشغيل الصوتي مؤقت داخل واجهة الجلسة؛ تُحفظ بيانات النص/النتائج فقط عند إكمال مسار الحفظ</td>
+              <td className="py-3.5 px-3 text-slate-500">قد يتولى المتصفح أو مزود Web Speech التعرف على الكلام؛ مكان المعالجة ومدة الاحتفاظ يخضعان لمزوّد الخدمة</td>
             </tr>
 
             <tr>
               <td className="py-3.5 px-3 font-bold text-slate-900">بيانات الحس العددي والحساب (PAE، الاستجابة)</td>
-              <td className="py-3.5 px-3 text-slate-600">فرز مؤشرات عسر الحساب وتوجيه التدريب</td>
-              <td className="py-3.5 px-3 text-emerald-800 font-bold">موافقة ولي الأمر المسبقة</td>
-              <td className="py-3.5 px-3 text-slate-600">عام دراسي واحد</td>
-              <td className="py-3.5 px-3 text-slate-500">خوادم المؤسسة المعزولة (Multi-Tenant)</td>
+              <td className="py-3.5 px-3 text-slate-600">عرض مقاييس وصفية لمهام قصيرة؛ لا تصدر هذه النسخة درجة خطر معيارية</td>
+              <td className="py-3.5 px-3 text-slate-600">يُسجّل إقرار ولي الأمر قبل الحفظ</td>
+              <td className="py-3.5 px-3 text-slate-600">تظل في سجل الطالب إلى أن يحذفه المستخدم المخوّل</td>
+              <td className="py-3.5 px-3 text-slate-500">حفظ الخادم محميّ بتكوين المصادقة والتشفير؛ يجب تدقيق بيئة النشر الفعلية</td>
             </tr>
 
             <tr>
               <td className="py-3.5 px-3 font-bold text-slate-900">سجل إقرار ولي الأمر (الاسم، الصفة، الوقت)</td>
-              <td className="py-3.5 px-3 text-slate-600">التوثيق القانوني والمساءلة الرقابية</td>
-              <td className="py-3.5 px-3 text-emerald-800 font-bold">المادة 15 من لائحة 816/2025</td>
-              <td className="py-3.5 px-3 text-slate-600">طوال فترة بقاء ملف الطالب</td>
-              <td className="py-3.5 px-3 text-slate-500">سجل تدقيق مشفر غير قابل للتلاعب (Audit Log)</td>
+              <td className="py-3.5 px-3 text-slate-600">حفظ حالة الموافقة المُدخلة وتوقيتها والمصدر</td>
+              <td className="py-3.5 px-3 text-slate-600">يجب أن يراجع المسؤول أساس الجمع والموافقة وفق القانون</td>
+              <td className="py-3.5 px-3 text-slate-600">يتبع سجل الطالب؛ لم تُحدد مدة قانونية داخل الكود</td>
+              <td className="py-3.5 px-3 text-slate-500">توثيق التطبيق ليس بحد ذاته إثباتًا لامتثال قانوني مكتمل</td>
             </tr>
           </tbody>
         </table>
@@ -101,10 +101,10 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
       <article className="rounded-3xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
-          <span>حماية خصوصية الطفل وعدم استخدام الكاميرا</span>
+          <span>لا تتطلب صفحات التعلّم الأساسية كاميرا</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          لا تتطلب المنصة تشغيل الكاميرا أو التقاط أي صور لحماية خصوصية الأطفال التامة. تعتمد المنظومة على نصوص القراءة التفاعلية وأسئلة الفهم والتحليل الصوتي المباشر.
+          مسارات القراءة والحساب والتدريب والقارئ الميسّر الظاهرة حاليًا لا تطلب تشغيل الكاميرا أو التقاط الصور. هذا لا يعني أن كل إعداد نشر أو خدمة خارجية آمنة تلقائيًا؛ راجع المتصفحات والخدمات المفعّلة قبل إدخال بيانات حقيقية.
         </p>
       </article>
 
@@ -114,27 +114,27 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
           <span>الميكروفون والتعرف الصوتي الموجه</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          تتطلب ميزة التعرف الصوتي موافقة صريحة ومستقلة، وتقتصر على تحويل القراءة الجهرية إلى نص لمقارنتها بالنص المرجعي ومراعاة اللهجة. يُتاح دائماً خيار الإدخال والمراجعة اليدوية دون تشغيل الميكروفون.
+          يطلب التطبيق إقرارًا منفصلًا لوضع القراءة الجهرية. النص الناتج عن Web Speech قد يحتوي أخطاء ويجب مراجعته؛ وتختلف معالجة الصوت باختلاف المتصفح ومزوّد الخدمة. تظل القراءة الصامتة متاحة دون تشغيل الميكروفون.
         </p>
       </article>
 
       <article className="rounded-3xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
-          <span>حوكمة موافقة ولي الأمر والرقابة المدرسية</span>
+          <span>موافقة ولي الأمر وإجراءات المؤسسة</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          يُشترط تسجيل تأكيد موافقة ولي الأمر قبل بدء أي جلسة فحص، وتُسجل الجلسة بطابع زمني رسمي. يقتصر الاطلاع على التقارير على المعلمين والأخصائيين المعتمدين والمصرح لهم داخل المنظومة التعليمية.
+          تتحقق مسارات حفظ سجلات الطلاب من إقرار موافقة مُدخل ومن طابع زمني ومصدر مسجل. لا تُثبت هذه الحقول وحدها هوية ولي الأمر أو كفاية الموافقة القانونية. يجب على المؤسسة ضبط الصلاحيات والتحقق من الوصول الفعلي في بيئة النشر.
         </p>
       </article>
 
       <article className="rounded-3xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <Trash2 className="h-5 w-5 text-rose-700" aria-hidden="true" />
-          <span>سيادة البيانات وحق الحذف الفوري (Right to Erasure)</span>
+          <span>حذف السجلات</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          تحتفظ المؤسسة التعليمية وولي الأمر بالسيطرة الكاملة على السجلات؛ يُمكن حفظ وطباعة التقارير بصيغة PDF عبر ميزة الطباعة الآمنة في المتصفح أو حذف ملف الطالب ونتائج جلساته نهائياً بضغطة زر واحدة وفق معايير اللائحة العامة لحماية البيانات وقانون 151/2020.
+          تتوفر وظيفة حذف سجل الطالب من واجهة المعلّم للمستخدم المخوّل. لم يُثبت الكود وجود حذف تلقائي بعد مدة محددة أو ضمان حذف جميع النسخ الاحتياطية والسجلات الخارجية؛ يجب تحديد ذلك في سياسة الاحتفاظ الفعلية للمؤسسة.
         </p>
       </article>
     </section>
@@ -142,23 +142,23 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 space-y-3 shadow-xs">
       <div className="flex items-center gap-2 text-slate-900 font-bold">
         <Lock className="h-5 w-5 text-sky-700" />
-        <h2>أمان البنية السحابية والتشفير المتقدم (Enterprise Security)</h2>
+        <h2>تخزين السجلات وحماية الخادم</h2>
       </div>
       <p className="text-sm leading-7 text-slate-700">
-        تُخزن البيانات والسجلات المشفرة وفق معيار AES-256، مع تطبيق عزل كامل لبيانات كل مدرسة ومؤسسة تعليمية (Multi-Tenant Isolation). كما تُدار جلسات الأخصائيين بروابط أمان رقمية وتوقيعات HMAC لضمان عدم وصول أي طرف غير مصرح له إلى التقارير.
+        يستخدم كود حفظ السجلات تشفير AES-256-GCM عند ضبط CLINICAL_STORE_ENCRYPTION_KEY، ويعطّل مسارات الحفظ المحمية إذا لم يتوفر المفتاح أو لم يكن مخزن البيانات جاهزًا. يتضمن الخادم جلسات مصادقة ونطاقات وصول حسب المدرسة، لكن سلامة النشر الفعلي تعتمد كذلك على إدارة الأسرار، وتأمين النقل والنسخ الاحتياطية، وإعداد الخادم.
       </p>
     </section>
 
-    <section className="rounded-3xl border border-emerald-300 bg-emerald-50/70 p-6 space-y-2">
-      <div className="flex items-center gap-2 font-bold text-emerald-950">
-        <Cpu className="h-5 w-5 text-emerald-700" />
-        <h2>الإطار المنهجي للاستخدام التربوي</h2>
+    <section className="rounded-3xl border border-amber-300 bg-amber-50/70 p-6 space-y-3">
+      <div className="flex items-center gap-2 font-bold text-amber-950">
+        <Info className="h-5 w-5 text-amber-800" />
+        <h2>ما قبل الاستخدام مع أطفال حقيقيين</h2>
       </div>
-      <ul className="list-disc space-y-1.5 pr-5 text-sm leading-7 text-emerald-950">
-        <li>تُعد مخرجات بصيرة مؤشرات فرز أولية ذكية ومساندة، صُممت لتوجيه المعلم والأخصائي نحو التدخل المبكر وبناء خطط دعم قرائية وحسابية فردية.</li>
-        <li>تلتزم المنصة بعدم بيع أو مشاركة أي بيانات تخص الطلاب أو المؤسسات مع أي أطراف تجارية أو إعلانية.</li>
-        <li>تُراجع خوارزميات الذكاء الاصطناعي دورياً لضمان العدالة اللغوية وملاءمة التنوع اللهجي للطلاب في جميع الدول العربية.</li>
-      </ul>
+      <p className="text-sm leading-7 text-amber-950">هذه النسخة التعليمية ليست نظامًا حاصلًا على اعتماد قانوني أو أمني أو سريري. قبل استخدامها مع بيانات أطفال حقيقية، يجب مراجعة الأساس القانوني والموافقات، ومزودي الذكاء الاصطناعي والصوت، ومكان المعالجة والنقل الدولي، والصلاحيات والاحتفاظ والحذف مع مستشار قانوني ومسؤول حماية بيانات.</p>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <a className="underline font-semibold text-amber-950" href="https://mcit.gov.eg/Upcont/Documents/Reports%20and%20Documents_1232021000_Law_No_151_2020_Personal_Data_Protection.pdf" target="_blank" rel="noreferrer">قانون حماية البيانات الشخصية 151/2020</a>
+        <a className="underline font-semibold text-amber-950" href="https://pdpc.gov.eg/assets/pdf-data/Executive%20Regulation.pdf" target="_blank" rel="noreferrer">اللائحة التنفيذية 816/2025</a>
+      </div>
     </section>
   </main>
 );
