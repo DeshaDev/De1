@@ -1057,7 +1057,7 @@ export interface DerivedSessionEvidenceResult {
     regressionCount: number;
     blinkCount: number;
     blinksPerMinute: number;
-    visualStrainLevel: 'nominal' | 'moderate' | 'high' | 'severe';
+    visualStrainLevel: 'unassessed';
     visualStrainLabelAr: string;
     gazeCoveragePercent: number;
     observedWordCount: number;
@@ -1687,7 +1687,7 @@ export function validateAndDeriveSessionFromEvidence(
       regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
       blinkCount: eyeMetrics ? eyeMetrics.blinkCount : 0,
       blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
-      visualStrainLevel: eyeMetrics ? eyeMetrics.visualStrainLevel : 'nominal',
+      visualStrainLevel: 'unassessed',
       visualStrainLabelAr: eyeMetrics
         ? eyeMetrics.visualStrainLabelAr
         : (isReadingOnlyModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'غير منطبق (جلسة صوتية)'),
