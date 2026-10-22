@@ -15,7 +15,6 @@ import {
   Eye,
   Star,
   Award,
-  Flame,
   Check,
   HelpCircle,
   Lightbulb,
@@ -61,8 +60,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [activeScaffold, setActiveScaffold] = useState<{ title: string; text: string; audioText: string } | null>(null);
 
   // Gamification State
-  const [xpPoints, setXpPoints] = useState<number>(380);
-  const [streakDays, setStreakDays] = useState<number>(4);
+  const [xpPoints, setXpPoints] = useState<number>(0);
   const [celebrationMessage, setCelebrationMessage] = useState<string>('');
 
   // Station 1: Phonics state
@@ -87,17 +85,20 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [mathAnswered, setMathAnswered] = useState<boolean>(false);
   const [mathErrorAbs, setMathErrorAbs] = useState<number | null>(null);
 
-  // Fallback initial derivation if Gemini API is unreachable
+  // Only teacher-reviewed words from a completed, non-demo session can be presented as observed targets.
+  const observedTargetWords = useMemo(() => {
+    if (activeStudent.sessionStatus !== 'completed' || activeStudent.teacherVerified !== true || activeStudent.evidenceProvenance === 'demo-synthetic') return [];
+    return (activeStudent.problematicWords || []).filter((word) => typeof word === 'string' && word.trim().length > 0).slice(0, 8);
+  }, [activeStudent.id, activeStudent.sessionStatus, activeStudent.teacherVerified, activeStudent.evidenceProvenance, activeStudent.problematicWords]);
+
+  // General grade-level exercises remain available when there are no verified targets.
   const fallbackPlan = useMemo(() => {
     return generateAdaptiveRemediationPlan({
       studentName: activeStudent.name,
       gradeLevel: activeStudent.gradeLevel,
-      effectiveWords:
-        activeStudent.problematicWords && activeStudent.problematicWords.length > 0
-          ? activeStudent.problematicWords
-          : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'],
+      effectiveWords: observedTargetWords.length > 0 ? observedTargetWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'],
     });
-  }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, activeStudent.problematicWords]);
+  }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, observedTargetWords]);
 
   const effectivePlan: RemediationSessionPlan = aiSession || fallbackPlan;
   const phonicsList: RemediationPhonicsDrill[] = effectivePlan.phonicsDrills;
@@ -144,11 +145,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           studentName: student.name,
           gradeLevel: student.gradeLevel,
           dialect: student.dialectCode || 'msa',
-          problematicWords: student.problematicWords || [],
-          readingWpm: student.wpm || 75,
-          fixationDurationMs: student.avgFixationMs || 380,
-          regressionsCount: student.regressionCount || 3,
-          numberLinePAE: student.numberLinePAE ?? 15,
+          problematicWords: observedTargetWords,
         }),
       });
 
@@ -314,9 +311,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   const triggerPacerScaffold = () => {
     const hint =
-      'ثبّت عينيك على الكلمة المضاءة بالأخضر وحرّك بصرك معها بسلاسة من اليمين لليسار لمنع رجوع البصر للخلف.';
+      'تابع الكلمة المظللة بهدوء، واقرأها ثم اربطها بمعنى الجملة. يمكنك إيقاف الإيقاع أو تغييره إذا شعرت بالإجهاد.';
     setActiveScaffold({
-      title: 'توجيه إيقاع العين البصري (Saccadic Rhythm)',
+      title: 'متابعة الكلمة المظللة',
       text: hint,
       audioText: hint,
     });
@@ -335,10 +332,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     speakText(hint);
   };
 
-  const targetedWords =
-    activeStudent.problematicWords && activeStudent.problematicWords.length > 0
-      ? activeStudent.problematicWords
-      : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'];
+  const targetedWords = observedTargetWords;
 
   return (
     <div className="space-y-3.5 max-w-4xl mx-auto pb-8 animate-fade-slide-up" dir="rtl">
@@ -351,21 +345,21 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="space-y-0.5 text-right flex-1 sm:flex-initial">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-xs sm:text-sm text-emerald-100">
-                صالة التدريب والتأهيل الذكية (Amira & Orton-Gillingham)
+                التدريب المتدرّج للقراءة والحساب
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                {aiSource === 'gemini-3.8-flash-ai' ? 'Gemini 3.8 Flash AI' : 'Orton-Gillingham Engine'}
+                {aiSession && aiSource === 'gemini-3.8-flash-ai' ? 'اقتراح مولّد آليًا — يحتاج مراجعة' : aiSession ? 'خطة تدريب مولّدة بالقواعد' : 'أنشطة تدريبية'}
               </span>
             </div>
             <p className="text-[11px] text-emerald-200/90 flex items-center gap-1.5 flex-wrap">
-              <span>مبنية لتعثر الطالب <strong className="text-white underline">{activeStudent.name}</strong> في الفحص:</span>
-              <span className="inline-flex gap-1 font-serif font-bold text-amber-300">
-                {targetedWords.slice(0, 3).map((w, idx) => (
-                  <span key={idx} className="bg-emerald-800/90 px-1.5 py-0.2 rounded border border-emerald-600/40 text-[10.5px]">
-                    «{w}»
-                  </span>
-                ))}
-              </span>
+              <span>{targetedWords.length > 0 ? <>أهداف تدريب راجعها المعلّم لـ <strong className="text-white underline">{activeStudent.name}</strong>:</> : <>أنشطة عامة للصف {activeStudent.gradeLevel}؛ لا توجد كلمات موثّقة كأخطاء لهذا الطالب.</>}</span>
+              {targetedWords.length > 0 ? (
+                <span className="inline-flex gap-1 font-serif font-bold text-amber-300">
+                  {targetedWords.slice(0, 3).map((w, idx) => (
+                    <span key={idx} className="bg-emerald-800/90 px-1.5 py-0.2 rounded border border-emerald-600/40 text-[10.5px]">«{w}»</span>
+                  ))}
+                </span>
+              ) : null}
             </p>
           </div>
         </div>
@@ -375,7 +369,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             type="button"
             onClick={() => setShowClinicalRationale((prev) => !prev)}
             className="px-2.5 py-1.5 rounded-lg bg-emerald-800/80 hover:bg-emerald-700/80 text-emerald-100 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
-            title="عرض التعليل الإكلينيكي"
+            title="عرض هدف الأنشطة التعليمية"
           >
             <Info className="w-3.5 h-3.5 text-emerald-300" />
             <span>التعليل</span>
@@ -399,7 +393,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="flex items-center justify-between font-bold text-[#15803D]">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
-              <span>التعليل الإكلينيكي للجلسة العلاجية الحالية:</span>
+              <span>مبررات الأنشطة التعليمية للجلسة العلاجية الحالية:</span>
             </span>
             <button
               type="button"
@@ -452,12 +446,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         <div className="flex items-center gap-2 text-xs">
           <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg font-mono font-bold text-amber-900">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-            <span>{xpPoints} XP</span>
-          </div>
-
-          <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold text-emerald-900">
-            <Flame className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
-            <span>{streakDays} أيام</span>
+            <span>{xpPoints} XP في الجلسة</span>
           </div>
 
           <select
