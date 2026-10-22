@@ -1574,11 +1574,14 @@ async function startServer() {
         return;
       }
 
-      const isVoiceOnlyModality =
-        req.body?.assessmentModality === 'voice_only' ||
-        (oralReadingAssessed === true && (observedWordCount === 0 || observedWordCount === undefined || calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined));
+      const reqModality = req.body?.assessmentModality;
+      const isNoEyeModality =
+        reqModality === 'reading_only' ||
+        reqModality === 'voice_only' ||
+        (oralReadingAssessed === true && (observedWordCount === 0 || observedWordCount === undefined || calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined)) ||
+        (observedWordCount === 0 && (calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined));
 
-      if (!isVoiceOnlyModality) {
+      if (!isNoEyeModality) {
         const hasValidCoverage =
           typeof gazeCoveragePercent === 'number' &&
           typeof observedWordCount === 'number' &&
@@ -1627,13 +1630,17 @@ async function startServer() {
               ? `- نتائج فحص عسر الحساب (الديسكالكوليا): خطأ خط الأعداد (PAE) = ${numberLinePAE}%، دقة الإدراك الكمي الفوري = ${subitizingAccuracy}%، أخطاء عكس الأرقام = ${reversalErrorCount ?? 0}`
               : `- فحص عسر الحساب (الديسكالكوليا): لم يُجرَ اختبار الحساب في هذه الجلسة بعد (يجب عدم افتراض أي درجة حسابية)`;
 
+          const eyeContextLine = isNoEyeModality
+            ? `- نمط الجلسة: تقييم مباشر للطلاقة القرائية واستيعاب النص بدون كاميرا (تم استبعاد تتبع العين التزاماً بالمصداقية وحماية الخصوصية)`
+            : `- التغطية البصرية الفعلية للنص: ${gazeCoveragePercent}% (${observedWordCount ?? 'مرصود'}/${totalPassageWordCount ?? 'كلي'})
+- متوسط زمن التثبيت البصري (Fixation Duration): ${avgFixationMs} مللي ثانية
+- نسبة التراجع البصري (Regression Rate): ${regressionRate}%`;
+
           const prompt = `أنت خبير تربوي وإكلينيكي في الفرز الأولي الاسترشادي لصعوبات التعلم (عسر القراءة / الديسلكسيا وعسر الحساب / الديسكالكوليا) للطلاب العرب.
 قم بتحليل مؤشرات الفرز الأولي التالية لـ "${anonymizedToken}" (الصف الدراسي: ${gradeLevel}) مع التأكيد أن هذه النتائج استرشادية أولية وليست تشخيصاً طبياً نهائياً:
-- التغطية البصرية الفعلية للنص: ${gazeCoveragePercent}% (${observedWordCount ?? 'مرصود'}/${totalPassageWordCount ?? 'كلي'})
+${eyeContextLine}
 - سرعة القراءة الفعلية: ${wpm} كلمة/دقيقة
-- متوسط زمن التثبيت البصري (Fixation Duration): ${avgFixationMs} مللي ثانية
-- نسبة التراجع البصري (Regression Rate): ${regressionRate}%
-- الكلمات التي شهدت أطول تثبيت بصري أو تعثر فونولوجي: ${problematicWords.join('، ') || 'لا يوجد'}
+- الكلمات التي شهدت أطول توقف أو تعثر فونولوجي: ${problematicWords.join('، ') || 'لا يوجد'}
 ${oralContextLine}
 ${mathContextLine}
 
@@ -1716,14 +1723,15 @@ ${mathContextLine}
         observedWordCount: Number(observedWordCount) || 10,
         totalPassageWordCount: Number(totalPassageWordCount) || 40,
         wpm: Number(wpm) || 60,
-        avgFixationMs: Number(avgFixationMs) || 300,
-        regressionRate: Number(regressionRate) || 15,
-        regressionCount: 4,
-        blinkCount: 10,
-        blinksPerMinute: 15,
-        visualStrainLabelAr: 'معدل رمش طبيعي ومريح بصرياً',
-        calibrationAccuracyPercent: Number(calibrationAccuracyPercent) || 85,
-        calibrationValidationLabelAr: 'تحقق مستقل (Independent Holdout)',
+        avgFixationMs: Number(avgFixationMs) || 0,
+        regressionRate: Number(regressionRate) || 0,
+        regressionCount: isNoEyeModality ? 0 : 4,
+        blinkCount: isNoEyeModality ? 0 : 10,
+        blinksPerMinute: isNoEyeModality ? 0 : 15,
+        visualStrainLabelAr: isNoEyeModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'معدل رمش طبيعي ومريح بصرياً',
+        calibrationAccuracyPercent: Number(calibrationAccuracyPercent) || (isNoEyeModality ? 0 : 85),
+        calibrationValidationLabelAr: isNoEyeModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'تحقق مستقل (Independent Holdout)',
+        assessmentModality: isNoEyeModality ? 'reading_only' : 'eye_voice',
         problematicWords: problematicWords.map(String),
         oralReadingAssessed: Boolean(oralReadingAssessed),
         oralAccuracyPercent:

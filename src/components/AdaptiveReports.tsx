@@ -144,9 +144,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         areasOfStrength.push(
           `استيعاب المقروء (${studentData.reading.comprehensionScore}% دقة إجابة أسئلة النص)`
         );
-      } else if (studentData.reading.comprehensionScore > 0) {
+      } else {
         areasNeedingSupport.push(
-          `الفهم الضمني للنص (${studentData.reading.comprehensionScore}% إجابات صحيحة)`
+          `الفهم القرائي واستيعاب النص (${studentData.reading.comprehensionScore}% إجابات صحيحة)`
         );
       }
     }
@@ -640,7 +640,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <th className="py-3 px-4">المحور</th>
                     <th className="py-3 px-4">المؤشر المقاس</th>
                     <th className="py-3 px-4">القيمة الفعلية</th>
-                    <th className="py-3 px-4">المرجعية المعيارية</th>
+                    <th className="py-3 px-4">المؤشر الاسترشادي للصف</th>
                     <th className="py-3 px-4">الحالة</th>
                   </tr>
                 </thead>
@@ -745,6 +745,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   </tr>
                 </tbody>
               </table>
+              <p className="text-[11px] text-slate-500 mt-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
+                * <strong>تنبيه منهجي استرشادي:</strong> مؤشرات سرعة القراءة (WPM) ومستويات الإتقان هي معايير تربوية أولية استرشادية مستخلصة من أبحاث القراءة العربية التجريبية لتوجيه الخطط المساندة، ولا تُعد معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
+              </p>
             </div>
           </div>
 

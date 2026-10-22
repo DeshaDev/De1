@@ -82,7 +82,7 @@ export interface StudentRecord {
   sessionCompletedAt?: string;
   sessionRoleLabel?: string;
   assessmentHistory?: StudentAssessmentSnapshot[];
-  assessmentModality?: 'voice_only' | 'eye_voice';
+  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
   /** Explicit provenance tag distinguishing client-reported session evidence from synthetic demos. */
   evidenceProvenance?: 'client-reported' | 'demo-synthetic';
   evidenceProvenanceLabelAr?: string;

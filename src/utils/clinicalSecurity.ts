@@ -897,7 +897,7 @@ export function buildDeterministicClinicalReport(params: {
   oralAccuracyPercent: number | null;
   phoneticSubstitutionCount: number;
   dialectVariantCount: number;
-  assessmentModality?: 'voice_only' | 'eye_voice';
+  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
     dyscalculiaAssessed: boolean;
   numberLinePAE: number | null;
   subitizingAccuracy: number | null;
@@ -971,23 +971,28 @@ export function buildDeterministicClinicalReport(params: {
     'تنبيه منهجي وإخلاء مسؤولية: هذه المؤشرات مبنية على أدلة مُبلَّغ بها من العميل وقواعد فرز استدلالية (Heuristic Screening) ولا تُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.'
   );
 
+  const isReadingOnly = params.assessmentModality === 'reading_only';
   const isVoiceOnly = params.assessmentModality === 'voice_only';
 
   return {
-    clinicalSummary: isVoiceOnly
-      ? `[مؤشر فرز قرائي صوتي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر التقييم الشفهي للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة.${oralText} تقع المؤشرات الصوتية ضمن النطاق الاسترشادي ويوصى بالمتابعة التربوية المعتادة.`
-      : `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
-          highReadingRisk
-            ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
-            : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
-        }`,
-    ocularMotorAnalysis: isVoiceOnly
-      ? 'تم إجراء الجلسة بنمط القراءة الجهرية الشفهية فقط دون تفعيل تتبع بؤبؤ العين بالكاميرا، وبالتالي لم تُسجل بيانات التثبيت أو القفزات التراجعية البصرية (Regressions).'
-      : `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
-          params.problematicWords.length > 0
-            ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
-            : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
-        }`,
+    clinicalSummary: isReadingOnly
+      ? `[مؤشر فرز قرائي وفهم استرشادي — أدلة مقاسة ومُبلَّغ بها] يُظهر التقييم المباشر للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع إجابة أسئلة الفهم القرائي للنص المعتمد (${params.totalPassageWordCount} كلمة).${oralText} تقع المؤشرات المقاسة ضمن النطاق الاسترشادي ويوصى بالمتابعة الصفية المعتادة.`
+      : (isVoiceOnly
+        ? `[مؤشر فرز قرائي صوتي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر التقييم الشفهي للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة.${oralText} تقع المؤشرات الصوتية ضمن النطاق الاسترشادي ويوصى بالمتابعة التربوية المعتادة.`
+        : `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
+            highReadingRisk
+              ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
+              : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
+          }`),
+    ocularMotorAnalysis: isReadingOnly
+      ? 'تم إجراء الجلسة بنمط القراءة المباشرة وحساب زمن الإنجاز وأسئلة الفهم دون كاميرا أو تتبع للعين، التزاماً بالمصداقية العلمية المباشرة وحماية لخصوصية الطفل.'
+      : (isVoiceOnly
+        ? 'تم إجراء الجلسة بنمط القراءة الجهرية الشفهية فقط دون تفعيل تتبع بؤبؤ العين بالكاميرا، وبالتالي لم تُسجل بيانات التثبيت أو القفزات التراجعية البصرية (Regressions).'
+        : `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
+            params.problematicWords.length > 0
+              ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
+              : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
+          }`),
     orthographicAndPhonologicalPatterns: `${
       highReadingRisk
         ? 'يُلاحظ تأنٍّ في معالجة الكلمات التي تشتمل على حروف متجانسة نقطياً (ب/ت/ث، ج/ح/خ) والمقاطع المشددة أو المتصلة بضمائر، مما يستدعي تفعيل التقطيع المقطعي الملون.'
@@ -1060,7 +1065,7 @@ export interface DerivedSessionEvidenceResult {
     readingRiskLabelAr: string;
     problematicWords: string[];
     fixations: WordFixation[];
-    assessmentModality?: 'voice_only' | 'eye_voice';
+    assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
     dyscalculiaAssessed: boolean;
     mathTrials?: StudentMathTrialsPayload;
     subitizingAccuracy: number | null;
@@ -1115,18 +1120,37 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
-  const isVoiceOnlyModality =
-    evidenceObj.assessmentModality === 'voice_only' ||
-    rawBody.assessmentModality === 'voice_only';
+  const rawModality = String(evidenceObj.assessmentModality ?? rawBody.assessmentModality ?? '').trim();
+  const hasEyeEvidence =
+    (Array.isArray(evidenceObj.fixations) && evidenceObj.fixations.length > 0) ||
+    (Array.isArray(rawBody.fixations) && rawBody.fixations.length > 0) ||
+    Number.isFinite(Number(evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent));
+
+  const assessmentModality: 'voice_only' | 'eye_voice' | 'reading_only' =
+    rawModality === 'voice_only'
+      ? 'voice_only'
+      : (rawModality === 'reading_only'
+          ? 'reading_only'
+          : (rawModality === 'eye_voice' || hasEyeEvidence
+              ? 'eye_voice'
+              : 'reading_only'));
+
+  const isVoiceOnlyModality = assessmentModality === 'voice_only';
+  const isReadingOnlyModality = assessmentModality === 'reading_only';
+  const isNoEyeModality = isVoiceOnlyModality || isReadingOnlyModality;
 
   let calibrationAccuracyPercent: number | undefined = undefined;
   let normalizedCalMethod = {
     isValidated: false,
-    labelAr: 'غير منطبق (جلسة صوتية)',
-    normalizedMethod: 'voice-first-orf' as const,
+    labelAr: isReadingOnlyModality
+      ? 'غير منطبق (جلسة قراءة وفهم مباشرة بدون كاميرا)'
+      : (isVoiceOnlyModality ? 'غير منطبق (جلسة صوتية)' : 'معايرة عين'),
+    normalizedMethod: isReadingOnlyModality
+      ? ('standardized-passage-orf' as const)
+      : ('voice-first-orf' as const),
   };
 
-  if (!isVoiceOnlyModality) {
+  if (!isNoEyeModality) {
     const rawCalib = Number(
       evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent
     );
@@ -1174,15 +1198,15 @@ export function validateAndDeriveSessionFromEvidence(
   let totalObservedFixationMs = 0;
   let wordBlinksSum = 0;
 
-  if (isVoiceOnlyModality && (!Array.isArray(rawFixations) || rawFixations.length === 0)) {
-    // Voice-only modality without raw fixations: do NOT fabricate synthetic fixations.
+  if (isNoEyeModality && (!Array.isArray(rawFixations) || rawFixations.length === 0)) {
+    // Camera-free modality without raw fixations: do NOT fabricate synthetic fixations.
     // Genuinely return empty fixations array and zero ocular duration.
   } else {
     if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
       return {
         valid: false,
         statusCode: 400,
-        errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة.',
+        errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة للجلسات المعتمدة على العين.',
       };
     }
 
@@ -1271,17 +1295,19 @@ export function validateAndDeriveSessionFromEvidence(
     });
   }
 
-  const minRequiredWords = Math.max(4, Math.ceil(passage.words.length * 0.25));
-  if (validatedFixations.length < minRequiredWords) {
-    return {
-      valid: false,
-      statusCode: 422,
-      errorAr: `تغطية تتبع العين غير كافية: رُصدت ${validatedFixations.length} كلمات من أصل ${passage.words.length} (الحد الأدنى ${minRequiredWords} كلمات / 25%).`,
-    };
+  if (!isNoEyeModality) {
+    const minRequiredWords = Math.max(4, Math.ceil(passage.words.length * 0.25));
+    if (validatedFixations.length < minRequiredWords) {
+      return {
+        valid: false,
+        statusCode: 422,
+        errorAr: `تغطية تتبع العين غير كافية: رُصدت ${validatedFixations.length} كلمات من أصل ${passage.words.length} (الحد الأدنى ${minRequiredWords} كلمات / 25%).`,
+      };
+    }
   }
   }
 
-  // 4. Reading Duration & Total Fixation Sum Plausibility Check (Finding 2: sum(fixations) <= readingDurationSeconds * 1000)
+  // 4. Reading Duration & Total Fixation Sum Plausibility Check
   const rawDuration =
     evidenceObj.readingDurationSeconds ?? rawBody.readingDurationSeconds;
   const readingDurationSeconds = Number(rawDuration);
@@ -1299,7 +1325,8 @@ export function validateAndDeriveSessionFromEvidence(
   }
 
   // Abuse/plausibility ceiling, not a clinical norm: reject implausible reported pace.
-  const observedReadingWpm = (validatedFixations.length * 60) / readingDurationSeconds;
+  const wordCountForPace = validatedFixations.length > 0 ? validatedFixations.length : passage.words.length;
+  const observedReadingWpm = (wordCountForPace * 60) / readingDurationSeconds;
   if (observedReadingWpm > 300) {
     return {
       valid: false,
@@ -1308,7 +1335,7 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
-  if (totalObservedFixationMs > readingDurationSeconds * 1000) {
+  if (totalObservedFixationMs > 0 && totalObservedFixationMs > readingDurationSeconds * 1000) {
     return {
       valid: false,
       statusCode: 400,
@@ -1316,9 +1343,9 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
-  // 5. Blink Count & Physiological Blink Rate Ceiling (<= 120 blinks/min) (Finding 2)
+  // 5. Blink Count & Physiological Blink Rate Ceiling (<= 120 blinks/min)
   const rawBlinkCount =
-    evidenceObj.blinkCount ?? rawBody.blinkCount ?? wordBlinksSum;
+    evidenceObj.blinkCount ?? rawBody.blinkCount ?? (isNoEyeModality ? 0 : wordBlinksSum);
   const blinkCount = Number(rawBlinkCount);
   if (!Number.isInteger(blinkCount) || blinkCount < 0) {
     return {
@@ -1441,7 +1468,7 @@ export function validateAndDeriveSessionFromEvidence(
       : null;
 
   // 8. Server-Side Eye-Tracking & Reading Risk Derivation
-  const eyeMetrics = !isVoiceOnlyModality && validatedFixations.length > 0
+  const eyeMetrics = !isNoEyeModality && validatedFixations.length > 0
     ? calculateEyeTrackingMetrics(
         validatedFixations,
         readingDurationSeconds,
@@ -1493,6 +1520,37 @@ export function validateAndDeriveSessionFromEvidence(
     ? eyeMetrics.wpm
     : Math.round((passage.words.length / readingDurationSeconds) * 60);
 
+  // Derive risk indicators objectively based on measured modality
+  let derivedDyslexiaRiskScore = 40;
+  let derivedReadingHeuristic = 75;
+  let derivedReadingRiskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
+  let derivedReadingRiskLabelAr = 'تقييم قراءة وفهم استرشادي';
+
+  if (eyeMetrics) {
+    derivedDyslexiaRiskScore = eyeMetrics.dyslexiaRiskScore;
+    derivedReadingHeuristic = eyeMetrics.heuristicIndicator;
+    derivedReadingRiskLevel = eyeMetrics.riskLevel;
+    derivedReadingRiskLabelAr = eyeMetrics.riskLabelAr;
+  } else if (oralIntegration) {
+    derivedDyslexiaRiskScore = Math.max(10, Math.min(90, Math.round(100 - (oralIntegration.accuracyPercent ?? 75))));
+    derivedReadingHeuristic = oralIntegration.accuracyPercent ?? 75;
+    derivedReadingRiskLevel = derivedReadingHeuristic >= 75 ? 'nominal' : (derivedReadingHeuristic >= 50 ? 'moderate' : 'high');
+    derivedReadingRiskLabelAr = 'فرز صوتي استرشادي';
+  } else if (isReadingOnlyModality) {
+    // Pedagogical reading and comprehension index (combining WPM fluency & comprehension score)
+    const expectedGradeWpm = Math.max(35, studentMeta.gradeLevel * 18);
+    const fluencyRatio = Math.min(1.2, derivedWpm / expectedGradeWpm);
+    const fluencyScore = Math.round(Math.min(100, fluencyRatio * 100));
+    derivedReadingHeuristic = Math.round((fluencyScore * 0.5) + (comprehensionScore * 0.5));
+    derivedDyslexiaRiskScore = Math.max(10, Math.min(90, 100 - derivedReadingHeuristic));
+    derivedReadingRiskLevel = derivedReadingHeuristic >= 70 ? 'nominal' : (derivedReadingHeuristic >= 45 ? 'moderate' : 'high');
+    derivedReadingRiskLabelAr = derivedReadingRiskLevel === 'nominal'
+      ? 'أداء قرائي واستيعابي نمائي ملائم للصف'
+      : (derivedReadingRiskLevel === 'moderate'
+          ? 'مؤشرات استرشادية تستدعي مساندة في الطلاقة أو الاستيعاب'
+          : 'مؤشرات استرشادية لتعثر قرائي يستدعي تدخلاً فردياً');
+  }
+
   const clinicalReport = buildDeterministicClinicalReport({
     studentName: studentMeta.name,
     gradeLevel: studentMeta.gradeLevel,
@@ -1508,7 +1566,7 @@ export function validateAndDeriveSessionFromEvidence(
     blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
     visualStrainLabelAr: eyeMetrics
       ? eyeMetrics.visualStrainLabelAr
-      : 'غير منطبق (جلسة صوتية)',
+      : (isReadingOnlyModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'غير منطبق (جلسة صوتية)'),
     calibrationAccuracyPercent:
       calibrationAccuracyPercent !== undefined
         ? Math.round(calibrationAccuracyPercent)
@@ -1521,7 +1579,7 @@ export function validateAndDeriveSessionFromEvidence(
     oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
     phoneticSubstitutionCount: oralIntegration?.phoneticSubstitutionCount ?? 0,
     dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
-    assessmentModality: isVoiceOnlyModality ? 'voice_only' : 'eye_voice',
+    assessmentModality,
     dyscalculiaAssessed,
     numberLinePAE,
     subitizingAccuracy,
@@ -1531,7 +1589,7 @@ export function validateAndDeriveSessionFromEvidence(
   return {
     valid: true,
     derivedFields: {
-      assessmentModality: isVoiceOnlyModality ? 'voice_only' : 'eye_voice',
+      assessmentModality,
       passageId: passage.id,
       readingDurationSeconds,
       comprehensionAnswers,
@@ -1546,7 +1604,7 @@ export function validateAndDeriveSessionFromEvidence(
       visualStrainLevel: eyeMetrics ? eyeMetrics.visualStrainLevel : 'nominal',
       visualStrainLabelAr: eyeMetrics
         ? eyeMetrics.visualStrainLabelAr
-        : 'غير منطبق (جلسة صوتية)',
+        : (isReadingOnlyModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'غير منطبق (جلسة صوتية)'),
       gazeCoveragePercent: eyeMetrics ? eyeMetrics.gazeCoveragePercent : 0,
       observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
       totalPassageWordCount: passage.words.length,
@@ -1564,14 +1622,10 @@ export function validateAndDeriveSessionFromEvidence(
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
       omissionCount: oralIntegration?.omissionCount ?? 0,
-      dyslexiaRiskScore: eyeMetrics
-        ? eyeMetrics.dyslexiaRiskScore
-        : (oralIntegration ? Math.max(10, Math.min(90, Math.round(100 - (oralIntegration.accuracyPercent ?? 75)))) : 40),
-      readingHeuristicIndicator: eyeMetrics
-        ? eyeMetrics.heuristicIndicator
-        : (oralIntegration?.accuracyPercent ?? 75),
-      readingRiskLevel: eyeMetrics ? eyeMetrics.riskLevel : 'nominal',
-      readingRiskLabelAr: eyeMetrics ? eyeMetrics.riskLabelAr : 'فرز صوتي استرشادي',
+      dyslexiaRiskScore: derivedDyslexiaRiskScore,
+      readingHeuristicIndicator: derivedReadingHeuristic,
+      readingRiskLevel: derivedReadingRiskLevel,
+      readingRiskLabelAr: derivedReadingRiskLabelAr,
       problematicWords: eyeMetrics
         ? eyeMetrics.problematicWords
         : (oralIntegration?.misreadWords || []),

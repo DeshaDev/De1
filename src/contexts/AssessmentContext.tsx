@@ -3,7 +3,32 @@
  * Central data management for all assessment results
  */
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+const STORAGE_KEY = 'baseera_active_assessment';
+
+const loadSavedAssessment = (): CombinedAssessmentData | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistAssessment = (data: CombinedAssessmentData | null) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (err) {
+    console.warn('Failed to save assessment to localStorage', err);
+  }
+};
 
 export interface SpeechAssessmentResult {
   studentId: string;
@@ -105,11 +130,24 @@ interface AssessmentProviderProps {
 }
 
 export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children }) => {
-  const [currentAssessment, setCurrentAssessment] = useState<CombinedAssessmentData | null>(null);
-  const [assessments, setAssessments] = useState<CombinedAssessmentData[]>([]);
+  const [currentAssessment, setCurrentAssessment] = useState<CombinedAssessmentData | null>(loadSavedAssessment);
+  const [assessments, setAssessments] = useState<CombinedAssessmentData[]>(() => {
+    const saved = loadSavedAssessment();
+    return saved ? [saved] : [];
+  });
+
+  useEffect(() => {
+    if (currentAssessment) {
+      persistAssessment(currentAssessment);
+      setAssessments(prev => {
+        const filtered = prev.filter(a => a.studentId !== currentAssessment.studentId);
+        return [currentAssessment, ...filtered];
+      });
+    }
+  }, [currentAssessment]);
 
   const startNewAssessment = (studentName: string, age = 8, studentId = 'student-' + Date.now()) => {
-    setCurrentAssessment({
+    const fresh: CombinedAssessmentData = {
       studentId,
       studentName,
       age,
@@ -117,99 +155,156 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
       tactileResults: null,
       readingResults: null,
       eyeTrackingResults: null,
-    });
+    };
+    setCurrentAssessment(fresh);
+    persistAssessment(fresh);
   };
 
   const saveSpeechResults = (results: SpeechAssessmentResult) => {
-    setCurrentAssessment(prev => ({
-      studentId: results.studentId || prev?.studentId || 'student-1',
-      studentName: results.studentName || prev?.studentName || 'الطالب',
-      age: results.age || prev?.age || 8,
-      speechResults: results,
-      tactileResults: prev?.tactileResults || null,
-      eyeTrackingResults: prev?.eyeTrackingResults || null,
-    }));
+    setCurrentAssessment(prev => {
+      const next: CombinedAssessmentData = {
+        studentId: results.studentId || prev?.studentId || 'student-1',
+        studentName: results.studentName || prev?.studentName || 'الطالب',
+        age: results.age || prev?.age || 8,
+        speechResults: results,
+        tactileResults: prev?.tactileResults || null,
+        readingResults: prev?.readingResults || null,
+        eyeTrackingResults: prev?.eyeTrackingResults || null,
+      };
+      persistAssessment(next);
+      return next;
+    });
   };
 
   const saveTactileResults = (results: TactileAssessmentResult) => {
-    setCurrentAssessment(prev => ({
-      studentId: results.studentId || prev?.studentId || 'student-1',
-      studentName: results.studentName || prev?.studentName || 'الطالب',
-      age: prev?.age || 8,
-      speechResults: prev?.speechResults || null,
-      tactileResults: results,
-      readingResults: prev?.readingResults || null,
-      eyeTrackingResults: prev?.eyeTrackingResults || null,
-    }));
+    setCurrentAssessment(prev => {
+      const next: CombinedAssessmentData = {
+        studentId: results.studentId || prev?.studentId || 'student-1',
+        studentName: results.studentName || prev?.studentName || 'الطالب',
+        age: prev?.age || 8,
+        speechResults: prev?.speechResults || null,
+        tactileResults: results,
+        readingResults: prev?.readingResults || null,
+        eyeTrackingResults: prev?.eyeTrackingResults || null,
+      };
+      persistAssessment(next);
+      return next;
+    });
   };
 
   const saveReadingResults = (results: ReadingAssessmentResult) => {
-    setCurrentAssessment(prev => ({
-      studentId: prev?.studentId || 'student-1',
-      studentName: prev?.studentName || 'الطالب',
-      age: prev?.age || 8,
-      speechResults: prev?.speechResults || null,
-      tactileResults: prev?.tactileResults || null,
-      readingResults: results,
-      eyeTrackingResults: {
-        wpm: results.wpm,
-        readingDurationSeconds: results.durationSeconds,
-        comprehensionScore: results.comprehensionScore,
-        completedAt: results.completedAt,
-      },
-    }));
+    setCurrentAssessment(prev => {
+      const next: CombinedAssessmentData = {
+        studentId: prev?.studentId || 'student-1',
+        studentName: prev?.studentName || 'الطالب',
+        age: prev?.age || 8,
+        speechResults: prev?.speechResults || null,
+        tactileResults: prev?.tactileResults || null,
+        readingResults: results,
+        eyeTrackingResults: {
+          wpm: results.wpm,
+          readingDurationSeconds: results.durationSeconds,
+          comprehensionScore: results.comprehensionScore,
+          completedAt: results.completedAt,
+        },
+      };
+      persistAssessment(next);
+      return next;
+    });
   };
 
   const saveEyeTrackingResults = (results: any) => {
-    setCurrentAssessment(prev => ({
-      studentId: prev?.studentId || 'student-1',
-      studentName: prev?.studentName || 'الطالب',
-      age: prev?.age || 8,
-      speechResults: prev?.speechResults || null,
-      tactileResults: prev?.tactileResults || null,
-      eyeTrackingResults: results,
-    }));
+    setCurrentAssessment(prev => {
+      const next: CombinedAssessmentData = {
+        studentId: prev?.studentId || 'student-1',
+        studentName: prev?.studentName || 'الطالب',
+        age: prev?.age || 8,
+        speechResults: prev?.speechResults || null,
+        tactileResults: prev?.tactileResults || null,
+        readingResults: prev?.readingResults || null,
+        eyeTrackingResults: results,
+      };
+      persistAssessment(next);
+      return next;
+    });
   };
 
   const saveSpeechAnalysisResults = (analysisResults: any[]) => {
-    // Calculate summary from analysis results
-    const correctWords = analysisResults.filter(r => r.isCorrect).length;
-    const averageConfidence = analysisResults.reduce((sum, r) => sum + r.confidence, 0) / analysisResults.length;
-    const totalPauses = analysisResults.reduce((sum, r) => sum + r.pauseCount, 0);
-    const wordsNeedingImprovement = analysisResults.filter(r => !r.isCorrect).length;
+    if (!Array.isArray(analysisResults) || analysisResults.length === 0) return;
 
-    // Extract problematic letters
+    const totalWords = analysisResults.length;
+    const correctWords = analysisResults.filter(r => Boolean(r.isCorrect ?? r.correct)).length;
+
+    const confidenceSum = analysisResults.reduce((sum, r) => {
+      const val = Number(r.acousticConfidence ?? r.confidence ?? r.phoneticSimilarity ?? 80);
+      return sum + (Number.isFinite(val) ? val : 80);
+    }, 0);
+    const averageConfidence = Math.round(confidenceSum / totalWords);
+
+    const totalPauses = analysisResults.reduce((sum, r) => {
+      const val = Number(r.intraWordPauses ?? r.pauseCount ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+
+    const wordsNeedingImprovement = totalWords - correctWords;
+
+    // Safely extract problematic letters from actual target words
     const problematicLetters: string[] = [];
     analysisResults.forEach(r => {
-      if (!r.isCorrect) {
-        const letter = r.expectedWord.charAt(0);
-        if (!problematicLetters.includes(letter)) {
+      const isWordCorrect = Boolean(r.isCorrect ?? r.correct);
+      const wordText = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '').trim();
+      if (!isWordCorrect && wordText) {
+        const letter = wordText.charAt(0);
+        if (letter && !problematicLetters.includes(letter)) {
           problematicLetters.push(letter);
         }
       }
     });
 
-    const diacriticErrors = analysisResults.filter(r =>
-      r.word.includes('َ') || r.word.includes('ُ') || r.word.includes('ِ')
-    ).filter(r => !r.isCorrect).length;
+    // Safely count diacritic errors without assuming r.word exists
+    const diacriticErrors = analysisResults.filter(r => {
+      const isWordCorrect = Boolean(r.isCorrect ?? r.correct);
+      const wordText = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '');
+      const hasDiacritics =
+        wordText.includes('َ') ||
+        wordText.includes('ُ') ||
+        wordText.includes('ِ') ||
+        wordText.includes('ً') ||
+        wordText.includes('ٌ') ||
+        wordText.includes('ٍ') ||
+        wordText.includes('ّ');
+      return hasDiacritics && !isWordCorrect;
+    }).length;
 
-    const avgHesitation = analysisResults.reduce((sum, r) => sum + r.hesitationMs, 0) / analysisResults.length;
+    const latencySum = analysisResults.reduce((sum, r) => {
+      const val = Number(r.voiceOnsetLatencyMs ?? r.hesitationMs ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+    const avgHesitation = Math.round(latencySum / totalWords);
 
     const speechResult: SpeechAssessmentResult = {
-      studentId: 'student-1',
-      studentName: 'الطالب',
-      age: 8,
+      studentId: currentAssessment?.studentId || 'student-1',
+      studentName: currentAssessment?.studentName || 'الطالب',
+      age: currentAssessment?.age || 8,
       date: new Date().toLocaleDateString('ar-SA'),
-      words: analysisResults.map(r => ({
-        word: r.word,
-        expected: r.expectedWord,
-        recognized: r.recognizedWord,
-        correct: r.isCorrect,
-        confidence: r.confidence,
-        pauseCount: r.pauseCount,
-        hesitationMs: r.hesitationMs,
-        pitchVariation: r.pitchVariation,
-      })),
+      words: analysisResults.map(r => {
+        const target = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '');
+        const recognized = String(r.spokenTranscript ?? r.recognized ?? r.recognizedWord ?? '');
+        const conf = Number(r.acousticConfidence ?? r.confidence ?? r.phoneticSimilarity ?? 80);
+        const pauses = Number(r.intraWordPauses ?? r.pauseCount ?? 0);
+        const latency = Number(r.voiceOnsetLatencyMs ?? r.hesitationMs ?? 0);
+        const pitch = Number(r.f0VariationHz ?? r.pitchVariation ?? 0);
+        return {
+          word: target,
+          expected: target,
+          recognized,
+          correct: Boolean(r.isCorrect ?? r.correct),
+          confidence: Number.isFinite(conf) ? conf : 80,
+          pauseCount: Number.isFinite(pauses) ? pauses : 0,
+          hesitationMs: Number.isFinite(latency) ? latency : 0,
+          pitchVariation: Number.isFinite(pitch) ? pitch : 0,
+        };
+      }),
       summary: {
         averageConfidence,
         totalPauses,
@@ -224,14 +319,25 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
   };
 
   const saveTactileAnalyticsResults = (taskResults: any[]) => {
-    const correctAnswers = taskResults.filter(r => r.correctness).length;
-    const averageReactionTime = taskResults.reduce((sum, r) => sum + r.reactionTime, 0) / taskResults.length;
-    const totalHesitation = taskResults.reduce((sum, r) => sum + r.hesitationCount, 0);
+    if (!Array.isArray(taskResults) || taskResults.length === 0) return;
+
+    const correctAnswers = taskResults.filter(r => Boolean(r.correctness ?? r.correct)).length;
+    const reactionSum = taskResults.reduce((sum, r) => {
+      const val = Number(r.reactionTime ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
+    const averageReactionTime = Math.round(reactionSum / taskResults.length);
+
+    const totalHesitation = taskResults.reduce((sum, r) => {
+      const val = Number(r.hesitationCount ?? 0);
+      return sum + (Number.isFinite(val) ? val : 0);
+    }, 0);
 
     // Determine weak areas
     const weakAreas: string[] = [];
-    taskResults.forEach((r, idx) => {
-      if (!r.correctness) {
+    taskResults.forEach((r) => {
+      const isCorrect = Boolean(r.correctness ?? r.correct);
+      if (!isCorrect) {
         if (r.type === 'sort') weakAreas.push('ترتيب الأرقام');
         if (r.type === 'compare') weakAreas.push('المقارنة السريعة');
         if (r.type === 'match') weakAreas.push('العد والمطابقة');
@@ -239,17 +345,17 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
     });
 
     const tactileResult: TactileAssessmentResult = {
-      studentId: 'student-1',
-      studentName: 'الطالب',
+      studentId: currentAssessment?.studentId || 'student-1',
+      studentName: currentAssessment?.studentName || 'الطالب',
       date: new Date().toLocaleDateString('ar-SA'),
       tasks: taskResults.map((r, idx) => ({
         taskId: idx + 1,
-        type: r.type || 'unknown',
-        correct: r.correctness,
-        reactionTime: r.reactionTime,
-        completionTime: r.completionTime,
-        hesitationCount: r.hesitationCount,
-        curvature: r.averageCurvature || 0,
+        type: String(r.type || 'unknown'),
+        correct: Boolean(r.correctness ?? r.correct),
+        reactionTime: Number(r.reactionTime) || 0,
+        completionTime: Number(r.completionTime) || 0,
+        hesitationCount: Number(r.hesitationCount) || 0,
+        curvature: Number(r.averageCurvature) || 0,
       })),
       summary: {
         averageReactionTime,
@@ -269,6 +375,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
 
   const clearCurrentAssessment = () => {
     setCurrentAssessment(null);
+    persistAssessment(null);
   };
 
   return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Mic, Camera, Trash2, Lock, Cpu, Globe } from 'lucide-react';
+import { ShieldCheck, Mic, Trash2, Lock, Cpu } from 'lucide-react';
 
 interface PrivacyPolicyViewProps {}
 
@@ -55,7 +55,7 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
           <span>سيادة البيانات وحق الحذف الفوري (Right to Erasure)</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          تحتفظ المؤسسة التعليمية وولي الأمر بالسيطرة الكاملة على السجلات؛ يُمكن تصدير التقارير بصيغة PDF مشفرة أو حذف ملف الطالب ونتائج جلساته نهائياً بضغطة زر واحدة وفق معايير اللائحة العامة لحماية البيانات.
+          تحتفظ المؤسسة التعليمية وولي الأمر بالسيطرة الكاملة على السجلات؛ يُمكن حفظ وطباعة التقارير بصيغة PDF عبر ميزة الطباعة الآمنة في المتصفح أو حذف ملف الطالب ونتائج جلساته نهائياً بضغطة زر واحدة وفق معايير اللائحة العامة لحماية البيانات.
         </p>
       </article>
     </section>

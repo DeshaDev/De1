@@ -52,6 +52,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   }, [activeStudent]);
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(defaultPassageIndex);
+  const [guardianConsentChecked, setGuardianConsentChecked] = useState(true);
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
 
   // Stages: 'intro' -> 'reading' -> 'comprehension' -> 'summary'
@@ -167,15 +168,31 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   // Complete session and save to parent record
   const handleCommitSession = () => {
     const baseStudent = activeStudent || INITIAL_STUDENTS[0];
+    const nowIso = new Date().toISOString();
+
+    // Ensure answers array is ordered and complete according to questions length
+    const answersArray = (passage.comprehensionQuestions || []).map((_, idx) =>
+      typeof selectedAnswers[idx] === 'number' ? selectedAnswers[idx] : 0
+    );
+
     const updatedRecord: StudentRecord = {
       ...baseStudent,
+      passageId: passage.id,
+      assessmentModality: 'reading_only',
       readingDurationSeconds: finalDurationSec,
       wpm: measuredWpm,
+      fixations: [],
+      calibrationAccuracyPercent: undefined,
+      calibrationValidationMethod: undefined,
+      blinkCount: 0,
       regressionCount: 0,
       regressionRate: 0,
       sessionStatus: 'completed',
-      sessionCompletedAt: new Date().toISOString(),
-      comprehensionAnswers: Object.values(selectedAnswers),
+      sessionCompletedAt: nowIso,
+      comprehensionAnswers: answersArray,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: baseStudent.guardianConsentRecordedAt || nowIso,
+      guardianConsentSource: baseStudent.guardianConsentSource || 'إقرار ولي الأمر والمدرسة في مختبر القراءة',
     };
 
     onCompleteSession(updatedRecord);
@@ -226,7 +243,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 اختر النص القرائي المناسب للمستوى الدراسي:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {ARABIC_READING_PASSAGES.slice(0, 6).map((p, idx) => (
+                {ARABIC_READING_PASSAGES.map((p, idx) => (
                   <button
                     key={p.id}
                     onClick={() => setSelectedPassageIndex(idx)}
@@ -252,7 +269,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             </div>
 
             {/* Instructions Card */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-8 text-right space-y-2">
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-6 text-right space-y-2">
               <h3 className="font-bold text-slate-900 text-sm mb-2">إرشادات الجلسة:</h3>
               <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
                 <li>اقرأ النص قراءة جهرية واضحة ومسترسلة كما تقرأ في الصف الدراسي.</li>
@@ -262,10 +279,25 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               </ul>
             </div>
 
+            {/* Guardian Consent Confirmation */}
+            <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 mb-8 text-right flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="guardian-consent-chk"
+                checked={guardianConsentChecked}
+                onChange={(e) => setGuardianConsentChecked(e.target.checked)}
+                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+              />
+              <label htmlFor="guardian-consent-chk" className="text-xs font-bold text-emerald-950 cursor-pointer select-none">
+                أقر بتوثيق موافقة ولي الأمر وإدارة المدرسة المسبقة على إجراء فحص القراءة والاستيعاب وتسجيل مؤشرات الأداء للطالب.
+              </label>
+            </div>
+
             {/* Start Button */}
             <button
               onClick={handleStartReading}
-              className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
+              disabled={!guardianConsentChecked}
+              className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
             >
               <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
               <span>ابدأ جلسة القراءة الآن</span>

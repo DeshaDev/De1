@@ -294,13 +294,13 @@ const SESSION_TIMELINE_STAGES: SessionStageItem[] = [
   {
     id: 'while-reading',
     tabLabel: 'أثناء القراءة الجهرية',
-    kicker: 'المرحلة ٠٣: الرصد المزدوج',
-    headline: 'محاذاة فورية بين مسار النظر والصوت مع مراعاة اللهجات العربية.',
+    kicker: 'المرحلة ٠٣: قياس الطلاقة والاستيعاب',
+    headline: 'محاذاة فورية لسرعة القراءة واستيعاب النصوص مع مراعاة اللهجات العربية.',
     description:
-      'تحليل لحظي يدمج حركة العين مع التعرف الصوتي الذكي، مع تمييز الفروق اللهجية الطبيعية لمنع احتسابها كتعثر قرائي.',
+      'تحليل فوري دقيق لسرعة القراءة الجهرية واستيعاب النصوص المشكولة، مع تمييز الفروق اللهجية الطبيعية لمنع احتسابها كتعثر قرائي.',
     privacyNote: 'محرك لغوي متعدد اللهجات (الخليجية، المصرية، الشامية، الفصحى).',
     waveBars: [45, 72, 88, 64, 95, 78, 56, 92, 84, 68, 90, 74, 60, 82, 50],
-    actionLabel: 'افتح مختبر القراءة والعين',
+    actionLabel: 'افتح مختبر القراءة والطلاقة',
     targetTab: 'eye-lab',
   },
   {
@@ -545,7 +545,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="space-y-3 max-w-4xl text-right">
             <div className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#15803D] tracking-wide">
               <SoundwaveBarsIcon className="text-[#15803D]" />
-              <span>تقنية عربية متقدمة · تتبع حركة العين · ذكاء صوتي تكيفي</span>
+              <span>تقنية عربية متقدمة · طلاقة وفهم قرائي · ذكاء صوتي تكيفي</span>
             </div>
 
             <h1 className="font-display font-extrabold text-[#18181B] tracking-tight text-2xl sm:text-3xl md:text-4xl lg:text-[2.5rem] xl:text-[2.85rem] leading-[1.28]">
@@ -561,7 +561,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             {/* Right Column: Lead copy, actions, and enterprise confidence signals */}
             <div className="lg:col-span-6 space-y-6 text-right">
               <p className="text-base text-slate-600 leading-relaxed font-normal">
-                تجمع «بصيرة» بين تتبع حركة العين بالذكاء الاصطناعي، والتحليل الصوتي التكيفي للهجات، ومهام الإدراك العددي — لتمكين المدارس والأخصائيين من الفرز المبكر لمؤشرات الديسلكسيا والديسكلكوليا بأعلى معايير الدقة والخصوصية.
+                تجمع «بصيرة» بين قياس الطلاقة والفهم القرائي للنصوص العربية المشكولة، والتحليل الصوتي التكيفي للهجات، ومهام الإدراك العددي — لتمكين المدارس والأخصائيين من الفرز المبكر لمؤشرات صعوبات التعلم بأعلى معايير الموثوقية والخصوصية.
               </p>
 
               {/* Primary Hero Action Buttons */}
@@ -757,7 +757,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 المعلمون والأخصائيون
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed">
-                أدوات قياس موضوعية تجمع تتبع العين بالتحليل الصوتي، لتمكين خطط الدعم الفردية ومتابعة التطور القرائي بدقة.
+                أدوات قياس موضوعية تجمع زمن القراءة بالتحليل الصوتي، لتمكين خطط الدعم الفردية ومتابعة التطور القرائي بدقة.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-800 group-hover:text-[#15803D] transition-colors">
@@ -1179,19 +1179,19 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             محطات الفحص والمساندة المتقدمة
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            بيئة متكاملة تدمج تتبع حركة العين والرصد الصوتي مع مهام الإدراك العددي واستوديو القراءة الميسّرة لتجربة تعليمية شاملة.
+            بيئة متكاملة تدمج قياس الطلاقة القرائية والرصد الصوتي مع مهام الإدراك العددي واستوديو القراءة الميسّرة لتجربة تعليمية شاملة.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {[
-            { id: 'eye-lab' as AppTabId, title: 'القراءة وتتبع العين', description: 'رصد فوري لزمن التثبيت والقفزات التراجعية مع المحاذاة الصوتية للنص المقروء.' },
+            { id: 'eye-lab' as AppTabId, title: 'مختبر القراءة والطلاقة', description: 'قياس دقيق لسرعة القراءة (WPM)، واسترسال المفردات المشكولة، واختبار الفهم القرائي.' },
             { id: 'arabic-speech-analysis' as AppTabId, title: 'تحليل النطق العربي', description: 'قياس الوقفات والتردد ودقة نطق الحروف والحركات باستخدام الذكاء الاصطناعي الصوتي.' },
             { id: 'tactile-analytics' as AppTabId, title: 'تحليل التفاعل اللمسي', description: 'قياس زمن الاستجابة ومسارات حركة اليد للكشف عن صعوبات الحساب.' },
             { id: 'adaptive-reports' as AppTabId, title: 'التقارير الذكية', description: 'تقارير شخصية للأهل والمعلمين مع خطط IEP وألعاب موجهة تلقائياً.' },
             { id: 'dyscalculia-lab' as AppTabId, title: 'مهام الحساب', description: 'قياس التمييز الكمي الفوري وتقدير خط الأعداد وكشف أخطاء عكس الخانات.' },
             { id: 'remediation-gym' as AppTabId, title: 'صالة التدريب والتأهيل', description: 'ألعاب وتمارين تفاعلية يومية لعلاج اللبس الفونولوجي والقفزات التراجعية وعكس الأرقام.' },
             { id: 'adaptive-reader' as AppTabId, title: 'القارئ العربي الميسّر', description: 'أدوات تقطيع مقطعي وتلوين فونولوجي وتركيز بصري لتسهيل القراءة.' },
-            { id: 'algorithms-lab' as AppTabId, title: 'المختبر التقني', description: 'استكشاف نماذج الاستدلال وخوارزميات تتبع حركة العين وتحليل الإشارات.' },
+            { id: 'algorithms-lab' as AppTabId, title: 'المختبر التقني', description: 'استكشاف نماذج الاستدلال وخوارزميات قياس الطلاقة وتحليل الإشارات الصوتية واللمسية.' },
           ].map((feature) => (
             <button
               key={feature.id}
@@ -1227,7 +1227,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-slate-600">
-            رحلة متكاملة في ٤ محطات: تسجيل الطالب ← تتبع القراءة والعين ← فحص الحساب ← التقرير الشامل وخطة المساندة.
+            رحلة متكاملة في ٤ محطات: تسجيل الطالب ← مختبر القراءة والطلاقة ← فحص الحساب ← التقرير الشامل وخطة المساندة.
           </p>
         </div>
 
@@ -1394,7 +1394,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 type="submit"
                 className="w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#15803D] text-white text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>تسجيل الطالب والانتقال إلى فحص القراءة والعين</span>
+                <span>تسجيل الطالب والانتقال إلى فحص القراءة والطلاقة</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </form>
@@ -1422,8 +1422,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 },
                 {
                   step: '٠٢',
-                  title: 'فحص القراءة وتتبع العين',
-                  desc: 'جلسة قراءة الفقرة ورصد مسار الكلمات بصوت مسموع.',
+                  title: 'مختبر القراءة والطلاقة',
+                  desc: 'جلسة قراءة النص المشكول وقياس السرعة وأسئلة الفهم.',
                   tab: 'eye-lab' as AppTabId,
                   active: false,
                 },

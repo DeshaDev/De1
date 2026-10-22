@@ -192,6 +192,7 @@ export default function App() {
     sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
     dialectRegionAr: record.dialectRegionAr,
+    assessmentModality: record.assessmentModality || 'reading_only',
     readingDurationSeconds:
       record.readingDurationSeconds ??
       Math.max(
@@ -203,8 +204,10 @@ export default function App() {
           ) / 1000
         ) + 2
       ),
-    blinkCount: record.blinkCount ?? 8,
-    calibrationAccuracyPercent: record.calibrationAccuracyPercent ?? 86,
+    blinkCount: record.blinkCount ?? 0,
+    ...(record.calibrationAccuracyPercent !== undefined
+      ? { calibrationAccuracyPercent: record.calibrationAccuracyPercent }
+      : {}),
     ...(record.calibrationValidationMethod
       ? { calibrationValidationMethod: record.calibrationValidationMethod }
       : {}),
@@ -213,15 +216,15 @@ export default function App() {
     phoneticSubstitutionCount: record.phoneticSubstitutionCount,
     dialectVariantCount: record.dialectVariantCount,
     omissionCount: record.omissionCount,
-    fixations: record.fixations,
+    fixations: record.fixations || [],
     ...(record.comprehensionAnswers
       ? { comprehensionAnswers: record.comprehensionAnswers }
       : {}),
     dyscalculiaAssessed: record.dyscalculiaAssessed,
     ...(record.mathTrials ? { mathTrials: record.mathTrials } : {}),
     guardianConsentGiven: record.guardianConsentGiven === true,
-    guardianConsentRecordedAt: record.guardianConsentRecordedAt,
-    guardianConsentSource: record.guardianConsentSource,
+    guardianConsentRecordedAt: record.guardianConsentRecordedAt || (record.guardianConsentGiven ? new Date().toISOString() : undefined),
+    guardianConsentSource: record.guardianConsentSource || (record.guardianConsentGiven ? 'إقرار ولي الأمر والمدرسة' : undefined),
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
     guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
     speechRecognitionUsed: record.speechRecognitionUsed === true,
@@ -548,6 +551,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
+          assessmentModality: selectedStudent.assessmentModality || 'reading_only',
           guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
           guardianConsentRecordedAt: selectedStudent.guardianConsentRecordedAt,
           guardianConsentSource: selectedStudent.guardianConsentSource,
@@ -782,7 +786,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            اختبار القراءة وتتبع العين
+            مختبر القراءة والطلاقة
           </button>
           <button
             type="button"
@@ -868,7 +872,7 @@ export default function App() {
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
           { id: 'home', label: 'الرئيسية' },
-          { id: 'eye-lab', label: 'اختبار القراءة وتتبع العين' },
+          { id: 'eye-lab', label: 'مختبر القراءة والطلاقة' },
           { id: 'dyscalculia-lab', label: 'مهام الحساب' },
           { id: 'remediation-gym', label: 'صالة التدريب والتأهيل' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
