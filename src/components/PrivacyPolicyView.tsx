@@ -74,7 +74,7 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
               <td className="py-3.5 px-3 text-slate-600">محاذاة الكلمات واكتشاف الإبدالات اللفظية</td>
               <td className="py-3.5 px-3 text-emerald-800 font-bold">إقرار صوتي صريح ومستقل</td>
               <td className="py-3.5 px-3 text-slate-600">تنتهي بانتهاء الجلسة ومراجعة المعلم</td>
-              <td className="py-3.5 px-3 text-slate-500">معالجة فورية في متصفح العميل (Web Speech API)</td>
+              <td className="py-3.5 px-3 text-slate-500">استخدام Web Speech API في المتصفح؛ يختلف مكان معالجة الصوت بحسب المتصفح ومزوّد الخدمة، ولا تفترض المنصة أن المعالجة محلية بالكامل</td>
             </tr>
 
             <tr>
