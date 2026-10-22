@@ -38,8 +38,9 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(derived.derivedFields.fixations.length, 0);
     assert.equal(typeof derived.derivedFields.comprehensionScore, 'number');
-    assert.equal(typeof derived.derivedFields.dyslexiaRiskScore, 'number');
-    assert.equal(typeof derived.derivedFields.readingHeuristicIndicator, 'number');
+    assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
+    assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
+    assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
     assert.ok(derived.derivedFields.clinicalReport);
     assert.match(
       derived.derivedFields.clinicalReport.ocularMotorAnalysis,
@@ -95,7 +96,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
       reversalErrorCount: null,
     });
 
-    assert.ok(report.clinicalSummary.includes('مؤشر فرز قرائي وفهم استرشادي'));
+    assert.ok(report.clinicalSummary.includes('جلسة قراءة وفهم تعليمية'));
     assert.ok(report.ocularMotorAnalysis.includes('دون كاميرا أو تتبع للعين'));
     assert.ok(report.interventionExercises.length > 0);
   });
