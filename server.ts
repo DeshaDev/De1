@@ -927,6 +927,10 @@ async function startServer() {
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: cleanName,
         gradeLevel,
+      }, {
+        sessionId: session.sessionId,
+        role: session.role,
+        clinicianName: session.clinicianName,
       });
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
@@ -1072,6 +1076,10 @@ async function startServer() {
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: current.name,
         gradeLevel: current.gradeLevel,
+      }, {
+        sessionId: session.sessionId,
+        role: session.role,
+        clinicianName: session.clinicianName,
       });
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
