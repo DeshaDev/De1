@@ -1529,6 +1529,7 @@ async function startServer() {
         audioRecordingStarted = false,
         gradeLevel,
         wpm,
+        comprehensionScore,
         avgFixationMs,
         regressionRate,
         gazeCoveragePercent,
@@ -1632,6 +1633,14 @@ async function startServer() {
         }
       }
 
+      if (!isNoEyeModality) {
+        res.status(422).json({
+          error: 'هذا الإصدار يدعم القراءة الصامتة أو الجهرية فقط؛ لم يعد يصدر تقارير عن تتبع العين بالكاميرا.',
+          reportBlocked: true,
+        });
+        return;
+      }
+
       // Build a descriptive report from supplied observations only. Do not ask a generative
       // model to infer dyslexia/dyscalculia, gaze behavior, or treatment from one short session.
       const safeWords = problematicWords
@@ -1657,6 +1666,7 @@ async function startServer() {
         observedWordCount: isNoEyeModality ? 0 : (asFiniteNumber(observedWordCount) ?? 0),
         totalPassageWordCount: asFiniteNumber(totalPassageWordCount) ?? 0,
         wpm: Math.max(0, Math.round(asFiniteNumber(wpm) ?? 0)),
+        comprehensionScore: asFiniteNumber(req.body?.comprehensionScore),
         avgFixationMs: isNoEyeModality ? 0 : (asFiniteNumber(avgFixationMs) ?? 0),
         regressionRate: isNoEyeModality ? 0 : (asFiniteNumber(regressionRate) ?? 0),
         regressionCount: isNoEyeModality ? 0 : 0,
