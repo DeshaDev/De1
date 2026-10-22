@@ -972,6 +972,9 @@ async function startServer() {
         audioRecordingStarted: incoming.audioRecordingStarted === true,
         speechRecognitionUsed: incoming.speechRecognitionUsed === true,
         ...derived.derivedFields,
+        teacherVerifierId: derived.derivedFields.teacherVerified ? session.sessionId : undefined,
+        teacherVerifierRole: derived.derivedFields.teacherVerified ? session.role : undefined,
+        teacherVerificationTimestamp: derived.derivedFields.teacherVerified ? nowIso : undefined,
       };
 
       const nextRecords = [newRecord, ...studentsDb];
@@ -1108,6 +1111,9 @@ async function startServer() {
       const updatedRecord: StudentRecord = {
         ...current,
         ...derived.derivedFields,
+        teacherVerifierId: derived.derivedFields.teacherVerified ? session.sessionId : undefined,
+        teacherVerifierRole: derived.derivedFields.teacherVerified ? session.role : undefined,
+        teacherVerificationTimestamp: derived.derivedFields.teacherVerified ? nowIso : undefined,
         id: current.id,
         name: current.name,
         schoolName: current.schoolName,
