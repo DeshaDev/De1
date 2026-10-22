@@ -106,6 +106,7 @@ export interface StudentRecord {
   guardianConsentPeriod?: string;
   teacherVerified?: boolean;
   teacherVerifierId?: string;
+  teacherVerifierName?: string;
   teacherVerifierRole?: string;
   teacherVerificationTimestamp?: string;
   teacherWordOverridesCount?: number;
