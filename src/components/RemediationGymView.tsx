@@ -933,7 +933,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 <RotateCcw className="w-4 h-4" />
               </button>
               <span className="text-[11px] text-slate-500 font-medium">
-                تدريب متصل لتقليل الارتدادات البصرية
+                أعد القراءة بالسرعة التي تريحك، وخذ استراحة متى احتجت.
               </span>
             </div>
           </div>
