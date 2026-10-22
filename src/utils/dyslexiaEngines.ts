@@ -2515,8 +2515,8 @@ export interface OralReadingFluencyResult {
   substitutionsCount?: number;
   deletionsCount?: number;
   accuracyPercent: number;
-  werPercent: number; // Standard Levenshtein Word Error Rate: (S + D + I) / N
-  standardWerPercent?: number;
+  werPercent: number | null; // Standard Levenshtein Word Error Rate: (S + D + I) / N (null if no transcript available)
+  standardWerPercent?: number | null;
   hesitationPauseCount: number;
   alignment: OralWordAlignmentItem[];
 }
@@ -2601,7 +2601,7 @@ export function computeStandardSequenceWer(
   }
 
   const totalErrors = substitutions + deletions + insertions;
-  const werPercent = Math.min(100, Math.round((totalErrors / n) * 100));
+  const werPercent = Math.round((totalErrors / n) * 100);
 
   return {
     werPercent,
@@ -2755,8 +2755,12 @@ export function evaluateOralReadingAlignment(
   const accuracyPercent = Math.round((correctWordsCount / totalWords) * 100);
 
   // Exact Dynamic Programming sequence alignment WER calculation:
-  // Evaluates purely objective transcription error between reference words and spoken tokens
-  const standardWerResult = computeStandardSequenceWer(referenceWords, spokenTokens);
+  // Evaluates purely objective transcription error between reference words and spoken tokens.
+  // When no spoken input was captured (empty transcript), WER is null rather than an artificial 0%.
+  const hasSpokenTokens = spokenTokens.length > 0;
+  const standardWerResult = hasSpokenTokens
+    ? computeStandardSequenceWer(referenceWords, spokenTokens)
+    : null;
 
   return {
     wcpm,
@@ -2765,12 +2769,12 @@ export function evaluateOralReadingAlignment(
     dialectVariantCount,
     phoneticSubstitutionCount,
     omittedWordsCount,
-    insertionCount: standardWerResult.insertions,
-    substitutionsCount: standardWerResult.substitutions,
-    deletionsCount: standardWerResult.deletions,
+    insertionCount: standardWerResult ? standardWerResult.insertions : 0,
+    substitutionsCount: standardWerResult ? standardWerResult.substitutions : 0,
+    deletionsCount: standardWerResult ? standardWerResult.deletions : referenceWords.length,
     accuracyPercent,
-    werPercent: standardWerResult.werPercent,
-    standardWerPercent: standardWerResult.werPercent,
+    werPercent: standardWerResult ? standardWerResult.werPercent : null,
+    standardWerPercent: standardWerResult ? standardWerResult.werPercent : null,
     hesitationPauseCount,
     alignment,
   };

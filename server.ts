@@ -911,14 +911,14 @@ async function startServer() {
         return;
       }
       if (
-        incoming.speechRecognitionUsed === true &&
+        (incoming.speechRecognitionUsed === true || incoming.audioRecordingStarted === true) &&
         (incoming.guardianAudioConsentGiven !== true ||
           typeof incoming.guardianAudioConsentRecordedAt !== 'string' ||
           !Number.isFinite(Date.parse(incoming.guardianAudioConsentRecordedAt)))
       ) {
         res.status(403).json({
           error:
-            'رُصد استخدام التعرف الصوتي دون سجل موافقة صوتية منفصل صالح؛ رُفض حفظ الجلسة.',
+            'رُصد تسجيل صوتي أو استخدام للتعرف الصوتي دون سجل موافقة صوتية منفصل صالح ومؤرخ؛ رُفض حفظ الجلسة.',
         });
         return;
       }
@@ -1057,13 +1057,13 @@ async function startServer() {
         return;
       }
       if (
-        incoming.speechRecognitionUsed === true &&
+        (incoming.speechRecognitionUsed === true || incoming.audioRecordingStarted === true) &&
         (incoming.guardianAudioConsentGiven !== true ||
           typeof incoming.guardianAudioConsentRecordedAt !== 'string' ||
           !Number.isFinite(Date.parse(incoming.guardianAudioConsentRecordedAt)))
       ) {
         res.status(403).json({
-          error: 'استخدام التعرف الصوتي يتطلب موافقة صوتية منفصلة بوقت صالح.',
+          error: 'التسجيل الصوتي أو استخدام التعرف الصوتي يتطلب موافقة صوتية منفصلة بوقت صالح.',
         });
         return;
       }
@@ -1567,13 +1567,13 @@ async function startServer() {
         return;
       }
       if (
-        speechRecognitionUsed === true &&
+        (speechRecognitionUsed === true || audioRecordingStarted === true) &&
         (guardianAudioConsentGiven !== true ||
           typeof guardianAudioConsentRecordedAt !== 'string' ||
           !Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)))
       ) {
         res.status(403).json({
-          error: 'استخدام التعرف الصوتي لا يتضمن موافقة صوتية منفصلة مسجلة.',
+          error: 'التسجيل الصوتي أو استخدام التعرف الصوتي لا يتضمن موافقة صوتية منفصلة مسجلة.',
         });
         return;
       }

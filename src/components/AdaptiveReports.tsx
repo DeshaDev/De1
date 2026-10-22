@@ -145,17 +145,19 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     // Evaluate reading fluency (if measured)
     if (studentData.reading) {
       if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
+        const isVerified = studentData.reading.teacherVerified === true;
+        const verificationLabel = isVerified ? 'بمعايرة المعلم' : 'محاذاة آلية أولية';
         if (studentData.reading.wcpm >= gradeTargetWpm.median) {
           areasOfStrength.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM بمعايرة المعلم عند وسيط عينة دراسة 2024 أو أعلى: ${gradeTargetWpm.median} ك/د)`
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} عند وسيط عينة دراسة 2024 أو أعلى: ${gradeTargetWpm.median} ك/د)`
           );
         } else if (studentData.reading.wcpm >= gradeTargetWpm.p25) {
           areasOfStrength.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM تقع ضمن النطاق الربيعي الاسترشادي: ${gradeTargetWpm.label})`
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} تقع ضمن النطاق الربيعي الاسترشادي: ${gradeTargetWpm.label})`
           );
         } else {
           areasNeedingSupport.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM دون المئين 25 الاسترشادي لدراسة 2024: ${gradeTargetWpm.p25} ك/د)`
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} دون المئين 25 الاسترشادي لدراسة 2024: ${gradeTargetWpm.p25} ك/د)`
           );
         }
       } else {
@@ -550,7 +552,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
                     ? typeof studentData.reading.wcpm === 'number'
-                      ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                      ? studentData.reading.teacherVerified === true
+                        ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                        : `طلاقة الكلمات المقروءة شفوياً بلغت ${studentData.reading.wcpm} كلمة/دقيقة (محاذاة آلية أولية — بانتظار اعتماد المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص.`
                       : `سرعة قراءة صامتة تقديرية (بناءً على زمن إتمام النص) بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
@@ -683,11 +687,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">الطلاقة الشفوية المعتمدة</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      {studentData.reading?.teacherVerified ? 'الطلاقة الشفوية المعتمدة' : 'الطلاقة الشفوية'}
+                    </td>
                     <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading && typeof studentData.reading.wcpm === 'number'
-                        ? `${studentData.reading.wcpm} WCPM`
+                        ? `${studentData.reading.wcpm} WCPM ${studentData.reading.teacherVerified ? '(معتمد من المعلم)' : '(محاذاة آلية)'}`
                         : studentData.reading
                         ? 'قراءة صامتة (WPM فقط)'
                         : 'لم تُقَس'}
@@ -698,7 +704,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4">
                       {studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
                         studentData.reading.wcpm >= gradeTargetWpm.median ? (
-                          <span className="text-emerald-700 font-bold">✓ عند الوسيط أو أعلى (معتمد)</span>
+                          <span className="text-emerald-700 font-bold">
+                            {studentData.reading.teacherVerified ? '✓ عند الوسيط أو أعلى (معتمد)' : '✓ عند الوسيط أو أعلى (آلي أولياً)'}
+                          </span>
                         ) : studentData.reading.wcpm >= gradeTargetWpm.p25 ? (
                           <span className="text-sky-700 font-bold">ضمن النطاق الربيعي</span>
                         ) : (

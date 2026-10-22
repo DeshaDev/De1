@@ -104,6 +104,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(result.omittedWordsCount, passage.words.length);
     assert.equal(result.wcpm, 0);
     assert.equal(result.accuracyPercent, 0);
+    assert.equal(result.werPercent, null); // Empty transcript must yield null rather than artificial 0%
   });
 
   await t.test('Teacher Human-in-the-Loop override recalculates WCPM accurately', () => {
@@ -182,6 +183,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.assessmentModality, 'reading_only');
     assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(derived.derivedFields.fixations.length, 0);
+    assert.equal(derived.derivedFields.dyslexiaRiskScore, 0); // Camera-free reading_only does not fabricate predictive clinical dyslexia scores
+    assert.equal(derived.derivedFields.readingRiskLevel, 'nominal');
     assert.ok(derived.derivedFields.clinicalReport);
   });
 
@@ -197,6 +200,15 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(wer.insertions, 1);
     // WER = (1 + 1 + 1) / 5 = 60%
     assert.equal(wer.werPercent, 60);
+
+    // Standard unclamped WER when insertions exceed reference length (e.g. child utters additional words)
+    const shortRef = ['ذهب', 'إلى']; // N = 2
+    const verboseHyp = ['ذهب', 'إلى', 'المدرسة', 'الكبيرة', 'في', 'الصباح']; // 4 insertions
+    const unclampedWer = computeStandardSequenceWer(shortRef, verboseHyp);
+    assert.equal(unclampedWer.referenceLength, 2);
+    assert.equal(unclampedWer.insertions, 4);
+    // WER = 4 / 2 * 100 = 200% (standard unclamped ASR definition)
+    assert.equal(unclampedWer.werPercent, 200);
   });
 
   await t.test('Authoritative Teacher Verification: server calculates WCPM and accuracy strictly from verifiedWordsAlignment', () => {

@@ -1503,15 +1503,15 @@ export function validateAndDeriveSessionFromEvidence(
 
   const rawOralWcpm = isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null);
   const rawOralAccuracy = isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null);
-  const rawOralWer = oralMetrics?.werPercent ?? 0;
+  const rawOralWer = oralMetrics ? oralMetrics.werPercent : null;
 
   const oralIntegration: OralReadingIntegrationInput | null =
     oralReadingAssessed
       ? {
           assessed: true,
           wcpm: typeof rawOralWcpm === 'number' ? rawOralWcpm : undefined,
-          accuracyPercent: typeof rawOralAccuracy === 'number' ? rawOralAccuracy : 0,
-          werPercent: typeof rawOralWer === 'number' ? rawOralWer : 0,
+          accuracyPercent: typeof rawOralAccuracy === 'number' ? rawOralAccuracy : null,
+          werPercent: rawOralWer,
           phoneticSubstitutionCount: isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
           dialectVariantCount: isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
           omissionCount: isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
@@ -1581,13 +1581,28 @@ export function validateAndDeriveSessionFromEvidence(
     mathRiskLabelAr = mathValidation.metrics.riskLabelAr;
   }
 
-  const derivedWpm = eyeMetrics
-    ? eyeMetrics.wpm
-    : Math.round((passage.words.length / readingDurationSeconds) * 60);
+  // Derive WPM strictly according to measured evidence:
+  // For oral reading: rate of words actually attempted/spoken by the child
+  // For silent reading: rate of completing the reference passage
+  let derivedWpm = 0;
+  if (eyeMetrics) {
+    derivedWpm = eyeMetrics.wpm;
+  } else if (isTeacherVerified && validatedTeacherAlignment) {
+    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
+    const attemptedWords = teacherCorrectWordsCount + teacherDialectVariantCount + teacherSubstitutionCount;
+    derivedWpm = Math.round((attemptedWords / durationMin));
+  } else if (spokenTranscript.trim().length > 0) {
+    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
+    const spokenTokensCount = spokenTranscript.trim().split(/\s+/).filter(Boolean).length;
+    derivedWpm = Math.round((spokenTokensCount / durationMin));
+  } else {
+    derivedWpm = Math.round((passage.words.length / readingDurationSeconds) * 60);
+  }
 
-  // Derive risk indicators objectively based on measured modality
-  let derivedDyslexiaRiskScore = 40;
-  let derivedReadingHeuristic = 75;
+  // Derive risk indicators objectively based on measured modality:
+  // Avoid predicting clinical dyslexia risk scores on uncalibrated camera-free sessions without independent norming
+  let derivedDyslexiaRiskScore = 0;
+  let derivedReadingHeuristic = comprehensionScore;
   let derivedReadingRiskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
   let derivedReadingRiskLabelAr = 'تقييم قراءة وفهم استرشادي';
 
@@ -1596,24 +1611,18 @@ export function validateAndDeriveSessionFromEvidence(
     derivedReadingHeuristic = eyeMetrics.heuristicIndicator;
     derivedReadingRiskLevel = eyeMetrics.riskLevel;
     derivedReadingRiskLabelAr = eyeMetrics.riskLabelAr;
+  } else if (isTeacherVerified) {
+    derivedReadingHeuristic = teacherAccuracyPercent ?? comprehensionScore;
+    derivedReadingRiskLevel = 'nominal';
+    derivedReadingRiskLabelAr = 'فرز قرائي واستيعابي استرشادي بمعايرة المعلم';
   } else if (oralIntegration) {
-    derivedDyslexiaRiskScore = Math.max(10, Math.min(90, Math.round(100 - (oralIntegration.accuracyPercent ?? 75))));
-    derivedReadingHeuristic = oralIntegration.accuracyPercent ?? 75;
-    derivedReadingRiskLevel = derivedReadingHeuristic >= 75 ? 'nominal' : (derivedReadingHeuristic >= 50 ? 'moderate' : 'high');
-    derivedReadingRiskLabelAr = 'فرز صوتي استرشادي';
+    derivedReadingHeuristic = oralIntegration.accuracyPercent ?? comprehensionScore;
+    derivedReadingRiskLevel = 'nominal';
+    derivedReadingRiskLabelAr = 'فرز صوتي استرشادي أولي';
   } else if (isReadingOnlyModality) {
-    // Pedagogical reading and comprehension index (combining WPM fluency & comprehension score)
-    const expectedGradeWpm = Math.max(35, studentMeta.gradeLevel * 18);
-    const fluencyRatio = Math.min(1.2, derivedWpm / expectedGradeWpm);
-    const fluencyScore = Math.round(Math.min(100, fluencyRatio * 100));
-    derivedReadingHeuristic = Math.round((fluencyScore * 0.5) + (comprehensionScore * 0.5));
-    derivedDyslexiaRiskScore = Math.max(10, Math.min(90, 100 - derivedReadingHeuristic));
-    derivedReadingRiskLevel = derivedReadingHeuristic >= 70 ? 'nominal' : (derivedReadingHeuristic >= 45 ? 'moderate' : 'high');
-    derivedReadingRiskLabelAr = derivedReadingRiskLevel === 'nominal'
-      ? 'أداء قرائي واستيعابي نمائي ملائم للصف'
-      : (derivedReadingRiskLevel === 'moderate'
-          ? 'مؤشرات استرشادية تستدعي مساندة في الطلاقة أو الاستيعاب'
-          : 'مؤشرات استرشادية لتعثر قرائي يستدعي تدخلاً فردياً');
+    derivedReadingHeuristic = comprehensionScore;
+    derivedReadingRiskLevel = 'nominal';
+    derivedReadingRiskLabelAr = 'فرز قراءة صامتة وفهم استرشادي';
   }
 
   const clinicalReport = buildDeterministicClinicalReport({

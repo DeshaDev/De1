@@ -11,8 +11,8 @@ export interface WordFixation {
 export interface OralReadingIntegrationInput {
   assessed: boolean;
   wcpm?: number;
-  accuracyPercent: number;
-  werPercent: number;
+  accuracyPercent?: number | null;
+  werPercent?: number | null;
   phoneticSubstitutionCount: number;
   dialectVariantCount: number;
   omissionCount: number;
@@ -259,7 +259,7 @@ export function calculateEyeTrackingMetrics(
     const subAndOmit =
       (oralInput.phoneticSubstitutionCount || 0) * 3.5 +
       (oralInput.omissionCount || 0) * 2.5;
-    const werContribution = Math.max(0, (oralInput.werPercent - 8) * 0.22);
+    const werContribution = Math.max(0, ((oralInput.werPercent ?? 0) - 8) * 0.22);
     oralPhonologicalPenalty = Math.min(18, subAndOmit + werContribution);
   }
 
