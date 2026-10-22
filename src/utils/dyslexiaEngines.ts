@@ -2511,8 +2511,9 @@ export interface OralReadingFluencyResult {
   dialectVariantCount: number;
   phoneticSubstitutionCount: number;
   omittedWordsCount: number;
+  insertionCount?: number;
   accuracyPercent: number;
-  werPercent: number; // Word Error Rate
+  werPercent: number; // Word Error Rate: (S + D + I) / N
   hesitationPauseCount: number;
   alignment: OralWordAlignmentItem[];
 }
@@ -2658,7 +2659,15 @@ export function evaluateOralReadingAlignment(
   const safeDurationMin = Math.max(0.05, durationSeconds / 60);
   const wcpm = Math.round(correctWordsCount / safeDurationMin);
   const accuracyPercent = Math.round((correctWordsCount / totalWords) * 100);
-  const werPercent = Math.max(0, 100 - accuracyPercent);
+
+  // Standard Levenshtein-based Word Error Rate (WER = (S + D + I) / N):
+  // S = Phonetic substitutions, D = Omissions / unread words, I = Insertions / unaligned tokens
+  const matchedTokensCount = correctWordsCount + phoneticSubstitutionCount;
+  const insertionCount = Math.max(0, spokenTokens.length - matchedTokensCount);
+  const werPercent = Math.min(
+    100,
+    Math.round(((phoneticSubstitutionCount + omittedWordsCount + insertionCount) / totalWords) * 100)
+  );
 
   return {
     wcpm,
@@ -2667,6 +2676,7 @@ export function evaluateOralReadingAlignment(
     dialectVariantCount,
     phoneticSubstitutionCount,
     omittedWordsCount,
+    insertionCount,
     accuracyPercent,
     werPercent,
     hesitationPauseCount,

@@ -4,7 +4,7 @@ import {
   evaluateOralReadingAlignment,
   OralReadingFluencyResult,
 } from './dyslexiaEngines';
-import { ARABIC_READING_PASSAGES, StudentRecord } from '../data/seedData';
+import { ARABIC_READING_PASSAGES, StudentRecord, INITIAL_STUDENTS } from '../data/seedData';
 import { validateAndDeriveSessionFromEvidence } from './clinicalSecurity';
 
 test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
@@ -21,7 +21,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       spokenTranscript,
       durationSeconds,
       0,
-      'eg'
+      'egyptian'
     );
 
     assert.equal(result.totalWords, referenceWords.length);
@@ -40,7 +40,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       spokenEgyptian,
       60,
       0,
-      'eg'
+      'egyptian'
     );
 
     assert.equal(result.alignment.length, 4);
@@ -49,6 +49,60 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       a => a.status === 'dialect_variant' || a.status === 'correct'
     ).length;
     assert.ok(validCount >= 2);
+  });
+
+  await t.test('Standard WER Calculation: computes (S + D + I) / N correctly with insertions', () => {
+    const reference = ['قَرَأَ', 'الطَّالِبُ', 'كِتَابًا']; // 3 words
+    // Spoken with 1 phonetic substitution ("التالب" instead of "الطالب") and 1 extra inserted word ("جميل")
+    const spokenWithInsertion = 'قرأ التالب كتابا جميل';
+
+    const result = evaluateOralReadingAlignment(
+      reference,
+      spokenWithInsertion,
+      30,
+      0,
+      'msa'
+    );
+
+    assert.equal(result.totalWords, 3);
+    assert.ok(result.werPercent > 0);
+    assert.equal(result.phoneticSubstitutionCount, 1);
+    // WER must account for substitution (1) and insertion (1) over N (3)
+    assert.ok(result.werPercent >= 66);
+  });
+
+  await t.test('Full Reference Alignment: unread words are counted as omissions rather than ignored', () => {
+    // If student only reads the first 4 words of a 52-word passage
+    const shortSpoken = passage.words.slice(0, 4).join(' ');
+    const result = evaluateOralReadingAlignment(
+      passage.words,
+      shortSpoken,
+      30,
+      0,
+      'egyptian'
+    );
+
+    assert.equal(result.totalWords, 52);
+    // 48 words must be marked as omitted
+    assert.equal(result.omittedWordsCount, 48);
+    // Accuracy must reflect the whole passage, not just the read fraction
+    assert.ok(result.accuracyPercent <= 10);
+  });
+
+  await t.test('Empty Speech Transcript: does not fabricate a perfect reading result', () => {
+    const emptyTranscript = '';
+    const result = evaluateOralReadingAlignment(
+      passage.words,
+      emptyTranscript,
+      30,
+      0,
+      'egyptian'
+    );
+
+    assert.equal(result.correctWordsCount, 0);
+    assert.equal(result.omittedWordsCount, passage.words.length);
+    assert.equal(result.wcpm, 0);
+    assert.equal(result.accuracyPercent, 0);
   });
 
   await t.test('Teacher Human-in-the-Loop override recalculates WCPM accurately', () => {
@@ -66,6 +120,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
 
   await t.test('Egyptian Law 151/2020 & Exec Reg 816/2025: validates explicit guardian consent metadata', () => {
     const compliantStudent: StudentRecord = {
+      ...INITIAL_STUDENTS[0],
       id: 'test-student-compliance-1',
       name: 'كريم أحمد',
       ageYears: 9,
@@ -76,11 +131,13 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       guardianConsentPeriod: 'عام دراسي 2026/2027',
       guardianConsentRecordedAt: new Date().toISOString(),
       guardianConsentSource: 'نموذج موافقة إلكتروني موثق - المادة 15',
+      guardianAudioConsentGiven: true,
       audioRecordingConsentGiven: true,
       assessmentModality: 'reading_only',
       sessionStatus: 'completed',
       wpm: 68,
       wcpm: 65,
+      oralWcpm: 65,
       teacherVerified: true,
       oralReadingAssessed: true,
       readingDurationSeconds: 48,

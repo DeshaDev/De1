@@ -67,9 +67,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     // Reading session data (strictly measured: WPM, WCPM, duration, comprehension)
     let readingSummary: {
       wpm: number;
-      wcpm?: number;
+      wcpm?: number | null;
       oralReadingAssessed?: boolean;
-      oralAccuracyPercent?: number;
+      oralAccuracyPercent?: number | null;
       teacherVerified?: boolean;
       durationSec: number;
       comprehensionScore: number;
@@ -79,9 +79,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     if (currentAssessment?.readingResults) {
       readingSummary = {
         wpm: currentAssessment.readingResults.wpm,
-        wcpm: currentAssessment.readingResults.wcpm,
+        wcpm: currentAssessment.readingResults.wcpm ?? null,
         oralReadingAssessed: currentAssessment.readingResults.oralReadingAssessed,
-        oralAccuracyPercent: currentAssessment.readingResults.oralAccuracyPercent,
+        oralAccuracyPercent: currentAssessment.readingResults.oralAccuracyPercent ?? null,
         teacherVerified: currentAssessment.readingResults.teacherVerified,
         durationSec: currentAssessment.readingResults.durationSeconds,
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
@@ -90,16 +90,16 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     } else if (currentAssessment?.eyeTrackingResults?.wpm) {
       readingSummary = {
         wpm: currentAssessment.eyeTrackingResults.wpm,
-        wcpm: currentAssessment.eyeTrackingResults.wcpm,
+        wcpm: currentAssessment.eyeTrackingResults.wcpm ?? null,
         durationSec: currentAssessment.eyeTrackingResults.readingDurationSeconds || 0,
         comprehensionScore: currentAssessment.eyeTrackingResults.comprehensionScore || 0,
       };
     } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
       readingSummary = {
         wpm: student.wpm,
-        wcpm: student.wcpm,
+        wcpm: student.wcpm ?? student.oralWcpm ?? null,
         oralReadingAssessed: student.oralReadingAssessed,
-        oralAccuracyPercent: student.oralAccuracyPercent,
+        oralAccuracyPercent: student.oralAccuracyPercent ?? null,
         teacherVerified: student.teacherVerified,
         durationSec: student.readingDurationSeconds || 0,
         comprehensionScore: student.comprehensionScore ?? 0,
@@ -118,21 +118,22 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     };
   }, [student, currentAssessment]);
 
-  // Normative benchmark targets by grade level
+  // Empirical exploratory benchmark percentiles from Arabic CBM-ORF (2024, N=414 primary students across 3 passages)
   const gradeTargetWpm = useMemo(() => {
     switch (studentData.grade) {
       case 1:
-        return { min: 30, max: 45, label: '٣٠ - ٤٥ ك/د' };
+        return { p25: 15, median: 25, p75: 35, label: '١٥ - ٣٥ ك/د (مؤشر استرشادي أولي)' };
       case 2:
-        return { min: 45, max: 65, label: '٤٥ - ٦٥ ك/د' };
+        return { p25: 20, median: 35, p75: 50, label: '٢٠ - ٥٠ CWPM (وسيط دراسة 2024: ٣٥)' };
       case 3:
-        return { min: 60, max: 80, label: '٦٠ - ٨٠ ك/د' };
+        return { p25: 36, median: 51, p75: 65, label: '٣٦ - ٦٥ CWPM (وسيط دراسة 2024: ٥١)' };
       case 4:
-        return { min: 75, max: 95, label: '٧٥ - ٩٥ ك/د' };
+        return { p25: 52, median: 66, p75: 79, label: '٥٢ - ٧٩ CWPM (وسيط دراسة 2024: ٦٦)' };
       case 5:
+        return { p25: 67, median: 80, p75: 95, label: '٦٧ - ٩٥ CWPM (وسيط دراسة 2024: ٨٠)' };
       case 6:
       default:
-        return { min: 90, max: 115, label: '٩٠ - ١١٥ ك/د' };
+        return { p25: 70, median: 90, p75: 101, label: '٧٠ - ١٠١ CWPM (وسيط دراسة 2024: ٩٠)' };
     }
   }, [studentData.grade]);
 
@@ -143,24 +144,28 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     // Evaluate reading fluency (if measured)
     if (studentData.reading) {
-      if (typeof studentData.reading.wcpm === 'number') {
-        if (studentData.reading.wcpm >= gradeTargetWpm.min) {
+      if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
+        if (studentData.reading.wcpm >= gradeTargetWpm.median) {
           areasOfStrength.push(
-            `الطلاقة القرائية الشفوية الصحيحة (${studentData.reading.wcpm} WCPM بمعايرة المعلم ضمن النطاق المتوقع للصف ${studentData.grade})`
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM بمعايرة المعلم عند وسيط عينة دراسة 2024 أو أعلى: ${gradeTargetWpm.median} ك/د)`
+          );
+        } else if (studentData.reading.wcpm >= gradeTargetWpm.p25) {
+          areasOfStrength.push(
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM تقع ضمن النطاق الربيعي الاسترشادي: ${gradeTargetWpm.label})`
           );
         } else {
           areasNeedingSupport.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM مقارنة بالمستهدف الاسترشادي: ${gradeTargetWpm.label})`
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM دون المئين 25 الاسترشادي لدراسة 2024: ${gradeTargetWpm.p25} ك/د)`
           );
         }
       } else {
-        if (studentData.reading.wpm >= gradeTargetWpm.min) {
+        if (studentData.reading.wpm >= gradeTargetWpm.median) {
           areasOfStrength.push(
-            `الطلاقة القرائية الصامتة (${studentData.reading.wpm} ك/د ضمن النطاق المتوقع للصف ${studentData.grade})`
+            `سرعة القراءة الصامتة (${studentData.reading.wpm} ك/د في نص واحد — قراءة موقوتة استرشادية)`
           );
         } else {
           areasNeedingSupport.push(
-            `الطلاقة القرائية الصامتة (${studentData.reading.wpm} ك/د مقارنة بالمستهدف: ${gradeTargetWpm.label})`
+            `سرعة القراءة الصامتة (${studentData.reading.wpm} ك/د مقارنة بالنطاق الاسترشادي: ${gradeTargetWpm.label})`
           );
         }
       }
@@ -692,10 +697,12 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
-                        studentData.reading.wcpm >= gradeTargetWpm.min ? (
-                          <span className="text-emerald-700 font-bold">✓ ضمن المستهدف (معتمد)</span>
+                        studentData.reading.wcpm >= gradeTargetWpm.median ? (
+                          <span className="text-emerald-700 font-bold">✓ عند الوسيط أو أعلى (معتمد)</span>
+                        ) : studentData.reading.wcpm >= gradeTargetWpm.p25 ? (
+                          <span className="text-sky-700 font-bold">ضمن النطاق الربيعي</span>
                         ) : (
-                          <span className="text-amber-700 font-bold">يحتاج إلى تدريب</span>
+                          <span className="text-amber-700 font-bold">دون المئين 25 (يحتاج تدريب)</span>
                         )
                       ) : studentData.reading ? (
                         <span className="text-slate-500">غير مشمول (جلسة صامتة)</span>
@@ -717,7 +724,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
-                        studentData.reading.wpm >= gradeTargetWpm.min ? (
+                        studentData.reading.wpm >= gradeTargetWpm.p25 ? (
                           <span className="text-emerald-700 font-bold">✓ سرعة ملائمة</span>
                         ) : (
                           <span className="text-amber-700 font-bold">سرعة بطيئة</span>

@@ -1053,9 +1053,18 @@ export interface DerivedSessionEvidenceResult {
     calibrationValidationMethod: string;
     oralReadingAssessed: boolean;
     spokenTranscript: string;
+    wcpm?: number | null;
     oralWcpm: number | null;
     oralAccuracyPercent: number | null;
     oralWerPercent: number | null;
+    teacherVerified?: boolean;
+    teacherVerificationTimestamp?: string;
+    teacherVerifierRole?: string;
+    teacherWordOverridesCount?: number;
+    verifiedWordsAlignment?: Array<{
+      word: string;
+      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+    }>;
     phoneticSubstitutionCount: number;
     dialectVariantCount: number;
     omissionCount: number;
@@ -1425,18 +1434,11 @@ export function validateAndDeriveSessionFromEvidence(
     Boolean(evidenceObj.oralReadingAssessed ?? rawBody.oralReadingAssessed) &&
     spokenTranscript.length > 0;
 
-  const oralSlice = oralReadingAssessed
-    ? passage.words.slice(
-        0,
-        Math.min(
-          passage.words.length,
-          Math.max(6, spokenTranscript.split(/\s+/).filter(Boolean).length)
-        )
-      )
-    : [];
+  // Always evaluate oral reading alignment against the FULL reference passage words
+  // to avoid artificially inflating accuracy if the child read only a fraction of the text.
   const oralMetrics = oralReadingAssessed
     ? evaluateOralReadingAlignment(
-        oralSlice,
+        passage.words,
         spokenTranscript,
         Math.max(6, readingDurationSeconds),
         0,
@@ -1615,9 +1617,30 @@ export function validateAndDeriveSessionFromEvidence(
       calibrationValidationMethod: normalizedCalMethod.labelAr,
       oralReadingAssessed,
       spokenTranscript: oralReadingAssessed ? spokenTranscript : '',
+      wcpm: oralIntegration?.wcpm ?? null,
       oralWcpm: oralIntegration?.wcpm ?? null,
       oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
       oralWerPercent: oralIntegration?.werPercent ?? null,
+      teacherVerified: Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified),
+      teacherVerificationTimestamp:
+        typeof (rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp) === 'string'
+          ? String(rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp)
+          : undefined,
+      teacherVerifierRole:
+        typeof (rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole) === 'string'
+          ? String(rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole)
+          : undefined,
+      teacherWordOverridesCount:
+        typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
+          ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)
+          : undefined,
+      verifiedWordsAlignment:
+        Array.isArray(rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment)
+          ? ((rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment) as Array<{
+              word: string;
+              status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+            }>)
+          : undefined,
       phoneticSubstitutionCount:
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,

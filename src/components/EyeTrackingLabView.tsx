@@ -63,22 +63,35 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   }, [activeStudent]);
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(defaultPassageIndex);
-  const [guardianConsentChecked, setGuardianConsentChecked] = useState(true);
+  const [guardianConsentChecked, setGuardianConsentChecked] = useState(
+    Boolean(activeStudent?.guardianConsentGiven)
+  );
+  const [audioConsentChecked, setAudioConsentChecked] = useState(
+    Boolean(activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
+  );
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
 
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
 
   // Reading mode: oral audio with teacher verification vs timed silent reading
-  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('oral_audio');
+  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>(
+    (activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
+      ? 'oral_audio'
+      : 'timed_silent'
+  );
   const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
-    (activeStudent?.dialect as ArabicDialectCode) || 'eg'
+    activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian'
   );
 
   // Audio recording & Speech recognition state
   const [spokenTranscript, setSpokenTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
+  const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Teacher verification & Human-in-the-Loop review state
   const [verifiedWords, setVerifiedWords] = useState<
@@ -88,6 +101,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     }>
   >([]);
   const [teacherVerified, setTeacherVerified] = useState(false);
+  const [teacherOverridesCount, setTeacherOverridesCount] = useState(0);
   const [measuredWcpm, setMeasuredWcpm] = useState<number | undefined>(undefined);
   const [measuredAccuracyPercent, setMeasuredAccuracyPercent] = useState<number | undefined>(undefined);
 
@@ -125,12 +139,44 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     setReadingSeconds(0);
     setIsReadingActive(true);
     setSpokenTranscript('');
+    setAudioCaptureFailed(false);
+    setAudioPlaybackUrl(null);
     setStage('reading');
 
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setReadingSeconds(prev => prev + 1);
     }, 1000);
+
+    // Initialize HTML5 MediaRecorder for real playable audio stream if oral mode
+    if (
+      readingMode === 'oral_audio' &&
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then(stream => {
+          audioChunksRef.current = [];
+          const recorder = new MediaRecorder(stream);
+          recorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunksRef.current.push(e.data);
+          };
+          recorder.onstop = () => {
+            const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            if (blob.size > 0) {
+              const url = URL.createObjectURL(blob);
+              setAudioPlaybackUrl(url);
+            }
+            stream.getTracks().forEach(t => t.stop());
+          };
+          recorder.start();
+          mediaRecorderRef.current = recorder;
+        })
+        .catch(() => {
+          // Microphone permission denied or device not found
+        });
+    }
 
     // Initialize speech recognition if oral mode selected and supported
     if (readingMode === 'oral_audio' && typeof window !== 'undefined') {
@@ -141,13 +187,13 @@ export const EyeTrackingLabView: React.FC<Props> = ({
         try {
           const recognition = new SpeechRecognitionClass();
           const langCode =
-            studentDialect === 'eg'
+            studentDialect === 'egyptian'
               ? 'ar-EG'
-              : studentDialect === 'sa' || studentDialect === 'gulf'
+              : studentDialect === 'gulf'
               ? 'ar-SA'
-              : studentDialect === 'levant'
+              : studentDialect === 'levantine'
               ? 'ar-JO'
-              : studentDialect === 'maghreb'
+              : studentDialect === 'maghrebi'
               ? 'ar-MA'
               : 'ar-SA';
           recognition.lang = langCode;
@@ -180,10 +226,19 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     }
   };
 
-  // Finish reading, stop timer and stop speech recognition
+  // Finish reading, stop timer and stop speech recognition & audio recorder
   const handleFinishReading = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        // ignore
+      }
+      mediaRecorderRef.current = null;
+    }
 
     if (recognitionRef.current) {
       try {
@@ -210,28 +265,45 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
     // If oral audio mode, transition to Teacher Verification stage
     if (readingMode === 'oral_audio') {
-      // Align passage words with spoken transcript
-      const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
-        passage.words,
-        spokenTranscript || passage.words.join(' '), // Fallback to passage words if browser had no mic input
-        elapsedSec,
-        0,
-        studentDialect
-      );
+      const cleanTranscript = (spokenTranscript || '').trim();
+      const hasSpeechTokens = cleanTranscript.length > 0;
 
-      const initialWords = passage.words.map((targetWord, idx) => {
-        const aligned = alignmentResult.alignment[idx];
-        const status = aligned ? aligned.status : 'correct';
-        return {
+      if (!hasSpeechTokens) {
+        // DO NOT SUBSTITUTE TARGET TEXT!
+        // When speech recognition captures nothing, state that clearly and do not inflate metrics.
+        setAudioCaptureFailed(true);
+        const initialWords = passage.words.map(targetWord => ({
           word: targetWord,
-          status: status as 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted',
-        };
-      });
+          status: 'omitted' as const, // Default to omitted until teacher explicitly verifies
+        }));
+        setVerifiedWords(initialWords);
+        setMeasuredWcpm(undefined);
+        setMeasuredAccuracyPercent(undefined);
+        setStage('verification');
+      } else {
+        setAudioCaptureFailed(false);
+        const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
+          passage.words,
+          cleanTranscript,
+          elapsedSec,
+          0,
+          studentDialect
+        );
 
-      setVerifiedWords(initialWords);
-      setMeasuredWcpm(alignmentResult.wcpm);
-      setMeasuredAccuracyPercent(alignmentResult.accuracyPercent);
-      setStage('verification');
+        const initialWords = passage.words.map((targetWord, idx) => {
+          const aligned = alignmentResult.alignment[idx];
+          const status = aligned ? aligned.status : 'correct';
+          return {
+            word: targetWord,
+            status: status as 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted',
+          };
+        });
+
+        setVerifiedWords(initialWords);
+        setMeasuredWcpm(alignmentResult.wcpm);
+        setMeasuredAccuracyPercent(alignmentResult.accuracyPercent);
+        setStage('verification');
+      }
     } else {
       // Timed silent reading mode: jump directly to comprehension
       setSelectedAnswers({});
@@ -242,6 +314,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Toggle word status during Teacher Verification (Human-in-the-Loop)
   const handleToggleWordStatus = (index: number) => {
+    setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => {
       const next = [...prev];
       const current = next[index];
@@ -290,6 +363,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Mark all words as correct (quick action for fluent reading)
   const handleMarkAllCorrect = () => {
+    setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
   };
 
@@ -360,17 +434,27 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       typeof selectedAnswers[idx] === 'number' ? selectedAnswers[idx] : 0
     );
 
+    const hasAudioCaptured =
+      readingMode === 'oral_audio' &&
+      Boolean(spokenTranscript && spokenTranscript.trim().length > 0);
+
     const updatedRecord: StudentRecord = {
       ...baseStudent,
       passageId: passage.id,
       assessmentModality: 'reading_only',
       readingDurationSeconds: finalDurationSec,
       wpm: measuredWpm,
-      wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
+      wcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
+      oralWcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
       oralReadingAssessed: readingMode === 'oral_audio',
-      oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
+      oralAccuracyPercent: readingMode === 'oral_audio' ? (measuredAccuracyPercent ?? null) : null,
       teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      teacherVerifierRole: 'معلم / أخصائي قرائي',
+      teacherVerificationTimestamp: teacherVerified ? nowIso : undefined,
+      teacherWordOverridesCount: teacherOverridesCount,
+      verifiedWordsAlignment: verifiedWords,
       spokenTranscript: readingMode === 'oral_audio' ? spokenTranscript : undefined,
+      speechRecognitionUsed: hasAudioCaptured,
       fixations: [],
       calibrationAccuracyPercent: undefined,
       calibrationValidationMethod: undefined,
@@ -380,9 +464,17 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       sessionStatus: 'completed',
       sessionCompletedAt: nowIso,
       comprehensionAnswers: answersArray,
-      guardianConsentGiven: true,
-      guardianConsentRecordedAt: baseStudent.guardianConsentRecordedAt || nowIso,
-      guardianConsentSource: baseStudent.guardianConsentSource || 'إقرار ولي الأمر والمدرسة في مختبر القراءة',
+      guardianConsentGiven: Boolean(baseStudent.guardianConsentGiven || guardianConsentChecked),
+      guardianConsentRecordedAt:
+        baseStudent.guardianConsentRecordedAt || (guardianConsentChecked ? nowIso : undefined),
+      guardianConsentSource:
+        baseStudent.guardianConsentSource || (guardianConsentChecked ? 'إقرار موثق بمختبر القراءة' : undefined),
+      guardianAudioConsentGiven: Boolean(
+        baseStudent.guardianAudioConsentGiven || (readingMode === 'oral_audio' && audioConsentChecked)
+      ),
+      audioRecordingConsentGiven: Boolean(
+        baseStudent.audioRecordingConsentGiven || (readingMode === 'oral_audio' && audioConsentChecked)
+      ),
     };
 
     onCompleteSession(updatedRecord);
@@ -486,11 +578,11 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                     onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
                     className="p-2 border border-slate-300 rounded-xl bg-white font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
                   >
-                    <option value="eg">اللهجة المصرية (Egypt)</option>
-                    <option value="sa">اللهجة السعودية والخليجية (Gulf/Saudi)</option>
-                    <option value="levant">اللهجة الشامية (Levant)</option>
-                    <option value="maghreb">اللهجة المغاربية (Maghreb)</option>
-                    <option value="general">العربية الفصحى المعيارية (Modern Standard)</option>
+                    <option value="egyptian">اللهجة المصرية (Egyptian)</option>
+                    <option value="gulf">اللهجة الخليجية والسعودية (Gulf / Saudi)</option>
+                    <option value="levantine">اللهجة الشامية (Levantine)</option>
+                    <option value="maghrebi">اللهجة المغاربية (Maghrebi)</option>
+                    <option value="msa">العربية الفصحى المعيارية (Modern Standard)</option>
                   </select>
                 </div>
               )}
@@ -538,24 +630,41 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               </ul>
             </div>
 
-            {/* Guardian Consent Confirmation */}
-            <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 mb-8 text-right flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="guardian-consent-chk"
-                checked={guardianConsentChecked}
-                onChange={(e) => setGuardianConsentChecked(e.target.checked)}
-                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
-              />
-              <label htmlFor="guardian-consent-chk" className="text-xs font-bold text-emerald-950 cursor-pointer select-none">
-                أقر بتوثيق موافقة ولي الأمر وإدارة المدرسة المسبقة على إجراء فحص القراءة والاستيعاب وتسجيل مؤشرات الأداء للطالب.
-              </label>
+            {/* Guardian Consent Confirmation (Default-Deny according to Law 151/2020 & Exec Reg 816/2025) */}
+            <div className="space-y-3 mb-8 text-right">
+              <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="guardian-consent-chk"
+                  checked={guardianConsentChecked}
+                  onChange={(e) => setGuardianConsentChecked(e.target.checked)}
+                  className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="guardian-consent-chk" className="text-xs font-bold text-emerald-950 cursor-pointer select-none">
+                  أقر بتوثيق موافقة ولي الأمر وإدارة المدرسة المسبقة على إجراء فحص القراءة والاستيعاب وتسجيل مؤشرات الأداء للطالب (المادة 15 من لائحة 816/2025).
+                </label>
+              </div>
+
+              {readingMode === 'oral_audio' && (
+                <div className="bg-sky-50/80 rounded-2xl p-4 border border-sky-200 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="audio-consent-chk"
+                    checked={audioConsentChecked}
+                    onChange={(e) => setAudioConsentChecked(e.target.checked)}
+                    className="w-5 h-5 rounded text-sky-600 focus:ring-sky-500 cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="audio-consent-chk" className="text-xs font-bold text-sky-950 cursor-pointer select-none">
+                    موافقة صريحة ومستقلة على استخدام الميكروفون وتسجيل صوت قراءة الطالب مؤقتاً لتدقيق الطلاقة الشفوية (WCPM).
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Start Button */}
             <button
               onClick={handleStartReading}
-              disabled={!guardianConsentChecked}
+              disabled={!guardianConsentChecked || (readingMode === 'oral_audio' && !audioConsentChecked)}
               className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
             >
               <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
@@ -760,6 +869,35 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Playable Child Audio Recording */}
+            {audioPlaybackUrl && (
+              <div className="mb-6 p-4 rounded-2xl bg-indigo-50/80 border border-indigo-200 text-right">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-indigo-700" />
+                    تسجيل قراءة الطالب الحي (استمع للمقطع لمراجعة وتدقيق النطق):
+                  </span>
+                  <span className="text-[10px] text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full font-mono">
+                    {finalDurationSec} ثانية
+                  </span>
+                </div>
+                <audio src={audioPlaybackUrl} controls className="w-full h-10 rounded-xl" />
+              </div>
+            )}
+
+            {/* Audio Capture Failure Alert */}
+            {audioCaptureFailed && (
+              <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-right">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-950 leading-relaxed">
+                    <strong>تعذّر التقاط تفريغ صوتي من الميكروفون:</strong>
+                    لم تتوفر بيانات تفريغ آلي من المتصفح في هذه الجلسة. التزاماً بالنزاهة العلمية، لم يتم افتراض أي كلمة مقروءة آلياً لتجنب تزييف النتائج. يُرجى من المعلم تحديد الكلمات المقروءة يدوياً أو الاستماع للتسجيل الحي أعلاه.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Interactive Word Inspection Grid */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
@@ -769,7 +907,9 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={handleMarkAllCorrect}
-                  className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
+                  disabled={audioCaptureFailed && !audioPlaybackUrl}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 disabled:opacity-40 disabled:cursor-not-allowed bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
+                  title={audioCaptureFailed && !audioPlaybackUrl ? 'تعذر التقاط صوت لتأكيد القراءة الكاملة' : 'تعليم جميع الكلمات كقراءة صحيحة'}
                 >
                   ✓ تعليم الكل كقراءة صحيحة
                 </button>

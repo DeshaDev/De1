@@ -93,6 +93,7 @@ export interface StudentRecord {
   passageId: string;
   dialectRegionAr?: string;
   dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+  dialect?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
   /** Elapsed screen-reading duration in seconds; sent as evidence for server-side scoring. */
   readingDurationSeconds?: number;
   /** Raw answer indices for server-side comprehension scoring. */
@@ -104,11 +105,21 @@ export interface StudentRecord {
   guardianRelationship?: string;
   guardianConsentPeriod?: string;
   teacherVerified?: boolean;
+  teacherVerifierId?: string;
+  teacherVerifierRole?: string;
+  teacherVerificationTimestamp?: string;
+  teacherWordOverridesCount?: number;
+  verifiedWordsAlignment?: Array<{
+    word: string;
+    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+  }>;
   guardianAudioConsentGiven?: boolean;
+  audioRecordingConsentGiven?: boolean;
   guardianAudioConsentRecordedAt?: string;
   speechRecognitionUsed?: boolean;
   // Dyslexia / Eye-Tracking & Blink Rate metrics
   wpm: number;
+  wcpm?: number | null;
   avgFixationMs: number;
   regressionRate: number;
   regressionCount: number;

@@ -440,7 +440,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [guardianName, setGuardianName] = useState<string>('');
   const [guardianRelationship, setGuardianRelationship] = useState<string>('الأب');
   const [guardianConsentChecked, setGuardianConsentChecked] = useState<boolean>(false);
-  const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState<boolean>(true);
+  const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState<boolean>(false);
   const [registrationNotice, setRegistrationNotice] = useState<string>('');
 
   // Interactive Dyslexia Lens State
