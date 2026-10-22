@@ -802,7 +802,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </tbody>
               </table>
               <p className="text-[11px] text-slate-500 mt-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
-                * <strong>تنبيه منهجي استرشادي ومقارنة معيارية:</strong> مؤشرات الكلمات الصحيحة في الدقيقة (WCPM) مستخلصة من المئينات التجريبية لدراسة CBM-ORF العربية (2024، N=414) للصفوف من 2 إلى 6 (المعتمدة على متوسط 3 نصوص)، بينما هذا التقييم يعتمد جلسة نص فردية استرشادية. الصف الأول خارج نطاق العينة المعيارية لدراسة 2024 ويُعامل كمؤشر أولي تجريبي. ولا تُعد هذه النتائج معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
+                * ملاحظة منهجية: نتائج بصيرة الحالية مأخوذة من جلسة نص واحدة. دراسة CBM-ORF العربية (2024) استندت إلى متوسط ثلاثة نصوص لعينة محددة؛ لذلك لا تُعامل نتيجة هذه الجلسة كمئين أو معيار عمري، ولا كدليل على وجود صعوبة أو نفيها.
               </p>
             </div>
           </div>
@@ -981,7 +981,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   }}
                   className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-sm cursor-pointer"
                 >
-                  <span>بدء اللعبة في الصالة العلاجية</span>
+                  <span>بدء النشاط التدريبي</span>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               </div>
