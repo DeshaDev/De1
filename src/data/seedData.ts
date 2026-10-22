@@ -60,9 +60,9 @@ export interface StudentAssessmentSnapshot {
   regressionRate: number;
   comprehensionScore: number;
   problematicWords: string[];
-  dyslexiaRiskScore: number;
-  readingHeuristicIndicator: number;
-  readingRiskLevel: 'nominal' | 'moderate' | 'high';
+  dyslexiaRiskScore: number | null;
+  readingHeuristicIndicator: number | null;
+  readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   subitizingAccuracy: number | null;
   numberLinePAE: number | null;
   transcodingAccuracy: number | null;
@@ -148,9 +148,9 @@ export interface StudentRecord {
   dialectVariantCount?: number;
   omissionCount?: number;
   // Heuristic Dyslexia Screening Score
-  dyslexiaRiskScore: number;
-  readingHeuristicIndicator: number;
-  readingRiskLevel: 'nominal' | 'moderate' | 'high';
+  dyslexiaRiskScore: number | null;
+  readingHeuristicIndicator: number | null;
+  readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   readingRiskLabelAr: string;
   problematicWords: string[];
   fixations: WordFixation[];
