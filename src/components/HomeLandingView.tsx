@@ -1292,14 +1292,18 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                                 ? 'text-[#DC2626]'
                                 : stu.readingRiskLevel === 'moderate'
                                   ? 'text-[#D97706]'
-                                  : 'text-[#059669]'
+                                  : stu.readingRiskLevel === 'unassessed'
+                                    ? 'text-slate-500'
+                                    : 'text-[#059669]'
                             }`}
                           >
                             {stu.readingRiskLevel === 'high'
                               ? 'مؤشر تجريبي مرتفع'
                               : stu.readingRiskLevel === 'moderate'
                                 ? 'مؤشر تجريبي متوسط'
-                                : 'مثال تجريبي'}
+                                : stu.readingRiskLevel === 'unassessed'
+                                  ? 'غير مصنّف'
+                                  : 'مثال تجريبي'}
                           </span>
                         </div>
                       </div>
