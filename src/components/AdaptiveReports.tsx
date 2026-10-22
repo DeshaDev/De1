@@ -1,9 +1,7 @@
 /**
  * Adaptive Multi-Axis Screening Reports (تقارير الفرز التربوي الاسترشادي متعدد المحاور)
- * Tri-modal evaluation: Voice Phonology + Tactile Math + Reading Session
- * Educational screening portfolio: Parent, Specialist/Teacher (IEP), and Targeted Games.
- * NOTE: Strictly prevents report fabrication when no assessments have been completed.
- * Diagnostic overclaims (DSM-5 / ICD-11) removed per clinical validation standards.
+ * Tri-modal evaluation: Voice Phonology + Reading Fluency & Comprehension + Tactile Math
+ * Strictly evidence-based: NO fake defaults, NO uncalibrated eye metrics, NO unvalidated risk bands.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -12,7 +10,7 @@ import {
   Printer,
   Volume2,
   VolumeX,
-  Eye,
+  BookOpen,
   Mic,
   Hand,
   ChevronLeft,
@@ -23,6 +21,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Info,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
@@ -40,15 +40,18 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const [activeView, setActiveView] = useState<'parent' | 'teacher' | 'games'>('parent');
   const [isSpeakingSummary, setIsSpeakingSummary] = useState(false);
 
-  // Check if ANY real assessment data has been gathered
+  // Check if ANY verified assessment data has been gathered
   const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
   const hasTactileData = Boolean(currentAssessment?.tactileResults?.summary);
-  const hasEyeData = Boolean(
-    currentAssessment?.eyeTrackingResults || (student && student.sessionStatus === 'completed')
+  const hasReadingData = Boolean(
+    currentAssessment?.readingResults ||
+    currentAssessment?.eyeTrackingResults?.wpm ||
+    (student && student.sessionStatus === 'completed' && student.wpm > 0)
   );
-  const hasAnyAssessmentData = hasSpeechData || hasTactileData || hasEyeData;
 
-  // Synthesize student data from active assessment context or completed student record
+  const hasAnyAssessmentData = hasSpeechData || hasTactileData || hasReadingData;
+
+  // Synthesize student data strictly from genuine assessments
   const studentData = useMemo(() => {
     const studentName = student?.name || currentAssessment?.studentName || 'الطالب المستهدف';
     const age = student?.ageYears || currentAssessment?.age || 9;
@@ -61,30 +64,32 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     // Tactile data (only present if actually assessed)
     const tactileSummary = currentAssessment?.tactileResults?.summary || null;
 
-    // Eye tracking data
-    let eyeSummary: {
-      wcpm: number;
-      avgFixationMs: number;
-      regressionRate: number;
-      gazeCoverage: number;
-      visualStrain: string;
+    // Reading session data (strictly measured: WPM, duration, comprehension)
+    let readingSummary: {
+      wpm: number;
+      durationSec: number;
+      comprehensionScore: number;
+      passageTitle?: string;
     } | null = null;
 
-    if (currentAssessment?.eyeTrackingResults) {
-      eyeSummary = {
-        wcpm: currentAssessment.eyeTrackingResults.wpm || 55,
-        avgFixationMs: 310,
-        regressionRate: currentAssessment.eyeTrackingResults.regressionRate || 0,
-        gazeCoverage: 80,
-        visualStrain: 'مؤشر استرشادي من جلسة القراءة',
+    if (currentAssessment?.readingResults) {
+      readingSummary = {
+        wpm: currentAssessment.readingResults.wpm,
+        durationSec: currentAssessment.readingResults.durationSeconds,
+        comprehensionScore: currentAssessment.readingResults.comprehensionScore,
+        passageTitle: currentAssessment.readingResults.passageTitle,
       };
-    } else if (student && student.sessionStatus === 'completed') {
-      eyeSummary = {
-        wcpm: student.wpm || 55,
-        avgFixationMs: student.avgFixationMs || 310,
-        regressionRate: student.regressionRate ? Math.round(student.regressionRate * 100) : 18,
-        gazeCoverage: 85,
-        visualStrain: student.visualStrainLabelAr || 'ضمن النطاق المعتاد',
+    } else if (currentAssessment?.eyeTrackingResults?.wpm) {
+      readingSummary = {
+        wpm: currentAssessment.eyeTrackingResults.wpm,
+        durationSec: currentAssessment.eyeTrackingResults.readingDurationSeconds || 0,
+        comprehensionScore: currentAssessment.eyeTrackingResults.comprehensionScore || 0,
+      };
+    } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
+      readingSummary = {
+        wpm: student.wpm,
+        durationSec: student.readingDurationSeconds || 0,
+        comprehensionScore: student.comprehensionScore ?? 0,
       };
     }
 
@@ -95,67 +100,98 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       date,
       speech: speechSummary,
       tactile: tactileSummary,
-      eye: eyeSummary,
+      reading: readingSummary,
       clinicalReport: student?.clinicalReport,
     };
   }, [student, currentAssessment]);
 
-  // Comprehensive Educational Screening Risk Indicator (0 - 100)
-  // Computed strictly from available modules; does not fabricate unassessed modules
-  const riskCalculation = useMemo(() => {
-    let riskPoints = 0;
-    let assessedWeights = 0;
+  // Normative benchmark targets by grade level
+  const gradeTargetWpm = useMemo(() => {
+    switch (studentData.grade) {
+      case 1:
+        return { min: 30, max: 45, label: '٣٠ - ٤٥ ك/د' };
+      case 2:
+        return { min: 45, max: 65, label: '٤٥ - ٦٥ ك/د' };
+      case 3:
+        return { min: 60, max: 80, label: '٦٠ - ٨٠ ك/د' };
+      case 4:
+        return { min: 75, max: 95, label: '٧٥ - ٩٥ ك/د' };
+      case 5:
+      case 6:
+      default:
+        return { min: 90, max: 115, label: '٩٠ - ١١٥ ك/د' };
+    }
+  }, [studentData.grade]);
 
-    // Eye tracking risk factors (if assessed)
-    if (studentData.eye) {
-      assessedWeights += 35;
-      if (studentData.eye.regressionRate > 25) riskPoints += 15;
-      if (studentData.eye.wcpm < 60) riskPoints += 12;
-      if (studentData.eye.avgFixationMs > 340) riskPoints += 8;
+  // Objective performance status without synthetic risk scoring
+  const performanceEvaluation = useMemo(() => {
+    const areasOfStrength: string[] = [];
+    const areasNeedingSupport: string[] = [];
+
+    // Evaluate reading fluency (if measured)
+    if (studentData.reading) {
+      if (studentData.reading.wpm >= gradeTargetWpm.min) {
+        areasOfStrength.push(
+          `الطلاقة القرائية (${studentData.reading.wpm} ك/د ضمن النطاق المتوقع للصف ${studentData.grade})`
+        );
+      } else {
+        areasNeedingSupport.push(
+          `الطلاقة القرائية (${studentData.reading.wpm} ك/د مقارنة بالمستهدف: ${gradeTargetWpm.label})`
+        );
+      }
+
+      if (studentData.reading.comprehensionScore >= 70) {
+        areasOfStrength.push(
+          `استيعاب المقروء (${studentData.reading.comprehensionScore}% دقة إجابة أسئلة النص)`
+        );
+      } else if (studentData.reading.comprehensionScore > 0) {
+        areasNeedingSupport.push(
+          `الفهم الضمني للنص (${studentData.reading.comprehensionScore}% إجابات صحيحة)`
+        );
+      }
     }
 
-    // Speech phonology risk factors (if assessed)
+    // Evaluate speech phonology (if measured)
     if (studentData.speech) {
-      assessedWeights += 35;
-      if (studentData.speech.averageConfidence < 80) riskPoints += 15;
-      if (studentData.speech.problematicLetters.length >= 2) riskPoints += 12;
-      if (studentData.speech.hesitationMs > 500) riskPoints += 8;
+      if (studentData.speech.averageConfidence >= 80) {
+        areasOfStrength.push(
+          `الوعي الفونولوجي (${studentData.speech.averageConfidence}% مطابقة النطق)`
+        );
+      } else {
+        const letters = studentData.speech.problematicLetters.join('، ');
+        areasNeedingSupport.push(
+          `التمييز النطقي لأزواج الحروف (${letters || 'حروف متقاربة المخرج'})`
+        );
+      }
     }
 
-    // Tactile & math risk factors (if assessed)
+    // Evaluate tactile & math (if measured)
     if (studentData.tactile) {
-      assessedWeights += 30;
-      const mathSuccessRate =
+      const mathRate =
         (studentData.tactile.correctAnswers / Math.max(1, studentData.tactile.totalTasks)) * 100;
-      if (mathSuccessRate < 70) riskPoints += 15;
-      if (studentData.tactile.averageReactionTime > 1.8) riskPoints += 15;
+      if (mathRate >= 75) {
+        areasOfStrength.push(`المهام اللمسية العددية (${Math.round(mathRate)}% إنجاز)`);
+      } else {
+        areasNeedingSupport.push('التمثيل المكاني على خط الأعداد (PAE)');
+      }
     }
 
-    // Normalized score out of 100 based on modules actually assessed
-    const normalizedScore =
-      assessedWeights > 0 ? Math.round((riskPoints / assessedWeights) * 100) : 25;
+    const hasSpecificNeeds = areasNeedingSupport.length > 0;
+    const summaryHeadline = hasSpecificNeeds
+      ? 'مؤشرات أداء تستدعي مساندة صفية وتدريباً مستهدفاً'
+      : 'مؤشرات أداء نمائية تلائم المرحلة الصفية';
 
-    let band: 'low' | 'moderate' | 'high' = 'low';
-    let bandLabel = 'مؤشرات اعتيادية (ضمن النطاق النمائي الطبيعي)';
-    let badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-
-    if (normalizedScore >= 60) {
-      band = 'high';
-      bandLabel = 'مؤشرات تباين مرتفعة (يوصى بمساندة صفية وتدخل فردي)';
-      badgeColor = 'bg-red-100 text-red-800 border-red-300';
-    } else if (normalizedScore >= 35) {
-      band = 'moderate';
-      bandLabel = 'مؤشرات تباين معتدلة (تتطلب تمارين تدريبية مستهدفة)';
-      badgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
-    }
+    const badgeColor = hasSpecificNeeds
+      ? 'bg-amber-100 text-amber-900 border-amber-300'
+      : 'bg-emerald-100 text-emerald-900 border-emerald-300';
 
     return {
-      score: normalizedScore,
-      band,
-      bandLabel,
+      areasOfStrength,
+      areasNeedingSupport,
+      summaryHeadline,
       badgeColor,
     };
-  }, [studentData]);
+  }, [studentData, gradeTargetWpm]);
 
   // Dynamic audio speech synthesis summary for parents
   const speakParentSummary = () => {
@@ -167,21 +203,23 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     }
 
     const observations: string[] = [];
+    if (studentData.reading) {
+      observations.push(
+        `بلغت سرعة القراءة ${studentData.reading.wpm} كلمة بالدقيقة، بنسبة فهم واستيعاب ${studentData.reading.comprehensionScore}%`
+      );
+    }
     if (studentData.speech) {
-      observations.push(`بلغت دقة النطق الصوتي ${studentData.speech.averageConfidence}%`);
+      observations.push(`ودقة النطق الصوتي ${studentData.speech.averageConfidence}%`);
     }
     if (studentData.tactile) {
       observations.push(
-        `أنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام لمسية عددية`
+        `وأنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام لمسية`
       );
     }
-    if (studentData.eye) {
-      observations.push(`وبلغت سرعة القراءة ${studentData.eye.wcpm} كلمة في الدقيقة`);
-    }
 
-    const text = `مرحباً بكم. هذا ملخص صوتي استرشادي لنتائج تقييم الطالب ${studentData.studentName}. ${
+    const text = `مرحباً بكم. هذا ملخص تربوي استرشادي لنتائج الطالب ${studentData.studentName}. ${
       observations.length > 0 ? observations.join('، ') + '.' : ''
-    } نوصي بالاطلاع على خطة التدريبات المخصصة في هذا التقرير لدعم التطور القرائي والحسابي للطالب.`;
+    } تم استبعاد تتبع حركة العين بالكاميرا لضمان موثوقية النتائج. نوصي بمتابعة خطة التدريبات المخصصة في هذا التقرير لدعم التطور القرائي للطالب.`;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
@@ -230,8 +268,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     {
       id: 'colored-reader',
       title: 'القارئ العربي الميسر الذكي',
-      description: 'قراءة نصوص مشكولة مع مسطرة التظليل البصري والتلوين الديناميكي للحروف المتشابهة.',
-      targetSkill: 'التتبع البصري الإيقاعي وخفض الارتدادات (Reading Flow)',
+      description: 'قراءة نصوص مشكولة مع مسطرة التظليل البصري وتكبير التباعد لتسهيل التتبع السطري.',
+      targetSkill: 'الطلاقة القرائية واسترسال السطور (Reading Flow)',
       difficulty: 'متدرج' as const,
       duration: '15 دقيقة يومياً',
       tabTarget: 'adaptive-reader',
@@ -239,7 +277,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     },
   ];
 
-  // EMPTY STATE: Prevent rendering fake diagnostic reports when no tests have run
+  // EMPTY STATE: Prevent rendering fake reports when no tests have run
   if (!hasAnyAssessmentData) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-12 select-none font-sans" dir="rtl">
@@ -249,26 +287,46 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           </div>
 
           <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 mb-3">
-            حالة التقرير: في انتظار إجراء الاختبارات
+            حالة التقرير: في انتظار إجراء الاختبارات الفعلية
           </span>
 
           <h2 className="text-3xl font-black text-slate-900 mb-3">
             لم يُجرَ أي تقييم بعد للطالب
           </h2>
           <p className="text-base text-slate-600 max-w-xl mx-auto mb-8 leading-relaxed">
-            التزاماً بمعايير النزاهة العلمية والشفافية التربوية، لا تُولّد منصة «بصيرة» تقارير أو مؤشرات مخاطر افتراضية بدون قياس فعلي. يرجى البدء بأحد محاور الفرز أدناه:
+            التزاماً بالنزاهة العلمية التامة، لا تُعرض أي نتائج أو مؤشرات فرز افتراضية ما لم تكن مبنية على قياس فعلي مباشر. يرجى البدء بأحد الاختبارات أدناه:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 text-right">
-            {/* 1. Speech Analysis Card */}
+            {/* 1. Reading Session Card */}
+            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-teal-300 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mb-4">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-base mb-1">جلسة القراءة والفهم</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  قياس زمن القراءة، سرعة الطلاقة (WPM)، ودقة استيعاب محتوى النص المشكول.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateTab && onNavigateTab('professional-eye-tracking')}
+                className="mt-6 w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>بدء جلسة القراءة</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 2. Speech Analysis Card */}
             <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-indigo-300 transition-colors flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4">
                   <Mic className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">تحليل النطق العربي</h3>
+                <h3 className="font-bold text-slate-900 text-base mb-1">تحليل النطق والوعي الصوتي</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  فحص الوعي الفونولوجي، أزواج الحروف المتشابهة صوتياً، ومعدل التردد والتوقف.
+                  فحص دقة نطق الكلمات العربية، وتمييز أصوات الحروف المتشابهة وكمون الاستجابة.
                 </p>
               </div>
               <button
@@ -280,7 +338,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </button>
             </div>
 
-            {/* 2. Tactile Math Card */}
+            {/* 3. Tactile Math Card */}
             <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-purple-300 transition-colors flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
@@ -296,26 +354,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 className="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>بدء فحص الحساب</span>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* 3. Reading Session Card */}
-            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-emerald-300 transition-colors flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
-                  <Eye className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">جلسة قراءة النص</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  قياس سرعة القراءة والطلاقة والارتدادات البصرية الاسترشادية على الكلمات المشكولة.
-                </p>
-              </div>
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('professional-eye-tracking')}
-                className="mt-6 w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>بدء جلسة القراءة</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
@@ -335,10 +373,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             منظومة الفرز التربوي الشامل وخطط الدعم
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            تقرير الفرز التربوي الاسترشادي وخطة التدخل الفردية (IEP)
+            تقرير الأداء القرائي ونتائج الفرز التربوي
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            مؤشرات فرز تكيفية مستندة إلى أداء الطالب:{' '}
+            مؤشرات أداء مقاسة للطالب:{' '}
             <span className="font-bold text-teal-700">{studentData.studentName}</span> (الصف{' '}
             {studentData.grade} الابتدائي - {studentData.date})
           </p>
@@ -356,13 +394,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         </div>
       </div>
 
-      {/* Scientific Transparency Notice */}
+      {/* Scientific Transparency Disclosure */}
       <div className="mb-6 p-4 rounded-2xl bg-slate-100 border border-slate-200 text-right">
         <div className="flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-700 leading-relaxed">
-            <span className="font-bold block mb-0.5">إخلاء مسؤولية تربوي وتوجيه منهجي:</span>
-            هذا التقرير هو أداة فرز تربوي استرشادي (Educational Screening) لتحديد مجالات القوة والاحتياج، وتصميم خطط الدعم داخل الصف والمنزل. لا يُعتبر هذا التقرير تشخيصاً طبياً أو إكلينيكياً نهائياً لعسر القراءة أو الحساب، وتجب إحالة الحالات ذات المؤشرات المرتفعة لمختص معتمد لإجراء الاختبارات المعيارية.
+            <span className="font-bold block mb-0.5">ضوابط التقرير والحدود العلمية:</span>
+            هذا التقرير هو أداة فرز تربوي استرشادي لتحديد مواطن القوة والاحتياج وتوجيه الدعم الصفي والمنزلي. لا يُعد تشخيصاً طبياً أو إكلينيكياً نهائياً لعسر القراءة. تم استبعاد أي قياسات غير معايرة، ولا تُعرض أي درجات إلا من واقع الأداء الفعلي المسجل.
           </div>
         </div>
       </div>
@@ -419,7 +457,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   القارئ الصوتي الذكي لولي الأمر
                 </h3>
                 <p className="text-xs text-slate-600">
-                  استمع لملخص صوتي باللغة العربية يشرح نتائج الفرز الاسترشادي للطالب وأبرز التوصيات المنزلية.
+                  استمع لملخص صوتي باللغة العربية يشرح نتائج القراءة والنطق وأبرز التوصيات المنزلية.
                 </p>
               </div>
             </div>
@@ -455,14 +493,34 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </div>
 
               {/* Status Band Pill */}
-              <div className={`px-4 py-2 rounded-2xl border text-xs font-bold ${riskCalculation.badgeColor}`}>
-                {riskCalculation.bandLabel}
+              <div
+                className={`px-4 py-2 rounded-2xl border text-xs font-bold ${performanceEvaluation.badgeColor}`}
+              >
+                {performanceEvaluation.summaryHeadline}
               </div>
             </div>
 
-            {/* Tri-Modal Progress Cards */}
+            {/* Tri-Modal Progress Cards (Strictly Measured Values) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              {/* 1. Speech */}
+              {/* 1. Reading & Comprehension */}
+              <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-100 text-right">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-teal-700 font-mono">
+                    {studentData.reading ? `${studentData.reading.wpm} ك/د` : 'لم يُجرَ'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة والفهم القرائي</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {studentData.reading
+                    ? `سرعة قراءة بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                    : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
+                </p>
+              </div>
+
+              {/* 2. Speech */}
               <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-right">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
@@ -477,24 +535,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {studentData.speech
                     ? `أظهر دقة نطق ${studentData.speech.averageConfidence}% مع رصد ${studentData.speech.wordsNeedingImprovement} كلمات تحتاج لتعزيز التمييز النطقي.`
                     : 'لم يكتمل فحص النطق في هذه الجلسة بعد.'}
-                </p>
-              </div>
-
-              {/* 2. Reading */}
-              <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-right">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                    <Eye className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700 font-mono">
-                    {studentData.eye ? `${studentData.eye.wcpm} كلمة/دقيقة` : 'لم تُجرَ'}
-                  </span>
-                </div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة القرائية</h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {studentData.eye
-                    ? `سرعة قراءة بلغت ${studentData.eye.wcpm} كلمة/دقيقة مع ارتدادات استرشادية بنسبة ${studentData.eye.regressionRate}%.`
-                    : 'لم تكتمل جلسة القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
 
@@ -537,9 +577,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
                   <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (٦ - ١٠)</span>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">القراءة بالمسطرة الرقمية</h4>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">القراءة الموجهة الميسرة</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    قراءة نص قصير في القارئ الميسر مع تفعيل مسطرة السطر لتسهيل التتبع ومنع القفز.
+                    قراءة نص قصير في القارئ الميسر مع مسطرة التتبع السطري لتنمية الثقة والاسترسال.
                   </p>
                 </div>
 
@@ -569,123 +609,142 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   ملف خطة الدعم التربوي الفردي الاسترشادية (IEP)
                 </span>
                 <h2 className="text-3xl font-black mb-1">
-                  تقرير الفرز التربوي الاسترشادي متعدد المحاور: {studentData.studentName}
+                  تقرير الفرز التربوي الاسترشادي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  مؤشرات فرز استرشادية لخطط التدخل والدعم الصفي — لا يُعتد بها كتشخيص سريري مستقل دون تقييم أخصائي معتمد
+                  تحليل مبني على المقاييس الفعلية المثبتة — لا يُعتد به كتشخيص سريري مستقل دون فحص أخصائي معتمد
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className={`px-4 py-2.5 rounded-xl border text-xs font-bold ${riskCalculation.badgeColor}`}>
-                  {riskCalculation.bandLabel}
+                <div
+                  className={`px-4 py-2.5 rounded-xl border text-xs font-bold ${performanceEvaluation.badgeColor}`}
+                >
+                  {performanceEvaluation.summaryHeadline}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Tri-Modal Metrics Table */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* 1. Reading & Eye */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 text-emerald-700 font-bold text-sm">
-                <Eye className="w-5 h-5" />
-                <span>المحور الأول: القراءة والطلاقة</span>
-              </div>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">سرعة القراءة (WCPM):</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.eye ? `${studentData.eye.wcpm} ك/د` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">متوسط زمن التثبيت:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.eye ? `${studentData.eye.avgFixationMs} ms` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">معدل الارتداد الاسترشادي:</span>
-                  <span className="font-mono font-bold text-amber-600">
-                    {studentData.eye ? `${studentData.eye.regressionRate}%` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">حالة المؤشر البصري:</span>
-                  <span className="font-mono font-bold text-emerald-600">
-                    {studentData.eye ? 'مكتمل' : 'لم يُجرَ'}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Transparent Measured vs. Excluded Data Table */}
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <span>جدول الشفافية والبيانات المقاسة فعلياً</span>
+            </h3>
 
-            {/* 2. Speech Phonology */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 text-indigo-700 font-bold text-sm">
-                <Mic className="w-5 h-5" />
-                <span>المحور الثاني: النطق والوعي الصوتي</span>
-              </div>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">دقة النطق الفونولوجي:</span>
-                  <span className="font-mono font-bold text-indigo-700">
-                    {studentData.speech ? `${studentData.speech.averageConfidence}%` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">كمون البدء الصوتي (VOT):</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.speech ? `${studentData.speech.hesitationMs} ms` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">أزواج الحروف المرصودة:</span>
-                  <span className="font-bold text-amber-600">
-                    {studentData.speech?.problematicLetters?.join('، ') || 'لا يوجد'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">التوقفات داخل الكلمة:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.speech ? `${studentData.speech.totalPauses} توقفات` : 'غير متاح'}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500 font-bold">
+                    <th className="py-3 px-4">المحور</th>
+                    <th className="py-3 px-4">المؤشر المقاس</th>
+                    <th className="py-3 px-4">القيمة الفعلية</th>
+                    <th className="py-3 px-4">المرجعية المعيارية</th>
+                    <th className="py-3 px-4">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {/* Reading Fluency */}
+                  <tr>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">الطلاقة القرائية</td>
+                    <td className="py-3.5 px-4 text-slate-600">سرعة القراءة (WPM)</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
+                      {studentData.reading ? `${studentData.reading.wpm} كلمة/دقيقة` : 'لم تُقَس'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {gradeTargetWpm.label} (الصف {studentData.grade})
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {studentData.reading ? (
+                        studentData.reading.wpm >= gradeTargetWpm.min ? (
+                          <span className="text-emerald-700 font-bold">✓ ضمن المستهدف</span>
+                        ) : (
+                          <span className="text-amber-700 font-bold">يحتاج إلى تدريب</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400">غير مكتمل</span>
+                      )}
+                    </td>
+                  </tr>
 
-            {/* 3. Tactile & Math */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 text-purple-700 font-bold text-sm">
-                <Hand className="w-5 h-5" />
-                <span>المحور الثالث: الحس العددي واللمسي</span>
-              </div>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">زمن الاستجابة الحركية:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.tactile ? `${studentData.tactile.averageReactionTime} ث` : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">المهام المنجزة بنجاح:</span>
-                  <span className="font-mono font-bold text-purple-700">
-                    {studentData.tactile
-                      ? `${studentData.tactile.correctAnswers} / ${studentData.tactile.totalTasks}`
-                      : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">معدل التردد الحركي:</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {studentData.tactile ? studentData.tactile.hesitationCount : 'غير متاح'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">مجال التركيز الأساسي:</span>
-                  <span className="font-bold text-amber-600">خط الأعداد (PAE)</span>
-                </div>
-              </div>
+                  {/* Reading Comprehension */}
+                  <tr>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">الفهم والاستيعاب</td>
+                    <td className="py-3.5 px-4 text-slate-600">دقة إجابات أسئلة النص</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
+                      {studentData.reading
+                        ? `${studentData.reading.comprehensionScore}%`
+                        : 'لم تُقَس'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">٧٠% أو أعلى</td>
+                    <td className="py-3.5 px-4">
+                      {studentData.reading ? (
+                        studentData.reading.comprehensionScore >= 70 ? (
+                          <span className="text-emerald-700 font-bold">✓ استيعاب سليم</span>
+                        ) : (
+                          <span className="text-amber-700 font-bold">استيعاب متوسط</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400">غير مكتمل</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Speech Phonology */}
+                  <tr>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">النطق والوعي الصوتي</td>
+                    <td className="py-3.5 px-4 text-slate-600">دقة التطابق الفونولوجي</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
+                      {studentData.speech
+                        ? `${studentData.speech.averageConfidence}%`
+                        : 'لم تُقَس'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">٨٠% أو أعلى</td>
+                    <td className="py-3.5 px-4">
+                      {studentData.speech ? (
+                        studentData.speech.averageConfidence >= 80 ? (
+                          <span className="text-emerald-700 font-bold">✓ دقة مناسبة</span>
+                        ) : (
+                          <span className="text-amber-700 font-bold">إبدالات متكررة</span>
+                        )
+                      ) : (
+                        <span className="text-slate-400">غير مكتمل</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Tactile Math */}
+                  <tr>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">الحس العددي</td>
+                    <td className="py-3.5 px-4 text-slate-600">إنجاز مهام خط الأعداد والكميات</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-purple-700">
+                      {studentData.tactile
+                        ? `${studentData.tactile.correctAnswers}/${studentData.tactile.totalTasks}`
+                        : 'لم تُقَس'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">٧٥% أو أعلى</td>
+                    <td className="py-3.5 px-4">
+                      {studentData.tactile ? (
+                        <span className="text-emerald-700 font-bold">✓ مكتمل</span>
+                      ) : (
+                        <span className="text-slate-400">غير مكتمل</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Micro Eye Gaze - Explicitly Excluded */}
+                  <tr className="bg-slate-50/60">
+                    <td className="py-3.5 px-4 font-bold text-slate-500">تتبع العين الميكروسكوبي</td>
+                    <td className="py-3.5 px-4 text-slate-400">تثبيتات البؤبؤ والارتدادات</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-400">غير مقاسة</td>
+                    <td className="py-3.5 px-4 text-slate-400">تتطلب عتاداً مخبرياً معتمداً</td>
+                    <td className="py-3.5 px-4 text-slate-500 font-semibold">
+                      ✕ مستبعدة لحماية الموثوقية
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -699,7 +758,22 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
-                    الهدف الفونولوجي والقرائي
+                    الهدف القرائي والطلاقة
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
+                </div>
+                <p className="text-sm font-bold text-slate-800 mb-2">
+                  رفع معدل القراءة الجهرية تدريجياً للاقتراب من المعدل المستهدف ({gradeTargetWpm.label})، مع قراءة النصوص المشكولة دون توقفات مخلة.
+                </p>
+                <div className="text-xs text-slate-600">
+                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> توظيف مسطرة القراءة الرقمية (Reading Ruler)، وتكبير التباعد بين السطور بنسبة 1.5x.
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
+                    الهدف الفونولوجي والتمييز الصوتي
                   </span>
                   <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
                 </div>
@@ -708,21 +782,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
                 <div className="text-xs text-slate-600">
                   <span className="font-bold text-slate-700">استراتيجية التدريس:</span> استخدام التغذية الراجعة الصوتية اللحظية، التقطيع المقطعي، والتمييز اللوني لمواضع النقاط.
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
-                    هدف التتبع البصري والطلاقة
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٨ أسابيع</span>
-                </div>
-                <p className="text-sm font-bold text-slate-800 mb-2">
-                  رفع معدل القراءة الجهرية تدريجياً بنسبة ٢٠%، مع تقليل التردد بين السطور.
-                </p>
-                <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> توظيف مسطرة القراءة الرقمية (Reading Ruler)، وتكبير التباعد بين السطور بنسبة 1.5x.
                 </div>
               </div>
 
@@ -785,7 +844,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
           {/* Grid of Adaptive Games */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {adaptiveGames.map((game) => (
+            {adaptiveGames.map(game => (
               <div
                 key={game.id}
                 className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"

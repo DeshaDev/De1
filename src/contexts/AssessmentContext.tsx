@@ -52,14 +52,29 @@ export interface TactileAssessmentResult {
   };
 }
 
+export interface ReadingAssessmentResult {
+  passageId: string;
+  passageTitle: string;
+  gradeLevel: number;
+  wordCount: number;
+  durationSeconds: number;
+  wpm: number;
+  comprehensionScore: number;
+  correctAnswersCount: number;
+  totalQuestionsCount: number;
+  readingRulerUsed?: boolean;
+  completedAt: string;
+}
+
 export interface CombinedAssessmentData {
   studentId: string;
   studentName: string;
   age: number;
   speechResults: SpeechAssessmentResult | null;
   tactileResults: TactileAssessmentResult | null;
+  readingResults?: ReadingAssessmentResult | null;
   eyeTrackingResults?: any | null;
-}
+};
 
 interface AssessmentContextType {
   currentAssessment: CombinedAssessmentData | null;
@@ -67,6 +82,7 @@ interface AssessmentContextType {
   startNewAssessment: (studentName: string, age?: number, studentId?: string) => void;
   saveSpeechResults: (results: SpeechAssessmentResult) => void;
   saveTactileResults: (results: TactileAssessmentResult) => void;
+  saveReadingResults: (results: ReadingAssessmentResult) => void;
   saveEyeTrackingResults: (results: any) => void;
   saveSpeechAnalysisResults: (results: any) => void;
   saveTactileAnalyticsResults: (results: any) => void;
@@ -99,6 +115,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
       age,
       speechResults: null,
       tactileResults: null,
+      readingResults: null,
       eyeTrackingResults: null,
     });
   };
@@ -121,7 +138,25 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
       age: prev?.age || 8,
       speechResults: prev?.speechResults || null,
       tactileResults: results,
+      readingResults: prev?.readingResults || null,
       eyeTrackingResults: prev?.eyeTrackingResults || null,
+    }));
+  };
+
+  const saveReadingResults = (results: ReadingAssessmentResult) => {
+    setCurrentAssessment(prev => ({
+      studentId: prev?.studentId || 'student-1',
+      studentName: prev?.studentName || 'الطالب',
+      age: prev?.age || 8,
+      speechResults: prev?.speechResults || null,
+      tactileResults: prev?.tactileResults || null,
+      readingResults: results,
+      eyeTrackingResults: {
+        wpm: results.wpm,
+        readingDurationSeconds: results.durationSeconds,
+        comprehensionScore: results.comprehensionScore,
+        completedAt: results.completedAt,
+      },
     }));
   };
 
@@ -244,6 +279,7 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         startNewAssessment,
         saveSpeechResults,
         saveTactileResults,
+    saveReadingResults,
         saveEyeTrackingResults,
         saveSpeechAnalysisResults,
         saveTactileAnalyticsResults,

@@ -1,24 +1,34 @@
 /**
- * Eye Tracking Lab - Exploratory Pupil Gaze & Word-by-Word Reading Tracker
- * Camera pupil estimation with Real-Time Word Foveal Detection
- * NOTE: Calibration stages removed per clinical/investor guidance.
- * Eye gaze overlays are exploratory and uncalibrated; not a clinical diagnostic.
+ * Arabic Reading & Comprehension Assessment Lab (مختبر القراءة والطلاقة والفهم القرائي)
+ * Pure, accessible, evidence-based Arabic oral and silent reading assessment.
+ * ZERO CAMERA / ZERO CALIBRATION / ZERO UNVALIDATED EYE GAZE MEASURES.
+ * Accurately measures:
+ *  1. Reading Duration (Elapsed seconds)
+ *  2. Reading Fluency (WPM = words / seconds * 60)
+ *  3. Reading Comprehension (Comprehension questions score %)
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
-  Camera,
-  Eye,
-  AlertCircle,
-  ChevronLeft,
-  Sparkles,
+  BookOpen,
+  Clock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
   ShieldCheck,
-  Info,
+  RotateCcw,
+  HelpCircle,
+  Award,
+  Layers,
+  Volume2,
 } from 'lucide-react';
-import webgazer from 'webgazer';
-import { StudentRecord, INITIAL_STUDENTS } from '../data/seedData';
-import { hitTestWordBoxes, WordBoundingBox } from '../utils/eyeTrackerEngine';
+import {
+  StudentRecord,
+  INITIAL_STUDENTS,
+  ARABIC_READING_PASSAGES,
+  ReadingPassage,
+} from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
 
 interface Props {
@@ -27,697 +37,547 @@ interface Props {
   onProceedToMathLab?: () => void;
 }
 
-interface PupilFeatures {
-  faceDetected: boolean;
-  leftEyeOpenRatio: number;
-  rightEyeOpenRatio: number;
-  combinedNormX: number;
-  combinedNormY: number;
-}
-
-// Gentle Web Audio Feedback Synthesizer
-const playChime = (freq = 520, duration = 0.08) => {
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch {
-    // audio fallback
-  }
-};
-
-// Reading Passage Paragraphs
-const READING_PARAGRAPHS = [
-  'فِي صَباحٍ مُشْرِقٍ خَرَجَتِ القِطَّةُ البَيْضاءُ الصَّغيرَةُ إلى حَديقَةِ المَنْزِلِ.',
-  'كانَتِ الشَّمْسُ دافِئَةً وَالأَزْهارُ المُتَفَتِّحَةُ تَمْلأُ المَكانَ بِعِطْرِها الزَّكِيِّ.',
-  'شاهَدَتِ القِطَّةُ فَراشَةً مُلَوَّنَةً تُحَلِّقُ قُرْبَ الشَّجَرَةِ فَرَكَضَتْ خَلْفَها فَرِحَةً.',
-  'وَبَعْدَ أَنْ تَعِبَتْ مِنَ اللَّعِبِ جَلَسَتْ تَحْتَ الظِّلِّ الظَّليلِ وَنامَتْ بِهُدوءٍ.',
-];
-
 export const EyeTrackingLabView: React.FC<Props> = ({
   onCompleteSession,
   activeStudent,
   onProceedToMathLab,
 }) => {
-  const { saveEyeTrackingResults } = useAssessment();
+  const { saveReadingResults } = useAssessment();
 
-  // Stage: direct setup -> reading (calibration stages completely removed)
-  const [stage, setStage] = useState<'setup' | 'reading'>('setup');
-  const stageRef = useRef<'setup' | 'reading'>('setup');
-  stageRef.current = stage;
+  // Selected passage (defaults to Grade 2 or Grade 3 passage)
+  const defaultPassageIndex = useMemo(() => {
+    const studentGrade = activeStudent?.gradeLevel || 3;
+    const foundIndex = ARABIC_READING_PASSAGES.findIndex(p => p.gradeLevel === studentGrade);
+    return foundIndex >= 0 ? foundIndex : 0;
+  }, [activeStudent]);
 
-  // Camera & Stream
-  const [cameraActive, setCameraActive] = useState(false);
-  const [isStartingCamera, setIsStartingCamera] = useState(false);
-  const [pupilFeatures, setPupilFeatures] = useState<PupilFeatures>({
-    faceDetected: false,
-    leftEyeOpenRatio: 0.3,
-    rightEyeOpenRatio: 0.3,
-    combinedNormX: 0.5,
-    combinedNormY: 0.5,
-  });
+  const [selectedPassageIndex, setSelectedPassageIndex] = useState(defaultPassageIndex);
+  const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
 
-  const streamRef = useRef<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const webgazerInitialized = useRef(false);
+  // Stages: 'intro' -> 'reading' -> 'comprehension' -> 'summary'
+  const [stage, setStage] = useState<'intro' | 'reading' | 'comprehension' | 'summary'>('intro');
 
-  // Reading & Word Tracking State
-  const [gazePosition, setGazePosition] = useState({
-    x: typeof window !== 'undefined' ? window.innerWidth / 2 : 500,
-    y: typeof window !== 'undefined' ? window.innerHeight / 2 : 400,
-  });
-  const [hasLiveGaze, setHasLiveGaze] = useState(false);
-  const [currentGazeWordIndex, setCurrentGazeWordIndex] = useState<number | null>(null);
-  const [currentGazeWordText, setCurrentGazeWordText] = useState<string>('');
-  const [regressionCount, setRegressionCount] = useState(0);
+  // Timer & Reading state
+  const [readingSeconds, setReadingSeconds] = useState(0);
+  const [isReadingActive, setIsReadingActive] = useState(false);
+  const timerRef = useRef<any>(null);
+  const readingStartTimestampRef = useRef<number>(0);
 
-  const wordRefs = useRef<Record<number, HTMLSpanElement | null>>({});
-  const wordBoxesRef = useRef<WordBoundingBox[]>([]);
-  const currentWordIndexRef = useRef<number | null>(null);
-  const regressionsCountRef = useRef<number>(0);
-  const wordFixationsRef = useRef<Record<number, number>>({});
-  const readingStartRef = useRef<number>(Date.now());
-  const gazePointsRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
+  // Accessibility comfort options
+  const [fontSizePx, setFontSizePx] = useState(26);
+  const [useReadingRuler, setUseReadingRuler] = useState(false);
+  const [activeRulerLineIndex, setActiveRulerLineIndex] = useState(0);
 
-  // Flatten words with global indices
-  const allWords = useMemo(() => {
-    let count = 0;
-    return READING_PARAGRAPHS.map((paragraph, pIdx) => {
-      const words = paragraph.split(' ').filter(Boolean);
-      return words.map(word => {
-        const item = { word, globalIndex: count, paragraphIndex: pIdx };
-        count++;
-        return item;
-      });
-    });
-  }, []);
+  // Comprehension questions state
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  const totalWordsCount = useMemo(() => {
-    return allWords.reduce((sum, p) => sum + p.length, 0);
-  }, [allWords]);
+  // Final derived metrics
+  const [measuredWpm, setMeasuredWpm] = useState(0);
+  const [finalDurationSec, setFinalDurationSec] = useState(0);
+  const [comprehensionScore, setComprehensionScore] = useState(0);
 
-  // Sync video element with webcam stream
-  useEffect(() => {
-    if (cameraActive && videoRef.current && streamRef.current) {
-      if (videoRef.current.srcObject !== streamRef.current) {
-        videoRef.current.srcObject = streamRef.current;
-        videoRef.current.play().catch(e => console.warn('Video play catch:', e));
-      }
-    }
-  }, [cameraActive]);
+  // Break passage words into visual lines for comfortable reading
+  const passageParagraphs = useMemo(() => {
+    const text = passage.words.join(' ');
+    // Split on full stops or logical clauses
+    const sentences = text.split(/(?<=[.،؛])\s+/).filter(Boolean);
+    return sentences.length > 0 ? sentences : [text];
+  }, [passage]);
 
-  // Periodic Face Detection check
-  useEffect(() => {
-    if (!cameraActive) return;
-
-    const checkFace = () => {
-      try {
-        const tracker = (webgazer as any).getTracker?.();
-        const positions = tracker?.getPositions?.();
-        const detected = Boolean(positions && Array.isArray(positions) && positions.length > 0);
-
-        setPupilFeatures(prev => {
-          if (prev.faceDetected === detected) return prev;
-          return { ...prev, faceDetected: detected };
-        });
-      } catch {
-        // ignore
-      }
-    };
-
-    const interval = setInterval(checkFace, 250);
-    return () => clearInterval(interval);
-  }, [cameraActive]);
-
-  // Measure word bounding boxes for word foveal hit-testing
-  const measureWordBoxes = useCallback(() => {
-    const boxes: WordBoundingBox[] = [];
-    Object.entries(wordRefs.current).forEach(([idxStr, el]) => {
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        boxes.push({
-          wordIndex: Number(idxStr),
-          left: rect.left,
-          top: rect.top,
-          right: rect.right,
-          bottom: rect.bottom,
-        });
-      }
-    });
-    wordBoxesRef.current = boxes;
-  }, []);
-
-  useEffect(() => {
-    if (stage === 'reading') {
-      const timer = setTimeout(measureWordBoxes, 200);
-      window.addEventListener('resize', measureWordBoxes);
-      window.addEventListener('scroll', measureWordBoxes);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('resize', measureWordBoxes);
-        window.removeEventListener('scroll', measureWordBoxes);
-      };
-    }
-  }, [stage, measureWordBoxes]);
-
-  // Start Camera
-  const handleStartCamera = useCallback(async () => {
-    setIsStartingCamera(true);
-    try {
-      // 1. Acquire Webcam Stream directly first
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user',
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-
-      // 2. Attach immediately to preview element
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch (e) {
-          console.warn('Preview video play warning:', e);
-        }
-      }
-      setCameraActive(true);
-
-      // 3. Configure WebGazer paths
-      const wgParams = webgazer.params as any;
-      if (wgParams) {
-        wgParams.faceMeshSolutionPath = '/mediapipe/face_mesh';
-        wgParams.showVideo = true;
-        wgParams.showFaceOverlay = false;
-        wgParams.showFaceFeedbackBox = false;
-      }
-
-      // 4. Defensive patch on TFFaceMesh to prevent unhandled rejections
-      const trackerProto = (webgazer as any).tracker?.TFFaceMesh?.prototype;
-      if (trackerProto && !trackerProto.__safePatched) {
-        const originalGetEyePatches = trackerProto.getEyePatches;
-        trackerProto.getEyePatches = async function (
-          video: any,
-          canvas: any,
-          width: number,
-          height: number
-        ) {
-          try {
-            if (!video || (video.readyState !== undefined && video.readyState < 2)) {
-              this.positionsArray = null;
-              return null;
-            }
-            const patches = await originalGetEyePatches.call(this, video, canvas, width, height);
-            if (!patches) {
-              this.positionsArray = null;
-            }
-            return patches || null;
-          } catch {
-            this.positionsArray = null;
-            return null;
-          }
-        };
-        trackerProto.__safePatched = true;
-      }
-
-      // 5. Provide shared stream to WebGazer
-      (webgazer as any).setStaticVideo(stream);
-
-      if (!webgazerInitialized.current) {
-        await webgazer
-          .setRegression('ridge')
-          .setTracker('TFFacemesh')
-          .showVideoPreview(true)
-          .showPredictionPoints(false)
-          .applyKalmanFilter(true)
-          .begin();
-
-        webgazerInitialized.current = true;
-      } else {
-        await webgazer.resume();
-      }
-
-      // 6. Ensure background video element is muted and positioned offscreen
-      const wgVideo = document.getElementById('webgazerVideoFeed') as HTMLVideoElement | null;
-      if (wgVideo) {
-        wgVideo.muted = true;
-        wgVideo.play().catch(() => {});
-      }
-
-      const wgContainer = document.getElementById('webgazerVideoContainer');
-      if (wgContainer) {
-        wgContainer.style.position = 'fixed';
-        wgContainer.style.top = '-9999px';
-        wgContainer.style.left = '-9999px';
-        wgContainer.style.opacity = '0';
-        wgContainer.style.pointerEvents = 'none';
-        wgContainer.style.zIndex = '-9999';
-      }
-
-      // 7. Real-time gaze listener with Word Foveal Detection
-      webgazer.setGazeListener((data: any) => {
-        if (data && typeof data.x === 'number' && typeof data.y === 'number') {
-          const clampedX = Math.max(10, Math.min(window.innerWidth - 10, data.x));
-          const clampedY = Math.max(10, Math.min(window.innerHeight - 10, data.y));
-
-          setPupilFeatures(prev => ({
-            ...prev,
-            faceDetected: true,
-            combinedNormX: clampedX / (window.innerWidth || 1),
-            combinedNormY: clampedY / (window.innerHeight || 1),
-          }));
-
-          setGazePosition({ x: clampedX, y: clampedY });
-          setHasLiveGaze(true);
-
-          // In Reading Stage: Detect word being looked at
-          if (stageRef.current === 'reading' && wordBoxesRef.current.length > 0) {
-            gazePointsRef.current.push({ x: clampedX, y: clampedY, t: Date.now() });
-
-            const hitIndex = hitTestWordBoxes(clampedX, clampedY, wordBoxesRef.current, 75);
-            if (hitIndex !== null) {
-              if (hitIndex !== currentWordIndexRef.current) {
-                // In Arabic (RTL), if index is smaller than before, eye jumped back to the right (Regression)
-                if (currentWordIndexRef.current !== null && hitIndex < currentWordIndexRef.current) {
-                  regressionsCountRef.current += 1;
-                  setRegressionCount(regressionsCountRef.current);
-                }
-
-                currentWordIndexRef.current = hitIndex;
-                setCurrentGazeWordIndex(hitIndex);
-
-                // Find word text
-                let foundWord = '';
-                allWords.forEach(p =>
-                  p.forEach(w => {
-                    if (w.globalIndex === hitIndex) foundWord = w.word;
-                  })
-                );
-                setCurrentGazeWordText(foundWord);
-              }
-
-              wordFixationsRef.current[hitIndex] = (wordFixationsRef.current[hitIndex] || 0) + 1;
-            }
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Camera initialization error:', error);
-      alert('فشل في تشغيل الكاميرا. يرجى التأكد من توصيل الكاميرا ومنح الإذن للمتصفح.');
-    } finally {
-      setIsStartingCamera(false);
-    }
-  }, [allWords]);
-
-  // Stop camera
-  const handleStopCamera = useCallback(() => {
-    try {
-      webgazer.pause();
-    } catch (e) {
-      console.warn('Error pausing webgazer:', e);
-    }
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    setCameraActive(false);
-    setPupilFeatures(prev => ({
-      ...prev,
-      faceDetected: false,
-    }));
-    setHasLiveGaze(false);
-  }, []);
-
-  // Proceed directly to Reading stage (No calibration steps)
-  const handleProceedToReading = useCallback(() => {
-    readingStartRef.current = Date.now();
-    gazePointsRef.current = [];
-    currentWordIndexRef.current = null;
-    regressionsCountRef.current = 0;
-    setRegressionCount(0);
-    setCurrentGazeWordIndex(null);
-    setCurrentGazeWordText('');
+  // Start reading timer
+  const handleStartReading = () => {
+    readingStartTimestampRef.current = Date.now();
+    setReadingSeconds(0);
+    setIsReadingActive(true);
     setStage('reading');
-    playChime(660, 0.12);
-  }, []);
 
-  // Finish Reading & Submit Session
-  const handleFinishReading = useCallback(() => {
-    const durationSec = Math.max(5, Math.round((Date.now() - readingStartRef.current) / 1000));
-    const points = gazePointsRef.current;
-    const regressions = regressionsCountRef.current;
-    // Regression rate is 0 if no gaze points recorded (not arbitrary 12%)
-    const regRate =
-      points.length > 0 ? Number(((regressions / Math.max(1, points.length)) * 100).toFixed(1)) : 0;
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setReadingSeconds(prev => prev + 1);
+    }, 1000);
+  };
 
-    const calculatedWpm = Math.max(25, Math.min(180, Math.round((totalWordsCount / durationSec) * 60)));
+  // Finish reading and stop timer
+  const handleFinishReading = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsReadingActive(false);
 
-    const baseStudent = activeStudent || INITIAL_STUDENTS[0];
-    const updatedRecord: StudentRecord = {
-      ...baseStudent,
-      readingDurationSeconds: durationSec,
-      wpm: calculatedWpm,
-      regressionCount: regressions,
-      regressionRate: regRate,
-      sessionStatus: 'completed',
-      sessionCompletedAt: new Date().toISOString(),
-    };
+    const elapsedSec = Math.max(
+      4,
+      Math.round((Date.now() - readingStartTimestampRef.current) / 1000)
+    );
+    setFinalDurationSec(elapsedSec);
 
-    // Save results into shared assessment context
-    saveEyeTrackingResults({
-      readingDurationSeconds: durationSec,
-      wpm: calculatedWpm,
-      regressionCount: regressions,
-      regressionRate: regRate,
-      wordsObserved: currentWordIndexRef.current !== null ? currentWordIndexRef.current + 1 : 0,
-      totalWords: totalWordsCount,
+    // Calculate real WPM strictly from measured duration
+    const calculatedWpm = Math.max(
+      15,
+      Math.min(220, Math.round((passage.words.length / elapsedSec) * 60))
+    );
+    setMeasuredWpm(calculatedWpm);
+
+    // Proceed to comprehension questions
+    setSelectedAnswers({});
+    setCurrentQuestionIndex(0);
+    setStage('comprehension');
+  };
+
+  // Handle question selection
+  const handleSelectOption = (questionIdx: number, optionIdx: number) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionIdx]: optionIdx,
+    }));
+  };
+
+  // Submit comprehension questions & finalize
+  const handleFinishComprehension = () => {
+    let correctCount = 0;
+    const questions = passage.comprehensionQuestions || [];
+
+    questions.forEach((q, idx) => {
+      if (selectedAnswers[idx] === q.correctIndex) {
+        correctCount += 1;
+      }
+    });
+
+    const scorePercent =
+      questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
+
+    setComprehensionScore(scorePercent);
+
+    // Save actual measured results to central assessment context
+    saveReadingResults({
+      passageId: passage.id,
+      passageTitle: passage.title,
+      gradeLevel: passage.gradeLevel,
+      wordCount: passage.words.length,
+      durationSeconds: finalDurationSec,
+      wpm: measuredWpm,
+      comprehensionScore: scorePercent,
+      correctAnswersCount: correctCount,
+      totalQuestionsCount: questions.length,
+      readingRulerUsed: useReadingRuler,
       completedAt: new Date().toISOString(),
     });
 
-    handleStopCamera();
-    onCompleteSession(updatedRecord);
-  }, [activeStudent, handleStopCamera, onCompleteSession, totalWordsCount, saveEyeTrackingResults]);
+    setStage('summary');
+  };
 
-  // Cleanup on unmount
+  // Complete session and save to parent record
+  const handleCommitSession = () => {
+    const baseStudent = activeStudent || INITIAL_STUDENTS[0];
+    const updatedRecord: StudentRecord = {
+      ...baseStudent,
+      readingDurationSeconds: finalDurationSec,
+      wpm: measuredWpm,
+      regressionCount: 0,
+      regressionRate: 0,
+      sessionStatus: 'completed',
+      sessionCompletedAt: new Date().toISOString(),
+      comprehensionAnswers: Object.values(selectedAnswers),
+    };
+
+    onCompleteSession(updatedRecord);
+  };
+
+  // Clean timer on unmount
   useEffect(() => {
     return () => {
-      try {
-        webgazer.pause();
-        webgazer.clearGazeListener();
-      } catch {
-        // cleanup ignore
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/50 flex flex-col justify-between font-sans select-none">
-      {/* =========================================================================
-          STAGE 1: SETUP & CAMERA PREVIEW (DIRECT ENTRY - NO CALIBRATION)
-          ========================================================================= */}
-      {stage === 'setup' && (
-        <div className="max-w-3xl w-full mx-auto p-6 md:p-8 pt-10">
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-blue-50/40 flex flex-col justify-between font-sans select-none" dir="rtl">
+      {/* =====================================================================
+          STAGE 1: BRIEFING & PASSAGE SELECTION
+          ===================================================================== */}
+      {stage === 'intro' && (
+        <div className="max-w-4xl w-full mx-auto p-6 md:p-8 pt-10">
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 md:p-10">
             {/* Header */}
-            <div className="text-center mb-6">
-              <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/25">
-                <Eye className="w-9 h-9 text-white" />
+            <div className="text-center mb-8">
+              <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-teal-600 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-teal-500/20">
+                <BookOpen className="w-9 h-9 text-white" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2">
-                مختبر القراءة وتتبع بؤبؤ العين
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
+                مختبر القراءة والطلاقة والفهم القرائي
               </h1>
-              <p className="text-slate-600 text-base md:text-lg">
-                جلسة قراءة عربية تفاعلية مع رصد تقديري لحركة البؤبؤ والكلمات المقروءة
+              <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto">
+                تقييم علمي مباشر لسرعة القراءة الجهرية، استرسال المفردات العربية المشكولة، ودقة استيعاب النص.
               </p>
             </div>
 
-            {/* Scientific Transparency Notice */}
-            <div className="mb-6 p-4 rounded-2xl bg-sky-50 border border-sky-200 text-right">
+            {/* Scientific Integrity Disclosure */}
+            <div className="mb-8 p-4 rounded-2xl bg-teal-50/80 border border-teal-200 text-right">
               <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-sky-900 leading-relaxed">
-                  <span className="font-bold block mb-1">تنبيه المنهجية والشفافية التقنية:</span>
-                  تم إلغاء مراحل المعايرة المصطنعة لحماية موثوقية النتائج. تتبع حركة العين في هذا النموذج هو مؤشر بصري استكشافي مبني على تقريب بؤبؤ العين عبر الكاميرا دون معايرة سريرية مسبقة. يُعتمد في الفرز التعليمي أساساً على دقة النطق الصوتي والفهم القرائي.
+                <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
+                <div className="text-xs text-teal-900 leading-relaxed">
+                  <span className="font-bold block mb-1">معيار النزاهة العلمية المعتمد:</span>
+                  تم استبعاد كاميرا تتبع العين والمعايرة الزائفة تماماً. هذا التقييم يعتمد حصرياً على البيانات الفعلية القابلة للإثبات: (1) زمن القراءة الفعلي بالثواني، (2) معدل الكلمات في الدقيقة (WPM)، (3) إجابات أسئلة الفهم والاستيعاب للنص.
                 </div>
               </div>
             </div>
 
-            {/* Camera Card */}
-            <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50/70 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Camera className="w-6 h-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-slate-900">معاينة الكاميرا المباشرة</h2>
-                </div>
-                <div
-                  className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
-                    cameraActive
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      cameraActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+            {/* Passage Selector */}
+            <div className="mb-8">
+              <label className="block text-sm font-bold text-slate-800 mb-3 text-right">
+                اختر النص القرائي المناسب للمستوى الدراسي:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {ARABIC_READING_PASSAGES.slice(0, 6).map((p, idx) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPassageIndex(idx)}
+                    className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex flex-col justify-between ${
+                      selectedPassageIndex === idx
+                        ? 'border-teal-600 bg-teal-50/80 shadow-md shadow-teal-100'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                     }`}
-                  />
-                  {cameraActive ? 'الكاميرا نشطة' : 'متوقفة'}
-                </div>
-              </div>
-
-              {/* Live Video Preview Box */}
-              <div className="relative w-full h-64 bg-slate-950 rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center mb-5">
-                <video
-                  ref={(el) => {
-                    videoRef.current = el;
-                    if (el && streamRef.current && el.srcObject !== streamRef.current) {
-                      el.srcObject = streamRef.current;
-                      el.play().catch(() => {});
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-cover transform -scale-x-100 transition-opacity duration-300 ${
-                    cameraActive ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-
-                {!cameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-slate-900 text-white">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center mb-3">
-                      <Camera className="w-8 h-8 text-blue-400" />
+                  >
+                    <div>
+                      <span className="text-[11px] font-bold text-teal-700 block mb-1">
+                        {p.gradeLabel}
+                      </span>
+                      <h4 className="font-bold text-slate-900 text-sm mb-1">{p.title}</h4>
                     </div>
-                    <p className="font-bold text-lg mb-1">الكاميرا غير نشطة</p>
-                    <p className="text-slate-400 text-sm max-w-sm">
-                      قم بتشغيل الكاميرا للتحقق من وضوح الوجه، أو انتقل مباشرة إلى جلسة القراءة
-                    </p>
-                  </div>
-                )}
-
-                {cameraActive && (
-                  <div
-                    className={`absolute inset-6 md:inset-8 rounded-2xl border-2 pointer-events-none transition-all duration-300 flex items-center justify-center ${
-                      pupilFeatures.faceDetected
-                        ? 'border-emerald-400/90 shadow-[0_0_25px_rgba(16,185,129,0.35)]'
-                        : 'border-amber-400/90 border-dashed'
-                    }`}
-                  >
-                    <span className="text-xs font-semibold text-white/90 bg-black/60 px-3 py-1 rounded-full backdrop-blur">
-                      {pupilFeatures.faceDetected
-                        ? '✓ تم رصد الوجه وحركة العينين'
-                        : 'اجلس أمام الكاميرا وثبّت رأسك'}
-                    </span>
-                  </div>
-                )}
+                    <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
+                      <span>{p.wordCount} كلمة</span>
+                      <span>{p.diacriticLabelAr.split(' ')[0]}</span>
+                    </div>
+                  </button>
+                ))}
               </div>
-
-              {/* Action Buttons & Status */}
-              {!cameraActive ? (
-                <div className="space-y-3">
-                  <button
-                    onClick={handleStartCamera}
-                    disabled={isStartingCamera}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg cursor-pointer"
-                  >
-                    <Camera className="w-6 h-6" />
-                    <span>{isStartingCamera ? 'جاري تشغيل الكاميرا...' : 'تشغيل الكاميرا للمعاينة'}</span>
-                  </button>
-                  <button
-                    onClick={handleProceedToReading}
-                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 px-4 rounded-xl transition-colors cursor-pointer text-sm"
-                  >
-                    متابعة القراءة بدون كاميرا (نمط القراءة والطلاقة الشفهية)
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Status Banner */}
-                  <div
-                    className={`p-4 rounded-xl border flex items-center gap-3 transition-colors ${
-                      pupilFeatures.faceDetected
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                        : 'bg-amber-50 border-amber-200 text-amber-900'
-                    }`}
-                  >
-                    {pupilFeatures.faceDetected ? (
-                      <>
-                        <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                        <div>
-                          <div className="font-bold text-base">تم رصد الوجه وحركة العينين بنجاح</div>
-                          <div className="text-xs text-emerald-700">
-                            جاهز للانتقال إلى جلسة قراءة النص مباشرة دون أي خطوات معايرة إضافية
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
-                        <div>
-                          <div className="font-bold text-base">جاري البحث عن معالم الوجه...</div>
-                          <div className="text-xs text-amber-700">
-                            تأكد من وضوح إضاءة الوجه والجلوس أمام الشاشة
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleStopCamera}
-                    className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer text-sm"
-                  >
-                    إيقاف الكاميرا
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Direct Proceed to Reading Button */}
+            {/* Instructions Card */}
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-8 text-right space-y-2">
+              <h3 className="font-bold text-slate-900 text-sm mb-2">إرشادات الجلسة:</h3>
+              <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
+                <li>اقرأ النص قراءة جهرية واضحة ومسترسلة كما تقرأ في الصف الدراسي.</li>
+                <li>سيبدأ المؤقت الدقيق فور الضغط على زر «ابدأ القراءة الآن».</li>
+                <li>عند الانتهاء من قراءة آخر كلمة في النص، اضغط على زر «أنهيت القراءة».</li>
+                <li>ستنتقل مباشرة للإجابة عن أسئلة الفهم القرائي (٤ أسئلة استيعاب).</li>
+              </ul>
+            </div>
+
+            {/* Start Button */}
             <button
-              onClick={handleProceedToReading}
-              className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-700 hover:via-teal-700 hover:to-indigo-700 text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
+              onClick={handleStartReading}
+              className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
             >
-              <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
-              <span>بدء جلسة قراءة النص العربي مباشرة</span>
+              <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
+              <span>ابدأ جلسة القراءة الآن</span>
               <ChevronLeft className="w-6 h-6" />
             </button>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          STAGE 2: READING STAGE WITH WORD-BY-WORD FOVEAL HIGHLIGHTING
-          ========================================================================= */}
+      {/* =====================================================================
+          STAGE 2: ACTIVE READING PASSAGE (PURE TIMED TEXT)
+          ===================================================================== */}
       {stage === 'reading' && (
-        <div className="max-w-4xl w-full mx-auto p-6 md:p-8 flex flex-col justify-between min-h-screen">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 md:p-12 mt-4">
-            {/* Disclaimer pill */}
-            <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-              <span>مؤشر تتبع استكشافي تجريبي — يُقاس زمن القراءة والارتدادات الاسترشادية</span>
-            </div>
-
-            {/* Header & Live Eye-Tracking Word Monitor */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-6 mb-8 gap-4">
+        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex flex-col justify-between min-h-screen">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-10 mt-4">
+            {/* Top Toolbar */}
+            <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-5 mb-6 gap-4">
               <div>
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full">
-                  جلسة القراءة وتتبع الكلمات
+                <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                  {passage.gradeLabel} · {passage.diacriticLabelAr}
                 </span>
-                <h2 className="text-3xl font-extrabold text-slate-900 mt-2">
-                  القِطَّةُ البَيْضاءُ فِي الحَديقَةِ
+                <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
+                  {passage.title}
                 </h2>
               </div>
 
-              {/* Real-time Current Word & Regressions Pill */}
-              <div className="flex flex-wrap items-center gap-3">
-                {cameraActive && (
-                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl shadow-sm">
-                    <Eye className="w-5 h-5 text-amber-600 animate-pulse" />
-                    <div className="text-right">
-                      <span className="text-[11px] font-bold text-amber-800 block">
-                        الكلمة المقدرة بالنظر:
-                      </span>
-                      <span className="text-lg font-black text-amber-950">
-                        {currentGazeWordText ? `"${currentGazeWordText}"` : 'اقرأ أول كلمة...'}
-                      </span>
-                    </div>
-                  </div>
-                )}
+              {/* Stopwatch & Accessibility Controls */}
+              <div className="flex items-center gap-3">
+                {/* Live Timer Pill */}
+                <div className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-sm">
+                  <Clock className="w-5 h-5 text-teal-400 animate-spin" style={{ animationDuration: '4s' }} />
+                  <span className="font-mono text-lg font-bold">
+                    {Math.floor(readingSeconds / 60)}:
+                    {(readingSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-xs text-slate-300">ثانية</span>
+                </div>
 
-                <div className="bg-blue-50 border border-blue-200 px-3 py-2 rounded-2xl text-xs font-bold text-blue-800 text-center">
-                  <div>الارتدادات (Regressions)</div>
-                  <div className="text-base font-black text-blue-600">{regressionCount}</div>
+                {/* Reading Ruler Toggle */}
+                <button
+                  onClick={() => setUseReadingRuler(!useReadingRuler)}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    useReadingRuler
+                      ? 'bg-amber-100 border-amber-300 text-amber-900'
+                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                  }`}
+                  title="مسطرة القراءة البصرية المساعدة"
+                >
+                  <Layers className="w-4 h-4" />
+                  <span className="hidden sm:inline">مسطرة السطر</span>
+                </button>
+
+                {/* Font Size Adjusters */}
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                  <button
+                    onClick={() => setFontSizePx(prev => Math.min(36, prev + 2))}
+                    className="px-2.5 py-1.5 text-xs font-bold hover:bg-slate-200 cursor-pointer"
+                    title="تكبير الخط"
+                  >
+                    أ+
+                  </button>
+                  <button
+                    onClick={() => setFontSizePx(prev => Math.max(20, prev - 2))}
+                    className="px-2.5 py-1.5 text-xs font-bold hover:bg-slate-200 cursor-pointer border-r border-slate-200"
+                    title="تصغير الخط"
+                  >
+                    أ-
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Interactive Arabic Reading Passage with Real-Time Word Highlighting */}
+            {/* Arabic Reading Passage with Tashkeel */}
             <div
-              className="space-y-8 text-right select-none"
-              dir="rtl"
-              style={{ lineHeight: '3' }}
+              className="py-6 px-4 md:px-8 text-right select-none space-y-6"
+              style={{
+                fontSize: `${fontSizePx}px`,
+                lineHeight: '2.5',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+              }}
             >
-              {allWords.map((paragraphWords, pIdx) => (
-                <p key={pIdx} className="text-2xl md:text-3xl font-semibold text-slate-800">
-                  {paragraphWords.map(item => {
-                    const isLookedAt = currentGazeWordIndex === item.globalIndex;
+              {passageParagraphs.map((sentence, sIdx) => {
+                const isRulerActive = useReadingRuler && activeRulerLineIndex === sIdx;
 
-                    return (
-                      <span
-                        key={item.globalIndex}
-                        ref={el => {
-                          wordRefs.current[item.globalIndex] = el;
-                        }}
-                        className={`relative inline-block mx-1.5 px-2.5 py-1 rounded-xl transition-all duration-100 ${
-                          isLookedAt
-                            ? 'bg-amber-300 text-slate-950 font-black scale-110 shadow-[0_0_20px_rgba(251,191,36,0.7)] border-2 border-amber-500 z-30'
-                            : 'text-slate-800 hover:text-blue-900'
-                        }`}
-                      >
-                        {item.word}
-
-                        {/* Floating Word Badge indicating active eye gaze */}
-                        {isLookedAt && (
-                          <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1 whitespace-nowrap animate-bounce pointer-events-none">
-                            <Eye className="w-3 h-3 text-amber-300" />
-                            <span>موضع القراءة</span>
-                          </span>
-                        )}
-                      </span>
-                    );
-                  })}
-                </p>
-              ))}
+                return (
+                  <p
+                    key={sIdx}
+                    onClick={() => setActiveRulerLineIndex(sIdx)}
+                    className={`font-semibold transition-all rounded-2xl px-4 py-2 cursor-pointer ${
+                      isRulerActive
+                        ? 'bg-amber-100/90 text-slate-950 shadow-md border-r-4 border-amber-500 font-bold'
+                        : useReadingRuler
+                        ? 'opacity-40 hover:opacity-80 text-slate-700'
+                        : 'text-slate-800 hover:text-teal-900'
+                    }`}
+                  >
+                    {sentence}
+                  </p>
+                );
+              })}
             </div>
 
-            {/* Bottom Centered "Next" Button */}
-            <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center justify-center">
+            {/* Bottom Finish Reading Button */}
+            <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col items-center justify-center">
               <button
                 onClick={handleFinishReading}
-                className="bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-600 hover:via-teal-700 hover:to-emerald-700 text-white font-extrabold text-2xl py-5 px-14 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center gap-4"
+                className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
               >
-                <span>إنهاء جلسة القراءة وحفظ النتائج</span>
+                <span>أنهيت القراءة — الانتقال لأسئلة الفهم</span>
                 <ChevronLeft className="w-8 h-8" />
               </button>
-              <p className="text-slate-500 text-sm mt-3 text-center">
-                اضغط هنا عند الانتهاء من قراءة النص بالكامل لحفظ زمن القراءة ومؤشرات الأداء
+              <p className="text-slate-500 text-xs mt-3 text-center">
+                اضغط على الزر فور الانتهاء لحساب زمن القراءة بدقة
               </p>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Real-time Gaze Indicator hovering over text when active */}
-          {hasLiveGaze && cameraActive && (
-            <div
-              className="fixed w-7 h-7 bg-emerald-400/50 border-2 border-emerald-500 rounded-full pointer-events-none z-50 transition-all duration-75 shadow-lg shadow-emerald-500/30"
-              style={{
-                left: gazePosition.x - 14,
-                top: gazePosition.y - 14,
-              }}
-            />
-          )}
+      {/* =====================================================================
+          STAGE 3: COMPREHENSION QUESTIONS
+          ===================================================================== */}
+      {stage === 'comprehension' && (
+        <div className="max-w-3xl w-full mx-auto p-6 md:p-8 pt-10">
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 md:p-10">
+            {/* Header */}
+            <div className="border-b border-slate-100 pb-5 mb-6 text-right">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 mb-2">
+                <HelpCircle className="w-3.5 h-3.5" />
+                اختبار الفهم والاستيعاب القرائي
+              </div>
+              <h2 className="text-2xl font-black text-slate-900">
+                السؤال {currentQuestionIndex + 1} من {passage.comprehensionQuestions.length}
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                المهارة المستهدفة: {passage.comprehensionQuestions[currentQuestionIndex]?.skillLabelAr}
+              </p>
+            </div>
+
+            {/* Current Question */}
+            {passage.comprehensionQuestions[currentQuestionIndex] && (
+              <div className="space-y-6">
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-relaxed">
+                    {passage.comprehensionQuestions[currentQuestionIndex].question}
+                  </h3>
+                </div>
+
+                {/* Options */}
+                <div className="space-y-3">
+                  {passage.comprehensionQuestions[currentQuestionIndex].options.map(
+                    (optionText, optIdx) => {
+                      const isSelected = selectedAnswers[currentQuestionIndex] === optIdx;
+
+                      return (
+                        <button
+                          key={optIdx}
+                          onClick={() => handleSelectOption(currentQuestionIndex, optIdx)}
+                          className={`w-full p-4 rounded-2xl border text-right font-bold transition-all cursor-pointer flex items-center justify-between text-base ${
+                            isSelected
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-950 shadow-sm'
+                              : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{optionText}</span>
+                          <span
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
+                              isSelected
+                                ? 'border-indigo-600 bg-indigo-600 text-white'
+                                : 'border-slate-300'
+                            }`}
+                          >
+                            {isSelected ? '✓' : ''}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <button
+                    onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentQuestionIndex === 0}
+                    className="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                    <span>السابق</span>
+                  </button>
+
+                  {currentQuestionIndex < passage.comprehensionQuestions.length - 1 ? (
+                    <button
+                      onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                      disabled={selectedAnswers[currentQuestionIndex] === undefined}
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <span>السؤال التالي</span>
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleFinishComprehension}
+                      disabled={selectedAnswers[currentQuestionIndex] === undefined}
+                      className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold rounded-xl text-base transition-colors shadow-lg cursor-pointer flex items-center gap-2"
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span>اعتماد الإجابات وعرض النتائج</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          STAGE 4: MEASURED RESULTS SUMMARY (EVIDENCE-ONLY)
+          ===================================================================== */}
+      {stage === 'summary' && (
+        <div className="max-w-3xl w-full mx-auto p-6 md:p-8 pt-10">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 md:p-10 text-center">
+            {/* Header Badge */}
+            <div className="w-20 h-20 mx-auto bg-gradient-to-tr from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20">
+              <Award className="w-10 h-10 text-white" />
+            </div>
+
+            <h2 className="text-3xl font-black text-slate-900 mb-2">
+              نتائج القراءة والفهم الفعلية
+            </h2>
+            <p className="text-slate-600 text-sm mb-8">
+              تم احتساب المقاييس التالية بناءً على الأداء الحقيقي للطالب في النص: «{passage.title}»
+            </p>
+
+            {/* Verified Metrics Dashboard */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-right">
+              {/* 1. WPM */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+                <span className="text-xs font-bold text-emerald-800 block mb-1">
+                  سرعة القراءة الفعلية
+                </span>
+                <div className="text-3xl font-black text-emerald-700 font-mono">
+                  {measuredWpm}{' '}
+                  <span className="text-sm font-semibold">ك/د</span>
+                </div>
+                <p className="text-[11px] text-emerald-700 mt-2">
+                  محسوبة من: {passage.words.length} كلمة ÷ {finalDurationSec} ثانية
+                </p>
+              </div>
+
+              {/* 2. Reading Time */}
+              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-5">
+                <span className="text-xs font-bold text-teal-800 block mb-1">
+                  زمن القراءة المستغرق
+                </span>
+                <div className="text-3xl font-black text-teal-700 font-mono">
+                  {finalDurationSec}{' '}
+                  <span className="text-sm font-semibold">ثانية</span>
+                </div>
+                <p className="text-[11px] text-teal-700 mt-2">
+                  مؤقت دقيق من بدء القراءة حتى إعلان الانتهاء
+                </p>
+              </div>
+
+              {/* 3. Comprehension */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
+                <span className="text-xs font-bold text-indigo-800 block mb-1">
+                  درجة الفهم القرائي
+                </span>
+                <div className="text-3xl font-black text-indigo-700 font-mono">
+                  {comprehensionScore}%
+                </div>
+                <p className="text-[11px] text-indigo-700 mt-2">
+                  نسبة الإجابات الصحيحة في أسئلة النص
+                </p>
+              </div>
+            </div>
+
+            {/* Clear Scientific Boundary Box */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right mb-8">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-700 leading-relaxed">
+                  <span className="font-bold text-slate-900 block mb-0.5">
+                    البيانات المقاسة مقابل المستبعدة:
+                  </span>
+                  ✓ <strong>ما تم قياسه بنجاح:</strong> زمن القراءة، سرعة الطلاقة اللفظية (WPM)، واستيعاب محتوى النص.<br />
+                  ✕ <strong>ما لم يُقَس:</strong> حركة العين الميكروسكوبية وتثبيتات البؤبؤ (تم استبعاد الكاميرا التزاماً بالمعايير العلمية والموثوقية التقنية).
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={handleCommitSession}
+                className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-lg py-4 px-10 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>حفظ النتائج والانتقال للتقرير الشامل</span>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={() => setStage('intro')}
+                className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 px-6 rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>إعادة القراءة بنص آخر</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -21,11 +21,11 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
     <section className="grid gap-4 sm:grid-cols-2">
       <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
         <div className="flex items-center gap-2 font-bold text-slate-900">
-          <Camera className="h-5 w-5 text-sky-700" aria-hidden="true" />
-          <span>الكاميرا وتتبع حركة العين (Zero-Video Storage)</span>
+          <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+          <span>خصوصية كاملة بدون كاميرا (Zero Camera / No Video)</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          تُعالج إشارات الكاميرا محلياً وبشكل فوري داخل متصفح المستخدم عبر نماذج الرؤية الحاسوبية لاستخراج إحداثيات بؤبؤ العين ومعدل الرمش. لا يتم حفظ أو تسجيل أو نقل أي بث فيديو أو صور خام لخوادم خارجية نهائياً.
+          تم استبعاد الكاميرا والمعايرة البصرية بالكامل من منظومة الفرز لحماية خصوصية الأطفال وضمان موثوقية النتائج. لا تتطلب المنصة تشغيل أي كاميرا أو التقاط أي صور، وتعتمد حصرياً على نصوص القراءة التفاعلية وأسئلة الفهم والتحليل الفونولوجي.
         </p>
       </article>
 
