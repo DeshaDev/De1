@@ -899,116 +899,127 @@ export function buildDeterministicClinicalReport(params: {
   phoneticSubstitutionCount: number;
   dialectVariantCount: number;
   assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
-    dyscalculiaAssessed: boolean;
+  dyscalculiaAssessed: boolean;
   numberLinePAE: number | null;
   subitizingAccuracy: number | null;
   reversalErrorCount: number | null;
 }): ClinicalReport {
-  const highReadingRisk =
-    params.avgFixationMs > 350 || params.regressionRate > 22;
   const isMathTested =
     params.dyscalculiaAssessed && typeof params.numberLinePAE === 'number';
-  const highMathRisk =
-    isMathTested &&
-    ((params.numberLinePAE ?? 0) > 12 || (params.reversalErrorCount ?? 0) > 0);
-
+  const numberLinePracticeSuggested =
+    isMathTested && ((params.numberLinePAE ?? 0) > 0 || (params.reversalErrorCount ?? 0) > 0);
+  const isReadingOnly = params.assessmentModality === 'reading_only';
+  const isVoiceOnly = params.assessmentModality === 'voice_only';
   const oralText = params.oralReadingAssessed
-    ? ` أظهر تحليل القراءة الجهرية (${params.dialectLabelAr}) دقة مطابقة فونولوجية ${params.oralAccuracyPercent ?? 0}% (إبدالات ديسلكسية: ${params.phoneticSubstitutionCount}، بدائل لهجية مقبولة: ${params.dialectVariantCount}).`
-    : ' (لم يتم تفعيل تسجيل القراءة الجهرية بالميكروفون في هذه الجلسة).';
+    ? ' محاذاة القراءة الجهرية (' + params.dialectLabelAr + ') سجلت مطابقة آلية/بشرية قدرها ' +
+      (params.oralAccuracyPercent === null ? 'غير متاحة' : params.oralAccuracyPercent) +
+      '%، و' + params.phoneticSubstitutionCount + ' إبدالات و' +
+      params.dialectVariantCount + ' صيغة لهجية محتملة؛ يلزم تفسيرها بحسب طريقة التحقق، ولا تشخّص عسر القراءة.'
+    : ' لم تُجرَ مراجعة جهرية للكلمات في هذه الجلسة.';
 
   const targetWordsSample =
-    params.problematicWords.slice(0, 4).join('، ') ||
-    'الكلمات متعددة المقاطع';
+    params.problematicWords.slice(0, 4).join('، ') || 'كلمات يختارها المعلم للتدريب';
 
   const exercises: ClinicalReport['interventionExercises'] = [
     {
-      title: 'تدريب التتبع الإيقاعي بالمقاطع الصوتية الملونة',
+      title: 'قراءة متدرجة وتقسيم الكلمات إلى مقاطع',
       durationMinutes: 10,
-      description: `قراءة فقرات متدرجة مع تفعيل المسطرة البصرية وتقسيم الكلمات المستهدفة (${targetWordsSample}) إلى مقاطع صوتية ملونة لتخفيف عبء فك الترميز البصري.`,
+      description:
+        'نشاط تعليمي مقترح لقراءة كلمات مثل (' + targetWordsSample +
+        ') وتقسيمها إلى مقاطع مع معلم أو ولي أمر. هذه توصية تعليمية وليست تدخلًا علاجيًا مُثبتًا.',
     },
     {
-      title: 'تمييز الحروف العربية المتشابهة رسماً ونقطياً',
+      title: 'تمييز الحروف العربية المتقاربة رسمًا ونقطًا',
       durationMinutes: 8,
       description:
-        'تدريب بصري وفونولوجي سريع للتفريق بين الحروف المتجانسة (ب/ت/ث/ن، ج/ح/خ، د/ذ، ص/ض، ط/ظ) داخل جمل مشكّلة.',
+        'ممارسة قراءة كلمات وجمل قصيرة تشمل أزواجًا مثل (ب/ت/ث، ج/ح/خ، د/ذ، ص/ض، ط/ظ)، مع شرح الفرق وتشجيع الطفل دون تصنيفه.',
     },
   ];
 
   if (isMathTested) {
     exercises.push({
-      title: highMathRisk
-        ? 'معايرة خط الأعداد الذهني وتثبيت خانتي الآحاد والعشرات'
-        : 'تعزيز الطلاقة الكمية والتمثيل المكاني على خط الأعداد (0-200)',
+      title: numberLinePracticeSuggested
+        ? 'تدريب اختياري على خط الأعداد والقيمة المكانية'
+        : 'استكشاف الكميات وخط الأعداد',
       durationMinutes: 10,
-      description: highMathRisk
-        ? `تدريب ملموس لتقليص الانحراف المكاني على خط الأعداد (PAE الحالي ${params.numberLinePAE}%) ومعالجة عكس ترتيب الآحاد والعشرات (${params.reversalErrorCount ?? 0} أخطاء).`
-        : `أنشطة إثرائية لربط الكميات النقطية السريعة (${params.subitizingAccuracy}%) بموقعها المكاني الدقيق على خط الأعداد.`,
+      description: numberLinePracticeSuggested
+        ? 'أظهرت هذه الجلسة خطأ تقدير على خط الأعداد قدره ' + params.numberLinePAE +
+          '% وعدد ' + (params.reversalErrorCount ?? 'غير متاح') +
+          ' من أخطاء عكس الأرقام في المهام المحددة. يمكن استخدام ذلك لاختيار تدريب، دون تحويله إلى تصنيف خطر.'
+        : 'نشاط اختياري لربط الكميات بمواقعها على خط الأعداد. المقاييس وصفية لهذه الجلسة ولا تكوّن درجة معيارية.',
     });
   } else {
     exercises.push({
-      title: 'القراءة الجهرية الموجهة وتنمية الحصيلة المعجمية',
+      title: 'قراءة مشتركة وتنمية المفردات',
       durationMinutes: 10,
       description:
-        'قراءة ثنائية مع المعلم أو ولي الأمر لرفع الطلاقة القرائية وتثبيت الربط بين الرسم الإملائي والنطق الصوتي.',
+        'يقرأ الطفل مع معلم أو ولي أمر، ويتحدثان عن معنى الكلمات، ويعيد الطفل صياغة فكرة من النص. لا يُفترض وجود صعوبة تشخيصية.',
     });
   }
 
   const accommodations: string[] = [
-    'استخدام خط عربي واضح وكبير (Readex Pro أو IBM Plex Sans Arabic بحجم 22–24px) مع تباعد أسطر 1.8 وخلفية كريمية دافئة لتقليل الإجهاد البصري.',
-    'تزويد الطالب بالمسطرة البصرية (Reading Ruler) لعزل السطر المقروء ومنع القفز أو التراجع البصري بين الأسطر.',
+    'إتاحة خط عربي واضح وكبير وتباعد أسطر مريح وخلفية يختارها الطفل، مع إمكانية تعديل التباين وحجم النص وفق الحاجة.',
+    'يمكن تجربة مسطرة قراءة اختيارية لعزل السطر إذا وجد الطفل ذلك مفيدًا؛ فائدتها وتفضيلها يختلفان بين الأطفال.',
   ];
 
-  if (highMathRisk) {
+  if (numberLinePracticeSuggested) {
     accommodations.push(
-      'توفير خط أعداد مرئي وشبكة مربعات ملونة لتمييز خانة الآحاد عن العشرات أثناء حل المسائل الحسابية.'
+      'يمكن تجربة خط أعداد مرئي ومكعبات القيمة المكانية، ثم ملاحظة ما إذا كانت هذه الوسائل تساعد الطفل في المهمة.'
     );
   } else {
     accommodations.push(
-      'منح وقت إضافي بنسبة 25% عند قراءة النصوص الطويلة وتجزئة الأسئلة المركبة إلى خطوات قصيرة.'
+      'إتاحة وقت إضافي عند الحاجة، وتقسيم التعليمات الطويلة إلى خطوات قصيرة؛ لا تُفرض نسبة ثابتة بوصفها معيارًا عامًا.'
     );
   }
 
   accommodations.push(
-    'تنبيه منهجي وإخلاء مسؤولية: هذه المؤشرات مبنية على أدلة مُبلَّغ بها من العميل وقواعد فرز استدلالية (Heuristic Screening) ولا تُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.'
+    'تفسير منهجي: هذه المخرجات أوصاف لمهام تعليمية قصيرة وليست أداة تشخيص طبي، ولا تُعرض منها درجات خطر معيارية دون تحقق مستقل على عينة مناسبة.'
   );
 
-  const isReadingOnly = params.assessmentModality === 'reading_only';
-  const isVoiceOnly = params.assessmentModality === 'voice_only';
+  const clinicalSummary = isReadingOnly
+    ? 'جلسة قراءة وفهم تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
+      '): معدل إتمام النص التقديري ' + params.wpm + ' كلمة/دقيقة في نص مرجعي من ' +
+      params.totalPassageWordCount + ' كلمة، ودرجة إجابات فهم النص. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. لا ينتج هذا النشاط معيارًا تشخيصيًا.'
+    : isVoiceOnly
+      ? 'جلسة قراءة جهرية تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
+        '): المعدل المسجل ' + params.wpm + ' كلمة/دقيقة.' + oralText +
+        ' هذا ملخص وصفي وليس تصنيفًا معياريًا أو تشخيصًا.'
+      : 'بيانات رصد بصري مسجلة في جلسة الطالب (' + params.studentName + '، الصف ' +
+        params.gradeLevel + '): تغطية ' + params.gazeCoveragePercent + '% (' +
+        params.observedWordCount + '/' + params.totalPassageWordCount +
+        ' كلمة)، ومتوسط تثبيت ' + params.avgFixationMs + ' مللي ثانية، وتراجعات مرصودة ' +
+        params.regressionCount + '، ومعدل رمش مسجل ' + params.blinksPerMinute +
+        '/دقيقة.' + oralText +
+        ' هذه أوصاف للقياسات وليست معيارًا تشخيصيًا؛ لا تُستنتج درجة خطر قبل تحقق مستقل على عينة عربية مناسبة.';
 
   return {
-    clinicalSummary: isReadingOnly
-      ? `[مؤشر فرز قرائي وفهم استرشادي — أدلة مقاسة ومُبلَّغ بها] يُظهر التقييم المباشر للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع إجابة أسئلة الفهم القرائي للنص المعتمد (${params.totalPassageWordCount} كلمة).${oralText} تقع المؤشرات المقاسة ضمن النطاق الاسترشادي ويوصى بالمتابعة الصفية المعتادة.`
-      : (isVoiceOnly
-        ? `[مؤشر فرز قرائي صوتي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر التقييم الشفهي للطالب (${params.studentName} · الصف ${params.gradeLevel}) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة.${oralText} تقع المؤشرات الصوتية ضمن النطاق الاسترشادي ويوصى بالمتابعة التربوية المعتادة.`
-        : `[مؤشر فرز أولي استرشادي — أدلة مُبلَّغ بها من العميل] يُظهر الفحص البصري للطالب (${params.studentName} · الصف ${params.gradeLevel}) بتغطية رصد فعلية ${params.gazeCoveragePercent}% (${params.observedWordCount}/${params.totalPassageWordCount} كلمة) سرعة قراءة تبلغ ${params.wpm} كلمة/دقيقة مع متوسط تثبيت بصري قدره ${params.avgFixationMs} مللي ثانية ونسبة تراجع بصري ${params.regressionRate}% ومعدل رمش ${params.blinksPerMinute} رمشة/دقيقة (${params.visualStrainLabelAr}).${oralText} ${
-            highReadingRisk
-              ? 'تشير هذه المؤشرات الاسترشادية إلى جهد بصري مرتفع في فك الترميز الصوتي والصرفي للكلمات العربية متعددة المقاطع ويوصى بعرضها على أخصائي صعوبات تعلم معتمد.'
-              : 'تقع مؤشرات الطلاقة القرائية وحركة العين المرصودة ضمن النطاق الاسترشادي الطبيعي المتوقع للمرحلة العمرية.'
-          }`),
+    clinicalSummary,
     ocularMotorAnalysis: isReadingOnly
-      ? 'تم إجراء الجلسة بنمط القراءة المباشرة وحساب زمن الإنجاز وأسئلة الفهم دون كاميرا أو تتبع للعين، التزاماً بالمصداقية العلمية المباشرة وحماية لخصوصية الطفل.'
-      : (isVoiceOnly
-        ? 'تم إجراء الجلسة بنمط القراءة الجهرية الشفهية فقط دون تفعيل تتبع بؤبؤ العين بالكاميرا، وبالتالي لم تُسجل بيانات التثبيت أو القفزات التراجعية البصرية (Regressions).'
-        : `سُجلت بيانات التثبيت البصري على ${params.observedWordCount} كلمة بمتوسط زمن تثبيت ${params.avgFixationMs}ms مقارنة بالمعيار الاسترشادي (220-260ms)، مع نسبة قفزات تراجعية (Regressions) بلغت ${params.regressionRate}% (${params.regressionCount} قفزة تراجعية)، وإجمالي ${params.blinkCount} رمشة عين (${params.blinksPerMinute} رمشة/دقيقة · دقة معايرة ${params.calibrationAccuracyPercent}% · ${params.calibrationValidationLabelAr}). ${
-            params.problematicWords.length > 0
-              ? `تركزت أطول فترات التوقف البصري أو التعثر النطقي عند الكلمات: (${params.problematicWords.join('، ')}) مما يعكس حاجة العين لإعادة المسح البصري للتمييز بين الحروف المتشابهة رسماً.`
-              : 'انتقلت العين بسلاسة من اليمين إلى اليسار عبر الكلمات المرصودة دون تراجعات غير اعتيادية.'
-          }`),
-    orthographicAndPhonologicalPatterns: `${
-      highReadingRisk
-        ? 'يُلاحظ تأنٍّ في معالجة الكلمات التي تشتمل على حروف متجانسة نقطياً (ب/ت/ث، ج/ح/خ) والمقاطع المشددة أو المتصلة بضمائر، مما يستدعي تفعيل التقطيع المقطعي الملون.'
-        : 'قدرة متوازنة على الربط بين الرسم الإملائي والتمثيل الصوتي للمقاطع العربية المشكّلة.'
-    }${oralText}`,
+      ? 'أُجريت الجلسة بقراءة النص والإجابة عن أسئلة الفهم دون كاميرا أو تتبع للعين. لذلك لم تُسجّل بيانات التثبيت أو التراجعات أو الرمش من الكاميرا.'
+      : isVoiceOnly
+        ? 'أُجريت الجلسة بالقراءة الجهرية دون تتبع للعين؛ لا توجد بيانات عن التثبيتات أو القفزات البصرية.'
+        : 'بيانات رصد بصري وصفية: ' + params.observedWordCount + ' كلمة مرصودة، ومتوسط تثبيت ' +
+          params.avgFixationMs + ' مللي ثانية، وتراجعات ' + params.regressionCount +
+          '، ورمش ' + params.blinkCount + ' (' + params.blinksPerMinute +
+          '/دقيقة)، ودقة المعايرة المسجلة ' + params.calibrationAccuracyPercent +
+          '% (' + params.calibrationValidationLabelAr +
+          '). لا يمكن تفسير هذه القيم بوصفها خطرًا سريريًا دون تحقق مستقل.',
+    orthographicAndPhonologicalPatterns: isReadingOnly
+      ? 'لم تُقيّم أنماط الإملاء أو النطق في الجلسة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
+      : isVoiceOnly
+        ? 'مخرجات المحاذاة الصوتية أولية أو راجعها المعلم بحسب نوع الجلسة. الكلمات والبدائل اللهجية المرصودة تحتاج إلى مراجعة بشرية قبل تفسيرها.' + oralText
+        : 'هذه أوصاف آلية للكلمات المرصودة وليست تفسيرًا تشخيصيًا. الكلمات المقترحة للمراجعة، إن وجدت: ' +
+          (params.problematicWords.slice(0, 6).join('، ') || 'لا توجد كلمات محددة للمراجعة') + '.' + oralText,
     dyscalculiaSpatialAnalysis: !isMathTested
-      ? 'لم يخضع الطالب لاختبار عسر الحساب (الديسكالكوليا) في هذه الجلسة بعد — لا يقوم النظام بتسجيل درجات حسابية افتراضية قبل إتمام المحطات الثلاث في تبويب «مهام الحساب».'
-      : highMathRisk
-        ? `بلغ معدل الخطأ المطلق المطبّع في خط الأعداد (PAE) ${params.numberLinePAE}% مع دقة إدراك كمي فوري ${params.subitizingAccuracy}% ورصد ${params.reversalErrorCount ?? 0} أخطاء في ترتيب الآحاد والعشرات، مما يدل على حاجة لتدريب الحس المكاني للأعداد.`
-        : `أداء متوازن في الإدراك الكمي الفوري (${params.subitizingAccuracy}%) وتمثيل خط الأعداد الذهني بنسبة خطأ منخفضة (${params.numberLinePAE}%).`,
+      ? 'لم تُنفّذ مهام الحساب في هذه الجلسة؛ لا توجد نتائج حسابية أو درجة خطر. يمكن إجراء الأنشطة الحسابية الوصفية عند الحاجة.'
+      : 'مقاييس وصفية للمهام المنفذة: خطأ تقدير خط الأعداد ' + params.numberLinePAE +
+        '%، ودقة تمييز الكميات ' + (params.subitizingAccuracy === null ? 'غير متاحة' : params.subitizingAccuracy) +
+        '%، وأخطاء عكس الأرقام ' + (params.reversalErrorCount === null ? 'غير متاحة' : params.reversalErrorCount) +
+        '. لا تُحوّل هذه القيم من عدد قليل من المحاولات إلى درجة خطر أو تشخيص لعسر الحساب.',
     interventionExercises: exercises,
     classroomAccommodations: accommodations,
   };
 }
-
 // ============================================================================
 // Server-Side Plausibility & Evidence Derivation for Reading + Math Sessions
 // ============================================================================
@@ -1072,9 +1083,9 @@ export interface DerivedSessionEvidenceResult {
     phoneticSubstitutionCount: number;
     dialectVariantCount: number;
     omissionCount: number;
-    dyslexiaRiskScore: number;
-    readingHeuristicIndicator: number;
-    readingRiskLevel: 'nominal' | 'moderate' | 'high';
+    dyslexiaRiskScore: number | null;
+    readingHeuristicIndicator: number | null;
+    readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
     readingRiskLabelAr: string;
     problematicWords: string[];
     fixations: WordFixation[];
@@ -1612,31 +1623,18 @@ export function validateAndDeriveSessionFromEvidence(
     derivedWpm = Math.round((passage.words.length / readingDurationSeconds) * 60);
   }
 
-  // Derive risk indicators objectively based on measured modality:
-  // Avoid predicting clinical dyslexia risk scores on uncalibrated camera-free sessions without independent norming
-  let derivedDyslexiaRiskScore = 0;
-  let derivedReadingHeuristic = comprehensionScore;
-  let derivedReadingRiskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let derivedReadingRiskLabelAr = 'تقييم قراءة وفهم استرشادي';
-
-  if (eyeMetrics) {
-    derivedDyslexiaRiskScore = eyeMetrics.dyslexiaRiskScore;
-    derivedReadingHeuristic = eyeMetrics.heuristicIndicator;
-    derivedReadingRiskLevel = eyeMetrics.riskLevel;
-    derivedReadingRiskLabelAr = eyeMetrics.riskLabelAr;
-  } else if (isTeacherVerified) {
-    derivedReadingHeuristic = teacherAccuracyPercent ?? comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز قرائي واستيعابي استرشادي بمعايرة المعلم';
-  } else if (oralIntegration) {
-    derivedReadingHeuristic = oralIntegration.accuracyPercent ?? comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز صوتي استرشادي أولي';
-  } else if (isReadingOnlyModality) {
-    derivedReadingHeuristic = comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز قراءة صامتة وفهم استرشادي';
-  }
+  // No reading mode in this prototype has validated diagnostic cutoffs for Arabic children.
+  // Preserve measured speed, transcript alignment, and comprehension separately; never derive a risk score from them.
+  const derivedDyslexiaRiskScore: number | null = null;
+  const derivedReadingHeuristic: number | null = null;
+  const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
+  const derivedReadingRiskLabelAr = eyeMetrics
+    ? 'قياسات بصرية وصفية فقط؛ لم تُعتمد حدود خطر أو درجات معيارية.'
+    : isTeacherVerified
+      ? 'الطلاقة الشفوية راجعها المعلّم؛ لا توجد درجة خطر معيارية.'
+      : oralIntegration
+        ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
+        : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
   const clinicalReport = buildDeterministicClinicalReport({
     studentName: studentMeta.name,
