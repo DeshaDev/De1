@@ -83,9 +83,7 @@ export default function App() {
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'nominal'>(
-    'all'
-  );
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
   const [hideDemoRecords, setHideDemoRecords] = useState<boolean>(false);
 
   // Live Gemini AI re-analysis state
@@ -169,19 +167,9 @@ export default function App() {
       s.schoolName.includes(searchQuery.trim());
     if (!matchesSearch) return false;
 
-    // Incomplete sessions are not yet classifiable as high-risk or within-average.
-    if (s.sessionStatus === 'in_progress') {
-      return riskFilter === 'all';
-    }
-    if (riskFilter === 'high') {
-      return s.readingRiskLevel === 'high' || s.mathRiskLevel === 'high';
-    }
-    if (riskFilter === 'nominal') {
-      return (
-        s.readingRiskLevel === 'nominal' &&
-        (s.mathRiskLevel === 'nominal' || s.mathRiskLevel === 'unassessed')
-      );
-    }
+    // Filter by workflow completion, not by unvalidated diagnostic/risk labels.
+    if (sessionFilter === 'completed') return s.sessionStatus === 'completed';
+    if (sessionFilter === 'in_progress') return s.sessionStatus !== 'completed';
     return true;
   });
 
@@ -1117,7 +1105,7 @@ export default function App() {
                   <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h2 className="text-base font-bold text-slate-900">
-                        سجل الطلاب ومؤشرات الفرز الاسترشادية
+                        سجل الطلاب ونتائج الجلسات
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         اختر سجلًا لعرض ملخص الجلسة وخطوة الدعم المقترحة.
@@ -1128,9 +1116,9 @@ export default function App() {
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                       <button
                         type="button"
-                        onClick={() => setRiskFilter('all')}
+                        onClick={() => setSessionFilter('all')}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                          riskFilter === 'all'
+                          sessionFilter === 'all'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
@@ -1139,25 +1127,25 @@ export default function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setRiskFilter('high')}
+                        onClick={() => setSessionFilter('completed')}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                          riskFilter === 'high'
+                          sessionFilter === 'completed'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        تحتاج مراجعة
+                        جلسات مكتملة
                       </button>
                       <button
                         type="button"
-                        onClick={() => setRiskFilter('nominal')}
+                        onClick={() => setSessionFilter('in_progress')}
                         className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                          riskFilter === 'nominal'
+                          sessionFilter === 'in_progress'
                             ? 'bg-white text-slate-900 shadow-xs'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        مؤشر أولي منخفض
+                        قيد الاستكمال
                       </button>
                     </div>
                   </div>
@@ -1197,7 +1185,7 @@ export default function App() {
                         type="button"
                         onClick={() => {
                           setSearchQuery('');
-                          setRiskFilter('all');
+                          setSessionFilter('all');
                           setHideDemoRecords(false);
                         }}
                         className="px-3 py-1.5 text-xs font-semibold text-[#0284C7] hover:underline cursor-pointer"
@@ -1264,28 +1252,12 @@ export default function App() {
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
-                                  {stu.mathRiskLevel === 'unassessed' ||
-                                  stu.dyscalculiaAssessed === false ||
-                                  stu.numberLinePAE === null ? (
-                                    <span className="text-slate-400">
-                                      ○ غير مُقيَّم
+                                  {stu.dyscalculiaAssessed === true && typeof stu.numberLinePAE === 'number' ? (
+                                    <span className="text-slate-700">
+                                      {stu.numberLinePAE}% خطأ تقدير في المهمة
                                     </span>
                                   ) : (
-                                    <span
-                                      className={
-                                        stu.mathRiskLevel === 'high'
-                                          ? 'text-[#DC2626] font-semibold'
-                                          : stu.mathRiskLevel === 'moderate'
-                                            ? 'text-[#D97706] font-semibold'
-                                            : 'text-[#059669] font-medium'
-                                      }
-                                    >
-                                      {stu.mathRiskLevel === 'high'
-                                        ? `تحتاج مراجعة (${stu.numberLinePAE}%)`
-                                        : stu.mathRiskLevel === 'moderate'
-                                          ? `تحتاج تدريب (${stu.numberLinePAE}%)`
-                                          : `المهمة أُنجزت (${stu.numberLinePAE}%)`}
-                                    </span>
+                                    <span className="text-slate-400">لم تُقَس</span>
                                   )}
                                 </td>
                               </tr>
