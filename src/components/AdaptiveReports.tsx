@@ -145,7 +145,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     }
   }, [studentData.grade]);
 
-  // Objective performance status without synthetic risk scoring
+  const isOralReading = Boolean(studentData.reading && (studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true));
+  const hasOralReadingEvidence = Boolean(studentData.reading && ((studentData.reading.spokenTranscript || '').trim() || studentData.reading.teacherVerified === true));
+
+  // Describe only comparable measures; silent completion pace is not oral-reading fluency.
   const performanceEvaluation = useMemo(() => {
     const areasOfStrength: string[] = [];
     const areasNeedingSupport: string[] = [];
@@ -175,15 +178,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       } else if (isOralSession) {
         areasNeedingSupport.push('تعذّر احتساب WCPM موثوق لهذه الجلسة؛ يلزم تفريغ صوتي أو مراجعة بشرية موثّقة.');
       } else {
-        if (studentData.reading.wpm >= gradeTargetWpm.median) {
-          areasOfStrength.push(
-            `سرعة القراءة الصامتة (${studentData.reading.wpm} ك/د في نص واحد — قراءة موقوتة استرشادية)`
-          );
-        } else {
-          areasNeedingSupport.push(
-            `سرعة القراءة الصامتة (${studentData.reading.wpm} ك/د مقارنة بالنطاق الاسترشادي: ${gradeTargetWpm.label})`
-          );
-        }
+        // WPM here is only a rough passage-completion rate; it cannot be scored against oral WCPM norms.
       }
 
       if (studentData.reading.comprehensionScore >= 70) {
@@ -224,12 +219,16 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     const hasSpecificNeeds = areasNeedingSupport.length > 0;
     const summaryHeadline = hasSpecificNeeds
-      ? 'مؤشرات أداء تستدعي مساندة صفية وتدريباً مستهدفاً'
-      : 'مؤشرات أداء نمائية تلائم المرحلة الصفية';
+      ? 'مؤشرات تستحق المراجعة والمساندة الصفية'
+      : areasOfStrength.length > 0
+        ? 'مؤشرات قوة في المهام المنجزة'
+        : 'بيانات وصفية فقط — لا تكفي وحدها للحكم على مستوى الأداء';
 
     const badgeColor = hasSpecificNeeds
       ? 'bg-amber-100 text-amber-900 border-amber-300'
-      : 'bg-emerald-100 text-emerald-900 border-emerald-300';
+      : areasOfStrength.length > 0
+        ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+        : 'bg-slate-100 text-slate-800 border-slate-300';
 
     return {
       areasOfStrength,
@@ -587,7 +586,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                       ? studentData.reading.teacherVerified === true
                         ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
                         : `طلاقة الكلمات المقروءة شفوياً بلغت ${studentData.reading.wcpm} كلمة/دقيقة (محاذاة آلية أولية — بانتظار اعتماد المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص.`
-                      : `سرعة قراءة صامتة تقديرية (بناءً على زمن إتمام النص) بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                      : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا تقدير لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -731,7 +730,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {gradeTargetWpm.label} WCPM (الصف {studentData.grade})
+                      {isOralReading ? `${gradeTargetWpm.label} — نطاق استرشادي من دراسة عربية سعودية (2024)، لا معيار محلي ولا تشخيص` : 'غير قابل للمقارنة — النطاقات المنشورة هنا تخص القراءة الجهرية'}
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading && studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true ? (
@@ -766,16 +765,16 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {gradeTargetWpm.label} (الصف {studentData.grade})
+                      {isOralReading ? `${gradeTargetWpm.label} — للمقارنة الوصفية فقط` : 'غير قابل للمقارنة بمعايير WCPM؛ معدل إتمام نص واحد فقط'}
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
-                        studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true ? (
-                          <span className="text-slate-500">غير متاحة (غياب التفريغ الصوتي)</span>
-                        ) : studentData.reading.wpm >= gradeTargetWpm.p25 ? (
-                          <span className="text-emerald-700 font-bold">✓ سرعة ملائمة</span>
+                        isOralReading ? (
+                          hasOralReadingEvidence
+                            ? <span className="text-slate-600">معدل كلمات التفريغ فقط؛ لا يُفسّر منفردًا كمستوى طلاقة</span>
+                            : <span className="text-slate-500">غير متاح (لا يوجد تفريغ صوتي كافٍ)</span>
                         ) : (
-                          <span className="text-amber-700 font-bold">سرعة بطيئة</span>
+                          <span className="text-slate-600">معدل إتمام تقريبي لنص واحد؛ لا يكفي وحده لتقييم الطلاقة</span>
                         )
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
