@@ -946,7 +946,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                الإدراك المكاني العددي (Siegler & Booth)
+                نشاط تعليمي على خط الأعداد
               </span>
               <span className="text-xs font-medium text-slate-500">
                 تدريب اختياري على القيمة المكانية وخط الأعداد
