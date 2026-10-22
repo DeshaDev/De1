@@ -64,9 +64,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     // Tactile data (only present if actually assessed)
     const tactileSummary = currentAssessment?.tactileResults?.summary || null;
 
-    // Reading session data (strictly measured: WPM, duration, comprehension)
+    // Reading session data (strictly measured: WPM, WCPM, duration, comprehension)
     let readingSummary: {
       wpm: number;
+      wcpm?: number;
+      oralReadingAssessed?: boolean;
+      oralAccuracyPercent?: number;
+      teacherVerified?: boolean;
       durationSec: number;
       comprehensionScore: number;
       passageTitle?: string;
@@ -75,6 +79,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     if (currentAssessment?.readingResults) {
       readingSummary = {
         wpm: currentAssessment.readingResults.wpm,
+        wcpm: currentAssessment.readingResults.wcpm,
+        oralReadingAssessed: currentAssessment.readingResults.oralReadingAssessed,
+        oralAccuracyPercent: currentAssessment.readingResults.oralAccuracyPercent,
+        teacherVerified: currentAssessment.readingResults.teacherVerified,
         durationSec: currentAssessment.readingResults.durationSeconds,
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
         passageTitle: currentAssessment.readingResults.passageTitle,
@@ -82,12 +90,17 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     } else if (currentAssessment?.eyeTrackingResults?.wpm) {
       readingSummary = {
         wpm: currentAssessment.eyeTrackingResults.wpm,
+        wcpm: currentAssessment.eyeTrackingResults.wcpm,
         durationSec: currentAssessment.eyeTrackingResults.readingDurationSeconds || 0,
         comprehensionScore: currentAssessment.eyeTrackingResults.comprehensionScore || 0,
       };
     } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
       readingSummary = {
         wpm: student.wpm,
+        wcpm: student.wcpm,
+        oralReadingAssessed: student.oralReadingAssessed,
+        oralAccuracyPercent: student.oralAccuracyPercent,
+        teacherVerified: student.teacherVerified,
         durationSec: student.readingDurationSeconds || 0,
         comprehensionScore: student.comprehensionScore ?? 0,
       };
@@ -130,14 +143,26 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     // Evaluate reading fluency (if measured)
     if (studentData.reading) {
-      if (studentData.reading.wpm >= gradeTargetWpm.min) {
-        areasOfStrength.push(
-          `الطلاقة القرائية (${studentData.reading.wpm} ك/د ضمن النطاق المتوقع للصف ${studentData.grade})`
-        );
+      if (typeof studentData.reading.wcpm === 'number') {
+        if (studentData.reading.wcpm >= gradeTargetWpm.min) {
+          areasOfStrength.push(
+            `الطلاقة القرائية الشفوية الصحيحة (${studentData.reading.wcpm} WCPM بمعايرة المعلم ضمن النطاق المتوقع للصف ${studentData.grade})`
+          );
+        } else {
+          areasNeedingSupport.push(
+            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM مقارنة بالمستهدف الاسترشادي: ${gradeTargetWpm.label})`
+          );
+        }
       } else {
-        areasNeedingSupport.push(
-          `الطلاقة القرائية (${studentData.reading.wpm} ك/د مقارنة بالمستهدف: ${gradeTargetWpm.label})`
-        );
+        if (studentData.reading.wpm >= gradeTargetWpm.min) {
+          areasOfStrength.push(
+            `الطلاقة القرائية الصامتة (${studentData.reading.wpm} ك/د ضمن النطاق المتوقع للصف ${studentData.grade})`
+          );
+        } else {
+          areasNeedingSupport.push(
+            `الطلاقة القرائية الصامتة (${studentData.reading.wpm} ك/د مقارنة بالمستهدف: ${gradeTargetWpm.label})`
+          );
+        }
       }
 
       if (studentData.reading.comprehensionScore >= 70) {
@@ -509,13 +534,19 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-teal-700 font-mono">
-                    {studentData.reading ? `${studentData.reading.wpm} ك/د` : 'لم يُجرَ'}
+                    {studentData.reading
+                      ? typeof studentData.reading.wcpm === 'number'
+                        ? `${studentData.reading.wcpm} WCPM`
+                        : `${studentData.reading.wpm} ك/د`
+                      : 'لم يُجرَ'}
                   </span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة والفهم القرائي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
-                    ? `سرعة قراءة بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
+                    ? typeof studentData.reading.wcpm === 'number'
+                      ? `طلاقة الكلمات الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، وسرعة إجمالية ${studentData.reading.wpm} ك/د، واستيعاب ${studentData.reading.comprehensionScore}% للنص (المستهدف: ${gradeTargetWpm.label}).`
+                      : `سرعة قراءة صامتة بلغت ${studentData.reading.wpm} كلمة/دقيقة واستيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -645,10 +676,39 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {/* Reading Fluency */}
+                  {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">الطلاقة القرائية</td>
-                    <td className="py-3.5 px-4 text-slate-600">سرعة القراءة (WPM)</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">الطلاقة الشفوية المعتمدة</td>
+                    <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
+                      {studentData.reading && typeof studentData.reading.wcpm === 'number'
+                        ? `${studentData.reading.wcpm} WCPM`
+                        : studentData.reading
+                        ? 'قراءة صامتة (WPM فقط)'
+                        : 'لم تُقَس'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {gradeTargetWpm.label} WCPM (الصف {studentData.grade})
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
+                        studentData.reading.wcpm >= gradeTargetWpm.min ? (
+                          <span className="text-emerald-700 font-bold">✓ ضمن المستهدف (معتمد)</span>
+                        ) : (
+                          <span className="text-amber-700 font-bold">يحتاج إلى تدريب</span>
+                        )
+                      ) : studentData.reading ? (
+                        <span className="text-slate-500">غير مشمول (جلسة صامتة)</span>
+                      ) : (
+                        <span className="text-slate-400">غير مكتمل</span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Reading Fluency Total WPM */}
+                  <tr>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">السرعة القرائية الكلية</td>
+                    <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي (WPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading ? `${studentData.reading.wpm} كلمة/دقيقة` : 'لم تُقَس'}
                     </td>
@@ -658,9 +718,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
                         studentData.reading.wpm >= gradeTargetWpm.min ? (
-                          <span className="text-emerald-700 font-bold">✓ ضمن المستهدف</span>
+                          <span className="text-emerald-700 font-bold">✓ سرعة ملائمة</span>
                         ) : (
-                          <span className="text-amber-700 font-bold">يحتاج إلى تدريب</span>
+                          <span className="text-amber-700 font-bold">سرعة بطيئة</span>
                         )
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
@@ -746,8 +806,60 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </tbody>
               </table>
               <p className="text-[11px] text-slate-500 mt-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
-                * <strong>تنبيه منهجي استرشادي:</strong> مؤشرات سرعة القراءة (WPM) ومستويات الإتقان هي معايير تربوية أولية استرشادية مستخلصة من أبحاث القراءة العربية التجريبية لتوجيه الخطط المساندة، ولا تُعد معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
+                * <strong>تنبيه منهجي استرشادي:</strong> مؤشرات سرعة القراءة (WPM) ومعدلات الكلمات الصحيحة (WCPM) ومستويات الإتقان هي معايير تربوية أولية استرشادية مستخلصة من أبحاث القراءة العربية التجريبية لتوجيه الخطط المساندة، ولا تُعد معايير تشخيصية طبية قاطعة أو بديلة عن الفحص الإكلينيكي المتخصص.
               </p>
+            </div>
+          </div>
+
+          {/* Scientific Grounding & Empirical Norms Citation Card */}
+          <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-lg border border-slate-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-teal-600/30 border border-teal-500 text-teal-300 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">
+                  المرجعية العلمية والإفصاح المنهجي للتقييم (Scientific Citations & Methodology)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  تلتزم منصة بصيرة بالمعايير التجريبية المنشورة وتستبعد النماذج العشوائية أو غير المعايرة:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-slate-300 mt-4">
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <span className="font-bold text-teal-400 block mb-1">
+                  1. معايير الطلاقة القرائية الشفوية (CBM-ORF 2024):
+                </span>
+                تعتمد مؤشرات WCPM وWPM على دراسات القياس المعتمد على المنهج للقراءة العربية (Arabic Curriculum-Based Measurement of Oral Reading Fluency, Ijaz Arabi 2024)، لتحديد المئينات الصفية الاسترشادية دون ادعاء تشخيص سريري حتمي.
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <span className="font-bold text-teal-400 block mb-1">
+                  2. تقنين الفرز التشخيصي المعدل (MADST, Ain Shams 2016):
+                </span>
+                مستوحى من دراسة تقنين اختبار الديسلكسيا لجامعة عين شمس (عينات مصرية وبيئية)، لمراعاة التدرج الفونولوجي وقراءة النصوص المشكولة كلياً وجزئياً.
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <span className="font-bold text-teal-400 block mb-1">
+                  3. التباين الصوتي وإشراف المعلم (Little STT, arXiv 2025):
+                </span>
+                نظراً لارتفاع معدل خطأ الكلمات (WER يصل إلى 66%) في نماذج Whisper والتعرف الآلي على أصوات الأطفال، تطبق بصيرة مبدأ المعلم في الحلقة (Human-in-the-Loop) لمراجعة وتأكيد دقة كل كلمة قبل اعتماد درجات WCPM.
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <span className="font-bold text-teal-400 block mb-1">
+                  4. تطبيع خطأ خط الأعداد (Siegler & Booth 2004; SAGE 2026):
+                </span>
+                احتساب نسبة الخطأ المطلق المطبّع (Scale-Normalized PAE) على خط الأعداد (0 - 100) وفق معايير علم النفس المعرفي وبطارية عسر الحساب المغربية (2026) لتقييم التمثيل الذهني للكميات.
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <span>* امتثال قانوني: قانون حماية البيانات الشخصية المصري 151/2020 ولائحته التنفيذية 816/2025 (المادة 15).</span>
+              <span className="text-teal-400 font-mono">Evidence-Based V4</span>
             </div>
           </div>
 

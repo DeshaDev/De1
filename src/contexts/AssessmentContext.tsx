@@ -84,6 +84,14 @@ export interface ReadingAssessmentResult {
   wordCount: number;
   durationSeconds: number;
   wpm: number;
+  wcpm?: number | null;
+  oralReadingAssessed?: boolean;
+  oralAccuracyPercent?: number | null;
+  phoneticSubstitutionCount?: number;
+  omissionCount?: number;
+  dialectVariantCount?: number;
+  spokenTranscript?: string;
+  teacherVerified?: boolean;
   comprehensionScore: number;
   correctAnswersCount: number;
   totalQuestionsCount: number;
@@ -203,8 +211,11 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         readingResults: results,
         eyeTrackingResults: {
           wpm: results.wpm,
+          wcpm: results.wcpm,
           readingDurationSeconds: results.durationSeconds,
           comprehensionScore: results.comprehensionScore,
+          oralReadingAssessed: results.oralReadingAssessed,
+          oralAccuracyPercent: results.oralAccuracyPercent,
           completedAt: results.completedAt,
         },
       };

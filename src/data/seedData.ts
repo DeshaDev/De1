@@ -100,6 +100,10 @@ export interface StudentRecord {
   guardianConsentGiven?: boolean;
   guardianConsentRecordedAt?: string;
   guardianConsentSource?: string;
+  guardianName?: string;
+  guardianRelationship?: string;
+  guardianConsentPeriod?: string;
+  teacherVerified?: boolean;
   guardianAudioConsentGiven?: boolean;
   guardianAudioConsentRecordedAt?: string;
   speechRecognitionUsed?: boolean;

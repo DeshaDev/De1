@@ -331,7 +331,15 @@ export default function App() {
   const handleStartMockUserJourney = (
     name: string,
     grade: number,
-    roleLabel: string
+    roleLabel: string,
+    guardianConsent?: {
+      guardianName: string;
+      guardianRelationship: string;
+      guardianConsentGiven: boolean;
+      guardianAudioConsentGiven: boolean;
+      guardianConsentRecordedAt: string;
+      guardianConsentSource: string;
+    }
   ) => {
     if (clinicalSession?.role === 'educator_readonly') {
       setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
@@ -342,6 +350,16 @@ export default function App() {
       setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
       return;
     }
+
+    const consentGiven = guardianConsent?.guardianConsentGiven === true;
+    const consentRecordedAt = consentGiven
+      ? (guardianConsent?.guardianConsentRecordedAt || new Date().toISOString())
+      : undefined;
+    const consentSource = consentGiven
+      ? (guardianConsent?.guardianConsentSource || `إقرار ولي الأمر (${guardianConsent?.guardianName || 'ولي الأمر'} - ${guardianConsent?.guardianRelationship || 'الوصي'})`)
+      : undefined;
+    const audioConsentGiven = guardianConsent?.guardianAudioConsentGiven === true;
+
     const existing = students.find(
       (student) =>
         !student.isDemoRecord &&
@@ -355,12 +373,14 @@ export default function App() {
           sessionCompletedAt: undefined,
           sessionRoleLabel: roleLabel,
           assessmentHistory: [...(existing.assessmentHistory || []), snapshotCompletedSession(existing)],
-          guardianConsentGiven: false,
-          guardianConsentRecordedAt: undefined,
-          guardianConsentSource: undefined,
-          guardianAudioConsentGiven: false,
-          guardianAudioConsentRecordedAt: undefined,
-          speechRecognitionUsed: false,
+          guardianConsentGiven: consentGiven,
+          guardianConsentRecordedAt: consentRecordedAt,
+          guardianConsentSource: consentSource,
+          guardianName: guardianConsent?.guardianName,
+          guardianRelationship: guardianConsent?.guardianRelationship,
+          guardianAudioConsentGiven: audioConsentGiven,
+          guardianAudioConsentRecordedAt: audioConsentGiven ? consentRecordedAt : undefined,
+          speechRecognitionUsed: audioConsentGiven,
           lastScreenedDate: '',
         };
         setStudents((prev) => prev.map((student) => student.id === existing.id ? resumedRecord : student));
@@ -378,9 +398,14 @@ export default function App() {
         schoolName: 'لم تُحدّد المدرسة',
         lastScreenedDate: '',
         passageId: ARABIC_READING_PASSAGES.find((passage) => passage.gradeLevel === grade)?.id || ARABIC_READING_PASSAGES[0].id,
-        guardianConsentGiven: false,
-        guardianConsentRecordedAt: undefined,
-        guardianConsentSource: undefined,
+        guardianConsentGiven: consentGiven,
+        guardianConsentRecordedAt: consentRecordedAt,
+        guardianConsentSource: consentSource,
+        guardianName: guardianConsent?.guardianName,
+        guardianRelationship: guardianConsent?.guardianRelationship,
+        guardianAudioConsentGiven: audioConsentGiven,
+        guardianAudioConsentRecordedAt: audioConsentGiven ? consentRecordedAt : undefined,
+        speechRecognitionUsed: audioConsentGiven,
         wpm: 0,
         avgFixationMs: 0,
         regressionRate: 0,

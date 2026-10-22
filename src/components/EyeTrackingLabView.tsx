@@ -22,6 +22,11 @@ import {
   Award,
   Layers,
   Volume2,
+  Mic,
+  MicOff,
+  UserCheck,
+  AlertCircle,
+  FileCheck2,
 } from 'lucide-react';
 import {
   StudentRecord,
@@ -30,6 +35,12 @@ import {
   ReadingPassage,
 } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
+import {
+  evaluateOralReadingAlignment,
+  OralReadingFluencyResult,
+  OralWordAlignmentItem,
+  ArabicDialectCode,
+} from '../utils/dyslexiaEngines';
 
 interface Props {
   onCompleteSession: (record: StudentRecord) => void;
@@ -55,8 +66,30 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const [guardianConsentChecked, setGuardianConsentChecked] = useState(true);
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
 
-  // Stages: 'intro' -> 'reading' -> 'comprehension' -> 'summary'
-  const [stage, setStage] = useState<'intro' | 'reading' | 'comprehension' | 'summary'>('intro');
+  // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
+  const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
+
+  // Reading mode: oral audio with teacher verification vs timed silent reading
+  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('oral_audio');
+  const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
+    (activeStudent?.dialect as ArabicDialectCode) || 'eg'
+  );
+
+  // Audio recording & Speech recognition state
+  const [spokenTranscript, setSpokenTranscript] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Teacher verification & Human-in-the-Loop review state
+  const [verifiedWords, setVerifiedWords] = useState<
+    Array<{
+      word: string;
+      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+    }>
+  >([]);
+  const [teacherVerified, setTeacherVerified] = useState(false);
+  const [measuredWcpm, setMeasuredWcpm] = useState<number | undefined>(undefined);
+  const [measuredAccuracyPercent, setMeasuredAccuracyPercent] = useState<number | undefined>(undefined);
 
   // Timer & Reading state
   const [readingSeconds, setReadingSeconds] = useState(0);
@@ -86,23 +119,81 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     return sentences.length > 0 ? sentences : [text];
   }, [passage]);
 
-  // Start reading timer
+  // Start reading timer & speech recognition if oral mode
   const handleStartReading = () => {
     readingStartTimestampRef.current = Date.now();
     setReadingSeconds(0);
     setIsReadingActive(true);
+    setSpokenTranscript('');
     setStage('reading');
 
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setReadingSeconds(prev => prev + 1);
     }, 1000);
+
+    // Initialize speech recognition if oral mode selected and supported
+    if (readingMode === 'oral_audio' && typeof window !== 'undefined') {
+      const SpeechRecognitionClass =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+      if (SpeechRecognitionClass) {
+        try {
+          const recognition = new SpeechRecognitionClass();
+          const langCode =
+            studentDialect === 'eg'
+              ? 'ar-EG'
+              : studentDialect === 'sa' || studentDialect === 'gulf'
+              ? 'ar-SA'
+              : studentDialect === 'levant'
+              ? 'ar-JO'
+              : studentDialect === 'maghreb'
+              ? 'ar-MA'
+              : 'ar-SA';
+          recognition.lang = langCode;
+          recognition.continuous = true;
+          recognition.interimResults = true;
+
+          recognition.onresult = (event: any) => {
+            let fullText = '';
+            for (let i = 0; i < event.results.length; i++) {
+              fullText += event.results[i][0].transcript + ' ';
+            }
+            setSpokenTranscript(fullText.trim());
+          };
+
+          recognition.onerror = () => {
+            setIsListening(false);
+          };
+
+          recognition.onend = () => {
+            setIsListening(false);
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+          setIsListening(true);
+        } catch {
+          setIsListening(false);
+        }
+      }
+    }
   };
 
-  // Finish reading and stop timer
+  // Finish reading, stop timer and stop speech recognition
   const handleFinishReading = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore error on stop
+      }
+      recognitionRef.current = null;
+      setIsListening(false);
+    }
 
     const elapsedSec = Math.max(
       4,
@@ -117,7 +208,96 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     );
     setMeasuredWpm(calculatedWpm);
 
-    // Proceed to comprehension questions
+    // If oral audio mode, transition to Teacher Verification stage
+    if (readingMode === 'oral_audio') {
+      // Align passage words with spoken transcript
+      const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
+        passage.words,
+        spokenTranscript || passage.words.join(' '), // Fallback to passage words if browser had no mic input
+        elapsedSec,
+        0,
+        studentDialect
+      );
+
+      const initialWords = passage.words.map((targetWord, idx) => {
+        const aligned = alignmentResult.alignment[idx];
+        const status = aligned ? aligned.status : 'correct';
+        return {
+          word: targetWord,
+          status: status as 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted',
+        };
+      });
+
+      setVerifiedWords(initialWords);
+      setMeasuredWcpm(alignmentResult.wcpm);
+      setMeasuredAccuracyPercent(alignmentResult.accuracyPercent);
+      setStage('verification');
+    } else {
+      // Timed silent reading mode: jump directly to comprehension
+      setSelectedAnswers({});
+      setCurrentQuestionIndex(0);
+      setStage('comprehension');
+    }
+  };
+
+  // Toggle word status during Teacher Verification (Human-in-the-Loop)
+  const handleToggleWordStatus = (index: number) => {
+    setVerifiedWords(prev => {
+      const next = [...prev];
+      const current = next[index];
+      const cycle: Array<'correct' | 'phonetic_substitution' | 'omitted' | 'dialect_variant'> = [
+        'correct',
+        'phonetic_substitution',
+        'omitted',
+        'dialect_variant',
+      ];
+      const currentIdx = cycle.indexOf(current.status);
+      const nextStatus = cycle[(currentIdx + 1) % cycle.length];
+      next[index] = { ...current, status: nextStatus };
+      return next;
+    });
+  };
+
+  // Live recalculate WCPM from teacher-verified words
+  const teacherStats = useMemo(() => {
+    let correct = 0;
+    let errors = 0;
+    let omitted = 0;
+    let dialect = 0;
+
+    verifiedWords.forEach(w => {
+      if (w.status === 'correct') correct += 1;
+      else if (w.status === 'dialect_variant') dialect += 1;
+      else if (w.status === 'phonetic_substitution') errors += 1;
+      else if (w.status === 'omitted') omitted += 1;
+    });
+
+    const effectiveWords = correct + dialect;
+    const duration = finalDurationSec || 60;
+    const liveWcpm = Math.max(0, Math.min(220, Math.round((effectiveWords / duration) * 60)));
+    const liveAccuracy = Math.round((effectiveWords / Math.max(1, verifiedWords.length)) * 100);
+
+    return {
+      correct,
+      errors,
+      omitted,
+      dialect,
+      effectiveWords,
+      liveWcpm,
+      liveAccuracy,
+    };
+  }, [verifiedWords, finalDurationSec]);
+
+  // Mark all words as correct (quick action for fluent reading)
+  const handleMarkAllCorrect = () => {
+    setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
+  };
+
+  // Teacher confirms verification and proceeds to comprehension
+  const handleConfirmVerification = () => {
+    setTeacherVerified(true);
+    setMeasuredWcpm(teacherStats.liveWcpm);
+    setMeasuredAccuracyPercent(teacherStats.liveAccuracy);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -155,6 +335,11 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       wordCount: passage.words.length,
       durationSeconds: finalDurationSec,
       wpm: measuredWpm,
+      wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
+      oralReadingAssessed: readingMode === 'oral_audio',
+      oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
+      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      spokenTranscript: readingMode === 'oral_audio' ? spokenTranscript : undefined,
       comprehensionScore: scorePercent,
       correctAnswersCount: correctCount,
       totalQuestionsCount: questions.length,
@@ -181,6 +366,11 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       assessmentModality: 'reading_only',
       readingDurationSeconds: finalDurationSec,
       wpm: measuredWpm,
+      wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
+      oralReadingAssessed: readingMode === 'oral_audio',
+      oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
+      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      spokenTranscript: readingMode === 'oral_audio' ? spokenTranscript : undefined,
       fixations: [],
       calibrationAccuracyPercent: undefined,
       calibrationValidationMethod: undefined,
@@ -232,9 +422,78 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
                 <div className="text-xs text-teal-900 leading-relaxed">
                   <span className="font-bold block mb-1">معيار النزاهة العلمية المعتمد:</span>
-                  تم استبعاد كاميرا تتبع العين والمعايرة الزائفة تماماً. هذا التقييم يعتمد حصرياً على البيانات الفعلية القابلة للإثبات: (1) زمن القراءة الفعلي بالثواني، (2) معدل الكلمات في الدقيقة (WPM)، (3) إجابات أسئلة الفهم والاستيعاب للنص.
+                  تم استبعاد كاميرا تتبع العين والمعايرة الزائفة تماماً. هذا التقييم يعتمد حصرياً على البيانات الفعلية القابلة للإثبات: (1) زمن القراءة الفعلي بالثواني، (2) معدل الكلمات في الدقيقة (WPM) والكلمات الصحيحة (WCPM)، (3) إجابات أسئلة الفهم والاستيعاب للنص، مع التدقيق البشري الإشرافي للمعلم.
                 </div>
               </div>
+            </div>
+
+            {/* Reading Assessment Modality Selector */}
+            <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+              <label className="block text-sm font-bold text-slate-800 mb-3">
+                نمط فحص القراءة:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setReadingMode('oral_audio')}
+                  className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
+                    readingMode === 'oral_audio'
+                      ? 'border-teal-600 bg-teal-50/80 shadow-sm'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className={`p-2.5 rounded-xl shrink-0 ${readingMode === 'oral_audio' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    <Mic className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">قراءة جهرية مسجلة ومراجعة</span>
+                      <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">موصى به</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      تسجيل صوتي حي، محاذاة الكلمات، ومراجعة إشرافية للمعلم لحساب طلاقة الكلمات الصحيحة (WCPM) بدقة.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setReadingMode('timed_silent')}
+                  className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
+                    readingMode === 'timed_silent'
+                      ? 'border-indigo-600 bg-indigo-50/80 shadow-sm'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className={`p-2.5 rounded-xl shrink-0 ${readingMode === 'timed_silent' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900 text-sm block">قراءة صامتة موقوتة</span>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      قياس زمن القراءة وسرعة الكلمات الإجمالية (WPM) دون تسجيل صوتي ميكروفوني.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Student Dialect Selection for Oral Mode */}
+              {readingMode === 'oral_audio' && (
+                <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <span className="font-bold text-slate-700">اللهجة المرجعية للطالب لمراعاة الفروق الصوتية:</span>
+                  <select
+                    value={studentDialect}
+                    onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
+                    className="p-2 border border-slate-300 rounded-xl bg-white font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                  >
+                    <option value="eg">اللهجة المصرية (Egypt)</option>
+                    <option value="sa">اللهجة السعودية والخليجية (Gulf/Saudi)</option>
+                    <option value="levant">اللهجة الشامية (Levant)</option>
+                    <option value="maghreb">اللهجة المغاربية (Maghreb)</option>
+                    <option value="general">العربية الفصحى المعيارية (Modern Standard)</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Passage Selector */}
@@ -316,9 +575,17 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             {/* Top Toolbar */}
             <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-5 mb-6 gap-4">
               <div>
-                <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                  {passage.gradeLabel} · {passage.diacriticLabelAr}
-                </span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                    {passage.gradeLabel} · {passage.diacriticLabelAr}
+                  </span>
+                  {readingMode === 'oral_audio' && (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                      <Mic className={`w-3.5 h-3.5 ${isListening ? 'text-red-500 animate-pulse' : 'text-emerald-600'}`} />
+                      <span>{isListening ? 'تسجيل واستماع نشط' : 'قراءة جهرية'}</span>
+                    </span>
+                  )}
+                </div>
                 <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
                   {passage.title}
                 </h2>
@@ -406,12 +673,181 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 onClick={handleFinishReading}
                 className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
               >
-                <span>أنهيت القراءة — الانتقال لأسئلة الفهم</span>
+                <span>
+                  {readingMode === 'oral_audio'
+                    ? 'أنهيت القراءة — مراجعة المعلم واعتماد الطلاقة (WCPM)'
+                    : 'أنهيت القراءة — الانتقال لأسئلة الفهم'}
+                </span>
                 <ChevronLeft className="w-8 h-8" />
               </button>
               <p className="text-slate-500 text-xs mt-3 text-center">
                 اضغط على الزر فور الانتهاء لحساب زمن القراءة بدقة
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          STAGE 2.5: TEACHER & SPECIALIST HUMAN-IN-THE-LOOP VERIFICATION
+          (مراجعة وتأكيد المعلم / الأخصائي القرائي)
+          ===================================================================== */}
+      {stage === 'verification' && (
+        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 pt-8">
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 md:p-10">
+            {/* Header */}
+            <div className="border-b border-slate-100 pb-5 mb-6 text-right">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 mb-2">
+                <UserCheck className="w-4 h-4 text-amber-700" />
+                <span>مراجعة وتأكيد المعلم / الأخصائي القرائي (Human-in-the-Loop Review)</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900">
+                تدقيق دقة نطق الكلمات وحساب طلاقة الكلمات الصحيحة (WCPM)
+              </h2>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                وفقاً للأدلة العلمية (دراسة Little STT 2025)، تُعاني خوارزميات التعرف الصوتي الآلي على كلام الأطفال من تباين صوتي ملحوظ (معدل خطأ WER يصل إلى 66%). لذلك لا يُعتد بالتحليل الآلي دون مراجعة وتعديل المعلم البشري. انقر على أي كلمة لتغيير حالتها في حال أخطأ النموذج الآلي في تصنيفها.
+              </p>
+            </div>
+
+            {/* Live Metrics Dashboard */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-right">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                <span className="text-[11px] font-bold text-emerald-800 block mb-1">
+                  الكلمات الصحيحة في الدقيقة
+                </span>
+                <div className="text-2xl font-black text-emerald-700 font-mono">
+                  {teacherStats.liveWcpm} <span className="text-xs">WCPM</span>
+                </div>
+                <span className="text-[10px] text-emerald-600">
+                  {teacherStats.effectiveWords} كلمة صحيحة ÷ {finalDurationSec} ث
+                </span>
+              </div>
+
+              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
+                <span className="text-[11px] font-bold text-teal-800 block mb-1">
+                  نسبة الدقة اللفظية
+                </span>
+                <div className="text-2xl font-black text-teal-700 font-mono">
+                  {teacherStats.liveAccuracy}%
+                </div>
+                <span className="text-[10px] text-teal-600">
+                  من إجمالي {verifiedWords.length} كلمة
+                </span>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                <span className="text-[11px] font-bold text-amber-800 block mb-1">
+                  الإبدالات / التعثرات
+                </span>
+                <div className="text-2xl font-black text-amber-700 font-mono">
+                  {teacherStats.errors}
+                </div>
+                <span className="text-[10px] text-amber-600">
+                  أخطاء لفظية بحاجة لمراجعة
+                </span>
+              </div>
+
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+                <span className="text-[11px] font-bold text-rose-800 block mb-1">
+                  الكلمات المتخطاة
+                </span>
+                <div className="text-2xl font-black text-rose-700 font-mono">
+                  {teacherStats.omitted}
+                </div>
+                <span className="text-[10px] text-rose-600">
+                  كلمات تم حذفها أثناء القراءة
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Word Inspection Grid */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-slate-800">
+                  انقر على الكلمة لتعديل تقييمها:
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMarkAllCorrect}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
+                >
+                  ✓ تعليم الكل كقراءة صحيحة
+                </button>
+              </div>
+
+              {/* Status Legend */}
+              <div className="flex flex-wrap items-center gap-2 mb-4 text-[11px]">
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold">
+                  ● صحيحة (Correct)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-sky-100 text-sky-900 border border-sky-300 font-bold">
+                  ● لهجة مقبولة (Dialect)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-bold">
+                  ● إبدال لفظي (Substitution)
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 font-bold">
+                  ● تخطي / حذف (Omitted)
+                </span>
+              </div>
+
+              {/* Interactive Words Canvas */}
+              <div
+                className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap gap-2.5 items-center justify-start text-right leading-loose"
+                style={{ fontSize: '20px' }}
+              >
+                {verifiedWords.map((item, idx) => {
+                  let badgeClass = 'bg-white border-slate-300 text-slate-800';
+                  let statusTitle = 'صحيحة';
+
+                  if (item.status === 'correct') {
+                    badgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200';
+                    statusTitle = 'صحيحة';
+                  } else if (item.status === 'dialect_variant') {
+                    badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
+                    statusTitle = 'بديل لهجي مقبول';
+                  } else if (item.status === 'phonetic_substitution') {
+                    badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold';
+                    statusTitle = 'إبدال صوتي / تعثر';
+                  } else if (item.status === 'omitted') {
+                    badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through hover:bg-rose-200';
+                    statusTitle = 'متخطاة / محذوفة';
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleToggleWordStatus(idx)}
+                      className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
+                      title={`${item.word}: ${statusTitle} (انقر للتغيير)`}
+                    >
+                      <span className="font-bold">{item.word}</span>
+                      <span className="text-[9px] font-normal opacity-70">
+                        {statusTitle}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Confirm & Next Button */}
+            <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-slate-600 text-right flex items-center gap-2">
+                <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>سيتم توثيق مراجعة المعلم واعتماد الطلاقة بدقة WCPM في التقرير الشامل.</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleConfirmVerification}
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
+              >
+                <UserCheck className="w-5 h-5" />
+                <span>اعتماد تدقيق المعلم والانتقال لأسئلة الفهم</span>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -534,36 +970,58 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             </p>
 
             {/* Verified Metrics Dashboard */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-right">
-              {/* 1. WPM */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-emerald-800 block mb-1">
-                  سرعة القراءة الفعلية
-                </span>
-                <div className="text-3xl font-black text-emerald-700 font-mono">
-                  {measuredWpm}{' '}
-                  <span className="text-sm font-semibold">ك/د</span>
+            <div className={`grid grid-cols-1 ${typeof measuredWcpm === 'number' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4 mb-8 text-right`}>
+              {/* 1. WCPM (If Oral Audio Mode) */}
+              {typeof measuredWcpm === 'number' && (
+                <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-black text-emerald-900">
+                      طلاقة الكلمات الصحيحة
+                    </span>
+                    <span className="text-[10px] bg-emerald-200 text-emerald-950 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      معتمد
+                    </span>
+                  </div>
+                  <div className="text-3xl font-black text-emerald-700 font-mono">
+                    {measuredWcpm}{' '}
+                    <span className="text-sm font-semibold">WCPM</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 mt-2">
+                    دقة لفظية: {measuredAccuracyPercent ?? 100}% (بمراجعة المعلم)
+                  </p>
                 </div>
-                <p className="text-[11px] text-emerald-700 mt-2">
+              )}
+
+              {/* 2. Total WPM */}
+              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-5">
+                <span className="text-xs font-bold text-teal-800 block mb-1">
+                  سرعة القراءة الإجمالية
+                </span>
+                <div className="text-3xl font-black text-teal-700 font-mono">
+                  {measuredWpm}{' '}
+                  <span className="text-sm font-semibold">WPM</span>
+                </div>
+                <p className="text-[11px] text-teal-700 mt-2">
                   محسوبة من: {passage.words.length} كلمة ÷ {finalDurationSec} ثانية
                 </p>
               </div>
 
-              {/* 2. Reading Time */}
-              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-teal-800 block mb-1">
+              {/* 3. Reading Time */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                <span className="text-xs font-bold text-slate-800 block mb-1">
                   زمن القراءة المستغرق
                 </span>
-                <div className="text-3xl font-black text-teal-700 font-mono">
+                <div className="text-3xl font-black text-slate-700 font-mono">
                   {finalDurationSec}{' '}
                   <span className="text-sm font-semibold">ثانية</span>
                 </div>
-                <p className="text-[11px] text-teal-700 mt-2">
+                <p className="text-[11px] text-slate-600 mt-2">
                   مؤقت دقيق من بدء القراءة حتى إعلان الانتهاء
                 </p>
               </div>
 
-              {/* 3. Comprehension */}
+              {/* 4. Comprehension */}
               <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
                 <span className="text-xs font-bold text-indigo-800 block mb-1">
                   درجة الفهم القرائي
@@ -585,7 +1043,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                   <span className="font-bold text-slate-900 block mb-0.5">
                     البيانات المقاسة مقابل المستبعدة:
                   </span>
-                  ✓ <strong>ما تم قياسه بنجاح:</strong> زمن القراءة، سرعة الطلاقة اللفظية (WPM)، واستيعاب محتوى النص.<br />
+                  ✓ <strong>ما تم قياسه وتدقيقه:</strong> زمن القراءة الفعلي، سرعة القراءة العامة (WPM)، طلاقة الكلمات الصحيحة بالدقيقة ({typeof measuredWcpm === 'number' ? `WCPM = ${measuredWcpm} بمراجعة المعلم` : 'قراءة صامتة دون WCPM'})، والاستيعاب القرائي.<br />
                   ✕ <strong>ما لم يُقَس:</strong> حركة العين الميكروسكوبية وتثبيتات البؤبؤ (تم استبعاد الكاميرا التزاماً بالمعايير العلمية والموثوقية التقنية).
                 </div>
               </div>

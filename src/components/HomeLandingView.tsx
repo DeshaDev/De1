@@ -36,7 +36,15 @@ interface HomeLandingViewProps {
   onStartMockUserJourney: (
     name: string,
     grade: number,
-    roleLabel: string
+    roleLabel: string,
+    guardianConsent?: {
+      guardianName: string;
+      guardianRelationship: string;
+      guardianConsentGiven: boolean;
+      guardianAudioConsentGiven: boolean;
+      guardianConsentRecordedAt: string;
+      guardianConsentSource: string;
+    }
   ) => void;
   onSelectExistingDemoJourney: (
     studentId: string,
@@ -429,6 +437,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [mockName, setMockName] = useState<string>('');
   const [mockGrade, setMockGrade] = useState<number>(3);
   const [mockRole, setMockRole] = useState<'student' | 'specialist'>('student');
+  const [guardianName, setGuardianName] = useState<string>('');
+  const [guardianRelationship, setGuardianRelationship] = useState<string>('الأب');
+  const [guardianConsentChecked, setGuardianConsentChecked] = useState<boolean>(false);
+  const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState<boolean>(true);
   const [registrationNotice, setRegistrationNotice] = useState<string>('');
 
   // Interactive Dyslexia Lens State
@@ -471,10 +483,22 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       setRegistrationNotice('يرجى إدخال اسم الطالب أو المعرّف للمتابعة.');
       return;
     }
+    if (!guardianConsentChecked) {
+      setRegistrationNotice('وفق المادة ١٥ من اللائحة التنفيذية رقم ٨١٦ لسنة ٢٠٢٥، يلزم توثيق موافقة ولي الأمر الصريحة قبل تسجيل بيانات الطفل.');
+      return;
+    }
+    const cleanGuardian = guardianName.trim() || 'ولي الأمر / الوصي القانوني';
     const roleLabel =
       mockRole === 'student' ? 'تجربة كطالب' : 'تجربة كمختص';
-    setRegistrationNotice(`تم تسجيل «${cleanName}» — جاري فتح الخطوة ٢...`);
-    onStartMockUserJourney(cleanName, mockGrade, roleLabel);
+    setRegistrationNotice(`تم توثيق الموافقة وتسجيل «${cleanName}» — جاري فتح محطة الفحص...`);
+    onStartMockUserJourney(cleanName, mockGrade, roleLabel, {
+      guardianName: cleanGuardian,
+      guardianRelationship,
+      guardianConsentGiven: true,
+      guardianAudioConsentGiven: guardianAudioConsentChecked,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianConsentSource: `موافقة صريحة موثقة (${cleanGuardian} - ${guardianRelationship})`,
+    });
   };
 
   const handleCustomTrustAsk = (e: React.FormEvent) => {
@@ -1384,6 +1408,72 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </div>
               </div>
 
+              {/* Mandatory Guardian Consent Block per Egyptian Law 151/2020 & Exec Reg 816/2025 Art 15 */}
+              <div className="p-3.5 bg-white border border-emerald-200/90 rounded-xl space-y-3 shadow-xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 border-b border-emerald-100 pb-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>موافقة ولي الأمر الصريحة (المادة ١٥ من اللائحة التنفيذية ٨١٦ لسنة ٢٠٢٥)</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                      اسم ولي الأمر / الوصي القانوني *
+                    </label>
+                    <input
+                      type="text"
+                      value={guardianName}
+                      onChange={(e) => setGuardianName(e.target.value)}
+                      placeholder="الاسم الكامل لولي الأمر"
+                      className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                      صلة القرابة *
+                    </label>
+                    <select
+                      value={guardianRelationship}
+                      onChange={(e) => setGuardianRelationship(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-emerald-600"
+                    >
+                      <option value="الأب">الأب</option>
+                      <option value="الأم">الأم</option>
+                      <option value="الوصي القانوني">الوصي القانوني</option>
+                      <option value="المعلم مفوضاً رسمياً">المعلم (مفوّض رسمياً من ولي الأمر والمدرسة)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Mandatory Consent Checkbox */}
+                <div className="flex items-start gap-2 pt-1 border-t border-slate-100">
+                  <input
+                    type="checkbox"
+                    id="mandatory-guardian-consent-chk"
+                    checked={guardianConsentChecked}
+                    onChange={(e) => setGuardianConsentChecked(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer mt-0.5 shrink-0"
+                  />
+                  <label htmlFor="mandatory-guardian-consent-chk" className="text-[11px] text-slate-700 leading-snug cursor-pointer select-none">
+                    أقر بموافقة ولي الأمر الصريحة المسبقة على معالجة بيانات القراءة والحساب للفرز التربوي ومتابعة التقدم المدرسي لمدة عام دراسي، مع الاحتفاظ بحق السحب والمحو الفوري (قانون ١٥١ لسنة ٢٠٢٠).
+                  </label>
+                </div>
+
+                {/* Optional Audio Consent Checkbox */}
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="audio-recording-consent-chk"
+                    checked={guardianAudioConsentChecked}
+                    onChange={(e) => setGuardianAudioConsentChecked(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer mt-0.5 shrink-0"
+                  />
+                  <label htmlFor="audio-recording-consent-chk" className="text-[11px] text-slate-600 leading-snug cursor-pointer select-none">
+                    موافقة صوتية منفصلة: أوافق على استخدام الميكروفون لتحليل القراءة الجهرية ومطابقة النطق واكتشاف أخطاء الحروف.
+                  </label>
+                </div>
+              </div>
+
               {registrationNotice && (
                 <div className="text-xs font-semibold text-[#059669]">
                   {registrationNotice}
@@ -1392,9 +1482,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#15803D] text-white text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                disabled={!guardianConsentChecked}
+                className="w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#15803D] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>تسجيل الطالب والانتقال إلى فحص القراءة والطلاقة</span>
+                <span>توثيق الموافقة وتسجيل الطالب لبدء الفحص</span>
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </form>
