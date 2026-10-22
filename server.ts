@@ -1097,6 +1097,9 @@ async function startServer() {
               completedAt:
                 current.sessionCompletedAt || current.lastScreenedDate || nowIso,
               passageId: current.passageId,
+              assessmentModality: current.assessmentModality,
+              wcpm: current.wcpm ?? current.oralWcpm ?? null,
+              teacherVerified: current.teacherVerified === true,
               wpm: current.wpm,
               avgFixationMs: current.avgFixationMs,
               regressionRate: current.regressionRate,
