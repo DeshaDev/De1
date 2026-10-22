@@ -56,7 +56,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [aiSession, setAiSession] = useState<RemediationSessionPlan | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiSource, setAiSource] = useState<string | null>(null);
-  const [showClinicalRationale, setShowClinicalRationale] = useState<boolean>(false);
+  const [showActivityRationale, setShowActivityRationale] = useState<boolean>(false);
   const [activeScaffold, setActiveScaffold] = useState<{ title: string; text: string; audioText: string } | null>(null);
 
   // Gamification State
@@ -167,7 +167,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
           if (announce) {
             triggerCelebration(
-              `✨ تم إعداد جلسة ذكاء اصطناعي مخصصة لكلمات تعثر ${student.name}!`,
+              `تم إعداد أنشطة تعليمية مقترحة للصف ${student.gradeLevel}.`,
               40
             );
           }
@@ -246,7 +246,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       setPacerWordIdx((prev) => {
         if (prev >= currentPassage.words.length - 1) {
           setPacerPlaying(false);
-          triggerCelebration('اكتمل تدريب التتبع بنجاح! (+20 نقطة)', 20);
+          triggerCelebration('انتهيت من عرض النص!', 20);
           return 0;
         }
         return prev + 1;
@@ -336,7 +336,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   return (
     <div className="space-y-3.5 max-w-4xl mx-auto pb-8 animate-fade-slide-up" dir="rtl">
-      {/* 1. AMIRA-STYLE AI PERSONALIZATION RIBBON (Compact, Venture-grade, Evidence-based) */}
+      {/* Educational activity ribbon */}
       <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-3 sm:p-3.5 shadow-sm border border-emerald-700/40 flex flex-col sm:flex-row items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
@@ -367,12 +367,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
           <button
             type="button"
-            onClick={() => setShowClinicalRationale((prev) => !prev)}
+            onClick={() => setShowActivityRationale((prev) => !prev)}
             className="px-2.5 py-1.5 rounded-lg bg-emerald-800/80 hover:bg-emerald-700/80 text-emerald-100 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
             title="عرض هدف الأنشطة التعليمية"
           >
             <Info className="w-3.5 h-3.5 text-emerald-300" />
-            <span>التعليل</span>
+            <span>لماذا هذا النشاط؟</span>
           </button>
 
           <button
@@ -388,7 +388,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       </div>
 
       {/* Optional Educational Activity Rationale */}
-      {showClinicalRationale && (
+      {showActivityRationale && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1.5 animate-fade-slide-up shadow-2xs">
           <div className="flex items-center justify-between font-bold text-[#15803D]">
             <span className="flex items-center gap-1.5">
@@ -397,7 +397,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => setShowClinicalRationale(false)}
+              onClick={() => setShowActivityRationale(false)}
               className="text-slate-400 hover:text-slate-600 p-0.5"
             >
               <X className="w-3.5 h-3.5" />
@@ -416,7 +416,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           {[
             { id: 'phonics', label: '١. تمييز الحروف', icon: Zap },
             { id: 'syllables', label: '٢. تركيب المقاطع', icon: BookOpen },
-            { id: 'pacer', label: '٣. التتبع البصري', icon: Eye },
+            { id: 'pacer', label: '٣. إبراز الكلمات', icon: Eye },
             { id: 'math', label: '٤. خط الأعداد', icon: Calculator },
           ].map((st) => {
             const Icon = st.icon;
@@ -529,12 +529,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   <span>🔊 استمع لنطق الكلمة</span>
                 </button>
 
-                {/* Amira Micro-Scaffolding Button */}
+                {/* Optional activity hint */}
                 <button
                   type="button"
                   onClick={triggerPhonicsScaffold}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs sm:text-sm font-bold transition-all border border-amber-300 cursor-pointer shadow-2xs"
-                  title="مساعدة الذكاء الاصطناعي (نمط Amira)"
+                  title="عرض تلميح تعليمي"
                 >
                   <Lightbulb className="w-4 h-4 text-amber-700" />
                   <span>تلميح ذكي</span>
@@ -542,7 +542,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </div>
             </div>
 
-            {/* Amira Micro-Scaffold Card Display */}
+            {/* Optional learning hint */}
             {activeScaffold && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
                 <div className="space-y-1">
@@ -653,10 +653,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                تركيب الكلمات مقطعياً (Orton-Gillingham)
+                تركيب الكلمات إلى مقاطع
               </span>
               <span className="text-xs font-medium text-slate-500">
-                المعالجة الفونولوجية السريعة
+                تدريب على تقسيم الكلمة وقراءتها
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -718,7 +718,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               })}
             </div>
 
-            {/* Reset, Speak & Amira Scaffolding */}
+            {/* Reset, speech and optional hints */}
             <div className="flex items-center justify-center gap-2">
               <button
                 type="button"
@@ -750,7 +750,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               )}
             </div>
 
-            {/* Amira Micro-Scaffold Card Display */}
+            {/* Optional learning hint */}
             {activeScaffold && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
                 <div className="space-y-1">
@@ -805,10 +805,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                التتبع البصري الإيقاعي (Saccadic Pacer)
+                إبراز الكلمات بإيقاع قابل للتعديل
               </span>
               <span className="text-xs font-medium text-slate-500">
-                تقليل الارتداد العكسي وتثبيت الإيقاع
+                إبراز كلمة تلو الأخرى؛ لا يقيس حركة العين أو يعالجها
               </span>
             </div>
 
@@ -849,7 +849,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 «{currentPassage.title}» · {currentPassage.gradeLevel}
               </span>
               <div className="flex items-center gap-1.5 font-mono">
-                <span>السرعة:</span>
+                <span>إيقاع الإبراز:</span>
                 {[60, 90, 120].map((w) => (
                   <button
                     key={w}
@@ -891,7 +891,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </div>
             </div>
 
-            {/* Amira Micro-Scaffold Card Display */}
+            {/* Optional learning hint */}
             {activeScaffold && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
                 <div className="space-y-1">
@@ -1035,7 +1035,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </div>
             </div>
 
-            {/* Amira Micro-Scaffold Card Display */}
+            {/* Optional learning hint */}
             {activeScaffold && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
                 <div className="space-y-1">
