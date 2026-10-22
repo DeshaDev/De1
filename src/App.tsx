@@ -681,7 +681,7 @@ export default function App() {
         }
       } else {
         const data = await res.json().catch(() => ({}));
-        setAiStatusBanner(data?.error || 'تعذر إصدار التقرير؛ قد تكون بيانات التتبع أو المعايرة غير كافية.');
+        setAiStatusBanner(data?.error || 'تعذر إصدار التقرير؛ تحقق من اكتمال بيانات الجلسة والموافقة المطلوبة.');
       }
     } catch {
       setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم تأكيد إصدار التقرير.');
