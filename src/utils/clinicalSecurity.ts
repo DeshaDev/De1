@@ -885,6 +885,7 @@ export function buildDeterministicClinicalReport(params: {
   observedWordCount: number;
   totalPassageWordCount: number;
   wpm: number;
+  comprehensionScore?: number | null;
   avgFixationMs: number;
   regressionRate: number;
   regressionCount: number;
@@ -982,7 +983,9 @@ export function buildDeterministicClinicalReport(params: {
   const clinicalSummary = isReadingOnly
     ? 'جلسة قراءة وفهم تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
       '): معدل إتمام النص التقديري ' + readingRateText + ' في نص مرجعي من ' +
-      params.totalPassageWordCount + ' كلمة، ودرجة إجابات فهم النص. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. لا ينتج هذا النشاط معيارًا تشخيصيًا.'
+      (params.totalPassageWordCount > 0 ? String(params.totalPassageWordCount) : 'عدد كلمات غير متاح') +
+      ' كلمة، ونتيجة أسئلة الفهم ' + (typeof params.comprehensionScore === 'number' ? String(params.comprehensionScore) + '%' : 'غير متاحة') +
+      '. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. لا ينتج هذا النشاط معيارًا تشخيصيًا.'
     : isVoiceOnly
       ? 'جلسة قراءة جهرية تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
         '): المعدل المسجل ' + readingRateText + '.' + oralText +
@@ -1647,6 +1650,7 @@ export function validateAndDeriveSessionFromEvidence(
     observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
     totalPassageWordCount: passage.words.length,
     wpm: derivedWpm,
+    comprehensionScore,
     avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
     regressionRate: eyeMetrics ? eyeMetrics.regressionRate : 0,
     regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
