@@ -141,8 +141,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentId: student.id,
-          studentName: student.name,
           gradeLevel: student.gradeLevel,
           dialect: student.dialectCode || 'msa',
           problematicWords: observedTargetWords,
@@ -386,6 +384,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           </button>
         </div>
       </div>
+
+      <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+        عند طلب توليد أنشطة جديدة، يُرسل الصف واللهجة وكلمات التدريب التي راجعها المعلّم إلى خدمة التوليد إذا كانت مفعّلة. لا يُرسل اسم الطفل أو رقم سجله. ويمكنك متابعة الأنشطة العامة دون طلب توليد جديد.
+      </p>
 
       {/* Optional Educational Activity Rationale */}
       {showActivityRationale && (
