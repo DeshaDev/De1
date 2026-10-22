@@ -426,7 +426,7 @@ export default function App() {
         regressionCount: 0,
         dyslexiaRiskScore: 0,
         readingHeuristicIndicator: 0,
-        readingRiskLevel: 'nominal',
+        readingRiskLevel: 'unassessed',
         readingRiskLabelAr: 'لم يُستكمل الفحص بعد',
         problematicWords: [],
         fixations: [],
@@ -1045,7 +1045,9 @@ export default function App() {
                       ? '■ مؤشر فرز استرشادي مرتفع'
                       : selectedStudent.readingRiskLevel === 'moderate'
                         ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
-                        : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
+                        : selectedStudent.readingRiskLevel === 'unassessed'
+                          ? 'لا يوجد تصنيف لخطر عسر القراءة في نمط الفحص الحالي'
+                          : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
                     · {selectedStudent.sessionStatus === 'in_progress' ? 'الفهم غير مُقيَّم' : `الفهم ${selectedStudent.comprehensionScore}%`}
                   </div>
                 </div>
@@ -1394,7 +1396,9 @@ export default function App() {
                                         ? 'text-[#DC2626] font-semibold'
                                         : stu.readingRiskLevel === 'moderate'
                                           ? 'text-[#D97706] font-semibold'
-                                          : 'text-[#059669] font-medium'
+                                          : stu.readingRiskLevel === 'unassessed'
+                                            ? 'text-slate-500 font-medium'
+                                            : 'text-[#059669] font-medium'
                                     }
                                   >
                                     {stu.sessionStatus === 'in_progress'
@@ -1403,7 +1407,9 @@ export default function App() {
                                       ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
                                       : stu.readingRiskLevel === 'moderate'
                                         ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
-                                        : `● منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
+                                        : stu.readingRiskLevel === 'unassessed'
+                                          ? 'غير مصنّف — لا تتوفر معايير مستقلة كافية'
+                                          : `● منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1613,7 +1619,10 @@ export default function App() {
                                   : stu.readingRiskLevel === 'moderate' ||
                                       stu.mathRiskLevel === 'moderate'
                                     ? '#D97706'
-                                    : '#059669'
+                                    : stu.readingRiskLevel === 'unassessed' &&
+                                        stu.mathRiskLevel === 'unassessed'
+                                      ? '#64748B'
+                                      : '#059669'
                               }
                               stroke="#FFFFFF"
                               strokeWidth="1.5"

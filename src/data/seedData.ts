@@ -58,7 +58,7 @@ export interface StudentAssessmentSnapshot {
   problematicWords: string[];
   dyslexiaRiskScore: number;
   readingHeuristicIndicator: number;
-  readingRiskLevel: 'nominal' | 'moderate' | 'high';
+  readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   subitizingAccuracy: number | null;
   numberLinePAE: number | null;
   transcodingAccuracy: number | null;
@@ -145,7 +145,7 @@ export interface StudentRecord {
   // Heuristic Dyslexia Screening Score
   dyslexiaRiskScore: number;
   readingHeuristicIndicator: number;
-  readingRiskLevel: 'nominal' | 'moderate' | 'high';
+  readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   readingRiskLabelAr: string;
   problematicWords: string[];
   fixations: WordFixation[];

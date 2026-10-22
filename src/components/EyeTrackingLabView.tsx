@@ -64,18 +64,27 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   }, [activeStudent]);
 
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(defaultPassageIndex);
-  const [guardianConsentChecked, setGuardianConsentChecked] = useState(
-    Boolean(activeStudent?.guardianConsentGiven)
-  );
+  const existingGuardianConsentAt = activeStudent?.guardianConsentRecordedAt;
+  const existingGuardianConsentSource = activeStudent?.guardianConsentSource;
+  const hasStoredGuardianConsent =
+    activeStudent?.guardianConsentGiven === true &&
+    typeof existingGuardianConsentAt === 'string' &&
+    Number.isFinite(Date.parse(existingGuardianConsentAt)) &&
+    typeof existingGuardianConsentSource === 'string' &&
+    existingGuardianConsentSource.trim().length > 0;
+  const existingAudioConsentAt = activeStudent?.guardianAudioConsentRecordedAt;
+  const hasStoredAudioConsent =
+    (activeStudent?.guardianAudioConsentGiven === true ||
+      activeStudent?.audioRecordingConsentGiven === true) &&
+    typeof existingAudioConsentAt === 'string' &&
+    Number.isFinite(Date.parse(existingAudioConsentAt));
+  const [guardianConsentChecked, setGuardianConsentChecked] = useState(hasStoredGuardianConsent);
   const [guardianConsentRecordedAt, setGuardianConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianConsentRecordedAt || (activeStudent?.guardianConsentGiven ? new Date().toISOString() : undefined)
+    existingGuardianConsentAt
   );
-  const [audioConsentChecked, setAudioConsentChecked] = useState(
-    Boolean(activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-  );
+  const [audioConsentChecked, setAudioConsentChecked] = useState(hasStoredAudioConsent);
   const [guardianAudioConsentRecordedAt, setGuardianAudioConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianAudioConsentRecordedAt ||
-      ((activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven) ? new Date().toISOString() : undefined)
+    existingAudioConsentAt
   );
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
 
@@ -84,9 +93,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Reading mode: oral audio with teacher verification vs timed silent reading
   const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>(
-    (activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-      ? 'oral_audio'
-      : 'timed_silent'
+    hasStoredAudioConsent ? 'oral_audio' : 'timed_silent'
   );
   const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
     activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian'
@@ -104,6 +111,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const isReadingActiveRef = useRef<boolean>(false);
   const audioPlaybackUrlRef = useRef<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioRecordingStartedRef = useRef(false);
 
   // Teacher verification & Human-in-the-Loop review state
   const [verifiedWords, setVerifiedWords] = useState<
@@ -147,6 +155,23 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Start reading timer & speech recognition if oral mode
   const handleStartReading = () => {
+    if (
+      !guardianConsentChecked ||
+      !guardianConsentRecordedAt ||
+      !Number.isFinite(Date.parse(guardianConsentRecordedAt))
+    ) {
+      window.alert('يلزم تأكيد موافقة ولي الأمر وتوثيق وقتها قبل بدء الجلسة.');
+      return;
+    }
+    if (
+      readingMode === 'oral_audio' &&
+      (!audioConsentChecked ||
+        !guardianAudioConsentRecordedAt ||
+        !Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)))
+    ) {
+      window.alert('يلزم تأكيد الموافقة الصوتية المستقلة وتوثيق وقتها قبل تشغيل الميكروفون.');
+      return;
+    }
     readingStartTimestampRef.current = Date.now();
     isReadingActiveRef.current = true;
     setReadingSeconds(0);
@@ -154,6 +179,8 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     spokenTranscriptRef.current = '';
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
+    audioRecordingStartedRef.current = false;
+    audioChunksRef.current = [];
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
       audioPlaybackUrlRef.current = null;
@@ -199,6 +226,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             }
           };
           recorder.start();
+          audioRecordingStartedRef.current = true;
           mediaRecorderRef.current = recorder;
         })
         .catch(() => {
@@ -492,15 +520,14 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
     const audioConsentGranted = readingMode === 'oral_audio' && audioConsentChecked;
     const effectiveAudioConsentRecordedAt = audioConsentGranted
-      ? (guardianAudioConsentRecordedAt || baseStudent.guardianAudioConsentRecordedAt || nowIso)
+      ? (guardianAudioConsentRecordedAt || baseStudent.guardianAudioConsentRecordedAt)
       : undefined;
     const effectiveGuardianConsentRecordedAt = guardianConsentChecked
-      ? (guardianConsentRecordedAt || baseStudent.guardianConsentRecordedAt || nowIso)
+      ? (guardianConsentRecordedAt || baseStudent.guardianConsentRecordedAt)
       : undefined;
 
     const audioRecordingStarted =
-      readingMode === 'oral_audio' &&
-      (audioChunksRef.current.length > 0 || Boolean(audioPlaybackUrl));
+      readingMode === 'oral_audio' && audioRecordingStartedRef.current;
 
     const updatedRecord: StudentRecord = {
       ...baseStudent,
@@ -534,17 +561,15 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       sessionStatus: 'completed',
       sessionCompletedAt: nowIso,
       comprehensionAnswers: answersArray,
-      guardianConsentGiven: Boolean(baseStudent.guardianConsentGiven || guardianConsentChecked),
+      guardianConsentGiven: Boolean(guardianConsentChecked && effectiveGuardianConsentRecordedAt),
       guardianConsentRecordedAt: effectiveGuardianConsentRecordedAt,
       guardianConsentSource:
-        baseStudent.guardianConsentSource || (guardianConsentChecked ? 'إقرار موثق بمختبر القراءة' : undefined),
-      guardianAudioConsentGiven: Boolean(
-        baseStudent.guardianAudioConsentGiven || audioConsentGranted
-      ),
+        guardianConsentChecked && effectiveGuardianConsentRecordedAt
+          ? (baseStudent.guardianConsentSource || 'إقرار موثق بمختبر القراءة')
+          : undefined,
+      guardianAudioConsentGiven: Boolean(audioConsentGranted && effectiveAudioConsentRecordedAt),
       guardianAudioConsentRecordedAt: effectiveAudioConsentRecordedAt,
-      audioRecordingConsentGiven: Boolean(
-        baseStudent.audioRecordingConsentGiven || audioConsentGranted
-      ),
+      audioRecordingConsentGiven: Boolean(audioConsentGranted && effectiveAudioConsentRecordedAt),
     };
 
     onCompleteSession(updatedRecord);

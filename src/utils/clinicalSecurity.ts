@@ -1072,7 +1072,7 @@ export interface DerivedSessionEvidenceResult {
     omissionCount: number;
     dyslexiaRiskScore: number;
     readingHeuristicIndicator: number;
-    readingRiskLevel: 'nominal' | 'moderate' | 'high';
+    readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
     readingRiskLabelAr: string;
     problematicWords: string[];
     fixations: WordFixation[];
@@ -1432,7 +1432,8 @@ export function validateAndDeriveSessionFromEvidence(
       : '';
 
   // Teacher Human-in-the-Loop review validation
-  const isTeacherVerified = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
+  const isTeacherVerified =
+    rawBody.teacherVerified === true || evidenceObj.teacherVerified === true;
   const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
 
   let validatedTeacherAlignment: Array<{
@@ -1603,8 +1604,9 @@ export function validateAndDeriveSessionFromEvidence(
   // Avoid predicting clinical dyslexia risk scores on uncalibrated camera-free sessions without independent norming
   let derivedDyslexiaRiskScore = 0;
   let derivedReadingHeuristic = comprehensionScore;
-  let derivedReadingRiskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let derivedReadingRiskLabelAr = 'تقييم قراءة وفهم استرشادي';
+  let derivedReadingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed' = 'unassessed';
+  let derivedReadingRiskLabelAr =
+    'غير مصنّف: لا تتوفر في نمط الفحص الحالي معايير مستقلة كافية لتقدير خطر عسر القراءة.';
 
   if (eyeMetrics) {
     derivedDyslexiaRiskScore = eyeMetrics.dyslexiaRiskScore;
@@ -1613,16 +1615,19 @@ export function validateAndDeriveSessionFromEvidence(
     derivedReadingRiskLabelAr = eyeMetrics.riskLabelAr;
   } else if (isTeacherVerified) {
     derivedReadingHeuristic = teacherAccuracyPercent ?? comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز قرائي واستيعابي استرشادي بمعايرة المعلم';
+    derivedReadingRiskLevel = 'unassessed';
+    derivedReadingRiskLabelAr =
+      'مؤشرات الطلاقة والفهم استرشادية؛ لم يُشتق تصنيف لخطر عسر القراءة.';
   } else if (oralIntegration) {
     derivedReadingHeuristic = oralIntegration.accuracyPercent ?? comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز صوتي استرشادي أولي';
+    derivedReadingRiskLevel = 'unassessed';
+    derivedReadingRiskLabelAr =
+      'محاذاة صوتية أولية فقط؛ يلزم اعتماد بشري ومعايير مستقلة قبل تصنيف خطر القراءة.';
   } else if (isReadingOnlyModality) {
     derivedReadingHeuristic = comprehensionScore;
-    derivedReadingRiskLevel = 'nominal';
-    derivedReadingRiskLabelAr = 'فرز قراءة صامتة وفهم استرشادي';
+    derivedReadingRiskLevel = 'unassessed';
+    derivedReadingRiskLabelAr =
+      'نتيجة القراءة والفهم استرشادية؛ لا تعني استبعاد عسر القراءة أو إثباته.';
   }
 
   const clinicalReport = buildDeterministicClinicalReport({
@@ -1695,15 +1700,9 @@ export function validateAndDeriveSessionFromEvidence(
       oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
       oralWerPercent: oralIntegration?.werPercent ?? null,
       teacherVerified: isTeacherVerified,
-      teacherVerificationTimestamp: isTeacherVerified
-        ? (typeof (rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp) === 'string'
-            ? String(rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp)
-            : new Date().toISOString())
-        : undefined,
-      teacherVerifierRole:
-        typeof (rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole) === 'string'
-          ? String(rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole)
-          : (isTeacherVerified ? 'معلم / أخصائي قرائي معتمد' : undefined),
+      // Timestamp is server-generated; authenticated reviewer identity is attached by server.ts.
+      teacherVerificationTimestamp: isTeacherVerified ? new Date().toISOString() : undefined,
+      teacherVerifierRole: undefined,
       teacherWordOverridesCount:
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
           ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)

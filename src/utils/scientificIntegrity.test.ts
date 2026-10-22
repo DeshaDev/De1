@@ -184,7 +184,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(derived.derivedFields.fixations.length, 0);
     assert.equal(derived.derivedFields.dyslexiaRiskScore, 0); // Camera-free reading_only does not fabricate predictive clinical dyslexia scores
-    assert.equal(derived.derivedFields.readingRiskLevel, 'nominal');
+    assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
     assert.ok(derived.derivedFields.clinicalReport);
   });
 
@@ -233,7 +233,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       oralReadingAssessed: true,
       spokenTranscript: 'تفريغ عشوائي قديم لا يعتمد عليه', // Machine transcript should NOT override teacher!
       teacherVerified: true,
-      teacherVerifierRole: 'معلم صعوبات تعلم',
+      teacherVerifierRole: 'دور مزيف يرسله العميل',
+      teacherVerificationTimestamp: '2000-01-01T00:00:00.000Z',
       teacherWordOverridesCount: 5,
       verifiedWordsAlignment: verifiedWords,
     };
@@ -246,6 +247,11 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.valid, true);
     assert.ok(derived.derivedFields);
     assert.equal(derived.derivedFields.teacherVerified, true);
+    assert.notEqual(
+      derived.derivedFields.teacherVerificationTimestamp,
+      '2000-01-01T00:00:00.000Z'
+    );
+    assert.equal(derived.derivedFields.teacherVerifierRole, undefined);
     // 30 correct + 5 dialect = 35 effective words in 1 minute = 35 WCPM
     assert.equal(derived.derivedFields.wcpm, 35);
     assert.equal(derived.derivedFields.oralWcpm, 35);
@@ -253,6 +259,28 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.oralAccuracyPercent, 67);
     assert.equal(derived.derivedFields.dialectVariantCount, 5);
     assert.equal(derived.derivedFields.omissionCount, 17);
+  });
+
+  await t.test('Teacher Verification: string values such as "false" do not count as human verification', () => {
+    const rawPayload = {
+      passageId: passage.id,
+      assessmentModality: 'reading_only',
+      readingDurationSeconds: 45,
+      comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
+      teacherVerified: 'false',
+    };
+
+    const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
+      name: 'طالب للاختبار',
+      gradeLevel: passage.gradeLevel,
+    });
+
+    assert.equal(derived.valid, true);
+    assert.equal(derived.derivedFields?.teacherVerified, false);
+    assert.equal(derived.derivedFields?.teacherVerificationTimestamp, undefined);
   });
 
   await t.test('Server Validation: rejects corrupted or mismatched verifiedWordsAlignment', () => {
