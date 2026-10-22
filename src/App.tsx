@@ -1691,7 +1691,5 @@ export default function App() {
       </footer>
     </div>
     </AssessmentProvider>
-    </div>
-    </AssessmentProvider>
   );
 }
