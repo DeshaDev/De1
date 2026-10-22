@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  ShieldCheck,
   RotateCcw,
   HelpCircle,
   Award,
@@ -636,17 +635,6 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               </p>
             </div>
 
-            {/* Scientific Integrity Disclosure */}
-            <div className="mb-8 p-4 rounded-2xl bg-teal-50/80 border border-teal-200 text-right">
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
-                <div className="text-xs text-teal-900 leading-relaxed">
-                  <span className="font-bold block mb-1">معيار النزاهة العلمية المعتمد:</span>
-                  تم استبعاد كاميرا تتبع العين والمعايرة الزائفة تماماً. هذا التقييم يعتمد حصرياً على البيانات الفعلية القابلة للإثبات: (1) زمن القراءة الفعلي بالثواني، (2) معدل الكلمات في الدقيقة (WPM) والكلمات الصحيحة (WCPM)، (3) إجابات أسئلة الفهم والاستيعاب للنص، مع التدقيق البشري الإشرافي للمعلم.
-                </div>
-              </div>
-            </div>
-
             {/* Reading Assessment Modality Selector */}
             <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
               <label className="block text-sm font-bold text-slate-800 mb-3">
@@ -1036,7 +1024,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                   <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-950 leading-relaxed">
                     <strong>تعذّر التقاط تفريغ صوتي من الميكروفون:</strong>
-                    لم تتوفر بيانات تفريغ آلي من المتصفح في هذه الجلسة. التزاماً بالنزاهة العلمية، لم يتم افتراض أي كلمة مقروءة آلياً لتجنب تزييف النتائج. يُرجى من المعلم تحديد الكلمات المقروءة يدوياً أو الاستماع للتسجيل الحي أعلاه.
+                    لم يتوفر تفريغ صوتي آلي في هذه الجلسة. يُرجى من المعلم تحديد الكلمات المقروءة يدوياً أو الاستماع للتسجيل الصوتي أعلاه.
                   </div>
                 </div>
               </div>
@@ -1316,20 +1304,6 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 <p className="text-[11px] text-indigo-700 mt-2">
                   نسبة الإجابات الصحيحة في أسئلة النص
                 </p>
-              </div>
-            </div>
-
-            {/* Clear Scientific Boundary Box */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right mb-8">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-slate-700 leading-relaxed">
-                  <span className="font-bold text-slate-900 block mb-0.5">
-                    البيانات المقاسة مقابل المستبعدة:
-                  </span>
-                  ✓ <strong>ما تم قياسه وتدقيقه:</strong> زمن القراءة الفعلي، سرعة القراءة العامة (WPM)، طلاقة الكلمات الصحيحة بالدقيقة ({typeof measuredWcpm === 'number' ? `WCPM = ${measuredWcpm} بمراجعة المعلم` : 'قراءة صامتة دون WCPM'})، والاستيعاب القرائي.<br />
-                  ✕ <strong>ما لم يُقَس:</strong> حركة العين الميكروسكوبية وتثبيتات البؤبؤ (تم استبعاد الكاميرا التزاماً بالمعايير العلمية والموثوقية التقنية).
-                </div>
               </div>
             </div>
 

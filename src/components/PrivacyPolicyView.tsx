@@ -101,10 +101,10 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
       <article className="rounded-3xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
-          <span>خصوصية كاملة بدون كاميرا (Zero Camera / No Video)</span>
+          <span>حماية خصوصية الطفل وعدم استخدام الكاميرا</span>
         </div>
         <p className="text-sm leading-7 text-slate-700">
-          تم استبعاد الكاميرا والمعايرة البصرية بالكامل من منظومة الفرز لحماية خصوصية الأطفال وضمان موثوقية النتائج. لا تتطلب المنصة تشغيل أي كاميرا أو التقاط أي صور، وتعتمد حصرياً على نصوص القراءة التفاعلية وأسئلة الفهم والتحليل الفونولوجي.
+          لا تتطلب المنصة تشغيل الكاميرا أو التقاط أي صور لحماية خصوصية الأطفال التامة. تعتمد المنظومة على نصوص القراءة التفاعلية وأسئلة الفهم والتحليل الصوتي المباشر.
         </p>
       </article>
 

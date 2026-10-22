@@ -158,7 +158,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         areasNeedingSupport.push('لم تتوفر بيانات صوتية صالحة؛ لم تُحتسب سرعة القراءة الجهرية لهذه الجلسة.');
       } else if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
         const isVerified = studentData.reading.teacherVerified === true;
-        const verificationLabel = isVerified ? 'بمعايرة المعلم' : 'محاذاة آلية أولية';
+        const verificationLabel = isVerified ? 'بمراجعة المعلم' : 'محاذاة آلية أولية';
         if (studentData.reading.wcpm >= gradeTargetWpm.median) {
           areasOfStrength.push(
             `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} عند وسيط عينة دراسة 2024 أو أعلى: ${gradeTargetWpm.median} ك/د)`
@@ -354,7 +354,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             لم يُجرَ أي تقييم بعد للطالب
           </h2>
           <p className="text-base text-slate-600 max-w-xl mx-auto mb-8 leading-relaxed">
-            التزاماً بالنزاهة العلمية التامة، لا تُعرض أي نتائج أو مؤشرات فرز افتراضية ما لم تكن مبنية على قياس فعلي مباشر. يرجى البدء بأحد الاختبارات أدناه:
+            لم تُسجل أي نتائج بعد لهذه الجلسة. يرجى البدء بإجراء أحد التقييمات أدناه لعرض التقرير:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 text-right">
@@ -459,8 +459,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         <div className="flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-700 leading-relaxed">
-            <span className="font-bold block mb-0.5">ضوابط التقرير والحدود العلمية:</span>
-            هذا التقرير هو أداة فرز تربوي استرشادي لتحديد مواطن القوة والاحتياج وتوجيه الدعم الصفي والمنزلي. لا يُعد تشخيصاً طبياً أو إكلينيكياً نهائياً لعسر القراءة. تم استبعاد أي قياسات غير معايرة، ولا تُعرض أي درجات إلا من واقع الأداء الفعلي المسجل.
+            <span className="font-bold block mb-0.5">ضوابط التقرير التربوي:</span>
+            هذا التقرير أداة فرز تربوي استرشادي لتحديد مواطن القوة والاحتياج وتوجيه الدعم الصفي والمنزلي، ولا يُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.
           </div>
         </div>
       </div>
@@ -867,7 +867,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   المرجعية العلمية والإفصاح المنهجي للتقييم (Scientific Citations & Methodology)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  تلتزم منصة بصيرة بالمعايير التجريبية المنشورة وتستبعد النماذج العشوائية أو غير المعايرة:
+                  تعتمد منصة بصيرة على المعايير التجريبية والأبحاث المحكمة في التقييم التربوي القرائي:
                 </p>
               </div>
             </div>
