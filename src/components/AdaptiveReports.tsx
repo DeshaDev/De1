@@ -71,6 +71,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       oralReadingAssessed?: boolean;
       oralAccuracyPercent?: number | null;
       teacherVerified?: boolean;
+      assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+      spokenTranscript?: string;
       durationSec: number;
       comprehensionScore: number;
       passageTitle?: string;
@@ -83,6 +85,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         oralReadingAssessed: currentAssessment.readingResults.oralReadingAssessed,
         oralAccuracyPercent: currentAssessment.readingResults.oralAccuracyPercent ?? null,
         teacherVerified: currentAssessment.readingResults.teacherVerified,
+        assessmentModality: currentAssessment.readingResults.assessmentModality,
+        spokenTranscript: currentAssessment.readingResults.spokenTranscript || '',
         durationSec: currentAssessment.readingResults.durationSeconds,
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
         passageTitle: currentAssessment.readingResults.passageTitle,
@@ -91,6 +95,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       readingSummary = {
         wpm: currentAssessment.eyeTrackingResults.wpm,
         wcpm: currentAssessment.eyeTrackingResults.wcpm ?? null,
+        assessmentModality: currentAssessment.eyeTrackingResults.assessmentModality,
+        spokenTranscript: currentAssessment.eyeTrackingResults.spokenTranscript || '',
         durationSec: currentAssessment.eyeTrackingResults.readingDurationSeconds || 0,
         comprehensionScore: currentAssessment.eyeTrackingResults.comprehensionScore || 0,
       };
@@ -101,6 +107,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         oralReadingAssessed: student.oralReadingAssessed,
         oralAccuracyPercent: student.oralAccuracyPercent ?? null,
         teacherVerified: student.teacherVerified,
+        assessmentModality: student.assessmentModality,
+        spokenTranscript: student.spokenTranscript || '',
         durationSec: student.readingDurationSeconds || 0,
         comprehensionScore: student.comprehensionScore ?? 0,
       };
@@ -144,7 +152,11 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     // Evaluate reading fluency (if measured)
     if (studentData.reading) {
-      if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
+      const isOralSession = studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true;
+      const hasOralEvidence = Boolean((studentData.reading.spokenTranscript || '').trim()) || studentData.reading.teacherVerified === true;
+      if (isOralSession && !hasOralEvidence) {
+        areasNeedingSupport.push('لم تتوفر بيانات صوتية صالحة؛ لم تُحتسب سرعة القراءة الجهرية لهذه الجلسة.');
+      } else if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
         const isVerified = studentData.reading.teacherVerified === true;
         const verificationLabel = isVerified ? 'بمعايرة المعلم' : 'محاذاة آلية أولية';
         if (studentData.reading.wcpm >= gradeTargetWpm.median) {
@@ -160,6 +172,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} دون المئين 25 الاسترشادي لدراسة 2024: ${gradeTargetWpm.p25} ك/د)`
           );
         }
+      } else if (isOralSession) {
+        areasNeedingSupport.push('تعذّر احتساب WCPM موثوق لهذه الجلسة؛ يلزم تفريغ صوتي أو مراجعة بشرية موثّقة.');
       } else {
         if (studentData.reading.wpm >= gradeTargetWpm.median) {
           areasOfStrength.push(
@@ -542,7 +556,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   </div>
                   <span className="text-xs font-bold text-teal-700 font-mono">
                     {studentData.reading
-                      ? typeof studentData.reading.wcpm === 'number'
+                      ? (studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true)
+                      ? 'غير متاح'
+                      : typeof studentData.reading.wcpm === 'number'
                         ? `${studentData.reading.wcpm} WCPM`
                         : `${studentData.reading.wpm} ك/د`
                       : 'لم يُجرَ'}
@@ -551,7 +567,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة والفهم القرائي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
-                    ? typeof studentData.reading.wcpm === 'number'
+                    ? (studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true)
+                      ? 'لم تتوفر بيانات صوتية صالحة؛ سرعة القراءة الجهرية غير متاحة.'
+                      : typeof studentData.reading.wcpm === 'number'
                       ? studentData.reading.teacherVerified === true
                         ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
                         : `طلاقة الكلمات المقروءة شفوياً بلغت ${studentData.reading.wcpm} كلمة/دقيقة (محاذاة آلية أولية — بانتظار اعتماد المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص.`
@@ -702,7 +720,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                       {gradeTargetWpm.label} WCPM (الصف {studentData.grade})
                     </td>
                     <td className="py-3.5 px-4">
-                      {studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
+                      {studentData.reading && studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true ? (
+                        <span className="text-slate-500">غير متاحة (غياب التفريغ الصوتي)</span>
+                      ) : studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
                         studentData.reading.wcpm >= gradeTargetWpm.median ? (
                           <span className="text-emerald-700 font-bold">
                             {studentData.reading.teacherVerified ? '✓ عند الوسيط أو أعلى (معتمد)' : '✓ عند الوسيط أو أعلى (آلي أولياً)'}
@@ -725,14 +745,20 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4 font-bold text-slate-900">السرعة القرائية الكلية</td>
                     <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي (WPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
-                      {studentData.reading ? `${studentData.reading.wpm} كلمة/دقيقة` : 'لم تُقَس'}
+                      {studentData.reading
+                        ? studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true
+                          ? 'غير متاحة (غياب التفريغ الصوتي)'
+                          : `${studentData.reading.wpm} كلمة/دقيقة`
+                        : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {gradeTargetWpm.label} (الصف {studentData.grade})
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
-                        studentData.reading.wpm >= gradeTargetWpm.p25 ? (
+                        studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true ? (
+                          <span className="text-slate-500">غير متاحة (غياب التفريغ الصوتي)</span>
+                        ) : studentData.reading.wpm >= gradeTargetWpm.p25 ? (
                           <span className="text-emerald-700 font-bold">✓ سرعة ملائمة</span>
                         ) : (
                           <span className="text-amber-700 font-bold">سرعة بطيئة</span>
