@@ -22,10 +22,6 @@ import { StudentRecord } from '../data/seedData';
 export type AppTabId =
   | 'home'
   | 'eye-lab'
-  | 'professional-eye-tracking'
-  | 'real-eye-calibration'
-  | 'arabic-speech-analysis'
-  | 'tactile-analytics'
   | 'adaptive-reports'
   | 'dyscalculia-lab'
   | 'remediation-gym'
