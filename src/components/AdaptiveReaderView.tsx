@@ -516,8 +516,8 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
 
         {problematicWords.length > 0 && (
         <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
-          <h3 className="text-sm font-bold text-amber-950">تدريب موجه من جلسة {studentName ? `«${studentName}»` : 'القراءة السابقة'}</h3>
-          <p className="text-xs leading-relaxed text-amber-900">الكلمات التالية رُصدت خلال جلسة القراءة السابقة للتركيز عليها وتيسير استيعابها بصرياً وصوتياً:</p>
+          <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` لـ «${studentName}»` : ''}</h3>
+          <p className="text-xs leading-relaxed text-amber-900">هذه الكلمات اختيرت للمراجعة في جلسة سابقة وراجعها المعلّم. جرّب قراءتها وفهمها؛ لا تعني القائمة وحدها وجود صعوبة.</p>
           <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
         </section>
       )}
@@ -663,10 +663,13 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
 
             {/* Morphological & Syllabic Breakdown Cards */}
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div className="px-6 py-3 bg-sky-50 border-b border-sky-100 text-xs leading-relaxed text-sky-900">
+                التقسيم والجذر والمعنى المقترحة وسائل مساعدة للمراجعة، وقد تحتاج إلى تصحيح لغوي بحسب الكلمة والسياق. لا تستخدم هذه الملاحظات للحكم على قدرة الطفل.
+              </div>
               <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
-                    التحليل الصرفي والمقطعي للكلمات المختارة
+                    ملاحظات لغوية مقترحة للكلمات
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     الفكرة المحورية: {keyIdea}
@@ -682,13 +685,13 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                       {item.word}
                     </div>
                     <div className="text-xs text-[#0284C7] font-semibold">
-                      المقاطع: {item.syllables}
+                      تقسيم مقترح: {item.syllables}
                     </div>
                     <div className="text-xs text-slate-600">
-                      الجذر اللغوي: <strong>{item.root}</strong>
+                      الجذر المحتمل: <strong>{item.root}</strong>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed pt-2 border-t border-slate-100">
-                      {item.meaning}
+                      معنى مقترح: {item.meaning}
                     </p>
                   </div>
                 ))}
