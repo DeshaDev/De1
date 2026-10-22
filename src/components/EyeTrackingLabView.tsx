@@ -155,6 +155,23 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Start reading timer & speech recognition if oral mode
   const handleStartReading = () => {
+    if (
+      !guardianConsentChecked ||
+      !guardianConsentRecordedAt ||
+      !Number.isFinite(Date.parse(guardianConsentRecordedAt))
+    ) {
+      window.alert('يلزم تأكيد موافقة ولي الأمر وتوثيق وقتها قبل بدء الجلسة.');
+      return;
+    }
+    if (
+      readingMode === 'oral_audio' &&
+      (!audioConsentChecked ||
+        !guardianAudioConsentRecordedAt ||
+        !Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)))
+    ) {
+      window.alert('يلزم تأكيد الموافقة الصوتية المستقلة وتوثيق وقتها قبل تشغيل الميكروفون.');
+      return;
+    }
     readingStartTimestampRef.current = Date.now();
     isReadingActiveRef.current = true;
     setReadingSeconds(0);
