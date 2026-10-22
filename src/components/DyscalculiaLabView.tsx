@@ -379,10 +379,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       numberLinePAE: computedMetrics.numberLinePAE,
       transcodingAccuracy: computedMetrics.transcodingAccuracy,
       reversalErrorCount: computedMetrics.reversalErrorCount,
-      dyscalculiaRiskScore: computedMetrics.dyscalculiaRiskScore,
-      mathHeuristicIndicator: computedMetrics.heuristicIndicator,
-      mathRiskLevel: computedMetrics.riskLevel,
-      mathRiskLabelAr: computedMetrics.riskLabelAr,
+      dyscalculiaRiskScore: null,
+      mathHeuristicIndicator: null,
+      mathRiskLevel: 'unassessed',
+      mathRiskLabelAr: 'هذه النتائج مقاييس وصفية؛ لا توجد درجة خطر معيارية معتمدة.',
       mathTrials: {
         subitizingTrials,
         numberLineTrials,
@@ -390,7 +390,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       },
     });
     setSaveMessage(
-      `تم تحديث ملف الطالب (${activeStudent.name}) بمؤشر الفرز الحسابي (${computedMetrics.dyscalculiaRiskScore}/100 - ${computedMetrics.riskLabelAr} · PAE=${computedMetrics.numberLinePAE}%).`
+      `تم حفظ مقاييس أداء وصفية لمهام الحساب لدى ${activeStudent.name}؛ لا يُستنتج منها تشخيص أو مستوى خطر معياري.`
     );
   };
 
@@ -1053,13 +1053,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
               <Calculator className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>ملخص الفرز الحسابي الفوري</span>
+              <span>مقاييس الأداء الوصفية</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900">
-              ملخص المهام الحسابية
+              نتائج المهام الحسابية
             </h3>
             <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              هذا مؤشر استكشافي مبني على عدد قليل من المحاولات، وليس اختباراً معيارياً أو تشخيصاً لعسر الحساب.
+              تعرض هذه الصفحة أداء الطفل في مهام قصيرة فقط. لم تُعايَر حدود تصنيف لعسر الحساب على عينة عربية ممثلة؛ لذلك لا تعرض الصفحة درجة خطر أو تشخيصًا.
             </p>
           </div>
 
@@ -1070,12 +1070,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
                 answeredNumberLineCount === 2 &&
                 answeredTranscodingCount === 3
-                  ? `مؤشر الأداء الاستدلالي ${computedMetrics.heuristicIndicator}/100 (الأعلى = أداء أفضل)`
-                  : `${
-                      answeredSubitizingCount +
-                      answeredNumberLineCount +
-                      answeredTranscodingCount
-                    } / 9 مهام`}
+                  ? 'اكتملت 9 من 9 مهام'
+                  : (answeredSubitizingCount + answeredNumberLineCount + answeredTranscodingCount) + ' / 9 مهام'}
               </span>
             </div>
 
@@ -1083,39 +1079,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             answeredNumberLineCount === 2 &&
             answeredTranscodingCount === 3 ? (
               <>
-                <div className="flex items-baseline justify-between pt-1">
-                  <span className="text-3xl font-bold font-mono tabular-nums text-slate-900">
-                    {computedMetrics.dyscalculiaRiskScore}
-                    <span className="text-sm font-normal text-slate-500">
-                      {' '}
-                      / 100
-                    </span>
-                  </span>
-                  <span
-                    className={`text-xs font-semibold ${
-                      computedMetrics.riskLevel === 'high'
-                        ? 'text-[#DC2626]'
-                        : computedMetrics.riskLevel === 'moderate'
-                          ? 'text-[#D97706]'
-                          : 'text-[#059669]'
-                    }`}
-                  >
-                    {computedMetrics.riskLevel === 'high' ? '■ ' : '● '}
-                    {computedMetrics.riskLabelAr}
-                  </span>
-                </div>
-
-                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2">
-                  <div
-                    style={{ width: `${computedMetrics.dyscalculiaRiskScore}%` }}
-                    className={`h-full transition-all ${
-                      computedMetrics.riskLevel === 'high'
-                        ? 'bg-[#DC2626]'
-                        : computedMetrics.riskLevel === 'moderate'
-                          ? 'bg-[#D97706]'
-                          : 'bg-[#059669]'
-                    }`}
-                  />
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-sm font-bold text-slate-800">{computedMetrics.riskLabelAr}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                    لا تعرض هذه النسخة درجة خطر أو تصنيفًا معياريًا. راجع دقة المهام وخطأ خط الأعداد وترميز الأعداد كلًّا على حدة.
+                  </p>
                 </div>
               </>
             ) : (
@@ -1139,9 +1107,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   نسبة الخطأ في خط الأعداد
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredNumberLineCount > 0
-                    ? `${computedMetrics.numberLinePAE}%`
-                    : '0/2'}
+                  {answeredNumberLineCount > 0 && computedMetrics.numberLinePAE !== null
+                    ? String(computedMetrics.numberLinePAE) + '%'
+                    : 'لم يُقَس'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
@@ -1149,17 +1117,17 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   صحة الإجابات في مهمة تمييز الكميات
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredSubitizingCount > 0
-                    ? `${computedMetrics.subitizingAccuracy}%`
-                    : '0/4'}
+                  {answeredSubitizingCount > 0 && computedMetrics.subitizingAccuracy !== null
+                    ? String(computedMetrics.subitizingAccuracy) + '%'
+                    : 'لم يُقَس'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-slate-600">متوسط زمن الاستجابة في المهام</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredSubitizingCount > 0
-                    ? `${computedMetrics.avgSubitizingMs} مللي ثانية`
-                    : '—'}
+                  {answeredSubitizingCount > 0 && computedMetrics.avgSubitizingMs !== null
+                    ? String(computedMetrics.avgSubitizingMs) + ' مللي ثانية'
+                    : 'لم يُقَس'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
@@ -1168,12 +1136,12 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 </span>
                 <span
                   className={`font-mono tabular-nums font-semibold ${
-                    computedMetrics.reversalErrorCount > 0
+                    (computedMetrics.reversalErrorCount ?? 0) > 0
                       ? 'text-[#DC2626]'
                       : 'text-[#059669]'
                   }`}
                 >
-                  {computedMetrics.reversalErrorCount} من{' '}
+                  {computedMetrics.reversalErrorCount ?? 'لم يُقَس'} من{' ' }
                   {TRANSCODING_ITEMS.length}
                 </span>
               </div>
