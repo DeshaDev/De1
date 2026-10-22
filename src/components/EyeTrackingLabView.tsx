@@ -385,7 +385,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
         const initialWords = passage.words.map((targetWord, idx) => {
           const aligned = alignmentResult.alignment[idx];
-          const status = aligned ? aligned.status : 'correct';
+          const status = aligned ? aligned.status : 'omitted';
           return {
             word: targetWord,
             status: status as 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted',
@@ -440,7 +440,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
     const effectiveWords = correct + dialect;
     const duration = finalDurationSec || 60;
-    const liveWcpm = Math.max(0, Math.min(220, Math.round((effectiveWords / duration) * 60)));
+    const liveWcpm = Math.max(0, Math.round((effectiveWords / duration) * 60));
     const liveAccuracy = Math.round((effectiveWords / Math.max(1, verifiedWords.length)) * 100);
 
     return {
@@ -935,7 +935,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col items-center justify-center">
               <button
                 onClick={handleFinishReading}
-                disabled={!isReadingActive}
+                disabled={!isReadingActive || readingSeconds < 4}
                 className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
               >
                 <span>
@@ -946,7 +946,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 <ChevronLeft className="w-8 h-8" />
               </button>
               <p className="text-slate-500 text-xs mt-3 text-center">
-                اضغط على الزر فور الانتهاء لحساب زمن القراءة بدقة
+                أكمل النص كاملًا ثم اضغط؛ لا يتاح إنهاء الجلسة قبل مرور 4 ثوانٍ كحدّ تقني أدنى.
               </p>
             </div>
           </div>
@@ -970,7 +970,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 تدقيق دقة نطق الكلمات وحساب طلاقة الكلمات الصحيحة (WCPM)
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                وفقاً للأدلة العلمية (دراسة Little STT 2025)، تُعاني خوارزميات التعرف الصوتي الآلي على كلام الأطفال من تباين صوتي ملحوظ (معدل خطأ WER يصل إلى 66%). لذلك لا يُعتد بالتحليل الآلي دون مراجعة وتعديل المعلم البشري. انقر على أي كلمة لتغيير حالتها في حال أخطأ النموذج الآلي في تصنيفها.
+                التفريغ الآلي مسودة قد تخطئ في الكلمات أو اللهجة أو الحركات؛ لا تعتمد نسبة الدقة أو WCPM قبل الاستماع إلى التسجيل ومراجعة كل كلمة. انقر على الكلمة لتغيير تصنيفها، ثم اعتمد النتيجة بعد المراجعة.
               </p>
             </div>
 
@@ -1284,7 +1284,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                     <span className="text-sm font-semibold">WCPM</span>
                   </div>
                   <p className="text-[11px] text-emerald-700 mt-2">
-                    دقة لفظية: {measuredAccuracyPercent ?? 100}% (بمراجعة المعلم)
+                    دقة لفظية: {measuredAccuracyPercent === undefined ? 'غير متاحة' : `${measuredAccuracyPercent}%`} (بمراجعة المعلم)
                   </p>
                 </div>
               )}
