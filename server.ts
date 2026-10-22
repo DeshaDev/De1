@@ -1632,140 +1632,62 @@ async function startServer() {
         }
       }
 
-      const anonymizedToken = 'الطالب [معرّف الجلسة المشفّر #ANON]';
-      const ai = getGenAIClient();
+      // Build a descriptive report from supplied observations only. Do not ask a generative
+      // model to infer dyslexia/dyscalculia, gaze behavior, or treatment from one short session.
+      const safeWords = problematicWords
+        .filter((word: unknown): word is string => typeof word === 'string')
+        .slice(0, 8)
+        .map((word: string) => word.trim().slice(0, 60))
+        .filter(Boolean);
+      const asFiniteNumber = (value: unknown): number | null =>
+        typeof value === 'number' && Number.isFinite(value) ? value : null;
+      const requestedAssessmentModality = reqModality === 'voice_only'
+        ? 'voice_only'
+        : isNoEyeModality
+          ? 'reading_only'
+          : 'eye_voice';
 
-      if (ai) {
-        try {
-          const oralContextLine = oralReadingAssessed
-            ? `- تحليل القراءة الجهرية المنطوقة: دقة المطابقة ${oralAccuracyPercent}%، إبدالات فونولوجية ديسلكسية: ${phoneticSubstitutionCount}، بدائل لهجية مقبولة: ${dialectVariantCount}`
-            : `- القراءة الجهرية: لم يتم تسجيل قراءة صوتية بالميكروفون في هذه الجلسة`;
-
-          const mathContextLine =
-            dyscalculiaAssessed && typeof numberLinePAE === 'number'
-              ? `- نتائج فحص عسر الحساب (الديسكالكوليا): خطأ خط الأعداد (PAE) = ${numberLinePAE}%، دقة الإدراك الكمي الفوري = ${subitizingAccuracy}%، أخطاء عكس الأرقام = ${reversalErrorCount ?? 0}`
-              : `- فحص عسر الحساب (الديسكالكوليا): لم يُجرَ اختبار الحساب في هذه الجلسة بعد (يجب عدم افتراض أي درجة حسابية)`;
-
-          const eyeContextLine = isNoEyeModality
-            ? `- نمط الجلسة: تقييم مباشر للطلاقة القرائية واستيعاب النص بدون كاميرا (تم استبعاد تتبع العين التزاماً بالمصداقية وحماية الخصوصية)`
-            : `- التغطية البصرية الفعلية للنص: ${gazeCoveragePercent}% (${observedWordCount ?? 'مرصود'}/${totalPassageWordCount ?? 'كلي'})
-- متوسط زمن التثبيت البصري (Fixation Duration): ${avgFixationMs} مللي ثانية
-- نسبة التراجع البصري (Regression Rate): ${regressionRate}%`;
-
-          const prompt = `أنت خبير تربوي وإكلينيكي في الفرز الأولي الاسترشادي لصعوبات التعلم (عسر القراءة / الديسلكسيا وعسر الحساب / الديسكالكوليا) للطلاب العرب.
-قم بتحليل مؤشرات الفرز الأولي التالية لـ "${anonymizedToken}" (الصف الدراسي: ${gradeLevel}) مع التأكيد أن هذه النتائج استرشادية أولية وليست تشخيصاً طبياً نهائياً:
-${eyeContextLine}
-- سرعة القراءة الفعلية: ${wpm} كلمة/دقيقة
-- الكلمات التي شهدت أطول توقف أو تعثر فونولوجي: ${problematicWords.join('، ') || 'لا يوجد'}
-${oralContextLine}
-${mathContextLine}
-
-قدّم تقريراً إرشادياً وتربوياً دقيقاً باللغة العربية الفصحى الواضحة.`;
-
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
-            contents: prompt,
-            config: {
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  clinicalSummary: {
-                    type: Type.STRING,
-                    description:
-                      'ملخص استرشادي شامل لحالة الطالب القرائية والحسابية.',
-                  },
-                  ocularMotorAnalysis: {
-                    type: Type.STRING,
-                    description:
-                      'تفسير دقيق لحركة العين المرصودة (التثبيتات البصرية والقفزات التراجعية).',
-                  },
-                  orthographicAndPhonologicalPatterns: {
-                    type: Type.STRING,
-                    description:
-                      'تحليل الصعوبات الصرفية والصوتية في الكلمات العربية المتعثرة ونتائج القراءة الجهرية.',
-                  },
-                  dyscalculiaSpatialAnalysis: {
-                    type: Type.STRING,
-                    description:
-                      'تحليل الإدراك الكمي أو توضيح أن اختبار الحساب لم يُجرَ بعد في حال عدم إتمامه.',
-                  },
-                  interventionExercises: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        title: { type: Type.STRING },
-                        durationMinutes: { type: Type.NUMBER },
-                        description: { type: Type.STRING },
-                      },
-                      required: ['title', 'durationMinutes', 'description'],
-                    },
-                  },
-                  classroomAccommodations: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                  },
-                },
-                required: [
-                  'clinicalSummary',
-                  'ocularMotorAnalysis',
-                  'orthographicAndPhonologicalPatterns',
-                  'dyscalculiaSpatialAnalysis',
-                  'interventionExercises',
-                  'classroomAccommodations',
-                ],
-              },
-            },
-          });
-
-          const parsed = JSON.parse((response.text || '{}').trim());
-          res.json({
-            report: parsed,
-            source: 'gemini-3.8-flash',
-            piiAnonymized: true,
-          });
-          return;
-        } catch (err: unknown) {
-          console.warn('Gemini analyze-session fallback triggered:', err);
-        }
-      }
-
-      const fallbackReport = buildDeterministicClinicalReport({
+      const descriptiveReport = buildDeterministicClinicalReport({
         studentName: stripArabicPatronymics(studentName),
-        gradeLevel: Number(gradeLevel) || 3,
-        dialectLabelAr: 'الفصحى المعيارية / الخليجية',
-        gazeCoveragePercent: Number(gazeCoveragePercent) || 100,
-        observedWordCount: Number(observedWordCount) || 10,
-        totalPassageWordCount: Number(totalPassageWordCount) || 40,
-        wpm: Number(wpm) || 60,
-        avgFixationMs: Number(avgFixationMs) || 0,
-        regressionRate: Number(regressionRate) || 0,
-        regressionCount: isNoEyeModality ? 0 : 4,
-        blinkCount: isNoEyeModality ? 0 : 10,
-        blinksPerMinute: isNoEyeModality ? 0 : 15,
-        visualStrainLabelAr: isNoEyeModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'معدل رمش طبيعي ومريح بصرياً',
-        calibrationAccuracyPercent: Number(calibrationAccuracyPercent) || (isNoEyeModality ? 0 : 85),
-        calibrationValidationLabelAr: isNoEyeModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'تحقق مستقل (Independent Holdout)',
-        assessmentModality: isNoEyeModality ? 'reading_only' : 'eye_voice',
-        problematicWords: problematicWords.map(String),
-        oralReadingAssessed: Boolean(oralReadingAssessed),
-        oralAccuracyPercent:
-          typeof oralAccuracyPercent === 'number' ? oralAccuracyPercent : null,
-        phoneticSubstitutionCount: Number(phoneticSubstitutionCount) || 0,
-        dialectVariantCount: Number(dialectVariantCount) || 0,
-        dyscalculiaAssessed: Boolean(dyscalculiaAssessed),
-        numberLinePAE: typeof numberLinePAE === 'number' ? numberLinePAE : null,
-        subitizingAccuracy:
-          typeof subitizingAccuracy === 'number' ? subitizingAccuracy : null,
-        reversalErrorCount:
-          typeof reversalErrorCount === 'number' ? reversalErrorCount : null,
+        gradeLevel: Number.isInteger(Number(gradeLevel)) && Number(gradeLevel) >= 1 && Number(gradeLevel) <= 6
+          ? Number(gradeLevel)
+          : 3,
+        dialectLabelAr: 'اللهجة المختارة في الجلسة',
+        gazeCoveragePercent: isNoEyeModality ? 0 : (asFiniteNumber(gazeCoveragePercent) ?? 0),
+        observedWordCount: isNoEyeModality ? 0 : (asFiniteNumber(observedWordCount) ?? 0),
+        totalPassageWordCount: asFiniteNumber(totalPassageWordCount) ?? 0,
+        wpm: Math.max(0, Math.round(asFiniteNumber(wpm) ?? 0)),
+        avgFixationMs: isNoEyeModality ? 0 : (asFiniteNumber(avgFixationMs) ?? 0),
+        regressionRate: isNoEyeModality ? 0 : (asFiniteNumber(regressionRate) ?? 0),
+        regressionCount: isNoEyeModality ? 0 : 0,
+        blinkCount: 0,
+        blinksPerMinute: 0,
+        visualStrainLabelAr: isNoEyeModality
+          ? 'غير منطبق؛ لا تستخدم هذه الجلسة الكاميرا'
+          : 'قياسات تقنية وصفية؛ لم يُصنّف الإجهاد البصري',
+        calibrationAccuracyPercent: isNoEyeModality
+          ? 0
+          : (asFiniteNumber(calibrationAccuracyPercent) ?? 0),
+        calibrationValidationLabelAr: isNoEyeModality
+          ? 'غير منطبق'
+          : 'دقة معايرة واردة من الجلسة؛ لا تعني تحققًا معياريًا مستقلاً',
+        problematicWords: safeWords,
+        oralReadingAssessed: oralReadingAssessed === true,
+        oralAccuracyPercent: asFiniteNumber(oralAccuracyPercent),
+        phoneticSubstitutionCount: Math.max(0, Math.round(asFiniteNumber(phoneticSubstitutionCount) ?? 0)),
+        dialectVariantCount: Math.max(0, Math.round(asFiniteNumber(dialectVariantCount) ?? 0)),
+        assessmentModality: requestedAssessmentModality,
+        dyscalculiaAssessed: dyscalculiaAssessed === true,
+        numberLinePAE: asFiniteNumber(numberLinePAE),
+        subitizingAccuracy: asFiniteNumber(subitizingAccuracy),
+        reversalErrorCount: asFiniteNumber(reversalErrorCount),
       });
 
       res.json({
-        source: 'clinical-engine',
-        piiAnonymized: true,
-        report: fallbackReport,
+        report: descriptiveReport,
+        source: 'descriptive-server-report',
+        usesExternalAI: false,
+        diagnosticClassification: null,
       });
     }
   );
