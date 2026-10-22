@@ -1,213 +1,93 @@
-# Design System Master File
+# بصيرة — Design System Master
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+> **Source of truth:** Use this file for every page. Page-specific design rules may live under `design-system/baseera/pages/` only where an explicit page exception is needed.
 
----
+**Product:** Arabic reading, comprehension and numeracy learning space for primary-school children, with parent/teacher support.  
+**Design intelligence:** UI UX Pro Max — Kids Learning + Educational App.  
+**Visual direction:** Softened Claymorphism combined with colorful block-based learning cards, clear hierarchy, calm backgrounds, and restrained motion.
 
-**Project:** Baseera
-**Generated:** 2026-10-21 18:58:38
-**Category:** Book & Reading Tracker
+## Product intent
 
----
+- Make children feel welcome, capable and unhurried. Celebrate attempts and progress rather than ranking children or using frightening risk labels.
+- Design Arabic-first with correct RTL layout, readable Arabic shaping, short instructions, and visible labels.
+- Separate child activities from adult/teacher reporting. Institutional login is available but visually secondary.
+- This is an educational screening and support tool, not a medical diagnostic product.
+- Keep the homepage's interactive preview titled **محاكاة جلسة القراءة التفاعلية**. It may highlight a word and play its pronunciation, but must not imply that camera tracking, gaze fixation, calibration or gaze maps are part of the product.
+- Never create speeds, scores or reassuring status labels when the supporting evidence is unavailable. Present missing measures as unavailable.
+- Use Lucide icons consistently; do not use emoji as interface icons.
+- No advertisements, pressure timers, manipulative streaks, shame-oriented wording, or child-targeted upsells.
 
-## Global Rules
+## Color palette
 
-### Color Palette
+| Role | Hex | Use |
+|---|---|---|
+| Primary | `#2563EB` | Main actions, active navigation, links |
+| Primary hover | `#1D4ED8` | Hover/pressed primary state |
+| On primary | `#FFFFFF` | Text/icons on blue actions |
+| Teal | `#0F766E` | Listening and supportive learning actions |
+| Achievement yellow | `#F59E0B` | Reward accents with dark text |
+| Play pink | `#EC4899` | Decorative highlights only; use dark text on pale pink surfaces |
+| Default canvas | `#EFF6FF` | Calm light-blue background |
+| Card | `#FFFFFF` | Main content surfaces |
+| Ink | `#17243D` | Headings and main copy |
+| Supporting text | `#475569` | Secondary copy |
+| Border | `#D6E4F8` | Card outlines and dividers |
+| Soft blue | `#DBEAFE` | Selected/active states |
+| Soft mint | `#D1FAE5` | Supportive callouts |
+| Soft yellow | `#FEF3C7` | Reward/number activities |
+| Soft pink | `#FCE7F3` | Decorative accent surface |
+| Error | `#B91C1C` | Clear error text and icons |
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#78716C` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#92400E` | `--color-secondary` |
-| On Secondary | `#FFFFFF` | `--color-on-secondary` |
-| Accent/CTA | `#D97706` | `--color-accent` |
-| On Accent/CTA | `#000000` | `--color-on-accent` |
-| Background | `#FFFBEB` | `--color-background` |
-| Foreground | `#0F172A` | `--color-foreground` |
-| Card | `#FFFFFF` | `--color-card` |
-| Card Foreground | `#0F172A` | `--color-card-foreground` |
-| Muted | `#F6F6F6` | `--color-muted` |
-| Muted Foreground | `#475569` | `--color-muted-foreground` |
-| Border | `#EEEDED` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| On Destructive | `#FFFFFF` | `--color-on-destructive` |
-| Ring | `#78716C` | `--color-ring` |
+Maintain at least 4.5:1 contrast for normal text. Use dark text on yellow and pink surfaces. Color alone must never encode a result; pair it with clear wording and/or an icon.
 
-**Color Notes:** Book brown + page amber
+## Typography
 
-### Typography
+- **Primary:** Noto Sans Arabic, weights 400–900.
+- **Fallback:** Tahoma, Arial, sans-serif.
+- Use a comfortable 16px minimum for mobile body text and approximately 1.65–1.9 line-height for Arabic reading copy.
+- Headings may use 800–900 weight; keep normal paragraphs calm and easy to scan.
+- Do not use decorative Latin display fonts that do not include complete Arabic glyphs.
 
-- **Heading Font:** Cormorant Garamond
-- **Body Font:** Crimson Pro
-- **Mood:** academia, library, mahogany, parchment, brass, scholarly, prestige, antique, victorian, leather
-- **Google Fonts:** [Cormorant Garamond + Crimson Pro](https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,300;1,500&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400)
+## Shape, spacing and depth
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,300;1,500&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
-```
+- Keep an 8px spacing rhythm: 8 / 16 / 24 / 32 / 48 / 64px.
+- Cards: 22–28px radius, soft border and restrained layered shadow.
+- Primary controls: minimum 44px height. Inputs: minimum 48px height and 16px font size.
+- Keep 8px or more between adjacent touch targets.
+- Use soft color blocks and gentle depth; avoid excessive gradients, nested cards, glass effects and high-frequency motion.
+- Each page should have one clear primary action. Secondary actions should remain visually subordinate.
+- On small screens, use a five-item bottom navigation and reserve safe-area space. Prevent unintentional horizontal page scrolling.
 
-### Spacing Variables
+## Motion
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+- Motion should be short, calm and purposeful. The reading preview may highlight one word at a time and must have a pause control.
+- Respect `prefers-reduced-motion`; no essential information may rely on animation.
+- Do not animate multiple elements continuously or place moving patterns behind reading text.
 
-### Shadow Depths
+## Accessibility and responsive rules
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+- Correct RTL, semantic heading hierarchy and a skip-to-content link.
+- Visible focus indicators; keyboard-usable controls and descriptive accessible names.
+- Use visible field labels and inline error messages; never rely on placeholders alone.
+- Keep primary/body text readable in both light and night reading themes.
+- Essential information must not exist only in tiny labels. Wrap labels when needed instead of truncating them.
+- Test widths around 375px, 768px and desktop widths; support portrait, landscape and browser zoom.
+- Preserve the reading comfort controls and spacing controls while redesigning the pages around them.
 
----
+## Shared components
 
-## Component Specs
+- Header: wordmark, five child-facing destinations, teacher access as a secondary action.
+- Mobile navigation: Home, Reading, Math, Accessible Reader, Practice (five items maximum).
+- Primary action: filled blue with white text, rounded corners and clear press/disabled states.
+- Secondary action: card surface, soft border and dark text.
+- Activity tile: large icon tile, direct label, one-sentence explanation, visible action.
+- Data summary: measured educational indicators only; missing data shown as unavailable.
+- Parent/teacher panel: evidence-aware descriptions and non-diagnostic wording.
+- Footer: learning purpose, privacy and parent/teacher entry.
 
-### Buttons
+## Avoid
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #D97706;
-  color: #000000;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #78716C;
-  border: 2px solid #78716C;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #FFFBEB;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #78716C;
-  outline: none;
-  box-shadow: 0 0 0 3px #78716C20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Swiss Modernism 2.0
-
-**Keywords:** Grid system, Helvetica, modular, asymmetric, international style, rational, clean, mathematical spacing
-
-**Best For:** Corporate sites, architecture, editorial, SaaS, museums, professional services, documentation
-
-**Key Effects:** display: grid, grid-template-columns: repeat(12 1fr), gap: 1rem, mathematical ratios, clear hierarchy
-
-### Page Pattern
-
-**Pattern Name:** Hero + Testimonials + CTA
-
-- **Conversion Strategy:** Social proof before CTA. Use a concise set of verified testimonials with photo, name, and role. CTA after social proof. Provide previous/next and pause controls; stop rotation on focus, hover, and reduced motion; announce slide position. Previous/next buttons and keyboard controls must expose every slide without dragging.
-- **CTA Placement:** Hero (sticky) + Post-testimonials
-- **Section Order:** Hero > Problem statement > Solution overview > Testimonials carousel > CTA
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Excessive decoration
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- Camera/gaze/calibration claims or visualizations.
+- Labels like “طفل سليم” or “عسر قراءة مرتفع” presented as a diagnosis.
+- Fake defaults, unsupported precision, or zero standing in for missing evidence without an explicit explanation.
+- Tiny grey copy, low-contrast buttons, icon-only navigation without labels, emoji icons, autoplay that cannot be paused, and distracting animations.
