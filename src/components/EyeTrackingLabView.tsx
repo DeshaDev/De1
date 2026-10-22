@@ -100,6 +100,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const [isListening, setIsListening] = useState(false);
   const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
+  const [readingModeNotice, setReadingModeNotice] = useState('');
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeStreamRef = useRef<MediaStream | null>(null);
@@ -125,6 +126,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const [isReadingActive, setIsReadingActive] = useState(false);
   const timerRef = useRef<any>(null);
   const readingStartTimestampRef = useRef<number>(0);
+  const readingPassageRef = useRef<HTMLDivElement | null>(null);
 
   // Accessibility comfort options
   const [fontSizePx, setFontSizePx] = useState(26);
@@ -148,117 +150,134 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     return sentences.length > 0 ? sentences : [text];
   }, [passage]);
 
-  // Start reading timer & speech recognition if oral mode
-  const handleStartReading = () => {
+  // After the stage changes, place the reading passage at the top of the viewport.
+  useEffect(() => {
+    if (stage !== 'reading') return;
+    const target = readingPassageRef.current;
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    target.focus({ preventScroll: true });
+  }, [stage, passage.id]);
+
+  // Start timing only when the selected reading mode is ready.
+  const startReadingClock = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
     readingStartTimestampRef.current = Date.now();
+    setReadingSeconds(0);
+    setIsReadingActive(true);
+    timerRef.current = setInterval(() => {
+      setReadingSeconds(prev => prev + 1);
+    }, 1000);
+  };
+
+  // Move to the reading stage immediately; the passage effect scrolls it into view.
+  const handleStartReading = () => {
     isReadingActiveRef.current = true;
     audioRecordingStartedRef.current = false;
     setReadingSeconds(0);
-    setIsReadingActive(true);
+    setIsReadingActive(false);
     spokenTranscriptRef.current = '';
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
+    setReadingModeNotice('');
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
       audioPlaybackUrlRef.current = null;
     }
     setAudioPlaybackUrl(null);
+    if (timerRef.current) clearInterval(timerRef.current);
     setStage('reading');
 
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setReadingSeconds(prev => prev + 1);
-    }, 1000);
-
-    // Initialize HTML5 MediaRecorder for real playable audio stream if oral mode
-    if (
-      readingMode === 'oral_audio' &&
-      typeof navigator !== 'undefined' &&
-      navigator.mediaDevices?.getUserMedia
-    ) {
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(stream => {
-          // If session finished or user navigated while awaiting permission prompt, abort immediately
-          if (!isReadingActiveRef.current) {
-            stream.getTracks().forEach(t => t.stop());
-            return;
-          }
-          activeStreamRef.current = stream;
-          audioChunksRef.current = [];
-          const recorder = new MediaRecorder(stream);
-          recorder.ondataavailable = e => {
-            if (e.data.size > 0) audioChunksRef.current.push(e.data);
-          };
-          recorder.onstop = () => {
-            const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            if (blob.size > 0) {
-              const url = URL.createObjectURL(blob);
-              audioPlaybackUrlRef.current = url;
-              setAudioPlaybackUrl(url);
-            }
-            if (activeStreamRef.current) {
-              activeStreamRef.current.getTracks().forEach(t => t.stop());
-              activeStreamRef.current = null;
-            }
-          };
-          recorder.start();
-          audioRecordingStartedRef.current = true;
-          mediaRecorderRef.current = recorder;
-        })
-        .catch(() => {
-          // Microphone permission denied or device not found
-        });
+    if (readingMode !== 'oral_audio') {
+      startReadingClock();
+      return;
     }
 
-    // Initialize speech recognition if oral mode selected and supported
-    if (readingMode === 'oral_audio' && typeof window !== 'undefined') {
+    const startSpeechRecognition = () => {
+      if (typeof window === 'undefined') return;
       const SpeechRecognitionClass =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognitionClass) return;
 
-      if (SpeechRecognitionClass) {
-        try {
-          const recognition = new SpeechRecognitionClass();
-          const langCode =
-            studentDialect === 'egyptian'
-              ? 'ar-EG'
-              : studentDialect === 'gulf'
-              ? 'ar-SA'
-              : studentDialect === 'levantine'
-              ? 'ar-JO'
-              : studentDialect === 'maghrebi'
-              ? 'ar-MA'
-              : 'ar-SA';
-          recognition.lang = langCode;
-          recognition.continuous = true;
-          recognition.interimResults = true;
-
-          recognition.onresult = (event: any) => {
-            let fullText = '';
-            for (let i = 0; i < event.results.length; i++) {
-              fullText += event.results[i][0].transcript + ' ';
-            }
-            const clean = fullText.trim();
-            spokenTranscriptRef.current = clean;
-            setSpokenTranscript(clean);
-          };
-
-          recognition.onerror = () => {
-            setIsListening(false);
-          };
-
-          recognition.onend = () => {
-            setIsListening(false);
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-          setIsListening(true);
-        } catch {
-          setIsListening(false);
-        }
+      try {
+        const recognition = new SpeechRecognitionClass();
+        const langCode =
+          studentDialect === 'egyptian' ? 'ar-EG' :
+          studentDialect === 'gulf' ? 'ar-SA' :
+          studentDialect === 'levantine' ? 'ar-JO' :
+          studentDialect === 'maghrebi' ? 'ar-MA' : 'ar-SA';
+        recognition.lang = langCode;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.onresult = (event: any) => {
+          let fullText = '';
+          for (let i = 0; i < event.results.length; i++) {
+            fullText += event.results[i][0].transcript + ' ';
+          }
+          const clean = fullText.trim();
+          spokenTranscriptRef.current = clean;
+          setSpokenTranscript(clean);
+        };
+        recognition.onerror = () => setIsListening(false);
+        recognition.onend = () => setIsListening(false);
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsListening(true);
+      } catch {
+        setIsListening(false);
       }
+    };
+
+    const fallBackToTimedSilent = (message: string) => {
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach(track => track.stop());
+        activeStreamRef.current = null;
+      }
+      setAudioCaptureFailed(true);
+      setReadingMode('timed_silent');
+      setReadingModeNotice(message);
+      startReadingClock();
+    };
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      fallBackToTimedSilent('الميكروفون غير متاح في هذا المتصفح؛ بدأ الاختبار بالقراءة الموقوتة دون تسجيل، ولن تُحتسب طلاقة شفوية.');
+      return;
     }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        if (!isReadingActiveRef.current) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        activeStreamRef.current = stream;
+        audioChunksRef.current = [];
+        const recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = event => {
+          if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          if (blob.size > 0) {
+            const url = URL.createObjectURL(blob);
+            audioPlaybackUrlRef.current = url;
+            setAudioPlaybackUrl(url);
+          }
+          if (activeStreamRef.current) {
+            activeStreamRef.current.getTracks().forEach(track => track.stop());
+            activeStreamRef.current = null;
+          }
+        };
+        recorder.start();
+        audioRecordingStartedRef.current = true;
+        mediaRecorderRef.current = recorder;
+        startReadingClock();
+        startSpeechRecognition();
+      })
+      .catch(() => {
+        if (!isReadingActiveRef.current) return;
+        fallBackToTimedSilent('تعذّر تشغيل الميكروفون؛ بدأ الاختبار بالقراءة الموقوتة دون تسجيل، ولن تُحتسب طلاقة شفوية.');
+      });
   };
 
   // Finish reading, stop timer and stop speech recognition & audio recorder
@@ -317,7 +336,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     }
 
     const elapsedSec = Math.max(
-      4,
+      1,
       Math.round((readingFinishedAt - readingStartTimestampRef.current) / 1000)
     );
     setFinalDurationSec(elapsedSec);
@@ -334,10 +353,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
         : 0;
       setMeasuredWpm(calculatedWpm);
     } else {
-      const calculatedWpm = Math.max(
-        10,
-        Math.min(300, Math.round((passage.words.length / elapsedSec) * 60))
-      );
+      const calculatedWpm = Math.round((passage.words.length / elapsedSec) * 60);
       setMeasuredWpm(calculatedWpm);
     }
 
@@ -631,7 +647,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 مختبر القراءة والطلاقة والفهم القرائي
               </h1>
               <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto">
-                تقييم علمي مباشر لسرعة القراءة الجهرية، استرسال المفردات العربية المشكولة، ودقة استيعاب النص.
+                جلسة تعليمية استرشادية لقراءة نص متدرّج والإجابة عن أسئلة الفهم. التفريغ الصوتي آلي أولي وقد يخطئ؛ النتائج ليست تشخيصًا ولا اختبارًا معياريًا.
               </p>
             </div>
 
@@ -659,7 +675,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                       <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">موصى به</span>
                     </div>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      تسجيل صوتي حي، محاذاة الكلمات، ومراجعة إشرافية للمعلم لحساب طلاقة الكلمات الصحيحة (WCPM) بدقة.
+                      يتطلب إذن الميكروفون. التفريغ الآلي مسودة فقط؛ راجع الكلمات مع المعلّم قبل اعتماد WCPM.
                     </p>
                   </div>
                 </button>
@@ -679,7 +695,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                   <div>
                     <span className="font-bold text-slate-900 text-sm block">قراءة صامتة موقوتة</span>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      قياس زمن القراءة وسرعة الكلمات الإجمالية (WPM) دون تسجيل صوتي ميكروفوني.
+                      يقيس زمن إتمام النص ومعدلًا تقديريًا له؛ لا يبيّن دقة قراءة الكلمات ولا يعادل الطلاقة الشفوية.
                     </p>
                   </div>
                 </button>
@@ -739,14 +755,14 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-6 text-right space-y-2">
               <h3 className="font-bold text-slate-900 text-sm mb-2">إرشادات الجلسة:</h3>
               <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
-                <li>اقرأ النص قراءة جهرية واضحة ومسترسلة كما تقرأ في الصف الدراسي.</li>
-                <li>سيبدأ المؤقت الدقيق فور الضغط على زر «ابدأ القراءة الآن».</li>
-                <li>عند الانتهاء من قراءة آخر كلمة في النص، اضغط على زر «أنهيت القراءة».</li>
-                <li>ستنتقل مباشرة للإجابة عن أسئلة الفهم القرائي (٤ أسئلة استيعاب).</li>
+                <li>{readingMode === 'oral_audio' ? 'اقرأ النص بصوت واضح وبالسرعة الطبيعية؛ قد يحتاج التفريغ الآلي إلى تصحيح.' : 'اقرأ النص بصمت وبالسرعة الطبيعية، ثم اضغط بعد إكمال النص.'}</li>
+                <li>يبدأ المؤقت عند جاهزية وضع القراءة، ولا تُحتسب مدة نافذة إذن الميكروفون.</li>
+                <li>اضغط «أنهيت القراءة» فور إكمال النص كاملًا.</li>
+                <li>ستجيب بعد ذلك عن أسئلة فهم النص، ثم تظهر لك ملخصات ما تم قياسه.</li>
               </ul>
             </div>
 
-            {/* Guardian Consent Confirmation (Default-Deny according to Law 151/2020 & Exec Reg 816/2025) */}
+            {/* Require prior guardian permission; this interface does not make a legal-compliance certification. */}
             <div className="space-y-3 mb-8 text-right">
               <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 flex items-center gap-3">
                 <input
@@ -765,7 +781,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                   className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                 />
                 <label htmlFor="guardian-consent-chk" className="text-xs font-bold text-emerald-950 cursor-pointer select-none">
-                  أقر بتوثيق موافقة ولي الأمر وإدارة المدرسة المسبقة على إجراء فحص القراءة والاستيعاب وتسجيل مؤشرات الأداء للطالب (المادة 15 من لائحة 816/2025).
+                  أؤكد أن موافقة وليّ الأمر المسبقة موثّقة لدى الجهة المسؤولة، وأنه اطّلع على غرض النشاط والبيانات التي ستُجمع.
                 </label>
               </div>
 
@@ -787,7 +803,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                     className="w-5 h-5 rounded text-sky-600 focus:ring-sky-500 cursor-pointer shrink-0"
                   />
                   <label htmlFor="audio-consent-chk" className="text-xs font-bold text-sky-950 cursor-pointer select-none">
-                    موافقة صريحة ومستقلة على استخدام الميكروفون وتسجيل صوت قراءة الطالب مؤقتاً لتدقيق الطلاقة الشفوية (WCPM).
+                    أوافق على استخدام الميكروفون وتسجيل قراءة الطالب لهذه الجلسة فقط. قد يستخدم التعرف على الكلام خدمة المتصفح؛ لذا سيُراجع التفريغ الآلي قبل تفسيره.
                   </label>
                 </div>
               )}
@@ -800,7 +816,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
             >
               <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
-              <span>ابدأ جلسة القراءة الآن</span>
+              <span>ابدأ اختبار القراءة</span>
               <ChevronLeft className="w-6 h-6" />
             </button>
           </div>
@@ -811,8 +827,9 @@ export const EyeTrackingLabView: React.FC<Props> = ({
           STAGE 2: ACTIVE READING PASSAGE (PURE TIMED TEXT)
           ===================================================================== */}
       {stage === 'reading' && (
-        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex flex-col justify-between min-h-screen">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-10 mt-4">
+        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex flex-col justify-start min-h-screen">
+          {readingModeNotice && <p role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950">{readingModeNotice}</p>}
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-10 mt-0">
             {/* Top Toolbar */}
             <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-5 mb-6 gap-4">
               <div>
@@ -880,8 +897,14 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
             {/* Arabic Reading Passage with Tashkeel */}
             <div
-              className="py-6 px-4 md:px-8 text-right select-none space-y-6"
+              ref={readingPassageRef}
+              id="reading-passage-text"
+              tabIndex={-1}
+              role="region"
+              aria-label="نص القراءة الحالي"
+              className="scroll-mt-28 py-6 px-4 md:px-8 text-right select-none space-y-6 outline-none"
               style={{
+                scrollMarginTop: '112px',
                 fontSize: `${fontSizePx}px`,
                 lineHeight: '2.5',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -912,7 +935,8 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col items-center justify-center">
               <button
                 onClick={handleFinishReading}
-                className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
+                disabled={!isReadingActive}
+                className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
               >
                 <span>
                   {readingMode === 'oral_audio'
@@ -1268,14 +1292,14 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               {/* 2. Total WPM */}
               <div className="bg-teal-50 border border-teal-200 rounded-2xl p-5">
                 <span className="text-xs font-bold text-teal-800 block mb-1">
-                  سرعة القراءة الإجمالية
+                  {readingMode === 'timed_silent' ? 'معدل إتمام النص (تقديري)' : 'معدل كلمات التفريغ الآلي'}
                 </span>
                 <div className="text-3xl font-black text-teal-700 font-mono">
                   {measuredWpm}{' '}
                   <span className="text-sm font-semibold">WPM</span>
                 </div>
                 <p className="text-[11px] text-teal-700 mt-2">
-                  محسوبة من: {passage.words.length} كلمة ÷ {finalDurationSec} ثانية
+                  {readingMode === 'timed_silent' ? `تقدير مبني على عدد كلمات النص (${passage.words.length}) وزمن الجلسة (${finalDurationSec} ثانية)، بافتراض إكمال النص.` : 'يعتمد على كلمات التعرّف الصوتي الآلي؛ ليس WCPM ولا يُعتمد دون مراجعة.'}
                 </p>
               </div>
 
