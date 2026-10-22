@@ -937,11 +937,11 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     blinkCount: 22,
     blinksPerMinute: 26,
     visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'تم تسجيل ٢٦ رمشة/دقيقة في البيانات النموذجية؛ لا يُستنتج منها إجهاد بصري.',
+    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
-    readingRiskLabelAr: 'مؤشر فرز مرتفع — يوصى بمتابعة متخصصة',
+    readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['لِمُشَاهَدَةِ', 'الكَوَاكِبِ', 'المُضِيئَةِ', 'المِنْظَارَ', 'مُلَاحَظَاتِهِمْ'],
     comprehensionScore: 50,
     fixations: G3_ASTRONOMY_WORDS.map((word, idx) => {
@@ -963,19 +963,19 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     numberLinePAE: 18.4,
     transcodingAccuracy: 50,
     reversalErrorCount: 2,
-    dyscalculiaRiskScore: 68,
-    mathHeuristicIndicator: 24,
-    mathRiskLevel: 'high',
-    mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
+    dyscalculiaRiskScore: null,
+    mathHeuristicIndicator: null,
+    mathRiskLevel: 'unassessed',
+    mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
     clinicalReport: {
       clinicalSummary:
-        'يُظهر رصد حركة العين للطالب ريان طلال العتيبي بطئاً في فك ترميز الكلمات الطويلة المتصلة بضمائر ولواحق مثل (لِمُشَاهَدَةِ، مُلَاحَظَاتِهِمْ)، مع ارتفاع معدل الرمش (٢٦ رمشة/دقيقة) وطول متوسط التثبيت البصري (445ms). يوصى بالتدريب عبر القارئ المقطعي الميسّر ومراجعة مختص صعوبات التعلم.',
+        'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'تُبيّن خريطة مسار النظر تجمّع دوائر تثبيت طويلة فوق المقاطع الوسطى للكلمات الرباعية والخماسية، مع 14 قفزة تراجعية (Regressions) نحو اليمين لإعادة التحقق من مواقع النقاط في الحروف المتشابهة (ظ/ض، ذ/د).',
+        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
       orthographicAndPhonologicalPatterns:
-        'حاجة إلى دعم في التقطيع الصوتي للكلمات المتصلة بضمائر الملكية وحروف الجر، وتأنٍّ في التمييز البصري السريع بين الحروف المتجانسة رسماً.',
+        'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
-        'في مهام الحس العددي، بلغ خطأ التقدير المكاني المطبّع على خط الأعداد (PAE) 18.4%، مع رصد خطأين في عكس خانات الآحاد والعشرات عند قراءة الأعداد المكونة من رقمين (مثل قراءة ٤٧ كـ ٧٤).',
+        'قيم المهام الحسابية اصطناعية لتوضيح شكل التقرير؛ لا تُفسر على أنها أداء طبيعي أو غير طبيعي أو درجة خطر.',
       interventionExercises: [
         {
           title: 'تفكيك الكلمات الطويلة بالمقاطع الملونة',
@@ -994,8 +994,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
         },
       ],
       classroomAccommodations: [
-        'تفعيل المسطرة البصرية والخلفية الكريمية الدافئة لتقليل الإجهاد البصري ومعدل الرمش.',
-        'البدء بنصوص متدرجة أقصر ومألوفة معجمياً قبل الانتقال إلى النصوص العلمية المركبة.',
+        'يمكن تجربة مسطرة قراءة أو خلفية مختلفة إذا وجد الطفل أنها أكثر راحة؛ يختلف التفضيل بين الأطفال.',
+        'اختيار نص قصير مناسب لمستوى القراءة الحالي، ثم زيادة الصعوبة تدريجياً وفق ملاحظة المعلم.',
         'استخدام شبكة المربعات المكانية عند إجراء العمليات الحسابية.',
       ],
     },
@@ -1018,11 +1018,11 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     blinkCount: 7,
     blinksPerMinute: 12,
     visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'تم تسجيل ١٢ رمشة/دقيقة في البيانات النموذجية؛ لا يُستنتج منها إجهاد بصري.',
+    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
-    readingRiskLabelAr: 'طلاقة قرائية ضمن النطاق المتوقع',
+    readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['مُلَاحَظَاتِهِمْ'],
     comprehensionScore: 100,
     fixations: G3_ASTRONOMY_WORDS.map((word, idx) => ({
@@ -1038,19 +1038,19 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     numberLinePAE: 21.5,
     transcodingAccuracy: 50,
     reversalErrorCount: 2,
-    dyscalculiaRiskScore: 74,
-    mathHeuristicIndicator: 19,
-    mathRiskLevel: 'high',
-    mathRiskLabelAr: 'مؤشر فرز مرتفع في الحس العددي',
+    dyscalculiaRiskScore: null,
+    mathHeuristicIndicator: null,
+    mathRiskLevel: 'unassessed',
+    mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
     clinicalReport: {
       clinicalSummary:
-        'يعرض هذا السجل التجريبي سرعة قراءة مرتفعة نسبيًا ضمن بيانات اصطناعية، مع معدل رمش معروض (١٢ رمشة/دقيقة). وتظهر مهمة خط الأعداد PAE بقيمة 21.5% كمثال تعليمي غير معياري؛ لا تمثل هذه البيانات نتائج طالبة حقيقية.',
+        'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'حركة العين أثناء قراءة النصوص العربية سلسة ومنتظمة بمتوسط تثبيت 235ms دون إجهاد بصري، بينما يزداد التردد الزمني عند مقارنة المجموعات النقطية والأعداد.',
+        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
       orthographicAndPhonologicalPatterns:
-        'لا توجد صعوبات فونولوجية أو صرفية في القراءة؛ المعالجة اللغوية سليمة تماماً.',
+        'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
-        'تحتاج الطالبة إلى دعم في الإدراك الكمي الفوري (Subitizing) للكميات الصغيرة (5-7 نقاط)، وتدريب على تمثيل موقع الأعداد على خط 0-100 وترتيب الآحاد والعشرات.',
+        'قيم المهام الحسابية اصطناعية لتوضيح شكل التقرير؛ لا تُفسر على أنها أداء طبيعي أو غير طبيعي أو درجة خطر.',
       interventionExercises: [
         {
           title: 'تدريب الإدراك الكمي السريع (Subitizing Flash)',
@@ -1087,11 +1087,11 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     blinkCount: 15,
     blinksPerMinute: 19,
     visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'تم تسجيل ١٩ رمشة/دقيقة في البيانات النموذجية؛ لا يُستنتج منها إجهاد بصري.',
+    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
-    readingRiskLabelAr: 'مؤشر فرز متوسط — يوصى بمتابعة تربوية',
+    readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['تتميزُ', 'الأفلاجِ', 'الينابيعِ', 'الوارفةِ'],
     comprehensionScore: 100,
     fixations: G4_OASIS_WORDS.map((word, idx) => ({
@@ -1107,24 +1107,24 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     numberLinePAE: 8.2,
     transcodingAccuracy: 100,
     reversalErrorCount: 0,
-    dyscalculiaRiskScore: 22,
-    mathHeuristicIndicator: 78,
-    mathRiskLevel: 'nominal',
-    mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
+    dyscalculiaRiskScore: null,
+    mathHeuristicIndicator: null,
+    mathRiskLevel: 'unassessed',
+    mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
     clinicalReport: {
       clinicalSummary:
-        'يُظهر الطالب عمر خالد الدوسري فهماً قرائياً كاملاً (100%) وحساً عددياً طبيعياً، مع تأنٍّ نسبي عند قراءة المفردات التراثية الأقل شيوعاً في معجمه اليومي مثل (الأفلاجِ، الوارفةِ).',
+        'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'متوسط تثبيت معتدل (345ms) يرتفع فقط عند الكلمات التراثية أو النادرة في المعجم المدرسي.',
+        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
       orthographicAndPhonologicalPatterns:
-        'يمتلك وعياً صوتياً جيداً، لكنه يتأنى عند قراءة الكلمات المحتوية على تضعيف (شدّة) متبوع بمدّ.',
+        'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
-        'المهارات الحسابية والمكانية ضمن المستوى الطبيعي المرتفع (خطأ خط الأعداد المطبّع 8.2% فقط وبدون أي أخطاء عكس أرقام).',
+        'قيم المهام الحسابية اصطناعية لتوضيح شكل التقرير؛ لا تُفسر على أنها أداء طبيعي أو غير طبيعي أو درجة خطر.',
       interventionExercises: [
         {
           title: 'القراءة المتدرجة بالتشكيل الجزئي الوظيفي',
           durationMinutes: 10,
-          description: 'قراءة نص «ساقيةُ القريةِ وحقولُ القمحِ» (تشكيل جزئي) لتعزيز الطلاقة السياقية ورفع السرعة إلى 85 كلمة/دقيقة.',
+          description: 'قراءة نص «ساقيةُ القريةِ وحقولُ القمحِ» (تشكيل جزئي) لتعزيز الطلاقة السياقية والتدرّب على النص وشرح المفردات وفق مستوى الطالب؛ لا تُستخدم سرعة مستهدفة غير متحققة معيارياً.',
         },
       ],
       classroomAccommodations: [
@@ -1149,12 +1149,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     regressionCount: 2,
     blinkCount: 6,
     blinksPerMinute: 11,
-    visualStrainLevel: 'nominal',
-    visualStrainLabelAr: 'تم تسجيل ١١ رمشة/دقيقة في البيانات النموذجية؛ لا يُستنتج منها إجهاد بصري.',
+    visualStrainLevel: 'unassessed',
+    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
-    readingRiskLabelAr: 'طلاقة قرائية ضمن النطاق المتوقع',
+    readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: [],
     comprehensionScore: 100,
     fixations: G5_SOLAR_WORDS.map((w, idx) => ({
@@ -1170,19 +1170,19 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     numberLinePAE: 3.8,
     transcodingAccuracy: 100,
     reversalErrorCount: 0,
-    dyscalculiaRiskScore: 9,
-    mathHeuristicIndicator: 92,
-    mathRiskLevel: 'nominal',
-    mathRiskLabelAr: 'إدراك كمي ومكاني طبيعي',
+    dyscalculiaRiskScore: null,
+    mathHeuristicIndicator: null,
+    mathRiskLevel: 'unassessed',
+    mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
     clinicalReport: {
       clinicalSummary:
-        'يعرض هذا السجل التجريبي أداءً مرتفعًا في مؤشرات الطلاقة القرائية ومهام الإدراك الكمي والمكاني ضمن بيانات اصطناعية، مع حركة عين مرسومة لأغراض الشرح؛ لا تمثل القيم مئينات معيارية أو نتائج طالبة حقيقية.',
+        'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'تثبيتات بصرية قصيرة ودقيقة (210ms) وقفزات أمامية منتظمة دون تراجعات معطِّلة.',
+        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
       orthographicAndPhonologicalPatterns:
-        'معالجة صرفية وفونولوجية تلقائية وسريعة للكلمات العربية المشكّلة جزئياً وغير المشكّلة.',
+        'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
-        'دقة عالية جداً في خط الأعداد المطبّع (PAE 3.8%) وإدراك كمي فوري سليم 100%.',
+        'قيم المهام الحسابية اصطناعية لتوضيح شكل التقرير؛ لا تُفسر على أنها أداء طبيعي أو غير طبيعي أو درجة خطر.',
       interventionExercises: [
         {
           title: 'الانتقال إلى النصوص غير المشكّلة (الصف السادس)',
