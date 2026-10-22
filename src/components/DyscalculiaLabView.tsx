@@ -738,7 +738,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-900 text-sm">
-                      المهمة الأولى (مدى 0–100): ضع المؤشر عند الموقع التقديري للعدد (٣٧ / 37)
+                      المهمة الأولى (مدى 0–100): حرّك المؤشر إلى تقديرك للعدد 37 ثم ثبّت الإجابة مرة واحدة.
                     </span>
                     <div className="flex items-center gap-3">
                       {numberLineSelections[1] ? (
@@ -764,11 +764,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       )}
                       <button
                         type="button"
-                        disabled={!numberLineTouched[1]}
+                        disabled={!numberLineTouched[1] || Boolean(numberLineSelections[1])}
                         onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
                         className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        {numberLineSelections[1] ? 'تثبيت التعديل (1)' : 'تثبيت التقدير (1)'}
+                        تثبيت التقدير (1)
                       </button>
                     </div>
                   </div>
@@ -780,6 +780,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     <input
                       id="nl-slider-37"
                       type="range"
+                      disabled={Boolean(numberLineSelections[1])}
                       min={0}
                       max={100}
                       value={estimate37Draft}
@@ -810,7 +811,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-900 text-sm">
-                      المهمة الثانية (مدى 0–200): ضع المؤشر عند الموقع التقديري للعدد (١٥٦ / 156)
+                      المهمة الثانية (مدى 0–200): حرّك المؤشر إلى تقديرك للعدد 156 ثم ثبّت الإجابة مرة واحدة.
                     </span>
                     <div className="flex items-center gap-3">
                       {numberLineSelections[2] ? (
@@ -838,11 +839,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       )}
                       <button
                         type="button"
-                        disabled={!numberLineTouched[2]}
+                        disabled={!numberLineTouched[2] || Boolean(numberLineSelections[2])}
                         onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
                         className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        {numberLineSelections[2] ? 'تثبيت التعديل (2)' : 'تثبيت التقدير (2)'}
+                        تثبيت التقدير (2)
                       </button>
                     </div>
                   </div>
@@ -854,6 +855,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     <input
                       id="nl-slider-156"
                       type="range"
+                      disabled={Boolean(numberLineSelections[2])}
                       min={0}
                       max={200}
                       value={estimate156Draft}
