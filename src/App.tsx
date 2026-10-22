@@ -189,6 +189,9 @@ export default function App() {
     sessionId: `session-${record.id}-${Date.now()}`,
     completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
     passageId: record.passageId,
+    assessmentModality: record.assessmentModality,
+    wcpm: record.wcpm ?? record.oralWcpm ?? null,
+    teacherVerified: record.teacherVerified === true,
     wpm: record.wpm,
     avgFixationMs: record.avgFixationMs,
     regressionRate: record.regressionRate,
@@ -1009,16 +1012,16 @@ export default function App() {
 
               <div className="baseera-summary-grid">
                 <article className="baseera-summary-card baseera-summary-blue">
-                  <span className="baseera-summary-label">الطلاقة القرائية</span>
-                  <strong>{selectedReadingRate === null ? 'غير متاحة' : selectedReadingRate + ' كلمة/دقيقة'}</strong>
+                  <span className="baseera-summary-label">{selectedStudent.assessmentModality === 'voice_only' ? 'الطلاقة الشفوية (WCPM)' : selectedStudent.assessmentModality === 'reading_only' ? 'معدل إتمام النص (تقديري)' : 'مؤشر القراءة'}</span>
+                  <strong>{selectedReadingRate === null ? 'غير متاح' : selectedReadingRate + ' كلمة/دقيقة'}</strong>
                   <p>
                     {selectedStudent.sessionStatus !== 'completed'
                       ? 'ستظهر النتيجة بعد إكمال النشاط.'
                       : selectedReadingRate === null
                         ? 'لم تتوفر بيانات كافية لاحتساب السرعة.'
                         : selectedStudent.assessmentModality === 'voice_only'
-                          ? selectedStudent.teacherVerified === true ? 'قراءة جهرية راجعها المعلّم.' : 'تقدير صوتي أولي.'
-                          : 'قراءة موقوتة استرشادية.'}
+                          ? selectedStudent.teacherVerified === true ? 'مراجعة بشرية للكلمات؛ ليست نتيجة تشخيصية.' : 'تفريغ صوتي آلي أولي يحتاج إلى مراجعة.'
+                          : 'تقدير لزمن إتمام نص واحد؛ لا يقيس دقة الكلمات ولا يُقارن بمعيار الطلاقة الجهرية.'}
                   </p>
                 </article>
                 <article className="baseera-summary-card baseera-summary-mint">
@@ -1028,8 +1031,8 @@ export default function App() {
                 </article>
                 <article className="baseera-summary-card baseera-summary-yellow">
                   <span className="baseera-summary-label">الأعداد والحساب</span>
-                  <strong>{selectedStudent.sessionStatus === 'completed' && selectedStudent.mathRiskLevel !== 'unassessed' && selectedStudent.numberLinePAE !== null ? selectedStudent.numberLinePAE + '%' : 'لم يُقَس بعد'}</strong>
-                  <p>أكمل نشاط الحساب لعرض النتيجة المتاحة.</p>
+                  <strong>{selectedStudent.dyscalculiaAssessed === true && selectedStudent.numberLinePAE !== null ? selectedStudent.numberLinePAE + '% خطأ' : 'لم يُقَس بعد'}</strong>
+                  <p>خطأ تقدير وصفي على خط الأعداد؛ لا يمثل درجة خطر أو تشخيصًا.</p>
                   <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('dyscalculia-lab')}>جرّب مهام الحساب <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
                 <article className="baseera-summary-card baseera-summary-lilac">
@@ -1432,7 +1435,7 @@ export default function App() {
                   <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
                     <div>
                       <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
-                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات الطلاقة، الفهم، ومسار النظر عبر الزمن.</p>
+                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات إتمام النص، وفهم المقروء، والمهام الحسابية عبر الزمن.</p>
                     </div>
                     <ol className='space-y-3'>
                       {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
@@ -1444,10 +1447,9 @@ export default function App() {
                             </time>
                           </div>
                           <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
-                            <span>الطلاقة: <strong>{snapshot.wpm} كلمة/دقيقة</strong></span>
+                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص (تقديري)' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only' ? (snapshot.wcpm ?? 'غير متاح') : snapshot.wpm} كلمة/دقيقة</strong></span>
                             <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
-                            <span>مؤشر القراءة: <strong>{snapshot.readingHeuristicIndicator}/100</strong></span>
-                            <span>الحساب: <strong>{snapshot.mathRiskLevel === 'unassessed' ? 'لم يُقيّم' : snapshot.mathRiskLevel + ' · ' + (snapshot.numberLinePAE ?? '—') + '% خطأ'}</strong></span>
+                            <span>خطأ خط الأعداد: <strong>{snapshot.numberLinePAE === null ? 'لم يُقَس' : snapshot.numberLinePAE + '%'}</strong></span>
                           </div>
                           {(snapshot.problematicWords || []).length > 0 && (
                             <p className='mt-2 text-xs leading-relaxed text-slate-600'>
