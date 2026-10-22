@@ -107,6 +107,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const isReadingActiveRef = useRef<boolean>(false);
   const audioPlaybackUrlRef = useRef<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const audioRecordingStartedRef = useRef(false);
 
   // Teacher verification & Human-in-the-Loop review state
   const [verifiedWords, setVerifiedWords] = useState<
@@ -152,6 +153,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const handleStartReading = () => {
     readingStartTimestampRef.current = Date.now();
     isReadingActiveRef.current = true;
+    audioRecordingStartedRef.current = false;
     setReadingSeconds(0);
     setIsReadingActive(true);
     spokenTranscriptRef.current = '';
@@ -202,6 +204,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             }
           };
           recorder.start();
+          audioRecordingStartedRef.current = true;
           mediaRecorderRef.current = recorder;
         })
         .catch(() => {
@@ -525,7 +528,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
     const audioRecordingStarted =
       readingMode === 'oral_audio' &&
-      (audioChunksRef.current.length > 0 || Boolean(audioPlaybackUrl));
+      (audioRecordingStartedRef.current || audioChunksRef.current.length > 0 || Boolean(audioPlaybackUrl));
 
     const updatedRecord: StudentRecord = {
       ...baseStudent,
