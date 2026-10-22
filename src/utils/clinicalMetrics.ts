@@ -28,11 +28,12 @@ export interface EyeTrackingMetricsResult {
   saccadeCount: number;
   blinkCount: number;
   blinksPerMinute: number;
-  visualStrainLevel: 'nominal' | 'moderate' | 'high';
+  /** Observed values only; no validated ocular-strain or dyslexia classification. */
+  visualStrainLevel: 'unassessed';
   visualStrainLabelAr: string;
-  dyslexiaRiskScore: number;
-  heuristicIndicator: number;
-  riskLevel: 'nominal' | 'moderate' | 'high';
+  dyslexiaRiskScore: null;
+  heuristicIndicator: null;
+  riskLevel: 'unassessed';
   riskLabelAr: string;
   problematicWords: string[];
   observedWordCount: number;
@@ -81,15 +82,6 @@ export interface DyscalculiaMetricsResult {
   riskLabelAr: string;
 }
 
-const GRADE_EXPECTED_WPM: Record<number, number> = {
-  1: 45,
-  2: 65,
-  3: 85,
-  4: 105,
-  5: 120,
-  6: 135,
-};
-
 /**
  * Computes heuristic oculomotor and reading screening metrics strictly from genuinely observed word fixations.
  * Unobserved words (durationMs <= 0 or visits <= 0) are NEVER padded with synthetic 190ms durations.
@@ -98,7 +90,7 @@ const GRADE_EXPECTED_WPM: Record<number, number> = {
 export function calculateEyeTrackingMetrics(
   fixations: WordFixation[],
   totalDurationSeconds: number,
-  gradeLevel: number = 3,
+  _gradeLevel: number = 3,
   sessionBlinkCount?: number,
   totalPassageWordsOverride?: number,
   oralInput?: OralReadingIntegrationInput | null
@@ -133,22 +125,12 @@ export function calculateEyeTrackingMetrics(
       saccadeCount: 0,
       blinkCount: fallbackBlinks,
       blinksPerMinute: fallbackBpm,
-      visualStrainLevel:
-        fallbackBpm >= 23
-          ? 'high'
-          : fallbackBpm >= 18
-            ? 'moderate'
-            : 'nominal',
-      visualStrainLabelAr:
-        fallbackBpm >= 23
-          ? 'إجهاد بصري مرتفع (رمش متكرر أثناء القراءة)'
-          : fallbackBpm >= 18
-            ? 'إجهاد بصري متوسط'
-            : 'ضمن المعدل الطبيعي للرمش',
-      dyslexiaRiskScore: 0,
-      heuristicIndicator: 50,
-      riskLevel: 'nominal',
-      riskLabelAr: 'بيانات غير كافية — لم يُرصد تثبيت بصري',
+      visualStrainLevel: 'unassessed',
+      visualStrainLabelAr: 'بيانات التثبيت غير متاحة؛ عدد الرمش المسجل ليس مقياسًا مستقلًا للإجهاد البصري.',
+      dyslexiaRiskScore: null,
+      heuristicIndicator: null,
+      riskLevel: 'unassessed',
+      riskLabelAr: 'لا توجد درجة خطر معيارية معتمدة لهذه الجلسة.',
       problematicWords: [],
       observedWordCount: 0,
       totalPassageWordCount,
@@ -218,15 +200,9 @@ export function calculateEyeTrackingMetrics(
       ? Math.round((blinkCount / Math.max(4, totalDurationSeconds)) * 60)
       : 0;
 
-  let visualStrainLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let visualStrainLabelAr = 'معدل رمش طبيعي ومريح بصرياً (٨ – ١٧ رمشة/دقيقة)';
-  if (blinksPerMinute >= 23) {
-    visualStrainLevel = 'high';
-    visualStrainLabelAr = 'إجهاد بصري مرتفع (رمش متكرر يشير لتوتر بصري قرائي)';
-  } else if (blinksPerMinute >= 18) {
-    visualStrainLevel = 'moderate';
-    visualStrainLabelAr = 'إجهاد بصري متوسط (زيادة الرمش عند الكلمات المركبة)';
-  }
+  const visualStrainLevel: 'unassessed' = 'unassessed';
+  const visualStrainLabelAr =
+    'تم تسجيل ' + blinksPerMinute + ' رمشة/دقيقة في هذه الجلسة. لا يُستنتج الإجهاد البصري أو صعوبة القراءة من معدل الرمش وحده.';
 
   const avgFixationMs = Math.round(
     totalFixationMs / Math.max(1, observedFixations.length)
@@ -237,53 +213,12 @@ export function calculateEyeTrackingMetrics(
     Math.round((regressionCount / Math.max(1, totalVisits)) * 100)
   );
 
-  const expectedWpm = GRADE_EXPECTED_WPM[gradeLevel] || 85;
-  const speedDeficitRatio = Math.max(
-    0,
-    Math.min(1, (expectedWpm - wpm) / expectedWpm)
-  );
-  const fixationPenalty = Math.max(
-    0,
-    Math.min(1, (avgFixationMs - 240) / 360)
-  );
-  const regressionPenalty = Math.max(
-    0,
-    Math.min(1, (regressionRate - 12) / 35)
-  );
-  const blinkStrainPenalty =
-    blinksPerMinute >= 18
-      ? Math.min(1, (blinksPerMinute - 16) / 16) * 8
-      : 0;
-
-  // Integrate Oral Reading Phonological Substitutions & Omissions (excluding accepted Arabic dialect variants)
-  let oralPhonologicalPenalty = 0;
-  if (oralInput?.assessed) {
-    const subAndOmit =
-      (oralInput.phoneticSubstitutionCount || 0) * 3.5 +
-      (oralInput.omissionCount || 0) * 2.5;
-    const werContribution = Math.max(0, ((oralInput.werPercent ?? 0) - 8) * 0.22);
-    oralPhonologicalPenalty = Math.min(18, subAndOmit + werContribution);
-  }
-
-  const rawRisk =
-    speedDeficitRatio * 34 +
-    fixationPenalty * 28 +
-    regressionPenalty * 26 +
-    blinkStrainPenalty +
-    oralPhonologicalPenalty;
-  const dyslexiaRiskScore = Math.max(5, Math.min(98, Math.round(rawRisk)));
-  const heuristicIndicator = Math.max(1, Math.min(99, 100 - dyslexiaRiskScore)); // Inverse heuristic score, not an empirical population percentile.
-
-  let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let riskLabelAr = 'ضمن المتوسط الاسترشادي الطبيعي';
-
-  if (dyslexiaRiskScore >= 62) {
-    riskLevel = 'high';
-    riskLabelAr = 'مؤشر فرز مرتفع لاحتمالية عسر القراءة (يتطلب تقييماً إكلينيكياً متخصصاً)';
-  } else if (dyslexiaRiskScore >= 35) {
-    riskLevel = 'moderate';
-    riskLabelAr = 'مؤشر فرز متوسط — يوصى بمتابعة تربوية';
-  }
+  // Fixations and regression counts are retained as descriptive observations only.
+  // They are not mapped to dyslexia likelihood without representative Arabic validation data.
+  const dyslexiaRiskScore: null = null;
+  const heuristicIndicator: null = null;
+  const riskLevel: 'unassessed' = 'unassessed';
+  const riskLabelAr = 'لا توجد درجة خطر معيارية معتمدة؛ راجع القياسات بوصفها مؤشرات تقنية فقط.';
 
   const isSufficientGazeData =
     observedWordCount >= 3 &&
