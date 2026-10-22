@@ -188,6 +188,32 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.ok(derived.derivedFields.clinicalReport);
   });
 
+  await t.test('Voice-only session without transcript does not infer speed from the full passage', () => {
+    const rawPayload = {
+      passageId: passage.id,
+      assessmentModality: 'voice_only',
+      readingDurationSeconds: 45,
+      comprehensionAnswers: [0, 1, 2, 0],
+      fixations: [],
+      blinkCount: 0,
+      oralReadingAssessed: true,
+      spokenTranscript: '',
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
+    };
+    const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
+      name: 'سارة خالد',
+      gradeLevel: 3,
+    });
+    assert.equal(derived.valid, true);
+    assert.ok(derived.derivedFields);
+    assert.equal(derived.derivedFields.assessmentModality, 'voice_only');
+    assert.equal(derived.derivedFields.wpm, 0);
+    assert.equal(derived.derivedFields.wcpm, null);
+    assert.equal(derived.derivedFields.oralWerPercent, null);
+  });
+
   await t.test('Standard Dynamic Programming Levenshtein WER: exact matrix calculation with deletions, substitutions and insertions', () => {
     const reference = ['كان', 'الولد', 'يقرأ', 'قصة', 'جميلة'];
     // 1 deletion ("كان" omitted), 1 substitution ("يسمع" for "يقرأ"), 1 insertion ("كبيرة" inserted at end)
@@ -241,6 +267,10 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
       name: 'عمر شريف',
       gradeLevel: 3,
+    }, {
+      sessionId: 'review-session-test-001',
+      role: 'clinician',
+      clinicianName: 'مراجع موثّق للاختبار',
     });
 
     assert.equal(derived.valid, true);
@@ -253,6 +283,9 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.oralAccuracyPercent, 67);
     assert.equal(derived.derivedFields.dialectVariantCount, 5);
     assert.equal(derived.derivedFields.omissionCount, 17);
+    assert.equal(derived.derivedFields.teacherVerifierId, 'review-session-test-001');
+    assert.equal(derived.derivedFields.teacherVerifierName, 'مراجع موثّق للاختبار');
+    assert.equal(derived.derivedFields.teacherVerifierRole, 'أخصائي مصادق عليه عبر الحساب');
   });
 
   await t.test('Server Validation: rejects corrupted or mismatched verifiedWordsAlignment', () => {
@@ -270,6 +303,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     const derived = validateAndDeriveSessionFromEvidence(invalidLengthPayload, {
       name: 'زيد',
       gradeLevel: 3,
+    }, {
+      sessionId: 'review-session-invalid-001', role: 'clinician', clinicianName: 'مراجع اختبار',
     });
 
     assert.equal(derived.valid, false);
@@ -293,6 +328,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     const derived2 = validateAndDeriveSessionFromEvidence(mismatchedWordPayload, {
       name: 'زيد',
       gradeLevel: 3,
+    }, {
+      sessionId: 'review-session-invalid-002', role: 'clinician', clinicianName: 'مراجع اختبار',
     });
 
     assert.equal(derived2.valid, false);
