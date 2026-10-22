@@ -249,7 +249,10 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(voiceOnlySession.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(voiceOnlySession.derivedFields.avgFixationMs, 0);
     assert.equal(voiceOnlySession.derivedFields.regressionRate, 0);
-    assert.ok(voiceOnlySession.derivedFields.wpm > 0);
+    // Without a transcript or teacher-verified alignment, voice-only speed is unavailable (stored as zero sentinel).
+    assert.equal(voiceOnlySession.derivedFields.wpm, 0);
+    assert.equal(voiceOnlySession.derivedFields.wcpm, null);
+    assert.equal(voiceOnlySession.derivedFields.oralWerPercent, null);
 
     // Reject client-supplied dyslexiaRiskScore
     const forgedScore = validateAndDeriveSessionFromEvidence(
