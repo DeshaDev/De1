@@ -387,13 +387,13 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
       </div>
 
-      {/* Optional Expandable Clinical Rationale */}
+      {/* Optional Educational Activity Rationale */}
       {showClinicalRationale && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1.5 animate-fade-slide-up shadow-2xs">
           <div className="flex items-center justify-between font-bold text-[#15803D]">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4" />
-              <span>مبررات الأنشطة التعليمية للجلسة العلاجية الحالية:</span>
+              <span>أهداف الأنشطة التعليمية المقترحة:</span>
             </span>
             <button
               type="button"
@@ -949,7 +949,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 الإدراك المكاني العددي (Siegler & Booth)
               </span>
               <span className="text-xs font-medium text-slate-500">
-                علاج عكس الخانات وتثبيت خط الأعداد
+                تدريب اختياري على القيمة المكانية وخط الأعداد
               </span>
             </div>
             <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-slate-600">
