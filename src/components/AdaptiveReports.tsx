@@ -559,13 +559,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <Mic className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-indigo-700 font-mono">
-                    {studentData.speech ? `${studentData.speech.averageConfidence}% دقة` : 'لم يُجرَ'}
+                    {studentData.speech ? `${studentData.speech.averageConfidence}% ثقة آلية` : 'لم يُجرَ'}
                   </span>
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">الوعي الصوتي والنطق</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">مخرجات التعرّف الصوتي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.speech
-                    ? `أظهر دقة نطق ${studentData.speech.averageConfidence}% مع رصد ${studentData.speech.wordsNeedingImprovement} كلمات تحتاج لتعزيز التمييز النطقي.`
+                    ? `سجّل نظام التعرّف الصوتي قيمة ثقة ${studentData.speech.averageConfidence}% واقترح مراجعة ${studentData.speech.wordsNeedingImprovement} كلمة. قيمة الثقة ليست مقياسًا لدقة النطق أو الوعي الصوتي؛ راجع التسجيل والكلمات بشريًا.`
                     : 'لم يكتمل فحص النطق في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -737,20 +737,16 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Comprehension */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">الفهم والاستيعاب</td>
-                    <td className="py-3.5 px-4 text-slate-600">دقة إجابات أسئلة النص</td>
+                    <td className="py-3.5 px-4 text-slate-600">نسبة الإجابات الصحيحة في هذا النص</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading
                         ? `${studentData.reading.comprehensionScore}%`
                         : 'لم تُقَس'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500">٧٠% أو أعلى</td>
+                    <td className="py-3.5 px-4 text-slate-500">وصف للجلسة؛ لا توجد عتبة تصنيف معتمدة هنا</td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
-                        studentData.reading.comprehensionScore >= 70 ? (
-                          <span className="text-emerald-700 font-bold">✓ استيعاب سليم</span>
-                        ) : (
-                          <span className="text-amber-700 font-bold">استيعاب متوسط</span>
-                        )
+                        <span className="text-slate-600">نتيجة وصفية لنص واحد</span>
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
                       )}
@@ -759,21 +755,17 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
                   {/* Speech Phonology */}
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">النطق والوعي الصوتي</td>
-                    <td className="py-3.5 px-4 text-slate-600">دقة التطابق الفونولوجي</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">مخرجات التعرّف الصوتي</td>
+                    <td className="py-3.5 px-4 text-slate-600">قيمة الثقة التي أعادها النظام</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
                       {studentData.speech
                         ? `${studentData.speech.averageConfidence}%`
                         : 'لم تُقَس'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500">٨٠% أو أعلى</td>
+                    <td className="py-3.5 px-4 text-slate-500">ليست معيارًا لدقة النطق</td>
                     <td className="py-3.5 px-4">
                       {studentData.speech ? (
-                        studentData.speech.averageConfidence >= 80 ? (
-                          <span className="text-emerald-700 font-bold">✓ دقة مناسبة</span>
-                        ) : (
-                          <span className="text-amber-700 font-bold">إبدالات متكررة</span>
-                        )
+                        <span className="text-slate-600">يحتاج إلى مراجعة بشرية</span>
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
                       )}
@@ -789,10 +781,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         ? `${studentData.tactile.correctAnswers}/${studentData.tactile.totalTasks}`
                         : 'لم تُقَس'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-500">٧٥% أو أعلى</td>
+                    <td className="py-3.5 px-4 text-slate-500">عدد المهام لا يكفي لتصنيف الخطر</td>
                     <td className="py-3.5 px-4">
                       {studentData.tactile ? (
-                        <span className="text-emerald-700 font-bold">✓ مكتمل</span>
+                        <span className="text-slate-600">وصف لأداء هذه الجلسة</span>
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
                       )}
