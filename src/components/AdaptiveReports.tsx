@@ -250,22 +250,36 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     const observations: string[] = [];
     if (studentData.reading) {
+      const oralSession =
+        studentData.reading.assessmentModality === 'voice_only' ||
+        studentData.reading.oralReadingAssessed === true;
+      const hasOralEvidence =
+        Boolean((studentData.reading.spokenTranscript || '').trim()) ||
+        studentData.reading.teacherVerified === true;
+      const oralRate = studentData.reading.wcpm;
+      const readingRateText = oralSession
+        ? hasOralEvidence && typeof oralRate === 'number'
+          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهذه نتيجة ${studentData.reading.teacherVerified ? 'راجعها المعلّم' : 'آلية أولية تحتاج مراجعة'}`
+          : 'لم تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية'
+        : studentData.reading.wpm > 0
+          ? `سرعة القراءة الموقوتة ${studentData.reading.wpm} كلمة بالدقيقة`
+          : 'سرعة القراءة غير متاحة';
       observations.push(
-        `بلغت سرعة القراءة ${studentData.reading.wpm} كلمة بالدقيقة، بنسبة فهم واستيعاب ${studentData.reading.comprehensionScore}%`
+        readingRateText + `، ونتيجة الفهم ${studentData.reading.comprehensionScore}%`
       );
     }
     if (studentData.speech) {
-      observations.push(`ودقة النطق الصوتي ${studentData.speech.averageConfidence}%`);
+      observations.push(`ودقة مطابقة النطق المسجلة ${studentData.speech.averageConfidence}%`);
     }
     if (studentData.tactile) {
       observations.push(
-        `وأنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام لمسية`
+        `وأنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام للحس العددي`
       );
     }
 
-    const text = `مرحباً بكم. هذا ملخص تربوي استرشادي لنتائج الطالب ${studentData.studentName}. ${
+    const text = `مرحباً بكم. هذا ملخص تعليمي استرشادي لنتائج ${studentData.studentName}. ${
       observations.length > 0 ? observations.join('، ') + '.' : ''
-    } تم استبعاد تتبع حركة العين بالكاميرا لضمان موثوقية النتائج. نوصي بمتابعة خطة التدريبات المخصصة في هذا التقرير لدعم التطور القرائي للطالب.`;
+    } يمكن مراجعة الأنشطة المقترحة مع المعلّم أو وليّ الأمر؛ هذه المخرجات ليست تشخيصاً طبياً.`;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
@@ -684,11 +698,11 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
-          {/* Transparent Measured vs. Excluded Data Table */}
+          {/* Available Learning Measures Table */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span>جدول الشفافية والبيانات المقاسة فعلياً</span>
+              <span>جدول المؤشرات التعليمية المتاحة</span>
             </h3>
 
             <div className="overflow-x-auto">
@@ -834,16 +848,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     </td>
                   </tr>
 
-                  {/* Micro Eye Gaze - Explicitly Excluded */}
-                  <tr className="bg-slate-50/60">
-                    <td className="py-3.5 px-4 font-bold text-slate-500">تتبع العين الميكروسكوبي</td>
-                    <td className="py-3.5 px-4 text-slate-400">تثبيتات البؤبؤ والارتدادات</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-400">غير مقاسة</td>
-                    <td className="py-3.5 px-4 text-slate-400">تتطلب عتاداً مخبرياً معتمداً</td>
-                    <td className="py-3.5 px-4 text-slate-500 font-semibold">
-                      ✕ مستبعدة لحماية الموثوقية
-                    </td>
-                  </tr>
                 </tbody>
               </table>
               <p className="text-[11px] text-slate-500 mt-4 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
