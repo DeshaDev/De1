@@ -83,9 +83,10 @@ export interface DyscalculiaMetricsResult {
 }
 
 /**
- * Computes heuristic oculomotor and reading screening metrics strictly from genuinely observed word fixations.
- * Unobserved words (durationMs <= 0 or visits <= 0) are NEVER padded with synthetic 190ms durations.
- * Integrates spoken reading phonological errors (while exempting Arabic dialectal variants) when oral assessment is provided.
+ * Computes descriptive observations from genuinely observed word fixations.
+ * Unobserved words are never filled with synthetic durations. The returned observations
+ * do not produce dyslexia-risk or visual-strain classifications; this prototype has
+ * no representative Arabic validation sample or calibrated cut-offs.
  */
 export function calculateEyeTrackingMetrics(
   fixations: WordFixation[],
