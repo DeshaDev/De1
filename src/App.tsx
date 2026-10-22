@@ -1143,7 +1143,7 @@ export default function App() {
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        يحتاج تدخلاً
+                        تحتاج مراجعة
                       </button>
                       <button
                         type="button"
@@ -1154,7 +1154,7 @@ export default function App() {
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        ضمن المتوسط
+                        مؤشر أولي منخفض
                       </button>
                     </div>
                   </div>
@@ -1278,10 +1278,10 @@ export default function App() {
                                       }
                                     >
                                       {stu.mathRiskLevel === 'high'
-                                        ? `■ صعوبات (${stu.numberLinePAE}%)`
+                                        ? `تحتاج مراجعة (${stu.numberLinePAE}%)`
                                         : stu.mathRiskLevel === 'moderate'
-                                          ? `▲ متابعة (${stu.numberLinePAE}%)`
-                                          : `● سليم (${stu.numberLinePAE}%)`}
+                                          ? `تحتاج تدريب (${stu.numberLinePAE}%)`
+                                          : `المهمة أُنجزت (${stu.numberLinePAE}%)`}
                                     </span>
                                   )}
                                 </td>
@@ -1472,10 +1472,18 @@ export default function App() {
                     </div>
                     <div className="pt-6 border-t border-slate-200 space-y-2">
                       <h3 className="text-sm font-bold text-slate-900">
-                        ٠٢. تحليل حركة العين والتثبيتات البصرية
+                        ٠٢. ملاحظات الطلاقة والقراءة
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        {selectedStudent.clinicalReport.ocularMotorAnalysis}
+                        {selectedStudent.sessionStatus !== 'completed'
+                          ? 'ستظهر الملاحظات بعد إكمال نشاط القراءة.'
+                          : selectedStudent.assessmentModality === 'voice_only'
+                            ? ((selectedStudent.spokenTranscript || '').trim() || selectedStudent.teacherVerified === true)
+                              ? selectedStudent.teacherVerified === true
+                                ? 'راجع المعلّم محاذاة الكلمات في القراءة الجهرية. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
+                                : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
+                              : 'لا تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية.'
+                            : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية استرشادية.'}
                       </p>
                     </div>
                   </div>
