@@ -613,9 +613,7 @@ export default function App() {
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,
           reversalErrorCount: selectedStudent.reversalErrorCount,
-          dyscalculiaAssessed:
-            selectedStudent.dyscalculiaAssessed !== false &&
-            selectedStudent.mathRiskLevel !== 'unassessed',
+          dyscalculiaAssessed: selectedStudent.dyscalculiaAssessed === true,
           oralReadingAssessed: selectedStudent.oralReadingAssessed,
           oralAccuracyPercent: selectedStudent.oralAccuracyPercent,
           oralWcpm: selectedStudent.oralWcpm,
