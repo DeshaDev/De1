@@ -53,15 +53,15 @@ test('calculateEyeTrackingMetrics classifies fluent reader with low regressions 
   assert.ok(result.heuristicIndicator >= 70);
 });
 
-test('calculateDyscalculiaMetrics detects high dyscalculia risk when PAE and reversals are elevated', () => {
+test('calculateDyscalculiaMetrics reports measured task observations without inventing a risk classification', () => {
   const subitizing = [
     { dotCount: 4, correct: true, reactionTimeMs: 2100 },
     { dotCount: 5, correct: false, reactionTimeMs: 2600 },
     { dotCount: 6, correct: false, reactionTimeMs: 2900 },
   ];
   const numberLine = [
-    { target: 37, userEstimate: 64, reactionTimeMs: 3200 },
-    { target: 78, userEstimate: 48, reactionTimeMs: 2900 },
+    { target: 37, userEstimate: 64, reactionTimeMs: 3200, scaleMin: 0, scaleMax: 100 },
+    { target: 78, userEstimate: 48, reactionTimeMs: 2900, scaleMin: 0, scaleMax: 100 },
   ];
   const transcoding = [
     { targetNumber: 47, selectedNumber: 74, isReversalError: true, reactionTimeMs: 2800 },
@@ -71,9 +71,22 @@ test('calculateDyscalculiaMetrics detects high dyscalculia risk when PAE and rev
   const metrics = calculateDyscalculiaMetrics(subitizing, numberLine, transcoding);
 
   assert.equal(metrics.reversalErrorCount, 2);
-  assert.ok(metrics.numberLinePAE > 20);
-  assert.equal(metrics.riskLevel, 'high');
-  assert.ok(metrics.dyscalculiaRiskScore >= 60);
+  assert.equal(typeof metrics.numberLinePAE, 'number');
+  assert.ok((metrics.numberLinePAE ?? 0) > 20);
+  assert.equal(metrics.riskLevel, 'unassessed');
+  assert.equal(metrics.dyscalculiaRiskScore, null);
+  assert.equal(metrics.heuristicIndicator, null);
+});
+
+test('calculateDyscalculiaMetrics treats empty task groups as unmeasured rather than perfect performance', () => {
+  const metrics = calculateDyscalculiaMetrics([], [], []);
+  assert.equal(metrics.subitizingAccuracy, null);
+  assert.equal(metrics.avgSubitizingMs, null);
+  assert.equal(metrics.numberLinePAE, null);
+  assert.equal(metrics.transcodingAccuracy, null);
+  assert.equal(metrics.reversalErrorCount, null);
+  assert.equal(metrics.dyscalculiaRiskScore, null);
+  assert.equal(metrics.riskLevel, 'unassessed');
 });
 
 test('segmentArabicWordIntoSyllables segments definite article and long vowels cleanly', () => {
