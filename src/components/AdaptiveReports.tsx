@@ -328,14 +328,14 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </div>
                 <h3 className="font-bold text-slate-900 text-base mb-1">جلسة القراءة والفهم</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  قياس زمن القراءة، سرعة الطلاقة (WPM)، ودقة استيعاب محتوى النص المشكول.
+                  توقيت إكمال نص واحد والإجابة عن أسئلة الفهم. معدل الإتمام تقديري ولا يقيس صحة الكلمات.
                 </p>
               </div>
               <button
                 onClick={() => onNavigateTab && onNavigateTab('eye-lab')}
                 className="mt-6 w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>بدء جلسة القراءة</span>
+                <span>ابدأ اختبار القراءة</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
@@ -344,18 +344,18 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-indigo-300 transition-colors flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4">
-                  <Mic className="w-6 h-6" />
+                  <BookOpen className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">تحليل النطق والوعي الصوتي</h3>
+                <h3 className="font-bold text-slate-900 text-base mb-1">القارئ الميسّر</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  فحص دقة نطق الكلمات العربية، وتمييز أصوات الحروف المتشابهة وكمون الاستجابة.
+                  خصّص حجم الخط وتباعد الكلمات، وجرّب الاستماع إلى النطق وتقسيم الكلمات إلى مقاطع.
                 </p>
               </div>
               <button
-                onClick={() => onNavigateTab && onNavigateTab('arabic-speech-analysis')}
+                onClick={() => onNavigateTab && onNavigateTab('adaptive-reader')}
                 className="mt-6 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>بدء فحص النطق</span>
+                <span>افتح القارئ الميسّر</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
@@ -366,13 +366,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
                   <Hand className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">التحليل اللمسي والحساب</h3>
+                <h3 className="font-bold text-slate-900 text-base mb-1">مغامرة الأعداد</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  قياس تقدير خط الأعداد (PAE)، إدراك الكميات الفوري، وسرعة الاستجابة الحركية.
+                  مهام قصيرة لاستكشاف تقدير موقع الأعداد وتمييز الكميات وقراءة الأرقام. النتائج وصفية وليست تشخيصًا.
                 </p>
               </div>
               <button
-                onClick={() => onNavigateTab && onNavigateTab('tactile-analytics')}
+                onClick={() => onNavigateTab && onNavigateTab('dyscalculia-lab')}
                 className="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>بدء فحص الحساب</span>
@@ -814,7 +814,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 id="baseera-evidence-title" className="text-lg font-black text-white">المرجعية العلمية وحدود النموذج الحالي</h3>
+                <h3 id="baseera-evidence-title" className="text-lg font-black text-white">الأبحاث المرجعية وحدود النموذج الحالي</h3>
                 <p className="text-xs text-slate-300 mt-1">هذه أبحاث مرجعية مستقلة، وليست اعتمادًا علميًا أو سريريًا لبصيرة. لا تنتقل صلاحية أي اختبار منشور إلى أنشطة هذا النموذج بمجرد الاستشهاد به.</p>
               </div>
             </div>
@@ -845,10 +845,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </section>
 
-          {/* Individualized Education Program (IEP) Goals */}
+          {/* Adaptable classroom goal examples — not a completed or validated IEP */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-6">
-              خطة الأهداف التربوية الفردية المقترحة (SMART IEP Goals)
+              أمثلة لأهداف تعليمية قابلة للتخصيص
             </h3>
 
             <div className="space-y-4">
@@ -863,7 +863,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   يحدد المعلم هدف الطلاقة بعد جمع خط أساس من عدة نصوص متقاربة الصعوبة ومراجعة دقة الكلمات والفهم؛ لا تُستخدم نتيجة هذه الجلسة وحدها لتحديد مستوى الطفل.
                 </p>
                 <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> توظيف مسطرة القراءة الرقمية (Reading Ruler)، وتكبير التباعد بين السطور بنسبة 1.5x.
+                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> قراءة مشتركة، تقسيم المهمة، وتعديل حجم الخط والتباعد وفق تفضيل الطفل.
                 </div>
               </div>
 
@@ -878,7 +878,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   مثال قابل للتعديل: يميّز الطفل بين الحروف المستهدفة في كلمات مناسبة لمستواه، بعد أن يحدد المعلم خط الأساس ومعيار التقدم من محاولات متكررة.
                 </p>
                 <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> استخدام التغذية الراجعة الصوتية اللحظية، التقطيع المقطعي، والتمييز اللوني لمواضع النقاط.
+                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> التدرّب على أمثلة مختارة مع شرح الفرق بين الحروف، ثم مراجعة الأداء عبر محاولات متعددة.
                 </div>
               </div>
 
@@ -893,7 +893,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   مثال قابل للتعديل: يتحسن تقدير الطفل لمواضع الأعداد مقارنة بخط أساسه في مهام متشابهة، ويُحدَّد معيار التقدم بعد مراجعة عدة محاولات.
                 </p>
                 <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">استراتيجية التدريس:</span> التدريب الحركي التفاعلي على خط الأعداد والمقارنة المكانية بالصور التجسيدية.
+                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> استخدام خط أعداد أو مكعبات القيمة المكانية وملاحظة أثرها على أداء الطفل في مهام متشابهة.
                 </div>
               </div>
             </div>
