@@ -1864,7 +1864,7 @@ ${mathContextLine}
     });
   });
 
-  // 2b. Gemini-powered Personalized Dyslexia/Dyscalculia Remediation Engine (Amira Learning / Dytective AI Architecture)
+  // 2b. Optional AI-assisted educational activity planner; not a diagnostic or validated treatment engine.
   app.post('/api/remediation/generate-personalized-session', async (req, res) => {
     const {
       studentId,
@@ -1872,10 +1872,6 @@ ${mathContextLine}
       gradeLevel = 3,
       dialect = 'msa',
       problematicWords = [],
-      readingWpm = 75,
-      fixationDurationMs = 380,
-      regressionsCount = 3,
-      numberLinePAE = 15,
     } = req.body || {};
 
     const cleanWords = Array.isArray(problematicWords)
@@ -1885,21 +1881,28 @@ ${mathContextLine}
           .slice(0, 8)
       : [];
 
+    const hasTeacherReviewedTargets = cleanWords.length > 0;
     const effectiveWords =
-      cleanWords.length > 0 ? cleanWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'];
+      hasTeacherReviewedTargets ? cleanWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'];
+    const targetContext = hasTeacherReviewedTargets
+      ? 'هذه كلمات راجعها معلم يدويًا ويمكن استخدامها أهدافًا تدريبية.'
+      : 'هذه أمثلة عامة للتدريب وليست أخطاء مرصودة لدى الطالب؛ لا تنسبها إليه.';
 
     const ai = getGenAIClient();
     if (ai) {
       try {
-        const prompt = `أنت خبير إكلينيكي في علم النفس اللغوي وعلاج عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكلكوليا) للغة العربية وفق منهجية Orton-Gillingham ومنصة Amira Learning.
-قم بتوليد جلسة علاجية تفاعلية مخصصة للطالب "${studentName || 'طالب'}" بالصف ${gradeLevel}، مع مراعاة لهجته (${dialect})، لمعالجة تعثره المحدد في الكلمات التالية التي رصدها فحص تتبع العين: [${effectiveWords.join('، ')}].
+        const prompt = `أنت مساعد تربوي لإنشاء أنشطة تعليمية عربية للقراءة والحس العددي. أنشئ خطة تدريب تعليمية، لا تشخيصًا ولا علاجًا سريريًا، ولا تدّع أنها برنامج علاجي معتمد أو أنها تعتمد على بيانات لم تصل إليك.
+الطالب ${studentName || 'طالب'} في الصف ${gradeLevel}، ولهجته المفضلة ${dialect}.
+سياق الأهداف: ${targetContext}
+قائمة العمل: [${effectiveWords.join('، ')}].
 
-المطلوب بدقة:
-1. phonicsDrills: 4 تمارين تمييز فونولوجي وبصري لعائلات الحروف المتشابهة (ب/ت/ث، ج/ح/خ، س/ش، د/ض) المستخلصة من كلمات التعثر، مع 2-3 خيارات وشرح علاجي مبسط.
-2. syllableDrills: 4 كلمات مأخوذة من سياق تعثر الطالب مفككة إلى مقاطع صوتية دقيقة (CV, CVC, CVV) لتدريب الدمج المقطعي.
-3. pacerPassage: قصة قصيرة متدفقة من 16-22 كلمة مناسبة للصف ${gradeLevel} تحوي الكلمات المستهدفة لتدريب مسرّع النظر البصري.
-4. mathDrills: 4 تمارين خط أعداد وتفكيك مكاني للعشرات والآحاد لمعالجة عكس الخانات المكانية.
-5. clinicalRationale: تعليل إكلينيكي مختصر (سياق تربوي) يوضح كيف صُممت هذه التدريبات لعلاج نقاط ضعف هذا الطالب المحددة.`;
+المطلوب:
+1. phonicsDrills: أربعة أنشطة قصيرة للتدرب على تمييز الحروف العربية المتقاربة في الرسم أو الصوت (ب/ت/ث، ج/ح/خ، س/ش، د/ذ)، بخيارات واضحة وتغذية راجعة تعليمية بسيطة.
+2. syllableDrills: أربع كلمات مناسبة للصف مقسمة إلى مقاطع عربية صحيحة؛ لا تفكك الكلمة بطريقة تخالف النطق المكتوب.
+3. pacerPassage: نص مفهوم من 16–22 كلمة مناسب للصف، مع كلمات يمكن قراءتها ببطء وبتركيز؛ لا تدّع أنه تمرين علاجي لحركة العين.
+4. mathDrills: أربعة أنشطة اختيارية لخط الأعداد والقيمة المكانية، مع شرح يعلّم الخطوات بدل وصف الطفل بأنه متعثر.
+5. clinicalRationale: أبق اسم الحقل للتوافق البرمجي، لكن اكتب داخله مبررًا تعليميًا موجزًا، لا حكمًا إكلينيكيًا.
+اجعل التعليمات لطيفة وقصيرة وملائمة للطفل. إذا كانت الكلمات أمثلة عامة، فقل ذلك ولا تنسبها إلى أداء الطالب.`;
 
         const response = await ai.models.generateContent({
           model: 'gemini-3.8-flash',
@@ -1990,7 +1993,8 @@ ${mathContextLine}
         const parsed = JSON.parse((response.text || '{}').trim());
         res.json({
           source: 'gemini-3.8-flash-ai',
-          targetWordsUsed: effectiveWords,
+          targetWordsUsed: hasTeacherReviewedTargets ? effectiveWords : [],
+          targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
           session: parsed,
         });
         return;
@@ -1999,7 +2003,7 @@ ${mathContextLine}
       }
     }
 
-    // High-fidelity Clinical Deterministic Fallback if Gemini is offline
+    // Deterministic grade-level educational fallback if the model is unavailable.
     const deterministicSession = generateAdaptiveRemediationPlan({
       studentName: String(studentName || 'الطالب'),
       gradeLevel: Number(gradeLevel),
@@ -2007,8 +2011,9 @@ ${mathContextLine}
     });
 
     res.json({
-      source: 'adaptive-clinical-synthesizer',
-      targetWordsUsed: effectiveWords,
+      source: 'rule-based-learning-plan',
+      targetWordsUsed: hasTeacherReviewedTargets ? effectiveWords : [],
+      targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
       session: deterministicSession,
     });
   });
