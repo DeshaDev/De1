@@ -33,10 +33,6 @@ import {
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
 import EyeTrackingLabView from './components/EyeTrackingLabView';
-import ProfessionalEyeTracking from './components/ProfessionalEyeTracking';
-import RealEyeCalibration from './components/RealEyeCalibration';
-import ArabicSpeechAnalysis from './components/ArabicSpeechAnalysis';
-import TactileAnalytics from './components/TactileAnalytics';
 import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
@@ -1562,46 +1558,12 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 2: LIVE EYE-TRACKING READING LAB */}
+        {/* Camera-free reading and comprehension session */}
         {activeTab === 'eye-lab' && (
           <EyeTrackingLabView
             onCompleteSession={handleCompleteNewSession}
             activeStudent={selectedStudent}
             onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
-          />
-        )}
-
-        {/* NEW: PROFESSIONAL EYE TRACKING CALIBRATION */}
-        {activeTab === 'professional-eye-tracking' && (
-          <EyeTrackingLabView
-            onCompleteSession={handleCompleteNewSession}
-            activeStudent={selectedStudent}
-            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
-          />
-        )}
-
-        {/* NEW: REAL EYE CALIBRATION WITH PUPIL TRACKING */}
-        {activeTab === 'real-eye-calibration' && (
-          <EyeTrackingLabView
-            onCompleteSession={handleCompleteNewSession}
-            activeStudent={selectedStudent}
-            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
-          />
-        )}
-
-        {/* NEW: ARABIC SPEECH ANALYSIS */}
-        {activeTab === 'arabic-speech-analysis' && (
-          <ArabicSpeechAnalysis
-            studentName={selectedStudent.name}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-          />
-        )}
-
-        {/* NEW: TACTILE ANALYTICS */}
-        {activeTab === 'tactile-analytics' && (
-          <TactileAnalytics
-            studentName={selectedStudent.name}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
           />
         )}
 
