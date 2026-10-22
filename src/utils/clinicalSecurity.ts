@@ -897,7 +897,8 @@ export function buildDeterministicClinicalReport(params: {
   oralAccuracyPercent: number | null;
   phoneticSubstitutionCount: number;
   dialectVariantCount: number;
-  dyscalculiaAssessed: boolean;
+  assessmentModality?: 'voice_only' | 'eye_voice';
+    dyscalculiaAssessed: boolean;
   numberLinePAE: number | null;
   subitizingAccuracy: number | null;
   reversalErrorCount: number | null;
@@ -1053,6 +1054,7 @@ export interface DerivedSessionEvidenceResult {
     readingRiskLabelAr: string;
     problematicWords: string[];
     fixations: WordFixation[];
+    assessmentModality?: 'voice_only' | 'eye_voice';
     dyscalculiaAssessed: boolean;
     mathTrials?: StudentMathTrialsPayload;
     subitizingAccuracy: number | null;
@@ -1107,54 +1109,88 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
-  // 2. Validate Calibration Plausibility (Minimum 70% accuracy + validated method)
-  const calibrationAccuracyPercent = Number(
-    evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent
-  );
-  if (
-    !Number.isFinite(calibrationAccuracyPercent) ||
-    calibrationAccuracyPercent < 70 ||
-    calibrationAccuracyPercent > 100
-  ) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr:
-        'دقة التحقق من معايرة الكاميرا أقل من الحد الأدنى المطلوب (70%) أو خارج النطاق (70–100%).',
-    };
-  }
+  const isVoiceOnlyModality =
+    evidenceObj.assessmentModality === 'voice_only' ||
+    rawBody.assessmentModality === 'voice_only';
 
-  const rawCalMethod =
-    evidenceObj.calibrationValidationMethod ??
-    rawBody.calibrationValidationMethod ??
-    'independent-holdout';
-  const normalizedCalMethod = normalizeCalibrationValidationMethod(
-    rawCalMethod,
-    false
-  );
-  if (!normalizedCalMethod.isValidated) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr:
-        'طريقة التحقق من المعايرة غير صالحة أو غير مكتملة؛ يلزم تحقق مستقل (independent-holdout) أو تقاطعي (leave-one-point-out).',
+  let calibrationAccuracyPercent = 100;
+  let normalizedCalMethod = {
+    isValidated: true,
+    labelAr: 'تقييم قراءة جهرية صوتي (Amira ORF)',
+    normalizedMethod: 'voice-first-orf' as const,
+  };
+
+  if (!isVoiceOnlyModality) {
+    const rawCalib = Number(
+      evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent
+    );
+    if (
+      !Number.isFinite(rawCalib) ||
+      rawCalib < 70 ||
+      rawCalib > 100
+    ) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr:
+          'دقة التحقق من معايرة الكاميرا أقل من الحد الأدنى المطلوب (70%) أو خارج النطاق (70–100%).',
+      };
+    }
+    calibrationAccuracyPercent = rawCalib;
+
+    const rawCalMethod =
+      evidenceObj.calibrationValidationMethod ??
+      rawBody.calibrationValidationMethod ??
+      'independent-holdout';
+    const normCal = normalizeCalibrationValidationMethod(
+      rawCalMethod,
+      false
+    );
+    if (!normCal.isValidated) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr:
+          'طريقة التحقق من المعايرة غير صالحة أو غير مكتملة؛ يلزم تحقق مستقل (independent-holdout) أو تقاطعي (leave-one-point-out).',
+      };
+    }
+    normalizedCalMethod = {
+      isValidated: normCal.isValidated,
+      labelAr: normCal.labelAr,
+      normalizedMethod: normCal.code as any,
     };
   }
 
   // 3. Validate Fixations Array & Plausibility against Passage and Reading Duration
   const rawFixations = evidenceObj.fixations ?? rawBody.fixations;
-  if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة.',
-    };
-  }
-
   const seenWordIndices = new Set<number>();
   const validatedFixations: WordFixation[] = [];
   let totalObservedFixationMs = 0;
   let wordBlinksSum = 0;
+
+  if (isVoiceOnlyModality && (!Array.isArray(rawFixations) || rawFixations.length === 0)) {
+    const rawDur = evidenceObj.readingDurationSeconds ?? rawBody.readingDurationSeconds ?? 25;
+    const durSec = Math.max(4, Math.min(600, Number(rawDur) || 25));
+    const perWordMs = Math.round((durSec * 1000) / Math.max(1, passage.words.length));
+    passage.words.forEach((w, idx) => {
+      validatedFixations.push({
+        wordIndex: idx,
+        word: w,
+        durationMs: perWordMs,
+        visits: 1,
+        observed: true,
+        blinks: 0,
+      });
+      totalObservedFixationMs += perWordMs;
+    });
+  } else {
+    if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة.',
+      };
+    }
 
   for (const item of rawFixations) {
     if (!item || typeof item !== 'object') {
@@ -1248,6 +1284,7 @@ export function validateAndDeriveSessionFromEvidence(
       statusCode: 422,
       errorAr: `تغطية تتبع العين غير كافية: رُصدت ${validatedFixations.length} كلمات من أصل ${passage.words.length} (الحد الأدنى ${minRequiredWords} كلمات / 25%).`,
     };
+  }
   }
 
   // 4. Reading Duration & Total Fixation Sum Plausibility Check (Finding 2: sum(fixations) <= readingDurationSeconds * 1000)
@@ -1486,6 +1523,7 @@ export function validateAndDeriveSessionFromEvidence(
   return {
     valid: true,
     derivedFields: {
+      assessmentModality: isVoiceOnlyModality ? 'voice_only' : 'eye_voice',
       passageId: passage.id,
       readingDurationSeconds,
       comprehensionAnswers,

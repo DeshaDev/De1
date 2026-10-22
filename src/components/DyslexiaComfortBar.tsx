@@ -34,10 +34,22 @@ const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
     'أنت الآن في الخطوة الثانية: فحص تتبع العين والقراءة الجهرية. ابدأ بمعايرة النقاط البصرية ثم اقرأ النص القصير بصوتك.',
   'dyscalculia-lab':
     'أنت الآن في الخطوة الثالثة: فحص الديسكالكوليا والحس العددي. حدد موقع الأعداد على خط الأعداد وأجب عن تمارين التقدير البصري.',
+  'remediation-gym':
+    'أنت الآن في صالة بصيرة للتأهيل والتدريب التفاعلي. تدرّب على التمييز الفونولوجي، تركيب المقاطع، التتبع البصري الإيقاعي، وتمارين خط الأعداد.',
   'adaptive-reader':
     'أنت الآن في القارئ العربي الميسّر لعسر القراءة. يمكنك تفعيل التقطيع المقطعي وتلوين الحروف المتشابهة والاستماع للنطق الصوتي.',
   'algorithms-lab':
     'أنت الآن في مختبر التقييم المتكيف بنظرية استجابة الفقرة ثنائية المعلم.',
+  'professional-eye-tracking':
+    'أنت الآن في مختبر المعايرة الاحترافية وتتبع العين السريري.',
+  'real-eye-calibration':
+    'أنت الآن في مختبر معايرة بؤبؤ العين والتتبع المباشر.',
+  'arabic-speech-analysis':
+    'أنت الآن في مختبر التحليل الصوتي والفونولوجي للنطق العربي.',
+  'tactile-analytics':
+    'أنت الآن في مختبر التفاعل اللمسي والحس العددي الحركي.',
+  'adaptive-reports':
+    'أنت الآن في التقارير الذكية التكيفية وخطة المساندة التربوية الفردية.',
   privacy:
     'أنت الآن في صفحة الخصوصية. توضح الصفحة الحالية ما يتعلق بموافقة ولي الأمر والكاميرا والتعرف الصوتي وحدود النسخة التجريبية.',
 };
@@ -282,30 +294,35 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
           </div>
         )}
 
-        {/* Compact Floating Pill Bar: Quick Night Mode + Audio + Settings Popover Trigger */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-xs border border-slate-300/90 rounded-full shadow-lg">
-          {/* Quick 1-Click Night / Warm Paper Toggle */}
+        {/* Sleek Non-Obtrusive Floating Widget */}
+        <div className="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md border border-slate-300/80 rounded-full shadow-md hover:shadow-lg transition-all">
+          {/* Quick Toggle / Open Menu */}
+          <button
+            type="button"
+            onClick={() => setIsOpen((prev) => !prev)}
+            aria-expanded={isOpen}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isOpen || isCustomized
+                ? 'bg-[#15803D] text-white'
+                : 'bg-slate-900 text-white hover:bg-[#15803D]'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>خيارات القراءة</span>
+          </button>
+
+          {/* Quick 1-Click Night / Paper Toggle */}
           <button
             type="button"
             onClick={() => onChangeSurfaceTheme(isNight ? 'cream' : 'night')}
             aria-pressed={isNight}
             title={isNight ? 'التبديل للوضع النهاري الدافئ' : 'التبديل للوضع الليلي المريح'}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              isNight
-                ? 'bg-[#0284C7] text-white'
-                : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-            }`}
+            className="p-1.5 rounded-full text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             {isNight ? (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-300" />
-                <span>نهاري دافئ</span>
-              </>
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
             ) : (
-              <>
-                <Moon className="w-3.5 h-3.5 text-slate-700" />
-                <span>ليلي مريح</span>
-              </>
+              <Moon className="w-3.5 h-3.5 text-slate-700" />
             )}
           </button>
 
@@ -315,32 +332,17 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
             onClick={handleToggleSpeech}
             aria-pressed={isSpeaking}
             title="استمع لشرح الشاشة صوتياً"
-            className={`p-2 rounded-full transition-colors cursor-pointer ${
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
               isSpeaking
-                ? 'bg-[#0284C7] text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ? 'bg-[#15803D] text-white'
+                : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
             {isSpeaking ? (
               <Square className="w-3.5 h-3.5 fill-current" />
             ) : (
-              <Volume2 className="w-3.5 h-3.5 text-[#0284C7]" />
+              <Volume2 className="w-3.5 h-3.5 text-emerald-700" />
             )}
-          </button>
-
-          {/* Toggle Comfort Popover Menu */}
-          <button
-            type="button"
-            onClick={() => setIsOpen((prev) => !prev)}
-            aria-expanded={isOpen}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-              isOpen || isCustomized
-                ? 'bg-[#0284C7] text-white'
-                : 'bg-[#0F172A] text-white hover:bg-slate-800'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>خيارات القراءة</span>
           </button>
         </div>
       </div>

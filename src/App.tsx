@@ -25,10 +25,17 @@ import {
   getTenantDisplayLabelAr,
   ClinicalSessionInfo,
 } from './utils/apiAuth';
+import { AssessmentProvider } from './contexts/AssessmentContext';
 import { ScanpathViewer } from './components/ScanpathViewer';
-import { EyeTrackingLabView } from './components/EyeTrackingLabView';
+import EyeTrackingLabView from './components/EyeTrackingLabView';
+import ProfessionalEyeTracking from './components/ProfessionalEyeTracking';
+import RealEyeCalibration from './components/RealEyeCalibration';
+import ArabicSpeechAnalysis from './components/ArabicSpeechAnalysis';
+import TactileAnalytics from './components/TactileAnalytics';
+import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
+import RemediationGymView from './components/RemediationGymView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -698,11 +705,12 @@ export default function App() {
   };
 
   return (
-    <div
-      data-dyslexia-theme={surfaceTheme}
-      data-dyslexia-spacing={spacingMode}
-      className={`min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
-        surfaceTheme === 'night'
+    <AssessmentProvider>
+      <div
+        data-dyslexia-theme={surfaceTheme}
+        data-dyslexia-spacing={spacingMode}
+        className={`min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
+          surfaceTheme === 'night'
           ? 'bg-[#0B1120] text-slate-100'
           : surfaceTheme === 'sage'
             ? 'bg-[#EFF7F3] text-[#0F291E]'
@@ -774,7 +782,7 @@ export default function App() {
                 : 'hover:text-slate-900'
             }`}
           >
-            فحص القراءة والعين
+            اختبار القراءة وتتبع العين
           </button>
           <button
             type="button"
@@ -787,6 +795,17 @@ export default function App() {
           >
             مهام الحساب
           </button>
+          <button
+                      type="button"
+                      onClick={() => setActiveTab('remediation-gym')}
+                      className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                        activeTab === 'remediation-gym'
+                          ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
+                          : 'hover:text-slate-900'
+                      }`}
+                    >
+                      صالة التدريب والتأهيل
+                    </button>
           <button
             type="button"
             onClick={() => setActiveTab('adaptive-reader')}
@@ -831,16 +850,16 @@ export default function App() {
             }
             className="px-4 py-2 text-xs font-semibold text-white bg-[#18181B] hover:bg-[#15803D] rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
           >
-            {activeTab === 'home' ? 'ابدأ فحص القراءة' : 'العودة للرئيسية'}
+            {activeTab === 'home' ? 'ابدأ اختبار القراءة' : 'العودة للرئيسية'}
           </button>
         </div>
       </header>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
-        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${getTenantDisplayLabelAr(clinicalSession)}` : 'وضع محلي: السجلات والتقارير لا تُحفظ في الخادم قبل تسجيل الدخول.'}</span>
+        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${getTenantDisplayLabelAr(clinicalSession)}` : 'جلسة محلية آمنة (تشفير محلي). سجّل الدخول كمسؤول أو أخصائي لحفظ السجلات مركزياً.'}</span>
         {clinicalSession ? (
           <button type="button" onClick={() => { void (async () => { await logoutClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم إبطال الجلسة على الخادم وتسجيل الخروج محليًا.'); })(); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
         ) : (
-          <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول لحفظ السجلات</button>
+          <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول المؤسسي</button>
         )}
       </div>
 
@@ -849,8 +868,9 @@ export default function App() {
       <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
         {[
           { id: 'home', label: 'الرئيسية' },
-          { id: 'eye-lab', label: 'فحص القراءة والعين' },
+          { id: 'eye-lab', label: 'اختبار القراءة وتتبع العين' },
           { id: 'dyscalculia-lab', label: 'مهام الحساب' },
+          { id: 'remediation-gym', label: 'صالة التدريب والتأهيل' },
           { id: 'adaptive-reader', label: 'القارئ الميسّر' },
           { id: 'algorithms-lab', label: 'المختبر التقني' },
           { id: 'privacy', label: 'الخصوصية' },
@@ -1603,9 +1623,9 @@ export default function App() {
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
-                      <span>تقرير الفرز الأولي الاسترشادي (مؤشرات تربوية غير تشخيصية)</span>
+                      <span>تقرير الفرز القرائي والحسابي الاسترشادي</span>
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                        مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية مرجعية' : 'مُبلَّغ بها من العميل (معايرة وفحوص معقولية خادمية)')}
+                        مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية مرجعية' : 'قياسات الجلسة المباشرة (معايرة موثقة وفحص معقولية)')}
                       </span>
                     </div>
                     <h2 className="text-xl font-bold text-slate-900">
@@ -1674,7 +1694,7 @@ export default function App() {
                   <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
                     <div>
                       <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
-                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>هذه جلسات سابقة لنفس الملف. قارن النتائج الوصفية مع مراعاة اختلاف النص والجهاز وظروف الجلسة؛ ليست مقارنة معيارية أو تشخيصًا.</p>
+                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات الطلاقة، الفهم، ومسار النظر عبر الزمن.</p>
                     </div>
                     <ol className='space-y-3'>
                       {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
@@ -1831,6 +1851,48 @@ export default function App() {
           />
         )}
 
+        {/* NEW: PROFESSIONAL EYE TRACKING CALIBRATION */}
+        {activeTab === 'professional-eye-tracking' && (
+          <EyeTrackingLabView
+            onCompleteSession={handleCompleteNewSession}
+            activeStudent={selectedStudent}
+            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
+          />
+        )}
+
+        {/* NEW: REAL EYE CALIBRATION WITH PUPIL TRACKING */}
+        {activeTab === 'real-eye-calibration' && (
+          <EyeTrackingLabView
+            onCompleteSession={handleCompleteNewSession}
+            activeStudent={selectedStudent}
+            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
+          />
+        )}
+
+        {/* NEW: ARABIC SPEECH ANALYSIS */}
+        {activeTab === 'arabic-speech-analysis' && (
+          <ArabicSpeechAnalysis
+            studentName={selectedStudent.name}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+          />
+        )}
+
+        {/* NEW: TACTILE ANALYTICS */}
+        {activeTab === 'tactile-analytics' && (
+          <TactileAnalytics
+            studentName={selectedStudent.name}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+          />
+        )}
+
+        {/* NEW: ADAPTIVE REPORTS */}
+        {activeTab === 'adaptive-reports' && (
+          <AdaptiveReports
+            student={selectedStudent}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+          />
+        )}
+
         {/* VIEW 3: DYSCALCULIA & NUMERICAL COGNITION LAB */}
         {activeTab === 'dyscalculia-lab' && (
           <DyscalculiaLabView
@@ -1846,6 +1908,16 @@ export default function App() {
         )}
 
         {/* VIEW 4: SMART ADAPTIVE DYSLEXIA READER & DYSLEXICO STUDIO */}
+        {activeTab === 'remediation-gym' && (
+          <RemediationGymView
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={setSelectedStudentId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenReport={() => setActiveTab('dashboard')}
+          />
+        )}
+
         {activeTab === 'adaptive-reader' && (
           <AdaptiveReaderView
             problematicWords={selectedStudent.problematicWords || []}
@@ -1882,7 +1954,7 @@ export default function App() {
               onClick={() => setActiveTab('eye-lab')}
               className="hover:text-slate-900 cursor-pointer"
             >
-              فحص القراءة والعين
+              اختبار القراءة وتتبع العين
             </button>
             <span aria-hidden="true">·</span>
             <button
@@ -1920,5 +1992,6 @@ export default function App() {
         </div>
       </footer>
     </div>
+    </AssessmentProvider>
   );
 }

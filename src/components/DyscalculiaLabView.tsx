@@ -10,6 +10,7 @@ import {
   Timer,
   ArrowLeft,
   ArrowRight,
+  Play,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import {
@@ -596,22 +597,69 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         )}
                       </div>
 
-                      <svg
-                        viewBox="0 0 240 180"
-                        className="w-full h-36 bg-white border border-slate-200 rounded-xl"
-                        role="img"
-                        aria-label={`مصفوفة نقاط للاختبار رقم ${pattern.id}`}
-                      >
-                        {visibleSubitizingIds[pattern.id] && pattern.dots.map((d, dIdx) => (
-                          <circle
-                            key={dIdx}
-                            cx={d.cx}
-                            cy={d.cy}
-                            r={11}
-                            fill="#0F172A"
-                          />
-                        ))}
-                      </svg>
+                      {/* Interactive Subitizing Presentation Card */}
+                      {!isAnswered && !visibleSubitizingIds[pattern.id] && !readySubitizingIds[pattern.id] ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRestartSubitizingTimer(pattern.id)}
+                          className="w-full h-36 bg-gradient-to-b from-sky-50/70 to-white hover:bg-sky-50 border-2 border-dashed border-sky-300 hover:border-sky-400 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all group p-4 text-center"
+                        >
+                          <span className="w-10 h-10 rounded-full bg-sky-100 text-[#0284C7] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                            <Play className="w-5 h-5 fill-current ml-0.5" />
+                          </span>
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">
+                              انقر هنا لبدء وميض النقاط
+                            </span>
+                            <span className="text-[11px] text-slate-500 block mt-0.5">
+                              (تظهر النقاط لـ 0.8 ثانية ثم تختفي لاختبار التقدير السريع)
+                            </span>
+                          </div>
+                        </button>
+                      ) : (
+                        <svg
+                          viewBox="0 0 240 180"
+                          className="w-full h-36 bg-white border border-slate-200 rounded-xl"
+                          role="img"
+                          aria-label={`مصفوفة نقاط للاختبار رقم ${pattern.id}`}
+                        >
+                          {visibleSubitizingIds[pattern.id] && pattern.dots.map((d, dIdx) => (
+                            <circle
+                              key={dIdx}
+                              cx={d.cx}
+                              cy={d.cy}
+                              r={12}
+                              fill="#0F172A"
+                            />
+                          ))}
+                          {!visibleSubitizingIds[pattern.id] && readySubitizingIds[pattern.id] && !isAnswered && (
+                            <text
+                              x="120"
+                              y="95"
+                              textAnchor="middle"
+                              fill="#0284C7"
+                              fontSize="14"
+                              fontWeight="bold"
+                              fontFamily="sans-serif"
+                            >
+                              اختر إجابتك من الأرقام بالأسفل ↓
+                            </text>
+                          )}
+                          {isAnswered && (
+                            <text
+                              x="120"
+                              y="95"
+                              textAnchor="middle"
+                              fill={isCorrect ? "#059669" : "#DC2626"}
+                              fontSize="14"
+                              fontWeight="bold"
+                              fontFamily="sans-serif"
+                            >
+                              {isCorrect ? `✓ صحيح (العدد ${pattern.targetCount})` : `✗ خطأ (العدد الفعلي ${pattern.targetCount})`}
+                            </text>
+                          )}
+                        </svg>
+                      )}
 
                       <div className="min-h-6 text-center text-xs text-slate-500" aria-live="polite">
                         {visibleSubitizingIds[pattern.id]
@@ -630,7 +678,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                             disabled={!readySubitizingIds[pattern.id] || visibleSubitizingIds[pattern.id] || isAnswered}
                             onClick={() => handleSelectSubitizing(pattern.id, opt)}
                             aria-label={`اختيار العدد ${opt} للمصفوفة ${pattern.id}`}
-                            className={`min-h-11 py-2.5 text-sm font-mono tabular-nums font-semibold rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                            className={`min-h-[48px] py-3 text-base font-mono tabular-nums font-semibold rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                               isAnswered && sel.chosen === opt
                                 ? isCorrect
                                   ? 'bg-[#059669] text-white border-[#059669]'

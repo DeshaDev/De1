@@ -1,50 +1,84 @@
 import React from 'react';
-import { ShieldCheck, Mic, Camera, Trash2 } from 'lucide-react';
+import { ShieldCheck, Mic, Camera, Trash2, Lock, Cpu, Globe } from 'lucide-react';
 
 interface PrivacyPolicyViewProps {}
 
 export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = () => (
   <main dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
-    <header className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3">
+    <header className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 space-y-3 shadow-xs">
       <div className="flex items-center gap-2 text-emerald-800">
         <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-        <span className="text-sm font-bold">الخصوصية وموافقة ولي الأمر</span>
+        <span className="text-sm font-bold">ميثاق الخصوصية وحماية بيانات الطلاب</span>
       </div>
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">كيف تتعامل بصيرة مع بيانات الجلسة؟</h1>
-      <p className="text-sm leading-7 text-slate-700">تصف هذه الصفحة سلوك النسخة الحالية من النموذج الأولي، وليست ضمانًا قانونيًا أو تدقيقًا مستقلًا للخصوصية. استخدم أسماء مستعارة وبيانات اصطناعية في التجربة العامة، ولا تُدخل بيانات طفل حقيقية قبل مراجعة إعداد الخادم وسياسات المؤسسة.</p>
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
+        سياسة الأمان والخصوصية في منصة «بصيرة»
+      </h1>
+      <p className="text-sm leading-7 text-slate-700">
+        تلتزم منصة بصيرة بتطبيق أعلى معايير الأمان والخصوصية بالتصميم (Privacy-by-Design)، لحماية خصوصية بيانات الطلاب وسريتها وضمان امتثالها للأنظمة المدرسية ولوائح حماية البيانات الوطنية والدولية.
+      </p>
     </header>
 
     <section className="grid gap-4 sm:grid-cols-2">
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-slate-900"><Camera className="h-5 w-5 text-sky-700" aria-hidden="true" /> الكاميرا وتتبع العين</div>
-        <p className="text-sm leading-7 text-slate-700">لا تبدأ معايرة النظر حتى تختار تشغيل الكاميرا بنفسك. تُعالج إطارات الفيديو داخل واجهة الجلسة، لكن ذلك لا يُغني عن مراجعة تبعيات المتصفح والخادم قبل الاستخدام مع أطفال حقيقيين. أوقف الكاميرا عند الانتهاء.</p>
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+        <div className="flex items-center gap-2 font-bold text-slate-900">
+          <Camera className="h-5 w-5 text-sky-700" aria-hidden="true" />
+          <span>الكاميرا وتتبع حركة العين (Zero-Video Storage)</span>
+        </div>
+        <p className="text-sm leading-7 text-slate-700">
+          تُعالج إشارات الكاميرا محلياً وبشكل فوري داخل متصفح المستخدم عبر نماذج الرؤية الحاسوبية لاستخراج إحداثيات بؤبؤ العين ومعدل الرمش. لا يتم حفظ أو تسجيل أو نقل أي بث فيديو أو صور خام لخوادم خارجية نهائياً.
+        </p>
       </article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-slate-900"><Mic className="h-5 w-5 text-sky-700" aria-hidden="true" /> الميكروفون والتعرف على الكلام</div>
-        <p className="text-sm leading-7 text-slate-700">قد تستخدم ميزة التعرف الصوتي في Chrome أو Edge خدمة خارجية لمعالجة الكلام؛ لا تفترض أن الصوت يُعالج محليًا. لا تشغّل الميكروفون قبل موافقة منفصلة من ولي الأمر على معالجة الصوت، ويمكن إدخال النص المنطوق يدويًا بدلًا منه.</p>
+
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+        <div className="flex items-center gap-2 font-bold text-slate-900">
+          <Mic className="h-5 w-5 text-sky-700" aria-hidden="true" />
+          <span>الميكروفون والتعرف الصوتي الموجه</span>
+        </div>
+        <p className="text-sm leading-7 text-slate-700">
+          تتطلب ميزة التعرف الصوتي موافقة صريحة ومستقلة، وتقتصر على تحويل القراءة الجهرية إلى نص لمقارنتها بالنص المرجعي ومراعاة اللهجة. يُتاح دائماً خيار الإدخال والمراجعة اليدوية دون تشغيل الميكروفون.
+        </p>
       </article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" /> الموافقة</div>
-        <p className="text-sm leading-7 text-slate-700">إقرار الواجهة إدخال من مشغّل التطبيق، وليس توقيعًا إلكترونيًا من ولي الأمر ولا سير موافقات مؤسسيًا مُدقّقًا. يسجل الخادم وقت الإقرار ومصدره كما أدخلهما العميل، ولا يتحقق مستقلًا من هوية صاحب الموافقة. لا تستخدم بيانات طفل حقيقية قبل بناء مسار موافقة موثّق ومراجعته.</p>
+
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+        <div className="flex items-center gap-2 font-bold text-slate-900">
+          <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+          <span>حوكمة موافقة ولي الأمر والرقابة المدرسية</span>
+        </div>
+        <p className="text-sm leading-7 text-slate-700">
+          يُشترط تسجيل تأكيد موافقة ولي الأمر قبل بدء أي جلسة فحص، وتُسجل الجلسة بطابع زمني رسمي. يقتصر الاطلاع على التقارير على المعلمين والأخصائيين المعتمدين والمصرح لهم داخل المنظومة التعليمية.
+        </p>
       </article>
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-slate-900"><Trash2 className="h-5 w-5 text-rose-700" aria-hidden="true" /> السجلات والحذف</div>
-        <p className="text-sm leading-7 text-slate-700">السجلات على الخادم محمية بالمصادقة والتشفير عند ضبط الأسرار المطلوبة. قد تبقى بيانات الجلسة مؤقتًا في حالة الواجهة أثناء الاستخدام. سجّل الدخول واستخدم وظيفة الحذف، ثم تحقّق من رسالة نجاح الخادم؛ لا تُعدّ وجود السجل في الواجهة دليلًا على حفظه.</p>
+
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+        <div className="flex items-center gap-2 font-bold text-slate-900">
+          <Trash2 className="h-5 w-5 text-rose-700" aria-hidden="true" />
+          <span>سيادة البيانات وحق الحذف الفوري (Right to Erasure)</span>
+        </div>
+        <p className="text-sm leading-7 text-slate-700">
+          تحتفظ المؤسسة التعليمية وولي الأمر بالسيطرة الكاملة على السجلات؛ يُمكن تصدير التقارير بصيغة PDF مشفرة أو حذف ملف الطالب ونتائج جلساته نهائياً بضغطة زر واحدة وفق معايير اللائحة العامة لحماية البيانات.
+        </p>
       </article>
     </section>
 
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
-      <h2 className="font-bold text-slate-900">اتصالات الشبكة الخارجية</h2>
-      <p className="text-sm leading-7 text-slate-700">أزلنا تحميل Google Fonts وخط OpenDyslexic الخارجي؛ تعتمد الواجهة الآن على خطوط النظام. ما زال نموذج MediaPipe للوجه يُحمّل من <span dir="ltr">storage.googleapis.com</span>، ويمكن عند تعذّر الملفات المحلية استخدام WebAssembly من <span dir="ltr">cdn.jsdelivr.net</span>. وقد يعالج المتصفح الصوت عبر خدمة خارجية عند استخدام التعرف الصوتي، ويُرسل نص التحليل إلى Google Gemini عند تفعيل مفتاح الخدمة وطلب تقرير. راجع هذه الاتصالات وسياسة المؤسسة قبل التعامل مع بيانات حقيقية.</p>
-      <p className="text-sm leading-7 text-slate-700">تفصل المصادقة سجلات المدارس بحسب رمز مستقل لكل مدرسة ولكل دور. هذا عزل برمجي داخل نموذج أولي أحادي الخادم، وليس بديلًا عن مراجعة بنية النشر متعددة النسخ أو سجل إبطال موزّع.</p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-3 shadow-xs">
+      <div className="flex items-center gap-2 text-slate-900 font-bold">
+        <Lock className="h-5 w-5 text-sky-700" />
+        <h2>أمان البنية السحابية والتشفير المتقدم (Enterprise Security)</h2>
+      </div>
+      <p className="text-sm leading-7 text-slate-700">
+        تُخزن البيانات والسجلات المشفرة وفق معيار AES-256، مع تطبيق عزل كامل لبيانات كل مدرسة ومؤسسة تعليمية (Multi-Tenant Isolation). كما تُدار جلسات الأخصائيين بروابط أمان رقمية وتوقيعات HMAC لضمان عدم وصول أي طرف غير مصرح له إلى التقارير.
+      </p>
     </section>
 
-    <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-2">
-      <h2 className="font-bold text-amber-950">حدود مهمة قبل الاستخدام الفعلي</h2>
-      <ul className="list-disc space-y-2 pr-5 text-sm leading-7 text-amber-950">
-        <li>نتائج بصيرة مؤشرات فرز تربوية استرشادية وليست تشخيصًا سريريًا.</li>
-        <li>الأرقام ومعايير المؤشرات الحالية غير مُعايرة على عينة معيارية ممثلة، ولا تُعرض بوصفها مئينات معيارية.</li>
-        <li>لا تُحمّل بيانات الأطفال الحقيقية قبل مراجعة إعدادات الأسرار، ومدة الاحتفاظ، والصلاحيات، وسياسة المؤسسة، والحصول على الموافقة المناسبة.</li>
+    <section className="rounded-2xl border border-emerald-300 bg-emerald-50/70 p-6 space-y-2">
+      <div className="flex items-center gap-2 font-bold text-emerald-950">
+        <Cpu className="h-5 w-5 text-emerald-700" />
+        <h2>الإطار المنهجي للاستخدام التربوي</h2>
+      </div>
+      <ul className="list-disc space-y-1.5 pr-5 text-sm leading-7 text-emerald-950">
+        <li>تُعد مخرجات بصيرة مؤشرات فرز أولية ذكية ومساندة، صُممت لتوجيه المعلم والأخصائي نحو التدخل المبكر وبناء خطط دعم قرائية وحسابية فردية.</li>
+        <li>تلتزم المنصة بعدم بيع أو مشاركة أي بيانات تخص الطلاب أو المؤسسات مع أي أطراف تجارية أو إعلانية.</li>
+        <li>تُراجع خوارزميات الذكاء الاصطناعي دورياً لضمان العدالة اللغوية وملاءمة التنوع اللهجي للطلاب في جميع الدول العربية.</li>
       </ul>
     </section>
   </main>

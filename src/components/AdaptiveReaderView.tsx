@@ -517,7 +517,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
         {problematicWords.length > 0 && (
         <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
           <h3 className="text-sm font-bold text-amber-950">تدريب موجه من جلسة {studentName ? `«${studentName}»` : 'القراءة السابقة'}</h3>
-          <p className="text-xs leading-relaxed text-amber-900">الكلمات التالية رُصدت ضمن الكلمات المستهدفة في الجلسة السابقة. تمييزها هنا أداة تدريبية فقط، ولا يعني بمفرده وجود اضطراب.</p>
+          <p className="text-xs leading-relaxed text-amber-900">الكلمات التالية رُصدت خلال جلسة القراءة السابقة للتركيز عليها وتيسير استيعابها بصرياً وصوتياً:</p>
           <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
         </section>
       )}
@@ -1072,7 +1072,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   htmlFor="dyslexico-live-input"
                   className="block text-xs font-semibold text-slate-700 mb-2"
                 >
-                  أدخل جملة عربية لمعاينة كيفية تصنيف بعض الإبدالات والاختلافات الإملائية والبدائل اللهجية. التصنيف آلي أولي وقد يحتاج إلى مراجعة:
+                  أدخل نصاً عربياً لاختبار التصنيف الذكي للإبدالات الصوتية، الأخطاء الإملائية، والبدائل اللهجية:
                 </label>
                 <textarea
                   id="dyslexico-live-input"

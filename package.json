@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
-    "prebuild": "mkdir -p public/mediapipe-wasm && cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm/",
+    "prebuild": "node -e \"const fs = require('fs'); fs.mkdirSync('public/mediapipe-wasm', { recursive: true }); fs.cpSync('node_modules/@mediapipe/tasks-vision/wasm', 'public/mediapipe-wasm', { recursive: true }); fs.mkdirSync('public/mediapipe', { recursive: true }); fs.cpSync('node_modules/webgazer/dist/mediapipe', 'public/mediapipe', { recursive: true });\"",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",

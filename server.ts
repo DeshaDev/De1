@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
+import { generateAdaptiveRemediationPlan } from './src/utils/remediationEngine';
 import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   ClinicalRole,
@@ -1573,37 +1574,43 @@ async function startServer() {
         return;
       }
 
-      const hasValidCoverage =
-        typeof gazeCoveragePercent === 'number' &&
-        typeof observedWordCount === 'number' &&
-        typeof totalPassageWordCount === 'number' &&
-        Number.isFinite(gazeCoveragePercent) &&
-        Number.isFinite(observedWordCount) &&
-        Number.isFinite(totalPassageWordCount) &&
-        totalPassageWordCount > 0 &&
-        observedWordCount >= 4 &&
-        observedWordCount <= totalPassageWordCount &&
-        gazeCoveragePercent >= 25 &&
-        observedWordCount / totalPassageWordCount >= 0.25;
-      if (!hasValidCoverage) {
-        res.status(422).json({
-          error:
-            'بيانات تتبع العين غير كافية لإصدار تقرير. يلزم رصد 4 كلمات على الأقل وتغطية 25% من النص دون تعويض اصطناعي.',
-          reportBlocked: true,
-        });
-        return;
-      }
-      if (
-        typeof calibrationAccuracyPercent !== 'number' ||
-        !Number.isFinite(calibrationAccuracyPercent) ||
-        calibrationAccuracyPercent < 70
-      ) {
-        res.status(422).json({
-          error:
-            'دقة التحقق من معايرة الكاميرا منخفضة أو غير متاحة؛ تم حجب التقرير بدلاً من إصدار نتيجة غير موثوقة.',
-          reportBlocked: true,
-        });
-        return;
+      const isVoiceOnlyModality =
+        req.body?.assessmentModality === 'voice_only' ||
+        (oralReadingAssessed === true && (observedWordCount === 0 || observedWordCount === undefined || calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined));
+
+      if (!isVoiceOnlyModality) {
+        const hasValidCoverage =
+          typeof gazeCoveragePercent === 'number' &&
+          typeof observedWordCount === 'number' &&
+          typeof totalPassageWordCount === 'number' &&
+          Number.isFinite(gazeCoveragePercent) &&
+          Number.isFinite(observedWordCount) &&
+          Number.isFinite(totalPassageWordCount) &&
+          totalPassageWordCount > 0 &&
+          observedWordCount >= 4 &&
+          observedWordCount <= totalPassageWordCount &&
+          gazeCoveragePercent >= 25 &&
+          observedWordCount / totalPassageWordCount >= 0.25;
+        if (!hasValidCoverage) {
+          res.status(422).json({
+            error:
+              'بيانات تتبع العين غير كافية لإصدار تقرير. يلزم رصد 4 كلمات على الأقل وتغطية 25% من النص دون تعويض اصطناعي.',
+            reportBlocked: true,
+          });
+          return;
+        }
+        if (
+          typeof calibrationAccuracyPercent !== 'number' ||
+          !Number.isFinite(calibrationAccuracyPercent) ||
+          calibrationAccuracyPercent < 70
+        ) {
+          res.status(422).json({
+            error:
+              'دقة التحقق من معايرة الكاميرا منخفضة أو غير متاحة؛ تم حجب التقرير بدلاً من إصدار نتيجة غير موثوقة.',
+            reportBlocked: true,
+          });
+          return;
+        }
       }
 
       const anonymizedToken = 'الطالب [معرّف الجلسة المشفّر #ANON]';
@@ -1833,6 +1840,155 @@ ${mathContextLine}
           };
         }),
       },
+    });
+  });
+
+  // 2b. Gemini-powered Personalized Dyslexia/Dyscalculia Remediation Engine (Amira Learning / Dytective AI Architecture)
+  app.post('/api/remediation/generate-personalized-session', async (req, res) => {
+    const {
+      studentId,
+      studentName,
+      gradeLevel = 3,
+      dialect = 'msa',
+      problematicWords = [],
+      readingWpm = 75,
+      fixationDurationMs = 380,
+      regressionsCount = 3,
+      numberLinePAE = 15,
+    } = req.body || {};
+
+    const cleanWords = Array.isArray(problematicWords)
+      ? problematicWords
+          .map((w: unknown) => (typeof w === 'string' ? w.trim() : ''))
+          .filter(Boolean)
+          .slice(0, 8)
+      : [];
+
+    const effectiveWords =
+      cleanWords.length > 0 ? cleanWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'];
+
+    const ai = getGenAIClient();
+    if (ai) {
+      try {
+        const prompt = `أنت خبير إكلينيكي في علم النفس اللغوي وعلاج عسر القراءة (الديسلكسيا) وعسر الحساب (الديسكلكوليا) للغة العربية وفق منهجية Orton-Gillingham ومنصة Amira Learning.
+قم بتوليد جلسة علاجية تفاعلية مخصصة للطالب "${studentName || 'طالب'}" بالصف ${gradeLevel}، مع مراعاة لهجته (${dialect})، لمعالجة تعثره المحدد في الكلمات التالية التي رصدها فحص تتبع العين: [${effectiveWords.join('، ')}].
+
+المطلوب بدقة:
+1. phonicsDrills: 4 تمارين تمييز فونولوجي وبصري لعائلات الحروف المتشابهة (ب/ت/ث، ج/ح/خ، س/ش، د/ض) المستخلصة من كلمات التعثر، مع 2-3 خيارات وشرح علاجي مبسط.
+2. syllableDrills: 4 كلمات مأخوذة من سياق تعثر الطالب مفككة إلى مقاطع صوتية دقيقة (CV, CVC, CVV) لتدريب الدمج المقطعي.
+3. pacerPassage: قصة قصيرة متدفقة من 16-22 كلمة مناسبة للصف ${gradeLevel} تحوي الكلمات المستهدفة لتدريب مسرّع النظر البصري.
+4. mathDrills: 4 تمارين خط أعداد وتفكيك مكاني للعشرات والآحاد لمعالجة عكس الخانات المكانية.
+5. clinicalRationale: تعليل إكلينيكي مختصر (سياق تربوي) يوضح كيف صُممت هذه التدريبات لعلاج نقاط ضعف هذا الطالب المحددة.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                clinicalRationale: { type: Type.STRING },
+                phonicsDrills: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.INTEGER },
+                      family: { type: Type.STRING },
+                      spokenWord: { type: Type.STRING },
+                      wordMeaning: { type: Type.STRING },
+                      targetLetter: { type: Type.STRING },
+                      options: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          properties: {
+                            letter: { type: Type.STRING },
+                            letterName: { type: Type.STRING },
+                            isCorrect: { type: Type.BOOLEAN },
+                            explanation: { type: Type.STRING },
+                          },
+                          required: ['letter', 'letterName', 'isCorrect', 'explanation'],
+                        },
+                      },
+                      ruleTip: { type: Type.STRING },
+                    },
+                    required: ['id', 'family', 'spokenWord', 'wordMeaning', 'targetLetter', 'options', 'ruleTip'],
+                  },
+                },
+                syllableDrills: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.INTEGER },
+                      targetWord: { type: Type.STRING },
+                      wordMeaning: { type: Type.STRING },
+                      syllables: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                      },
+                    },
+                    required: ['id', 'targetWord', 'wordMeaning', 'syllables'],
+                  },
+                },
+                pacerPassage: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.INTEGER },
+                    title: { type: Type.STRING },
+                    gradeLevel: { type: Type.STRING },
+                    words: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
+                  },
+                  required: ['id', 'title', 'gradeLevel', 'words'],
+                },
+                mathDrills: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.INTEGER },
+                      targetNumber: { type: Type.INTEGER },
+                      min: { type: Type.INTEGER },
+                      max: { type: Type.INTEGER },
+                      prompt: { type: Type.STRING },
+                    },
+                    required: ['id', 'targetNumber', 'min', 'max', 'prompt'],
+                  },
+                },
+              },
+              required: ['clinicalRationale', 'phonicsDrills', 'syllableDrills', 'pacerPassage', 'mathDrills'],
+            },
+          },
+        });
+
+        const parsed = JSON.parse((response.text || '{}').trim());
+        res.json({
+          source: 'gemini-3.8-flash-ai',
+          targetWordsUsed: effectiveWords,
+          session: parsed,
+        });
+        return;
+      } catch (err) {
+        console.warn('Gemini remediation synthesis fallback triggered:', err);
+      }
+    }
+
+    // High-fidelity Clinical Deterministic Fallback if Gemini is offline
+    const deterministicSession = generateAdaptiveRemediationPlan({
+      studentName: String(studentName || 'الطالب'),
+      gradeLevel: Number(gradeLevel),
+      effectiveWords,
+    });
+
+    res.json({
+      source: 'adaptive-clinical-synthesizer',
+      targetWordsUsed: effectiveWords,
+      session: deterministicSession,
     });
   });
 

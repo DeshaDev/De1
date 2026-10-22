@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn, ChildProcess } from 'node:child_process';
+import { spawn, execSync, ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -113,9 +113,15 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   async function startServerInstance() {
     port = await getFreePort();
     baseUrl = `http://127.0.0.1:${port}`;
-    serverProc = spawn('./node_modules/.bin/tsx', ['server.ts'], {
+    const tsxBin =
+      process.platform === 'win32'
+        ? path.resolve(process.cwd(), 'node_modules/.bin/tsx.cmd')
+        : path.resolve(process.cwd(), 'node_modules/.bin/tsx');
+    serverProc = spawn(tsxBin, ['server.ts'], {
       cwd: process.cwd(),
+      shell: process.platform === 'win32',
       env: {
+        ...process.env,
         ...TEST_ENV,
         PORT: String(port),
         CLINICAL_DATA_DIR: tempDir,
@@ -129,8 +135,14 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     if (serverProc) {
       const proc = serverProc;
       serverProc = null;
-      proc.kill('SIGTERM');
-      await new Promise((r) => setTimeout(r, 300));
+      if (process.platform === 'win32' && proc.pid) {
+        try {
+          execSync(`taskkill /pid ${proc.pid} /T /F`, { stdio: 'ignore' });
+        } catch {}
+      } else {
+        proc.kill('SIGTERM');
+      }
+      await new Promise((r) => setTimeout(r, 400));
     }
   }
 
@@ -499,8 +511,10 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
     // Verify security-state.json exists and has 0600 permissions
     assert.equal(fs.existsSync(securityStateFile), true);
-    const mode = fs.statSync(securityStateFile).mode & 0o777;
-    assert.equal(mode, 0o600);
+    if (process.platform !== 'win32') {
+      const mode = fs.statSync(securityStateFile).mode & 0o777;
+      assert.equal(mode, 0o600);
+    }
 
     // Restart server process
     await stopServerInstance();
