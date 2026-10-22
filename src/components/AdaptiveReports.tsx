@@ -422,7 +422,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-700 leading-relaxed">
             <span className="font-bold block mb-0.5">ضوابط التقرير التربوي:</span>
-            هذا التقرير أداة فرز تربوي استرشادي لتحديد مواطن القوة والاحتياج وتوجيه الدعم الصفي والمنزلي، ولا يُعد تشخيصاً طبياً أو إكلينيكياً نهائياً.
+            يلخص التقرير قياسات جلسة تعليمية قصيرة؛ لا يثبت وحده وجود اضطراب تعلم ولا ينفيه. تُراجع الملاحظات مع المعلّم والأسرة، ويُحال الطفل لتقييم مختص عند وجود قلق مستمر.
           </div>
         </div>
       </div>
@@ -595,9 +595,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="border-t border-slate-100 pt-6">
               <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-teal-600" />
-                <span>الخطة المنزلية المقترحة (١٥ دقيقة يومياً)</span>
+                <span>أمثلة لأنشطة منزلية قصيرة قابلة للتعديل</span>
               </h3>
 
+              <p className="text-xs text-slate-500 mb-4">أمثلة قابلة للتعديل حسب وقت الطفل، وليست جرعة تدريبية أو توصية علاجية ثابتة.</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
                   <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (١ - ٥)</span>
@@ -806,57 +807,43 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
-          {/* Scientific Grounding & Empirical Norms Citation Card */}
-          <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-lg border border-slate-800">
+          {/* What research does and does not validate in this prototype */}
+          <section className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-lg border border-slate-800" aria-labelledby="baseera-evidence-title">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-teal-600/30 border border-teal-500 text-teal-300 flex items-center justify-center font-bold">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">
-                  المرجعية العلمية والإفصاح المنهجي للتقييم (Scientific Citations & Methodology)
-                </h3>
-                <p className="text-xs text-slate-400">
-                  تعتمد منصة بصيرة على المعايير التجريبية والأبحاث المحكمة في التقييم التربوي القرائي:
-                </p>
+                <h3 id="baseera-evidence-title" className="text-lg font-black text-white">المرجعية العلمية وحدود النموذج الحالي</h3>
+                <p className="text-xs text-slate-300 mt-1">هذه أبحاث مرجعية مستقلة، وليست اعتمادًا علميًا أو سريريًا لبصيرة. لا تنتقل صلاحية أي اختبار منشور إلى أنشطة هذا النموذج بمجرد الاستشهاد به.</p>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-slate-300 mt-4">
-              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <span className="font-bold text-teal-400 block mb-1">
-                  1. معايير الطلاقة القرائية الشفوية (CBM-ORF 2024):
-                </span>
-                تعتمد مؤشرات WCPM وWPM على دراسات القياس المعتمد على المنهج للقراءة العربية (Arabic Curriculum-Based Measurement of Oral Reading Fluency, Ijaz Arabi 2024)، لتحديد المئينات الصفية الاسترشادية دون ادعاء تشخيص سريري حتمي.
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <span className="font-bold text-teal-400 block mb-1">
-                  2. تقنين الفرز التشخيصي المعدل (MADST, Ain Shams 2016):
-                </span>
-                مستوحى من دراسة تقنين اختبار الديسلكسيا لجامعة عين شمس (عينات مصرية وبيئية)، لمراعاة التدرج الفونولوجي وقراءة النصوص المشكولة كلياً وجزئياً.
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <span className="font-bold text-teal-400 block mb-1">
-                  3. التباين الصوتي وإشراف المعلم (Little STT, arXiv 2025):
-                </span>
-                نظراً لارتفاع معدل خطأ الكلمات (WER يصل إلى 66%) في نماذج Whisper والتعرف الآلي على أصوات الأطفال، تطبق بصيرة مبدأ المعلم في الحلقة (Human-in-the-Loop) لمراجعة وتأكيد دقة كل كلمة قبل اعتماد درجات WCPM.
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <span className="font-bold text-teal-400 block mb-1">
-                  4. تطبيع خطأ خط الأعداد (Siegler & Booth 2004; SAGE 2026):
-                </span>
-                احتساب نسبة الخطأ المطلق المطبّع (Scale-Normalized PAE) على خط الأعداد (0 - 100) وفق معايير علم النفس المعرفي وبطارية عسر الحساب المغربية (2026) لتقييم التمثيل الذهني للكميات.
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-slate-200 mt-4">
+              <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <h4 className="font-bold text-teal-300 block mb-2">الطلاقة القرائية العربية — CBM-ORF (2024)</h4>
+                <p>دراسة على 414 طالبًا بالصفوف 2–6، واستندت المئينات المقترحة إلى متوسط ثلاثة نصوص. جلسة بصيرة الحالية تقيس نصًا واحدًا؛ لذلك لا تعرض مئينات الدراسة كحكم على الطفل.</p>
+                <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://doi.org/10.18860/ijazarabi.v7i2.26356" target="_blank" rel="noreferrer">فتح الدراسة المنشورة</a>
+              </article>
+              <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <h4 className="font-bold text-teal-300 block mb-2">أداة فرز عربية منشورة — MADST (2016)</h4>
+                <p>اختبار MADST أداة مستقلة لها بنود وتعليمات وعينة تقنين خاصة، وتذكر الدراسة حدودًا في تمثيل العينة. لا ينفذ هذا التطبيق الاختبار ولا يرث صدقه بمجرد الاستشهاد به.</p>
+                <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://research.asu.edu.eg/handle/12345678/51928" target="_blank" rel="noreferrer">فتح سجل جامعة عين شمس</a>
+              </article>
+              <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <h4 className="font-bold text-teal-300 block mb-2">التعرّف على كلام الأطفال بالعربية — Little STT (2025)</h4>
+                <p>اختبرت الدراسة Whisper على 355 ملفًا صوتيًا قصيرًا من 288 طفلًا يتحدثون لهجة شامية، وسجل أفضل نموذج فيها WER قدره 0.66. هذه نتيجة لذلك النموذج والمجموعة، ولا تمثل تلقائيًا التعرف الصوتي في متصفح المستخدم.</p>
+                <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://arxiv.org/abs/2510.23319" target="_blank" rel="noreferrer">فتح الدراسة ومجموعة البيانات</a>
+              </article>
+              <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+                <h4 className="font-bold text-teal-300 block mb-2">بطارية مغربية لعسر الحساب (2026)</h4>
+                <p>تصف الدراسة بطارية من 79 بندًا وتسعة مجالات مع دليل صلاحية أولي من عينة مغربية. نشاط بصيرة الحالي يتضمن مهام قصيرة فقط، وليس هذه البطارية أو بديلًا عنها.</p>
+                <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://doi.org/10.1177/07342829261484042" target="_blank" rel="noreferrer">فتح الدراسة المنشورة</a>
+              </article>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <span>* امتثال قانوني: قانون حماية البيانات الشخصية المصري 151/2020 ولائحته التنفيذية 816/2025 (المادة 15).</span>
-              <span className="text-teal-400 font-mono">Evidence-Based V4</span>
+            <div className="mt-4 pt-3 border-t border-slate-700 text-[11px] leading-relaxed text-slate-300">
+              لا يدّعي هذا النموذج اعتمادًا سريريًا أو امتثالًا قانونيًا. قبل استخدامه مع بيانات أطفال حقيقية، يلزم التحقق المستقل من القياس ومراجعة الخصوصية والموافقة والمتطلبات القانونية المختصة.
             </div>
-          </div>
+          </section>
 
           {/* Individualized Education Program (IEP) Goals */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
@@ -870,7 +857,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
                     الهدف القرائي والطلاقة
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
                   يحدد المعلم هدف الطلاقة بعد جمع خط أساس من عدة نصوص متقاربة الصعوبة ومراجعة دقة الكلمات والفهم؛ لا تُستخدم نتيجة هذه الجلسة وحدها لتحديد مستوى الطفل.
@@ -885,10 +872,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
                     الهدف الفونولوجي والتمييز الصوتي
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  أن يميز الطالب نطقاً وقراءة بين الحروف المتشابهة (ب/ت/ث) بنسبة دقة لا تقل عن ٩٠% في ١٠ محاولات متتالية.
+                  مثال قابل للتعديل: يميّز الطفل بين الحروف المستهدفة في كلمات مناسبة لمستواه، بعد أن يحدد المعلم خط الأساس ومعيار التقدم من محاولات متكررة.
                 </p>
                 <div className="text-xs text-slate-600">
                   <span className="font-bold text-slate-700">استراتيجية التدريس:</span> استخدام التغذية الراجعة الصوتية اللحظية، التقطيع المقطعي، والتمييز اللوني لمواضع النقاط.
@@ -900,10 +887,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="px-3 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800">
                     هدف الحس العددي والرياضيات
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
+                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  خفض نسبة الخطأ في تقدير مواقع الأعداد على خط الأعداد (0 - 100) لتكون أقل من ١٠%.
+                  مثال قابل للتعديل: يتحسن تقدير الطفل لمواضع الأعداد مقارنة بخط أساسه في مهام متشابهة، ويُحدَّد معيار التقدم بعد مراجعة عدة محاولات.
                 </p>
                 <div className="text-xs text-slate-600">
                   <span className="font-bold text-slate-700">استراتيجية التدريس:</span> التدريب الحركي التفاعلي على خط الأعداد والمقارنة المكانية بالصور التجسيدية.
@@ -920,15 +907,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">منح وقت إضافي بنسبة 25% في المهام التحريرية</span>
+                <span className="text-slate-800">تكييف الوقت وطول المهمة حسب حاجة الطفل، لا وفق نسبة ثابتة للجميع</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">استخدام خط عربي واضح بحجم مريح (18pt على الأقل)</span>
+                <span className="text-slate-800">إتاحة خط عربي واضح مع حجم وتباعد قابلين للتعديل</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-slate-800">السماح باستخدام مسطرة تتبع الأسطر أثناء القراءة الفردية</span>
+                <span className="text-slate-800">إتاحة مسطرة سطر اختيارية إذا وجد الطفل أنها تساعده</span>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -948,7 +935,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-teal-800 rounded-3xl p-8 md:p-10 text-white shadow-xl">
             <h2 className="text-3xl font-black mb-2">الألعاب التكيفية الداعمة للطالب</h2>
             <p className="text-sm text-indigo-100 max-w-xl leading-relaxed">
-              تم اختيار هذه الألعاب بناءً على مؤشرات الأداء المرصودة لتقديم تدريب مهاري مكثف بقالب تفاعلي مشجع.
+              هذه أنشطة تعليمية عامة قابلة للاختيار. يراجع المعلم سجل الأداء قبل تخصيصها؛ لا يثبت عرض اللعبة وحده وجود صعوبة أو أثر علاجي.
             </p>
           </div>
 
