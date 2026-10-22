@@ -183,8 +183,9 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.assessmentModality, 'reading_only');
     assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
     assert.equal(derived.derivedFields.fixations.length, 0);
-    assert.equal(derived.derivedFields.dyslexiaRiskScore, 0); // Camera-free reading_only does not fabricate predictive clinical dyslexia scores
-    assert.equal(derived.derivedFields.readingRiskLevel, 'nominal');
+    assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
+    assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
+    assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
     assert.ok(derived.derivedFields.clinicalReport);
   });
 
