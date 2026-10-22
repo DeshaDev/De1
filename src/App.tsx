@@ -603,6 +603,7 @@ export default function App() {
           speechRecognitionUsed: selectedStudent.speechRecognitionUsed === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
+          comprehensionScore: selectedStudent.comprehensionScore,
           avgFixationMs: selectedStudent.avgFixationMs,
           regressionRate: selectedStudent.regressionRate,
           gazeCoveragePercent: selectedStudent.gazeCoveragePercent,
