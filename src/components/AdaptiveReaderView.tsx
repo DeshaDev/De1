@@ -54,22 +54,22 @@ const DYSLEXICO_PRESETS: {
 }[] = [
   {
     id: 'ar-three-categories',
-    label: 'نموذج التمييز الثلاثي (إبدال + إملاء + لهجة)',
+    label: 'مثال لغوي تجريبي — إملاء ولهجة؛ الأخطاء مقصودة',
     dialect: 'gulf',
     sample:
       'قرأ التالب كتاب في المدرسه وشاف المنضار صوب الجبل وكتب الملاحضات',
   },
   {
     id: 'ar-dyslexic',
-    label: 'نموذج إبدالات حرفية (ت/ط، ض/ظ)',
+    label: 'مثال إملائي تجريبي — تبديلات مقصودة',
     dialect: 'msa',
     sample: 'قرأ التالب كتاب في المدرسه وكتب بقلم ازرق عن المنضار والضوء',
   },
   {
     id: 'ar-egyptian-levantine',
-    label: 'نموذج باللهجة المصرية والشامية',
+    label: 'مثال باللهجة المصرية — اختلاف اللهجة ليس خطأً مرضيًا',
     dialect: 'egyptian',
-    sample: 'دهب التالب الى المدرسه وشاف المنضار مع تلاميز الفصل',
+    sample: 'ده الولد راح المدرسة وشاف المنظار وقال لأصحابه',
   },
 ];
 
@@ -101,7 +101,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
   const [lineHeightRatio, setLineHeightRatio] = useState<number>(2.0);
   const [pacingIntervalMs, setPacingIntervalMs] = useState<number>(520);
   const [pacingSyncModeLabel, setPacingSyncModeLabel] = useState<string>(
-    'مؤشر تتبع بصري إيقاعي قابل لضبط السرعة'
+    'إبراز كلمة للمساعدة على التركيز (قابل للتعديل)'
   );
   const [surfaceTheme, setSurfaceTheme] = useState<
     'white' | 'cream' | 'sky' | 'night'
@@ -289,7 +289,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
     let currentIdx = 0;
     let boundaryEventFired = false;
     setPacingSyncModeLabel(
-      `مؤشر تتبع إيقاعي استرشادي (${pacingIntervalMs}ms للكلمة)`
+      'توقيت إبراز تقريبي — لا يقيس حركة العين'
     );
 
     speechTimerRef.current = window.setInterval(() => {
@@ -509,7 +509,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               }`}
             >
               <Code2 className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>٢. محلل الفروق اللغوية الثلاثي (Dyslexico)</span>
+              <span>٢. مراجعة الفروق الإملائية واللهجية</span>
             </button>
           </div>
         </div>
@@ -999,23 +999,23 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
           <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-slate-200">
             <div className="max-w-2xl space-y-1.5">
               <div className="text-xs text-slate-500">
-                محاولة التمييز بين الخطأ القرائي، والاختلاف الإملائي، والمفردة اللهجية
+                مراجعة أولية للفروق الكتابية واللهجية في النص المدخل فقط
               </div>
               <h3 className="text-lg font-bold text-slate-900">
-                محلل الكلمات والمطابقة الفونولوجية المراعية للهجات العربية
+                مراجعة كتابية استكشافية تراعي اختلافات اللهجات العربية
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                يفصل المحرك برمجياً بين ثلاث فئات لغوية:
+                يقترح المحرك ثلاث فئات لغوية من النص المكتوب؛ قد يخطئ في السياق أو اللهجة:
                 <strong className="text-rose-700 mx-1">
-                  (١) إبدال حرفي ({phonologicalCandidatesCount})
+                  (١) فروق كتابية محتملة ({phonologicalCandidatesCount})
                 </strong>
                 ،
                 <strong className="text-amber-800 mx-1">
-                  (٢) اختلاف إملائي كتابي غير مرضي ({orthographicConventionsCount})
+                  (٢) اختلافات إملائية محتملة ({orthographicConventionsCount})
                 </strong>
                 ،
                 <strong className="text-[#059669] mx-1">
-                  (٣) استعمال لهجي عربي صحيح ({validDialectTokensCount})
+                  (٣) صيغ لهجية محتملة ({validDialectTokensCount})
                 </strong>
                 .
               </p>
@@ -1023,7 +1023,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
 
             <div className="flex flex-wrap items-center gap-2">
               <select
-                aria-label="لهجة الطالب العربي في معالج Dyslexico"
+                aria-label="اللهجة المحتملة في المثال اللغوي"
                 value={selectedDialect}
                 onChange={(e) =>
                   setSelectedDialect(e.target.value as ArabicDialectCode)
@@ -1064,7 +1064,8 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <p role="note" className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-950">هذا محلل لغوي استكشافي للنص المكتوب فقط؛ لا يشخّص عسر القراءة ولا يصنّف الطفل. كل اقتراح يحتاج إلى مراجعة بشرية في سياق الجملة واللهجة.</p>
+<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left 7 cols: Live Dyslexic Text Input & Interactive Token Correction */}
             <div className="lg:col-span-7 space-y-4">
               <div>
@@ -1072,7 +1073,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   htmlFor="dyslexico-live-input"
                   className="block text-xs font-semibold text-slate-700 mb-2"
                 >
-                  أدخل نصاً عربياً لاختبار التصنيف الذكي للإبدالات الصوتية، الأخطاء الإملائية، والبدائل اللهجية:
+                  أدخل مثالًا مكتوبًا لمراجعة الفروق الإملائية واللهجية؛ هذه الأداة لا تستخدم الصوت ولا تقيس نطق الطفل:
                 </label>
                 <textarea
                   id="dyslexico-live-input"
@@ -1089,7 +1090,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               {/* Interactive Token Strip with 3-Way Color Coding */}
               <div className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
-                  <span>تصنيف الكلمات المدخلة (انقر على الكلمة لتطبيق المقابل الفصيح):</span>
+                  <span>نتائج المراجعة اللغوية الأولية (انقر لتجربة المقابل المقترح):</span>
                   <span className="font-mono tabular-nums">
                     إبدالات: {phonologicalCandidatesCount} · إملاء:{' '}
                     {orthographicConventionsCount} · لهجة:{' '}
@@ -1303,7 +1304,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     <th className="py-2.5 px-3">الكلمة المدخلة</th>
                     <th className="py-2.5 px-3">التصنيف اللغوي الدقيق</th>
                     <th className="py-2.5 px-3">المقابل الفصيح</th>
-                    <th className="py-2.5 px-3">هل يُحتسب كملاحظة عسر قراءة؟</th>
+                    <th className="py-2.5 px-3">هل يحتاج إلى مراجعة بشرية؟</th>
                     <th className="py-2.5 px-3">التفسير اللغوي والتربوي</th>
                     <th className="py-2.5 px-3">إجراء</th>
                   </tr>
@@ -1339,11 +1340,11 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                         <td className="py-3 px-3 font-semibold">
                           {item.isDyslexiaScreeningCandidate ? (
                             <span className="text-amber-800">
-                              فقط عند التكرار في السياق
+                              لا يكفي للاستدلال؛ راجع السياق والأداء الفعلي
                             </span>
                           ) : (
                             <span className="text-[#059669]">
-                              لا (استعمال لهجي أو إملائي طبيعي)
+                              اختلاف لغوي محتمل؛ راجع السياق
                             </span>
                           )}
                         </td>
