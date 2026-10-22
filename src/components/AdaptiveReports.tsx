@@ -257,10 +257,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const adaptiveGames = [
     {
       id: 'letter-hunt',
-      title: 'صائد النقاط والحروف المتشابهة (ب / ت / ث / ن)',
+      title: 'لعبة تمييز الحروف العربية (ب / ت / ث / ن)',
       description:
-        'لعبة تفاعلية مرحة لتدريب الوعي البصري-الفونيمي والتمييز السريع بين مواضع النقاط والأصوات.',
-      targetSkill: 'الوعي الفونيمي والخلط البصري (Visual Homographs)',
+        'لعبة تعليمية قصيرة لملاحظة اختلاف النقاط بين الحروف وقراءة أمثلة بسيطة.',
+      targetSkill: 'ملاحظة شكل الحرف ونقاطه',
       difficulty: 'متوسط' as const,
       duration: '10 دقائق يومياً',
       tabTarget: 'remediation-gym',
@@ -270,8 +270,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       id: 'syllable-train',
       title: 'قطار المقاطع الصوتية والمدود الطويلة',
       description:
-        'تركيب الكلمات من المقاطع الصوتية والحركات لتنمية الطلاقة وكسر تردد الاستدعاء الصوتي.',
-      targetSkill: 'التقطيع المقطعي والطلاقة (Syllable Segmentation & VOT)',
+        'تدريب على تجميع أجزاء مكتوبة من الكلمة والاستماع إلى نطقها، مع مراجعة تقسيمها قبل اعتماده.',
+      targetSkill: 'قراءة أجزاء الكلمة ودمجها',
       difficulty: 'سهل' as const,
       duration: '8 دقائق يومياً',
       tabTarget: 'remediation-gym',
@@ -279,9 +279,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     },
     {
       id: 'number-line-jumper',
-      title: 'قافز خط الأعداد الذهني (0 - 100)',
-      description: 'تدريب حركي لمسي على تقدير مواقع الأعداد وتصحيح الخطأ المطلق (Siegler PAE).',
-      targetSkill: 'الحس العددي وخط الأعداد (Mental Number Line)',
+      title: 'مغامرة خط الأعداد (0–100)',
+      description: 'نشاط للتدرّب على تقدير مواضع الأعداد ومقارنة الإجابة بالموقع المرجعي.',
+      targetSkill: 'تقدير المواضع على خط الأعداد',
       difficulty: 'متوسط' as const,
       duration: '12 دقيقة يومياً',
       tabTarget: 'dyscalculia-lab',
@@ -289,9 +289,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     },
     {
       id: 'colored-reader',
-      title: 'القارئ العربي الميسر الذكي',
-      description: 'قراءة نصوص مشكولة مع مسطرة التظليل البصري وتكبير التباعد لتسهيل التتبع السطري.',
-      targetSkill: 'الطلاقة القرائية واسترسال السطور (Reading Flow)',
+      title: 'القارئ العربي الميسّر',
+      description: 'تجربة حجم خط وتباعد ومسطر قراءة مختلفة، ثم اختيار ما يساعد الطفل على القراءة براحة.',
+      targetSkill: 'تخصيص عرض النص للراحة',
       difficulty: 'متدرج' as const,
       duration: '15 دقيقة يومياً',
       tabTarget: 'adaptive-reader',
@@ -375,7 +375,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 onClick={() => onNavigateTab && onNavigateTab('dyscalculia-lab')}
                 className="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>بدء فحص الحساب</span>
+                <span>ابدأ مهام الحساب</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
