@@ -67,15 +67,17 @@ export interface TranscodingTrialResult {
 }
 
 export interface DyscalculiaMetricsResult {
-  subitizingAccuracy: number;
-  avgSubitizingMs: number;
-  numberLinePAE: number;
-  avgNumberLineMs: number;
-  transcodingAccuracy: number;
-  reversalErrorCount: number;
-  dyscalculiaRiskScore: number;
-  heuristicIndicator: number;
-  riskLevel: 'nominal' | 'moderate' | 'high';
+  subitizingAccuracy: number | null;
+  avgSubitizingMs: number | null;
+  numberLinePAE: number | null;
+  avgNumberLineMs: number | null;
+  transcodingAccuracy: number | null;
+  reversalErrorCount: number | null;
+  /** Intentionally null: this prototype has no validated dyscalculia-risk cutoffs. */
+  dyscalculiaRiskScore: null;
+  /** Intentionally null: this prototype has no normed performance percentile. */
+  heuristicIndicator: null;
+  riskLevel: 'unassessed';
   riskLabelAr: string;
 }
 
@@ -320,86 +322,44 @@ export function calculateDyscalculiaMetrics(
 ): DyscalculiaMetricsResult {
   const subitizingAccuracy =
     subitizing.length > 0
-      ? Math.round(
-          (subitizing.filter((t) => t.correct).length / subitizing.length) * 100
-        )
-      : 100;
+      ? Math.round((subitizing.filter((trial) => trial.correct).length / subitizing.length) * 100)
+      : null;
 
   const avgSubitizingMs =
     subitizing.length > 0
-      ? Math.round(
-          subitizing.reduce((acc, t) => acc + t.reactionTimeMs, 0) /
-            subitizing.length
-        )
-      : 900;
+      ? Math.round(subitizing.reduce((sum, trial) => sum + trial.reactionTimeMs, 0) / subitizing.length)
+      : null;
 
-  // Percent Absolute Error (PAE) normalized by the scale range (scaleMax - scaleMin) per Siegler & Booth (2004):
-  // PAE = (|userEstimate - target| / (scaleMax - scaleMin)) * 100
+  // Percent absolute error is a descriptive task measure, not a diagnostic cut-off.
   const numberLinePAE =
     numberLine.length > 0
-      ? Number(
-          (
-            numberLine.reduce((acc, t) => {
-              const scaleMin = typeof t.scaleMin === 'number' ? t.scaleMin : 0;
-              const scaleMax =
-                typeof t.scaleMax === 'number' ? t.scaleMax : 100;
-              const scaleRange = Math.max(1, Math.abs(scaleMax - scaleMin));
-              const normalizedPaePct =
-                (Math.abs(t.userEstimate - t.target) / scaleRange) * 100;
-              return acc + normalizedPaePct;
-            }, 0) / numberLine.length
-          ).toFixed(1)
-        )
-      : 0;
+      ? Number((
+          numberLine.reduce((sum, trial) => {
+            const scaleMin = typeof trial.scaleMin === 'number' ? trial.scaleMin : 0;
+            const scaleMax = typeof trial.scaleMax === 'number' ? trial.scaleMax : 100;
+            const scaleRange = Math.max(1, Math.abs(scaleMax - scaleMin));
+            return sum + (Math.abs(trial.userEstimate - trial.target) / scaleRange) * 100;
+          }, 0) / numberLine.length
+        ).toFixed(1))
+      : null;
 
   const avgNumberLineMs =
     numberLine.length > 0
-      ? Math.round(
-          numberLine.reduce((acc, t) => acc + Math.max(100, t.reactionTimeMs), 0) /
-            numberLine.length
-        )
-      : 0;
+      ? Math.round(numberLine.reduce((sum, trial) => sum + Math.max(100, trial.reactionTimeMs), 0) / numberLine.length)
+      : null;
 
   const transcodingAccuracy =
     transcoding.length > 0
-      ? Math.round(
-          (transcoding.filter((t) => t.targetNumber === t.selectedNumber).length /
-            transcoding.length) *
-            100
-        )
-      : 100;
+      ? Math.round((transcoding.filter((trial) => trial.targetNumber === trial.selectedNumber).length / transcoding.length) * 100)
+      : null;
 
-  const reversalErrorCount = transcoding.filter((t) => t.isReversalError).length;
+  const reversalErrorCount =
+    transcoding.length > 0
+      ? transcoding.filter((trial) => trial.isReversalError).length
+      : null;
 
-  // Heuristic Screening Formula:
-  // High PAE (>12% of scale range), slow/inaccurate subitizing, and Arabic place-value reversals
-  const paeRisk = Math.min(1, Math.max(0, (numberLinePAE - 4) / 22));
-  const subitizingRisk =
-    (1 - subitizingAccuracy / 100) * 0.6 +
-    Math.min(1, Math.max(0, (avgSubitizingMs - 1100) / 2200)) * 0.4;
-  const transcodingRisk =
-    (1 - transcodingAccuracy / 100) * 0.5 +
-    Math.min(1, reversalErrorCount / Math.max(1, transcoding.length)) * 0.5;
-
-  const dyscalculiaRiskScore = Math.max(
-    5,
-    Math.min(
-      98,
-      Math.round(paeRisk * 36 + subitizingRisk * 32 + transcodingRisk * 32)
-    )
-  );
-  const heuristicIndicator = Math.max(1, Math.min(99, 100 - dyscalculiaRiskScore)); // Inverse heuristic score, not an empirical population percentile.
-
-  let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let riskLabelAr = 'مؤشر فرز أولي: إدراك كمي ومكاني طبيعي';
-
-  if (dyscalculiaRiskScore >= 60) {
-    riskLevel = 'high';
-    riskLabelAr = 'مؤشر فرز أولي مرتفع لعسر الحساب (الديسكالكوليا)';
-  } else if (dyscalculiaRiskScore >= 34) {
-    riskLevel = 'moderate';
-    riskLabelAr = 'مؤشر فرز أولي متوسط في الحس العددي';
-  }
+  const allTaskTypesObserved =
+    subitizing.length > 0 && numberLine.length > 0 && transcoding.length > 0;
 
   return {
     subitizingAccuracy,
@@ -408,10 +368,14 @@ export function calculateDyscalculiaMetrics(
     avgNumberLineMs,
     transcodingAccuracy,
     reversalErrorCount,
-    dyscalculiaRiskScore,
-    heuristicIndicator,
-    riskLevel,
-    riskLabelAr,
+    // This repository has no representative Arabic validation sample or calibrated
+    // cut-offs. Deliberately avoid turning a few task responses into a risk label.
+    dyscalculiaRiskScore: null,
+    heuristicIndicator: null,
+    riskLevel: 'unassessed',
+    riskLabelAr: allTaskTypesObserved
+      ? 'اكتملت المهام الوصفية؛ لا توجد درجة خطر معيارية معتمدة.'
+      : 'لم تكتمل أنواع المهام اللازمة لعرض جميع المقاييس.',
   };
 }
 
