@@ -4,6 +4,12 @@ import {
   Sparkles,
   Eye,
   BarChart3,
+  Home,
+  BookOpen,
+  Calculator,
+  Gamepad2,
+  GraduationCap,
+  Type,
   CheckCircle2,
   ArrowLeft,
   Trash2,
@@ -26,7 +32,6 @@ import {
   ClinicalSessionInfo,
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
-import { ScanpathViewer } from './components/ScanpathViewer';
 import EyeTrackingLabView from './components/EyeTrackingLabView';
 import ProfessionalEyeTracking from './components/ProfessionalEyeTracking';
 import RealEyeCalibration from './components/RealEyeCalibration';
@@ -47,7 +52,7 @@ import {
 
 type ActiveTab = AppTabId;
 
-type DashboardSubView = 'roster' | 'scanpath' | 'report';
+type DashboardSubView = 'roster' | 'report';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
@@ -139,9 +144,21 @@ export default function App() {
   const selectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0];
 
-  const selectedPassage =
-    ARABIC_READING_PASSAGES.find((p) => p.id === selectedStudent.passageId) ||
-    ARABIC_READING_PASSAGES[0];
+  const selectedReadingRate = (() => {
+    if (selectedStudent.sessionStatus !== 'completed') return null;
+    if (selectedStudent.assessmentModality === 'voice_only') {
+      const hasOralEvidence =
+        Boolean((selectedStudent.spokenTranscript || '').trim()) ||
+        selectedStudent.teacherVerified === true;
+      const oralRate = selectedStudent.wcpm ?? selectedStudent.oralWcpm;
+      return hasOralEvidence && typeof oralRate === 'number' && Number.isFinite(oralRate)
+        ? oralRate
+        : null;
+    }
+    return typeof selectedStudent.wpm === 'number' && selectedStudent.wpm > 0
+      ? selectedStudent.wpm
+      : null;
+  })();
 
   const filteredStudents = students.filter((s) => {
     if (hideDemoRecords && s.isDemoRecord) return false;
@@ -752,7 +769,7 @@ export default function App() {
       <div
         data-dyslexia-theme={surfaceTheme}
         data-dyslexia-spacing={spacingMode}
-        className={`min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
+        className={`baseera-app min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
           surfaceTheme === 'night'
           ? 'bg-[#0B1120] text-slate-100'
           : surfaceTheme === 'sage'
@@ -764,14 +781,15 @@ export default function App() {
                 : 'bg-[#FAF6EE] text-[#1E293B]'
       }`}
     >
+      <a className="baseera-skip-link" href="#main-content">تجاوز إلى المحتوى</a>
       {showClinicalLogin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-login-title">
           <form
             onSubmit={(event) => { event.preventDefault(); void handleClinicalLogin(); }}
             className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
           >
-            <h2 id="clinical-login-title" className="text-lg font-bold">تسجيل دخول المستخدم المخوّل</h2>
-            <p className="text-sm text-slate-600">أدخل رمز المدرسة والدور الذي سلّمه لك مسؤول النظام. تحدد صلاحية الرمز المدرسة والدور تلقائيًا؛ لا يمكن اختيار دور أعلى من صلاحيتك.</p>
+            <h2 id="clinical-login-title" className="text-lg font-bold">دخول المعلّم أو الأخصائي</h2>
+            <p className="text-sm text-slate-600">أدخل رمز المدرسة الذي سلّمه لك مسؤول النظام. تُحدَّد صلاحيات الحساب تلقائيًا.</p>
             <label className="block space-y-1 text-sm font-medium">
               <span>رمز الوصول</span>
               <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setClinicalAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
@@ -786,155 +804,123 @@ export default function App() {
           </form>
         </div>
       )}
-      {/* Strict 3-Zone Top Bar Contract — Ordered Sequentially by User Lifecycle */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-8 px-4 sm:px-6 py-3 sm:py-4 bg-white/95 backdrop-blur-xs border-b border-slate-200">
-        {/* Zone 1: Single text element wordmark */}
-        <a
-          href="#top"
-          onClick={(e) => {
-            e.preventDefault();
-            setActiveTab('home');
-          }}
-          className="text-xl font-bold tracking-tight text-slate-900 font-display whitespace-nowrap shrink-0"
-        >
-          بصيرة
-        </a>
+      <header className="baseera-topbar sticky top-0 z-30">
+        <div className="baseera-topbar-inner">
+          <a
+            href="#top"
+            onClick={(event) => {
+              event.preventDefault();
+              setActiveTab('home');
+            }}
+            className="baseera-brand"
+            aria-label="بصيرة — الصفحة الرئيسية"
+          >
+            <span className="baseera-brand-mark"><BookOpen aria-hidden="true" size={25} /></span>
+            <span className="baseera-brand-copy">
+              <strong>بصيرة</strong>
+              <small>نتعلّم خطوة بخطوة</small>
+            </span>
+          </a>
 
-        {/* Zone 2: 5 Sequential User Lifecycle Links (Home -> Reading -> Math -> Reader -> Final Report) */}
-        <nav
-          aria-label="التنقل الرئيسي"
-          className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
-        >
-          <button
-            type="button"
-            onClick={() => setActiveTab('home')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'home'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            الرئيسية
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('eye-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'eye-lab'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            مختبر القراءة والطلاقة
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('dyscalculia-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'dyscalculia-lab'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            مهام الحساب
-          </button>
-          <button
-                      type="button"
-                      onClick={() => setActiveTab('remediation-gym')}
-                      className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                        activeTab === 'remediation-gym'
-                          ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                          : 'hover:text-slate-900'
-                      }`}
-                    >
-                      صالة التدريب والتأهيل
-                    </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('adaptive-reader')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'adaptive-reader'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            القارئ الميسّر
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('algorithms-lab')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'algorithms-lab'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            المختبر التقني
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('dashboard')}
-            className={`py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'text-[#15803D] font-bold underline underline-offset-8 decoration-2'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            التقرير والمؤشرات
-          </button>
-        </nav>
+          <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
+            {([
+              { id: 'home', label: 'الرئيسية', icon: Home },
+              { id: 'eye-lab', label: 'القراءة', icon: BookOpen },
+              { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
+              { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: Type },
+              { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
+            ] as const).map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={'baseera-nav-link' + (activeTab === item.id ? ' is-active' : '')}
+                  aria-current={activeTab === item.id ? 'page' : undefined}
+                >
+                  <Icon aria-hidden="true" size={18} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-        {/* Zone 3: 1 primary action */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab(activeTab === 'home' ? 'eye-lab' : 'home')
-            }
-            className="px-4 py-2 text-xs font-semibold text-white bg-[#18181B] hover:bg-[#15803D] rounded-full transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-xs"
-          >
-            {activeTab === 'home' ? 'ابدأ اختبار القراءة' : 'العودة للرئيسية'}
-          </button>
+          <div className="baseera-header-actions">
+            <button
+              type="button"
+              className="baseera-teacher-action"
+              onClick={() => clinicalSession ? setActiveTab('dashboard') : setShowClinicalLogin(true)}
+            >
+              <GraduationCap aria-hidden="true" size={19} />
+              <span>{clinicalSession ? 'لوحة المعلّم' : 'دخول المعلّم'}</span>
+            </button>
+            <button
+              type="button"
+              className="baseera-primary-action baseera-header-cta"
+              onClick={() => setActiveTab(activeTab === 'home' ? 'eye-lab' : 'home')}
+            >
+              <span>{activeTab === 'home' ? 'ابدأ نشاطًا' : 'الرئيسية'}</span>
+              <ArrowLeft aria-hidden="true" size={17} />
+            </button>
+          </div>
         </div>
       </header>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
-        <span>{clinicalSession ? `تم تسجيل الدخول: ${clinicalSession.clinicianName} · ${clinicalSession.role === 'clinician' ? 'صلاحية أخصائي' : 'قراءة فقط'} · المدرسة: ${getTenantDisplayLabelAr(clinicalSession)}` : 'جلسة محلية آمنة (تشفير محلي). سجّل الدخول كمسؤول أو أخصائي لحفظ السجلات مركزياً.'}</span>
+
+      <div className="baseera-session-strip" role="status">
+        <span className="baseera-session-copy">
+          <ShieldCheck aria-hidden="true" size={17} />
+          {clinicalSession
+            ? 'جلسة المدرسة متصلة: ' + clinicalSession.clinicianName + ' · ' + getTenantDisplayLabelAr(clinicalSession)
+            : 'وضع التجربة — لا توجد جلسة مدرسة متصلة.'}
+        </span>
         {clinicalSession ? (
-          <button type="button" onClick={() => { void (async () => { await logoutClinicalSession(); setClinicalSession(null); setIsPersistedStoreLoaded(false); setAiStatusBanner('تم إبطال الجلسة على الخادم وتسجيل الخروج محليًا.'); })(); }} className="rounded-md border border-slate-300 px-3 py-1 font-semibold">تسجيل الخروج</button>
+          <button
+            type="button"
+            className="baseera-session-action"
+            onClick={() => {
+              void (async () => {
+                await logoutClinicalSession();
+                setClinicalSession(null);
+                setIsPersistedStoreLoaded(false);
+                setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
+              })();
+            }}
+          >
+            تسجيل الخروج
+          </button>
         ) : (
-          <button type="button" onClick={() => setShowClinicalLogin(true)} className="rounded-md bg-emerald-700 px-3 py-1 font-semibold text-white">تسجيل الدخول المؤسسي</button>
+          <button type="button" className="baseera-session-action" onClick={() => setShowClinicalLogin(true)}>
+            دخول المعلّم
+          </button>
         )}
       </div>
 
+      <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
+        {([
+          { id: 'home', label: 'الرئيسية', icon: Home },
+          { id: 'eye-lab', label: 'القراءة', icon: BookOpen },
+          { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
+          { id: 'adaptive-reader', label: 'القارئ', icon: Type },
+          { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
+        ] as const).map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.id)}
+              className={'baseera-mobile-nav-item' + (activeTab === item.id ? ' is-active' : '')}
+              aria-current={activeTab === item.id ? 'page' : undefined}
+            >
+              <Icon aria-hidden="true" size={20} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Mobile Navigation Strip (visible only below md, same sequential order) */}
-      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
-        {[
-          { id: 'home', label: 'الرئيسية' },
-          { id: 'eye-lab', label: 'مختبر القراءة والطلاقة' },
-          { id: 'dyscalculia-lab', label: 'مهام الحساب' },
-          { id: 'remediation-gym', label: 'صالة التدريب والتأهيل' },
-          { id: 'adaptive-reader', label: 'القارئ الميسّر' },
-          { id: 'algorithms-lab', label: 'المختبر التقني' },
-          { id: 'privacy', label: 'الخصوصية' },
-          { id: 'dashboard', label: 'التقرير والمؤشرات' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setActiveTab(item.id as ActiveTab)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 ${
-              activeTab === item.id
-                ? 'bg-[#0F172A] text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Floating Accessibility & Night Mode Widget */}
+      {/* Floating Accessibility & Night Mode Widget */}      {/* Floating Accessibility & Night Mode Widget */}
       <DyslexiaComfortBar
         activeTab={activeTab}
         surfaceTheme={surfaceTheme}
@@ -946,7 +932,7 @@ export default function App() {
       />
 
       {/* Main Content Container (Single Unified Navigation — Zero Duplicate Top Stepper Bar) */}
-      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+      <main id="main-content" className="baseera-main flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6 pb-28 md:pb-10">
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
           {activeTab === 'home' && (
@@ -987,14 +973,14 @@ export default function App() {
               <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>منصة الفرز التربوي الأولي</span>
+                    <span>مساحة المعلّم ووليّ الأمر</span>
                     <span aria-hidden="true">·</span>
                     <span>الصف {selectedStudent.gradeLevel}</span>
                     <span aria-hidden="true">·</span>
                     <span>{selectedStudent.schoolName}</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-display">
-                    ملخص المؤشرات القرائية والحسابية — {selectedStudent.name}
+                    ملخص التعلّم — {selectedStudent.name}
                   </h1>
                 </div>
 
@@ -1021,158 +1007,41 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Flat Hairline-Divided 4-Column Metric Strip */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-200 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 bg-slate-50/40">
-                <div className="p-6 space-y-1.5">
-                  <div className="text-xs text-slate-500">
-                    سرعة القراءة والفهم
-                  </div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.wpm}{' '}
-                      <span className="text-xs font-normal text-slate-500">
-                        كلمة/د
-                      </span>
-                    </span>
-                    <span className="text-xs font-mono tabular-nums text-[#0284C7] font-semibold">
-                      {selectedStudent.sessionStatus === 'in_progress' ? 'المؤشر غير متاح قبل إكمال الجلسة' : `مؤشر الأداء الاستدلالي ${selectedStudent.readingHeuristicIndicator}/100 (الأعلى = أداء أفضل)`}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-600 pt-1">
-                    {selectedStudent.sessionStatus === 'in_progress'
-                      ? 'الجلسة غير مكتملة — لا توجد نتيجة'
-                      : selectedStudent.readingRiskLevel === 'high'
-                      ? '■ مؤشر فرز استرشادي مرتفع'
-                      : selectedStudent.readingRiskLevel === 'moderate'
-                        ? '▲ مؤشر متوسط — يحتاج إلى مراجعة'
-                        : 'مؤشر استرشادي — يحتاج إلى سياق'}{' '}
-                    · {selectedStudent.sessionStatus === 'in_progress' ? 'الفهم غير مُقيَّم' : `الفهم ${selectedStudent.comprehensionScore}%`}
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-1.5">
-                  <div className="text-xs text-slate-500">
-                    متوسط زمن التثبيت البصري
-                  </div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : selectedStudent.avgFixationMs}{' '}
-                      <span className="text-xs font-normal text-slate-500">
-                        ms
-                      </span>
-                    </span>
-                    <span
-                      className={`text-xs font-semibold ${
-                        selectedStudent.avgFixationMs >= 400
-                          ? 'text-[#DC2626]'
-                          : selectedStudent.avgFixationMs >= 320
-                            ? 'text-[#D97706]'
-                            : 'text-[#059669]'
-                      }`}
-                    >
-                      {selectedStudent.sessionStatus === 'in_progress'
-                        ? 'لا توجد قياسات بعد'
-                        : selectedStudent.avgFixationMs >= 400
-                          ? '■ تثبيت مطوّل'
-                          : selectedStudent.avgFixationMs >= 320
-                            ? '▲ تثبيت متوسط'
-                            : 'ضمن العرض التجريبي'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-600 pt-1">
-                    الرمش:{' '}
-                    <span className="font-mono tabular-nums font-semibold text-slate-900">
-                      {selectedStudent.sessionStatus === 'in_progress' || selectedStudent.blinksPerMinute == null ? '—' : selectedStudent.blinksPerMinute}
-                    </span>{' '}
-                    رمشة/دقيقة
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-1.5">
-                  <div className="text-xs text-slate-500">
-                    القفزات البصرية التراجعية
-                  </div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                      {selectedStudent.sessionStatus === 'in_progress' ? '—' : `${selectedStudent.regressionRate}%`}
-                    </span>
-                    <span
-                      className={`text-xs font-semibold ${
-                        selectedStudent.visualStrainLevel === 'severe'
-                          ? 'text-[#DC2626]'
-                          : selectedStudent.visualStrainLevel === 'moderate'
-                            ? 'text-[#D97706]'
-                            : 'text-[#059669]'
-                      }`}
-                    >
-                      {selectedStudent.sessionStatus === 'in_progress'
-                        ? 'لا توجد قياسات بعد'
-                        : selectedStudent.regressionRate > 22
-                          ? '■ تراجع مرتفع'
-                          : '● مسح بصري مستقر'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-600 pt-1 truncate">
-                    {selectedStudent.sessionStatus === 'in_progress'
-                      ? 'ستظهر الملاحظة بعد إكمال الجلسة'
-                      : selectedStudent.visualStrainLabelAr || 'لا توجد ملاحظة مسجلة'}
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-1.5">
-                  <div className="text-xs text-slate-500">
-                    مؤشر خط الأعداد والحساب
-                  </div>
-                  {selectedStudent.mathRiskLevel === 'unassessed' ||
-                  selectedStudent.dyscalculiaAssessed === false ||
-                  selectedStudent.numberLinePAE === null ? (
-                    <>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-base font-bold text-slate-600">
-                          غير مُقيَّم بعد
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('dyscalculia-lab')}
-                          className="text-xs font-semibold text-[#0284C7] hover:underline cursor-pointer"
-                        >
-                          بدء الفحص ←
-                        </button>
-                      </div>
-                      <div className="text-xs text-slate-500 pt-1">
-                        لم يُستكمل تقييم خط الأعداد بعد
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
-                          {selectedStudent.numberLinePAE}%
-                        </span>
-                        <span
-                          className={`text-xs font-semibold ${
-                            selectedStudent.mathRiskLevel === 'high'
-                              ? 'text-[#DC2626]'
-                              : selectedStudent.mathRiskLevel === 'moderate'
-                                ? 'text-[#D97706]'
-                                : 'text-[#059669]'
-                          }`}
-                        >
-                          {selectedStudent.mathRiskLevel === 'high'
-                            ? '■ مؤشر عسر حساب'
-                            : selectedStudent.mathRiskLevel === 'moderate'
-                              ? '▲ متابعة حسابية'
-                              : '● حس عددي سليم'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-600 pt-1">
-                        الإدراك الكمي: {selectedStudent.subitizingAccuracy}% ·
-                        عكس أرقام: {selectedStudent.reversalErrorCount}
-                      </div>
-                    </>
-                  )}
-                </div>
+              <div className="baseera-summary-grid">
+                <article className="baseera-summary-card baseera-summary-blue">
+                  <span className="baseera-summary-label">الطلاقة القرائية</span>
+                  <strong>{selectedReadingRate === null ? 'غير متاحة' : selectedReadingRate + ' كلمة/دقيقة'}</strong>
+                  <p>
+                    {selectedStudent.sessionStatus !== 'completed'
+                      ? 'ستظهر النتيجة بعد إكمال النشاط.'
+                      : selectedReadingRate === null
+                        ? 'لم تتوفر بيانات كافية لاحتساب السرعة.'
+                        : selectedStudent.assessmentModality === 'voice_only'
+                          ? selectedStudent.teacherVerified === true ? 'قراءة جهرية راجعها المعلّم.' : 'تقدير صوتي أولي.'
+                          : 'قراءة موقوتة استرشادية.'}
+                  </p>
+                </article>
+                <article className="baseera-summary-card baseera-summary-mint">
+                  <span className="baseera-summary-label">فهم النص</span>
+                  <strong>{selectedStudent.sessionStatus === 'completed' ? selectedStudent.comprehensionScore + '%' : 'لم يُقَس بعد'}</strong>
+                  <p>ملخص إجابات أسئلة الفهم القرائي.</p>
+                </article>
+                <article className="baseera-summary-card baseera-summary-yellow">
+                  <span className="baseera-summary-label">الأعداد والحساب</span>
+                  <strong>{selectedStudent.sessionStatus === 'completed' && selectedStudent.mathRiskLevel !== 'unassessed' && selectedStudent.numberLinePAE !== null ? selectedStudent.numberLinePAE + '%' : 'لم يُقَس بعد'}</strong>
+                  <p>أكمل نشاط الحساب لعرض النتيجة المتاحة.</p>
+                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('dyscalculia-lab')}>جرّب مهام الحساب <ArrowLeft aria-hidden="true" size={15} /></button>
+                </article>
+                <article className="baseera-summary-card baseera-summary-lilac">
+                  <span className="baseera-summary-label">خطوتك القادمة</span>
+                  <strong>{selectedStudent.sessionStatus === 'completed' ? 'واصل التدرّب' : 'ابدأ بنشاط قصير'}</strong>
+                  <p>اختر نشاطًا مناسبًا مع ولي أمرك أو معلّمك.</p>
+                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab(selectedStudent.sessionStatus === 'completed' ? 'remediation-gym' : 'eye-lab')}>{selectedStudent.sessionStatus === 'completed' ? 'اذهب للتدريب' : 'ابدأ القراءة'} <ArrowLeft aria-hidden="true" size={15} /></button>
+                </article>
               </div>
+            </section>
+
+            {/* Segmented Sub-Navigation Bar
             </section>
 
             {/* Segmented Sub-Navigation Bar for Progressive Disclosure */}
@@ -1194,21 +1063,7 @@ export default function App() {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>١. سجل الطلاب ومؤشرات الفرز ({students.length})</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={dashboardSubView === 'scanpath'}
-                  onClick={() => setDashboardSubView('scanpath')}
-                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
-                    dashboardSubView === 'scanpath'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Eye className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>٢. خريطة المسار البصري</span>
+                  <span>١. سجل التعلّم ({students.length})</span>
                 </button>
                 <button
                   type="button"
@@ -1222,7 +1077,7 @@ export default function App() {
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>٣. تقرير الفرز وخطة المساندة التربوية</span>
+                  <span>٢. تقرير التقدّم وخطة المساندة</span>
                 </button>
               </div>
 
@@ -1262,7 +1117,7 @@ export default function App() {
                         سجل الطلاب ومؤشرات الفرز الاسترشادية
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        انقر على أي طالب لعرض مؤشراته أو فتح خريطة مسار العين
+                        اختر سجلًا لعرض ملخص الجلسة وخطوة الدعم المقترحة.
                       </p>
                     </div>
 
@@ -1353,10 +1208,10 @@ export default function App() {
                         <thead>
                           <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/40">
                             <th className="py-3 px-4">الطالب والصف</th>
-                            <th className="py-3 px-3 text-left">السرعة</th>
-                            <th className="py-3 px-3 text-left">التثبيت</th>
-                            <th className="py-3 px-3">مؤشر القراءة</th>
-                            <th className="py-3 px-4">مؤشر الحساب</th>
+                            <th className="py-3 px-3 text-left">الطلاقة</th>
+                            <th className="py-3 px-3 text-left">الفهم</th>
+                            <th className="py-3 px-3">حالة القراءة</th>
+                            <th className="py-3 px-4">الحساب</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1382,28 +1237,27 @@ export default function App() {
                                   </div>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900 font-medium">
-                                  {stu.sessionStatus === 'in_progress' ? '—' : stu.wpm} <span className="text-[10px] text-slate-400">ك/د</span>
+                                  {stu.sessionStatus !== 'completed'
+                                    ? '—'
+                                    : stu.assessmentModality === 'voice_only'
+                                      ? ((stu.spokenTranscript || '').trim() || stu.teacherVerified === true)
+                                        ? (stu.wcpm ?? stu.oralWcpm ?? 'غير متاح')
+                                        : 'غير متاح'
+                                      : (stu.wpm > 0 ? stu.wpm : 'غير متاح')}
+                                  <span className="text-[10px] text-slate-500"> {stu.sessionStatus === 'completed' ? 'ك/د' : ''}</span>
                                 </td>
                                 <td className="py-3.5 px-3 text-left font-mono tabular-nums text-slate-900">
-                                  {stu.sessionStatus === 'in_progress' ? '—' : `${stu.avgFixationMs}ms`}
+                                  {stu.sessionStatus === 'completed' ? stu.comprehensionScore + '%' : '—'}
                                 </td>
                                 <td className="py-3.5 px-3">
-                                  <span
-                                    className={
-                                      stu.readingRiskLevel === 'high'
-                                        ? 'text-[#DC2626] font-semibold'
-                                        : stu.readingRiskLevel === 'moderate'
-                                          ? 'text-[#D97706] font-semibold'
-                                          : 'text-[#059669] font-medium'
-                                    }
-                                  >
-                                    {stu.sessionStatus === 'in_progress'
-                                      ? 'لم يُستكمل الفحص'
-                                      : stu.readingRiskLevel === 'high'
-                                      ? `■ مرتفع (مؤشر ${stu.readingHeuristicIndicator}/100)`
-                                      : stu.readingRiskLevel === 'moderate'
-                                        ? `▲ متوسط (مؤشر ${stu.readingHeuristicIndicator}/100)`
-                                        : `● منخفض (مؤشر ${stu.readingHeuristicIndicator}/100)`}
+                                  <span className="baseera-evidence-status">
+                                    {stu.sessionStatus !== 'completed'
+                                      ? 'لم تكتمل الجلسة'
+                                      : stu.teacherVerified === true
+                                        ? 'راجعها المعلّم'
+                                        : stu.oralReadingAssessed === true
+                                          ? 'محاذاة صوتية أولية'
+                                          : 'قراءة موقوتة استرشادية'}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1450,10 +1304,10 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setDashboardSubView('scanpath')}
-                        className="font-semibold text-[#0284C7] hover:underline cursor-pointer"
+                        onClick={() => setActiveTab('eye-lab')}
+                        className="font-semibold text-[#2563EB] hover:underline cursor-pointer"
                       >
-                        فتح خريطة المسار البصري ←
+                        بدء نشاط قراءة جديد ←
                       </button>
                       <span aria-hidden="true" className="text-slate-300">
                         |
@@ -1469,197 +1323,38 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 5 Cols: Heuristic Screening Index Matrix Chart */}
-                <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-                  <div>
-                    <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200">
-                      <div>
-                        <h2 className="text-base font-bold text-slate-900">
-                          مصفوفة مؤشرات الفرز الاسترشادية (غير معيارية)
-                        </h2>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          موقع الطالب بين الطلاقة القرائية (أفقياً) والحس العددي (عمودياً)
-                        </p>
-                      </div>
-                      <BarChart3 className="w-4 h-4 text-[#0284C7]" />
+                <aside className="baseera-next-steps-card">
+                  <span className="baseera-section-kicker">خطوة صغيرة تالية</span>
+                  <h2>أنشطة مساندة مقترحة</h2>
+                  <p className="baseera-next-steps-intro">اختر نشاطًا تدريبيًا بناءً على ما تمّ في الجلسة، لا على درجة خطورة.</p>
+                  <div className="baseera-support-item">
+                    <span className="baseera-support-icon"><BookOpen aria-hidden="true" size={21} /></span>
+                    <div>
+                      <strong>قراءة مريحة</strong>
+                      <p>اقرأ نصًا قصيرًا مرة أخرى، ثم استمع إلى الكلمات التي تحتاج إلى توضيح.</p>
                     </div>
-
-                    <svg
-                      viewBox="0 0 380 230"
-                      className="w-full h-auto bg-[#F8FAFC] border border-slate-200 rounded-xl"
-                      role="img"
-                      aria-label="مخطط توزيع الطلاب حسب مؤشرات الفرز القرائي والحسابي"
-                    >
-                      <rect
-                        x="40"
-                        y="15"
-                        width="110"
-                        height="180"
-                        fill="#FEE2E2"
-                        fillOpacity="0.4"
-                      />
-                      <rect
-                        x="150"
-                        y="15"
-                        width="75"
-                        height="180"
-                        fill="#FEF3C7"
-                        fillOpacity="0.35"
-                      />
-                      <rect
-                        x="225"
-                        y="15"
-                        width="135"
-                        height="180"
-                        fill="#DCFCE7"
-                        fillOpacity="0.35"
-                      />
-
-                      <line
-                        x1="40"
-                        y1="105"
-                        x2="360"
-                        y2="105"
-                        stroke="#CBD5E1"
-                        strokeDasharray="3 3"
-                      />
-                      <line
-                        x1="150"
-                        y1="15"
-                        x2="150"
-                        y2="195"
-                        stroke="#CBD5E1"
-                        strokeDasharray="3 3"
-                      />
-
-                      <text
-                        x="95"
-                        y="30"
-                        fontSize="9"
-                        fill="#991B1B"
-                        textAnchor="middle"
-                      >
-                        دون حد التغطية (&lt;25%)
-                      </text>
-                      <text
-                        x="187"
-                        y="30"
-                        fontSize="9"
-                        fill="#92400E"
-                        textAnchor="middle"
-                      >
-                        متابعة (25-45%)
-                      </text>
-                      <text
-                        x="292"
-                        y="30"
-                        fontSize="9"
-                        fill="#065F46"
-                        textAnchor="middle"
-                      >
-                        مؤشر أعلى من العتبة الداخلية (&gt;45%)
-                      </text>
-
-                      <text
-                        x="200"
-                        y="218"
-                        fontSize="10"
-                        fill="#475569"
-                        textAnchor="middle"
-                      >
-                        مؤشر الأداء الاستدلالي للقراءة → (الأعلى = أفضل)
-                      </text>
-
-                      {students.map((stu) => {
-                        // Do not plot unassessed arithmetic tasks at an invented neutral score.
-                        if (
-                          stu.mathHeuristicIndicator === null ||
-                          stu.mathRiskLevel === 'unassessed' ||
-                          stu.dyscalculiaAssessed === false
-                        ) {
-                          return null;
-                        }
-                        const cx = 40 + (stu.readingHeuristicIndicator / 100) * 320;
-                        const effectiveMathIndicator = stu.mathHeuristicIndicator;
-                        const cy = 190 - (effectiveMathIndicator / 100) * 135;
-                        const isSel = stu.id === selectedStudent.id;
-                        const firstName = stu.name.split(' ')[0];
-
-                        return (
-                          <g
-                            key={stu.id}
-                            onClick={() => setSelectedStudentId(stu.id)}
-                            className="cursor-pointer"
-                          >
-                            {isSel && (
-                              <circle
-                                cx={cx}
-                                cy={cy}
-                                r={13}
-                                fill="#0284C7"
-                                fillOpacity="0.2"
-                                stroke="#0284C7"
-                                strokeWidth="1.5"
-                              />
-                            )}
-                            <circle
-                              cx={cx}
-                              cy={cy}
-                              r={isSel ? 7 : 5.5}
-                              fill={
-                                stu.readingRiskLevel === 'high' ||
-                                stu.mathRiskLevel === 'high'
-                                  ? '#DC2626'
-                                  : stu.readingRiskLevel === 'moderate' ||
-                                      stu.mathRiskLevel === 'moderate'
-                                    ? '#D97706'
-                                    : '#059669'
-                              }
-                              stroke="#FFFFFF"
-                              strokeWidth="1.5"
-                            />
-                            <text
-                              x={cx}
-                              y={cy - 10}
-                              fontSize="10"
-                              fontWeight={isSel ? '700' : '500'}
-                              fill="#0F172A"
-                              textAnchor="middle"
-                            >
-                              {firstName}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </svg>
                   </div>
-
-                  <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-                    <span>انقر على أي نقطة لتحديد الطالب</span>
-                    <span className="font-mono tabular-nums text-slate-900 font-semibold">
-                      أداء قرائي استدلالي {selectedStudent.readingHeuristicIndicator}/100 ·{' '}
-                      {selectedStudent.mathHeuristicIndicator !== null &&
-                      selectedStudent.mathRiskLevel !== 'unassessed'
-                        ? `أداء حسابي استدلالي ${selectedStudent.mathHeuristicIndicator}/100`
-                        : 'الحساب غير مُقيَّم'}
-                    </span>
+                  <div className="baseera-support-item">
+                    <span className="baseera-support-icon mint"><Type aria-hidden="true" size={21} /></span>
+                    <div>
+                      <strong>تمييز المقاطع والكلمات</strong>
+                      <p>استخدم القارئ الميسّر لتقسيم الكلمات وتغيير المسافات وحجم النص.</p>
+                    </div>
                   </div>
-                </div>
+                  <div className="baseera-support-item">
+                    <span className="baseera-support-icon yellow"><Calculator aria-hidden="true" size={21} /></span>
+                    <div>
+                      <strong>تمارين الأعداد</strong>
+                      <p>أنجز مهمة قصيرة للحس العددي، ثم راجعها مع المعلّم أو ولي الأمر.</p>
+                    </div>
+                  </div>
+                  <div className="baseera-support-actions">
+                    <button type="button" className="baseera-primary-action" onClick={() => setActiveTab('remediation-gym')}>ابدأ التدريب <ArrowLeft aria-hidden="true" size={17} /></button>
+                    <button type="button" className="baseera-secondary-action" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر</button>
+                  </div>
+                </aside>
               </div>
             )}
-
-            {/* SUB-VIEW 2: INTERACTIVE SCANPATH & HEATMAP VISUALIZER */}
-            {dashboardSubView === 'scanpath' && (
-              <div className="space-y-4">
-                <ScanpathViewer
-                  words={selectedPassage.words}
-                  fixations={selectedStudent.fixations}
-                  passageTitle={`${selectedPassage.title} — مسار نظر الطالب (${selectedStudent.name})`}
-                  passageCategory={selectedPassage.category}
-                />
-              </div>
-            )}
-
             {/* SUB-VIEW 3: AI SCREENING REPORT & INDIVIDUALIZED SUPPORT PLAN */}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -1668,7 +1363,7 @@ export default function App() {
                     <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
                       <span>تقرير الفرز القرائي والحسابي الاسترشادي</span>
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                        مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية مرجعية' : 'قياسات الجلسة المباشرة (معايرة موثقة وفحص معقولية)')}
+                        مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية توضيحية' : 'بيانات الجلسة المسجلة')}
                       </span>
                     </div>
                     <h2 className="text-xl font-bold text-slate-900">
@@ -1977,63 +1672,25 @@ export default function App() {
         </div>
       </main>
 
-      {/* Quiet Clinical Footer */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-5 mt-12">
-        <div className="max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
-          <span>
-            بصيرة — المنصة العربية للفرز الأولي لمؤشرات عسر القراءة والحساب بتتبع حركة العين
-          </span>
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              onClick={() => setActiveTab('home')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              الرئيسية
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('eye-lab')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              اختبار القراءة وتتبع العين
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('dyscalculia-lab')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              فحص الحساب
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('adaptive-reader')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              القارئ الميسّر
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('privacy')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              سياسة الخصوصية
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('dashboard')}
-              className="hover:text-slate-900 cursor-pointer"
-            >
-              التقرير النهائي والنتائج
-            </button>
+      <footer className="baseera-footer">
+        <div className="baseera-footer-inner">
+          <div className="baseera-footer-brand">
+            <span className="baseera-brand-mark"><BookOpen aria-hidden="true" size={22} /></span>
+            <div>
+              <strong>بصيرة</strong>
+              <p>مساحة تعليمية عربية لاستكشاف مهارات القراءة والحساب، خطوة بخطوة.</p>
+            </div>
           </div>
+          <nav className="baseera-footer-links" aria-label="روابط إضافية">
+            <button type="button" onClick={() => setActiveTab('home')}>الرئيسية</button>
+            <button type="button" onClick={() => setActiveTab('privacy')}>الخصوصية</button>
+            <button type="button" onClick={() => setActiveTab('dashboard')}>للمعلّم ووليّ الأمر</button>
+          </nav>
+          <p className="baseera-footer-note">النتائج تعليمية استرشادية وليست تشخيصًا طبيًا.</p>
         </div>
       </footer>
+    </div>
+    </AssessmentProvider>
     </div>
     </AssessmentProvider>
   );
