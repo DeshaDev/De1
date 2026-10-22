@@ -206,12 +206,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     } else {
       setEstimate156Draft(newEstimate);
     }
-    const startTs =
-      numberLineStartRef.current[trialId] || performance.now() - 1200;
-    const elapsed = Math.max(
-      280,
-      Math.min(9000, Math.round(performance.now() - startTs))
-    );
+    const startTs = numberLineStartRef.current[trialId] || performance.now();
+    const elapsed = Math.max(150, Math.min(30_000, Math.round(performance.now() - startTs)));
     setNumberLineSelections((prev) => ({
       ...prev,
       [trialId]: {
@@ -749,14 +745,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                           <strong>{numberLineSelections[1].estimate}</strong> ·
                           PAE:{' '}
                           <strong
-                            className={
-                              (Math.abs(numberLineSelections[1].estimate - 37) /
-                                100) *
-                                100 >
-                              12
-                                ? 'text-[#DC2626]'
-                                : 'text-[#059669]'
-                            }
+                            className="text-slate-700"
                           >
                             {(
                               (Math.abs(numberLineSelections[1].estimate - 37) /
@@ -795,6 +784,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       min={0}
                       max={100}
                       value={estimate37Draft}
+                      onPointerDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
+                      onKeyDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
                       onChange={(e) =>
                         handleRecordNumberLineEstimate(1, Number(e.target.value))
                       }
@@ -828,16 +819,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                           <strong>{numberLineSelections[2].estimate}</strong> ·
                           PAE:{' '}
                           <strong
-                            className={
-                              (Math.abs(
-                                numberLineSelections[2].estimate - 156
-                              ) /
-                                200) *
-                                100 >
-                              12
-                                ? 'text-[#DC2626]'
-                                : 'text-[#059669]'
-                            }
+                            className="text-slate-700"
                           >
                             {(
                               (Math.abs(
@@ -878,6 +860,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       min={0}
                       max={200}
                       value={estimate156Draft}
+                      onPointerDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
+                      onKeyDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
                       onChange={(e) =>
                         handleRecordNumberLineEstimate(2, Number(e.target.value))
                       }
