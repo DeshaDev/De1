@@ -1515,6 +1515,7 @@ async function startServer() {
         guardianAudioConsentGiven,
         guardianAudioConsentRecordedAt,
         speechRecognitionUsed = false,
+        audioRecordingStarted = false,
         gradeLevel,
         wpm,
         avgFixationMs,

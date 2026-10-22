@@ -66,10 +66,10 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     );
 
     assert.equal(result.totalWords, 3);
-    assert.ok(result.werPercent > 0);
+    assert.ok(result.werPercent !== null && result.werPercent > 0);
     assert.equal(result.phoneticSubstitutionCount, 1);
     // WER must account for substitution (1) and insertion (1) over N (3)
-    assert.ok(result.werPercent >= 66);
+    assert.ok(result.werPercent !== null && result.werPercent >= 66);
   });
 
   await t.test('Full Reference Alignment: unread words are counted as omissions rather than ignored', () => {
