@@ -126,117 +126,80 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     };
   }, [student, currentAssessment]);
 
-  // Empirical exploratory benchmark percentiles from Arabic CBM-ORF (2024, N=414 primary students across 3 passages)
-  const gradeTargetWpm = useMemo(() => {
-    switch (studentData.grade) {
-      case 1:
-        return { p25: 15, median: 25, p75: 35, label: '١٥ - ٣٥ ك/د (مؤشر استرشادي تجريبي أولي — خارج عينة دراسة 2024)' };
-      case 2:
-        return { p25: 20, median: 35, p75: 50, label: '٢٠ - ٥٠ CWPM (وسيط دراسة 2024: ٣٥)' };
-      case 3:
-        return { p25: 36, median: 51, p75: 65, label: '٣٦ - ٦٥ CWPM (وسيط دراسة 2024: ٥١)' };
-      case 4:
-        return { p25: 52, median: 66, p75: 79, label: '٥٢ - ٧٩ CWPM (وسيط دراسة 2024: ٦٦)' };
-      case 5:
-        return { p25: 67, median: 80, p75: 95, label: '٦٧ - ٩٥ CWPM (وسيط دراسة 2024: ٨٠)' };
-      case 6:
-      default:
-        return { p25: 70, median: 90, p75: 101, label: '٧٠ - ١٠١ CWPM (وسيط دراسة 2024: ٩٠)' };
-    }
-  }, [studentData.grade]);
-
   const isOralReading = Boolean(studentData.reading && (studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true));
   const hasOralReadingEvidence = Boolean(studentData.reading && ((studentData.reading.spokenTranscript || '').trim() || studentData.reading.teacherVerified === true));
 
-  // Describe only comparable measures; silent completion pace is not oral-reading fluency.
+  // Record the outputs actually observed in this session without turning them into strengths,
+  // deficits, percentiles, or risk classes that the current prototype has not validated.
   const performanceEvaluation = useMemo(() => {
-    const areasOfStrength: string[] = [];
-    const areasNeedingSupport: string[] = [];
+    const observations: string[] = [];
+    const followUp: string[] = [];
 
-    // Evaluate reading fluency (if measured)
     if (studentData.reading) {
-      const isOralSession = studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true;
-      const hasOralEvidence = Boolean((studentData.reading.spokenTranscript || '').trim()) || studentData.reading.teacherVerified === true;
-      if (isOralSession && !hasOralEvidence) {
-        areasNeedingSupport.push('لم تتوفر بيانات صوتية صالحة؛ لم تُحتسب سرعة القراءة الجهرية لهذه الجلسة.');
-      } else if (typeof studentData.reading.wcpm === 'number' && studentData.reading.wcpm !== null) {
-        const isVerified = studentData.reading.teacherVerified === true;
-        const verificationLabel = isVerified ? 'بمراجعة المعلم' : 'محاذاة آلية أولية';
-        if (studentData.reading.wcpm >= gradeTargetWpm.median) {
-          areasOfStrength.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} عند وسيط عينة دراسة 2024 أو أعلى: ${gradeTargetWpm.median} ك/د)`
-          );
-        } else if (studentData.reading.wcpm >= gradeTargetWpm.p25) {
-          areasOfStrength.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} تقع ضمن النطاق الربيعي الاسترشادي: ${gradeTargetWpm.label})`
+      const oralSession = studentData.reading.assessmentModality === 'voice_only' ||
+        studentData.reading.oralReadingAssessed === true;
+      const hasOralEvidence = Boolean((studentData.reading.spokenTranscript || '').trim()) ||
+        studentData.reading.teacherVerified === true;
+
+      if (oralSession) {
+        if (typeof studentData.reading.wcpm === 'number' && hasOralEvidence) {
+          observations.push(
+            'القراءة الجهرية: ' + studentData.reading.wcpm + ' كلمة صحيحة/دقيقة (' +
+            (studentData.reading.teacherVerified ? 'راجعها المعلم' : 'تقدير آلي أولي يحتاج إلى مراجعة') +
+            '). قراءة نص واحد لا تكفي لمقارنة معيارية أو حكم تشخيصي.'
           );
         } else {
-          areasNeedingSupport.push(
-            `الطلاقة القرائية الشفوية (${studentData.reading.wcpm} WCPM ${verificationLabel} دون المئين 25 الاسترشادي لدراسة 2024: ${gradeTargetWpm.p25} ك/د)`
-          );
+          followUp.push('لم تتوفر مراجعة صوتية كافية لاعتماد WCPM لهذه الجلسة.');
         }
-      } else if (isOralSession) {
-        areasNeedingSupport.push('تعذّر احتساب WCPM موثوق لهذه الجلسة؛ يلزم تفريغ صوتي أو مراجعة بشرية موثّقة.');
       } else {
-        // WPM here is only a rough passage-completion rate; it cannot be scored against oral WCPM norms.
+        observations.push(
+          'معدل إتمام النص الصامت: ' + studentData.reading.wpm +
+          ' كلمة/دقيقة تقديريًا، بافتراض إكمال النص. لا يقيس دقة الكلمات.'
+        );
       }
 
-      if (studentData.reading.comprehensionScore >= 70) {
-        areasOfStrength.push(
-          `استيعاب المقروء (${studentData.reading.comprehensionScore}% دقة إجابة أسئلة النص)`
-        );
-      } else {
-        areasNeedingSupport.push(
-          `الفهم القرائي واستيعاب النص (${studentData.reading.comprehensionScore}% إجابات صحيحة)`
-        );
-      }
+      observations.push(
+        'إجابات أسئلة الفهم في النص الحالي: ' + studentData.reading.comprehensionScore +
+        '%. هذه نتيجة النص المحدد وليست معيارًا عمريًا.'
+      );
     }
 
-    // Evaluate speech phonology (if measured)
     if (studentData.speech) {
-      if (studentData.speech.averageConfidence >= 80) {
-        areasOfStrength.push(
-          `الوعي الفونولوجي (${studentData.speech.averageConfidence}% مطابقة النطق)`
-        );
-      } else {
-        const letters = studentData.speech.problematicLetters.join('، ');
-        areasNeedingSupport.push(
-          `التمييز النطقي لأزواج الحروف (${letters || 'حروف متقاربة المخرج'})`
+      observations.push(
+        'ثقة نظام التعرّف الصوتي: ' + studentData.speech.averageConfidence +
+        '%. لا تساوي هذه القيمة دقة النطق أو قياس الوعي الفونولوجي.'
+      );
+      if (studentData.speech.problematicLetters.length > 0) {
+        followUp.push(
+          'راجع بشريًا الحروف التي اقترحها التحليل الصوتي: ' +
+          studentData.speech.problematicLetters.join('، ') + '.'
         );
       }
     }
 
-    // Evaluate tactile & math (if measured)
     if (studentData.tactile) {
-      const mathRate =
-        (studentData.tactile.correctAnswers / Math.max(1, studentData.tactile.totalTasks)) * 100;
-      if (mathRate >= 75) {
-        areasOfStrength.push(`المهام اللمسية العددية (${Math.round(mathRate)}% إنجاز)`);
-      } else {
-        areasNeedingSupport.push('التمثيل المكاني على خط الأعداد (PAE)');
-      }
+      observations.push(
+        'المهام العددية المسجلة: ' + studentData.tactile.correctAnswers + ' من ' +
+        studentData.tactile.totalTasks + '. وصف للجلسة القصيرة، وليس درجة خطر معيارية.'
+      );
     }
 
-    const hasSpecificNeeds = areasNeedingSupport.length > 0;
-    const summaryHeadline = hasSpecificNeeds
-      ? 'مؤشرات تستحق المراجعة والمساندة الصفية'
-      : areasOfStrength.length > 0
-        ? 'مؤشرات قوة في المهام المنجزة'
-        : 'بيانات وصفية فقط — لا تكفي وحدها للحكم على مستوى الأداء';
-
-    const badgeColor = hasSpecificNeeds
+    const summaryHeadline = followUp.length > 0
+      ? 'بيانات تحتاج إلى استكمال أو مراجعة'
+      : observations.length > 0
+        ? 'ملاحظات وصفية من المهام المنجزة'
+        : 'لا توجد بيانات كافية بعد';
+    const badgeColor = followUp.length > 0
       ? 'bg-amber-100 text-amber-900 border-amber-300'
-      : areasOfStrength.length > 0
-        ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-        : 'bg-slate-100 text-slate-800 border-slate-300';
+      : 'bg-slate-100 text-slate-800 border-slate-300';
 
     return {
-      areasOfStrength,
-      areasNeedingSupport,
+      areasOfStrength: observations,
+      areasNeedingSupport: followUp,
       summaryHeadline,
       badgeColor,
     };
-  }, [studentData, gradeTargetWpm]);
+  }, [studentData]);
 
   // Dynamic audio speech synthesis summary for parents
   const speakParentSummary = () => {
@@ -369,7 +332,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
               </div>
               <button
-                onClick={() => onNavigateTab && onNavigateTab('professional-eye-tracking')}
+                onClick={() => onNavigateTab && onNavigateTab('eye-lab')}
                 className="mt-6 w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>بدء جلسة القراءة</span>
@@ -583,9 +546,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     ? (studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true)
                       ? 'لم تتوفر بيانات صوتية صالحة؛ سرعة القراءة الجهرية غير متاحة.'
                       : typeof studentData.reading.wcpm === 'number'
-                      ? studentData.reading.teacherVerified === true
-                        ? `طلاقة الكلمات المقروءة شفوياً الصحيحة بلغت ${studentData.reading.wcpm} كلمة/دقيقة (WCPM معتمدة من المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص (المستهدف للصف: ${gradeTargetWpm.label}).`
-                        : `طلاقة الكلمات المقروءة شفوياً بلغت ${studentData.reading.wcpm} كلمة/دقيقة (محاذاة آلية أولية — بانتظار اعتماد المعلم)، ومعدل نطق ${studentData.reading.wpm} كلمة/دقيقة، ونسبة استيعاب ${studentData.reading.comprehensionScore}% لأسئلة النص.`
+                      ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص؛ ${studentData.reading.teacherVerified === true ? 'راجع المعلم الكلمات.' : 'ما زال التقدير الآلي بحاجة إلى مراجعة.'} لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
                       : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا تقدير لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
@@ -730,26 +691,16 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {isOralReading ? `${gradeTargetWpm.label} — نطاق استرشادي من دراسة عربية سعودية (2024)، لا معيار محلي ولا تشخيص` : 'غير قابل للمقارنة — النطاقات المنشورة هنا تخص القراءة الجهرية'}
+                      {isOralReading ? 'لا تقارن جلسة واحدة مباشرة بدراسة استخدمت متوسط 3 نصوص؛ لا توجد عتبة تشخيصية.' : 'لا تنطبق معايير الطلاقة الجهرية على قراءة صامتة.'}
                     </td>
                     <td className="py-3.5 px-4">
-                      {studentData.reading && studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true ? (
-                        <span className="text-slate-500">غير متاحة (غياب التفريغ الصوتي)</span>
-                      ) : studentData.reading && typeof studentData.reading.wcpm === 'number' ? (
-                        studentData.reading.wcpm >= gradeTargetWpm.median ? (
-                          <span className="text-emerald-700 font-bold">
-                            {studentData.reading.teacherVerified ? '✓ عند الوسيط أو أعلى (معتمد)' : '✓ عند الوسيط أو أعلى (آلي أولياً)'}
-                          </span>
-                        ) : studentData.reading.wcpm >= gradeTargetWpm.p25 ? (
-                          <span className="text-sky-700 font-bold">ضمن النطاق الربيعي</span>
-                        ) : (
-                          <span className="text-amber-700 font-bold">دون المئين 25 (يحتاج تدريب)</span>
-                        )
-                      ) : studentData.reading ? (
-                        <span className="text-slate-500">غير مشمول (جلسة صامتة)</span>
-                      ) : (
-                        <span className="text-slate-400">غير مكتمل</span>
-                      )}
+                      {studentData.reading && typeof studentData.reading.wcpm === 'number'
+                        ? studentData.reading.teacherVerified === true
+                          ? <span className="text-slate-700">راجعها المعلم؛ وصف لجلسة واحدة</span>
+                          : <span className="text-amber-800">تقدير آلي أولي؛ يحتاج مراجعة</span>
+                        : studentData.reading && isOralReading
+                          ? <span className="text-slate-500">غير متاح — لا توجد بيانات صوتية كافية</span>
+                          : <span className="text-slate-500">غير منطبق على القراءة الصامتة</span>}
                     </td>
                   </tr>
 
@@ -765,7 +716,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {isOralReading ? `${gradeTargetWpm.label} — للمقارنة الوصفية فقط` : 'غير قابل للمقارنة بمعايير WCPM؛ معدل إتمام نص واحد فقط'}
+                      {isOralReading ? 'معدل نطق/تفريغ خلال هذه الجلسة؛ يُراجع مستقلًا عن WCPM.' : 'معدل إتمام نص واحد فقط؛ لا يقيس دقة الكلمات.'}
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
@@ -922,7 +873,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="text-xs text-slate-500 font-mono">المدى الزمني: ٦ أسابيع</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800 mb-2">
-                  رفع معدل القراءة الجهرية تدريجياً للاقتراب من المعدل المستهدف ({gradeTargetWpm.label})، مع قراءة النصوص المشكولة دون توقفات مخلة.
+                  يحدد المعلم هدف الطلاقة بعد جمع خط أساس من عدة نصوص متقاربة الصعوبة ومراجعة دقة الكلمات والفهم؛ لا تُستخدم نتيجة هذه الجلسة وحدها لتحديد مستوى الطفل.
                 </p>
                 <div className="text-xs text-slate-600">
                   <span className="font-bold text-slate-700">استراتيجية التدريس:</span> توظيف مسطرة القراءة الرقمية (Reading Ruler)، وتكبير التباعد بين السطور بنسبة 1.5x.
