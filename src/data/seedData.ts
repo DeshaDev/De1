@@ -51,6 +51,10 @@ export interface StudentAssessmentSnapshot {
   sessionId: string;
   completedAt: string;
   passageId: string;
+  /** Reading modality is retained so history never conflates silent WPM with oral WCPM. */
+  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+  wcpm?: number | null;
+  teacherVerified?: boolean;
   wpm: number;
   avgFixationMs: number;
   regressionRate: number;
