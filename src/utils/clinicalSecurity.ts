@@ -7,6 +7,7 @@ import {
 } from '../data/seedData';
 import {
   WordFixation,
+  OralReadingIntegrationInput,
   SubitizingTrialResult,
   NumberLineTrialResult,
   TranscodingTrialResult,
@@ -1500,13 +1501,17 @@ export function validateAndDeriveSessionFromEvidence(
         )
       : null;
 
-  const oralIntegration =
+  const rawOralWcpm = isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null);
+  const rawOralAccuracy = isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null);
+  const rawOralWer = oralMetrics?.werPercent ?? 0;
+
+  const oralIntegration: OralReadingIntegrationInput | null =
     oralReadingAssessed
       ? {
           assessed: true,
-          wcpm: isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null),
-          accuracyPercent: isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null),
-          werPercent: oralMetrics?.werPercent ?? null,
+          wcpm: typeof rawOralWcpm === 'number' ? rawOralWcpm : undefined,
+          accuracyPercent: typeof rawOralAccuracy === 'number' ? rawOralAccuracy : 0,
+          werPercent: typeof rawOralWer === 'number' ? rawOralWer : 0,
           phoneticSubstitutionCount: isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
           dialectVariantCount: isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
           omissionCount: isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
