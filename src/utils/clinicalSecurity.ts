@@ -1061,6 +1061,8 @@ export interface DerivedSessionEvidenceResult {
     oralWerPercent: number | null;
     teacherVerified?: boolean;
     teacherVerificationTimestamp?: string;
+    teacherVerifierId?: string;
+    teacherVerifierName?: string;
     teacherVerifierRole?: string;
     teacherWordOverridesCount?: number;
     verifiedWordsAlignment?: Array<{
@@ -1094,9 +1096,16 @@ export interface DerivedSessionEvidenceResult {
   };
 }
 
+export interface SessionReviewerContext {
+  sessionId: string;
+  role: ClinicalRole;
+  clinicianName: string;
+}
+
 export function validateAndDeriveSessionFromEvidence(
   rawBody: Record<string, unknown>,
-  studentMeta: { name: string; gradeLevel: number }
+  studentMeta: { name: string; gradeLevel: number },
+  reviewer?: SessionReviewerContext
 ): DerivedSessionEvidenceResult {
   // 1. Reject any attempt by the client to supply derived risk scores, levels, or tenantId
   const forbiddenPresent = Object.keys(rawBody).filter((k) =>
@@ -1432,7 +1441,8 @@ export function validateAndDeriveSessionFromEvidence(
       : '';
 
   // Teacher Human-in-the-Loop review validation
-  const isTeacherVerified = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
+  const requestedTeacherVerification = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
+  const isTeacherVerified = requestedTeacherVerification && reviewer?.role === 'clinician';
   const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
 
   let validatedTeacherAlignment: Array<{
@@ -1595,6 +1605,9 @@ export function validateAndDeriveSessionFromEvidence(
     const durationMin = Math.max(0.05, readingDurationSeconds / 60);
     const spokenTokensCount = spokenTranscript.trim().split(/\s+/).filter(Boolean).length;
     derivedWpm = Math.round((spokenTokensCount / durationMin));
+  } else if (isVoiceOnlyModality) {
+    // Keep zero only as the stored numeric sentinel; reports must display this as unavailable without evidence.
+    derivedWpm = 0;
   } else {
     derivedWpm = Math.round((passage.words.length / readingDurationSeconds) * 60);
   }
@@ -1695,15 +1708,10 @@ export function validateAndDeriveSessionFromEvidence(
       oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
       oralWerPercent: oralIntegration?.werPercent ?? null,
       teacherVerified: isTeacherVerified,
-      teacherVerificationTimestamp: isTeacherVerified
-        ? (typeof (rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp) === 'string'
-            ? String(rawBody.teacherVerificationTimestamp ?? evidenceObj.teacherVerificationTimestamp)
-            : new Date().toISOString())
-        : undefined,
-      teacherVerifierRole:
-        typeof (rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole) === 'string'
-          ? String(rawBody.teacherVerifierRole ?? evidenceObj.teacherVerifierRole)
-          : (isTeacherVerified ? 'معلم / أخصائي قرائي معتمد' : undefined),
+      teacherVerificationTimestamp: isTeacherVerified ? new Date().toISOString() : undefined,
+      teacherVerifierId: isTeacherVerified ? reviewer?.sessionId : undefined,
+      teacherVerifierName: isTeacherVerified ? reviewer?.clinicianName : undefined,
+      teacherVerifierRole: isTeacherVerified ? 'أخصائي مصادق عليه عبر الحساب' : undefined,
       teacherWordOverridesCount:
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
           ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)
