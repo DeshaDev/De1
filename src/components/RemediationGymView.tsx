@@ -52,7 +52,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Active Station Tab: phonics | syllables | pacer | math
   const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math'>('phonics');
 
-  // AI Session State (Amira Learning / Gemini Generative Interventions)
+  // Optional AI-assisted session plan for general educational activities
   const [aiSession, setAiSession] = useState<RemediationSessionPlan | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiSource, setAiSource] = useState<string | null>(null);
