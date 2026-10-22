@@ -976,13 +976,16 @@ export function buildDeterministicClinicalReport(params: {
     'تفسير منهجي: هذه المخرجات أوصاف لمهام تعليمية قصيرة وليست أداة تشخيص طبي، ولا تُعرض منها درجات خطر معيارية دون تحقق مستقل على عينة مناسبة.'
   );
 
+  const readingRateText = params.wpm > 0
+    ? String(params.wpm) + ' كلمة/دقيقة'
+    : 'غير متاح لعدم توافر قياس صالح';
   const clinicalSummary = isReadingOnly
     ? 'جلسة قراءة وفهم تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
-      '): معدل إتمام النص التقديري ' + params.wpm + ' كلمة/دقيقة في نص مرجعي من ' +
+      '): معدل إتمام النص التقديري ' + readingRateText + ' في نص مرجعي من ' +
       params.totalPassageWordCount + ' كلمة، ودرجة إجابات فهم النص. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. لا ينتج هذا النشاط معيارًا تشخيصيًا.'
     : isVoiceOnly
       ? 'جلسة قراءة جهرية تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
-        '): المعدل المسجل ' + params.wpm + ' كلمة/دقيقة.' + oralText +
+        '): المعدل المسجل ' + readingRateText + '.' + oralText +
         ' هذا ملخص وصفي وليس تصنيفًا معياريًا أو تشخيصًا.'
       : 'بيانات رصد بصري مسجلة في جلسة الطالب (' + params.studentName + '، الصف ' +
         params.gradeLevel + '): تغطية ' + params.gazeCoveragePercent + '% (' +
