@@ -154,11 +154,14 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [transcodingSelections, setTranscodingSelections] = useState<
     Record<number, { value: number; rtMs: number }>
   >({});
-  const transcodingStartRef = useRef<Record<number, number>>({
-    1: performance.now(),
-    2: performance.now(),
-    3: performance.now(),
-  });
+  const [transcodingIndex, setTranscodingIndex] = useState(0);
+  const transcodingStartRef = useRef<Record<number, number>>({});
+  const currentTranscodingItem = TRANSCODING_ITEMS[transcodingIndex];
+
+  useEffect(() => {
+    if (activeStation !== 3 || !currentTranscodingItem || transcodingSelections[currentTranscodingItem.id]) return;
+    transcodingStartRef.current[currentTranscodingItem.id] = performance.now();
+  }, [activeStation, currentTranscodingItem, transcodingSelections]);
 
   const [saveMessage, setSaveMessage] = useState<string>('');
   const [validationError, setValidationError] = useState<string>('');
@@ -221,8 +224,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     setSaveMessage('');
   };
 
-  const handleSpeakPrompt = (id: number, text: string) => {
-    transcodingStartRef.current[id] = performance.now();
+  const handleSpeakPrompt = (_id: number, text: string) => {
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -235,12 +237,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   };
 
   const handleSelectTranscoding = (itemId: number, val: number) => {
-    const startTs =
-      transcodingStartRef.current[itemId] || performance.now() - 1200;
-    const elapsed = Math.max(
-      300,
-      Math.min(5000, Math.round(performance.now() - startTs))
-    );
+    if (transcodingSelections[itemId]) return;
+    const startTs = transcodingStartRef.current[itemId];
+    if (!Number.isFinite(startTs)) return;
+    const elapsed = Math.max(150, Math.round(performance.now() - startTs));
     setTranscodingSelections((prev) => ({
       ...prev,
       [itemId]: { value: val, rtMs: elapsed },
