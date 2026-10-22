@@ -1892,7 +1892,7 @@ ${mathContextLine}
       ? problematicWords
           .filter((word: unknown): word is string => typeof word === 'string')
           .slice(0, 8)
-          .map((word: string) => word.normalize('NFC').replace(/[^\\u0600-\\u06FF\\u064B-\\u065F\\u0670ـ\\s]/g, '').replace(/\\s+/g, ' ').trim().slice(0, 40))
+          .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
           .filter(Boolean)
       : [];
 
