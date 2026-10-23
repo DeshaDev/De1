@@ -1594,6 +1594,7 @@ export default function App() {
             onSelectStudent={setSelectedStudentId}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
+            canGeneratePlan={clinicalSession?.role === 'clinician'}
           />
         )}
 
