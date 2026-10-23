@@ -22,12 +22,7 @@ import {
   Check
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
-import {
-  encodeArabicPhoneticSkeleton,
-  computeDyslexicoWeightedLevenshtein,
-  computeStandardLevenshtein,
-} from '../utils/dyslexiaEngines';
-import { getConfusableLetterGroup, segmentArabicWordIntoSyllables } from '../utils/clinicalMetrics';
+import { segmentArabicWordIntoSyllables } from '../utils/clinicalMetrics';
 
 export interface TestWord {
   id: number;
@@ -154,11 +149,9 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
   }
 ];
 
-export interface PhonologicalErrorClassification {
-  type: 'none' | 'visual_reversal' | 'phonetic_contrast' | 'diacritic_error' | 'vowel_duration' | 'hesitation' | 'unrecognized';
+export interface TranscriptComparison {
+  status: 'exact_match' | 'transcript_difference' | 'unavailable';
   labelArabic: string;
-  severity: 'nominal' | 'mild' | 'moderate' | 'severe';
-  detectedSubstitution?: string;
   notes: string;
 }
 
@@ -167,14 +160,11 @@ export interface WordAnalysisReport {
   targetWord: string;
   spokenTranscript: string;
   normalizedSpoken: string;
-  isCorrect: boolean;
-  phoneticSimilarity: number; // 0 - 100%
-  acousticConfidence: number; // 0 - 100%
-  voiceOnsetLatencyMs: number; // Voice Onset Time (ms)
-  intraWordPauses: number; // Pauses during pronunciation
-  f0VariationHz: number; // Fundamental frequency prosody variation
-  durationMs: number;
-  errorClassification: PhonologicalErrorClassification;
+  /** Exact transcript match after normalization; it is not a pronunciation accuracy measure. */
+  exactTranscriptMatch: boolean;
+  /** Optional confidence reported by browser speech recognition; null when unavailable. */
+  speechRecognitionConfidence: number | null;
+  transcriptComparison: TranscriptComparison;
   audioBlobUrl?: string;
   syllables: string[];
 }
@@ -218,7 +208,6 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
 
   // Speech Recognition ref
   const speechRecognitionRef = useRef<any>(null);
-  const recordedStartTimeRef = useRef<number>(0);
   const speechTranscriptRef = useRef<string>('');
   const speechConfidenceRef = useRef<number>(0);
 
@@ -247,10 +236,16 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
           let currentInterim = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             const transcript = event.results[i][0].transcript;
-            const confidence = event.results[i][0].confidence || 0.85;
+            const rawConfidence = event.results[i][0].confidence;
             if (event.results[i].isFinal) {
               speechTranscriptRef.current = transcript.trim();
-              speechConfidenceRef.current = Math.round(confidence * 100);
+              speechConfidenceRef.current =
+                typeof rawConfidence === 'number' &&
+                Number.isFinite(rawConfidence) &&
+                rawConfidence >= 0 &&
+                rawConfidence <= 1
+                  ? Math.round(rawConfidence * 100)
+                  : 0;
               setInterimTranscript(transcript.trim());
             } else {
               currentInterim += transcript;
@@ -343,8 +338,8 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
         const blobUrl = URL.createObjectURL(audioBlob);
         setCurrentRecordingUrl(blobUrl);
 
-        // Process acoustic signal and phonological comparison
-        await processUtteranceAcoustics(audioBlob, blobUrl);
+        // Compare the browser-produced transcript with the displayed word only.
+        processTranscriptComparison(blobUrl);
       };
 
       mediaRecorderRef.current = mediaRecorder;
@@ -445,7 +440,6 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     setInterimTranscript('');
     setCurrentRecordingUrl(null);
 
-    recordedStartTimeRef.current = Date.now();
     mediaRecorderRef.current.start(100);
     setIsRecording(true);
 
@@ -476,251 +470,63 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     }
   };
 
-  // 5. Acoustic Signal Processing & Phonological Comparison
-  const processUtteranceAcoustics = async (audioBlob: Blob, blobUrl: string) => {
-    try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const offlineCtx = new AudioCtx();
-      const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
-      const rawData = audioBuffer.getChannelData(0);
-      const sampleRate = audioBuffer.sampleRate;
-      const totalDurationMs = Math.round(audioBuffer.duration * 1000);
+  // Text-only comparison of the browser-produced transcript. This is not a clinical measure.
+  const normalizeArabicTranscript = (value: string) =>
+    stripDiacritics(value)
+      .replace(/[ـ]/g, '')
+      .replace(/[\\s.,،؛:!?؟'"“”(){}\\[\\]\\-]/g, '')
+      .trim();
 
-      // A. Extract Voice Onset Time (VOT latency from audio onset)
-      const { voiceOnsetMs, pauseCount } = detectAcousticLatencies(rawData, sampleRate);
-
-      // B. Estimate fundamental frequency (F0) prosody variation via autocorrelation
-      const f0Variation = estimateF0Variation(rawData, sampleRate);
-
-      // C. Get transcription from Speech API or phonetic fallback
-      const rawTranscript = speechTranscriptRef.current.trim() || interimTranscript.trim();
-      const cleanExpected = stripDiacritics(currentWord.word);
-      const cleanSpoken = stripDiacritics(rawTranscript);
-
-      // D. Phonological error classification with Dyslexia Engines
-      const errorClassification = classifyPhonologicalError(
-        currentWord,
-        cleanExpected,
-        cleanSpoken,
-        voiceOnsetMs,
-        pauseCount
-      );
-
-      // E. Calculate phonetic similarity score (0-100%)
-      const phoneticScore = computePhoneticSimilarityScore(cleanExpected, cleanSpoken);
-
-      const isPronunciationCorrect =
-        errorClassification.type === 'none' ||
-        (cleanSpoken.length > 0 && cleanSpoken === cleanExpected) ||
-        phoneticScore >= 80;
-
-      const syllables = segmentArabicWordIntoSyllables(currentWord.word);
-
-      const report: WordAnalysisReport = {
-        wordId: currentWord.id,
-        targetWord: currentWord.word,
-        spokenTranscript: rawTranscript || (isPronunciationCorrect ? currentWord.word : 'نطق غير مكتمل'),
-        normalizedSpoken: cleanSpoken,
-        isCorrect: isPronunciationCorrect,
-        phoneticSimilarity: phoneticScore,
-        acousticConfidence: speechConfidenceRef.current || (isPronunciationCorrect ? 92 : 65),
-        voiceOnsetLatencyMs: voiceOnsetMs,
-        intraWordPauses: pauseCount,
-        f0VariationHz: f0Variation,
-        durationMs: totalDurationMs,
-        errorClassification,
-        audioBlobUrl: blobUrl,
-        syllables,
-      };
-
-      setCompletedReports((prev) => {
-        const filtered = prev.filter((r) => r.wordId !== currentWord.id);
-        return [...filtered, report];
-      });
-
-      await offlineCtx.close();
-    } catch (err) {
-      console.error('Acoustic processing error:', err);
-    }
-  };
-
-  // Helper: Acoustic latency and intra-word pause detection
-  const detectAcousticLatencies = (data: Float32Array, sampleRate: number) => {
-    const windowSize = Math.floor(sampleRate * 0.02); // 20ms frames
-    const energyThreshold = 0.015;
-    let voiceOnsetFrame = -1;
-    let pauseCount = 0;
-    let consecutiveSilenceFrames = 0;
-    const pauseThresholdFrames = Math.floor(0.12 / 0.02); // 120ms pause
-
-    for (let i = 0; i < data.length; i += windowSize) {
-      let sumSquares = 0;
-      const end = Math.min(i + windowSize, data.length);
-      for (let j = i; j < end; j++) {
-        sumSquares += data[j] * data[j];
-      }
-      const rms = Math.sqrt(sumSquares / (end - i));
-
-      if (rms > energyThreshold) {
-        if (voiceOnsetFrame === -1) {
-          voiceOnsetFrame = i;
-        }
-        if (consecutiveSilenceFrames >= pauseThresholdFrames) {
-          pauseCount++;
-        }
-        consecutiveSilenceFrames = 0;
-      } else {
-        if (voiceOnsetFrame !== -1) {
-          consecutiveSilenceFrames++;
-        }
-      }
-    }
-
-    const voiceOnsetMs = voiceOnsetFrame === -1 ? 0 : Math.round((voiceOnsetFrame / sampleRate) * 1000);
-    return { voiceOnsetMs, pauseCount };
-  };
-
-  // Helper: F0 Fundamental Frequency variation using peak autocorrelation
-  const estimateF0Variation = (data: Float32Array, sampleRate: number): number => {
-    const minPeriod = Math.floor(sampleRate / 400); // 400Hz (highest child voice)
-    const maxPeriod = Math.floor(sampleRate / 80); // 80Hz (lowest)
-    const step = Math.floor(sampleRate * 0.05); // sample every 50ms
-    const pitches: number[] = [];
-
-    for (let pos = 0; pos + maxPeriod < data.length; pos += step) {
-      let bestCorr = -1;
-      let bestPeriod = -1;
-
-      for (let period = minPeriod; period <= maxPeriod; period++) {
-        let corr = 0;
-        for (let i = 0; i < minPeriod * 2; i++) {
-          corr += data[pos + i] * data[pos + i + period];
-        }
-        if (corr > bestCorr) {
-          bestCorr = corr;
-          bestPeriod = period;
-        }
-      }
-
-      if (bestCorr > 0.3 && bestPeriod > 0) {
-        pitches.push(sampleRate / bestPeriod);
-      }
-    }
-
-    if (pitches.length < 2) return 15; // nominal default
-    const mean = pitches.reduce((a, b) => a + b, 0) / pitches.length;
-    const variance = pitches.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / pitches.length;
-    return Math.round(Math.sqrt(variance));
-  };
-
-  // Helper: Compute Dyslexia-Weighted phonetic similarity
-  const computePhoneticSimilarityScore = (expected: string, spoken: string): number => {
-    if (!spoken || spoken.length === 0) return 0;
-    if (expected === spoken) return 100;
-
-    // Use Dyslexico weighted Levenshtein
-    const weightedResult = computeDyslexicoWeightedLevenshtein(expected, spoken);
-    const weightedDist = weightedResult.weightedDistance;
-    const standardDist = weightedResult.standardDistance;
-    const maxLen = Math.max(expected.length, spoken.length) || 1;
-
-    // Phonetic skeleton alignment
-    const skelExpected = encodeArabicPhoneticSkeleton(expected);
-    const skelSpoken = encodeArabicPhoneticSkeleton(spoken);
-    const skelMatch = skelExpected === skelSpoken;
-
-    let score = Math.max(0, 100 - (weightedDist / maxLen) * 80);
-    if (skelMatch) score = Math.max(score, 88);
-    if (standardDist === 0) score = 100;
-
-    return Math.round(score);
-  };
-
-  // Helper: Classify error into Arabic Dyslexia Phonological Taxonomies
-  const classifyPhonologicalError = (
-    word: TestWord,
-    cleanExpected: string,
-    cleanSpoken: string,
-    voiceOnsetMs: number,
-    pauseCount: number
-  ): PhonologicalErrorClassification => {
-    if (!cleanSpoken) {
+  const classifyTranscriptComparison = (
+    expected: string,
+    recognized: string
+  ): TranscriptComparison => {
+    if (!recognized) {
       return {
-        type: 'unrecognized',
-        labelArabic: 'لم يُسمع نطق واضح',
-        severity: 'mild',
-        notes: 'يرجى إعادة المحاولة ورفع نبرة الصوت بالقرب من الميكروفون',
+        status: 'unavailable',
+        labelArabic: 'لم يتوفر تفريغ نصي واضح',
+        notes: 'لم يُرجع المتصفح نصًا نهائيًا واضحًا. أعد المحاولة أو استمع إلى التسجيل وراجعه يدويًا.',
       };
     }
-
-    if (cleanSpoken === cleanExpected) {
-      if (voiceOnsetMs > 650) {
-        return {
-          type: 'hesitation',
-          labelArabic: 'نطق سليم مع تردد بطيء في البدء',
-          severity: 'mild',
-          notes: `زمن كمون البدء (${voiceOnsetMs}ms) يشير إلى صعوبة استدعاء فونولوجي خفيفة`,
-        };
-      }
+    if (recognized === expected) {
       return {
-        type: 'none',
-        labelArabic: 'نطق سليم ومتقن',
-        severity: 'nominal',
-        notes: 'تطابق فونولوجي واكتمال صوتي سليم',
+        status: 'exact_match',
+        labelArabic: 'التفريغ يطابق الكلمة المستهدفة نصيًا',
+        notes: 'هذه مطابقة نصية بعد تطبيع التشكيل وعلامات الترقيم؛ لا تثبت وحدها صحة النطق ولا تقيس الوعي الفونولوجي.',
       };
     }
-
-    // Check confusable letter substitution (Visual-homographic reversals)
-    const confusableFamily = getConfusableLetterGroup(word.targetPhoneme);
-    for (const confusable of confusableFamily) {
-      if (confusable !== word.targetPhoneme && cleanSpoken.includes(confusable)) {
-        return {
-          type: 'visual_reversal',
-          labelArabic: `خلط بين الحروف المتشابهة رسمًا (${word.targetPhoneme} ↔ ${confusable})`,
-          severity: 'moderate',
-          detectedSubstitution: confusable,
-          notes: `أبدل الطالب حرف [${word.targetPhoneme}] بحرف [${confusable}] المتشابه بصرياً`,
-        };
-      }
-    }
-
-    // Check phonetic contrast (Emphatic vs Plain / T/Ta, S/Sad, K/Qaf)
-    const phoneticPairs: Record<string, string> = {
-      'ت': 'ط', 'ط': 'ت',
-      'س': 'ص', 'ص': 'س',
-      'د': 'ض', 'ض': 'د',
-      'ك': 'ق', 'ق': 'ك',
-      'ذ': 'ظ', 'ظ': 'ذ',
-    };
-
-    if (phoneticPairs[word.targetPhoneme] && cleanSpoken.includes(phoneticPairs[word.targetPhoneme])) {
-      const substituted = phoneticPairs[word.targetPhoneme];
-      return {
-        type: 'phonetic_contrast',
-        labelArabic: `إبدال صوتي بين المفخم والمرقق (${word.targetPhoneme} ↔ ${substituted})`,
-        severity: 'moderate',
-        detectedSubstitution: substituted,
-        notes: `احتمال اختلاف بين الصوت المطلوب والتفريغ؛ يلزم الاستماع والمراجعة البشرية`,
-      };
-    }
-
-    // Check hesitation or syllable fracturing
-    if (pauseCount >= 2) {
-      return {
-        type: 'hesitation',
-        labelArabic: 'تفكيك الكلمة وتكرار التردد',
-        severity: 'moderate',
-        notes: `رُصدت ${pauseCount} توقفات خلال هذه المحاولة`,
-      };
-    }
-
     return {
-      type: 'diacritic_error',
-      labelArabic: 'اختلاف في البنية الصوتية أو الحركات',
-      severity: 'mild',
-      notes: `نطق الطالب: "${cleanSpoken}" مقابل المطلوب: "${cleanExpected}"`,
+      status: 'transcript_difference',
+      labelArabic: 'اختلاف بين التفريغ والكلمة المستهدفة',
+      notes: 'قد يرجع الاختلاف إلى التعرف الصوتي أو اللهجة أو التسجيل أو طريقة النطق. استمع إلى التسجيل وراجع التفريغ يدويًا قبل تفسيره.',
     };
+  };
+
+  const processTranscriptComparison = (blobUrl: string) => {
+    const rawTranscript = speechTranscriptRef.current.trim() || interimTranscript.trim();
+    const cleanExpected = normalizeArabicTranscript(currentWord.word);
+    const cleanSpoken = normalizeArabicTranscript(rawTranscript);
+    const exactTranscriptMatch = Boolean(cleanSpoken) && cleanSpoken === cleanExpected;
+    const transcriptComparison = classifyTranscriptComparison(cleanExpected, cleanSpoken);
+    const speechRecognitionConfidence =
+      speechConfidenceRef.current > 0 ? speechConfidenceRef.current : null;
+
+    const report: WordAnalysisReport = {
+      wordId: currentWord.id,
+      targetWord: currentWord.word,
+      spokenTranscript: rawTranscript,
+      normalizedSpoken: cleanSpoken,
+      exactTranscriptMatch,
+      speechRecognitionConfidence,
+      transcriptComparison,
+      audioBlobUrl: blobUrl,
+      syllables: segmentArabicWordIntoSyllables(currentWord.word),
+    };
+
+    setCompletedReports((prev) => {
+      const filtered = prev.filter((item) => item.wordId !== currentWord.id);
+      return [...filtered, report];
+    });
   };
 
   // Play model Arabic TTS
@@ -768,46 +574,28 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     }
   };
 
-  // Finalize and save results
+  // Summarize transcript matches only. Browser confidence is optional metadata, not a pronunciation score.
   const finishAssessment = () => {
     setStage('results');
-
-    // Aggregate metrics
-    const totalWords = completedReports.length || 1;
-    const correctCount = completedReports.filter((r) => r.isCorrect).length;
-    const avgConfidence = Math.round(
-      completedReports.reduce((acc, r) => acc + r.acousticConfidence, 0) / totalWords
-    );
-    const avgLatency = Math.round(
-      completedReports.reduce((acc, r) => acc + r.voiceOnsetLatencyMs, 0) / totalWords
-    );
-    const totalPauses = completedReports.reduce((acc, r) => acc + r.intraWordPauses, 0);
-
-    const problematicLetters: string[] = [];
-    completedReports.forEach((r) => {
-      if (!r.isCorrect && r.errorClassification.detectedSubstitution) {
-        problematicLetters.push(
-          `${r.targetWord.charAt(0)} ↔ ${r.errorClassification.detectedSubstitution}`
-        );
-      }
-    });
-
-    const contextPayload = {
-      summary: {
-        averageConfidence: avgConfidence,
-        totalPauses,
-        wordsNeedingImprovement: totalWords - correctCount,
-        problematicLetters: Array.from(new Set(problematicLetters)),
-        diacriticErrors: completedReports.filter((r) => r.errorClassification.type === 'diacritic_error').length,
-        hesitationMs: avgLatency,
-      },
-      details: completedReports,
-    };
+    const totalWords = completedReports.length;
+    const exactTranscriptMatches = completedReports.filter((item) => item.exactTranscriptMatch).length;
+    const availableConfidences = completedReports
+      .map((item) => item.speechRecognitionConfidence)
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100);
+    const averageRecognitionConfidence = availableConfidences.length
+      ? Math.round(availableConfidences.reduce((sum, value) => sum + value, 0) / availableConfidences.length)
+      : null;
 
     saveSpeechAnalysisResults(completedReports);
-
     if (onComplete) {
-      onComplete(contextPayload);
+      onComplete({
+        summary: {
+          averageRecognitionConfidence,
+          exactTranscriptMatches,
+          transcriptsNeedingReview: Math.max(0, totalWords - exactTranscriptMatches),
+        },
+        details: completedReports,
+      });
     }
   };
 
@@ -827,10 +615,10 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
             نشاط استكشافي للنطق والأصوات العربية
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            مختبر التحليل الصوتي والفونولوجي (بصيرة)
+            نشاط مقارنة التفريغ الصوتي بالعربية
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            فحص دقيق لمخارج الحروف، التردد الصوتي، زمن كمون النطق، والخلط البصري-السمعي للطالب:{' '}
+            يقارن النشاط تفريغ المتصفح بالكلمة المعروضة. قد يخطئ التعرف الصوتي، ولا تمثل المطابقة النصية تقييمًا لدقة النطق أو اختبارًا لصعوبات التعلّم للطالب:{' '}
             <span className="font-bold text-emerald-700">{studentName}</span>
           </p>
         </div>
@@ -861,27 +649,25 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
           </div>
 
           <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-4">
-            مرحباً بك في فحص النطق والوعي الفونولوجي
+            جرّب نطق الكلمات ومراجعة التفريغ
           </h2>
 
           <p className="text-slate-600 leading-relaxed mb-8">
-            يقيس هذا الاختبار قدرة الطفل على قراءة الكلمات العربية النموذجية بصوت عالٍ،
-            مستهدفاً التمييز بين الحروف المتشابهة رسمًا (ب/ت/ث)، والمتقاربة صوتياً (ت/ط، س/ص)،
-            وضبط الحركات والمدود، مع رصد التردد وزمن الاستجابة الصوتي.
+            اعرض الكلمة، وانطقها، ثم قارن التفريغ الذي يعيده المتصفح بالنص المستهدف. قد يختلف التفريغ بسبب جودة التسجيل أو اللهجة أو دقة التعرف؛ راجع التسجيل يدويًا. هذا نشاط تدريبي استكشافي وليس فحصًا معياريًا.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-right">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <div className="text-emerald-700 font-black text-lg mb-1">13 كلمة</div>
-              <div className="text-xs text-slate-600">تغطي الفونيمات المحورية لعسر القراءة</div>
+              <div className="text-xs text-slate-600">أمثلة تدريبية للمقارنة النصية، وليست اختبارًا معياريًا</div>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <div className="text-emerald-700 font-black text-lg mb-1">VOT Latency</div>
-              <div className="text-xs text-slate-600">قياس زمن كمون البدء وتردد الاستدعاء</div>
+              <div className="text-emerald-700 font-black text-lg mb-1">التفريغ الصوتي</div>
+              <div className="text-xs text-slate-600">نص يعيده المتصفح عند دعمه</div>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <div className="text-emerald-700 font-black text-lg mb-1">تغذية فورية</div>
-              <div className="text-xs text-slate-600">تحليل فوري بمحرك Dyslexico الذكي</div>
+              <div className="text-xs text-slate-600">مقارنة نصية أولية تتطلب مراجعة</div>
             </div>
           </div>
 
@@ -902,7 +688,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
       {stage === 'instructions' && (
         <div className="bg-white rounded-3xl p-8 md:p-12 border border-slate-200 shadow-xl max-w-2xl mx-auto">
           <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">
-            إرشادات الفحص الصوتي
+            إرشادات نشاط القراءة الجهرية
           </h2>
 
           <div className="space-y-4 mb-8 text-right">
@@ -1045,7 +831,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                   className="w-full sm:w-auto px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-3 text-lg animate-pulse"
                 >
                   <MicOff className="w-6 h-6" />
-                  <span>إيقاف التسجيل واعتماد النطق</span>
+                  <span>إيقاف التسجيل ومراجعة التفريغ</span>
                 </button>
               )}
 
@@ -1090,68 +876,43 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
             </div>
           </div>
 
-          {/* SIDE PANEL: EXPLORATORY OBSERVATIONS; NOT A CLINICAL MEASURE */}
+          {/* Transcript comparison observations only; not a diagnostic measure. */}
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold text-sm">
                 <Activity className="w-4 h-4 text-emerald-600" />
-                <span>التحليل الفونولوجي للكلمة الحالية</span>
+                <span>مقارنة التفريغ بالكلمة المعروضة</span>
               </div>
-
               {currentReport ? (
                 <div className="space-y-3">
-                  <div
-                    className={`p-3.5 rounded-2xl border ${
-                      currentReport.isCorrect
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                        : 'bg-amber-50 border-amber-200 text-amber-900'
-                    }`}
-                  >
+                  <div className={`p-3.5 rounded-2xl border ${
+                    currentReport.transcriptComparison.status === 'exact_match'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                  }`}>
                     <div className="flex items-center gap-2 font-bold text-sm mb-1">
-                      {currentReport.isCorrect ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                      )}
-                      <span>{currentReport.errorClassification.labelArabic}</span>
+                      {currentReport.transcriptComparison.status === 'exact_match'
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        : <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />}
+                      <span>{currentReport.transcriptComparison.labelArabic}</span>
                     </div>
-                    <p className="text-xs opacity-90">{currentReport.errorClassification.notes}</p>
+                    <p className="text-xs opacity-90">{currentReport.transcriptComparison.notes}</p>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">زمن كمون البدء:</span>
-                      <span className="font-mono font-bold text-slate-800">
-                        {currentReport.voiceOnsetLatencyMs} ms
-                      </span>
-                    </div>
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">التطابق الفونيمي:</span>
-                      <span className="font-mono font-bold text-emerald-700">
-                        {currentReport.phoneticSimilarity}%
-                      </span>
-                    </div>
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">توقفات داخلية:</span>
-                      <span className="font-mono font-bold text-slate-800">
-                        {currentReport.intraWordPauses}
-                      </span>
-                    </div>
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">ثبات النبرة F0:</span>
-                      <span className="font-mono font-bold text-slate-800">
-                        ±{currentReport.f0VariationHz} Hz
-                      </span>
-                    </div>
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                    <span className="text-slate-500 block mb-1">ثقة التعرف التي وفرها المتصفح:</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {currentReport.speechRecognitionConfidence === null
+                        ? 'غير متاحة'
+                        : `${currentReport.speechRecognitionConfidence}% — ليست دقة النطق`}
+                    </span>
                   </div>
                 </div>
               ) : (
                 <div className="p-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  سجل صوتك لرؤية المقاييس الفونولوجية والاكوستيكية المباشرة هنا
+                  ابدأ التسجيل لعرض التفريغ النصي ومراجعته.
                 </div>
               )}
             </div>
-
             {/* Test Words Progress List */}
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
@@ -1173,7 +934,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                         isCurrent
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : rep
-                          ? rep.isCorrect
+                          ? rep.exactTranscriptMatch
                             ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                             : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
                           : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -1181,7 +942,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                     >
                       <span>{w.word}</span>
                       <span className="text-[10px] font-normal opacity-80">
-                        {rep ? (rep.isCorrect ? '✓ متقن' : '⚠ تنبيه') : `كلمة ${idx + 1}`}
+                        {rep ? (rep.exactTranscriptMatch ? '✓ مطابق نصيًا' : 'راجع التفريغ') : `كلمة ${idx + 1}`}
                       </span>
                     </button>
                   );
@@ -1192,151 +953,98 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
         </div>
       )}
 
-      {/* ----------------- STAGE 4: RESULTS REPORT ----------------- */}
+      {/* ----------------- STAGE 4: TRANSCRIPT COMPARISON SUMMARY ----------------- */}
       {stage === 'results' && (
         <div className="space-y-8 animate-fadeIn">
-          {/* Top Score Summary Banner */}
           <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-indigo-900 rounded-3xl p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
-              <div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur mb-2 inline-block">
-                  ملخص النشاط الصوتي
-                </span>
-                <h2 className="text-3xl font-black mb-1">نتائج الفحص الفونولوجي: {studentName}</h2>
-                <p className="text-sm text-emerald-100">
-                  اكتمل نشاط من 13 كلمة تدريبية للأصوات العربية
-                </p>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/20 text-center">
-                  <span className="text-xs text-emerald-200 block">دقة النطق الفونولوجي</span>
-                  <span className="text-3xl font-black font-mono">
-                    {Math.round(
-                      (completedReports.filter((r) => r.isCorrect).length /
-                        (completedReports.length || 1)) *
-                        100
-                    )}
-                    %
-                  </span>
-                </div>
-              </div>
+            <div className="relative z-10">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white mb-2 inline-block">
+                ملخص نشاط تدريبي
+              </span>
+              <h2 className="text-3xl font-black mb-1">مقارنة التفريغ بالنص المستهدف: {studentName}</h2>
+              <p className="text-sm text-emerald-100 leading-7">
+                يعرض الملخص عدد التفريغات المطابقة نصيًا. المطابقة لا تثبت صحة النطق، والاختلاف لا يثبت وجود صعوبة تعلم؛ قد يخطئ التعرف الصوتي ويحتاج كل اختلاف إلى مراجعة بشرية.
+              </p>
             </div>
           </div>
 
-          {/* Metric KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium block mb-1">
-                الكلمات المتقنة سليمًا
-              </span>
+              <span className="text-xs text-slate-500 font-medium block mb-1">تفريغات مطابقة نصيًا</span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-emerald-600 font-mono">
-                  {completedReports.filter((r) => r.isCorrect).length}
+                  {completedReports.filter((item) => item.exactTranscriptMatch).length}
                 </span>
-                <span className="text-xs text-slate-400">من {completedReports.length}</span>
+                <span className="text-xs text-slate-400">من {completedReports.length} كلمة منجزة</span>
               </div>
             </div>
-
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium block mb-1">
-                متوسط زمن كمون البدء (VOT)
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-slate-800 font-mono">
-                  {Math.round(
-                    completedReports.reduce((acc, r) => acc + r.voiceOnsetLatencyMs, 0) /
-                      (completedReports.length || 1)
-                  )}
-                </span>
-                <span className="text-xs text-slate-400">ms</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium block mb-1">
-                تنبيهات الخلط البصري-السمعي
-              </span>
+              <span className="text-xs text-slate-500 font-medium block mb-1">تفريغات تحتاج إلى مراجعة</span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-amber-600 font-mono">
-                  {
-                    completedReports.filter(
-                      (r) =>
-                        r.errorClassification.type === 'visual_reversal' ||
-                        r.errorClassification.type === 'phonetic_contrast'
-                    ).length
-                  }
+                  {completedReports.filter((item) => !item.exactTranscriptMatch).length}
                 </span>
-                <span className="text-xs text-slate-400">أزواج حروف</span>
+                <span className="text-xs text-slate-400">قد يكون الاختلاف من نظام التعرف</span>
               </div>
             </div>
-
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <span className="text-xs text-slate-500 font-medium block mb-1">
-                متوسط ثبات النغمة والنبرة
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-indigo-600 font-mono">
-                  ±
-                  {Math.round(
-                    completedReports.reduce((acc, r) => acc + r.f0VariationHz, 0) /
-                      (completedReports.length || 1)
-                  )}
-                </span>
-                <span className="text-xs text-slate-400">Hz</span>
+              <span className="text-xs text-slate-500 font-medium block mb-1">ثقة التعرف الصوتي المتاحة</span>
+              <div className="text-2xl font-black text-slate-800 font-mono">
+                {(() => {
+                  const values = completedReports
+                    .map((item) => item.speechRecognitionConfidence)
+                    .filter((value): value is number => typeof value === 'number');
+                  return values.length
+                    ? `${Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)}%`
+                    : 'غير متاحة';
+                })()}
               </div>
+              <span className="text-xs text-slate-400">ليست مقياسًا لدقة النطق</span>
             </div>
           </div>
 
-          {/* Detailed Item-by-Item Breakdown Table */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
-            <h3 className="text-xl font-black text-slate-900 mb-4">
-              التفصيل الإكلينيكي لكل كلمة
-            </h3>
+            <h3 className="text-xl font-black text-slate-900 mb-4">تفاصيل المقارنة النصية</h3>
+            <div className="mb-4 text-xs leading-6 text-slate-500">
+              قارِن النص المعروض بما أعاده المتصفح. لا تستخدم النتائج لتصنيف الطفل أو لتشخيص عسر القراءة أو قياس الوعي الفونولوجي.
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-right text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-xs text-slate-400 uppercase">
+                  <tr className="border-b border-slate-200 text-xs text-slate-400">
                     <th className="py-3 px-4 font-bold">الكلمة المستهدفة</th>
-                    <th className="py-3 px-4 font-bold">ما تم نطقه</th>
-                    <th className="py-3 px-4 font-bold">التصنيف الإكلينيكي</th>
-                    <th className="py-3 px-4 font-bold">كمون البدء</th>
-                    <th className="py-3 px-4 font-bold">التطابق</th>
-                    <th className="py-3 px-4 font-bold">الاستماع</th>
+                    <th className="py-3 px-4 font-bold">التفريغ الذي أعاده المتصفح</th>
+                    <th className="py-3 px-4 font-bold">نتيجة المقارنة</th>
+                    <th className="py-3 px-4 font-bold">ثقة التعرف (إن توفرت)</th>
+                    <th className="py-3 px-4 font-bold">التسجيل</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {completedReports.map((report) => (
                     <tr key={report.wordId} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {report.targetWord}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-700 font-serif">
-                        {report.spokenTranscript}
-                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">{report.targetWord}</td>
+                      <td className="py-3.5 px-4 text-slate-700 font-serif">{report.spokenTranscript || 'لم يتوفر تفريغ'}</td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
-                            report.isCorrect
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
-                        >
-                          {report.errorClassification.labelArabic}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                          report.transcriptComparison.status === 'exact_match'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {report.transcriptComparison.labelArabic}
                         </span>
+                        <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">{report.transcriptComparison.notes}</p>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-xs text-slate-600">
-                        {report.voiceOnsetLatencyMs} ms
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-xs text-slate-700">
-                        {report.phoneticSimilarity}%
+                        {report.speechRecognitionConfidence === null ? 'غير متاحة' : `${report.speechRecognitionConfidence}%`}
                       </td>
                       <td className="py-3.5 px-4">
                         {report.audioBlobUrl && (
                           <button
+                            type="button"
                             onClick={() => playRecordedUtterance(report.audioBlobUrl)}
                             className="p-1.5 bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 rounded-lg transition-colors"
                             title="تشغيل التسجيل"
+                            aria-label={`تشغيل تسجيل ${report.targetWord}`}
                           >
                             <Play className="w-3.5 h-3.5" />
                           </button>
@@ -1348,7 +1056,6 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
               </table>
             </div>
           </div>
-
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
             <button
@@ -1359,7 +1066,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
               className="px-6 py-3 rounded-xl border border-slate-300 font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>إعادة الاختبار</span>
+              <span>إعادة النشاط</span>
             </button>
 
             <button
