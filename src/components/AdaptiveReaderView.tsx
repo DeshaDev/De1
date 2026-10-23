@@ -88,7 +88,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
   const normalizedProblemWords = new Set(problematicWords.map(normalizeArabicWord).filter(Boolean));
   const [selectedPassageId, setSelectedPassageId] = useState<string>(initialPassage.id);
   const [text, setText] = useState<string>(personalizedDefaultText);
-  const [syllableMode, setSyllableMode] = useState<boolean>(true);
+  const [syllableMode, setSyllableMode] = useState<boolean>(false);
   const [letterColorMode, setLetterColorMode] = useState<boolean>(false);
   const [readingRuler, setReadingRuler] = useState<boolean>(true);
   const [openDyslexicMode, setOpenDyslexicMode] = useState<boolean>(true);
@@ -664,7 +664,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
             {/* Morphological & Syllabic Breakdown Cards */}
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
               <div className="px-6 py-3 bg-sky-50 border-b border-sky-100 text-xs leading-relaxed text-sky-900">
-                التقسيم والجذر والمعنى المقترحة وسائل مساعدة للمراجعة، وقد تحتاج إلى تصحيح لغوي بحسب الكلمة والسياق. لا تستخدم هذه الملاحظات للحكم على قدرة الطفل.
+                التقسيم والجذر والمعنى مقترحات آلية/تعليمية وليست تحليلًا صرفيًا أو صوتيًا معتمدًا. راجعها قبل التدريب؛ وهي لا تقيس قدرة الطفل ولا تشخّص صعوبة التعلم.
               </div>
               <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                 <div>
@@ -779,7 +779,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     التقطيع المقطعي الملون
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    تقسيم الكلمة إلى مقاطع صوتية متناوبة الألوان
+                    تقسيم بصري تقريبي للكلمات المشكلة البسيطة؛ قد تظهر الكلمة كاملة إذا لم يكن التقطيع موثوقًا
                   </div>
                 </div>
                 <span className="text-xs font-mono font-semibold text-[#0284C7]">
