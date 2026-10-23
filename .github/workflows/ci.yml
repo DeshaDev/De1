@@ -43,6 +43,41 @@ jobs:
       - name: Verify production server bundle exists
         run: test -s server.js
 
+      - name: Build production Docker image
+        run: docker build --pull -t baseera-ci-smoke .
+
+      - name: Smoke-test the production Docker image with synthetic credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_code="$(printf 'a%.0s' {1..48})"
+          readonly_code="$(printf 'b%.0s' {1..48})"
+          tenant_json="$(printf '{"ci_demo":{"schoolName":"CI Demo","school_admin":"%s","educator_readonly":"%s"}}' "$admin_code" "$readonly_code")"
+          encryption_key="$(printf '0%.0s' {1..64})"
+          docker run -d --name baseera-ci-smoke -p 4317:3000 \
+            -e BASEERA_TENANT_CREDENTIALS="$tenant_json" \
+            -e BASEERA_SESSION_SECRET='ci-session-secret-that-is-only-for-tests-2026' \
+            -e BASEERA_STORE_ENCRYPTION_KEY="$encryption_key" \
+            -e BASEERA_DATA_DIR='/tmp/baseera-ci-store' \
+            -e TRUST_PROXY_HOPS='0' \
+            -e PORT='3000' \
+            baseera-ci-smoke
+          cleanup() { docker rm -f baseera-ci-smoke >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4317/ -o /tmp/baseera-docker-response.html; then break; fi
+            sleep 1
+          done
+          grep -q 'بصيرة' /tmp/baseera-docker-response.html
+          ! grep -q '^pt>
+      - name: Smoke-test production server
+        run: node scripts/production-smoke-test.mjs
+
+      - name: Run browser end-to-end smoke tests
+        run: npm run e2e
+ /tmp/baseera-docker-response.html
+
+
       - name: Smoke-test production server
         run: node scripts/production-smoke-test.mjs
 

@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: baseera-educational-prototype
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /
+    disk:
+      name: baseera-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: BASEERA_DATA_DIR
+        value: /var/data
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: BASEERA_SESSION_SECRET
+        generateValue: true
+      - key: BASEERA_TENANT_CREDENTIALS
+        sync: false
+      - key: BASEERA_STORE_ENCRYPTION_KEY
+        sync: false

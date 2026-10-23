@@ -98,3 +98,7 @@ npm install --no-save --package-lock=false --legacy-peer-deps @playwright/test@1
 npx playwright install chromium
 npm run e2e
 ```
+
+## نشر نسخة تجريبية
+
+أُضيف إعداد نشر اختياري على Render في [`render.yaml`](../render.yaml) مع تعليمات عربية في [`docs/DEPLOY_RENDER_AR.md`](docs/DEPLOY_RENDER_AR.md). لم تُنشر نسخة عامة بعد؛ لا يتكون رابط حي إلا بعد تفعيل Blueprint داخل حساب استضافة وإدخال أسرار المصادقة والتشفير. إعداد النشر يستخدم بيانات اختبار اصطناعية فقط إلى أن تكتمل مراجعة الخصوصية والموافقات.
