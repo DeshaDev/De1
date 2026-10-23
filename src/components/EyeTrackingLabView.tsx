@@ -1291,10 +1291,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             </div>
 
             <h2 className="text-3xl font-black text-slate-900 mb-2">
-              نتائج القراءة والفهم الفعلية
+              نتائج جلسة القراءة والفهم
             </h2>
             <p className="text-slate-600 text-sm mb-8">
-              تم احتساب المقاييس التالية بناءً على الأداء الحقيقي للطالب في النص: «{passage.title}»
+              المقاييس التالية تلخّص ما سُجّل في هذه الجلسة من زمن وإجابات. تقدير إتمام النص لا يثبت صحة قراءة كل كلمة، والتفريغ الآلي يحتاج إلى مراجعة.
             </p>
 
             {/* Verified Metrics Dashboard */}
