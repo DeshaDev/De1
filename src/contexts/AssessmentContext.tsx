@@ -166,7 +166,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         studentName: prev?.studentName || 'الطالب',
         age: prev?.age || 8,
         speechResults: prev?.speechResults || null,
-        tactileResults: prev?.tactileResults || null,
         readingResults: results,
       };
       persistAssessment(next);
