@@ -763,7 +763,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         <span className="font-mono tabular-nums text-slate-700">
                           تقدير الطالب:{' '}
                           <strong>{numberLineSelections[1].estimate}</strong> ·
-                          PAE:{' '}
+                          نسبة الخطأ المطبّع (وصفية):{' '}
                           <strong
                             className="text-slate-700"
                           >
@@ -836,7 +836,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         <span className="font-mono tabular-nums text-slate-700">
                           تقدير الطالب:{' '}
                           <strong>{numberLineSelections[2].estimate}</strong> ·
-                          PAE:{' '}
+                          نسبة الخطأ المطبّع (وصفية):{' '}
                           <strong
                             className="text-slate-700"
                           >
@@ -1140,9 +1140,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 </span>
                 <span
                   className={`font-mono tabular-nums font-semibold ${
-                    (computedMetrics.reversalErrorCount ?? 0) > 0
-                      ? 'text-[#DC2626]'
-                      : 'text-[#059669]'
+                    computedMetrics.reversalErrorCount === null
+                      ? 'text-slate-700'
+                      : computedMetrics.reversalErrorCount > 0
+                        ? 'text-[#DC2626]'
+                        : 'text-[#059669]'
                   }`}
                 >
                   {computedMetrics.reversalErrorCount ?? 'لم يُقَس'} من{' ' }
