@@ -1010,19 +1010,19 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-right">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-emerald-800 block mb-1">
-                  الكلمات الصحيحة في الدقيقة
+                  تقدير مؤقت من الكلمات المصنّفة
                 </span>
                 <div className="text-2xl font-black text-emerald-700 font-mono">
                   {teacherStats.liveWcpm} <span className="text-xs">WCPM</span>
                 </div>
                 <span className="text-[10px] text-emerald-600">
-                  {teacherStats.effectiveWords} كلمة صحيحة ÷ {finalDurationSec} ث
+                  {teacherStats.effectiveWords} كلمة مصنّفة صحيحة ÷ {finalDurationSec} ث
                 </span>
               </div>
 
               <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-teal-800 block mb-1">
-                  نسبة الدقة اللفظية
+                  مطابقة وفق التصنيفات الحالية
                 </span>
                 <div className="text-2xl font-black text-teal-700 font-mono">
                   {teacherStats.liveAccuracy}%
@@ -1040,19 +1040,19 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                   {teacherStats.errors}
                 </div>
                 <span className="text-[10px] text-amber-600">
-                  أخطاء لفظية بحاجة لمراجعة
+                  تصنيفات تحتاج إلى مراجعة
                 </span>
               </div>
 
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-rose-800 block mb-1">
-                  الكلمات المتخطاة
+                  الكلمات التي صنّفها التفريغ متخطاة
                 </span>
                 <div className="text-2xl font-black text-rose-700 font-mono">
                   {teacherStats.omitted}
                 </div>
                 <span className="text-[10px] text-rose-600">
-                  كلمات تم حذفها أثناء القراءة
+                  كلمات صنّفها التفريغ على أنها متخطاة
                 </span>
               </div>
             </div>
