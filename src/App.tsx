@@ -37,7 +37,6 @@ import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
-import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -1607,10 +1606,6 @@ export default function App() {
           />
         )}
 
-        {/* VIEW 5: CLINICAL ALGORITHMS & ADAPTIVE IRT / PYGAZE ML LAB */}
-        {activeTab === 'algorithms-lab' && (
-          <ClinicalAlgorithmsView />
-        )}
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         {activeTab === 'terms' && <TermsOfUseView />}
         </div>
