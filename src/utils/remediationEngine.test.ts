@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateAdaptiveRemediationPlan } from './remediationEngine.ts';
+import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './remediationEngine.ts';
 
 const normalizeArabic = (value: string) =>
   value.replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[\s.,،؛:!?؟]/g, '');
@@ -64,4 +64,30 @@ test('teacher-reviewed target status is stated narrowly and does not imply diagn
   assert.match(plan.clinicalRationale, /راجعها المعلم/);
   assert.match(plan.clinicalRationale, /لا يثبت وجود اضطراب/);
   assert.doesNotMatch(plan.clinicalRationale, /تشخيص مؤكد|خطة علاج معتمدة/);
+});
+
+test('curated activities pass structural checks used before model-generated activities are displayed', () => {
+  const plan = generateAdaptiveRemediationPlan({
+    studentName: 'طفل تجريبي',
+    gradeLevel: 3,
+    effectiveWords: [],
+    targetsTeacherReviewed: false,
+  });
+  assert.equal(isStructurallyValidRemediationSessionPlan(plan), true);
+});
+
+test('structural checks reject mismatched Arabic syllables and phonics examples', () => {
+  const plan = generateAdaptiveRemediationPlan({
+    studentName: 'طفل تجريبي',
+    gradeLevel: 3,
+    effectiveWords: [],
+    targetsTeacherReviewed: false,
+  });
+  const badSyllables = structuredClone(plan);
+  badSyllables.syllableDrills[0].syllables = ['خَطَأ'];
+  assert.equal(isStructurallyValidRemediationSessionPlan(badSyllables), false);
+
+  const badPhonics = structuredClone(plan);
+  badPhonics.phonicsDrills[0].spokenWord = 'بُسْتَان';
+  assert.equal(isStructurallyValidRemediationSessionPlan(badPhonics), false);
 });
