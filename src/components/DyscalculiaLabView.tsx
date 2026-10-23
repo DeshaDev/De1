@@ -211,7 +211,18 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       setEstimate156Draft(newEstimate);
     }
     const startTs = numberLineStartRef.current[trialId] || performance.now();
-    const elapsed = Math.max(150, Math.min(30_000, Math.round(performance.now() - startTs)));
+    const elapsed = Math.round(performance.now() - startTs);
+    if (elapsed < 150 || elapsed > 30_000) {
+      setNumberLineTouched((prev) => ({ ...prev, [trialId]: false }));
+      numberLineStartRef.current[trialId] = performance.now();
+      setValidationError(
+        elapsed < 150
+          ? 'كانت الاستجابة أسرع من حدّ القياس التقني لهذه المهمة؛ حرّك المؤشر مجددًا ثم ثبّت تقديرك.'
+          : 'استغرق التقدير أكثر من 30 ثانية؛ أعد تقدير الموقع ثم ثبّت الإجابة لقياس المحاولة من جديد.'
+      );
+      setSaveMessage('');
+      return;
+    }
     setNumberLineSelections((prev) => ({
       ...prev,
       [trialId]: {
@@ -784,8 +795,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       min={0}
                       max={100}
                       value={estimate37Draft}
-                      onPointerDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
-                      onKeyDown={() => { if (!numberLineSelections[1]) numberLineStartRef.current[1] = performance.now(); }}
+                      onPointerDown={() => { if (!numberLineSelections[1] && !numberLineTouched[1]) numberLineStartRef.current[1] = performance.now(); }}
+                      onKeyDown={() => { if (!numberLineSelections[1] && !numberLineTouched[1]) numberLineStartRef.current[1] = performance.now(); }}
                       onChange={(e) => {
                         setEstimate37Draft(Number(e.target.value));
                         setNumberLineTouched((prev) => ({ ...prev, 1: true }));
@@ -859,8 +870,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       min={0}
                       max={200}
                       value={estimate156Draft}
-                      onPointerDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
-                      onKeyDown={() => { if (!numberLineSelections[2]) numberLineStartRef.current[2] = performance.now(); }}
+                      onPointerDown={() => { if (!numberLineSelections[2] && !numberLineTouched[2]) numberLineStartRef.current[2] = performance.now(); }}
+                      onKeyDown={() => { if (!numberLineSelections[2] && !numberLineTouched[2]) numberLineStartRef.current[2] = performance.now(); }}
                       onChange={(e) => {
                         setEstimate156Draft(Number(e.target.value));
                         setNumberLineTouched((prev) => ({ ...prev, 2: true }));
