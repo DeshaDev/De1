@@ -263,6 +263,10 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
         return;
       }
       const data = await res.json();
+      if (data?.proposalAvailable !== true) {
+        setAdaptationStatus(typeof data?.message === 'string' ? data.message : 'لم يتوفر اقتراح صالح؛ احتفظنا بالنص الحالي.');
+        return;
+      }
       const adaptation = data?.adaptation;
       if (
         !adaptation ||
