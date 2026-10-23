@@ -27,7 +27,6 @@ export type AppTabId =
   | 'remediation-gym'
   | 'adaptive-reader'
   | 'dashboard'
-  | 'algorithms-lab'
   | 'privacy'
   | 'terms';
 
