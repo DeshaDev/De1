@@ -228,7 +228,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       observations.push(
         'ثقة التعرف الصوتي التي وفرها المتصفح ' +
         (typeof studentData.speech.averageRecognitionConfidence === 'number'
-          ? studentData.speech.summary.averageRecognitionConfidence + '%'
+          ? studentData.speech.averageRecognitionConfidence + '%'
           : 'غير متاحة') +
         '. لا تمثل هذه القيمة دقة النطق؛ راجع أي اختلاف بين التفريغ والكلمة المستهدفة.'
       );
@@ -565,7 +565,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <h4 className="font-bold text-slate-900 text-sm mb-1">تفريغ صوتي أولي للمراجعة</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.speech
-                    ? `ثقة التعرف الصوتي التي وفرها المتصفح ${typeof studentData.speech.summary.averageRecognitionConfidence === 'number' ? studentData.speech.summary.averageRecognitionConfidence + '%' : 'غير متاحة'}. اختلف التفريغ عن النص المستهدف في ${studentData.speech.summary.transcriptsNeedingReview} كلمة؛ الاختلاف لا يثبت خطأ النطق ويحتاج إلى مراجعة التسجيل.`
+                    ? `ثقة التعرف الصوتي التي وفرها المتصفح ${typeof studentData.speech.averageRecognitionConfidence === 'number' ? studentData.speech.averageRecognitionConfidence + '%' : 'غير متاحة'}. اختلف التفريغ عن النص المستهدف في ${studentData.speech.transcriptsNeedingReview} كلمة؛ الاختلاف لا يثبت خطأ النطق ويحتاج إلى مراجعة التسجيل.`
                     : 'لم يكتمل فحص النطق في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -761,7 +761,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4 text-slate-600">ثقة التعرف الصوتي التي وفرها المتصفح</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
                       {studentData.speech
-                        ? `${typeof studentData.speech.summary.averageRecognitionConfidence === 'number' ? studentData.speech.summary.averageRecognitionConfidence + '%' : 'غير متاحة'}`
+                        ? `${typeof studentData.speech.averageRecognitionConfidence === 'number' ? studentData.speech.averageRecognitionConfidence + '%' : 'غير متاحة'}`
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">ليست معيارًا لدقة النطق</td>
