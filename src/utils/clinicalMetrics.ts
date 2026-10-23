@@ -328,9 +328,23 @@ export function segmentArabicWordIntoSyllables(word: string): string[] {
   const clean = word.trim();
   if (!clean) return [];
 
-  // Group each base character with its immediately following diacritics
+  // Conservative display-only segmentation: do not invent vowel boundaries for
+  // unvocalized or partially vocalized Arabic. Also leave shadda/gemination intact
+  // unless a linguistically validated gemination-aware segmenter is available.
+  const trailingPunctuation = clean.match(/[،؛,.!?؟:…]+$/)?.[0] ?? '';
+  const core = trailingPunctuation
+    ? clean.slice(0, -trailingPunctuation.length)
+    : clean;
+  if (!core || !/[\u064B-\u0652\u0670]/.test(core) || core.includes(SHADDA)) {
+    return [clean];
+  }
+  if (!/^[\u0621-\u064A\u0670\u064B-\u0652ـ]+$/.test(core)) {
+    return [clean];
+  }
+
+  // Each unit is one Arabic base letter plus any diacritics immediately after it.
   const units: string[] = [];
-  for (const ch of clean) {
+  for (const ch of core.normalize('NFC')) {
     if (ARABIC_DIACRITICS_REGEX.test(ch) && units.length > 0) {
       units[units.length - 1] += ch;
     } else {
@@ -338,59 +352,49 @@ export function segmentArabicWordIntoSyllables(word: string): string[] {
     }
   }
 
-  if (units.length <= 2) return [clean];
+  // Require explicit vowel/sukun marks on consonants before splitting. Bare long
+  // vowels are allowed; the first alif in the definite article is an exception.
+  const hasDefiniteArticle = units.length >= 2 &&
+    units[0].startsWith('ا') && units[1].startsWith('ل');
+  for (let i = 0; i < units.length; i++) {
+    const base = units[i][0];
+    const marks = units[i].slice(1);
+    const isBareLongVowel = LONG_VOWELS.has(base) && marks.length === 0;
+    const isArticleAlif = hasDefiniteArticle && i === 0 && marks.length === 0;
+    if (!isBareLongVowel && !isArticleAlif &&
+        !/[\u064B-\u0652\u0670]/.test(marks)) {
+      return [clean];
+    }
+  }
 
   const syllables: string[] = [];
-  let i = 0;
-
-  // Handle definite article "ال" as an initial morphological unit
-  if (
-    units.length >= 3 &&
-    units[0].startsWith('ا') &&
-    units[1].startsWith('ل')
-  ) {
-    syllables.push(units[0] + units[1]);
-    i = 2;
-  }
-
-  while (i < units.length) {
-    let current = units[i];
-    const next = units[i + 1];
-
-    if (next) {
-      const nextBase = next[0];
-      const nextHasSukun = next.includes(SUKUN);
-      const nextHasShadda = next.includes(SHADDA);
-      const nextIsLongVowel =
-        LONG_VOWELS.has(nextBase) && next.length === 1;
-
-      if (nextHasSukun || nextIsLongVowel || nextHasShadda) {
-        current += next;
-        i += 2;
-        // If a shadda consonant is immediately followed by a long vowel (e.g. طُلَّابُ), keep the long vowel attached
-        if (
-          nextHasShadda &&
-          i < units.length &&
-          LONG_VOWELS.has(units[i][0]) &&
-          units[i].length === 1
-        ) {
-          current += units[i];
-          i += 1;
-        }
-        syllables.push(current);
-        continue;
-      }
+  let current = '';
+  for (const unit of units) {
+    const base = unit[0];
+    const marks = unit.slice(1);
+    if (!current) {
+      current = unit;
+      continue;
     }
 
-    // If it's the final single consonant, attach to previous syllable or pair with next
-    if (i === units.length - 1 && syllables.length > 0) {
-      syllables[syllables.length - 1] += current;
+    const isBareLongVowel = LONG_VOWELS.has(base) && marks.length === 0;
+    const closesSyllable = marks.includes(SUKUN);
+
+    if (isBareLongVowel || closesSyllable) {
+      current += unit;
+      syllables.push(current);
+      current = '';
     } else {
       syllables.push(current);
+      current = unit;
     }
-    i += 1;
   }
+  if (current) syllables.push(current);
 
+  if (syllables.length <= 1) return [clean];
+  if (trailingPunctuation) {
+    syllables[syllables.length - 1] += trailingPunctuation;
+  }
   return syllables;
 }
 
