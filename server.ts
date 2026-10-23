@@ -1800,7 +1800,7 @@ async function startServer() {
   });
 
   // 2b. Optional AI-assisted educational activity planner; not a diagnostic or validated treatment engine.
-  app.post('/api/remediation/generate-personalized-session', aiRateLimiter, async (req, res) => {
+  app.post('/api/remediation/generate-personalized-session', requireClinicalAuth('students:read'), aiRateLimiter, async (req, res) => {
     const rawBody = req.body as Record<string, unknown> | null;
     if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
       res.status(400).json({ error: 'بيانات التدريب غير صالحة.' });
@@ -1812,21 +1812,28 @@ async function startServer() {
       res.status(400).json({ error: 'يجب اختيار صف دراسي من 1 إلى 6.' });
       return;
     }
-    const gradeLevel = requestedGrade;
+    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    const studentId = typeof rawBody.studentId === 'string' ? rawBody.studentId.trim().slice(0, 160) : '';
+    // Personalization is derived from the tenant-scoped server record, never from client-supplied words.
+    const storedStudent = studentId
+      ? studentsDb.find((student) => student.id === studentId && student.tenantId === session.tenantId && student.isDemoRecord !== true)
+      : undefined;
+    const gradeLevel = storedStudent?.gradeLevel ?? requestedGrade;
     const allowedDialects = new Set(['msa', 'gulf', 'egyptian', 'levantine', 'maghrebi']);
     const dialect = typeof rawBody.dialect === 'string' && allowedDialects.has(rawBody.dialect)
       ? rawBody.dialect
       : 'msa';
-    const problematicWords = rawBody.problematicWords;
-
-    // Only accept a small set of short Arabic words; never pass arbitrary client text to the prompt.
-    const cleanWords = Array.isArray(problematicWords)
-      ? problematicWords
-          .filter((word: unknown): word is string => typeof word === 'string')
-          .slice(0, 8)
-          .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
-          .filter(Boolean)
+    const trustedTargetWords = storedStudent &&
+      storedStudent.sessionStatus === 'completed' &&
+      storedStudent.teacherVerified === true &&
+      Array.isArray(storedStudent.problematicWords)
+      ? storedStudent.problematicWords
       : [];
+    const cleanWords = trustedTargetWords
+      .filter((word: unknown): word is string => typeof word === 'string')
+      .slice(0, 8)
+      .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
+      .filter(Boolean);
 
     const hasTeacherReviewedTargets = cleanWords.length > 0;
     const effectiveWords =
