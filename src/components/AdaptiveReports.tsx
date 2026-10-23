@@ -532,21 +532,21 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   </div>
                   <span className="text-xs font-bold text-teal-700 font-mono">
                     {studentData.reading
-                      ? (studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true)
-                      ? 'غير متاح'
-                      : typeof studentData.reading.wcpm === 'number'
-                        ? `${studentData.reading.wcpm} WCPM`
-                        : `${studentData.reading.wpm} ك/د`
+                      ? isOralReading
+                        ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
+                          ? `${studentData.reading.wcpm} WCPM`
+                          : 'غير متاح'
+                        : `${studentData.reading.wpm} ك/د تقديريًا`
                       : 'لم يُجرَ'}
                   </span>
                 </div>
                 <h4 className="font-bold text-slate-900 text-sm mb-1">الطلاقة والفهم القرائي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
-                    ? (studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true)
-                      ? 'لم تتوفر بيانات صوتية صالحة؛ سرعة القراءة الجهرية غير متاحة.'
-                      : typeof studentData.reading.wcpm === 'number'
-                      ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص؛ ${studentData.reading.teacherVerified === true ? 'راجع المعلم الكلمات.' : 'ما زال التقدير الآلي بحاجة إلى مراجعة.'} لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
+                    ? isOralReading
+                      ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
+                        ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص؛ ${studentData.reading.teacherVerified === true ? 'راجع المعلم الكلمات.' : 'ما زال التقدير الآلي بحاجة إلى مراجعة.'} لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
+                        : 'لم تتوفر بيانات صوتية كافية لاعتماد WCPM لهذه الجلسة.'
                       : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا تقدير لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
@@ -681,21 +681,23 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {studentData.reading?.teacherVerified ? 'الطلاقة الشفوية المعتمدة' : 'الطلاقة الشفوية'}
+                      {isOralReading ? (studentData.reading?.teacherVerified ? 'الطلاقة الشفوية التي راجعها المعلم' : 'الطلاقة الشفوية — تحتاج مراجعة') : 'الطلاقة الشفوية (غير منطبقة)'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
-                      {studentData.reading && typeof studentData.reading.wcpm === 'number'
-                        ? `${studentData.reading.wcpm} WCPM ${studentData.reading.teacherVerified ? '(معتمد من المعلم)' : '(محاذاة آلية)'}`
-                        : studentData.reading
-                        ? 'قراءة صامتة (WPM فقط)'
-                        : 'لم تُقَس'}
+                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
+                        ? `${studentData.reading.wcpm} WCPM ${studentData.reading.teacherVerified ? '(راجعها المعلم)' : '(تقدير آلي أولي)'}`
+                        : studentData.reading && isOralReading
+                          ? 'غير متاح — لا توجد بيانات صوتية كافية'
+                          : studentData.reading
+                            ? 'غير منطبق — قراءة صامتة'
+                            : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {isOralReading ? 'لا تقارن جلسة واحدة مباشرة بدراسة استخدمت متوسط 3 نصوص؛ لا توجد عتبة تشخيصية.' : 'لا تنطبق معايير الطلاقة الجهرية على قراءة صامتة.'}
                     </td>
                     <td className="py-3.5 px-4">
-                      {studentData.reading && typeof studentData.reading.wcpm === 'number'
+                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
                         ? studentData.reading.teacherVerified === true
                           ? <span className="text-slate-700">راجعها المعلم؛ وصف لجلسة واحدة</span>
                           : <span className="text-amber-800">تقدير آلي أولي؛ يحتاج مراجعة</span>
