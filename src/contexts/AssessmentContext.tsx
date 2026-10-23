@@ -12,9 +12,14 @@ const loadSavedAssessment = (): CombinedAssessmentData | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const saved = JSON.parse(raw) as CombinedAssessmentData & { eyeTrackingResults?: unknown };
+    const saved = JSON.parse(raw) as CombinedAssessmentData & {
+      eyeTrackingResults?: unknown;
+      speechResults?: unknown;
+    };
     if (!saved || typeof saved !== 'object') return null;
     delete saved.eyeTrackingResults;
+    // Older versions stored guessed speech-confidence, pause, onset and pitch metrics.
+    if (saved.speechResults) saved.speechResults = null;
     return saved;
   } catch {
     return null;
@@ -43,19 +48,13 @@ export interface SpeechAssessmentResult {
     word: string;
     expected: string;
     recognized: string;
-    correct: boolean;
-    confidence: number;
-    pauseCount: number;
-    hesitationMs: number;
-    pitchVariation: number;
+    transcriptMatchesTarget: boolean;
+    recognitionConfidence: number | null;
   }>;
   summary: {
-    averageConfidence: number;
-    totalPauses: number;
-    wordsNeedingImprovement: number;
-    problematicLetters: string[];
-    diacriticErrors: number;
-    hesitationMs: number;
+    averageRecognitionConfidence: number | null;
+    exactTranscriptMatches: number;
+    transcriptsNeedingReview: number;
   };
 }
 
@@ -219,85 +218,42 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
     if (!Array.isArray(analysisResults) || analysisResults.length === 0) return;
 
     const totalWords = analysisResults.length;
-    const correctWords = analysisResults.filter(r => Boolean(r.isCorrect ?? r.correct)).length;
-
-    const confidenceSum = analysisResults.reduce((sum, r) => {
-      const val = Number(r.acousticConfidence ?? r.confidence ?? r.phoneticSimilarity ?? 80);
-      return sum + (Number.isFinite(val) ? val : 80);
-    }, 0);
-    const averageConfidence = Math.round(confidenceSum / totalWords);
-
-    const totalPauses = analysisResults.reduce((sum, r) => {
-      const val = Number(r.intraWordPauses ?? r.pauseCount ?? 0);
-      return sum + (Number.isFinite(val) ? val : 0);
-    }, 0);
-
-    const wordsNeedingImprovement = totalWords - correctWords;
-
-    // Safely extract problematic letters from actual target words
-    const problematicLetters: string[] = [];
-    analysisResults.forEach(r => {
-      const isWordCorrect = Boolean(r.isCorrect ?? r.correct);
-      const wordText = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '').trim();
-      if (!isWordCorrect && wordText) {
-        const letter = wordText.charAt(0);
-        if (letter && !problematicLetters.includes(letter)) {
-          problematicLetters.push(letter);
-        }
-      }
-    });
-
-    // Safely count diacritic errors without assuming r.word exists
-    const diacriticErrors = analysisResults.filter(r => {
-      const isWordCorrect = Boolean(r.isCorrect ?? r.correct);
-      const wordText = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '');
-      const hasDiacritics =
-        wordText.includes('َ') ||
-        wordText.includes('ُ') ||
-        wordText.includes('ِ') ||
-        wordText.includes('ً') ||
-        wordText.includes('ٌ') ||
-        wordText.includes('ٍ') ||
-        wordText.includes('ّ');
-      return hasDiacritics && !isWordCorrect;
-    }).length;
-
-    const latencySum = analysisResults.reduce((sum, r) => {
-      const val = Number(r.voiceOnsetLatencyMs ?? r.hesitationMs ?? 0);
-      return sum + (Number.isFinite(val) ? val : 0);
-    }, 0);
-    const avgHesitation = Math.round(latencySum / totalWords);
+    const exactTranscriptMatches = analysisResults.filter(
+      (item) => item.exactTranscriptMatch === true
+    ).length;
+    const confidenceValues = analysisResults
+      .map((item) => item.speechRecognitionConfidence)
+      .filter((value): value is number =>
+        typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100
+      );
+    const averageRecognitionConfidence = confidenceValues.length
+      ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length)
+      : null;
 
     const speechResult: SpeechAssessmentResult = {
       studentId: currentAssessment?.studentId || 'student-1',
       studentName: currentAssessment?.studentName || 'الطالب',
       age: currentAssessment?.age || 8,
       date: new Date().toLocaleDateString('ar-SA'),
-      words: analysisResults.map(r => {
-        const target = String(r.targetWord ?? r.word ?? r.expectedWord ?? r.expected ?? '');
-        const recognized = String(r.spokenTranscript ?? r.recognized ?? r.recognizedWord ?? '');
-        const conf = Number(r.acousticConfidence ?? r.confidence ?? r.phoneticSimilarity ?? 80);
-        const pauses = Number(r.intraWordPauses ?? r.pauseCount ?? 0);
-        const latency = Number(r.voiceOnsetLatencyMs ?? r.hesitationMs ?? 0);
-        const pitch = Number(r.f0VariationHz ?? r.pitchVariation ?? 0);
+      words: analysisResults.map((item) => {
+        const target = String(item.targetWord ?? '');
+        const recognized = String(item.spokenTranscript ?? '');
+        const confidence = item.speechRecognitionConfidence;
         return {
           word: target,
           expected: target,
           recognized,
-          correct: Boolean(r.isCorrect ?? r.correct),
-          confidence: Number.isFinite(conf) ? conf : 80,
-          pauseCount: Number.isFinite(pauses) ? pauses : 0,
-          hesitationMs: Number.isFinite(latency) ? latency : 0,
-          pitchVariation: Number.isFinite(pitch) ? pitch : 0,
+          transcriptMatchesTarget: item.exactTranscriptMatch === true,
+          recognitionConfidence:
+            typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= 0 && confidence <= 100
+              ? confidence
+              : null,
         };
       }),
       summary: {
-        averageConfidence,
-        totalPauses,
-        wordsNeedingImprovement,
-        problematicLetters,
-        diacriticErrors,
-        hesitationMs: avgHesitation,
+        averageRecognitionConfidence,
+        exactTranscriptMatches,
+        transcriptsNeedingReview: Math.max(0, totalWords - exactTranscriptMatches),
       },
     };
 
