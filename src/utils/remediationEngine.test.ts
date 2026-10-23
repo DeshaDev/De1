@@ -122,3 +122,20 @@ test('only a teacher-reviewed word present in the curated bank can influence the
   const unmatched = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['كلمة غير مدرجة'], targetsTeacherReviewed: true });
   assert.notEqual(normalizeArabic(unmatched.syllableDrills[0].targetWord), normalizeArabic('كلمة غير مدرجة'));
 });
+
+
+test('every grade band produces a structurally valid curated plan', () => {
+  for (let gradeLevel = 1; gradeLevel <= 6; gradeLevel += 1) {
+    const plan = generateAdaptiveRemediationPlan({
+      studentName: 'طالب تجريبي',
+      gradeLevel,
+      effectiveWords: [],
+      targetsTeacherReviewed: false,
+    });
+    assert.equal(
+      isStructurallyValidRemediationSessionPlan(plan),
+      true,
+      `The curated plan for grade ${gradeLevel} must pass structural validation`,
+    );
+  }
+});
