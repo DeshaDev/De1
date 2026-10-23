@@ -35,6 +35,12 @@ interface WordBreakdownItem {
   meaning: string;
 }
 
+interface TextAdaptationProposal {
+  simplifiedText: string;
+  keyIdea: string;
+  wordBreakdowns: WordBreakdownItem[];
+}
+
 const DEFAULT_ADAPTIVE_TEXT = ARABIC_READING_PASSAGES[0].words.join(' ');
 
 interface AdaptiveReaderViewProps {
@@ -118,6 +124,8 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
 
   // AI Adaptation & TTS state
   const [isAdapting, setIsAdapting] = useState<boolean>(false);
+  const [pendingAdaptation, setPendingAdaptation] = useState<TextAdaptationProposal | null>(null);
+  const [adaptationStatus, setAdaptationStatus] = useState<string>('');
   const [keyIdea, setKeyIdea] = useState<string>(
     'قصة يومية مبسّطة للصف الثاني الابتدائي تدور حول عناية سلمى بالقطة البيضاء في حديقة البيت.'
   );
@@ -243,31 +251,73 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
   const handleRunAIAdaptation = async () => {
     if (!text.trim()) return;
     setIsAdapting(true);
+    setAdaptationStatus('');
     try {
       const res = await authenticatedFetch('/api/ai/adapt-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.adaptation) {
-          if (data.adaptation.simplifiedText) {
-            setText(data.adaptation.simplifiedText);
-          }
-          if (data.adaptation.keyIdea) {
-            setKeyIdea(data.adaptation.keyIdea);
-          }
-          if (Array.isArray(data.adaptation.wordBreakdowns)) {
-            setWordBreakdowns(data.adaptation.wordBreakdowns);
-          }
-        }
+      if (!res.ok) {
+        setAdaptationStatus('تعذّر إعداد اقتراح الآن. احتفظنا بالنص الحالي كما هو.');
+        return;
       }
+      const data = await res.json();
+      const adaptation = data?.adaptation;
+      if (
+        !adaptation ||
+        typeof adaptation.simplifiedText !== 'string' ||
+        !adaptation.simplifiedText.trim()
+      ) {
+        setAdaptationStatus('لم يصل اقتراح نص صالح؛ لم يتغير نص القراءة.');
+        return;
+      }
+
+      const wordBreakdowns = Array.isArray(adaptation.wordBreakdowns)
+        ? adaptation.wordBreakdowns
+            .filter((item: unknown): item is WordBreakdownItem =>
+              Boolean(
+                item &&
+                typeof item === 'object' &&
+                typeof (item as WordBreakdownItem).word === 'string' &&
+                typeof (item as WordBreakdownItem).syllables === 'string' &&
+                typeof (item as WordBreakdownItem).root === 'string' &&
+                typeof (item as WordBreakdownItem).meaning === 'string'
+              )
+            )
+            .slice(0, 4)
+            .map((item: WordBreakdownItem) => ({
+              word: item.word.slice(0, 80),
+              syllables: item.syllables.slice(0, 180),
+              root: item.root.slice(0, 80),
+              meaning: item.meaning.slice(0, 240),
+            }))
+        : [];
+
+      setPendingAdaptation({
+        simplifiedText: adaptation.simplifiedText.slice(0, 20000),
+        keyIdea: typeof adaptation.keyIdea === 'string'
+          ? adaptation.keyIdea.slice(0, 500)
+          : 'لم يتوفر اقتراح للفكرة الرئيسية؛ صغها بعد مراجعة النص.',
+        wordBreakdowns,
+      });
+      setAdaptationStatus('أُعدّ اقتراح للمراجعة فقط؛ لم نستبدل نص القراءة.');
     } catch {
-      // Keeps current breakdown
+      setAdaptationStatus('تعذّر الاتصال بخدمة التبسيط. احتفظنا بالنص الحالي كما هو.');
     } finally {
       setIsAdapting(false);
     }
+  };
+
+  const handleApplyAdaptationProposal = () => {
+    if (!pendingAdaptation) return;
+    setText(pendingAdaptation.simplifiedText);
+    setKeyIdea(pendingAdaptation.keyIdea);
+    setWordBreakdowns(pendingAdaptation.wordBreakdowns);
+    setPendingAdaptation(null);
+    setActiveLineIdx(0);
+    setHighlightedWordIndex(null);
+    setAdaptationStatus('تم تطبيق الاقتراح الذي راجعته. راجع المعنى والمقاطع قبل التدريب مع الطفل.');
   };
 
   const handleSpeakPassage = async () => {
@@ -544,6 +594,10 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   );
                   if (found) {
                     setText(found.words.join(' '));
+                    setWordBreakdowns([]);
+                    setKeyIdea('راجع النص المختار، ثم صغ فكرته الرئيسية أو اطلب اقتراحًا آليًا لمراجعته.');
+                    setPendingAdaptation(null);
+                    setAdaptationStatus('');
                     setActiveLineIdx(0);
                   }
                 }}
@@ -586,13 +640,39 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 <span>
                   {isAdapting
                     ? 'جاري التحليل الصرفي...'
-                    : 'تبسيط النص وتحليل الجذور'}
+                     : 'اقتراح تبسيط للمراجعة'}
                 </span>
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {studioMode === 'reader' && adaptationStatus && (
+        <p role="status" className="mx-6 sm:mx-8 mb-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-700">{adaptationStatus}</p>
+      )}
+
+      {studioMode === 'reader' && pendingAdaptation && (
+        <section className="mx-6 sm:mx-8 mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 space-y-3" aria-labelledby="adaptation-review-heading">
+          <h3 id="adaptation-review-heading" className="font-bold text-amber-950">اقتراح آلي — راجعه قبل استخدامه</h3>
+          <p className="text-xs leading-relaxed text-amber-900">قد يغيّر الاقتراح معنى النص أو يخطئ في الجذر والمقاطع. لا يُرسل اسم الطفل عمدًا، لكن النص الذي أدخلته يُرسل إلى خدمة التوليد عند الطلب؛ تجنّب تضمين أسماء أو بيانات شخصية.</p>
+          <label htmlFor="adaptation-review-text" className="block text-xs font-semibold text-amber-950">النص المقترح (يمكنك تعديله قبل اعتماده)</label>
+          <textarea id="adaptation-review-text" dir="auto" rows={4} value={pendingAdaptation.simplifiedText} onChange={(e) => setPendingAdaptation((prev) => prev ? { ...prev, simplifiedText: e.target.value } : prev)} className="w-full rounded-xl border border-amber-300 bg-white p-3 text-sm leading-relaxed text-slate-900" />
+          <p className="text-xs text-amber-950"><strong>الفكرة المقترحة:</strong> {pendingAdaptation.keyIdea || 'لم تُقترح فكرة رئيسية.'}</p>
+          {pendingAdaptation.wordBreakdowns.length > 0 && (
+            <details className="rounded-xl border border-amber-200 bg-white p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-amber-950">عرض ملاحظات الكلمات المقترحة ({pendingAdaptation.wordBreakdowns.length})</summary>
+              <ul className="mt-2 space-y-2 text-xs text-slate-700">
+                {pendingAdaptation.wordBreakdowns.map((item, idx) => <li key={`${item.word}-${idx}`}><strong>{item.word}</strong> — تقسيم: {item.syllables} — جذر محتمل: {item.root} — معنى مقترح: {item.meaning}</li>)}
+              </ul>
+            </details>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handleApplyAdaptationProposal} className="rounded-xl bg-[#15803D] px-4 py-2 text-xs font-bold text-white hover:bg-[#166534]">استخدام الاقتراح بعد المراجعة</button>
+            <button type="button" onClick={() => setPendingAdaptation(null)} className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-950">تجاهل الاقتراح</button>
+          </div>
+        </section>
+      )}
 
       {/* MODE 1: SMART ADAPTIVE READER & VISUAL COMFORT */}
       {studioMode === 'reader' && (
@@ -710,12 +790,24 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     id="custom-arabic-text"
                     rows={2}
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      setWordBreakdowns([]);
+                      setKeyIdea('راجع النص الحالي وصغ فكرته الرئيسية بعد قراءته.');
+                      setPendingAdaptation(null);
+                      setAdaptationStatus('');
+                    }}
                     className="w-full p-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0284C7]"
                   />
                   <button
                     type="button"
-                    onClick={() => setText(personalizedDefaultText)}
+                    onClick={() => {
+                      setText(personalizedDefaultText);
+                      setWordBreakdowns([]);
+                      setKeyIdea('راجع النص الحالي وصغ فكرته الرئيسية بعد قراءته.');
+                      setPendingAdaptation(null);
+                      setAdaptationStatus('');
+                    }}
                     aria-label="استعادة النص الافتراضي"
                     className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
