@@ -120,7 +120,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.ok(teacherVerifiedWcpm > initialWcpm);
   });
 
-  await t.test('Egyptian Law 151/2020 & Exec Reg 816/2025: validates explicit guardian consent metadata', () => {
+  await t.test('Qatar privacy-law readiness: validates explicit guardian consent metadata', () => {
     const compliantStudent: StudentRecord = {
       ...INITIAL_STUDENTS[0],
       id: 'test-student-compliance-1',
@@ -388,7 +388,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.dialectRegionAr, 'اللهجة الخليجية والسعودية');
   });
 
-  await t.test('Egyptian Law 151/2020 Audio Consent: validates timestamp and rejects missing recordedAt for audio sessions', () => {
+  await t.test('Qatar privacy-law readiness: audio consent requires an explicit timestamp and rejects missing recordedAt', () => {
     const validConsentStudent: StudentRecord = {
       ...INITIAL_STUDENTS[0],
       id: 'test-consent-valid',

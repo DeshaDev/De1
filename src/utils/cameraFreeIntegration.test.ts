@@ -97,7 +97,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     });
 
     assert.ok(report.clinicalSummary.includes('جلسة قراءة وفهم تعليمية'));
-    assert.ok(report.ocularMotorAnalysis.includes('دون كاميرا أو تتبع للعين'));
+    assert.ok(report.ocularMotorAnalysis.includes('لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين'));
     assert.ok(report.interventionExercises.length > 0);
   });
 });
