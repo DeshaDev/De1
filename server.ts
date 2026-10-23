@@ -1219,18 +1219,9 @@ async function startServer() {
       studentName: current.name,
       gradeLevel: current.gradeLevel,
       dialectLabelAr: current.dialectRegionAr || 'العربية الفصحى',
-      gazeCoveragePercent: 0,
-      observedWordCount: 0,
-      totalPassageWordCount: 0,
+      totalPassageWordCount:
+        ARABIC_READING_PASSAGES.find((passage) => passage.id === current.passageId)?.words.length ?? 0,
       wpm: current.wpm,
-      avgFixationMs: 0,
-      regressionRate: 0,
-      regressionCount: 0,
-      blinkCount: 0,
-      blinksPerMinute: 0,
-      visualStrainLabelAr: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين.',
-      calibrationAccuracyPercent: 0,
-      calibrationValidationLabelAr: 'غير منطبق؛ لا توجد معايرة كاميرا في هذا الإصدار.',
       problematicWords: current.problematicWords || [],
       oralReadingAssessed: current.oralReadingAssessed === true,
       oralAccuracyPercent: current.oralAccuracyPercent ?? null,
@@ -1509,15 +1500,12 @@ async function startServer() {
         'avgFixationMs', 'regressionRate', 'gazeCoveragePercent',
         'observedWordCount', 'totalPassageWordCount',
         'calibrationAccuracyPercent', 'calibrationValidationMethod',
-        'blinkCount', 'blinksPerMinute',
+        'blinkCount', 'blinksPerMinute', 'fixations',
       ].filter((key) => Object.prototype.hasOwnProperty.call(body, key));
-      if (
-        rejectedEyeFields.length > 0 ||
-        (Array.isArray(body.fixations) && body.fixations.length > 0)
-      ) {
+      if (rejectedEyeFields.length > 0) {
         res.status(400).json({
           error: 'أرسل بيانات القراءة دون حقول الكاميرا أو تتبع العين القديمة.',
-          rejectedFields: [...rejectedEyeFields, ...(Array.isArray(body.fixations) && body.fixations.length > 0 ? ['fixations'] : [])],
+          rejectedFields: rejectedEyeFields,
         });
         return;
       }
@@ -1565,14 +1553,9 @@ async function startServer() {
           ? Number(gradeLevel)
           : 3,
         dialectLabelAr: 'اللهجة المختارة في الجلسة',
-        gazeCoveragePercent: 0, observedWordCount: 0, totalPassageWordCount: 0,
+        totalPassageWordCount: 0,
         wpm: Math.max(0, Math.round(asFiniteNumber(wpm) ?? 0)),
         comprehensionScore: asFiniteNumber(comprehensionScore),
-        avgFixationMs: 0, regressionRate: 0, regressionCount: 0,
-        blinkCount: 0, blinksPerMinute: 0,
-        visualStrainLabelAr: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين.',
-        calibrationAccuracyPercent: 0,
-        calibrationValidationLabelAr: 'غير منطبق؛ لا توجد معايرة كاميرا في هذا الإصدار.',
         problematicWords: safeWords,
         oralReadingAssessed: oralReadingAssessed === true && assessmentModality === 'voice_only',
         oralAccuracyPercent: asFiniteNumber(oralAccuracyPercent),

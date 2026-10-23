@@ -8,7 +8,6 @@ import {
   parseStrictTrustProxyHops,
   stripArabicPatronymics,
   formatTenantDisplayNameAr,
-  normalizeCalibrationValidationMethod,
   checkAuthFailureLimit,
   recordFailedAuthAttempt,
   getAuthThrottleDelayMs,
@@ -115,20 +114,6 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(formatTenantDisplayNameAr('school_b'), 'مدرسة النخبة الثانية (ب)');
   });
 
-  it('normalizes known calibrationValidationMethod values and never defaults unknown strings to leave-one-point-out', () => {
-    const lopo = normalizeCalibrationValidationMethod('leave-one-point-out');
-    assert.equal(lopo.code, 'leave-one-point-out');
-    assert.equal(lopo.isValidated, true);
-
-    const holdout = normalizeCalibrationValidationMethod('independent-holdout');
-    assert.equal(holdout.code, 'independent-holdout');
-    assert.equal(holdout.isValidated, true);
-
-    const unknown = normalizeCalibrationValidationMethod('weird-unknown-method');
-    assert.equal(unknown.code, 'single-point-unvalidated');
-    assert.equal(unknown.isValidated, false);
-  });
-
   it('accepts only high-diversity 48-character hex access codes and rejects predictable tokens', () => {
     assert.equal(
       isStrongClinicalAccessCode('3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d'),
@@ -213,8 +198,8 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.ok(readingSession.derivedFields);
     assert.equal(readingSession.derivedFields.assessmentModality, 'reading_only');
     assert.equal(readingSession.derivedFields.comprehensionScore, 100);
-    assert.equal(readingSession.derivedFields.calibrationAccuracyPercent, undefined);
-    assert.deepEqual(readingSession.derivedFields.fixations, []);
+    assert.equal('calibrationAccuracyPercent' in readingSession.derivedFields, false);
+    assert.equal('fixations' in readingSession.derivedFields, false);
     assert.equal(readingSession.derivedFields.dyslexiaRiskScore, null);
     assert.equal(readingSession.derivedFields.readingHeuristicIndicator, null);
     assert.equal(readingSession.derivedFields.readingRiskLevel, 'unassessed');
@@ -237,8 +222,8 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     );
     assert.equal(voiceOnlySession.valid, true);
     assert.ok(voiceOnlySession.derivedFields);
-    assert.deepEqual(voiceOnlySession.derivedFields.fixations, []);
-    assert.equal(voiceOnlySession.derivedFields.calibrationAccuracyPercent, undefined);
+    assert.equal('fixations' in voiceOnlySession.derivedFields, false);
+    assert.equal('calibrationAccuracyPercent' in voiceOnlySession.derivedFields, false);
     assert.equal(voiceOnlySession.derivedFields.wpm, 0);
     assert.equal(voiceOnlySession.derivedFields.wcpm, null);
     assert.equal(voiceOnlySession.derivedFields.oralWerPercent, null);

@@ -55,10 +55,6 @@ export interface StudentAssessmentSnapshot {
   wcpm?: number | null;
   teacherVerified?: boolean;
   wpm: number;
-  /** @deprecated Legacy snapshots may contain camera metrics; new sessions never collect these fields. */
-  avgFixationMs?: number;
-  /** @deprecated Legacy snapshots may contain camera metrics; new sessions never collect these fields. */
-  regressionRate?: number;
   comprehensionScore: number;
   problematicWords: string[];
   dyslexiaRiskScore: number | null;
@@ -948,7 +944,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
         {
           title: 'تفكيك الكلمات الطويلة بالمقاطع الملونة',
           durationMinutes: 12,
-          description: 'استخدام القارئ الميسّر لتقسيم الكلمات متعددة المقاطع (مثل مُـ · لَا · حَـ · ظَا · تِـ · هِمْ) مع التتبع البصري الإيقاعي.',
+          description: 'استخدام القارئ الميسّر لتقسيم الكلمات متعددة المقاطع (مثل مُـ · لَا · حَـ · ظَا · تِـ · هِمْ) مع إبراز الكلمات بإيقاع بصري.',
         },
         {
           title: 'تدريب خط الأعداد المكاني الملموس (0 - 100)',

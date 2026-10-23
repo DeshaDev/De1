@@ -1,11 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  calculateEyeTrackingMetrics,
   calculateDyscalculiaMetrics,
   segmentArabicWordIntoSyllables,
   getConfusableLetterGroup,
-  WordFixation,
 } from './clinicalMetrics.ts';
 import {
   issueClinicalSessionToken,
@@ -13,47 +11,6 @@ import {
   authorizeSessionScope,
   validateExplicitGuardianConsent,
 } from './clinicalSecurity.ts';
-
-test('calculateEyeTrackingMetrics reports observed reading/gaze values without classifying dyslexia risk', () => {
-  const fixations = [
-    { wordIndex: 0, word: 'يَقرَأُ', durationMs: 520, visits: 3, regressedFromIndex: 2 },
-    { wordIndex: 1, word: 'الطَّالِبُ', durationMs: 490, visits: 2, regressedFromIndex: 3 },
-    { wordIndex: 2, word: 'النَّصَّ', durationMs: 460, visits: 2 },
-    { wordIndex: 3, word: 'بِتَركِيزٍ', durationMs: 580, visits: 3, regressedFromIndex: 4 },
-    { wordIndex: 4, word: 'عَالٍ.', durationMs: 410, visits: 1 },
-  ];
-
-  // A short set of observations can produce descriptive measures, not a diagnostic estimate.
-  const result = calculateEyeTrackingMetrics(fixations, 12, 3);
-
-  assert.equal(result.wpm, 25);
-  assert.ok(result.regressionCount >= 5);
-  assert.equal(result.riskLevel, 'unassessed');
-  assert.equal(result.dyslexiaRiskScore, null);
-  assert.equal(result.heuristicIndicator, null);
-  assert.ok(result.problematicWords.includes('يَقرَأُ'));
-  assert.ok(result.problematicWords.includes('بِتَركِيزٍ'));
-});
-
-test('calculateEyeTrackingMetrics does not turn low regression counts into a normal-risk label', () => {
-  const fixations = [
-    { wordIndex: 0, word: 'تُشْرِقُ', durationMs: 210, visits: 1 },
-    { wordIndex: 1, word: 'الشَّمْسُ', durationMs: 195, visits: 1 },
-    { wordIndex: 2, word: 'صَبَاحاً', durationMs: 220, visits: 1 },
-    { wordIndex: 3, word: 'فَتَمْلَأُ', durationMs: 230, visits: 1 },
-    { wordIndex: 4, word: 'الأُفُقَ', durationMs: 205, visits: 1 },
-    { wordIndex: 5, word: 'نُوراً.', durationMs: 190, visits: 1 },
-  ];
-
-  // 6 words in 3.8 seconds = ~95 WPM
-  const result = calculateEyeTrackingMetrics(fixations, 3.8, 3);
-
-  assert.ok(result.wpm >= 90);
-  assert.equal(result.regressionCount, 0);
-  assert.equal(result.riskLevel, 'unassessed');
-  assert.equal(result.dyslexiaRiskScore, null);
-  assert.equal(result.heuristicIndicator, null);
-});
 
 test('calculateDyscalculiaMetrics reports measured task observations without inventing a risk classification', () => {
   const subitizing = [
@@ -112,86 +69,6 @@ test('getConfusableLetterGroup identifies homographic Arabic letter families', (
   assert.equal(getConfusableLetterGroup('خُ'), 'jeem_group');
   assert.equal(getConfusableLetterGroup('ض'), 'seen_group');
   assert.equal(getConfusableLetterGroup('م'), 'none');
-});
-
-test('calculateEyeTrackingMetrics rejects unobserved 0ms words and flags insufficient gaze coverage instead of fabricating 190ms defaults', () => {
-  const sparseFixations: WordFixation[] = [
-    { wordIndex: 0, word: 'زار', durationMs: 240, visits: 1, observed: true },
-    { wordIndex: 1, word: 'طلاب', durationMs: 260, visits: 1, observed: true },
-    { wordIndex: 2, word: 'المدرسة', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 3, word: 'المرصد', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 4, word: 'الفلكي', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 5, word: 'مساء', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 6, word: 'صاف', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 7, word: 'لمشاهدة', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 8, word: 'الكواكب', durationMs: 0, visits: 0, observed: false },
-    { wordIndex: 9, word: 'المضيئة', durationMs: 0, visits: 0, observed: false },
-  ];
-
-  const metrics = calculateEyeTrackingMetrics(sparseFixations, 15, 4);
-  assert.equal(metrics.observedWordCount, 2);
-  assert.equal(metrics.totalPassageWordCount, 10);
-  assert.equal(metrics.gazeCoveragePercent, 20);
-  assert.equal(metrics.isSufficientGazeData, false);
-  // Average fixation must be computed ONLY from the 2 observed words ((240+260)/2 = 250ms), not diluted by 0ms or 190ms
-  assert.equal(metrics.avgFixationMs, 250);
-});
-
-test('calculateEyeTrackingMetrics integrates oral reading phonetic substitutions while exempting Arabic dialect variants', () => {
-  const normalGaze: WordFixation[] = [
-    { wordIndex: 0, word: 'زار', durationMs: 210, visits: 1, observed: true },
-    { wordIndex: 1, word: 'طلاب', durationMs: 220, visits: 1, observed: true },
-    { wordIndex: 2, word: 'المدرسة', durationMs: 230, visits: 1, observed: true },
-    { wordIndex: 3, word: 'المرصد', durationMs: 215, visits: 1, observed: true },
-    { wordIndex: 4, word: 'الفلكي', durationMs: 225, visits: 1, observed: true },
-  ];
-
-  // Dialect annotations remain available as observations; no risk score is produced.
-  const withDialectOnly = calculateEyeTrackingMetrics(
-    normalGaze,
-    4,
-    4,
-    undefined,
-    undefined,
-    {
-      assessed: true,
-      wcpm: 75,
-      accuracyPercent: 100,
-      werPercent: 0,
-      phoneticSubstitutionCount: 0,
-      omissionCount: 0,
-      dialectVariantCount: 3,
-      misreadWords: [],
-    }
-  );
-  assert.equal(withDialectOnly.riskLevel, 'unassessed');
-  assert.equal(withDialectOnly.dyslexiaRiskScore, null);
-  assert.equal(withDialectOnly.dialectVariantCount, 3);
-
-  // Potential transcript errors are carried forward for human review, not converted to a dyslexia-risk score.
-  const withPhoneticErrors = calculateEyeTrackingMetrics(
-    normalGaze,
-    4,
-    4,
-    undefined,
-    undefined,
-    {
-      assessed: true,
-      wcpm: 42,
-      accuracyPercent: 55,
-      werPercent: 45,
-      phoneticSubstitutionCount: 3,
-      omissionCount: 2,
-      dialectVariantCount: 1,
-      misreadWords: ['طلاب (نُطقت: تلاب)', 'المنظار (نُطقت: المنضار)'],
-    }
-  );
-  assert.equal(withPhoneticErrors.heuristicIndicator, null);
-  assert.equal(withPhoneticErrors.riskLevel, 'unassessed');
-  assert.ok(
-    withPhoneticErrors.problematicWords.some((w) => w.includes('تلاب')),
-    'Phonetic error words must be merged into problematicWords'
-  );
 });
 
 test('calculateDyscalculiaMetrics normalizes PAE by scale range (scaleMax - scaleMin) per Siegler & Booth (2004)', () => {

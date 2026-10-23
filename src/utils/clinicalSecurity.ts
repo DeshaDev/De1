@@ -6,12 +6,10 @@ import {
   StudentMathTrialsPayload,
 } from '../data/seedData';
 import {
-  WordFixation,
   OralReadingIntegrationInput,
   SubitizingTrialResult,
   NumberLineTrialResult,
   TranscodingTrialResult,
-  calculateEyeTrackingMetrics,
   calculateDyscalculiaMetrics,
 } from './clinicalMetrics';
 import {
@@ -113,61 +111,6 @@ export function parseStrictTrustProxyHops(raw: string | undefined): number {
   return parsed;
 }
 
-/**
- * Strictly normalizes calibrationValidationMethod without ever defaulting unknown strings to 'leave-one-point-out'.
- */
-export function normalizeCalibrationValidationMethod(
-  rawMethod: unknown,
-  isManualOrNoCamera = false
-): {
-  code:
-    | 'independent-holdout'
-    | 'leave-one-point-out'
-    | 'single-point-unvalidated';
-  labelAr: string;
-  isValidated: boolean;
-} {
-  if (isManualOrNoCamera) {
-    return {
-      code: 'single-point-unvalidated',
-      labelAr:
-        'وضع محاكاة يدوية بالماوس (بدون كاميرا — لا توجد بيانات نظر من الكاميرا)',
-      isValidated: false,
-    };
-  }
-  if (typeof rawMethod === 'string') {
-    const trimmed = rawMethod.trim();
-    if (
-      trimmed === 'independent-holdout' ||
-      trimmed === 'تحقق مستقل (Independent Holdout)'
-    ) {
-      return {
-        code: 'independent-holdout',
-        labelAr: 'تحقق مستقل (Independent Holdout)',
-        isValidated: true,
-      };
-    }
-    if (
-      trimmed === 'leave-one-point-out' ||
-      trimmed === 'تحقق متقاطع (Leave-One-Point-Out CV)'
-    ) {
-      return {
-        code: 'leave-one-point-out',
-        labelAr: 'تحقق متقاطع (Leave-One-Point-Out CV)',
-        isValidated: true,
-      };
-    }
-  }
-  return {
-    code: 'single-point-unvalidated',
-    labelAr: 'غير مُتحقَّق منه (معايرة غير مكتملة أو طريقة غير معروفة)',
-    isValidated: false,
-  };
-}
-
-/**
- * Issues a cryptographically signed HMAC-SHA256 session token for an authenticated clinician or educator.
- */
 export function issueClinicalSessionToken(
   role: ClinicalRole,
   clinicianName: string,
@@ -881,19 +824,9 @@ export function buildDeterministicClinicalReport(params: {
   studentName: string;
   gradeLevel: number;
   dialectLabelAr: string;
-  gazeCoveragePercent: number;
-  observedWordCount: number;
   totalPassageWordCount: number;
   wpm: number;
   comprehensionScore?: number | null;
-  avgFixationMs: number;
-  regressionRate: number;
-  regressionCount: number;
-  blinkCount: number;
-  blinksPerMinute: number;
-  visualStrainLabelAr: string;
-  calibrationAccuracyPercent: number;
-  calibrationValidationLabelAr: string;
   problematicWords: string[];
   oralReadingAssessed: boolean;
   oralAccuracyPercent: number | null;
@@ -1038,18 +971,7 @@ export interface DerivedSessionEvidenceResult {
     dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
     dialectRegionAr: string;
     wpm: number;
-    avgFixationMs: number;
-    regressionRate: number;
-    regressionCount: number;
-    blinkCount: number;
-    blinksPerMinute: number;
-    visualStrainLevel: 'unassessed';
-    visualStrainLabelAr: string;
-    gazeCoveragePercent: number;
-    observedWordCount: number;
-    totalPassageWordCount: number;
     calibrationAccuracyPercent?: number;
-    calibrationValidationMethod: string;
     oralReadingAssessed: boolean;
     spokenTranscript: string;
     wcpm?: number | null;
@@ -1074,7 +996,6 @@ export interface DerivedSessionEvidenceResult {
     readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
     readingRiskLabelAr: string;
     problematicWords: string[];
-    fixations: WordFixation[];
     assessmentModality?: 'voice_only' | 'reading_only';
     dyscalculiaAssessed: boolean;
     mathTrials?: StudentMathTrialsPayload;
@@ -1141,22 +1062,17 @@ export function validateAndDeriveSessionFromEvidence(
   const legacyEyeFields = [
     'calibrationAccuracyPercent', 'calibrationValidationMethod',
     'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
-    'avgFixationMs', 'regressionRate', 'regressionCount', 'blinksPerMinute',
-    'visualStrainLabelAr',
+    'avgFixationMs', 'regressionRate', 'regressionCount', 'blinkCount',
+    'blinksPerMinute', 'visualStrainLabelAr', 'fixations',
   ];
   const hasLegacyEyeMetrics = legacyEyeFields.some((key) =>
     Object.prototype.hasOwnProperty.call(evidenceObj, key) ||
     Object.prototype.hasOwnProperty.call(rawBody, key)
   );
-  const hasObservedFixations =
-    (Array.isArray(evidenceObj.fixations) && evidenceObj.fixations.length > 0) ||
-    (Array.isArray(rawBody.fixations) && rawBody.fixations.length > 0);
-  const reportedBlinks = Number(evidenceObj.blinkCount ?? rawBody.blinkCount ?? 0);
   if (
     rawModality === 'eye_voice' ||
     (rawModality !== '' && rawModality !== 'voice_only' && rawModality !== 'reading_only') ||
-    hasLegacyEyeMetrics || hasObservedFixations ||
-    (Number.isFinite(reportedBlinks) && reportedBlinks > 0)
+    hasLegacyEyeMetrics
   ) {
     return {
       valid: false,
@@ -1167,176 +1083,8 @@ export function validateAndDeriveSessionFromEvidence(
   const assessmentModality: 'voice_only' | 'reading_only' =
     rawModality === 'voice_only' ? 'voice_only' : 'reading_only';
   const isVoiceOnlyModality = assessmentModality === 'voice_only';
-  const isReadingOnlyModality = assessmentModality === 'reading_only';
-  const isNoEyeModality = true;
-
-  let calibrationAccuracyPercent: number | undefined = undefined;
-  let normalizedCalMethod = {
-    isValidated: false,
-    labelAr: isReadingOnlyModality
-      ? 'غير منطبق (جلسة قراءة وفهم مباشرة بدون كاميرا)'
-      : (isVoiceOnlyModality ? 'غير منطبق (جلسة صوتية)' : 'معايرة عين'),
-    normalizedMethod: isReadingOnlyModality
-      ? ('standardized-passage-orf' as const)
-      : ('voice-first-orf' as const),
-  };
-
-  if (!isNoEyeModality) {
-    const rawCalib = Number(
-      evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent
-    );
-    if (
-      !Number.isFinite(rawCalib) ||
-      rawCalib < 70 ||
-      rawCalib > 100
-    ) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr:
-          'دقة التحقق من معايرة الكاميرا أقل من الحد الأدنى المطلوب (70%) أو خارج النطاق (70–100%).',
-      };
-    }
-    calibrationAccuracyPercent = rawCalib;
-
-    const rawCalMethod =
-      evidenceObj.calibrationValidationMethod ??
-      rawBody.calibrationValidationMethod ??
-      'independent-holdout';
-    const normCal = normalizeCalibrationValidationMethod(
-      rawCalMethod,
-      false
-    );
-    if (!normCal.isValidated) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr:
-          'طريقة التحقق من المعايرة غير صالحة أو غير مكتملة؛ يلزم تحقق مستقل (independent-holdout) أو تقاطعي (leave-one-point-out).',
-      };
-    }
-    normalizedCalMethod = {
-      isValidated: normCal.isValidated,
-      labelAr: normCal.labelAr,
-      normalizedMethod: normCal.code as any,
-    };
-  }
-
-  // 3. Validate Fixations Array & Plausibility against Passage and Reading Duration
-  const rawFixations = evidenceObj.fixations ?? rawBody.fixations;
-  const seenWordIndices = new Set<number>();
-  const validatedFixations: WordFixation[] = [];
-  let totalObservedFixationMs = 0;
-  let wordBlinksSum = 0;
-
-  if (isNoEyeModality && (!Array.isArray(rawFixations) || rawFixations.length === 0)) {
-    // Camera-free modality without raw fixations: do NOT fabricate synthetic fixations.
-    // Genuinely return empty fixations array and zero ocular duration.
-  } else {
-    if (!Array.isArray(rawFixations) || rawFixations.length === 0) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr: 'أدلة التثبيت البصري (fixations) مطلوبة ولا يمكن أن تكون فارغة للجلسات المعتمدة على العين.',
-      };
-    }
-
-  for (const item of rawFixations) {
-    if (!item || typeof item !== 'object') {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr: 'عنصر تثبيت بصري غير صالح.',
-      };
-    }
-    const f = item as Record<string, unknown>;
-    const wordIndex = Number(f.wordIndex);
-    const durationMs = Number(f.durationMs);
-    const visits = Number(f.visits);
-    const blinks = f.blinks === undefined ? 0 : Number(f.blinks);
-    const observed = f.observed !== false && durationMs > 0 && visits > 0;
-
-    if (
-      !Number.isInteger(wordIndex) ||
-      wordIndex < 0 ||
-      wordIndex >= passage.words.length ||
-      seenWordIndices.has(wordIndex)
-    ) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr: `فهرس الكلمة (${String(f.wordIndex)}) خارج حدود النص أو مكرر.`,
-      };
-    }
-    seenWordIndices.add(wordIndex);
-
-    if (!observed) {
-      continue;
-    }
-
-    if (
-      !Number.isFinite(durationMs) ||
-      durationMs < 40 ||
-      durationMs > 10_000 ||
-      !Number.isInteger(visits) ||
-      visits < 1 ||
-      visits > 50 ||
-      !Number.isInteger(blinks) ||
-      blinks < 0 ||
-      blinks > 25
-    ) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr:
-          'قيم زمن التثبيت أو عدد الزيارات أو الرمشات للكلمة خارج الحدود الفيزيائية المعقولة.',
-      };
-    }
-
-    let regressedFromIndex: number | undefined;
-    if (
-      f.regressedFromIndex !== undefined &&
-      f.regressedFromIndex !== null
-    ) {
-      const regIdx = Number(f.regressedFromIndex);
-      if (
-        !Number.isInteger(regIdx) ||
-        regIdx < 0 ||
-        regIdx >= passage.words.length
-      ) {
-        return {
-          valid: false,
-          statusCode: 400,
-          errorAr: 'فهرس التراجع البصري (regressedFromIndex) غير صالح.',
-        };
-      }
-      regressedFromIndex = regIdx;
-    }
-
-    totalObservedFixationMs += Math.round(durationMs);
-    wordBlinksSum += blinks;
-    validatedFixations.push({
-      wordIndex,
-      word: passage.words[wordIndex],
-      durationMs: Math.round(durationMs),
-      visits,
-      regressedFromIndex,
-      blinks,
-      observed: true,
-    });
-  }
-
-  if (!isNoEyeModality) {
-    const minRequiredWords = Math.max(4, Math.ceil(passage.words.length * 0.25));
-    if (validatedFixations.length < minRequiredWords) {
-      return {
-        valid: false,
-        statusCode: 422,
-        errorAr: `تغطية تتبع العين غير كافية: رُصدت ${validatedFixations.length} كلمات من أصل ${passage.words.length} (الحد الأدنى ${minRequiredWords} كلمات / 25%).`,
-      };
-    }
-  }
-  }
+  
+  // Camera and eye-tracking metrics are not part of the product or accepted session evidence.
 
   // 4. Reading Duration & Total Fixation Sum Plausibility Check
   const rawDuration =
@@ -1356,44 +1104,13 @@ export function validateAndDeriveSessionFromEvidence(
   }
 
   // Abuse/plausibility ceiling, not a clinical norm: reject implausible reported pace.
-  const wordCountForPace = validatedFixations.length > 0 ? validatedFixations.length : passage.words.length;
+  const wordCountForPace = passage.words.length;
   const observedReadingWpm = (wordCountForPace * 60) / readingDurationSeconds;
   if (observedReadingWpm > 300) {
     return {
       valid: false,
       statusCode: 400,
       errorAr: `سرعة القراءة المستنتجة (${Math.round(observedReadingWpm)} كلمة/دقيقة) تتجاوز حد المعقولية التقني (300 كلمة/دقيقة).`,
-    };
-  }
-
-  if (totalObservedFixationMs > 0 && totalObservedFixationMs > readingDurationSeconds * 1000) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr: `بيانات غير معقولة فيزيائياً: مجموع أزمنة التثبيت البصري (${(totalObservedFixationMs / 1000).toFixed(1)} ثانية) يتجاوز مدة القراءة الكلية (${readingDurationSeconds} ثانية).`,
-    };
-  }
-
-  // 5. Blink Count & Physiological Blink Rate Ceiling (<= 120 blinks/min)
-  const rawBlinkCount =
-    evidenceObj.blinkCount ?? rawBody.blinkCount ?? (isNoEyeModality ? 0 : wordBlinksSum);
-  const blinkCount = Number(rawBlinkCount);
-  if (!Number.isInteger(blinkCount) || blinkCount < 0) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr: 'عدد الرمشات (blinkCount) يجب أن يكون عدداً صحيحاً غير سالب.',
-    };
-  }
-  const effectiveBlinkCount = Math.max(blinkCount, wordBlinksSum);
-  const computedBlinksPerMinute = Math.round(
-    (effectiveBlinkCount / readingDurationSeconds) * 60
-  );
-  if (computedBlinksPerMinute > 120) {
-    return {
-      valid: false,
-      statusCode: 400,
-      errorAr: `معدل الرمش المُبلَّغ به (${computedBlinksPerMinute} رمشة/دقيقة) يتجاوز السقف الفسيولوجي المعقول (120 رمشة/دقيقة).`,
     };
   }
 
@@ -1553,18 +1270,6 @@ export function validateAndDeriveSessionFromEvidence(
         }
       : null;
 
-  // 8. Server-Side Eye-Tracking & Reading Risk Derivation
-  const eyeMetrics = !isNoEyeModality && validatedFixations.length > 0
-    ? calculateEyeTrackingMetrics(
-        validatedFixations,
-        readingDurationSeconds,
-        studentMeta.gradeLevel,
-        effectiveBlinkCount,
-        passage.words.length,
-        oralIntegration
-      )
-    : null;
-
   // 9. Optional Math Trials Validation & Derivation
   const rawMathTrials = evidenceObj.mathTrials ?? rawBody.mathTrials ?? null;
   let dyscalculiaAssessed = false;
@@ -1606,9 +1311,7 @@ export function validateAndDeriveSessionFromEvidence(
   // For oral reading: rate of words actually attempted/spoken by the child
   // For silent reading: rate of completing the reference passage
   let derivedWpm = 0;
-  if (eyeMetrics) {
-    derivedWpm = eyeMetrics.wpm;
-  } else if (isTeacherVerified && validatedTeacherAlignment) {
+  if (isTeacherVerified && validatedTeacherAlignment) {
     const durationMin = Math.max(0.05, readingDurationSeconds / 60);
     const attemptedWords = teacherCorrectWordsCount + teacherDialectVariantCount + teacherSubstitutionCount;
     derivedWpm = Math.round((attemptedWords / durationMin));
@@ -1628,39 +1331,20 @@ export function validateAndDeriveSessionFromEvidence(
   const derivedDyslexiaRiskScore: number | null = null;
   const derivedReadingHeuristic: number | null = null;
   const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
-  const derivedReadingRiskLabelAr = eyeMetrics
-    ? 'قياسات بصرية وصفية فقط؛ لم تُعتمد حدود خطر أو درجات معيارية.'
-    : isTeacherVerified
-      ? 'الطلاقة الشفوية راجعها المعلّم؛ لا توجد درجة خطر معيارية.'
-      : oralIntegration
-        ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
-        : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
+  const derivedReadingRiskLabelAr = isTeacherVerified
+    ? 'الطلاقة الشفوية راجعها المعلّم؛ لا توجد درجة خطر معيارية.'
+    : oralIntegration
+      ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
+      : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
   const clinicalReport = buildDeterministicClinicalReport({
     studentName: studentMeta.name,
     gradeLevel: studentMeta.gradeLevel,
     dialectLabelAr: dialectRegionAr,
-    gazeCoveragePercent: eyeMetrics ? eyeMetrics.gazeCoveragePercent : 0,
-    observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
     totalPassageWordCount: passage.words.length,
     wpm: derivedWpm,
     comprehensionScore,
-    avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
-    regressionRate: eyeMetrics ? eyeMetrics.regressionRate : 0,
-    regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
-    blinkCount: eyeMetrics ? eyeMetrics.blinkCount : 0,
-    blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
-    visualStrainLabelAr: eyeMetrics
-      ? eyeMetrics.visualStrainLabelAr
-      : (isReadingOnlyModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'غير منطبق (جلسة صوتية)'),
-    calibrationAccuracyPercent:
-      calibrationAccuracyPercent !== undefined
-        ? Math.round(calibrationAccuracyPercent)
-        : 0,
-    calibrationValidationLabelAr: normalizedCalMethod.labelAr,
-    problematicWords: eyeMetrics
-      ? eyeMetrics.problematicWords
-      : (oralIntegration?.misreadWords || []),
+    problematicWords: oralIntegration?.misreadWords || [],
     oralReadingAssessed,
     oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
     phoneticSubstitutionCount: oralIntegration?.phoneticSubstitutionCount ?? 0,
@@ -1683,23 +1367,6 @@ export function validateAndDeriveSessionFromEvidence(
       dialectCode: dialectProfile.code,
       dialectRegionAr,
       wpm: derivedWpm,
-      avgFixationMs: eyeMetrics ? eyeMetrics.avgFixationMs : 0,
-      regressionRate: eyeMetrics ? eyeMetrics.regressionRate : 0,
-      regressionCount: eyeMetrics ? eyeMetrics.regressionCount : 0,
-      blinkCount: eyeMetrics ? eyeMetrics.blinkCount : 0,
-      blinksPerMinute: eyeMetrics ? eyeMetrics.blinksPerMinute : 0,
-      visualStrainLevel: 'unassessed',
-      visualStrainLabelAr: eyeMetrics
-        ? eyeMetrics.visualStrainLabelAr
-        : (isReadingOnlyModality ? 'غير منطبق (جلسة قراءة بدون كاميرا)' : 'غير منطبق (جلسة صوتية)'),
-      gazeCoveragePercent: eyeMetrics ? eyeMetrics.gazeCoveragePercent : 0,
-      observedWordCount: eyeMetrics ? eyeMetrics.observedWordCount : 0,
-      totalPassageWordCount: passage.words.length,
-      calibrationAccuracyPercent:
-        calibrationAccuracyPercent !== undefined
-          ? Math.round(calibrationAccuracyPercent)
-          : undefined,
-      calibrationValidationMethod: normalizedCalMethod.labelAr,
       oralReadingAssessed,
       spokenTranscript: oralReadingAssessed ? spokenTranscript : '',
       wcpm: oralIntegration?.wcpm ?? null,
@@ -1724,10 +1391,7 @@ export function validateAndDeriveSessionFromEvidence(
       readingHeuristicIndicator: derivedReadingHeuristic,
       readingRiskLevel: derivedReadingRiskLevel,
       readingRiskLabelAr: derivedReadingRiskLabelAr,
-      problematicWords: eyeMetrics
-        ? eyeMetrics.problematicWords
-        : (oralIntegration?.misreadWords || []),
-      fixations: validatedFixations,
+      problematicWords: oralIntegration?.misreadWords || [],
       dyscalculiaAssessed,
       mathTrials,
       subitizingAccuracy,

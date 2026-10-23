@@ -132,7 +132,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       guardianConsentGiven: true,
       guardianConsentPeriod: 'عام دراسي 2026/2027',
       guardianConsentRecordedAt: new Date().toISOString(),
-      guardianConsentSource: 'نموذج موافقة إلكتروني موثق - المادة 15',
+      guardianConsentSource: 'موافقة صريحة موثقة من ولي الأمر وفق المتطلبات القطرية',
       guardianAudioConsentGiven: true,
       audioRecordingConsentGiven: true,
       assessmentModality: 'reading_only',
@@ -162,8 +162,6 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       assessmentModality: 'reading_only',
       readingDurationSeconds: 45,
       comprehensionAnswers: [0, 1, 2, 0],
-      fixations: [],
-      blinkCount: 0,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: new Date().toISOString(),
       guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
@@ -177,8 +175,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.valid, true);
     assert.ok(derived.derivedFields);
     assert.equal(derived.derivedFields.assessmentModality, 'reading_only');
-    assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
-    assert.equal(derived.derivedFields.fixations.length, 0);
+    assert.equal('calibrationAccuracyPercent' in derived.derivedFields, false);
+    assert.equal('fixations' in derived.derivedFields, false);
     assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
     assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
     assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
@@ -191,8 +189,6 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       assessmentModality: 'voice_only',
       readingDurationSeconds: 45,
       comprehensionAnswers: [0, 1, 2, 0],
-      fixations: [],
-      blinkCount: 0,
       oralReadingAssessed: true,
       spokenTranscript: '',
       guardianConsentGiven: true,

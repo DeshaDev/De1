@@ -15,8 +15,6 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
       assessmentModality: 'reading_only',
       readingDurationSeconds: 45,
       comprehensionAnswers: [0, 1, 2, 0],
-      fixations: [],
-      blinkCount: 0,
       dialectRegionAr: 'الفصحى المعيارية / الخليجية',
       guardianConsentGiven: true,
       guardianConsentRecordedAt: new Date().toISOString(),
@@ -35,8 +33,8 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.equal(derived.derivedFields.readingDurationSeconds, 45);
     // 52 words in 45 sec = ~69 WPM
     assert.equal(derived.derivedFields.wpm, Math.round((passage.words.length / 45) * 60));
-    assert.equal(derived.derivedFields.calibrationAccuracyPercent, undefined);
-    assert.equal(derived.derivedFields.fixations.length, 0);
+    assert.equal('calibrationAccuracyPercent' in derived.derivedFields, false);
+    assert.equal('fixations' in derived.derivedFields, false);
     assert.equal(typeof derived.derivedFields.comprehensionScore, 'number');
     assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
     assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
@@ -54,7 +52,6 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
       assessmentModality: 'reading_only',
       readingDurationSeconds: 5, // 52 words in 5 sec = 624 WPM -> implausible!
       comprehensionAnswers: [0, 1, 2, 0],
-      fixations: [],
     };
 
     const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
@@ -72,18 +69,8 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
       studentName: 'فيصل العتيبي',
       gradeLevel: 4,
       dialectLabelAr: 'الخليجية',
-      gazeCoveragePercent: 0,
-      observedWordCount: 0,
       totalPassageWordCount: 57,
       wpm: 75,
-      avgFixationMs: 0,
-      regressionRate: 0,
-      regressionCount: 0,
-      blinkCount: 0,
-      blinksPerMinute: 0,
-      visualStrainLabelAr: 'غير منطبق (جلسة قراءة بدون كاميرا)',
-      calibrationAccuracyPercent: 0,
-      calibrationValidationLabelAr: 'غير منطبق',
       problematicWords: [],
       oralReadingAssessed: false,
       oralAccuracyPercent: null,
