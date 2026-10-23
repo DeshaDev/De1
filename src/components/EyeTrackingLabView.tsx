@@ -150,6 +150,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     return sentences.length > 0 ? sentences : [text];
   }, [passage]);
 
+  // Match the server's technical ceiling so an incomplete, implausibly fast session
+  // cannot be stored as if the entire reference passage had been read.
+  const minimumReadingDurationSeconds = Math.ceil((passage.words.length * 60) / 300);
+
   // Scroll/focus before the browser paints the reading stage, so the child sees the passage
   // immediately instead of a flash of the previous header/footer position.
   useLayoutEffect(() => {
@@ -936,7 +940,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="mt-10 pt-6 border-t border-slate-200 flex flex-col items-center justify-center">
               <button
                 onClick={handleFinishReading}
-                disabled={!isReadingActive || readingSeconds < 4}
+                disabled={!isReadingActive || readingSeconds < minimumReadingDurationSeconds}
                 className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-2xl py-5 px-16 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 cursor-pointer flex items-center gap-4"
               >
                 <span>
@@ -947,7 +951,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 <ChevronLeft className="w-8 h-8" />
               </button>
               <p className="text-slate-500 text-xs mt-3 text-center">
-                أكمل النص كاملًا ثم اضغط؛ لا يتاح إنهاء الجلسة قبل مرور 4 ثوانٍ كحدّ تقني أدنى.
+                اقرأ النص كاملًا وبهدوء؛ لن يتاح إنهاء الجلسة إلا بعد مرور وقت كافٍ لحفظ قياسها بصورة سليمة.
               </p>
             </div>
           </div>
