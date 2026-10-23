@@ -81,7 +81,7 @@ npm run build
 
 The production build generates a browser bundle in `dist/` and a bundled Node.js server entry point at `server.js`. Run `npm run build` before `npm start`, or use the supplied multi-stage Dockerfile. Production deployment must configure unique access-code, session-signing, and storage-encryption secrets.
 
-This repository grants no public reuse license. The notice in `LICENSE` does not itself prove ownership; contributor assignments and third-party dependency and asset licenses must be reviewed before investment or commercial distribution.
+This repository grants no public reuse license. The notice in `LICENSE` does not itself prove ownership; contributor assignments and third-party dependency and asset licenses must be reviewed before investment or commercial distribution. See [`docs/IP_OWNERSHIP_CHECKLIST.md`](docs/IP_OWNERSHIP_CHECKLIST.md) for the required due-diligence checklist.
 
 Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.
 
@@ -101,4 +101,4 @@ npm run e2e
 
 ## نشر نسخة تجريبية
 
-أُضيف إعداد نشر اختياري على Render في [`render.yaml`](../render.yaml) مع تعليمات عربية في [`docs/DEPLOY_RENDER_AR.md`](docs/DEPLOY_RENDER_AR.md). لم تُنشر نسخة عامة بعد؛ لا يتكون رابط حي إلا بعد تفعيل Blueprint داخل حساب استضافة وإدخال أسرار المصادقة والتشفير. إعداد النشر يستخدم بيانات اختبار اصطناعية فقط إلى أن تكتمل مراجعة الخصوصية والموافقات.
+أُضيف إعداد نشر اختياري على Render في [`render.yaml`](render.yaml) مع تعليمات عربية في [`docs/DEPLOY_RENDER_AR.md`](docs/DEPLOY_RENDER_AR.md). لم تُنشر نسخة عامة بعد؛ لا يتكون رابط حي إلا بعد تفعيل Blueprint داخل حساب استضافة وإدخال أسرار المصادقة والتشفير. إعداد النشر يستخدم بيانات اختبار اصطناعية فقط إلى أن تكتمل مراجعة الخصوصية والموافقات.

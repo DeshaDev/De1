@@ -25,6 +25,12 @@ jobs:
       - name: Install browser-test tooling
         run: npm install --no-save --package-lock=false --legacy-peer-deps @playwright/test@1.56.1
 
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-1.56.1
+
       - name: Install Chromium for end-to-end tests
         run: npx playwright install --with-deps chromium
 
