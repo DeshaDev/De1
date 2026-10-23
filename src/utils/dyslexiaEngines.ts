@@ -1824,131 +1824,204 @@ export function evaluateOralReadingAlignment(
     .trim()
     .split(/\s+/)
     .filter(Boolean);
+  const totalWords = Math.max(1, referenceWords.length);
+  const safeDurationMin = Math.max(0.05, durationSeconds / 60);
   const hasSentenceContext = referenceWords.length >= 2 && spokenTokens.length >= 2;
 
-  const alignment: OralWordAlignmentItem[] = [];
-  let spokenIdx = 0;
+  if (spokenTokens.length === 0) {
+    const alignment: OralWordAlignmentItem[] = referenceWords.map((w) => ({
+      targetWord: w,
+      spokenWord: null,
+      status: 'omitted',
+      weightedDistance: 1.0,
+    }));
+    return {
+      wcpm: 0,
+      totalWords,
+      correctWordsCount: 0,
+      dialectVariantCount: 0,
+      phoneticSubstitutionCount: 0,
+      omittedWordsCount: referenceWords.length,
+      insertionCount: 0,
+      substitutionsCount: 0,
+      deletionsCount: referenceWords.length,
+      accuracyPercent: 0,
+      werPercent: null,
+      standardWerPercent: null,
+      hesitationPauseCount,
+      alignment,
+    };
+  }
+
+  const n = referenceWords.length;
+  const m = spokenTokens.length;
+
+  type MatchClass = {
+    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'mismatch';
+    cost: number;
+    weightedDistance: number;
+    dialectNoteAr?: string;
+  };
+
+  function classifyPair(targetRaw: string, candidateRaw: string): MatchClass {
+    const targetClean = targetRaw
+      .replace(/[.,!?،؟؛:"«»()[\]\u064B-\u0652\u0670]/g, '')
+      .trim();
+    const candidateClean = candidateRaw
+      .replace(/[.,!?،؟؛:"«»()[\]\u064B-\u0652\u0670]/g, '')
+      .trim();
+
+    if (!targetClean || !candidateClean) {
+      return { status: 'mismatch', cost: 1.2, weightedDistance: 1.0 };
+    }
+
+    const dialectInfo = normalizeArabicDialectWord(candidateClean, dialect);
+    const { weightedDistance } = computeDyslexicoWeightedLevenshtein(
+      candidateClean,
+      targetClean
+    );
+    const orthoOrPauseMatch = isPureOrthographicNormalization(
+      candidateClean,
+      targetClean
+    );
+    const systematicShift = checkSystematicDialectPhonologicalShift(
+      candidateClean,
+      targetClean,
+      dialect || 'egyptian',
+      hasSentenceContext
+    );
+
+    if (
+      (weightedDistance === 0 && candidateClean === targetClean) ||
+      orthoOrPauseMatch
+    ) {
+      return {
+        status: 'correct',
+        cost: 0.0,
+        weightedDistance: 0.0,
+        dialectNoteAr: orthoOrPauseMatch
+          ? 'تطبيع وقفي/إملائي قياسي (وقف بدون تنوين أو تاء مربوطة/همزة)'
+          : undefined,
+      };
+    }
+
+    if (
+      dialectInfo.isDialectVariant &&
+      (dialectInfo.canonicalMsa === targetClean ||
+        dialectInfo.canonicalMsaAlternates.includes(targetClean))
+    ) {
+      return {
+        status: 'dialect_variant',
+        cost: 0.05,
+        weightedDistance: Math.min(0.15, weightedDistance),
+        dialectNoteAr: dialectInfo.dialectNoteAr,
+      };
+    }
+
+    if (systematicShift.isShift) {
+      return {
+        status: 'dialect_variant',
+        cost: 0.05,
+        weightedDistance: Math.min(0.15, weightedDistance),
+        dialectNoteAr: systematicShift.noteAr,
+      };
+    }
+
+    if (weightedDistance <= 0.65) {
+      return {
+        status: 'phonetic_substitution',
+        cost: 0.4 + weightedDistance * 0.4,
+        weightedDistance,
+      };
+    }
+
+    return {
+      status: 'mismatch',
+      cost: 1.2,
+      weightedDistance,
+    };
+  }
+
+  // Precompute classification cache
+  const memo: MatchClass[][] = Array.from({ length: n }, () => new Array(m));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < m; j++) {
+      memo[i][j] = classifyPair(referenceWords[i], spokenTokens[j]);
+    }
+  }
+
+  // Dynamic Programming Matrix for Global Sequence Alignment
+  // Deletion (omitted reference word) cost = 1.0
+  // Insertion (extra spoken word) cost = 0.4
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 0; i <= n; i++) dp[i][0] = i * 1.0;
+  for (let j = 0; j <= m; j++) dp[0][j] = j * 0.4;
+
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const c = memo[i - 1][j - 1];
+      dp[i][j] = Math.min(
+        dp[i - 1][j - 1] + c.cost,
+        dp[i - 1][j] + 1.0,
+        dp[i][j - 1] + 0.4
+      );
+    }
+  }
+
+  // Backtrace to align all reference words
+  let i = n;
+  let j = m;
+  const reversedAlignment: OralWordAlignmentItem[] = [];
   let correctWordsCount = 0;
   let dialectVariantCount = 0;
   let phoneticSubstitutionCount = 0;
   let omittedWordsCount = 0;
 
-  for (let i = 0; i < referenceWords.length; i++) {
-    const targetRaw = referenceWords[i];
-    const targetClean = targetRaw
-      .replace(/[.,!?،؟؛:"«»()[\]\u064B-\u0652\u0670]/g, '')
-      .trim();
-
-    // Look ahead up to 2 tokens in spoken transcript
-    let matchedIdx = -1;
-    let bestStatus:
-      | 'correct'
-      | 'dialect_variant'
-      | 'phonetic_substitution'
-      | 'omitted' = 'omitted';
-    let bestDist = 99;
-    let bestDialectNote: string | undefined = undefined;
-
-    for (
-      let look = spokenIdx;
-      look < Math.min(spokenTokens.length, spokenIdx + 3);
-      look++
-    ) {
-      const candidateClean = spokenTokens[look]
-        .replace(/[.,!?،؟؛:"«»()[\]\u064B-\u0652\u0670]/g, '')
-        .trim();
-
-      const dialectInfo = normalizeArabicDialectWord(candidateClean, dialect);
-      const { weightedDistance } = computeDyslexicoWeightedLevenshtein(
-        candidateClean,
-        targetClean
-      );
-      const orthoOrPauseMatch = isPureOrthographicNormalization(
-        candidateClean,
-        targetClean
-      );
-      const systematicShift = checkSystematicDialectPhonologicalShift(
-        candidateClean,
-        targetClean,
-        dialect || 'egyptian',
-        hasSentenceContext
-      );
-
-      if (
-        (weightedDistance === 0 && candidateClean === targetClean) ||
-        orthoOrPauseMatch
-      ) {
-        matchedIdx = look;
-        bestStatus = 'correct';
-        bestDist = 0;
-        bestDialectNote = orthoOrPauseMatch
-          ? 'تطبيع وقفي/إملائي قياسي (وقف بدون تنوين أو تاء مربوطة/همزة)'
-          : undefined;
-        break;
-      } else if (
-        dialectInfo.isDialectVariant &&
-        (dialectInfo.canonicalMsa === targetClean ||
-          dialectInfo.canonicalMsaAlternates.includes(targetClean))
-      ) {
-        matchedIdx = look;
-        bestStatus = 'dialect_variant';
-        bestDist = Math.min(0.15, weightedDistance);
-        bestDialectNote = dialectInfo.dialectNoteAr;
-        break;
-      } else if (systematicShift.isShift) {
-        matchedIdx = look;
-        bestStatus = 'dialect_variant';
-        bestDist = Math.min(0.15, weightedDistance);
-        bestDialectNote = systematicShift.noteAr;
-        break;
-      } else if (weightedDistance <= 0.65 && weightedDistance < bestDist) {
-        matchedIdx = look;
-        bestStatus = 'phonetic_substitution';
-        bestDist = weightedDistance;
-        bestDialectNote = undefined;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0) {
+      const c = memo[i - 1][j - 1];
+      if (Math.abs(dp[i][j] - (dp[i - 1][j - 1] + c.cost)) < 1e-5 && c.status !== 'mismatch') {
+        reversedAlignment.push({
+          targetWord: referenceWords[i - 1],
+          spokenWord: spokenTokens[j - 1],
+          status: c.status,
+          weightedDistance: c.weightedDistance,
+          dialectNoteAr: c.dialectNoteAr,
+        });
+        if (c.status === 'correct') {
+          correctWordsCount++;
+        } else if (c.status === 'dialect_variant') {
+          dialectVariantCount++;
+          correctWordsCount++;
+        } else if (c.status === 'phonetic_substitution') {
+          phoneticSubstitutionCount++;
+        }
+        i--;
+        j--;
+        continue;
       }
     }
 
-    if (matchedIdx !== -1) {
-      alignment.push({
-        targetWord: targetRaw,
-        spokenWord: spokenTokens[matchedIdx],
-        status: bestStatus,
-        weightedDistance: bestDist,
-        dialectNoteAr: bestDialectNote,
-      });
-      if (bestStatus === 'correct') {
-        correctWordsCount++;
-      } else if (bestStatus === 'dialect_variant') {
-        dialectVariantCount++;
-        correctWordsCount++; // Natural Arabic dialect pronunciation is semantically & lexically valid!
-      } else {
-        phoneticSubstitutionCount++;
-      }
-      spokenIdx = matchedIdx + 1;
-    } else {
-      alignment.push({
-        targetWord: targetRaw,
+    if (i > 0 && (j === 0 || Math.abs(dp[i][j] - (dp[i - 1][j] + 1.0)) < 1e-5)) {
+      reversedAlignment.push({
+        targetWord: referenceWords[i - 1],
         spokenWord: null,
         status: 'omitted',
         weightedDistance: 1.0,
       });
       omittedWordsCount++;
+      i--;
+    } else {
+      // Spoken token was an extra insertion
+      j--;
     }
   }
 
-  const totalWords = Math.max(1, referenceWords.length);
-  const safeDurationMin = Math.max(0.05, durationSeconds / 60);
+  const alignment = reversedAlignment.reverse();
   const wcpm = Math.round(correctWordsCount / safeDurationMin);
   const accuracyPercent = Math.round((correctWordsCount / totalWords) * 100);
 
-  // Exact Dynamic Programming sequence alignment WER calculation:
-  // Evaluates purely objective transcription error between reference words and spoken tokens.
-  // When no spoken input was captured (empty transcript), WER is null rather than an artificial 0%.
-  const hasSpokenTokens = spokenTokens.length > 0;
-  const standardWerResult = hasSpokenTokens
-    ? computeStandardSequenceWer(referenceWords, spokenTokens)
-    : null;
+  const standardWerResult = computeStandardSequenceWer(referenceWords, spokenTokens);
 
   return {
     wcpm,

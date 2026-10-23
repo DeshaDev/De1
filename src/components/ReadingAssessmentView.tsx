@@ -100,6 +100,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   // Audio recording & Speech recognition state
   const [spokenTranscript, setSpokenTranscript] = useState('');
   const spokenTranscriptRef = useRef<string>('');
+  const finalTranscriptsRef = useRef<string[]>([]);
+  const currentInterimRef = useRef<string>('');
   const [isListening, setIsListening] = useState(false);
   const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
@@ -226,7 +228,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       return;
     }
 
-    const startSpeechRecognition = () => {
+        const startSpeechRecognition = () => {
       if (typeof window === 'undefined') return;
       const SpeechRecognitionClass =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -242,17 +244,63 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         recognition.lang = langCode;
         recognition.continuous = true;
         recognition.interimResults = true;
+
         recognition.onresult = (event: any) => {
-          let fullText = '';
-          for (let i = 0; i < event.results.length; i++) {
-            fullText += event.results[i][0].transcript + ' ';
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0]?.transcript || '';
+            if (event.results[i].isFinal) {
+              const trimmed = transcript.trim();
+              if (trimmed) finalTranscriptsRef.current.push(trimmed);
+            } else {
+              interim += transcript + ' ';
+            }
           }
-          const clean = fullText.trim();
-          spokenTranscriptRef.current = clean;
-          setSpokenTranscript(clean);
+          currentInterimRef.current = interim.trim();
+          const combined = [
+            ...finalTranscriptsRef.current,
+            currentInterimRef.current
+          ].filter(Boolean).join(' ').trim();
+
+          spokenTranscriptRef.current = combined;
+          setSpokenTranscript(combined);
         };
-        recognition.onerror = () => setIsListening(false);
-        recognition.onend = () => setIsListening(false);
+
+        recognition.onerror = (event: any) => {
+          // 'no-speech' is triggered when the reader pauses or breathes; ignore so onend restarts smoothly
+          if (event.error === 'no-speech' || event.error === 'audio-capture') {
+            return;
+          }
+          if (event.error === 'not-allowed') {
+            setIsListening(false);
+          }
+        };
+
+        recognition.onend = () => {
+          // If reading session is active, auto-restart so sentence pauses NEVER disconnect the recognizer
+          if (isReadingActiveRef.current) {
+            if (currentInterimRef.current) {
+              finalTranscriptsRef.current.push(currentInterimRef.current);
+              currentInterimRef.current = '';
+            }
+            try {
+              recognition.start();
+              setIsListening(true);
+            } catch {
+              setTimeout(() => {
+                if (isReadingActiveRef.current) {
+                  try {
+                    recognition.start();
+                    setIsListening(true);
+                  } catch {}
+                }
+              }, 100);
+            }
+          } else {
+            setIsListening(false);
+          }
+        };
+
         recognition.start();
         recognitionRef.current = recognition;
         setIsListening(true);
@@ -374,7 +422,16 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     );
     setFinalDurationSec(elapsedSec);
 
-    const cleanTranscript = (spokenTranscriptRef.current || spokenTranscript || '').trim();
+    if (currentInterimRef.current) {
+      finalTranscriptsRef.current.push(currentInterimRef.current);
+      currentInterimRef.current = '';
+    }
+    const cleanTranscript = (
+      spokenTranscriptRef.current ||
+      finalTranscriptsRef.current.join(' ') ||
+      spokenTranscript ||
+      ''
+    ).trim();
 
     // Calculate real WPM strictly from measured evidence:
     // For oral reading: measured from actual spoken words read per minute
@@ -931,6 +988,29 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Live Real-Time Speech Feedback Bar */}
+            {readingMode === 'oral_audio' && (
+              <div className="mb-5 p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-950 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3 shrink-0">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isListening ? 'bg-emerald-400 opacity-75' : 'bg-amber-400'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isListening ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
+                  </span>
+                  <span className="font-bold shrink-0">
+                    {isListening ? 'الميكروفون يستمع لقراءتك الآن:' : 'جاري استقبال الصوت...'}
+                  </span>
+                  <span className="font-sans text-slate-700 bg-white/90 px-3 py-1 rounded-xl border border-emerald-100 max-w-md truncate">
+                    {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-8).join(' ')}..."` : 'اقرأ بصوت واضح ومسموع...'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full font-mono">
+                    {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة مُلتقطة
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Arabic Reading Passage with Tashkeel */}
             <div
               ref={readingPassageRef}
@@ -1087,6 +1167,18 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     لم يتوفر تفريغ صوتي آلي في هذه الجلسة. يُرجى من المعلم تحديد الكلمات المقروءة يدوياً أو الاستماع للتسجيل الصوتي أعلاه.
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Captured Speech Transcript Display */}
+            {spokenTranscript && (
+              <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
+                <span className="text-xs font-bold text-slate-800 block mb-1">
+                  التفريغ الصوتي التلقائي الملتقط من قراءة الطالب:
+                </span>
+                <p className="text-xs text-slate-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-slate-100">
+                  {spokenTranscript}
+                </p>
               </div>
             )}
 
