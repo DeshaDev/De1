@@ -43,11 +43,96 @@ export interface RemediationMathDrill {
 }
 
 export interface RemediationSessionPlan {
+  /** Legacy API field name; content is educational context, never a clinical rationale. */
   clinicalRationale: string;
   phonicsDrills: RemediationPhonicsDrill[];
   syllableDrills: RemediationSyllableDrill[];
   pacerPassage: RemediationPacerPassage;
   mathDrills: RemediationMathDrill[];
+}
+
+/**
+ * Structural validation for model-generated learning activities. This checks consistency,
+ * not educational efficacy; invalid or malformed output should fall back to curated examples.
+ */
+export function isStructurallyValidRemediationSessionPlan(value: unknown): value is RemediationSessionPlan {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const plan = value as Record<string, unknown>;
+  const normalize = (word: unknown): string =>
+    typeof word === 'string'
+      ? word.normalize('NFC').replace(/[\\u064B-\\u065F\\u0670ـ]/g, '').replace(/[\\s·,،;؛.:!?؟\\-]/g, '')
+      : '';
+
+  if (typeof plan.clinicalRationale !== 'string' || !plan.clinicalRationale.trim()) return false;
+  if (!Array.isArray(plan.phonicsDrills) || plan.phonicsDrills.length !== 4) return false;
+  for (const raw of plan.phonicsDrills) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const drill = raw as Record<string, unknown>;
+    const target = normalize(drill.targetLetter);
+    const spokenWord = normalize(drill.spokenWord);
+    if (
+      !Number.isInteger(drill.id) ||
+      typeof drill.family !== 'string' ||
+      typeof drill.wordMeaning !== 'string' ||
+      !target ||
+      !spokenWord.includes(target) ||
+      typeof drill.ruleTip !== 'string' ||
+      !Array.isArray(drill.options) || drill.options.length < 2 || drill.options.length > 3
+    ) return false;
+    const options = drill.options as unknown[];
+    const correct = options.filter((option) =>
+      !!option && typeof option === 'object' && !Array.isArray(option) &&
+      (option as Record<string, unknown>).isCorrect === true
+    ) as Record<string, unknown>[];
+    if (correct.length !== 1 || normalize(correct[0].letter) !== target) return false;
+    if (options.some((option) => {
+      if (!option || typeof option !== 'object' || Array.isArray(option)) return true;
+      const item = option as Record<string, unknown>;
+      return typeof item.letter !== 'string' || typeof item.letterName !== 'string' ||
+        typeof item.explanation !== 'string' || typeof item.isCorrect !== 'boolean';
+    })) return false;
+  }
+
+  if (!Array.isArray(plan.syllableDrills) || plan.syllableDrills.length !== 4) return false;
+  for (const raw of plan.syllableDrills) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const drill = raw as Record<string, unknown>;
+    if (
+      !Number.isInteger(drill.id) ||
+      typeof drill.targetWord !== 'string' ||
+      !drill.targetWord.trim() ||
+      typeof drill.wordMeaning !== 'string' ||
+      !Array.isArray(drill.syllables) || drill.syllables.length < 2 ||
+      drill.syllables.some((part) => typeof part !== 'string' || !part.trim()) ||
+      normalize((drill.syllables as string[]).join('')) !== normalize(drill.targetWord)
+    ) return false;
+  }
+
+  if (!plan.pacerPassage || typeof plan.pacerPassage !== 'object' || Array.isArray(plan.pacerPassage)) return false;
+  const passage = plan.pacerPassage as Record<string, unknown>;
+  if (
+    !Number.isInteger(passage.id) ||
+    typeof passage.title !== 'string' || !passage.title.trim() ||
+    typeof passage.gradeLevel !== 'string' ||
+    !Array.isArray(passage.words) || passage.words.length < 16 || passage.words.length > 22 ||
+    passage.words.some((word) => typeof word !== 'string' || !word.trim())
+  ) return false;
+
+  if (!Array.isArray(plan.mathDrills) || plan.mathDrills.length !== 4) return false;
+  for (const raw of plan.mathDrills) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
+    const drill = raw as Record<string, unknown>;
+    if (
+      !Number.isInteger(drill.id) ||
+      !Number.isInteger(drill.targetNumber) ||
+      !Number.isInteger(drill.min) || !Number.isInteger(drill.max) ||
+      (drill.min as number) >= (drill.max as number) ||
+      (drill.targetNumber as number) < (drill.min as number) ||
+      (drill.targetNumber as number) > (drill.max as number) ||
+      typeof drill.prompt !== 'string' || !drill.prompt.trim()
+    ) return false;
+  }
+  return true;
 }
 
 /**
@@ -64,7 +149,7 @@ export function generateAdaptiveRemediationPlan(params: {
   // These are fixed examples whose target letters match the actual word; arbitrary
   // student targets must never be substituted into a phonics item for another letter.
 
-  // 1. Phonics Drills targeting student's actual words
+  // 1. General phonics examples; do not infer that the student's own errors match these items.
   const phonicsDrills: RemediationPhonicsDrill[] = [
     {
       id: 1,
