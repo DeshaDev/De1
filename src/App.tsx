@@ -1027,10 +1027,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* Segmented Sub-Navigation Bar
-            </section>
-
-            {/* Segmented Sub-Navigation Bar for Progressive Disclosure */}
+            {/* Segmented sub-navigation for the dashboard's progressive-disclosure views */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
               <div
                 role="tablist"
