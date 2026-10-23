@@ -60,7 +60,7 @@ export function isStructurallyValidRemediationSessionPlan(value: unknown): value
   const plan = value as Record<string, unknown>;
   const normalize = (word: unknown): string =>
     typeof word === 'string'
-      ? word.normalize('NFC').replace(/[\\u064B-\\u065F\\u0670ـ]/g, '').replace(/[\\s·,،;؛.:!?؟\\-]/g, '')
+      ? word.normalize('NFC').replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[\s·,،;؛.:!?؟\-]/g, '')
       : '';
 
   if (typeof plan.clinicalRationale !== 'string' || !plan.clinicalRationale.trim()) return false;
