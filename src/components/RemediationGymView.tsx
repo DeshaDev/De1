@@ -92,9 +92,27 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   // Only teacher-reviewed words from a completed, non-demo session can be presented as observed targets.
   const observedTargetWords = useMemo(() => {
-    if (activeStudent.sessionStatus !== 'completed' || activeStudent.teacherVerified !== true || activeStudent.evidenceProvenance === 'demo-synthetic') return [];
-    return (activeStudent.problematicWords || []).filter((word) => typeof word === 'string' && word.trim().length > 0).slice(0, 8);
-  }, [activeStudent.id, activeStudent.sessionStatus, activeStudent.teacherVerified, activeStudent.evidenceProvenance, activeStudent.problematicWords]);
+    if (
+      activeStudent.sessionStatus !== 'completed' ||
+      activeStudent.teacherVerified !== true ||
+      activeStudent.evidenceProvenance === 'demo-synthetic' ||
+      !Array.isArray(activeStudent.verifiedWordsAlignment)
+    ) return [];
+
+    // Only explicitly reviewed substitutions/omissions are training targets.
+    // Do not reuse gaze-derived or automatic-transcript candidates as teacher-verified errors.
+    return activeStudent.verifiedWordsAlignment
+      .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+      .map((item) => item.word)
+      .filter((word) => typeof word === 'string' && word.trim().length > 0)
+      .slice(0, 8);
+  }, [
+    activeStudent.id,
+    activeStudent.sessionStatus,
+    activeStudent.teacherVerified,
+    activeStudent.evidenceProvenance,
+    activeStudent.verifiedWordsAlignment,
+  ]);
 
   // General grade-level exercises remain available when there are no verified targets.
   const fallbackPlan = useMemo(() => {
