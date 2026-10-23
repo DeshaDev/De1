@@ -14,10 +14,12 @@ const loadSavedAssessment = (): CombinedAssessmentData | null => {
     if (!raw) return null;
     const saved = JSON.parse(raw) as CombinedAssessmentData & {
       eyeTrackingResults?: unknown;
+      tactileResults?: unknown;
       speechResults?: unknown;
     };
     if (!saved || typeof saved !== 'object') return null;
     delete saved.eyeTrackingResults;
+    delete saved.tactileResults;
     // Older versions stored guessed speech-confidence, pause, onset and pitch metrics.
     if (saved.speechResults) saved.speechResults = null;
     return saved;
@@ -58,28 +60,6 @@ export interface SpeechAssessmentResult {
   };
 }
 
-export interface TactileAssessmentResult {
-  studentId: string;
-  studentName: string;
-  date: string;
-  tasks: Array<{
-    taskId: number;
-    type: string;
-    correct: boolean;
-    reactionTime: number;
-    completionTime: number;
-    hesitationCount: number;
-    curvature: number;
-  }>;
-  summary: {
-    averageReactionTime: number;
-    correctAnswers: number;
-    totalTasks: number;
-    hesitationCount: number;
-    weakAreas: string[];
-  };
-}
-
 export interface ReadingAssessmentResult {
   passageId: string;
   passageTitle: string;
@@ -108,7 +88,6 @@ export interface CombinedAssessmentData {
   studentName: string;
   age: number;
   speechResults: SpeechAssessmentResult | null;
-  tactileResults: TactileAssessmentResult | null;
   readingResults?: ReadingAssessmentResult | null;
 };
 
@@ -117,10 +96,8 @@ interface AssessmentContextType {
   setCurrentAssessment: (data: CombinedAssessmentData) => void;
   startNewAssessment: (studentName: string, age?: number, studentId?: string) => void;
   saveSpeechResults: (results: SpeechAssessmentResult) => void;
-  saveTactileResults: (results: TactileAssessmentResult) => void;
   saveReadingResults: (results: ReadingAssessmentResult) => void;
   saveSpeechAnalysisResults: (results: any) => void;
-  saveTactileAnalyticsResults: (results: any) => void;
   getAllAssessments: () => CombinedAssessmentData[];
   clearCurrentAssessment: () => void;
 }
@@ -162,7 +139,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
       studentName,
       age,
       speechResults: null,
-      tactileResults: null,
       readingResults: null,
     };
     setCurrentAssessment(fresh);
@@ -176,22 +152,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         studentName: results.studentName || prev?.studentName || 'الطالب',
         age: results.age || prev?.age || 8,
         speechResults: results,
-        tactileResults: prev?.tactileResults || null,
-        readingResults: prev?.readingResults || null,
-      };
-      persistAssessment(next);
-      return next;
-    });
-  };
-
-  const saveTactileResults = (results: TactileAssessmentResult) => {
-    setCurrentAssessment(prev => {
-      const next: CombinedAssessmentData = {
-        studentId: results.studentId || prev?.studentId || 'student-1',
-        studentName: results.studentName || prev?.studentName || 'الطالب',
-        age: prev?.age || 8,
-        speechResults: prev?.speechResults || null,
-        tactileResults: results,
         readingResults: prev?.readingResults || null,
       };
       persistAssessment(next);
@@ -260,57 +220,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
     saveSpeechResults(speechResult);
   };
 
-  const saveTactileAnalyticsResults = (taskResults: any[]) => {
-    if (!Array.isArray(taskResults) || taskResults.length === 0) return;
-
-    const correctAnswers = taskResults.filter(r => Boolean(r.correctness ?? r.correct)).length;
-    const reactionSum = taskResults.reduce((sum, r) => {
-      const val = Number(r.reactionTime ?? 0);
-      return sum + (Number.isFinite(val) ? val : 0);
-    }, 0);
-    const averageReactionTime = Math.round(reactionSum / taskResults.length);
-
-    const totalHesitation = taskResults.reduce((sum, r) => {
-      const val = Number(r.hesitationCount ?? 0);
-      return sum + (Number.isFinite(val) ? val : 0);
-    }, 0);
-
-    // Determine weak areas
-    const weakAreas: string[] = [];
-    taskResults.forEach((r) => {
-      const isCorrect = Boolean(r.correctness ?? r.correct);
-      if (!isCorrect) {
-        if (r.type === 'sort') weakAreas.push('ترتيب الأرقام');
-        if (r.type === 'compare') weakAreas.push('المقارنة السريعة');
-        if (r.type === 'match') weakAreas.push('العد والمطابقة');
-      }
-    });
-
-    const tactileResult: TactileAssessmentResult = {
-      studentId: currentAssessment?.studentId || 'student-1',
-      studentName: currentAssessment?.studentName || 'الطالب',
-      date: new Date().toLocaleDateString('ar-SA'),
-      tasks: taskResults.map((r, idx) => ({
-        taskId: idx + 1,
-        type: String(r.type || 'unknown'),
-        correct: Boolean(r.correctness ?? r.correct),
-        reactionTime: Number(r.reactionTime) || 0,
-        completionTime: Number(r.completionTime) || 0,
-        hesitationCount: Number(r.hesitationCount) || 0,
-        curvature: Number(r.averageCurvature) || 0,
-      })),
-      summary: {
-        averageReactionTime,
-        correctAnswers,
-        totalTasks: taskResults.length,
-        hesitationCount: totalHesitation,
-        weakAreas: [...new Set(weakAreas)],
-      },
-    };
-
-    saveTactileResults(tactileResult);
-  };
-
   const getAllAssessments = () => {
     return assessments;
   };
@@ -327,10 +236,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         setCurrentAssessment,
         startNewAssessment,
         saveSpeechResults,
-        saveTactileResults,
     saveReadingResults,
         saveSpeechAnalysisResults,
-        saveTactileAnalyticsResults,
         getAllAssessments,
         clearCurrentAssessment,
       }}
