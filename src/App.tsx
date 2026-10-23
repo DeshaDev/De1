@@ -83,8 +83,8 @@ export default function App() {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
   const [hideDemoRecords, setHideDemoRecords] = useState<boolean>(false);
 
-  // Live Gemini AI re-analysis state
-  const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
+  // Status state for updating the deterministic descriptive learning report
+  const [isUpdatingReport, setIsGeneratingAI] = useState<boolean>(false);
   const [aiStatusBanner, setAiStatusBanner] = useState<string>('');
 
   // Site-wide Dyslexia Accessibility & Comfort Studio state
@@ -549,7 +549,7 @@ export default function App() {
     }
   };
 
-  const handleRegenerateAIClinicalReport = async () => {
+  const handleRefreshLearningReport = async () => {
     if (!clinicalSession || clinicalSession.role !== 'clinician') {
       setAiStatusBanner(clinicalSession
         ? 'رمزك للقراءة فقط ولا يتيح إنشاء تقارير على الخادم.'
@@ -611,7 +611,7 @@ export default function App() {
               const errData = await persistRes.json().catch(() => ({}));
               setAiStatusBanner(
                 errData?.error ||
-                  'صدر التقرير من خدمة التحليل، لكن فشل حفظه في سجل الطالب على الخادم.'
+                  'أُنشئ الملخص الوصفي، لكن تعذر حفظه في سجل الطالب على الخادم.'
               );
               return;
             }
@@ -635,7 +635,7 @@ export default function App() {
             );
           }
           setAiStatusBanner(
-            `تم تحديث وحفظ تقرير المؤشرات القرائية وخطة المساندة التربوية للطالب (${selectedStudent.name}).`
+            `تم تحديث وحفظ الملخص الوصفي وخطة المساندة للطالب (${selectedStudent.name}).`
           );
         }
       } else {
@@ -1353,16 +1353,16 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    disabled={isGeneratingAI || clinicalSession?.role !== 'clinician'}
+                    disabled={isUpdatingReport || clinicalSession?.role !== 'clinician'}
                     title={clinicalSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
-                    onClick={handleRegenerateAIClinicalReport}
+                    onClick={handleRefreshLearningReport}
                     className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>
-                      {isGeneratingAI
-                        ? 'جاري تحديث التقرير...'
-                        : 'تحديث التقرير بالذكاء الاصطناعي'}
+                      {isUpdatingReport
+                        ? 'جارٍ تحديث الملخص...'
+                        : 'تحديث الملخص الوصفي'}
                     </span>
                   </button>
                   </div>
