@@ -131,7 +131,7 @@ export function issueBaseeraSessionToken(
   customTenantDisplayNameAr?: string
 ): VerifiedBaseeraSession {
   if (role !== 'school_admin' && role !== 'educator_readonly') {
-    throw new Error('Invalid clinical role');
+    throw new Error('Invalid learning-session role');
   }
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(tenantId)) {
     throw new Error('Invalid tenant ID');
@@ -1114,7 +1114,7 @@ export function validateAndDeriveSessionFromEvidence(
     };
   }
 
-  // Abuse/plausibility ceiling, not a clinical norm: reject implausible reported pace.
+  // Abuse/plausibility ceiling, not an educational norm: reject implausible reported pace.
   const wordCountForPace = passage.words.length;
   const observedReadingWpm = (wordCountForPace * 60) / readingDurationSeconds;
   if (observedReadingWpm > 300) {

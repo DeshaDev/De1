@@ -46,7 +46,7 @@ interface Props {
   onCompleteSession: (record: StudentRecord) => void;
   activeStudent?: StudentRecord;
   onProceedToMathLab?: () => void;
-  /** A signed-in clinician account is required to certify human-reviewed WCPM in the stored record. */
+  /** A signed-in school administrator account is required to certify human-reviewed WCPM in the stored record. */
   canVerifyAsTeacher?: boolean;
 }
 

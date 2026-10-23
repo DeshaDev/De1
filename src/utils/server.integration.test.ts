@@ -195,7 +195,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     );
   });
 
-  it('requires a clinical session for AI training and never trusts client-supplied words as teacher-reviewed', async () => {
+  it('requires an authenticated learning session for AI training and never trusts client-supplied words as teacher-reviewed', async () => {
     const noSession = await fetch(`${baseUrl}/api/remediation/curated-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

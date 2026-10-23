@@ -44,7 +44,7 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = process.env.BASEERA_DATA_DIR
   ? path.resolve(process.env.BASEERA_DATA_DIR)
   : path.join(__dirname, '.runtime-store');
-const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
+const STORE_PATH = path.join(DATA_DIR, 'learning-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
 
 let baseeraStoreReady = false;
