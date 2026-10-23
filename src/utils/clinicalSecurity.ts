@@ -17,6 +17,18 @@ import {
   evaluateOralReadingAlignment,
 } from './dyslexiaEngines';
 
+interface OralReadingIntegrationInput {
+  assessed: boolean;
+  wcpm?: number;
+  accuracyPercent?: number | null;
+  werPercent?: number | null;
+  phoneticSubstitutionCount: number;
+  dialectVariantCount: number;
+  omissionCount: number;
+  insertionCount?: number;
+  misreadWords?: string[];
+}
+
 export type ClinicalRole = 'clinician' | 'educator_readonly';
 
 export type ClinicalScope =

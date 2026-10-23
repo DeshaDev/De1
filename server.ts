@@ -193,10 +193,44 @@ function hasForbiddenPrototypeKeys(input: unknown): boolean {
 }
 
 function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
-  const legacy = s as StudentRecord & {
-    readingPercentile?: number;
-    mathPercentile?: number;
-  };
+  const raw = s as unknown as Record<string, unknown>;
+  const cameraFieldNames = [
+    'avgFixationMs', 'regressionRate', 'regressionCount', 'blinkCount',
+    'blinksPerMinute', 'visualStrainLevel', 'visualStrainLabelAr',
+    'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
+    'calibrationAccuracyPercent', 'calibrationValidationMethod',
+    'fixations', 'eyeTrackingResults',
+  ];
+  const hasLegacyCameraField = cameraFieldNames.some((key) =>
+    Object.prototype.hasOwnProperty.call(raw, key)
+  ) || raw.assessmentModality === 'eye_voice';
+  const hasLegacyCameraHistory = Array.isArray(raw.assessmentHistory) &&
+    raw.assessmentHistory.some((item) => {
+      if (!item || typeof item !== 'object') return false;
+      const snapshot = item as Record<string, unknown>;
+      return cameraFieldNames.some((key) =>
+        Object.prototype.hasOwnProperty.call(snapshot, key)
+      ) || snapshot.assessmentModality === 'eye_voice';
+    });
+  const hasLegacyRiskData =
+    typeof raw.dyslexiaRiskScore === 'number' ||
+    typeof raw.dyscalculiaRiskScore === 'number' ||
+    typeof raw.readingHeuristicIndicator === 'number' ||
+    typeof raw.mathHeuristicIndicator === 'number' ||
+    (typeof raw.readingRiskLevel === 'string' && raw.readingRiskLevel !== 'unassessed') ||
+    (typeof raw.mathRiskLevel === 'string' && raw.mathRiskLevel !== 'unassessed') ||
+    typeof raw.readingPercentile === 'number' ||
+    typeof raw.mathPercentile === 'number' ||
+    (Array.isArray(raw.assessmentHistory) && raw.assessmentHistory.some((item) => {
+      if (!item || typeof item !== 'object') return false;
+      const snapshot = item as Record<string, unknown>;
+      return typeof snapshot.dyslexiaRiskScore === 'number' ||
+        typeof snapshot.dyscalculiaRiskScore === 'number' ||
+        typeof snapshot.readingHeuristicIndicator === 'number' ||
+        (typeof snapshot.readingRiskLevel === 'string' && snapshot.readingRiskLevel !== 'unassessed') ||
+        (typeof snapshot.mathRiskLevel === 'string' && snapshot.mathRiskLevel !== 'unassessed');
+    }));
+
   const normalized = {
     ...s,
     guardianConsentGiven: s.isDemoRecord ? false : s.guardianConsentGiven,
@@ -207,30 +241,54 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
       ? 'نموذج توضيحي اصطناعي (غير مخصص للتشخيص)'
       : (s.evidenceProvenanceLabelAr ??
         'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)'),
-    readingHeuristicIndicator:
-      s.readingHeuristicIndicator ??
-      (typeof legacy.readingPercentile === 'number'
-        ? legacy.readingPercentile
-        : 50),
-    mathHeuristicIndicator:
-      s.mathHeuristicIndicator ??
-      (typeof legacy.mathPercentile === 'number'
-        ? legacy.mathPercentile
-        : null),
-  } as StudentRecord & {
-    readingPercentile?: number;
-    mathPercentile?: number;
-  };
-  delete normalized.readingPercentile;
-  delete normalized.mathPercentile;
+    // There are no validated Arabic diagnostic cut-offs in this version.
+    dyslexiaRiskScore: null,
+    readingHeuristicIndicator: null,
+    readingRiskLevel: 'unassessed' as const,
+    readingRiskLabelAr: 'لا توجد حدود تصنيف معيارية متحققة لهذه الأنشطة.',
+    dyscalculiaRiskScore: null,
+    mathHeuristicIndicator: null,
+    mathRiskLevel: 'unassessed' as const,
+    mathRiskLabelAr: 'الأنشطة الحسابية وصفية ولا تنتج تصنيفًا معياريًا.',
+  } as StudentRecord;
 
-  const cleanName = (normalized.name || '').trim().replace(/\s+/g, ' ');
+  const normalizedRaw = normalized as unknown as Record<string, unknown>;
+  for (const key of cameraFieldNames) delete normalizedRaw[key];
+  delete normalizedRaw.readingPercentile;
+  delete normalizedRaw.mathPercentile;
+
+  if (normalizedRaw.assessmentModality === 'eye_voice') {
+    normalizedRaw.assessmentModality =
+      normalized.oralReadingAssessed === true || normalized.teacherVerified === true
+        ? 'voice_only'
+        : 'reading_only';
+  }
+
+  if (Array.isArray(normalizedRaw.assessmentHistory)) {
+    normalizedRaw.assessmentHistory = normalizedRaw.assessmentHistory.map((item) => {
+      if (!item || typeof item !== 'object') return item;
+      const snapshot = { ...(item as Record<string, unknown>) };
+      for (const key of cameraFieldNames) delete snapshot[key];
+      if (snapshot.assessmentModality === 'eye_voice') {
+        snapshot.assessmentModality =
+          snapshot.teacherVerified === true ? 'voice_only' : 'reading_only';
+      }
+      snapshot.dyslexiaRiskScore = null;
+      snapshot.readingHeuristicIndicator = null;
+      snapshot.readingRiskLevel = 'unassessed';
+      snapshot.dyscalculiaRiskScore = null;
+      snapshot.mathRiskLevel = 'unassessed';
+      return snapshot;
+    });
+  }
+
+  const cleanName = (normalized.name || '').trim().replace(/\\s+/g, ' ');
   const cleanSchool = (normalized.schoolName || '').trim();
-  const cleanSummary = normalized.clinicalReport?.clinicalSummary
-    ? normalized.clinicalReport.clinicalSummary
-        .replace(/^\[سجل تجريبي توضيحي[^\]]*\]\s*/g, '')
-        .trim()
-    : '';
+  const oldSummary = normalized.clinicalReport?.clinicalSummary || '';
+  const cleanSummary = hasLegacyCameraField || hasLegacyCameraHistory || hasLegacyRiskData
+    ? 'هذا سجل من إصدار سابق؛ أزيلت منه حقول النظر ودرجات الخطورة غير المعتمدة. أعد إجراء النشاط للحصول على ملخص وصفي حديث، ولا تستخدم التقرير السابق للتشخيص أو المقارنة المعيارية.'
+    : oldSummary.replace(/^\\[سجل تجريبي توضيحي[^\\]]*\\]\\s*/g, '').trim();
+
   return {
     ...normalized,
     name: cleanName,
@@ -238,8 +296,9 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
     clinicalReport: normalized.clinicalReport
       ? {
           ...normalized.clinicalReport,
-          clinicalSummary:
-            cleanSummary || normalized.clinicalReport.clinicalSummary,
+          clinicalSummary: cleanSummary || oldSummary,
+          ocularMotorAnalysis:
+            'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
         }
       : normalized.clinicalReport,
   };
@@ -369,10 +428,15 @@ function loadPersistedStudents(): StudentRecord[] {
       })
     );
 
-    if (!decoded.wasEncrypted && !savePersistedStudents(cleaned)) {
+    const normalizedStoreChanged =
+      JSON.stringify(cleaned) !== JSON.stringify(decoded.data);
+    if (
+      (normalizedStoreChanged || !decoded.wasEncrypted) &&
+      !savePersistedStudents(cleaned)
+    ) {
       clinicalStoreReady = false;
       console.warn(
-        'Legacy clinical store could not be migrated to encrypted storage.'
+        'Clinical store could not be safely migrated to the current camera-free and non-diagnostic schema.'
       );
       return createSeededStudents();
     }
