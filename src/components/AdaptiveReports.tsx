@@ -156,13 +156,17 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     if (studentData.speech) {
       observations.push(
-        'ثقة نظام التعرّف الصوتي: ' + studentData.speech.averageConfidence +
-        '%. لا تساوي هذه القيمة دقة النطق أو قياس الوعي الفونولوجي.'
+        'ثقة التعرف الصوتي التي وفرها المتصفح: ' +
+        (typeof studentData.speech.averageRecognitionConfidence === 'number'
+          ? studentData.speech.averageRecognitionConfidence + '%'
+          : 'غير متاحة') +
+        '. لا تساوي هذه القيمة دقة النطق أو تقيس الوعي الفونولوجي.'
       );
-      if (studentData.speech.problematicLetters.length > 0) {
+      if (studentData.speech.transcriptsNeedingReview > 0) {
         followUp.push(
-          'راجع بشريًا الحروف التي اقترحها التحليل الصوتي: ' +
-          studentData.speech.problematicLetters.join('، ') + '.'
+          'اختلف التفريغ عن النص المستهدف في ' +
+          studentData.speech.transcriptsNeedingReview +
+          ' كلمة؛ راجع التسجيل يدويًا، فقد يكون الاختلاف من نظام التعرف الصوتي.'
         );
       }
     }
@@ -221,7 +225,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       );
     }
     if (studentData.speech) {
-      observations.push(`بلغت قيمة الثقة التي أعادها نظام التعرّف الصوتي ${studentData.speech.averageConfidence}%. لا تمثل هذه القيمة دقة النطق، وتحتاج الكلمات المقترحة إلى مراجعة بشرية.`);
+      observations.push(
+        'ثقة التعرف الصوتي التي وفرها المتصفح ' +
+        (typeof studentData.speech.averageRecognitionConfidence === 'number'
+          ? studentData.speech.summary.averageRecognitionConfidence + '%'
+          : 'غير متاحة') +
+        '. لا تمثل هذه القيمة دقة النطق؛ راجع أي اختلاف بين التفريغ والكلمة المستهدفة.'
+      );
     }
     if (studentData.tactile) {
       observations.push(
@@ -549,13 +559,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <Mic className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-indigo-700 font-mono">
-                    {studentData.speech ? `${studentData.speech.averageConfidence}% ثقة آلية` : 'لم يُجرَ'}
+                    {studentData.speech ? `${typeof studentData.speech.averageRecognitionConfidence === 'number' ? studentData.speech.averageRecognitionConfidence + '% ثقة للتعرف الصوتي' : 'ثقة التعرف غير متاحة'}` : 'لم يُجرَ'}
                   </span>
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">مخرجات التعرّف الصوتي</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">تفريغ صوتي أولي للمراجعة</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.speech
-                    ? `سجّل نظام التعرّف الصوتي قيمة ثقة ${studentData.speech.averageConfidence}% واقترح مراجعة ${studentData.speech.wordsNeedingImprovement} كلمة. قيمة الثقة ليست مقياسًا لدقة النطق أو الوعي الصوتي؛ راجع التسجيل والكلمات بشريًا.`
+                    ? `ثقة التعرف الصوتي التي وفرها المتصفح ${typeof studentData.speech.summary.averageRecognitionConfidence === 'number' ? studentData.speech.summary.averageRecognitionConfidence + '%' : 'غير متاحة'}. اختلف التفريغ عن النص المستهدف في ${studentData.speech.summary.transcriptsNeedingReview} كلمة؛ الاختلاف لا يثبت خطأ النطق ويحتاج إلى مراجعة التسجيل.`
                     : 'لم يكتمل فحص النطق في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -747,11 +757,11 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
                   {/* Speech Phonology */}
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">مخرجات التعرّف الصوتي</td>
-                    <td className="py-3.5 px-4 text-slate-600">قيمة الثقة التي أعادها النظام</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">تفريغ صوتي أولي للمراجعة</td>
+                    <td className="py-3.5 px-4 text-slate-600">ثقة التعرف الصوتي التي وفرها المتصفح</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-indigo-700">
                       {studentData.speech
-                        ? `${studentData.speech.averageConfidence}%`
+                        ? `${typeof studentData.speech.summary.averageRecognitionConfidence === 'number' ? studentData.speech.summary.averageRecognitionConfidence + '%' : 'غير متاحة'}`
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">ليست معيارًا لدقة النطق</td>
