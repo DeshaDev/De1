@@ -1716,10 +1716,11 @@ async function startServer() {
       return;
     }
 
-    const fallback = (message: string) => res.json({
+    const fallback = (message: string, usesExternalAI = false) => res.json({
       source: 'text-only-fallback',
       reviewRequired: true,
-      usesExternalAI: false,
+      proposalAvailable: false,
+      usesExternalAI,
       message,
       adaptation: {
         // Never invent syllable boundaries, word roots, meanings, or a key idea when
@@ -1774,7 +1775,7 @@ async function startServer() {
 
       const parsed: unknown = JSON.parse((response.text || '{}').trim());
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        fallback('تعذّر التحقق من اقتراح التبسيط؛ احتفظنا بالنص كما هو.');
+        fallback('تعذّر التحقق من اقتراح التبسيط؛ احتفظنا بالنص كما هو.', true);
         return;
       }
       const record = parsed as Record<string, unknown>;
@@ -1786,7 +1787,7 @@ async function startServer() {
         record.keyIdea.length > 500 ||
         !Array.isArray(record.wordBreakdowns)
       ) {
-        fallback('كان الاقتراح غير مكتمل أو غير صالح؛ احتفظنا بالنص كما هو.');
+        fallback('كان الاقتراح غير مكتمل أو غير صالح؛ احتفظنا بالنص كما هو.', true);
         return;
       }
 
@@ -1794,8 +1795,8 @@ async function startServer() {
       const keyIdea = record.keyIdea;
       const normalizeArabicForMatch = (value: string) =>
         value.normalize('NFC')
-          .replace(/[\\u064B-\\u065F\\u0670ـ]/g, '')
-          .replace(/[^\\u0621-\\u064A]/g, '');
+          .replace(/[\u064B-\u065F\u0670ـ]/g, '')
+          .replace(/[^\u0621-\u064A]/g, '');
       const searchableText = normalizeArabicForMatch(text + ' ' + simplifiedText);
       const wordBreakdowns = record.wordBreakdowns
         .filter((item): item is Record<string, unknown> =>
@@ -1821,12 +1822,13 @@ async function startServer() {
       res.json({
         source: 'gemini-3.8-flash-suggestion',
         reviewRequired: true,
+        proposalAvailable: true,
         usesExternalAI: true,
         adaptation: { simplifiedText, keyIdea, wordBreakdowns },
       });
     } catch (err) {
       console.warn('Gemini adapt-text fallback triggered:', err);
-      fallback('تعذّر توليد اقتراح صالح؛ احتفظنا بالنص كما هو.');
+      fallback('تعذّر توليد اقتراح صالح؛ احتفظنا بالنص كما هو.', true);
     }
   });
 
