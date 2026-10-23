@@ -42,8 +42,14 @@
 2. **El Fiky, Yomna Hassan (2016).** “Modification and Standardization of Egyptian dyslexia screening test for children.”  
    [سجل جامعة عين شمس](https://research.asu.edu.eg/handle/12345678/51928). الدراسة تخص اختبار MADST وسياق تقنينه المصري، ولا تُعد معيارًا عربيًا عامًا أو تحققًا من بصيرة.
 
-3. **Siegler, R. S., & Booth, J. L. (2004).** “Development of numerical estimation in young children.” *Child Development, 75(2), 428–444.*  
+3. **Arabic Little STT: Arabic Children Speech Recognition Dataset (2025).**  
+   [arXiv:2510.23319](https://arxiv.org/abs/2510.23319). تضم مجموعة البيانات 355 عبارة من 288 طفلًا ناطقًا بلهجة شامية (6–13 سنة)، واختبرت الدراسة ثمانية نماذج Whisper. أفضل WER مذكور هو 0.66 لـ Whisper Large-v3 ضمن هذه المجموعة؛ لا يمثل هذا الرقم دقة التعرف الصوتي داخل متصفح بصيرة ولا جميع اللهجات العربية.
+
+4. **Siegler, R. S., & Booth, J. L. (2004).** “Development of numerical estimation in young children.” *Child Development, 75(2), 428–444.*  
    [DOI: 10.1111/j.1467-8624.2004.00684.x](https://doi.org/10.1111/j.1467-8624.2004.00684.x). تبحث الدراسة تطور تقدير الأعداد على خط الأعداد؛ ولا تُثبت وحدها صلاحية اختبار بصيرة أو تشخيص عسر الحساب.
+
+5. **Zerouali et al. (2026).** “A Dyscalculia Diagnostic Battery for Moroccan Children: Development and Preliminary Validity Evidence.”  
+   [DOI: 10.1177/07342829261484042](https://doi.org/10.1177/07342829261484042). تقدم الدراسة أدلة أولية على بطارية خاصة بسياق مغربي (79 بندًا وتسعة مجالات). لا تعني نتائجها أن بصيرة قد تم التحقق منها، ولا أنها معيار قطري أو عربي عام.
 
 هذه المراجع خلفية لتصميم الأنشطة والأسئلة البحثية فقط، وليست ادعاءً باعتماد المنصة علميًا أو سريريًا.
 

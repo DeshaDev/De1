@@ -196,50 +196,42 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal([...manyHints.values()][0].failures.length, 10);
   });
 
-  it('derives reading metrics server-side, populates deterministic report recommendations, and rejects implausible evidence', () => {
+  it('derives camera-free reading observations and rejects legacy eye evidence', () => {
     const passage = ARABIC_READING_PASSAGES[0];
-    const validFixations = passage.words.map((word, index) => ({
-      wordIndex: index,
-      word,
-      durationMs: index % 5 === 0 ? 390 : 240,
-      visits: index % 6 === 0 && index > 0 ? 2 : 1,
-      regressedFromIndex: index % 6 === 0 && index > 0 ? index + 1 : undefined,
-      blinks: 0,
-      observed: true,
-    }));
+    const answers = passage.comprehensionQuestions.map((q) => q.correctIndex);
 
-    const derived = validateAndDeriveSessionFromEvidence(
+    const readingSession = validateAndDeriveSessionFromEvidence(
       {
+        assessmentModality: 'reading_only',
         passageId: passage.id,
         readingDurationSeconds: 28,
-        blinkCount: 9,
-        calibrationAccuracyPercent: 88,
-        calibrationValidationMethod: 'leave-one-point-out',
-        fixations: validFixations,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+        comprehensionAnswers: answers,
       },
       { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
     );
-
-    assert.equal(derived.valid, true);
-    assert.ok(derived.derivedFields);
-    assert.equal(derived.derivedFields.evidenceProvenance, 'client-reported');
-    assert.ok(derived.derivedFields.wpm > 0);
-    assert.equal(derived.derivedFields.comprehensionScore, 100);
-    assert.equal(
-      derived.derivedFields.calibrationValidationMethod,
-      'تحقق متقاطع (Leave-One-Point-Out CV)'
+    assert.equal(readingSession.valid, true);
+    assert.ok(readingSession.derivedFields);
+    assert.equal(readingSession.derivedFields.assessmentModality, 'reading_only');
+    assert.equal(readingSession.derivedFields.comprehensionScore, 100);
+    assert.equal(readingSession.derivedFields.calibrationAccuracyPercent, undefined);
+    assert.deepEqual(readingSession.derivedFields.fixations, []);
+    assert.equal(readingSession.derivedFields.dyslexiaRiskScore, null);
+    assert.equal(readingSession.derivedFields.readingHeuristicIndicator, null);
+    assert.equal(readingSession.derivedFields.readingRiskLevel, 'unassessed');
+    assert.ok(readingSession.derivedFields.wpm > 0);
+    assert.match(
+      readingSession.derivedFields.clinicalReport.ocularMotorAnalysis,
+      /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
     );
-    assert.ok(derived.derivedFields.clinicalReport.interventionExercises.length >= 2);
-    assert.ok(derived.derivedFields.clinicalReport.classroomAccommodations.length >= 2);
+    assert.ok(readingSession.derivedFields.clinicalReport.interventionExercises.length >= 2);
+    assert.ok(readingSession.derivedFields.clinicalReport.classroomAccommodations.length >= 2);
 
-    // Voice-only modality test: should NOT produce synthetic fixations
     const voiceOnlySession = validateAndDeriveSessionFromEvidence(
       {
         assessmentModality: 'voice_only',
         passageId: passage.id,
         readingDurationSeconds: 30,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+        comprehensionAnswers: answers,
       },
       { name: 'طالب صوتي', gradeLevel: passage.gradeLevel }
     );
@@ -247,22 +239,42 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.ok(voiceOnlySession.derivedFields);
     assert.deepEqual(voiceOnlySession.derivedFields.fixations, []);
     assert.equal(voiceOnlySession.derivedFields.calibrationAccuracyPercent, undefined);
-    assert.equal(voiceOnlySession.derivedFields.avgFixationMs, 0);
-    assert.equal(voiceOnlySession.derivedFields.regressionRate, 0);
-    // Without a transcript or teacher-verified alignment, voice-only speed is unavailable (stored as zero sentinel).
     assert.equal(voiceOnlySession.derivedFields.wpm, 0);
     assert.equal(voiceOnlySession.derivedFields.wcpm, null);
     assert.equal(voiceOnlySession.derivedFields.oralWerPercent, null);
 
-    // Reject client-supplied dyslexiaRiskScore
-    const forgedScore = validateAndDeriveSessionFromEvidence(
+    const legacyEyeMode = validateAndDeriveSessionFromEvidence(
       {
+        assessmentModality: 'eye_voice',
         passageId: passage.id,
         readingDurationSeconds: 28,
-        blinkCount: 9,
+        comprehensionAnswers: answers,
         calibrationAccuracyPercent: 88,
-        fixations: validFixations,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
+      },
+      { name: 'طالب قديم', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(legacyEyeMode.valid, false);
+    assert.equal(legacyEyeMode.statusCode, 400);
+
+    const legacyFixations = validateAndDeriveSessionFromEvidence(
+      {
+        assessmentModality: 'reading_only',
+        passageId: passage.id,
+        readingDurationSeconds: 28,
+        comprehensionAnswers: answers,
+        fixations: [{ wordIndex: 0, durationMs: 250, visits: 1 }],
+      },
+      { name: 'طالب قديم', gradeLevel: passage.gradeLevel }
+    );
+    assert.equal(legacyFixations.valid, false);
+    assert.equal(legacyFixations.statusCode, 400);
+
+    const forgedScore = validateAndDeriveSessionFromEvidence(
+      {
+        assessmentModality: 'reading_only',
+        passageId: passage.id,
+        readingDurationSeconds: 28,
+        comprehensionAnswers: answers,
         dyslexiaRiskScore: 5,
       },
       { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
@@ -270,80 +282,20 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(forgedScore.valid, false);
     assert.equal(forgedScore.statusCode, 400);
 
-    // Reject impossible fixation sum > readingDurationSeconds (e.g. 53 words * 420ms in 4s)
-    const impossibleDuration = validateAndDeriveSessionFromEvidence(
-      {
-        passageId: passage.id,
-        readingDurationSeconds: 4,
-        blinkCount: 5,
-        calibrationAccuracyPercent: 88,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
-        fixations: passage.words.map((word, index) => ({
-          wordIndex: index,
-          word,
-          durationMs: 420,
-          visits: 1,
-          blinks: 0,
-          observed: true,
-        })),
-      },
-      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
-    );
-    assert.equal(impossibleDuration.valid, false);
-    assert.equal(impossibleDuration.statusCode, 400);
-
-    // Reject an implausible full-passage reading pace in six seconds.
-    const tooFastReading = validateAndDeriveSessionFromEvidence(
-      {
-        passageId: passage.id,
-        readingDurationSeconds: 6,
-        blinkCount: 3,
-        calibrationAccuracyPercent: 88,
-        calibrationValidationMethod: 'leave-one-point-out',
-        fixations: passage.words.map((word, wordIndex) => ({
-          wordIndex,
-          word,
-          durationMs: 40,
-          visits: 1,
-          blinks: 0,
-          observed: true,
-        })),
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
-      },
-      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
-    );
-    assert.equal(tooFastReading.valid, false);
-    assert.equal(tooFastReading.statusCode, 400);
-
-    // Reject calibrationAccuracyPercent = 0
-    const zeroCalib = validateAndDeriveSessionFromEvidence(
-      {
-        passageId: passage.id,
-        readingDurationSeconds: 28,
-        blinkCount: 6,
-        calibrationAccuracyPercent: 0,
-        fixations: validFixations,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
-      },
-      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
-    );
-    assert.equal(zeroCalib.valid, false);
-    assert.equal(zeroCalib.statusCode, 400);
-
-    // Reject 10,000 blinks in a minute
-    const tenThousandBlinks = validateAndDeriveSessionFromEvidence(
-      {
-        passageId: passage.id,
-        readingDurationSeconds: 60,
-        blinkCount: 10000,
-        calibrationAccuracyPercent: 88,
-        fixations: validFixations,
-        comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
-      },
-      { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel }
-    );
-    assert.equal(tenThousandBlinks.valid, false);
-    assert.equal(tenThousandBlinks.statusCode, 400);
+    for (const seconds of [4, 6]) {
+      const tooFast = validateAndDeriveSessionFromEvidence(
+        {
+          assessmentModality: 'reading_only',
+          passageId: passage.id,
+          readingDurationSeconds: seconds,
+          comprehensionAnswers: answers,
+        },
+        { name: 'سرعة غير معقولة', gradeLevel: passage.gradeLevel }
+      );
+      assert.equal(tooFast.valid, false);
+      assert.equal(tooFast.statusCode, 400);
+      assert.match(tooFast.errorAr || '', /حد المعقولية التقني/);
+    }
   });
 
   it('validates canonical 4+2+3 math trials and rejects invented targets or choices', () => {

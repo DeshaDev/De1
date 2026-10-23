@@ -44,7 +44,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.ok(derived.derivedFields.clinicalReport);
     assert.match(
       derived.derivedFields.clinicalReport.ocularMotorAnalysis,
-      /دون كاميرا أو تتبع للعين/
+      /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
     );
   });
 

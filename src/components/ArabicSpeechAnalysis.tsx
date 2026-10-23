@@ -1,7 +1,6 @@
 /**
- * Arabic Speech & Phonological Analysis System (بصيرة - التحليل الصوتي والفونولوجي)
- * Clinical-grade acoustic signal processing and Arabic phonemic alignment
- * Inspired by international oral reading fluency standards (e.g., Amira Learning, Dyslexico)
+ * Exploratory Arabic pronunciation practice activity.
+ * Automated transcript comparisons are fallible and are not a validated screening or diagnostic test.
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -39,7 +38,7 @@ export interface TestWord {
   description: string;
 }
 
-export const CLINICAL_ARABIC_WORDS: TestWord[] = [
+export const ARABIC_PRACTICE_WORDS: TestWord[] = [
   // 1. الحروف المتشابهة بصرياً (Visual-orthographic homographs)
   {
     id: 1,
@@ -223,8 +222,8 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   const speechTranscriptRef = useRef<string>('');
   const speechConfidenceRef = useRef<number>(0);
 
-  const currentWord = CLINICAL_ARABIC_WORDS[currentWordIndex];
-  const progressPercent = Math.round((currentWordIndex / CLINICAL_ARABIC_WORDS.length) * 100);
+  const currentWord = ARABIC_PRACTICE_WORDS[currentWordIndex];
+  const progressPercent = Math.round((currentWordIndex / ARABIC_PRACTICE_WORDS.length) * 100);
 
   // Clean diacritics for normalization
   const stripDiacritics = (text: string) => {
@@ -702,7 +701,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
         labelArabic: `إبدال صوتي بين المفخم والمرقق (${word.targetPhoneme} ↔ ${substituted})`,
         severity: 'moderate',
         detectedSubstitution: substituted,
-        notes: `ضعف في التمييز السمعي الفونيمي بين صوتي [${word.targetPhoneme}] و [${substituted}]`,
+        notes: `احتمال اختلاف بين الصوت المطلوب والتفريغ؛ يلزم الاستماع والمراجعة البشرية`,
       };
     }
 
@@ -712,7 +711,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
         type: 'hesitation',
         labelArabic: 'تفكيك الكلمة وتكرار التردد',
         severity: 'moderate',
-        notes: `رُصدت ${pauseCount} توقفات غير طبيعية أثناء نطق الكلمة`,
+        notes: `رُصدت ${pauseCount} توقفات خلال هذه المحاولة`,
       };
     }
 
@@ -752,7 +751,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     if (isRecording) {
       stopWordRecording();
     }
-    if (currentWordIndex < CLINICAL_ARABIC_WORDS.length - 1) {
+    if (currentWordIndex < ARABIC_PRACTICE_WORDS.length - 1) {
       setCurrentWordIndex((prev) => prev + 1);
       setInterimTranscript('');
       setCurrentRecordingUrl(null);
@@ -825,7 +824,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            فحص النطق والقراءة الفونولوجية السريرية
+            نشاط استكشافي للنطق والأصوات العربية
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
             مختبر التحليل الصوتي والفونولوجي (بصيرة)
@@ -847,7 +846,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                 />
               </div>
               <span className="text-xs font-bold text-slate-700 font-mono">
-                {currentWordIndex + 1} / {CLINICAL_ARABIC_WORDS.length}
+                {currentWordIndex + 1} / {ARABIC_PRACTICE_WORDS.length}
               </span>
             </div>
           )}
@@ -1082,7 +1081,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                 className="px-6 py-2.5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center gap-2"
               >
                 <span>
-                  {currentWordIndex === CLINICAL_ARABIC_WORDS.length - 1
+                  {currentWordIndex === ARABIC_PRACTICE_WORDS.length - 1
                     ? 'إنهاء وعرض التقرير'
                     : 'الكلمة التالية'}
                 </span>
@@ -1091,7 +1090,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
             </div>
           </div>
 
-          {/* SIDE PANEL: REAL-TIME CLINICAL METRICS */}
+          {/* SIDE PANEL: EXPLORATORY OBSERVATIONS; NOT A CLINICAL MEASURE */}
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold text-sm">
@@ -1159,7 +1158,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                 قائمة الكلمات (13 كلمة)
               </h4>
               <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                {CLINICAL_ARABIC_WORDS.map((w, idx) => {
+                {ARABIC_PRACTICE_WORDS.map((w, idx) => {
                   const rep = completedReports.find((r) => r.wordId === w.id);
                   const isCurrent = idx === currentWordIndex;
                   return (
@@ -1201,11 +1200,11 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
               <div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur mb-2 inline-block">
-                  تقرير التقييم الصوتي السريري المكتمل
+                  ملخص النشاط الصوتي
                 </span>
                 <h2 className="text-3xl font-black mb-1">نتائج الفحص الفونولوجي: {studentName}</h2>
                 <p className="text-sm text-emerald-100">
-                  تم فحص 13 كلمة حاسمة لعسر القراءة ومخارج الأصوات العربية
+                  اكتمل نشاط من 13 كلمة تدريبية للأصوات العربية
                 </p>
               </div>
 

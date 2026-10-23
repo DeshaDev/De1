@@ -61,22 +61,10 @@ async function waitForServer(baseUrl: string, timeoutMs = 15000): Promise<void> 
 
 function buildPlausibleReadingEvidence() {
   const passage = ARABIC_READING_PASSAGES[0];
-  const fixations = passage.words.map((word, index) => ({
-    wordIndex: index,
-    word,
-    durationMs: index % 4 === 0 ? 410 : 250,
-    visits: index % 5 === 0 && index > 0 ? 2 : 1,
-    regressedFromIndex: index % 5 === 0 && index > 0 ? index + 1 : undefined,
-    blinks: 0,
-    observed: true,
-  }));
   return {
+    assessmentModality: 'reading_only',
     passageId: passage.id,
     readingDurationSeconds: 28,
-    blinkCount: 9,
-    calibrationAccuracyPercent: 88,
-    calibrationValidationMethod: 'leave-one-point-out',
-    fixations,
     comprehensionAnswers: passage.comprehensionQuestions.map((q) => q.correctIndex),
     guardianConsentGiven: true,
     guardianConsentRecordedAt: '2026-03-01T08:00:00.000Z',
@@ -278,14 +266,6 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         schoolName: 'مدرسة أ',
         ...buildPlausibleReadingEvidence(),
         readingDurationSeconds: 4,
-        fixations: passage.words.map((word, index) => ({
-          wordIndex: index,
-          word,
-          durationMs: 420,
-          visits: 1,
-          blinks: 0,
-          observed: true,
-        })),
       }),
     });
     assert.equal(impossibleRes.status, 400);
@@ -305,14 +285,6 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         schoolName: 'مدرسة أ',
         ...buildPlausibleReadingEvidence(),
         readingDurationSeconds: 6,
-        fixations: passage.words.map((word, index) => ({
-          wordIndex: index,
-          word,
-          durationMs: 40,
-          visits: 1,
-          blinks: 0,
-          observed: true,
-        })),
       }),
     });
     assert.equal(tooFastRes.status, 400);
