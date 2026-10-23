@@ -88,6 +88,6 @@ test('structural checks reject mismatched Arabic syllables and phonics examples'
   assert.equal(isStructurallyValidRemediationSessionPlan(badSyllables), false);
 
   const badPhonics = structuredClone(plan);
-  badPhonics.phonicsDrills[0].spokenWord = 'بُسْتَان';
+  badPhonics.phonicsDrills[0].spokenWord = 'كِتَاب';
   assert.equal(isStructurallyValidRemediationSessionPlan(badPhonics), false);
 });
