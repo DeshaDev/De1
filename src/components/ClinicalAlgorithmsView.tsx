@@ -24,11 +24,7 @@ import {
   ARABIC_DIALECT_PROFILES,
   ArabicDialectCode,
 } from '../utils/dyslexiaEngines';
-import { ARABIC_READING_PASSAGES, StudentRecord } from '../data/seedData';
-
-interface ClinicalAlgorithmsViewProps {
-  selectedStudent: StudentRecord;
-}
+import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
 const SAMPLE_GAZE_PRESETS: Record<
   'dyslexic' | 'nominal',
@@ -36,7 +32,7 @@ const SAMPLE_GAZE_PRESETS: Record<
 > = {
   dyslexic: {
     label:
-      'عينة مسار عين لطالب يعاني من عسر القراءة (تثبيتات مطوّلة + قفزات تراجعية)',
+      'بيانات اصطناعية: تثبيتات أطول وتراجعات متكررة (للاختبار البرمجي فقط)',
     samples: [
       { x: 780, y: 180, timestampMs: 0, wordIndex: 0 },
       { x: 784, y: 182, timestampMs: 140, wordIndex: 0 },
@@ -80,9 +76,7 @@ const SAMPLE_GAZE_PRESETS: Record<
   },
 };
 
-export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
-  selectedStudent,
-}) => {
+export const ClinicalAlgorithmsView: React.FC = () => {
   // Progressive Disclosure Lab Switcher ('irt' | 'oral' | 'pygaze')
   const [activeLab, setActiveLab] = useState<'irt' | 'oral' | 'pygaze'>('irt');
 
@@ -349,54 +343,16 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
   };
 
   // 3. PYGAZE / GAZEPARSER & HEURISTIC ENSEMBLE STATE
-  const [gazePresetMode, setGazePresetMode] = useState<
-    'student' | 'dyslexic' | 'nominal'
-  >('dyslexic');
+  const [gazePresetMode, setGazePresetMode] = useState<'dyslexic' | 'nominal'>('dyslexic');
   const [minFixationThresholdMs, setMinFixationThresholdMs] =
     useState<number>(120);
   const [maxDispersionThresholdPx, setMaxDispersionThresholdPx] =
     useState<number>(45);
 
-  const activeGazeSamples: RawGazeSample[] = useMemo(() => {
-    if (gazePresetMode === 'dyslexic') {
-      return SAMPLE_GAZE_PRESETS.dyslexic.samples;
-    }
-    if (gazePresetMode === 'nominal') {
-      return SAMPLE_GAZE_PRESETS.nominal.samples;
-    }
-    const samples: RawGazeSample[] = [];
-    let currentTs = 0;
-    selectedStudent.fixations.forEach((fix, idx) => {
-      const baseWordX = 780 - (idx % 7) * 105;
-      const baseWordY = 160 + Math.floor(idx / 7) * 65;
-      const stepCount = Math.max(3, Math.round(fix.durationMs / 80));
-      const dt = Math.round(fix.durationMs / stepCount);
-
-      for (let s = 0; s <= stepCount; s++) {
-        samples.push({
-          x: baseWordX + (s % 2 === 0 ? 1 : -1) * (s + 1),
-          y: baseWordY + (s % 2),
-          timestampMs: currentTs + s * dt,
-          wordIndex: fix.wordIndex,
-        });
-      }
-      currentTs += fix.durationMs + 32;
-
-      if (typeof fix.regressedFromIndex === 'number') {
-        const regX = baseWordX + 115;
-        for (let r = 0; r <= 3; r++) {
-          samples.push({
-            x: regX + r,
-            y: baseWordY,
-            timestampMs: currentTs + r * 95,
-            wordIndex: Math.max(0, fix.wordIndex - 1),
-          });
-        }
-        currentTs += 310;
-      }
-    });
-    return samples;
-  }, [gazePresetMode, selectedStudent]);
+  const activeGazeSamples: RawGazeSample[] = useMemo(
+    () => SAMPLE_GAZE_PRESETS[gazePresetMode].samples,
+    [gazePresetMode]
+  );
 
   const oculomotorHeuristicResult = useMemo(
     () =>
@@ -414,32 +370,41 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
 
   const handleDownloadHeuristicJSON = () => {
     const payload = {
-      platform: 'Baseera Experimental Oculomotor Heuristic & IRT Demo',
+      platform: 'Baseera technical simulation — synthetic examples only',
+      dataProvenance: 'synthetic-demo-data',
+      diagnosticClassification: null,
+      noteAr: 'هذه بيانات اصطناعية لا تخص طفلًا ولا تصلح للفرز أو التشخيص أو اتخاذ قرار تعليمي.',
       timestamp: new Date().toISOString(),
-      studentName: selectedStudent.name,
       oculomotorParameters: {
         minFixationDurationMs: minFixationThresholdMs,
         maxDispersionPx: maxDispersionThresholdPx,
         readingDirection: 'rtl',
       },
       extractedFeatures: oculomotorHeuristicResult.features,
-      heuristicInference: {
-        heuristicRiskScore: oculomotorHeuristicResult.heuristicRiskScore,
-        classification: oculomotorHeuristicResult.classification,
-        temporalHeuristicScore:
-          oculomotorHeuristicResult.temporalHeuristicScore,
+      technicalRuleOutputs: {
+        temporalHeuristicScore: oculomotorHeuristicResult.temporalHeuristicScore,
         ruleVotes: oculomotorHeuristicResult.ruleVotes,
       },
-      irtAdaptiveSummary: currentIRTEstimate,
-      oralReadingFluency: oralFluencyMetrics,
+      irtSimulation: {
+        responses: irtHistory.length,
+        theta: irtHistory.length > 0 ? currentIRTEstimate.theta : null,
+        standardError: irtHistory.length > 0 ? currentIRTEstimate.standardError : null,
+        totalFisherInformation: irtHistory.length > 0 ? currentIRTEstimate.totalFisherInformation : null,
+        populationRank: null,
+        riskClassification: null,
+      },
+      oralAlignmentDemo: {
+        referenceWordCount: targetOralPassageWords.length,
+        transcriptWordCount: spokenTranscript.trim() ? spokenTranscript.trim().split(/\\s+/).filter(Boolean).length : 0,
+        wcpmIsNormed: false,
+        diagnosticClassification: null,
+      },
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: 'application/json',
-    });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `clinical-telemetry-${selectedStudent.id}.json`;
+    a.download = 'baseera-technical-simulation.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -451,10 +416,10 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
         <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200">
           <div>
             <div className="text-xs text-slate-500 mb-1">
-              مؤشرات استرشادية · محاذاة قراءة · نموذج IRT توضيحي غير معاير
+              بيئة تجريبية للمطوّرين · بيانات اصطناعية · لا تنتج نتيجة طفل
             </div>
             <h1 className="text-2xl font-bold text-slate-900 font-display">
-              مختبر المؤشرات البصرية والصوتية
+              مختبر تقني تجريبي
             </h1>
           </div>
 
@@ -466,6 +431,10 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             <Download className="w-4 h-4 text-sky-400" />
             <span>تصدير مصفوفة القياس (JSON)</span>
           </button>
+        </div>
+
+        <div className="mx-6 mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
+          <strong>مهم:</strong> هذه شاشة محاكاة للبرمجة وليست جزءًا من فحص الطفل. معاملات IRT وعتبات حركة العين غير مُعايرة على عينة عربية ممثّلة؛ لا تستخدم درجاتها أو تصنيفاتها لاتخاذ قرار أو لملف طالب. الأمثلة المصطنعة لا تمثل أداءً حقيقيًا.
         </div>
 
         {/* 3-Lab Segmented Navigation Strip */}
@@ -487,14 +456,14 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                المؤشرات البصرية
+                محاكاة بنود
               </div>
               <div className="text-sm mt-0.5">
-                عرض توضيحي لنظرية استجابة الفقرة (2PL IRT) — غير معاير
+                تجربة تقنية لـ IRT 2PL — غير معايرة
               </div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
-              θ = {currentIRTEstimate.theta.toFixed(2)}
+              {irtHistory.length > 0 ? `θ = ${currentIRTEstimate.theta.toFixed(2)}` : 'θ غير متاح بعد'}
             </span>
           </button>
 
@@ -511,15 +480,13 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                محاذاة القراءة الجهرية
+                مثال نصي
               </div>
               <div className="text-sm mt-0.5">
-                طلاقة القراءة الجهرية واللهجات العربية (WCPM)
+                تجربة محاذاة الكلام إلى النص — ليست WCPM معيارية
               </div>
             </div>
-            <span className="text-xs font-mono tabular-nums text-slate-500">
-              {oralFluencyMetrics.wcpm} ك/د
-            </span>
+            <span className="text-xs text-slate-500">عرض تجريبي</span>
           </button>
 
           <button
@@ -535,15 +502,13 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
           >
             <div>
               <div className="text-xs text-[#0284C7] font-semibold">
-                عرض IRT التوضيحي
+                معالجة إحداثيات
               </div>
               <div className="text-sm mt-0.5">
-                مؤشر استرشادي لحركة العين
+                تجربة تقنية لبيانات عين اصطناعية
               </div>
             </div>
-            <span className="text-xs font-mono tabular-nums text-slate-500">
-              {oculomotorHeuristicResult.heuristicRiskScore}%
-            </span>
+            <span className="text-xs text-slate-500">غير سريري</span>
           </button>
         </div>
       </div>
@@ -587,7 +552,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                     : currentIRTEstimate.theta.toFixed(2)}
                 </span>
                 <span className="text-xs font-mono text-[#0284C7] font-semibold">
-                  رتبة نظرية داخل النموذج: {currentIRTEstimate.modelBasedRank} (غير معيارية)
+                  {irtHistory.length > 0 ? `رتبة نظرية داخل النموذج: ${currentIRTEstimate.modelBasedRank} (ليست مئينًا سكانيًا)` : 'لا توجد بيانات؛ أجب عن بند تجريبي لعرض حسابات النموذج'}
                 </span>
               </div>
             </div>
@@ -627,7 +592,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
             </div>
 
             <div className="p-5">
-              <div className="text-xs text-slate-500">تصنيف استرشادي غير معياري</div>
+              <div className="text-xs text-slate-500">حدود غير مُعايرة — لا تصنيف</div>
               <div className="mt-1 text-xs font-bold text-slate-900 leading-snug">
                 {currentIRTEstimate.interpretationLabelAr}
               </div>
@@ -827,7 +792,7 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                           fill="#DC2626"
                           textAnchor="middle"
                         >
-                          θ = {currentIRTEstimate.theta.toFixed(2)}
+                          {irtHistory.length > 0 ? `θ = ${currentIRTEstimate.theta.toFixed(2)}` : 'θ غير متاح بعد'}
                         </text>
                       </>
                     );
@@ -1136,22 +1101,21 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
                 كشف التثبيتات والقفزات بطريقة عتبية مستوحاة من I-DT/I-VT
               </div>
               <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-                مصنف الحركات البصرية ونموذج الفرز الاستدلالي الموزون
+                تحليل تقني لعينة إحداثيات اصطناعية
               </h3>
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
               {[
-                { id: 'dyslexic', label: 'عينة اصطناعية لأغراض العرض' },
-                { id: 'nominal', label: 'عينة قارئ طلق' },
-                { id: 'student', label: `بيانات ${selectedStudent.name}` },
+                { id: 'dyslexic', label: 'نمط اصطناعي (أ)' },
+                { id: 'nominal', label: 'نمط اصطناعي (ب)' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() =>
                     setGazePresetMode(
-                      tab.id as 'student' | 'dyslexic' | 'nominal'
+                      tab.id as 'dyslexic' | 'nominal'
                     )
                   }
                   className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
@@ -1226,30 +1190,10 @@ export const ClinicalAlgorithmsView: React.FC<ClinicalAlgorithmsViewProps> = ({
               />
             </div>
 
-            <div className="flex flex-col justify-center bg-white border border-slate-200 rounded-xl px-4 py-3">
-              <div className="text-[11px] text-slate-500">
-                مؤشر الفرز الاستدلالي الموزون
-              </div>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-xl font-bold font-mono tabular-nums text-slate-900">
-                  {oculomotorHeuristicResult.heuristicRiskScore}%
-                </span>
-                <span
-                  className={`text-xs font-semibold ${
-                    oculomotorHeuristicResult.classification === 'high_dyslexia_risk'
-                      ? 'text-[#DC2626]'
-                      : oculomotorHeuristicResult.classification === 'moderate_risk'
-                        ? 'text-[#D97706]'
-                        : 'text-[#059669]'
-                  }`}
-                >
-                  {oculomotorHeuristicResult.classification === 'high_dyslexia_risk'
-                    ? '■ مؤشر فرز مرتفع'
-                    : oculomotorHeuristicResult.classification === 'moderate_risk'
-                      ? '▲ مؤشر فرز متوسط'
-                      : '● مؤشر فرز استرشادي منخفض'}
-                </span>
-              </div>
+            <div className="flex flex-col justify-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <div className="text-[11px] text-slate-500">حالة هذه المحاكاة</div>
+              <p className="mt-1 text-sm font-bold text-slate-800">بيانات اصطناعية فقط</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">لا تُعرض درجة خطر؛ الأوزان والعتبات داخلية وغير مُعايرة.</p>
             </div>
           </div>
 
