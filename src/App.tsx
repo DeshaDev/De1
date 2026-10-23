@@ -25,12 +25,12 @@ import {
 } from './data/seedData';
 import {
   authenticatedFetch,
-  clearClinicalSession,
-  logoutClinicalSession,
-  getStoredClinicalSession,
-  loginClinicalSession,
+  clearBaseeraSession,
+  logoutBaseeraSession,
+  getStoredBaseeraSession,
+  loginBaseeraSession,
   getTenantDisplayLabelAr,
-  ClinicalSessionInfo,
+  BaseeraSessionInfo,
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
 import ReadingAssessmentView from './components/ReadingAssessmentView';
@@ -69,14 +69,14 @@ export default function App() {
   );
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
-  const [clinicalSession, setClinicalSession] =
-    useState<ClinicalSessionInfo | null>(() => getStoredClinicalSession());
+  const [baseeraSession, setBaseeraSession] =
+    useState<BaseeraSessionInfo | null>(() => getStoredBaseeraSession());
   const [pendingServerRecord, setPendingServerRecord] =
     useState<StudentRecord | null>(null);
-  const [showClinicalLogin, setShowClinicalLogin] = useState<boolean>(false);
-  const [clinicalAccessCode, setClinicalAccessCode] = useState<string>('');
-  const [clinicalLoginError, setClinicalLoginError] = useState<string>('');
-  const [isClinicalLoggingIn, setIsClinicalLoggingIn] = useState<boolean>(false);
+  const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(false);
+  const [clinicalAccessCode, setBaseeraAccessCode] = useState<string>('');
+  const [clinicalLoginError, setBaseeraLoginError] = useState<string>('');
+  const [isBaseeraLoggingIn, setIsBaseeraLoggingIn] = useState<boolean>(false);
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -110,7 +110,7 @@ export default function App() {
 
   // Load persistent student records from RBAC-protected server when an authenticated session is stored
   useEffect(() => {
-    if (!clinicalSession?.token) return;
+    if (!baseeraSession?.token) return;
     let cancelled = false;
     authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
@@ -134,7 +134,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [clinicalSession?.token]);
+  }, [baseeraSession?.token]);
 
   const selectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0];
@@ -277,13 +277,13 @@ export default function App() {
     setSelectedStudentId(completedRecord.id);
     setActiveTab('dashboard');
     setDashboardSubView('report');
-    if (!clinicalSession) {
+    if (!baseeraSession) {
       setPendingServerRecord(completedRecord);
       setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها في التخزين المشفر.');
-      setShowClinicalLogin(true);
+      setShowBaseeraLogin(true);
       return;
     }
-    if (clinicalSession.role !== 'clinician') {
+    if (baseeraSession.role !== 'school_admin') {
       setAiStatusBanner('هذا الحساب للقراءة فقط؛ اكتملت النتيجة محليًا ولم تُحفظ في سجل المدرسة. استخدم رمز أخصائي مخوّل للحفظ.');
       return;
     }
@@ -318,9 +318,9 @@ export default function App() {
         setPendingServerRecord(completedRecord);
         setAiStatusBanner(data?.error || 'لم يُحفظ السجل في الخادم. بقيت نسخة محلية لإعادة المحاولة بعد تسجيل الدخول.');
         if (response.status === 401) {
-          clearClinicalSession();
-          setClinicalSession(null);
-          setShowClinicalLogin(true);
+          clearBaseeraSession();
+          setBaseeraSession(null);
+          setShowBaseeraLogin(true);
         }
       }
     } catch {
@@ -342,7 +342,7 @@ export default function App() {
       guardianConsentSource: string;
     }
   ) => {
-    if (clinicalSession?.role === 'educator_readonly') {
+    if (baseeraSession?.role === 'educator_readonly') {
       setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
       return;
     }
@@ -424,8 +424,8 @@ export default function App() {
         mathHeuristicIndicator: null,
         mathRiskLevel: 'unassessed',
         mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
-        clinicalReport: {
-          clinicalSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
+        learningReport: {
+          learningSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
           ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
           orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر نص منطوق فعلي.',
           dyscalculiaSpatialAnalysis: 'لم يُستكمل فحص الحساب بعد.',
@@ -456,16 +456,16 @@ export default function App() {
     studentId: string,
     updated: Partial<StudentRecord>
   ) => {
-    if (!clinicalSession || clinicalSession.role !== 'clinician') {
+    if (!baseeraSession || baseeraSession.role !== 'school_admin') {
       setStudents((prev) =>
         prev.map((student) =>
           student.id === studentId ? { ...student, ...updated } : student
         )
       );
-      setAiStatusBanner(clinicalSession
+      setAiStatusBanner(baseeraSession
         ? 'رمزك للقراءة فقط؛ حُفظت النتيجة محليًا فقط ولم تُحفظ في الخادم.'
         : 'حُفظت نتيجة الحساب محليًا؛ سجّل الدخول لحفظ تحديثات سجل الطالب في الخادم.');
-      if (!clinicalSession) setShowClinicalLogin(true);
+      if (!baseeraSession) setShowBaseeraLogin(true);
       return;
     }
     try {
@@ -517,11 +517,11 @@ export default function App() {
   };
 
   const handleDeleteStudentRecord = async (studentId: string) => {
-    if (!clinicalSession || clinicalSession.role !== 'clinician') {
-      setAiStatusBanner(clinicalSession
+    if (!baseeraSession || baseeraSession.role !== 'school_admin') {
+      setAiStatusBanner(baseeraSession
         ? 'رمزك للقراءة فقط؛ لا يمكن حذف سجلات الطلاب.'
         : 'يلزم تسجيل الدخول قبل حذف سجل من الخادم.');
-      if (!clinicalSession) setShowClinicalLogin(true);
+      if (!baseeraSession) setShowBaseeraLogin(true);
       return;
     }
     if (students.length <= 1) return;
@@ -550,11 +550,11 @@ export default function App() {
   };
 
   const handleRefreshLearningReport = async () => {
-    if (!clinicalSession || clinicalSession.role !== 'clinician') {
-      setAiStatusBanner(clinicalSession
+    if (!baseeraSession || baseeraSession.role !== 'school_admin') {
+      setAiStatusBanner(baseeraSession
         ? 'رمزك للقراءة فقط ولا يتيح إنشاء تقارير على الخادم.'
         : 'يلزم تسجيل دخول أخصائي لإنشاء التقارير من الخادم.');
-      if (!clinicalSession) setShowClinicalLogin(true);
+      if (!baseeraSession) setShowBaseeraLogin(true);
       return;
     }
     if (
@@ -600,11 +600,11 @@ export default function App() {
         if (data?.report) {
           if (!selectedStudent.isDemoRecord) {
             const persistRes = await authenticatedFetch(
-              `/api/students/${encodeURIComponent(selectedStudent.id)}/clinical-report`,
+              `/api/students/${encodeURIComponent(selectedStudent.id)}/learning-report`,
               {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clinicalReport: data.report }),
+                body: JSON.stringify({ learningReport: data.report }),
               }
             );
             if (!persistRes.ok) {
@@ -621,7 +621,7 @@ export default function App() {
                 s.id === selectedStudent.id
                   ? persisted?.student
                     ? { ...s, ...persisted.student }
-                    : { ...s, clinicalReport: data.report }
+                    : { ...s, learningReport: data.report }
                   : s
               )
             );
@@ -629,7 +629,7 @@ export default function App() {
             setStudents((prev) =>
               prev.map((s) =>
                 s.id === selectedStudent.id
-                  ? { ...s, clinicalReport: data.report }
+                  ? { ...s, learningReport: data.report }
                   : s
               )
             );
@@ -649,22 +649,22 @@ export default function App() {
     }
   };
 
-  const handleClinicalLogin = async () => {
-    setClinicalLoginError('');
-    setIsClinicalLoggingIn(true);
+  const handleBaseeraLogin = async () => {
+    setBaseeraLoginError('');
+    setIsBaseeraLoggingIn(true);
     try {
-      const session = await loginClinicalSession(
+      const session = await loginBaseeraSession(
         clinicalAccessCode.trim(),
-        'clinician',
-        'أخصائي التقييم'
+        'school_admin',
+        'مسؤول المدرسة'
       );
       if (!session) {
-        setClinicalLoginError('فشل تسجيل الدخول. تحقق من الرمز ومن إعدادات المصادقة والتخزين المشفر على الخادم.');
+        setBaseeraLoginError('فشل تسجيل الدخول. تحقق من الرمز ومن إعدادات المصادقة والتخزين المشفر على الخادم.');
         return;
       }
-      setClinicalSession(session);
-      setClinicalAccessCode('');
-      setShowClinicalLogin(false);
+      setBaseeraSession(session);
+      setBaseeraAccessCode('');
+      setShowBaseeraLogin(false);
       const response = await authenticatedFetch('/api/students');
       if (response.ok) {
         const data = await response.json();
@@ -717,9 +717,9 @@ export default function App() {
         setAiStatusBanner(data?.error || 'تم تسجيل الدخول لكن تعذر تحميل السجلات.');
       }
     } catch {
-      setClinicalLoginError('تعذر الاتصال بخدمة تسجيل الدخول.');
+      setBaseeraLoginError('تعذر الاتصال بخدمة تسجيل الدخول.');
     } finally {
-      setIsClinicalLoggingIn(false);
+      setIsBaseeraLoggingIn(false);
     }
   };
 
@@ -741,24 +741,24 @@ export default function App() {
       }`}
     >
       <a className="baseera-skip-link" href="#main-content">تجاوز إلى المحتوى</a>
-      {showClinicalLogin && (
+      {showBaseeraLogin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-login-title">
           <form
-            onSubmit={(event) => { event.preventDefault(); void handleClinicalLogin(); }}
+            onSubmit={(event) => { event.preventDefault(); void handleBaseeraLogin(); }}
             className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
           >
             <h2 id="clinical-login-title" className="text-lg font-bold">دخول المعلّم أو الأخصائي</h2>
             <p className="text-sm text-slate-600">أدخل رمز المدرسة الذي سلّمه لك مسؤول النظام. تُحدَّد صلاحيات الحساب تلقائيًا.</p>
             <label className="block space-y-1 text-sm font-medium">
               <span>رمز الوصول</span>
-              <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setClinicalAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
+              <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setBaseeraAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
             </label>
             {clinicalLoginError && <p role="alert" className="text-sm text-red-700">{clinicalLoginError}</p>}
             <div className="flex gap-2">
-              <button type="submit" disabled={isClinicalLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                {isClinicalLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
+              <button type="submit" disabled={isBaseeraLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {isBaseeraLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
               </button>
-              <button type="button" onClick={() => { setShowClinicalLogin(false); setClinicalLoginError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">إلغاء</button>
+              <button type="button" onClick={() => { setShowBaseeraLogin(false); setBaseeraLoginError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">إلغاء</button>
             </div>
           </form>
         </div>
@@ -809,10 +809,10 @@ export default function App() {
             <button
               type="button"
               className="baseera-teacher-action"
-              onClick={() => clinicalSession ? setActiveTab('dashboard') : setShowClinicalLogin(true)}
+              onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
             >
               <GraduationCap aria-hidden="true" size={19} />
-              <span>{clinicalSession ? 'لوحة المعلّم' : 'دخول المعلّم'}</span>
+              <span>{baseeraSession ? 'لوحة المعلّم' : 'دخول المعلّم'}</span>
             </button>
             <button
               type="button"
@@ -829,18 +829,18 @@ export default function App() {
       <div className="baseera-session-strip" role="status">
         <span className="baseera-session-copy">
           <ShieldCheck aria-hidden="true" size={17} />
-          {clinicalSession
-            ? 'جلسة المدرسة متصلة: ' + clinicalSession.clinicianName + ' · ' + getTenantDisplayLabelAr(clinicalSession)
+          {baseeraSession
+            ? 'جلسة المدرسة متصلة: ' + baseeraSession.accountName + ' · ' + getTenantDisplayLabelAr(baseeraSession)
             : 'وضع التجربة — لا توجد جلسة مدرسة متصلة.'}
         </span>
-        {clinicalSession ? (
+        {baseeraSession ? (
           <button
             type="button"
             className="baseera-session-action"
             onClick={() => {
               void (async () => {
-                await logoutClinicalSession();
-                setClinicalSession(null);
+                await logoutBaseeraSession();
+                setBaseeraSession(null);
                 setIsPersistedStoreLoaded(false);
                 setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
               })();
@@ -849,7 +849,7 @@ export default function App() {
             تسجيل الخروج
           </button>
         ) : (
-          <button type="button" className="baseera-session-action" onClick={() => setShowClinicalLogin(true)}>
+          <button type="button" className="baseera-session-action" onClick={() => setShowBaseeraLogin(true)}>
             دخول المعلّم
           </button>
         )}
@@ -1047,7 +1047,7 @@ export default function App() {
                       : 'وضع الجلسة'}
                   </span>
                 </span>
-                {students.length > 1 && clinicalSession?.role === 'clinician' && (
+                {students.length > 1 && baseeraSession?.role === 'school_admin' && (
                   <button
                     type="button"
                     onClick={() =>
@@ -1353,8 +1353,8 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    disabled={isUpdatingReport || clinicalSession?.role !== 'clinician'}
-                    title={clinicalSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
+                    disabled={isUpdatingReport || baseeraSession?.role !== 'school_admin'}
+                    title={baseeraSession?.role === 'educator_readonly' ? 'صلاحية القراءة فقط لا تتيح إنشاء تقرير على الخادم' : undefined}
                     onClick={handleRefreshLearningReport}
                     className="px-4 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-60 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
                   >
@@ -1406,7 +1406,7 @@ export default function App() {
                         ٠١. ملخص الأداء القرائي والحسابي
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        {selectedStudent.clinicalReport.clinicalSummary}
+                        {selectedStudent.learningReport.learningSummary}
                       </p>
                     </div>
                     <div className="pt-6 border-t border-slate-200 space-y-2">
@@ -1434,7 +1434,7 @@ export default function App() {
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {
-                          selectedStudent.clinicalReport
+                          selectedStudent.learningReport
                             .orthographicAndPhonologicalPatterns
                         }
                       </p>
@@ -1445,7 +1445,7 @@ export default function App() {
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {
-                          selectedStudent.clinicalReport
+                          selectedStudent.learningReport
                             .dyscalculiaSpatialAnalysis
                         }
                       </p>
@@ -1460,8 +1460,8 @@ export default function App() {
                       أنشطة المساندة القرائية اليومية المقترحة
                     </h3>
                     <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white overflow-hidden">
-                      {selectedStudent.clinicalReport.interventionExercises.length > 0 ? (
-                        selectedStudent.clinicalReport.interventionExercises.map(
+                      {selectedStudent.learningReport.interventionExercises.length > 0 ? (
+                        selectedStudent.learningReport.interventionExercises.map(
                           (ex, idx) => (
                             <div
                               key={idx}
@@ -1495,8 +1495,8 @@ export default function App() {
                         التيسيرات الصفية والمدرسية الموصى بها
                       </h3>
                       <ul className="space-y-2.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-5">
-                        {selectedStudent.clinicalReport.classroomAccommodations.length > 0 ? (
-                          selectedStudent.clinicalReport.classroomAccommodations.map(
+                        {selectedStudent.learningReport.classroomAccommodations.length > 0 ? (
+                          selectedStudent.learningReport.classroomAccommodations.map(
                             (acc, idx) => (
                               <li key={idx} className="flex items-start gap-2">
                                 <span className="text-[#0284C7] font-bold">·</span>
@@ -1532,7 +1532,7 @@ export default function App() {
           <ReadingAssessmentView
             onCompleteSession={handleCompleteNewSession}
             activeStudent={selectedStudent}
-            canVerifyAsTeacher={clinicalSession?.role === 'clinician'}
+            canVerifyAsTeacher={baseeraSession?.role === 'school_admin'}
             onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
           />
         )}
@@ -1567,7 +1567,7 @@ export default function App() {
             onSelectStudent={setSelectedStudentId}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
-            canGeneratePlan={clinicalSession?.role === 'clinician'}
+            canGeneratePlan={baseeraSession?.role === 'school_admin'}
           />
         )}
 

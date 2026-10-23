@@ -8,14 +8,14 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
-  ClinicalRole,
-  ClinicalScope,
+  BaseeraRole,
+  BaseeraScope,
   AuthFailureBucket,
-  issueClinicalSessionToken,
-  verifyClinicalSessionToken,
+  issueBaseeraSessionToken,
+  verifyBaseeraSessionToken,
   authorizeSessionScope,
   validateExplicitGuardianConsent,
-  VerifiedClinicalSession,
+  VerifiedBaseeraSession,
   parseStrictTrustProxyHops,
   stripArabicPatronymics,
   formatTenantDisplayNameAr,
@@ -23,12 +23,12 @@ import {
   getAuthBucketKey,
   recordFailedAuthAttempt,
   getAuthThrottleDelayMs,
-  isStrongClinicalAccessCode,
+  isStrongBaseeraAccessCode,
   StudentProfilePatchSchema,
-  ClinicalReportUpdateEnvelopeSchema,
+  LearningReportUpdateEnvelopeSchema,
   validateAndDeriveMathTrials,
   validateAndDeriveSessionFromEvidence,
-  buildDeterministicClinicalReport,
+  buildDeterministicLearningReport,
 } from './src/utils/clinicalSecurity';
 
 dotenv.config();
@@ -41,24 +41,24 @@ const TRUST_PROXY_HOPS = parseStrictTrustProxyHops(
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = process.env.CLINICAL_DATA_DIR
-  ? path.resolve(process.env.CLINICAL_DATA_DIR)
+const DATA_DIR = process.env.BASEERA_DATA_DIR
+  ? path.resolve(process.env.BASEERA_DATA_DIR)
   : path.join(__dirname, '.runtime-store');
 const STORE_PATH = path.join(DATA_DIR, 'clinical-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
 
-let clinicalStoreReady = false;
+let baseeraStoreReady = false;
 let securityStateReady = false;
 
-const CLINICAL_SESSION_SECRET = (
-  process.env.CLINICAL_SESSION_SECRET || ''
+const BASEERA_SESSION_SECRET = (
+  process.env.BASEERA_SESSION_SECRET || ''
 ).trim();
 
-export interface ClinicalAuditLogEntry {
+export interface BaseeraAuditLogEntry {
   eventId: string;
   timestamp: string;
   tenantId: string;
-  actorRole: ClinicalRole;
+  actorRole: BaseeraRole;
   sessionId: string;
   action:
     | 'student.create'
@@ -75,10 +75,10 @@ interface PersistedSecurityState {
   revokedSessions: Record<string, number>;
   failedAuthBuckets: Record<string, AuthFailureBucket>;
   aiRateBuckets: Record<string, number[]>;
-  auditLogs: ClinicalAuditLogEntry[];
+  auditLogs: BaseeraAuditLogEntry[];
 }
 
-const REVOKED_CLINICAL_SESSIONS = new Map<string, number>();
+const REVOKED_BASEERA_SESSIONS = new Map<string, number>();
 const failedAuthBuckets = new Map<string, AuthFailureBucket>();
 const aiRateLimitBuckets = new Map<string, number[]>();
 // Invalid login attempts are serialized per IP so parallel requests cannot all
@@ -87,18 +87,18 @@ const aiRateLimitBuckets = new Map<string, number[]>();
 const authAttemptTails = new Map<string, Promise<void>>();
 const pendingAuthAttempts = new Map<string, number>();
 const MAX_PENDING_AUTH_ATTEMPTS_PER_IP = 16;
-let auditLogsDb: ClinicalAuditLogEntry[] = [];
+let auditLogsDb: BaseeraAuditLogEntry[] = [];
 
 interface TenantCredential {
   tenantId: string;
   tenantDisplayNameAr: string;
-  role: ClinicalRole;
+  role: BaseeraRole;
   accessCode: string;
 }
 
 /** Role and tenant are derived from an independently provisioned secret, never from request claims. */
 function getTenantCredentialEntries(): TenantCredential[] {
-  const raw = (process.env.CLINICAL_TENANT_CREDENTIALS || '').trim();
+  const raw = (process.env.BASEERA_TENANT_CREDENTIALS || '').trim();
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -125,10 +125,10 @@ function getTenantCredentialEntries(): TenantCredential[] {
         tenantId,
         customSchoolName
       );
-      for (const role of ['clinician', 'educator_readonly'] as const) {
+      for (const role of ['school_admin', 'educator_readonly'] as const) {
         const accessCode = credentials[role];
         if (
-          !isStrongClinicalAccessCode(accessCode) ||
+          !isStrongBaseeraAccessCode(accessCode) ||
           seenCodes.has(accessCode)
         )
           return [];
@@ -148,24 +148,24 @@ function getTenantCredentialEntries(): TenantCredential[] {
 }
 
 function getStoreEncryptionKey(): Buffer | null {
-  const raw = (process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim();
+  const raw = (process.env.BASEERA_STORE_ENCRYPTION_KEY || '').trim();
   if (!/^[a-f0-9]{64}$/i.test(raw)) return null;
   return Buffer.from(raw, 'hex');
 }
 
-function isClinicalAuthConfigured(): boolean {
-  const storeKeyHex = (process.env.CLINICAL_STORE_ENCRYPTION_KEY || '')
+function isBaseeraAuthConfigured(): boolean {
+  const storeKeyHex = (process.env.BASEERA_STORE_ENCRYPTION_KEY || '')
     .trim()
     .toLowerCase();
   const credentials = getTenantCredentialEntries();
   return (
     credentials.length >= 2 &&
-    CLINICAL_SESSION_SECRET.length >= 32 &&
-    CLINICAL_SESSION_SECRET !== 'baseera-rbac-hmac-secret-key-2026' &&
-    CLINICAL_SESSION_SECRET !== storeKeyHex &&
+    BASEERA_SESSION_SECRET.length >= 32 &&
+    BASEERA_SESSION_SECRET !== 'baseera-rbac-hmac-secret-key-2026' &&
+    BASEERA_SESSION_SECRET !== storeKeyHex &&
     !credentials.some(
       ({ accessCode }) =>
-        accessCode === CLINICAL_SESSION_SECRET ||
+        accessCode === BASEERA_SESSION_SECRET ||
         accessCode === storeKeyHex ||
         accessCode === 'BASEERA-CLINICAL-2026'
     ) &&
@@ -284,7 +284,7 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
 
   const cleanName = (normalized.name || '').trim().replace(/\\s+/g, ' ');
   const cleanSchool = (normalized.schoolName || '').trim();
-  const oldSummary = normalized.clinicalReport?.clinicalSummary || '';
+  const oldSummary = normalized.learningReport?.learningSummary || '';
   const cleanSummary = hasLegacyCameraField || hasLegacyCameraHistory || hasLegacyRiskData
     ? 'هذا سجل من إصدار سابق؛ أزيلت منه حقول النظر ودرجات الخطورة غير المعتمدة. أعد إجراء النشاط للحصول على ملخص وصفي حديث، ولا تستخدم التقرير السابق للتشخيص أو المقارنة المعيارية.'
     : oldSummary.replace(/^\\[سجل تجريبي توضيحي[^\\]]*\\]\\s*/g, '').trim();
@@ -293,14 +293,14 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
     ...normalized,
     name: cleanName,
     schoolName: cleanSchool,
-    clinicalReport: normalized.clinicalReport
+    learningReport: normalized.learningReport
       ? {
-          ...normalized.clinicalReport,
-          clinicalSummary: cleanSummary || oldSummary,
+          ...normalized.learningReport,
+          learningSummary: cleanSummary || oldSummary,
           ocularMotorAnalysis:
             'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
         }
-      : normalized.clinicalReport,
+      : normalized.learningReport,
   };
 }
 
@@ -394,9 +394,9 @@ function savePersistedStudents(records: StudentRecord[]): boolean {
 function loadPersistedStudents(): StudentRecord[] {
   const key = getStoreEncryptionKey();
   if (!key) {
-    clinicalStoreReady = false;
+    baseeraStoreReady = false;
     console.warn(
-      'Encrypted clinical persistence is disabled until CLINICAL_STORE_ENCRYPTION_KEY is configured.'
+      'Encrypted clinical persistence is disabled until BASEERA_STORE_ENCRYPTION_KEY is configured.'
     );
     return createSeededStudents();
   }
@@ -406,7 +406,7 @@ function loadPersistedStudents(): StudentRecord[] {
     fs.chmodSync(DATA_DIR, 0o700);
     if (!fs.existsSync(STORE_PATH)) {
       const seeded = createSeededStudents();
-      clinicalStoreReady = savePersistedStudents(seeded);
+      baseeraStoreReady = savePersistedStudents(seeded);
       return seeded;
     }
 
@@ -434,16 +434,16 @@ function loadPersistedStudents(): StudentRecord[] {
       (normalizedStoreChanged || !decoded.wasEncrypted) &&
       !savePersistedStudents(cleaned)
     ) {
-      clinicalStoreReady = false;
+      baseeraStoreReady = false;
       console.warn(
         'Clinical store could not be safely migrated to the current camera-free and non-diagnostic schema.'
       );
       return createSeededStudents();
     }
-    clinicalStoreReady = true;
+    baseeraStoreReady = true;
     return cleaned;
   } catch {
-    clinicalStoreReady = false;
+    baseeraStoreReady = false;
     console.warn(
       'Failed to load the encrypted clinical store; protected persistence endpoints remain disabled.'
     );
@@ -454,7 +454,7 @@ function loadPersistedStudents(): StudentRecord[] {
 function serializeSecurityState(): PersistedSecurityState {
   const now = Date.now();
   const revokedSessions: Record<string, number> = {};
-  for (const [sid, exp] of REVOKED_CLINICAL_SESSIONS.entries()) {
+  for (const [sid, exp] of REVOKED_BASEERA_SESSIONS.entries()) {
     if (exp > now) revokedSessions[sid] = exp;
   }
   const failedAuth: Record<string, AuthFailureBucket> = {};
@@ -520,12 +520,12 @@ function loadSecurityState(): void {
       throw new Error('Invalid security state envelope');
     }
     const now = Date.now();
-    REVOKED_CLINICAL_SESSIONS.clear();
+    REVOKED_BASEERA_SESSIONS.clear();
     for (const [sid, exp] of Object.entries(
       decoded.data.revokedSessions || {}
     )) {
       if (typeof exp === 'number' && exp > now) {
-        REVOKED_CLINICAL_SESSIONS.set(sid, exp);
+        REVOKED_BASEERA_SESSIONS.set(sid, exp);
       }
     }
     failedAuthBuckets.clear();
@@ -577,13 +577,13 @@ function loadSecurityState(): void {
 function commitStudentMutationWithAudit(
   currentStudents: StudentRecord[],
   nextStudents: StudentRecord[],
-  session: VerifiedClinicalSession,
-  action: ClinicalAuditLogEntry['action'],
+  session: VerifiedBaseeraSession,
+  action: BaseeraAuditLogEntry['action'],
   targetStudentId: string,
   changedFields: string[]
 ): { ok: boolean; students: StudentRecord[] } {
   const prevAuditLogs = auditLogsDb;
-  const entry: ClinicalAuditLogEntry = {
+  const entry: BaseeraAuditLogEntry = {
     eventId: `aud-${crypto.randomBytes(12).toString('hex')}`,
     timestamp: new Date().toISOString(),
     tenantId: session.tenantId,
@@ -608,13 +608,13 @@ function commitStudentMutationWithAudit(
 }
 
 // Role-Based Access Control (RBAC) Middleware for protecting child records & AI analysis
-function requireClinicalAuth(requiredScope: ClinicalScope) {
+function requireClinicalAuth(requiredScope: BaseeraScope) {
   return (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction
   ) => {
-    if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
+    if (!isBaseeraAuthConfigured() || !baseeraStoreReady || !securityStateReady) {
       res.status(503).json({
         error:
           'يلزم ضبط الأسرار وتهيئة مخزن سريري مشفر قابل للقراءة والكتابة قبل تفعيل بيانات الطلاب.',
@@ -625,17 +625,17 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
       (req.headers.authorization as string) ||
       (req.headers['x-clinical-session-token'] as string) ||
       '';
-    const verifiedSession = verifyClinicalSessionToken(
+    const verifiedSession = verifyBaseeraSessionToken(
       rawHeader,
-      CLINICAL_SESSION_SECRET
+      BASEERA_SESSION_SECRET
     );
     const now = Date.now();
-    for (const [sessionId, expiresAt] of REVOKED_CLINICAL_SESSIONS) {
-      if (expiresAt <= now) REVOKED_CLINICAL_SESSIONS.delete(sessionId);
+    for (const [sessionId, expiresAt] of REVOKED_BASEERA_SESSIONS) {
+      if (expiresAt <= now) REVOKED_BASEERA_SESSIONS.delete(sessionId);
     }
     const activeSession =
       verifiedSession &&
-      !REVOKED_CLINICAL_SESSIONS.has(verifiedSession.sessionId)
+      !REVOKED_BASEERA_SESSIONS.has(verifiedSession.sessionId)
         ? verifiedSession
         : null;
     const authResult = authorizeSessionScope(activeSession, requiredScope);
@@ -646,7 +646,7 @@ function requireClinicalAuth(requiredScope: ClinicalScope) {
       });
       return;
     }
-    (req as any).clinicalSession = activeSession;
+    (req as any).baseeraSession = activeSession;
     next();
   };
 }
@@ -712,16 +712,16 @@ async function startServer() {
   // Educator / Clinician Authentication & RBAC Session Issuing Endpoint.
   // Failed attempts are IP-scoped; unauthenticated tenant hints never influence throttling.
   app.post('/api/auth/session', async (req, res) => {
-    if (!isClinicalAuthConfigured() || !clinicalStoreReady || !securityStateReady) {
+    if (!isBaseeraAuthConfigured() || !baseeraStoreReady || !securityStateReady) {
       res.status(503).json({
         error:
-          'المصادقة غير مفعّلة: اضبط CLINICAL_TENANT_CREDENTIALS وCLINICAL_SESSION_SECRET وCLINICAL_STORE_ENCRYPTION_KEY.',
+          'المصادقة غير مفعّلة: اضبط BASEERA_TENANT_CREDENTIALS وBASEERA_SESSION_SECRET وBASEERA_STORE_ENCRYPTION_KEY.',
       });
       return;
     }
 
     const clientIp = req.ip || req.socket.remoteAddress || 'local';
-    const { accessCode, clinicianName = 'مستخدم بصيرة' } = req.body || {};
+    const { accessCode, accountName = 'مستخدم بصيرة' } = req.body || {};
     const credential =
       typeof accessCode === 'string'
         ? getTenantCredentialEntries().find(({ accessCode: expected }) =>
@@ -746,14 +746,14 @@ async function startServer() {
       // schools are successfully used from the same address.
 
       const safeClinicianName =
-        typeof clinicianName === 'string'
-          ? clinicianName.trim().slice(0, 100)
+        typeof accountName === 'string'
+          ? accountName.trim().slice(0, 100)
           : '';
-      const session = issueClinicalSessionToken(
+      const session = issueBaseeraSessionToken(
         credential.role,
         safeClinicianName ||
-          (credential.role === 'clinician' ? 'أخصائي التقييم' : 'معلم'),
-        CLINICAL_SESSION_SECRET,
+          (credential.role === 'school_admin' ? 'مسؤول المدرسة' : 'معلم'),
+        BASEERA_SESSION_SECRET,
         60 * 60 * 1000,
         credential.tenantId,
         credential.tenantDisplayNameAr
@@ -837,7 +837,7 @@ async function startServer() {
     (req, res) => {
       res.json({
         authenticated: true,
-        session: (req as any).clinicalSession,
+        session: (req as any).baseeraSession,
       });
     }
   );
@@ -846,10 +846,10 @@ async function startServer() {
     '/api/auth/logout',
     requireClinicalAuth('students:read'),
     (req, res) => {
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
-      REVOKED_CLINICAL_SESSIONS.set(session.sessionId, session.expiresAt);
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+      REVOKED_BASEERA_SESSIONS.set(session.sessionId, session.expiresAt);
       if (!saveSecurityState()) {
-        REVOKED_CLINICAL_SESSIONS.delete(session.sessionId);
+        REVOKED_BASEERA_SESSIONS.delete(session.sessionId);
         res.status(503).json({
           error: 'تعذر تثبيت إبطال الجلسة في التخزين المشفر.',
         });
@@ -864,7 +864,7 @@ async function startServer() {
     '/api/audit-logs',
     requireClinicalAuth('audit:read'),
     (req, res) => {
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       res.json({
         auditLogs: auditLogsDb.filter(
           (entry) => entry.tenantId === session.tenantId
@@ -876,7 +876,7 @@ async function startServer() {
 
   // Each authenticated school sees only its own records.
   app.get('/api/students', requireClinicalAuth('students:read'), (req, res) => {
-    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     res.json({
       students: studentsDb.filter(
         (student) => student.tenantId === session.tenantId
@@ -892,7 +892,7 @@ async function startServer() {
     requireClinicalAuth('students:write'),
     (req, res) => {
       const incoming = req.body as Record<string, unknown> | null;
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       if (
         !incoming ||
         typeof incoming !== 'object' ||
@@ -994,7 +994,7 @@ async function startServer() {
       }, {
         sessionId: session.sessionId,
         role: session.role,
-        clinicianName: session.clinicianName,
+        accountName: session.accountName,
       });
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
@@ -1049,7 +1049,7 @@ async function startServer() {
         session,
         'student.create',
         newRecord.id,
-        ['session', 'evidence', 'clinicalReport']
+        ['session', 'evidence', 'learningReport']
       );
       if (!committed.ok) {
         res
@@ -1068,7 +1068,7 @@ async function startServer() {
     requireClinicalAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       const idx = studentsDb.findIndex(
         (student) =>
           student.id === id && student.tenantId === session.tenantId
@@ -1143,7 +1143,7 @@ async function startServer() {
       }, {
         sessionId: session.sessionId,
         role: session.role,
-        clinicianName: session.clinicianName,
+        accountName: session.accountName,
       });
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
@@ -1224,7 +1224,7 @@ async function startServer() {
         session,
         'student.session.append',
         updatedRecord.id,
-        ['session', 'evidence', 'assessmentHistory', 'clinicalReport']
+        ['session', 'evidence', 'assessmentHistory', 'learningReport']
       );
       if (!committed.ok) {
         res
@@ -1243,7 +1243,7 @@ async function startServer() {
     res: express.Response
   ) => {
     const { id } = req.params;
-    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const idx = studentsDb.findIndex(
       (s) => s.id === id && s.tenantId === session.tenantId
     );
@@ -1279,7 +1279,7 @@ async function startServer() {
 
     const current = studentsDb[idx];
     const m = mathValidation.metrics;
-    const updatedReport = buildDeterministicClinicalReport({
+    const updatedReport = buildDeterministicLearningReport({
       studentName: current.name,
       gradeLevel: current.gradeLevel,
       dialectLabelAr: current.dialectRegionAr || 'العربية الفصحى',
@@ -1310,7 +1310,7 @@ async function startServer() {
       mathHeuristicIndicator: m.heuristicIndicator,
       mathRiskLevel: m.riskLevel,
       mathRiskLabelAr: m.riskLabelAr,
-      clinicalReport: updatedReport,
+      learningReport: updatedReport,
     };
 
     const nextRecords = [...studentsDb];
@@ -1321,7 +1321,7 @@ async function startServer() {
       session,
       'student.math.assess',
       updatedRecord.id,
-      ['mathTrials', 'dyscalculiaRiskScore', 'mathRiskLevel', 'clinicalReport']
+      ['mathTrials', 'dyscalculiaRiskScore', 'mathRiskLevel', 'learningReport']
     );
     if (!committed.ok) {
       res
@@ -1340,12 +1340,12 @@ async function startServer() {
   );
 
   // Dedicated endpoint to persist an updated AI or clinician report (Fixing Finding 1)
-  const handleUpdateClinicalReport = (
+  const handleUpdateLearningReport = (
     req: express.Request,
     res: express.Response
   ) => {
     const { id } = req.params;
-    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const idx = studentsDb.findIndex(
       (s) => s.id === id && s.tenantId === session.tenantId
     );
@@ -1375,7 +1375,7 @@ async function startServer() {
       return;
     }
 
-    const parsedEnvelope = ClinicalReportUpdateEnvelopeSchema.safeParse(rawBody);
+    const parsedEnvelope = LearningReportUpdateEnvelopeSchema.safeParse(rawBody);
     if (!parsedEnvelope.success) {
       res.status(400).json({
         error:
@@ -1385,11 +1385,11 @@ async function startServer() {
       return;
     }
 
-    const validatedReport = parsedEnvelope.data.clinicalReport;
+    const validatedReport = parsedEnvelope.data.learningReport;
 
     const updatedRecord: StudentRecord = {
       ...current,
-      clinicalReport: validatedReport,
+      learningReport: validatedReport,
     };
 
     const nextRecords = [...studentsDb];
@@ -1400,7 +1400,7 @@ async function startServer() {
       session,
       'student.report.update',
       updatedRecord.id,
-      ['clinicalReport']
+      ['learningReport']
     );
     if (!committed.ok) {
       res
@@ -1413,9 +1413,9 @@ async function startServer() {
   };
 
   app.put(
-    '/api/students/:id/clinical-report',
+    '/api/students/:id/learning-report',
     requireClinicalAuth('students:write'),
-    handleUpdateClinicalReport
+    handleUpdateLearningReport
   );
 
   // Strict 4-field profile PATCH (`name`, `schoolName`, `gradeLevel`, `ageYears` only)
@@ -1425,7 +1425,7 @@ async function startServer() {
     (req, res) => {
       const { id } = req.params;
       const rawUpdates = req.body as Record<string, unknown> | null;
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       const idx = studentsDb.findIndex(
         (s) => s.id === id && s.tenantId === session.tenantId
       );
@@ -1495,7 +1495,7 @@ async function startServer() {
     requireClinicalAuth('students:delete'),
     (req, res) => {
       const { id } = req.params;
-      const session = (req as any).clinicalSession as VerifiedClinicalSession;
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       const existsInTenant = studentsDb.some(
         (s) => s.id === id && s.tenantId === session.tenantId
       );
@@ -1611,7 +1611,7 @@ async function startServer() {
             .filter(Boolean)
         : [];
 
-      const report = buildDeterministicClinicalReport({
+      const report = buildDeterministicLearningReport({
         studentName: stripArabicPatronymics(studentName),
         gradeLevel: Number.isInteger(Number(gradeLevel)) && Number(gradeLevel) >= 1 && Number(gradeLevel) <= 6
           ? Number(gradeLevel)
@@ -1788,7 +1788,7 @@ async function startServer() {
       res.status(400).json({ error: 'يجب اختيار صف دراسي من 1 إلى 6.' });
       return;
     }
-    const session = (req as any).clinicalSession as VerifiedClinicalSession;
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof rawBody.studentId === 'string' ? rawBody.studentId.trim().slice(0, 160) : '';
     // Personalization is derived from the tenant-scoped server record, never from client-supplied words.
     const storedStudent = studentId
@@ -1833,7 +1833,7 @@ async function startServer() {
 2. syllableDrills: أربع كلمات مناسبة للصف مقسمة إلى مقاطع عربية صحيحة؛ لا تفكك الكلمة بطريقة تخالف النطق المكتوب.
 3. pacerPassage: نص مفهوم من 16–22 كلمة مناسب للصف، مع كلمات يمكن قراءتها ببطء وبتركيز؛ لا تدّع أنه تمرين علاجي لحركة العين.
 4. mathDrills: أربعة أنشطة اختيارية لخط الأعداد والقيمة المكانية، مع شرح يعلّم الخطوات بدل وصف الطفل بأنه متعثر.
-5. clinicalRationale: أبق اسم الحقل للتوافق البرمجي، لكن اكتب داخله مبررًا تعليميًا موجزًا، لا حكمًا إكلينيكيًا.
+5. learningRationale: أبق اسم الحقل للتوافق البرمجي، لكن اكتب داخله مبررًا تعليميًا موجزًا، لا حكمًا إكلينيكيًا.
 اجعل التعليمات لطيفة وقصيرة وملائمة للطفل. إذا كانت الكلمات أمثلة عامة، فقل ذلك ولا تنسبها إلى أداء الطالب.`;
 
         const response = await ai.models.generateContent({
@@ -1844,7 +1844,7 @@ async function startServer() {
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                clinicalRationale: { type: Type.STRING },
+                learningRationale: { type: Type.STRING },
                 phonicsDrills: {
                   type: Type.ARRAY,
                   items: {
@@ -1917,7 +1917,7 @@ async function startServer() {
                   },
                 },
               },
-              required: ['clinicalRationale', 'phonicsDrills', 'syllableDrills', 'pacerPassage', 'mathDrills'],
+              required: ['learningRationale', 'phonicsDrills', 'syllableDrills', 'pacerPassage', 'mathDrills'],
             },
           },
         });
@@ -1928,7 +1928,7 @@ async function startServer() {
         }
         // The model's free-form rationale is never shown as trusted assessment. Replace it
         // with a deterministic, provenance-aware explanation authored by the application.
-        parsed.clinicalRationale = hasTeacherReviewedTargets
+        parsed.learningRationale = hasTeacherReviewedTargets
           ? `اقتراح أنشطة تعليمية للصف ${gradeLevel}. أُرسلت كلمات راجعها المعلّم ضمن سياق التوليد، لكن يجب مراجعة ارتباط كل تمرين بالكلمة قبل استخدامه. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`
           : `اقتراح أنشطة عامة للصف ${gradeLevel}. لا توجد كلمات خطأ موثّقة أُرسلت للتخصيص؛ أمثلة النص ليست أخطاء مرصودة لدى الطفل. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`;
         res.json({

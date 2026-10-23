@@ -112,7 +112,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       speech: speechSummary,
       tactile: tactileSummary,
       reading: readingSummary,
-      clinicalReport: student?.clinicalReport,
+      learningReport: student?.learningReport,
     };
   }, [student, currentAssessment]);
 

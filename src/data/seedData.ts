@@ -4,8 +4,8 @@ import {
   TranscodingTrialResult,
 } from '../utils/clinicalMetrics';
 
-export interface ClinicalReport {
-  clinicalSummary: string;
+export interface LearningReport {
+  learningSummary: string;
   ocularMotorAnalysis: string;
   orthographicAndPhonologicalPatterns: string;
   dyscalculiaSpatialAnalysis: string;
@@ -151,7 +151,7 @@ export interface StudentRecord {
   mathHeuristicIndicator: number | null;
   mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   mathRiskLabelAr: string;
-  clinicalReport: ClinicalReport;
+  learningReport: LearningReport;
 }
 
 const G2_GARDEN_WORDS = [
@@ -1269,8 +1269,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathHeuristicIndicator: null,
     mathRiskLevel: 'unassessed',
     mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
-    clinicalReport: {
-      clinicalSummary:
+    learningReport: {
+      learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
         'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
@@ -1330,8 +1330,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathHeuristicIndicator: null,
     mathRiskLevel: 'unassessed',
     mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
-    clinicalReport: {
-      clinicalSummary:
+    learningReport: {
+      learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
         'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
@@ -1385,8 +1385,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathHeuristicIndicator: null,
     mathRiskLevel: 'unassessed',
     mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
-    clinicalReport: {
-      clinicalSummary:
+    learningReport: {
+      learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
         'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
@@ -1434,8 +1434,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathHeuristicIndicator: null,
     mathRiskLevel: 'unassessed',
     mathRiskLabelAr: 'بيانات حساب اصطناعية للتوضيح؛ لا تصنيف خطر معتمد.',
-    clinicalReport: {
-      clinicalSummary:
+    learningReport: {
+      learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
         'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',

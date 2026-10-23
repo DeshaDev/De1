@@ -17,17 +17,17 @@ const TEST_ENV = {
   GEMINI_API_KEY: '', // Keep integration tests deterministic and prevent external model calls.
   NODE_ENV: 'production',
   TRUST_PROXY_HOPS: '0',
-  CLINICAL_STORE_ENCRYPTION_KEY:
+  BASEERA_STORE_ENCRYPTION_KEY:
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-  CLINICAL_SESSION_SECRET:
+  BASEERA_SESSION_SECRET:
     'test-hmac-signing-secret-32chars-minimum-distinct-2026!',
-  CLINICAL_TENANT_CREDENTIALS: JSON.stringify({
+  BASEERA_TENANT_CREDENTIALS: JSON.stringify({
     school_a: {
-      clinician: SCHOOL_A_CLINICIAN_CODE,
+      school_admin: SCHOOL_A_CLINICIAN_CODE,
       educator_readonly: SCHOOL_A_EDUCATOR_CODE,
     },
     school_b: {
-      clinician: SCHOOL_B_CLINICIAN_CODE,
+      school_admin: SCHOOL_B_CLINICIAN_CODE,
       educator_readonly: SCHOOL_B_EDUCATOR_CODE,
     },
   }),
@@ -113,7 +113,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         ...process.env,
         ...TEST_ENV,
         PORT: String(port),
-        CLINICAL_DATA_DIR: tempDir,
+        BASEERA_DATA_DIR: tempDir,
       },
       stdio: 'pipe',
     });
@@ -152,7 +152,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const res = await fetch(`${baseUrl}/api/auth/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode, clinicianName: 'مختبر النظام' }),
+      body: JSON.stringify({ accessCode, accountName: 'مختبر النظام' }),
     });
     assert.equal(res.status, 200);
     return (await res.json()) as {
@@ -220,11 +220,11 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const payload = (await forgedTargets.json()) as {
       targetWordsUsed: string[];
       targetWordsAreTeacherReviewed: boolean;
-      session: { clinicalRationale: string };
+      session: { learningRationale: string };
     };
     assert.deepEqual(payload.targetWordsUsed, []);
     assert.equal(payload.targetWordsAreTeacherReviewed, false);
-    assert.match(payload.session.clinicalRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
+    assert.match(payload.session.learningRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
@@ -311,10 +311,10 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(createdBody.student.evidenceProvenance, 'client-reported');
     assert.ok(createdBody.student.wpm > 0);
     assert.equal(createdBody.student.comprehensionScore, 100);
-    assert.ok(Array.isArray(createdBody.student.clinicalReport.interventionExercises));
-    assert.ok(createdBody.student.clinicalReport.interventionExercises.length >= 2);
-    assert.ok(Array.isArray(createdBody.student.clinicalReport.classroomAccommodations));
-    assert.ok(createdBody.student.clinicalReport.classroomAccommodations.length >= 2);
+    assert.ok(Array.isArray(createdBody.student.learningReport.interventionExercises));
+    assert.ok(createdBody.student.learningReport.interventionExercises.length >= 2);
+    assert.ok(Array.isArray(createdBody.student.learningReport.classroomAccommodations));
+    assert.ok(createdBody.student.learningReport.classroomAccommodations.length >= 2);
 
     // 4. Cross-tenant POST with existing ID from School A returns 404 (not 409) so it does not leak ID existence
     const crossTenantCreate = await fetch(`${baseUrl}/api/students`, {
@@ -335,10 +335,10 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(crossTenantCreate.status, 404);
   });
 
-  it('enforces strict 4-field PATCH and saves updated AI clinicalReport + mathTrials via dedicated PUT routes', async () => {
+  it('enforces strict 4-field PATCH and saves updated AI learningReport + mathTrials via dedicated PUT routes', async () => {
     const clinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
 
-    // 1. Sending { clinicalReport } to PATCH /api/students/:id returns 400
+    // 1. Sending { learningReport } to PATCH /api/students/:id returns 400
     const badPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
       method: 'PATCH',
       headers: {
@@ -346,7 +346,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         Authorization: `Bearer ${clinician.token}`,
       },
       body: JSON.stringify({
-        clinicalReport: { clinicalSummary: 'محاولة عبر المسار الخاطئ' },
+        learningReport: { learningSummary: 'محاولة عبر المسار الخاطئ' },
       }),
     });
     assert.equal(badPatch.status, 400);
@@ -369,9 +369,9 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const patchedBody = (await goodPatch.json()) as { student: Record<string, any> };
     assert.equal(patchedBody.student.name, 'نورة بنت سعد العتيبي');
 
-    // 3. Dedicated PUT /api/students/:id/clinical-report saves full report with exercises & accommodations
+    // 3. Dedicated PUT /api/students/:id/learning-report saves full report with exercises & accommodations
     const updatedReport = {
-      clinicalSummary: 'ملخص محدث بالذكاء الاصطناعي يوضح استقرار الطلاقة القرائية.',
+      learningSummary: 'ملخص محدث بالذكاء الاصطناعي يوضح استقرار الطلاقة القرائية.',
       ocularMotorAnalysis: 'تحليل حركة العين بعد التحديث يظهر تثبيتات منتظمة.',
       orthographicAndPhonologicalPatterns: 'تحليل الصرف والأصوات العربية المحدث.',
       dyscalculiaSpatialAnalysis: 'تحليل الحس العددي والمكاني المحدث.',
@@ -394,35 +394,35 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     };
 
     const putReportRes = await fetch(
-      `${baseUrl}/api/students/stu-http-school-a-1/clinical-report`,
+      `${baseUrl}/api/students/stu-http-school-a-1/learning-report`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${clinician.token}`,
         },
-        body: JSON.stringify({ clinicalReport: updatedReport }),
+        body: JSON.stringify({ learningReport: updatedReport }),
       }
     );
     assert.equal(putReportRes.status, 200);
     const savedReportBody = (await putReportRes.json()) as { student: Record<string, any> };
     assert.equal(
-      savedReportBody.student.clinicalReport.clinicalSummary,
-      updatedReport.clinicalSummary
+      savedReportBody.student.learningReport.learningSummary,
+      updatedReport.learningSummary
     );
     assert.equal(
-      savedReportBody.student.clinicalReport.interventionExercises.length,
+      savedReportBody.student.learningReport.interventionExercises.length,
       2
     );
     for (const [method, route] of [
       ['PUT', '/api/students/stu-http-school-a-1/report'],
       ['POST', '/api/students/stu-http-school-a-1/report'],
-      ['POST', '/api/students/stu-http-school-a-1/clinical-report'],
+      ['POST', '/api/students/stu-http-school-a-1/learning-report'],
     ] as const) {
       const deprecatedRes = await fetch(`${baseUrl}${route}`, {
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
-        body: JSON.stringify({ clinicalReport: updatedReport }),
+        body: JSON.stringify({ learningReport: updatedReport }),
       });
       assert.equal(deprecatedRes.status, 404);
     }
@@ -542,8 +542,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       (s) => s.id === 'stu-http-school-a-1'
     );
     assert.ok(persistedStudent);
-    assert.ok(persistedStudent.clinicalReport.interventionExercises.length >= 2);
-    assert.ok(persistedStudent.clinicalReport.classroomAccommodations.length >= 2);
+    assert.ok(persistedStudent.learningReport.interventionExercises.length >= 2);
+    assert.ok(persistedStudent.learningReport.classroomAccommodations.length >= 2);
     assert.equal(persistedStudent.name, 'نورة بنت سعد العتيبي');
   });
 

@@ -1,9 +1,9 @@
-export type ClinicalRole = 'clinician' | 'educator_readonly';
+export type BaseeraRole = 'school_admin' | 'educator_readonly';
 
-export interface ClinicalSessionInfo {
+export interface BaseeraSessionInfo {
   token: string;
-  role: ClinicalRole;
-  clinicianName: string;
+  role: BaseeraRole;
+  accountName: string;
   tenantId: string;
   tenantDisplayNameAr?: string;
   sessionId: string;
@@ -20,7 +20,7 @@ const TENANT_DISPLAY_FALLBACKS: Record<string, string> = {
   school_beta: 'مدرسة باء النموذجية',
 };
 
-export function getTenantDisplayLabelAr(session: ClinicalSessionInfo): string {
+export function getTenantDisplayLabelAr(session: BaseeraSessionInfo): string {
   if (session.tenantDisplayNameAr && session.tenantDisplayNameAr.trim()) {
     return session.tenantDisplayNameAr.trim();
   }
@@ -36,9 +36,9 @@ export function getTenantDisplayLabelAr(session: ClinicalSessionInfo): string {
 }
 
 const SESSION_STORAGE_KEY = 'baseera_clinical_session_v1';
-let cachedSession: ClinicalSessionInfo | null = null;
+let cachedSession: BaseeraSessionInfo | null = null;
 
-export function getStoredClinicalSession(): ClinicalSessionInfo | null {
+export function getStoredBaseeraSession(): BaseeraSessionInfo | null {
   if (cachedSession && cachedSession.expiresAt > Date.now() + 10_000) {
     return cachedSession;
   }
@@ -46,7 +46,7 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
   try {
     const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ClinicalSessionInfo;
+    const parsed = JSON.parse(raw) as BaseeraSessionInfo;
     if (
       parsed?.token &&
       parsed.expiresAt > Date.now() + 10_000 &&
@@ -68,23 +68,23 @@ export function getStoredClinicalSession(): ClinicalSessionInfo | null {
   return null;
 }
 
-export async function loginClinicalSession(
+export async function loginBaseeraSession(
   accessCode: string,
-  role: ClinicalRole = 'clinician',
-  clinicianName = 'أخصائي التقييم'
-): Promise<ClinicalSessionInfo | null> {
+  role: BaseeraRole = 'school_admin',
+  accountName = 'مسؤول المدرسة'
+): Promise<BaseeraSessionInfo | null> {
   if (!accessCode || typeof accessCode !== 'string') return null;
   try {
     const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode, role, clinicianName }),
+      body: JSON.stringify({ accessCode, role, accountName }),
     });
     if (!response.ok) return null;
-    const data = (await response.json()) as ClinicalSessionInfo;
+    const data = (await response.json()) as BaseeraSessionInfo;
     if (!data?.token || !data.expiresAt) return null;
 
-    const enriched: ClinicalSessionInfo = {
+    const enriched: BaseeraSessionInfo = {
       ...data,
       tenantDisplayNameAr: getTenantDisplayLabelAr(data),
     };
@@ -106,8 +106,8 @@ export async function loginClinicalSession(
 }
 
 /** Revoke the current token on the server, then clear it locally even if offline. */
-export async function logoutClinicalSession(): Promise<void> {
-  const session = getStoredClinicalSession();
+export async function logoutBaseeraSession(): Promise<void> {
+  const session = getStoredBaseeraSession();
   try {
     if (session?.token) {
       await fetch('/api/auth/logout', {
@@ -118,11 +118,11 @@ export async function logoutClinicalSession(): Promise<void> {
   } catch {
     // The local session is always cleared; the server token will expire within one hour.
   } finally {
-    clearClinicalSession();
+    clearBaseeraSession();
   }
 }
 
-export function clearClinicalSession(): void {
+export function clearBaseeraSession(): void {
   cachedSession = null;
   if (typeof window !== 'undefined') {
     try {
@@ -133,8 +133,8 @@ export function clearClinicalSession(): void {
   }
 }
 
-export async function ensureClinicalSession(): Promise<ClinicalSessionInfo | null> {
-  return getStoredClinicalSession();
+export async function ensureClinicalSession(): Promise<BaseeraSessionInfo | null> {
+  return getStoredBaseeraSession();
 }
 
 /**
@@ -149,6 +149,6 @@ export async function authenticatedFetch(
   const headers = new Headers(init.headers || {});
   if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
   const response = await fetch(input, { ...init, headers });
-  if (response.status === 401) clearClinicalSession();
+  if (response.status === 401) clearBaseeraSession();
   return response;
 }

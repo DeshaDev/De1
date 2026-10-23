@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  issueClinicalSessionToken,
-  verifyClinicalSessionToken,
+  issueBaseeraSessionToken,
+  verifyBaseeraSessionToken,
   authorizeSessionScope,
   validateExplicitGuardianConsent,
   parseStrictTrustProxyHops,
@@ -11,13 +11,13 @@ import {
   checkAuthFailureLimit,
   recordFailedAuthAttempt,
   getAuthThrottleDelayMs,
-  isStrongClinicalAccessCode,
+  isStrongBaseeraAccessCode,
   AuthFailureBucket,
   validateAndDeriveSessionFromEvidence,
   validateAndDeriveMathTrials,
-  buildDeterministicClinicalReport,
+  buildDeterministicLearningReport,
   StudentProfilePatchSchema,
-  ClinicalReportUpdateEnvelopeSchema,
+  LearningReportUpdateEnvelopeSchema,
 } from './clinicalSecurity';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
@@ -25,15 +25,15 @@ const TEST_SECRET = 'test-clinical-hmac-secret-key-2026-secure';
 
 describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting Unit Tests', () => {
   it('issues and verifies a clinician session token with full scopes and Arabic tenant display name', () => {
-    const issued = issueClinicalSessionToken(
-      'clinician',
+    const issued = issueBaseeraSessionToken(
+      'school_admin',
       'د. سارة المنصور',
       TEST_SECRET,
       60_000,
       'school_a'
     );
     assert.ok(issued.token.includes('.'));
-    assert.equal(issued.role, 'clinician');
+    assert.equal(issued.role, 'school_admin');
     assert.equal(issued.tenantId, 'school_a');
     assert.equal(issued.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
     assert.deepEqual(issued.scopes, [
@@ -44,22 +44,22 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
       'audit:read',
     ]);
 
-    const verified = verifyClinicalSessionToken(issued.token, TEST_SECRET);
+    const verified = verifyBaseeraSessionToken(issued.token, TEST_SECRET);
     assert.ok(verified);
-    assert.equal(verified.role, 'clinician');
+    assert.equal(verified.role, 'school_admin');
     assert.equal(verified.tenantId, 'school_a');
     assert.equal(verified.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
   });
 
   it('rejects tampered or expired tokens and enforces educator_readonly restrictions', () => {
-    const issued = issueClinicalSessionToken(
+    const issued = issueBaseeraSessionToken(
       'educator_readonly',
       'أ. هند السالم',
       TEST_SECRET,
       60_000,
       'school_b'
     );
-    const verified = verifyClinicalSessionToken(issued.token, TEST_SECRET);
+    const verified = verifyBaseeraSessionToken(issued.token, TEST_SECRET);
     assert.ok(verified);
     assert.equal(verified.tenantDisplayNameAr, 'مدرسة النخبة الثانية (ب)');
     assert.equal(
@@ -83,7 +83,7 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     const tamperedSig =
       sig.slice(0, -2) + (sig.endsWith('aa') ? 'bb' : 'aa');
     assert.equal(
-      verifyClinicalSessionToken(`${payloadB64}.${tamperedSig}`, TEST_SECRET),
+      verifyBaseeraSessionToken(`${payloadB64}.${tamperedSig}`, TEST_SECRET),
       null
     );
   });
@@ -116,13 +116,13 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
 
   it('accepts only high-diversity 48-character hex access codes and rejects predictable tokens', () => {
     assert.equal(
-      isStrongClinicalAccessCode('3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d'),
+      isStrongBaseeraAccessCode('3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d'),
       true
     );
-    assert.equal(isStrongClinicalAccessCode('A-clinician-secret-0123456789abc'), false);
-    assert.equal(isStrongClinicalAccessCode('a'.repeat(48)), false);
-    assert.equal(isStrongClinicalAccessCode('0123456789abcdef'.repeat(3)), false);
-    assert.equal(isStrongClinicalAccessCode('f'.repeat(47)), false);
+    assert.equal(isStrongBaseeraAccessCode('A-clinician-secret-0123456789abc'), false);
+    assert.equal(isStrongBaseeraAccessCode('a'.repeat(48)), false);
+    assert.equal(isStrongBaseeraAccessCode('0123456789abcdef'.repeat(3)), false);
+    assert.equal(isStrongBaseeraAccessCode('f'.repeat(47)), false);
   });
 
   it('applies progressive IP throttling from 2s at five failures through 60s at ten', () => {
@@ -205,11 +205,11 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(readingSession.derivedFields.readingRiskLevel, 'unassessed');
     assert.ok(readingSession.derivedFields.wpm > 0);
     assert.match(
-      readingSession.derivedFields.clinicalReport.ocularMotorAnalysis,
+      readingSession.derivedFields.learningReport.ocularMotorAnalysis,
       /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
     );
-    assert.ok(readingSession.derivedFields.clinicalReport.interventionExercises.length >= 2);
-    assert.ok(readingSession.derivedFields.clinicalReport.classroomAccommodations.length >= 2);
+    assert.ok(readingSession.derivedFields.learningReport.interventionExercises.length >= 2);
+    assert.ok(readingSession.derivedFields.learningReport.classroomAccommodations.length >= 2);
 
     const voiceOnlySession = validateAndDeriveSessionFromEvidence(
       {
@@ -346,13 +346,13 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     assert.equal(unofferedOption.valid, false);
   });
 
-  it('enforces strict StudentProfilePatchSchema and ClinicalReportUpdateEnvelopeSchema', () => {
+  it('enforces strict StudentProfilePatchSchema and LearningReportUpdateEnvelopeSchema', () => {
     assert.equal(
       StudentProfilePatchSchema.safeParse({ name: 'طالب محدث', gradeLevel: 4 }).success,
       true
     );
     assert.equal(
-      StudentProfilePatchSchema.safeParse({ clinicalReport: {} }).success,
+      StudentProfilePatchSchema.safeParse({ learningReport: {} }).success,
       false
     );
     assert.equal(
@@ -361,9 +361,9 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
     );
 
     assert.equal(
-      ClinicalReportUpdateEnvelopeSchema.safeParse({
-        clinicalReport: {
-          clinicalSummary: 'ملخص مؤشرات القراءة الاسترشادية للطالب بعد الفحص.',
+      LearningReportUpdateEnvelopeSchema.safeParse({
+        learningReport: {
+          learningSummary: 'ملخص مؤشرات القراءة الاسترشادية للطالب بعد الفحص.',
           ocularMotorAnalysis: 'تحليل حركة العين والتثبيتات البصرية المسجلة.',
           orthographicAndPhonologicalPatterns: 'تحليل الأنماط الإملائية والصوتية.',
           dyscalculiaSpatialAnalysis: 'تحليل الإدراك العددي والمكاني.',

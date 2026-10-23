@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 import {
   validateAndDeriveSessionFromEvidence,
-  buildDeterministicClinicalReport,
+  buildDeterministicLearningReport,
 } from './clinicalSecurity';
 
 test('Camera-Free Reading-Only Modality Integration', async (t) => {
@@ -39,9 +39,9 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
     assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
     assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
-    assert.ok(derived.derivedFields.clinicalReport);
+    assert.ok(derived.derivedFields.learningReport);
     assert.match(
-      derived.derivedFields.clinicalReport.ocularMotorAnalysis,
+      derived.derivedFields.learningReport.ocularMotorAnalysis,
       /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
     );
   });
@@ -64,8 +64,8 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.match(derived.errorAr || '', /حد المعقولية التقني/);
   });
 
-  await t.test('buildDeterministicClinicalReport generates camera-free disclosures', () => {
-    const report = buildDeterministicClinicalReport({
+  await t.test('buildDeterministicLearningReport generates camera-free disclosures', () => {
+    const report = buildDeterministicLearningReport({
       studentName: 'فيصل العتيبي',
       gradeLevel: 4,
       dialectLabelAr: 'الخليجية',
@@ -83,7 +83,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
       reversalErrorCount: null,
     });
 
-    assert.ok(report.clinicalSummary.includes('جلسة قراءة وفهم تعليمية'));
+    assert.ok(report.learningSummary.includes('جلسة قراءة وفهم تعليمية'));
     assert.ok(report.ocularMotorAnalysis.includes('لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين'));
     assert.ok(report.interventionExercises.length > 0);
   });

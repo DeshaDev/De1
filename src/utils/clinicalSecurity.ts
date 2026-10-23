@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import {
   ARABIC_READING_PASSAGES,
-  ClinicalReport,
+  LearningReport,
   StudentMathTrialsPayload,
 } from '../data/seedData';
 import {
@@ -29,32 +29,32 @@ interface OralReadingIntegrationInput {
   misreadWords?: string[];
 }
 
-export type ClinicalRole = 'clinician' | 'educator_readonly';
+export type BaseeraRole = 'school_admin' | 'educator_readonly';
 
-export type ClinicalScope =
+export type BaseeraScope =
   | 'students:read'
   | 'students:write'
   | 'students:delete'
   | 'ai:analyze'
   | 'audit:read';
 
-export interface VerifiedClinicalSession {
+export interface VerifiedBaseeraSession {
   token: string;
-  role: ClinicalRole;
-  clinicianName: string;
+  role: BaseeraRole;
+  accountName: string;
   /** Tenant identity is part of the signed token and cannot be supplied by the browser. */
   tenantId: string;
   /** Human-readable Arabic school name for UI display instead of raw internal tenantId. */
   tenantDisplayNameAr: string;
   /** Unique server-recognized session ID used for logout revocation. */
   sessionId: string;
-  scopes: ClinicalScope[];
+  scopes: BaseeraScope[];
   issuedAt: number;
   expiresAt: number;
 }
 
-const ROLE_SCOPES: Record<ClinicalRole, ClinicalScope[]> = {
-  clinician: [
+const ROLE_SCOPES: Record<BaseeraRole, BaseeraScope[]> = {
+  school_admin: [
     'students:read',
     'students:write',
     'students:delete',
@@ -97,7 +97,7 @@ export function stripArabicPatronymics(rawName: string): string {
     .trim();
 }
 
-export function getScopesForRole(role: ClinicalRole): ClinicalScope[] {
+export function getScopesForRole(role: BaseeraRole): BaseeraScope[] {
   return ROLE_SCOPES[role] || ROLE_SCOPES.educator_readonly;
 }
 
@@ -122,15 +122,15 @@ export function parseStrictTrustProxyHops(raw: string | undefined): number {
   return parsed;
 }
 
-export function issueClinicalSessionToken(
-  role: ClinicalRole,
-  clinicianName: string,
+export function issueBaseeraSessionToken(
+  role: BaseeraRole,
+  accountName: string,
   secret: string,
   ttlMs: number = 60 * 60 * 1000,
   tenantId = 'default',
   customTenantDisplayNameAr?: string
-): VerifiedClinicalSession {
-  if (role !== 'clinician' && role !== 'educator_readonly') {
+): VerifiedBaseeraSession {
+  if (role !== 'school_admin' && role !== 'educator_readonly') {
     throw new Error('Invalid clinical role');
   }
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(tenantId)) {
@@ -148,7 +148,7 @@ export function issueClinicalSessionToken(
 
   const payloadObj = {
     role,
-    clinicianName: clinicianName.trim() || 'أخصائي التقييم',
+    accountName: accountName.trim() || 'مسؤول المدرسة',
     tenantId,
     tenantDisplayNameAr,
     sessionId,
@@ -169,7 +169,7 @@ export function issueClinicalSessionToken(
   return {
     token: `${payloadBase64}.${signature}`,
     role,
-    clinicianName: payloadObj.clinicianName,
+    accountName: payloadObj.accountName,
     tenantId,
     tenantDisplayNameAr,
     sessionId,
@@ -182,11 +182,11 @@ export function issueClinicalSessionToken(
 /**
  * Verifies an HMAC-SHA256 signed session token and checks expiration.
  */
-export function verifyClinicalSessionToken(
+export function verifyBaseeraSessionToken(
   rawToken: string | undefined | null,
   secret: string,
   nowMs: number = Date.now()
-): VerifiedClinicalSession | null {
+): VerifiedBaseeraSession | null {
   if (!rawToken || typeof rawToken !== 'string') return null;
   const trimmed = rawToken.replace(/^Bearer\s+/i, '').trim();
   const parts = trimmed.split('.');
@@ -215,7 +215,7 @@ export function verifyClinicalSessionToken(
       !parsed ||
       typeof parsed.expiresAt !== 'number' ||
       parsed.expiresAt <= nowMs ||
-      (parsed.role !== 'clinician' && parsed.role !== 'educator_readonly') ||
+      (parsed.role !== 'school_admin' && parsed.role !== 'educator_readonly') ||
       typeof parsed.tenantId !== 'string' ||
       !/^[a-zA-Z0-9_-]{1,80}$/.test(parsed.tenantId) ||
       typeof parsed.sessionId !== 'string' ||
@@ -224,14 +224,14 @@ export function verifyClinicalSessionToken(
       !Array.isArray(parsed.scopes) ||
       parsed.scopes.some(
         (scope: unknown) =>
-          !ROLE_SCOPES[parsed.role as ClinicalRole].includes(
-            scope as ClinicalScope
+          !ROLE_SCOPES[parsed.role as BaseeraRole].includes(
+            scope as BaseeraScope
           )
       )
     )
       return null;
     // Re-derive scopes from the role rather than trusting mutable claims in a signed token.
-    const scopes = getScopesForRole(parsed.role as ClinicalRole);
+    const scopes = getScopesForRole(parsed.role as BaseeraRole);
     const tenantDisplayNameAr = formatTenantDisplayNameAr(
       parsed.tenantId,
       typeof parsed.tenantDisplayNameAr === 'string'
@@ -241,9 +241,9 @@ export function verifyClinicalSessionToken(
     return {
       token: trimmed,
       role: parsed.role,
-      clinicianName:
-        typeof parsed.clinicianName === 'string'
-          ? parsed.clinicianName
+      accountName:
+        typeof parsed.accountName === 'string'
+          ? parsed.accountName
           : 'مستخدم',
       tenantId: parsed.tenantId,
       tenantDisplayNameAr,
@@ -261,8 +261,8 @@ export function verifyClinicalSessionToken(
  * Checks whether a verified session possesses the required RBAC scope.
  */
 export function authorizeSessionScope(
-  session: VerifiedClinicalSession | null,
-  requiredScope: ClinicalScope
+  session: VerifiedBaseeraSession | null,
+  requiredScope: BaseeraScope
 ): { allowed: boolean; statusCode: 200 | 401 | 403; errorAr?: string } {
   if (!session) {
     return {
@@ -319,7 +319,7 @@ const MAX_FREE_FAILURES = 4;
  * and obvious repeated patterns. It is a configuration sanity check, not proof
  * that an operator actually used a cryptographically secure generator.
  */
-export function isStrongClinicalAccessCode(value: unknown): value is string {
+export function isStrongBaseeraAccessCode(value: unknown): value is string {
   if (typeof value !== 'string' || !/^[a-f0-9]{48}$/.test(value)) return false;
 
   const counts = new Map<string, number>();
@@ -498,7 +498,7 @@ export function recordFailedAuthAttempt(
 /**
  * Strict 4-field student profile PATCH schema:
  * Accepts ONLY `name`, `schoolName`, `gradeLevel`, `ageYears`.
- * Rejects derived scores (`dyslexiaRiskScore`, `readingRiskLevel`), `tenantId`, `clinicalReport`, consent, and history.
+ * Rejects derived scores (`dyslexiaRiskScore`, `readingRiskLevel`), `tenantId`, `learningReport`, consent, and history.
  */
 export const StudentProfilePatchSchema = z
   .object({
@@ -526,9 +526,9 @@ export const StudentProfilePatchSchema = z
  * Strict schema for saving an updated clinical report (`PUT /api/students/:id/report`).
  * Requires non-empty exercises and accommodations so saved reports never render blank sections.
  */
-export const ClinicalReportSchema = z
+export const LearningReportSchema = z
   .object({
-    clinicalSummary: z.string().trim().min(10).max(5000),
+    learningSummary: z.string().trim().min(10).max(5000),
     ocularMotorAnalysis: z.string().trim().min(10).max(5000),
     orthographicAndPhonologicalPatterns: z.string().trim().min(10).max(5000),
     dyscalculiaSpatialAnalysis: z.string().trim().min(10).max(5000),
@@ -551,9 +551,9 @@ export const ClinicalReportSchema = z
   })
   .strict();
 
-export const ClinicalReportUpdateEnvelopeSchema = z
+export const LearningReportUpdateEnvelopeSchema = z
   .object({
-    clinicalReport: ClinicalReportSchema,
+    learningReport: LearningReportSchema,
   })
   .strict();
 
@@ -828,10 +828,10 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
 }
 
 /**
- * Generates a complete, deterministic, rule-based ClinicalReport on the server
+ * Generates a complete, deterministic, rule-based LearningReport on the server
  * with NON-EMPTY `interventionExercises` and `classroomAccommodations` (Fixing Finding 1).
  */
-export function buildDeterministicClinicalReport(params: {
+export function buildDeterministicLearningReport(params: {
   studentName: string;
   gradeLevel: number;
   dialectLabelAr: string;
@@ -848,7 +848,7 @@ export function buildDeterministicClinicalReport(params: {
   numberLinePAE: number | null;
   subitizingAccuracy: number | null;
   reversalErrorCount: number | null;
-}): ClinicalReport {
+}): LearningReport {
   const isMathTested =
     params.dyscalculiaAssessed && typeof params.numberLinePAE === 'number';
   const numberLinePracticeSuggested =
@@ -865,7 +865,7 @@ export function buildDeterministicClinicalReport(params: {
   const targetWordsSample =
     params.problematicWords.slice(0, 4).join('، ') || 'كلمات يختارها المعلم للتدريب';
 
-  const exercises: ClinicalReport['interventionExercises'] = [
+  const exercises: LearningReport['interventionExercises'] = [
     {
       title: 'قراءة متدرجة وتقسيم الكلمات إلى مقاطع',
       durationMinutes: 10,
@@ -924,7 +924,7 @@ export function buildDeterministicClinicalReport(params: {
   const readingRateText = params.wpm > 0
     ? String(params.wpm) + ' كلمة/دقيقة'
     : 'غير متاح لعدم توافر قياس صالح';
-  const clinicalSummary = isReadingOnly
+  const learningSummary = isReadingOnly
     ? 'جلسة قراءة وفهم تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
       '): معدل إتمام النص التقديري ' + readingRateText + ' في نص مرجعي من ' +
       (params.totalPassageWordCount > 0 ? String(params.totalPassageWordCount) : 'عدد كلمات غير متاح') +
@@ -935,7 +935,7 @@ export function buildDeterministicClinicalReport(params: {
       ' هذا ملخص وصفي وليس تصنيفًا معياريًا أو تشخيصًا.';
 
   return {
-    clinicalSummary,
+    learningSummary,
     ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
     orthographicAndPhonologicalPatterns: isReadingOnly
       ? 'لم تُقيّم أنماط الإملاء أو النطق في جلسة القراءة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
@@ -1021,14 +1021,14 @@ export interface DerivedSessionEvidenceResult {
     mathRiskLabelAr: string;
     evidenceProvenance: 'client-reported';
     evidenceProvenanceLabelAr: string;
-    clinicalReport: ClinicalReport;
+    learningReport: LearningReport;
   };
 }
 
 export interface SessionReviewerContext {
   sessionId: string;
-  role: ClinicalRole;
-  clinicianName: string;
+  role: BaseeraRole;
+  accountName: string;
 }
 
 export function validateAndDeriveSessionFromEvidence(
@@ -1181,7 +1181,7 @@ export function validateAndDeriveSessionFromEvidence(
 
   // Teacher Human-in-the-Loop review validation
   const requestedTeacherVerification = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
-  const isTeacherVerified = requestedTeacherVerification && reviewer?.role === 'clinician';
+  const isTeacherVerified = requestedTeacherVerification && reviewer?.role === 'school_admin';
   const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
 
   let validatedTeacherAlignment: Array<{
@@ -1348,7 +1348,7 @@ export function validateAndDeriveSessionFromEvidence(
       ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
       : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
-  const clinicalReport = buildDeterministicClinicalReport({
+  const learningReport = buildDeterministicLearningReport({
     studentName: studentMeta.name,
     gradeLevel: studentMeta.gradeLevel,
     dialectLabelAr: dialectRegionAr,
@@ -1387,7 +1387,7 @@ export function validateAndDeriveSessionFromEvidence(
       teacherVerified: isTeacherVerified,
       teacherVerificationTimestamp: isTeacherVerified ? new Date().toISOString() : undefined,
       teacherVerifierId: isTeacherVerified ? reviewer?.sessionId : undefined,
-      teacherVerifierName: isTeacherVerified ? reviewer?.clinicianName : undefined,
+      teacherVerifierName: isTeacherVerified ? reviewer?.accountName : undefined,
       teacherVerifierRole: isTeacherVerified ? 'أخصائي مصادق عليه عبر الحساب' : undefined,
       teacherWordOverridesCount:
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
@@ -1417,7 +1417,7 @@ export function validateAndDeriveSessionFromEvidence(
       evidenceProvenance: 'client-reported',
       evidenceProvenanceLabelAr:
         'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)',
-      clinicalReport,
+      learningReport,
     },
   };
 }
