@@ -375,8 +375,8 @@ export function runOculomotorHeuristicInference(
     normalizedRuleScore: rule1Score,
     decisionPathAr:
       meanFixationDurationMs >= 310
-        ? `زمن التثبيت (${meanFixationDurationMs}ms > 310ms) يشير لبطء فك الترميز الفونولوجي`
-        : `زمن التثبيت (${meanFixationDurationMs}ms <= 310ms) أقل من العتبة الاسترشادية المحددة`,
+        ? `زمن التثبيت المحسوب ${meanFixationDurationMs}ms تجاوز حد المحاكاة 310ms.`
+        : `زمن التثبيت المحسوب ${meanFixationDurationMs}ms لا يتجاوز حد المحاكاة 310ms.`,
   };
 
   // Rule 2: Regressive-saccade density
@@ -395,8 +395,8 @@ export function runOculomotorHeuristicInference(
     normalizedRuleScore: rule2Score,
     decisionPathAr:
       regressionRatePercent >= 19
-        ? `نسبة التراجع (${regressionRatePercent}% >= 19%) تعكس إعادة قراءة الحروف المتشابهة`
-        : `نسبة التراجع (${regressionRatePercent}% < 19%) أقل من العتبة الاسترشادية المضمّنة`,
+        ? `نسبة التراجع المحسوبة ${regressionRatePercent}% تجاوزت حد المحاكاة 19%.`
+        : `نسبة التراجع المحسوبة ${regressionRatePercent}% لا تتجاوز حد المحاكاة 19%.`,
   };
 
   // Rule 3: Upper-tail fixation duration
@@ -413,8 +413,8 @@ export function runOculomotorHeuristicInference(
     normalizedRuleScore: rule3Score,
     decisionPathAr:
       p90FixationDurationMs >= 390
-        ? `الرتبة المئوية ٩٠ داخل عينة الجلسة (${p90FixationDurationMs}ms) يكشف تعثراً في الكلمات المركبة`
-        : `الرتبة المئوية ٩٠ داخل عينة الجلسة (${p90FixationDurationMs}ms) متوازن عبر النص`,
+        ? `قيمة P90 في هذه العينة ${p90FixationDurationMs}ms تجاوزت حد المحاكاة 390ms.`
+        : `قيمة P90 في هذه العينة ${p90FixationDurationMs}ms لا تتجاوز حد المحاكاة 390ms.`,
   };
 
   // Rule 4: Saccade amplitude
@@ -431,8 +431,8 @@ export function runOculomotorHeuristicInference(
     normalizedRuleScore: rule4Score,
     decisionPathAr:
       meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 65
-        ? `قصر مدى القفزة (${meanSaccadeAmplitudePx}px) يشير لقراءة حرفية مجزأة`
-        : `مدى القفزة (${meanSaccadeAmplitudePx}px) يغطي مقاطع كاملة بكفاءة`,
+        ? `متوسط الإزاحة ${meanSaccadeAmplitudePx}px يقع في نطاق المحاكاة الأعلى حساسية.`
+        : `متوسط الإزاحة ${meanSaccadeAmplitudePx}px خارج نطاق المحاكاة الأعلى حساسية.`,
   };
 
   // Rule 5: Smoothed temporal heuristic state
@@ -444,8 +444,8 @@ export function runOculomotorHeuristicInference(
     normalizedRuleScore: Math.round(rule5Score * 100) / 100,
     decisionPathAr:
       temporalHeuristicScore >= 55
-        ? `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يرصد تذبذباً متكرراً بين التثبيت والتراجع`
-        : `مؤشر التسلسل الزمني (${temporalHeuristicScore}%) يظهر إيقاعاً قرائياً منتظماً`,
+        ? `المؤشر الزمني الداخلي ${temporalHeuristicScore}% تجاوز عتبة المحاكاة 55%.`
+        : `المؤشر الزمني الداخلي ${temporalHeuristicScore}% لا يتجاوز عتبة المحاكاة 55%.`,
   };
 
   const ruleVotes = [rule1Vote, rule2Vote, rule3Vote, rule4Vote, rule5Vote];
@@ -2243,7 +2243,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 1.45,
     difficultyB: -1.4,
-    clinicalRationaleAr: 'يقيس التمييز الفونولوجي والبصري بين الظاء والضاد والطاء في الجذر (ن-ظ-ر).',
+    clinicalRationaleAr: 'مثال تعليمي لملاحظة اختلاف حرف داخل كلمة؛ ليس بندًا معياريًا مثبتًا ولا يقيس خطر عسر القراءة.',
   },
   {
     id: 'irt-2',
@@ -2260,7 +2260,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 1.75,
     difficultyB: -0.6,
-    clinicalRationaleAr: 'يفحص قدرة الذاكرة العاملة الصوتية على عزل المقاطع الساكنة المغلقة (CVC).',
+    clinicalRationaleAr: 'مثال على تقسيم كلمة إلى مقاطع مكتوبة؛ صحة التقسيم تحتاج مراجعة لغوية ولا يقيس الذاكرة العاملة.',
   },
   {
     id: 'irt-3',
@@ -2272,7 +2272,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 1.6,
     difficultyB: 0.0,
-    clinicalRationaleAr: 'يقيس دقة المعالجة المكانية لمواقع النقاط فوق وتحت صحن الحرف (ب/ت/ث/ن).',
+    clinicalRationaleAr: 'مثال بصري على مواضع النقاط في الحروف؛ لا يقيس قدرة مكانية معيارية.',
   },
   {
     id: 'irt-4',
@@ -2284,7 +2284,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 1.9,
     difficultyB: 0.65,
-    clinicalRationaleAr: 'يقيّم قدرة القارئ على استخلاص الجذر الصرفي دون الخلط البصري مع (ح-ف-ظ) أو (ل-ف-ظ).',
+    clinicalRationaleAr: 'مثال لغوي عن الجذر الثلاثي؛ قد تتطلب الإجابات شرحًا صرفيًا بحسب مستوى المتعلم.',
   },
   {
     id: 'irt-5',
@@ -2296,7 +2296,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 2.1,
     difficultyB: 1.25,
-    clinicalRationaleAr: 'مؤشر عالي الحساسية في مقاييس Marker Learning لكشف ضعف الحلقة الفونولوجية في الديسلكسيا.',
+    clinicalRationaleAr: 'تمرين عكسي لترتيب حروف كلمة، غير مُعاير ولا توجد بيانات هنا تثبت الحساسية أو النوعية أو صلاحيته لفرز عسر القراءة.',
   },
   {
     id: 'irt-6',
@@ -2308,7 +2308,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 1.5,
     difficultyB: -0.9,
-    clinicalRationaleAr: 'يختبر قدرة الطالب العربي على ربط النطق اللهجي الدارج (إبدال الذال زاياً) بالرسم الإملائي الفصيح (ذ).',
+    clinicalRationaleAr: 'مثال يشرح فرقًا إملائيًا شائعًا بين النطق واللهجة والرسم؛ لا يُصنّف اختلاف اللهجة بوصفه خطأ مرضيًا.',
   },
   {
     id: 'irt-7',
@@ -2320,7 +2320,7 @@ export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
     correctIndex: 0,
     discriminationA: 2.25,
     difficultyB: 1.85,
-    clinicalRationaleAr: 'يقيس سعة المعالجة الفونولوجية المتسلسلة في الكلمات العربية ذات السوابق واللواحق المركبة.',
+    clinicalRationaleAr: 'مثال على كلمة طويلة وتقسيم مقطعي مقترح؛ لا يقيس سعة معالجة معيارية.',
   },
 ];
 
