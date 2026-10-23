@@ -21,6 +21,7 @@ import {
   INITIAL_STUDENTS,
   ARABIC_READING_PASSAGES,
   StudentRecord,
+  StudentAssessmentSnapshot,
 } from './data/seedData';
 import {
   authenticatedFetch,
@@ -187,13 +188,13 @@ export default function App() {
     transcodingAccuracy: record.transcodingAccuracy,
     dyscalculiaRiskScore: record.dyscalculiaRiskScore,
     mathRiskLevel: record.mathRiskLevel,
-  });
+  } as StudentAssessmentSnapshot);
 
   // Only raw evidence & consent fields are sent to the server; scores and reports are derived server-side.
   const sessionPayloadFromRecord = (record: StudentRecord) => ({
     sessionRoleLabel: record.sessionRoleLabel,
     passageId: record.passageId,
-    dialectCode: record.dialectCode || record.dialect || 'egyptian',
+    dialectCode: record.dialectCode || record.dialect || 'msa',
     dialectRegionAr: record.dialectRegionAr,
     assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
     ...(typeof record.readingDurationSeconds === 'number' && Number.isFinite(record.readingDurationSeconds)
