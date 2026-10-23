@@ -56,6 +56,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Optional AI-assisted session plan for general educational activities
   const [aiSession, setAiSession] = useState<RemediationSessionPlan | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
+  const [aiStatusMessage, setAiStatusMessage] = useState<string>('');
   const [aiSource, setAiSource] = useState<string | null>(null);
   const [showActivityRationale, setShowActivityRationale] = useState<boolean>(false);
   const [activeScaffold, setActiveScaffold] = useState<{ title: string; text: string; audioText: string } | null>(null);
@@ -134,9 +135,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setTimeout(() => setCelebrationMessage(''), 3500);
   };
 
-  // Fetch or Re-synthesize AI Session for the active student (Amira style)
+  // Optional authenticated generation of new educational activities for the selected grade.
   const fetchAiSession = async (student: StudentRecord, announce: boolean = true) => {
     setIsLoadingAi(true);
+    setAiStatusMessage('');
     setActiveScaffold(null);
     try {
       const res = await authenticatedFetch('/api/remediation/generate-personalized-session', {
@@ -149,32 +151,42 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.session) {
-          setAiSession(data.session);
-          setAiSource(data.source || 'gemini-3.8-flash-ai');
-          setPhonicsIdx(0);
-          setSyllableIdx(0);
-          setPacerWordIdx(0);
-          setPacerPlaying(false);
-          setMathIdx(0);
-          setSelectedLetter(null);
-          setPhonicsEvaluated(false);
-          setAssembledSyllables([]);
-          setSyllableComplete(false);
-          setMathAnswered(false);
-
-          if (announce) {
-            triggerCelebration(
-              `تم إعداد أنشطة تعليمية مقترحة للصف ${student.gradeLevel}.`,
-              40
-            );
-          }
-        }
+      if (!res.ok) {
+        setAiStatusMessage(
+          res.status === 401 || res.status === 403
+            ? 'الأنشطة العامة متاحة الآن. لتوليد خطة جديدة من الخادم، سجّل الدخول بحساب معلّم مخوّل.'
+            : 'تعذّر توليد خطة جديدة؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
+        );
+        return;
       }
-    } catch (err) {
-      console.warn('AI session fetch error:', err);
+
+      const data = await res.json();
+      if (!data?.session) {
+        setAiStatusMessage('لم يصل مخطط صالح؛ استمر بالأنشطة العامة دون تخصيص.');
+        return;
+      }
+
+      setAiSession(data.session);
+      setAiSource(data.source || 'rule-based-learning-plan');
+      setPhonicsIdx(0);
+      setSyllableIdx(0);
+      setPacerWordIdx(0);
+      setPacerPlaying(false);
+      setMathIdx(0);
+      setSelectedLetter(null);
+      setPhonicsEvaluated(false);
+      setAssembledSyllables([]);
+      setSyllableComplete(false);
+      setMathAnswered(false);
+
+      if (announce) {
+        triggerCelebration(
+          `تم إعداد أنشطة تعليمية مقترحة للصف ${student.gradeLevel}.`,
+          40
+        );
+      }
+    } catch {
+      setAiStatusMessage('تعذّر الاتصال بالخادم؛ استمر بالأنشطة التعليمية العامة الحالية.');
     } finally {
       setIsLoadingAi(false);
     }
@@ -388,8 +400,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       </div>
 
       <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-        عند طلب توليد أنشطة جديدة، يُرسل الصف واللهجة وكلمات التدريب التي راجعها المعلّم إلى خدمة التوليد إذا كانت مفعّلة. لا يُرسل اسم الطفل أو رقم سجله. ويمكنك متابعة الأنشطة العامة دون طلب توليد جديد.
+        عند طلب توليد أنشطة جديدة، يُرسل الصف واللهجة وكلمات التدريب التي راجعها المعلّم إلى خدمة التوليد إذا كانت مفعّلة. لا يُرسل اسم الطفل أو رقم سجله إلى نموذج التوليد. ويمكنك متابعة الأنشطة العامة دون طلب توليد جديد.
       </p>
+      {aiStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{aiStatusMessage}</p>}
 
       {/* Optional Educational Activity Rationale */}
       {showActivityRationale && (
