@@ -691,6 +691,22 @@
 }
 .baseera-mobile-nav { display: none; }
 
+/* Immersive reading focus: show the passage itself, not sticky navigation or floating UI. */
+body.baseera-reading-focus .baseera-topbar,
+body.baseera-reading-focus .baseera-session-strip,
+body.baseera-reading-focus .baseera-mobile-nav,
+body.baseera-reading-focus .baseera-comfort-dock,
+body.baseera-reading-focus .baseera-footer {
+  display: none !important;
+}
+body.baseera-reading-focus .baseera-main {
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+}
+body.baseera-reading-focus {
+  scroll-behavior: auto;
+}
+
 .baseera-main {
   width: min(100% - 32px, 1280px);
   max-width: 1280px;
