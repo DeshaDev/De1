@@ -84,3 +84,6 @@ The production build generates a browser bundle in `dist/` and a bundled Node.js
 This repository grants no public reuse license. The notice in `LICENSE` does not itself prove ownership; contributor assignments and third-party dependency and asset licenses must be reviewed before investment or commercial distribution.
 
 Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.
+
+
+**Live demo:** No public hosted demo is currently available. The repository and automated CI checks should not be presented as a deployed production service.

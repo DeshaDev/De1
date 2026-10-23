@@ -44,7 +44,7 @@ export interface RemediationMathDrill {
 
 export interface RemediationSessionPlan {
   /** Legacy API field name; content is educational context, never a clinical rationale. */
-  clinicalRationale: string;
+  learningRationale: string;
   phonicsDrills: RemediationPhonicsDrill[];
   syllableDrills: RemediationSyllableDrill[];
   pacerPassage: RemediationPacerPassage;
@@ -63,7 +63,7 @@ export function isStructurallyValidRemediationSessionPlan(value: unknown): value
       ? word.normalize('NFC').replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[\s·,،;؛.:!?؟\-]/g, '')
       : '';
 
-  if (typeof plan.clinicalRationale !== 'string' || !plan.clinicalRationale.trim()) return false;
+  if (typeof plan.learningRationale !== 'string' || !plan.learningRationale.trim()) return false;
   if (!Array.isArray(plan.phonicsDrills) || plan.phonicsDrills.length !== 4) return false;
   for (const raw of plan.phonicsDrills) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
@@ -172,7 +172,7 @@ export function generateAdaptiveRemediationPlan(params: {
   const syllableBank: Record<string, RemediationSyllableDrill[]> = {
     foundational: [
       { id: 1, targetWord: 'بُسْتَان', wordMeaning: 'مكان فيه أشجار ونباتات', syllables: ['بُسْ', 'تَان'] },
-      { id: 2, targetWord: 'تُفَّاح', wordMeaning: 'فاكهة معروفة', syllables: ['تُفْ', 'فَاح'] },
+      { id: 2, targetWord: 'تُفَّاح', wordMeaning: 'فاكهة معروفة', syllables: ['تُفَّ', 'اح'] },
       { id: 3, targetWord: 'قَلَم', wordMeaning: 'أداة للكتابة', syllables: ['قَ', 'لَم'] },
       { id: 4, targetWord: 'مَدْرَسَة', wordMeaning: 'مكان للتعلم', syllables: ['مَدْ', 'رَ', 'سَة'] },
     ],
@@ -237,7 +237,7 @@ export function generateAdaptiveRemediationPlan(params: {
   const pacerPassage = pacerByBand[band];
 
   return {
-    clinicalRationale: targetsTeacherReviewed && effectiveWords.length > 0
+    learningRationale: targetsTeacherReviewed && effectiveWords.length > 0
       ? `أنشطة تعليمية للصف ${gradeLevel}. لا تُستخدم الكلمات التي راجعها المعلم لتخصيص التدريب إلا إذا طابقت كلمة موجودة في بنك تدريبي مضبوط. لا تثبت النتائج وجود اضطراب ولا تمثل الخطة اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
       : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب مستوى القراءة، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
     phonicsDrills,

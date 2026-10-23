@@ -453,7 +453,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </button>
           </div>
           <p className="leading-relaxed text-slate-700">
-            {effectivePlan.clinicalRationale}
+            {effectivePlan.learningRationale}
           </p>
         </div>
       )}

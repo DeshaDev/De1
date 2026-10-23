@@ -48,8 +48,8 @@ test('generic practice does not claim eye-tracking observations or individualize
     targetsTeacherReviewed: false,
   });
 
-  assert.match(plan.clinicalRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
-  assert.doesNotMatch(plan.clinicalRationale, /تتبع حركة العين|جلسة علاجية|علاج عسر القراءة|القفزات التراجعية/);
+  assert.match(plan.learningRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
+  assert.doesNotMatch(plan.learningRationale, /تتبع حركة العين|جلسة علاجية|علاج عسر القراءة|القفزات التراجعية/);
   assert.equal(plan.pacerPassage.title, 'قصة قصيرة للقراءة والتظليل');
 });
 
@@ -61,9 +61,9 @@ test('teacher-reviewed target status is stated narrowly and does not imply diagn
     targetsTeacherReviewed: true,
   });
 
-  assert.match(plan.clinicalRationale, /راجعها المعلم/);
-  assert.match(plan.clinicalRationale, /لا تثبت النتائج وجود اضطراب/);
-  assert.doesNotMatch(plan.clinicalRationale, /تشخيص مؤكد|خطة علاج معتمدة/);
+  assert.match(plan.learningRationale, /راجعها المعلم/);
+  assert.match(plan.learningRationale, /لا تثبت النتائج وجود اضطراب/);
+  assert.doesNotMatch(plan.learningRationale, /تشخيص مؤكد|خطة علاج معتمدة/);
 });
 
 test('curated activities pass structural checks used before model-generated activities are displayed', () => {
