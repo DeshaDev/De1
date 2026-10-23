@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
-import { generateAdaptiveRemediationPlan } from './src/utils/remediationEngine';
+import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   ClinicalRole,
@@ -1944,7 +1944,15 @@ async function startServer() {
           },
         });
 
-        const parsed = JSON.parse((response.text || '{}').trim());
+        const parsed: unknown = JSON.parse((response.text || '{}').trim());
+        if (!isStructurallyValidRemediationSessionPlan(parsed)) {
+          throw new Error('AI-generated educational plan failed structural consistency checks.');
+        }
+        // The model's free-form rationale is never shown as trusted assessment. Replace it
+        // with a deterministic, provenance-aware explanation authored by the application.
+        parsed.clinicalRationale = hasTeacherReviewedTargets
+          ? `اقتراح أنشطة تعليمية للصف ${gradeLevel}. أُرسلت كلمات راجعها المعلّم ضمن سياق التوليد، لكن يجب مراجعة ارتباط كل تمرين بالكلمة قبل استخدامه. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`
+          : `اقتراح أنشطة عامة للصف ${gradeLevel}. لا توجد كلمات خطأ موثّقة أُرسلت للتخصيص؛ أمثلة النص ليست أخطاء مرصودة لدى الطفل. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`;
         res.json({
           source: 'gemini-3.8-flash-ai',
           targetWordsUsed: hasTeacherReviewedTargets ? effectiveWords : [],
