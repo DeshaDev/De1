@@ -104,7 +104,7 @@ export const AssessmentStatus: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="font-semibold">اختبار النطق:</span>
+          <span className="font-semibold">نشاط مقارنة التفريغ:</span>
           <span className={hasSpeechResults ? 'text-green-600' : 'text-gray-400'}>
             {hasSpeechResults ? '✅ مكتمل' : '⏳ لم يبدأ'}
           </span>
@@ -120,11 +120,11 @@ export const AssessmentStatus: React.FC = () => {
 
       {hasSpeechResults && currentAssessment.speechResults && (
         <div className="mt-6 pt-6 border-t">
-          <h4 className="font-bold mb-2">ملخص النطق:</h4>
+          <h4 className="font-bold mb-2">ملخص التفريغ النصي:</h4>
           <ul className="space-y-1 text-sm text-gray-600">
-            <li>• متوسط الثقة: {currentAssessment.speechResults.summary.averageConfidence}%</li>
-            <li>• عدد الوقفات: {currentAssessment.speechResults.summary.totalPauses}</li>
-            <li>• أخطاء التشكيل: {currentAssessment.speechResults.summary.diacriticErrors}</li>
+            <li>• التفريغات المطابقة نصيًا: {currentAssessment.speechResults.summary.exactTranscriptMatches}</li>
+            <li>• التفريغات التي تحتاج إلى مراجعة: {currentAssessment.speechResults.summary.transcriptsNeedingReview}</li>
+            <li>• ثقة التعرف التي أعادها المتصفح: {typeof currentAssessment.speechResults.summary.averageRecognitionConfidence === 'number' ? currentAssessment.speechResults.summary.averageRecognitionConfidence + '%' : 'غير متاحة'}</li>
           </ul>
         </div>
       )}
