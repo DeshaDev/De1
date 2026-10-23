@@ -91,11 +91,19 @@ test('calculateDyscalculiaMetrics treats empty task groups as unmeasured rather 
   assert.equal(metrics.riskLevel, 'unassessed');
 });
 
-test('segmentArabicWordIntoSyllables segments definite article and long vowels cleanly', () => {
-  const syllables = segmentArabicWordIntoSyllables('المكتبة');
-  assert.ok(syllables.length >= 2);
-  assert.equal(syllables[0], 'ال');
-  assert.equal(syllables.join(''), 'المكتبة');
+test('segmentArabicWordIntoSyllables leaves unvocalized Arabic intact instead of inventing boundaries', () => {
+  assert.deepEqual(segmentArabicWordIntoSyllables('المكتبة'), ['المكتبة']);
+  assert.deepEqual(segmentArabicWordIntoSyllables('المدرسة.'), ['المدرسة.']);
+});
+
+test('segmentArabicWordIntoSyllables conservatively segments a fully vocalized simple word', () => {
+  const syllables = segmentArabicWordIntoSyllables('شَاهَدَتْ');
+  assert.deepEqual(syllables, ['شَا', 'هَ', 'دَتْ']);
+  assert.equal(syllables.join(''), 'شَاهَدَتْ');
+});
+
+test('segmentArabicWordIntoSyllables keeps shadda/gemination intact when uncertain', () => {
+  assert.deepEqual(segmentArabicWordIntoSyllables('التُّفَّاحِ'), ['التُّفَّاحِ']);
 });
 
 test('getConfusableLetterGroup identifies homographic Arabic letter families', () => {
