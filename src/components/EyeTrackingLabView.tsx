@@ -568,7 +568,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     }
 
     // Save only the options the child actually selected; never fabricate a default answer.
-    const answersArray = questions.map((_, idx) => selectedAnswers[idx]);
+    const answersArray: number[] = questions.map((_, idx) => selectedAnswers[idx] as number);
 
     const cleanTranscript = (spokenTranscriptRef.current || spokenTranscript || '').trim();
     const hasAudioCaptured =
