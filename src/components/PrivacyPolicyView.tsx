@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const QATAR_LAW_URL =
-  'https://www.almeezan.qa/LawArticles.aspx?LawID=7121&LawTreeSectionID=17485&language=ar';
+  'https://www.almeezan.qa/LawView.aspx?LawID=7121&language=ar';
 const QATAR_CHILD_DATA_URL =
   'https://www.almeezan.qa/LawArticles.aspx?LawArticleID=72903&LawID=7121&language=ar';
 const NCSA_GUIDANCE_URL =
