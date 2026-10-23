@@ -180,7 +180,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.dyslexiaRiskScore, null);
     assert.equal(derived.derivedFields.readingHeuristicIndicator, null);
     assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
-    assert.ok(derived.derivedFields.clinicalReport);
+    assert.ok(derived.derivedFields.learningReport);
   });
 
   await t.test('Voice-only session without transcript does not infer speed from the full passage', () => {
@@ -262,8 +262,8 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       gradeLevel: 3,
     }, {
       sessionId: 'review-session-test-001',
-      role: 'clinician',
-      clinicianName: 'مراجع موثّق للاختبار',
+      role: 'school_admin',
+      accountName: 'مراجع موثّق للاختبار',
     });
 
     assert.equal(derived.valid, true);
@@ -278,10 +278,10 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.omissionCount, 17);
     assert.equal(derived.derivedFields.teacherVerifierId, 'review-session-test-001');
     assert.equal(derived.derivedFields.teacherVerifierName, 'مراجع موثّق للاختبار');
-    assert.equal(derived.derivedFields.teacherVerifierRole, 'أخصائي مصادق عليه عبر الحساب');
+    assert.equal(derived.derivedFields.teacherVerifierRole, 'مراجع مخوّل عبر حساب المدرسة');
   });
 
-  await t.test('Client-submitted teacherVerified is ignored without an authenticated clinician reviewer', () => {
+  await t.test('Client-submitted teacherVerified is ignored without an authenticated school administrator reviewer', () => {
     const rawPayload = {
       passageId: passage.id,
       assessmentModality: 'voice_only',
@@ -326,7 +326,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       name: 'زيد',
       gradeLevel: 3,
     }, {
-      sessionId: 'review-session-invalid-001', role: 'clinician', clinicianName: 'مراجع اختبار',
+      sessionId: 'review-session-invalid-001', role: 'school_admin', accountName: 'مراجع اختبار',
     });
 
     assert.equal(derived.valid, false);
@@ -351,7 +351,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       name: 'زيد',
       gradeLevel: 3,
     }, {
-      sessionId: 'review-session-invalid-002', role: 'clinician', clinicianName: 'مراجع اختبار',
+      sessionId: 'review-session-invalid-002', role: 'school_admin', accountName: 'مراجع اختبار',
     });
 
     assert.equal(derived2.valid, false);

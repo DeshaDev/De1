@@ -1388,7 +1388,7 @@ export function validateAndDeriveSessionFromEvidence(
       teacherVerificationTimestamp: isTeacherVerified ? new Date().toISOString() : undefined,
       teacherVerifierId: isTeacherVerified ? reviewer?.sessionId : undefined,
       teacherVerifierName: isTeacherVerified ? reviewer?.accountName : undefined,
-      teacherVerifierRole: isTeacherVerified ? 'أخصائي مصادق عليه عبر الحساب' : undefined,
+      teacherVerifierRole: isTeacherVerified ? 'مراجع مخوّل عبر حساب المدرسة' : undefined,
       teacherWordOverridesCount:
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
           ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)

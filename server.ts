@@ -396,7 +396,7 @@ function loadPersistedStudents(): StudentRecord[] {
   if (!key) {
     baseeraStoreReady = false;
     console.warn(
-      'Encrypted clinical persistence is disabled until BASEERA_STORE_ENCRYPTION_KEY is configured.'
+      'Encrypted student-data persistence is disabled until BASEERA_STORE_ENCRYPTION_KEY is configured.'
     );
     return createSeededStudents();
   }
@@ -745,13 +745,13 @@ async function startServer() {
       // rolling window expires them naturally, even if credentials for different
       // schools are successfully used from the same address.
 
-      const safeClinicianName =
+      const safeReviewerName =
         typeof accountName === 'string'
           ? accountName.trim().slice(0, 100)
           : '';
       const session = issueBaseeraSessionToken(
         credential.role,
-        safeClinicianName ||
+        safeReviewerName ||
           (credential.role === 'school_admin' ? 'مسؤول المدرسة' : 'معلم'),
         BASEERA_SESSION_SECRET,
         60 * 60 * 1000,

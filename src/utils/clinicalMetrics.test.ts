@@ -6,8 +6,8 @@ import {
   getConfusableLetterGroup,
 } from './clinicalMetrics.ts';
 import {
-  issueClinicalSessionToken,
-  verifyClinicalSessionToken,
+  issueBaseeraSessionToken,
+  verifyBaseeraSessionToken,
   authorizeSessionScope,
   validateExplicitGuardianConsent,
 } from './clinicalSecurity.ts';
@@ -118,12 +118,12 @@ test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny 
   assert.equal(unauthCheck.statusCode, 401);
 
   // 2. Educator readonly role can read students but is forbidden (403) from deleting or writing
-  const readonlySession = issueClinicalSessionToken(
+  const readonlySession = issueBaseeraSessionToken(
     'educator_readonly',
     'معلم الصف',
     secret
   );
-  const verifiedReadonly = verifyClinicalSessionToken(
+  const verifiedReadonly = verifyBaseeraSessionToken(
     `Bearer ${readonlySession.token}`,
     secret
   );
@@ -140,12 +140,12 @@ test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny 
   assert.equal(deleteAttempt.statusCode, 403);
 
   // 3. Clinician role has full scopes
-  const clinicianSession = issueClinicalSessionToken(
+  const clinicianSession = issueBaseeraSessionToken(
     'clinician',
     'د. سارة',
     secret
   );
-  const verifiedClinician = verifyClinicalSessionToken(
+  const verifiedClinician = verifyBaseeraSessionToken(
     clinicianSession.token,
     secret
   );
@@ -160,7 +160,7 @@ test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny 
 
   // 4. Tampered token is rejected
   assert.equal(
-    verifyClinicalSessionToken(`${clinicianSession.token}tampered`, secret),
+    verifyBaseeraSessionToken(`${clinicianSession.token}tampered`, secret),
     null
   );
 
