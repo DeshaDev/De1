@@ -146,179 +146,100 @@ export function generateAdaptiveRemediationPlan(params: {
   targetsTeacherReviewed?: boolean;
 }): RemediationSessionPlan {
   const { gradeLevel, effectiveWords, targetsTeacherReviewed = false } = params;
-  // These are fixed examples whose target letters match the actual word; arbitrary
-  // student targets must never be substituted into a phonics item for another letter.
+  const band = gradeLevel <= 2 ? 'foundational' : gradeLevel <= 4 ? 'developing' : 'advanced';
 
-  // 1. General phonics examples; do not infer that the student's own errors match these items.
-  const phonicsDrills: RemediationPhonicsDrill[] = [
-    {
-      id: 1,
-      family: 'عائلة السين والصاد (الترقيق والتفخيم)',
-      spokenWord: 'سَاقِيَة',
-      wordMeaning: 'مثال تدريبي على صوت السين والتمييز بينها وبين الصاد',
-      targetLetter: 'س',
-      options: [
-        {
-          letter: 'سـ',
-          letterName: 'سين (مرققة)',
-          isCorrect: true,
-          explanation: 'أحسنت! صوت السين هنا مرقق خفيف يخرج بصفير ناعم.',
-        },
-        {
-          letter: 'صـ',
-          letterName: 'صاد (مفخمة)',
-          isCorrect: false,
-          explanation: 'الصاد حرف مفخم يمتلئ به الفم، بينما الكلمة تبدأ بسين مرققة.',
-        },
-      ],
-      ruleTip: 'فرّق بصفير لسانك: السين (س) خفيفة ومرققة، والصاد (ص) مفخمة وممتلئة.',
-    },
-    {
-      id: 2,
-      family: 'عائلة الباء والتاء والثاء (الإعجام والتنقيط)',
-      spokenWord: 'بُسْتَان',
-      wordMeaning: 'حديقة غناء تحوي الأشجار والأزهار',
-      targetLetter: 'ب',
-      options: [
-        {
-          letter: 'بـ',
-          letterName: 'باء',
-          isCorrect: true,
-          explanation: 'ممتاز! الباء تحمل نقطة واحدة بالأسفل مثل طبق تحته تمرة.',
-        },
-        {
-          letter: 'تـ',
-          letterName: 'تاء',
-          isCorrect: false,
-          explanation: 'التاء نقطتان في الأعلى، بينما الكلمة تبدأ بباء نقطتها بالأسفل.',
-        },
-        {
-          letter: 'ثـ',
-          letterName: 'ثاء',
-          isCorrect: false,
-          explanation: 'الثاء ثلاث نقاط، انتبه لعدد النقاط.',
-        },
-      ],
-      ruleTip: 'الباء نقطتها بالأسفل، والتاء نقطتان بالأعلى، والثاء ثلاث نقاط كالمثلث.',
-    },
-    {
-      id: 3,
-      family: 'عائلة الجيم والحاء والخاء (موضع النقطة)',
-      spokenWord: 'خُبْز',
-      wordMeaning: 'غذاء يومي أساسي',
-      targetLetter: 'خ',
-      options: [
-        {
-          letter: 'جـ',
-          letterName: 'جيم',
-          isCorrect: false,
-          explanation: 'الجيم نقطتها في بطنها بالأسفل، وليست فوق الرأس.',
-        },
-        {
-          letter: 'حـ',
-          letterName: 'حاء',
-          isCorrect: false,
-          explanation: 'الحاء ملساء تماماً وبلا أي نقاط.',
-        },
-        {
-          letter: 'خـ',
-          letterName: 'خاء',
-          isCorrect: true,
-          explanation: 'بطل! الخاء تحمل نقطة فوق رأسها كتاج متألق.',
-        },
-      ],
-      ruleTip: 'الخاء فوقها نقطة كتاج، والجيم في بطنها نقطة، والحاء بلا نقاط.',
-    },
-    {
-      id: 4,
-      family: 'عائلة الدال والضاد',
-      spokenWord: 'ضَوْء',
-      wordMeaning: 'نور ساطع يضيء المكان',
-      targetLetter: 'ض',
-      options: [
-        {
-          letter: 'د',
-          letterName: 'دال (مرققة)',
-          isCorrect: false,
-          explanation: 'الدال صوت خفيف ومرقق، والكلمة تبدأ بصوت مفخم.',
-        },
-        {
-          letter: 'ضـ',
-          letterName: 'ضاد (مفخمة)',
-          isCorrect: true,
-          explanation: 'رائع! صوت الضاد قوي ومفخم يمتلئ به الفم.',
-        },
-      ],
-      ruleTip: 'الضاد (ض) حرف مفخم قوي، بينما الدال (د) صوت خفيف ورقيق.',
-    },
-  ];
-
-  // 2. Syllables derived from student's target words
-  const syllableDrills: RemediationSyllableDrill[] = [
-    {
-      id: 1,
-      targetWord: 'سَاقِيَة',
-      wordMeaning: 'قناة مائية تسقي الحقول والزروع',
-      syllables: ['سَا', 'قِ', 'يَة'],
-    },
-    {
-      id: 2,
-      targetWord: 'بُسْتَان',
-      wordMeaning: 'واحة الأشجار والأزهار',
-      syllables: ['بُسْ', 'تَان'],
-    },
-    {
-      id: 3,
-      targetWord: 'مَدْرَسَة',
-      wordMeaning: 'صرح التعليم والمعرفة',
-      syllables: ['مَدْ', 'رَ', 'سَة'],
-    },
-    {
-      id: 4,
-      targetWord: 'عُصْفُور',
-      wordMeaning: 'طائر صغير مغرد',
-      syllables: ['عُصْ', 'فُور'],
-    },
-  ];
-
-  // 3. A short general passage with adjustable word-highlighting (not eye-movement training).
-  const pacerPassage: RemediationPacerPassage = {
-    id: 1,
-    title: 'قصة قصيرة للقراءة والتظليل',
-    gradeLevel: `الصف ${gradeLevel}`,
-    words: [
-      'فِي',
-      'صَبَاحِ',
-      'يَوْمٍ',
-      'مُشْرِقٍ،',
-      'خَرَجَ',
-      'عُمَرُ',
-      'إِلَى',
-      'الْبُسْتَانِ',
-      'الْقَرِيبِ،',
-      'حَيْثُ',
-      'تَجْرِي',
-      'مِيَاهُ',
-      'السَّاقِيَةِ',
-      'بِعُذُوبَةٍ',
-      'وَصَفَاءٍ',
-      'بَيْنَ',
-      'الْأَشْجَارِ.',
+  const phonicsBank: Record<string, RemediationPhonicsDrill[]> = {
+    foundational: [
+      { id: 1, family: 'تمييز الباء والتاء', spokenWord: 'بُسْتَان', wordMeaning: 'مكان فيه أشجار ونباتات', targetLetter: 'ب', options: [{ letter: 'ب', letterName: 'باء', isCorrect: true, explanation: 'الكلمة تبدأ بحرف الباء.' }, { letter: 'ت', letterName: 'تاء', isCorrect: false, explanation: 'التاء حرف آخر؛ ابحث عن صوت بداية الكلمة.' }], ruleTip: 'انظر إلى حرف البداية ونقاطه.' },
+      { id: 2, family: 'تمييز التاء والثاء', spokenWord: 'تُفَّاح', wordMeaning: 'فاكهة معروفة', targetLetter: 'ت', options: [{ letter: 'ت', letterName: 'تاء', isCorrect: true, explanation: 'الكلمة تبدأ بالتاء.' }, { letter: 'ث', letterName: 'ثاء', isCorrect: false, explanation: 'الثاء تحمل ثلاث نقاط.' }], ruleTip: 'ميّز عدد النقاط في الحروف المتقاربة.' },
+      { id: 3, family: 'تمييز الجيم والحاء', spokenWord: 'جَبَل', wordMeaning: 'ارتفاع كبير من الأرض', targetLetter: 'ج', options: [{ letter: 'ج', letterName: 'جيم', isCorrect: true, explanation: 'الكلمة تبدأ بالجيم.' }, { letter: 'ح', letterName: 'حاء', isCorrect: false, explanation: 'الحاء تشبه الجيم في الرسم من دون نقطة.' }], ruleTip: 'انتبه إلى موضع النقطة أو غيابها.' },
+      { id: 4, family: 'تمييز الخاء والجيم', spokenWord: 'خُرُوف', wordMeaning: 'صغير الضأن', targetLetter: 'خ', options: [{ letter: 'خ', letterName: 'خاء', isCorrect: true, explanation: 'الكلمة تبدأ بالخاء.' }, { letter: 'ج', letterName: 'جيم', isCorrect: false, explanation: 'موضع نقطة الجيم مختلف.' }], ruleTip: 'اقرأ أول صوت ثم اختر الحرف المطابق.' },
+    ],
+    developing: [
+      { id: 1, family: 'تمييز السين والصاد', spokenWord: 'سَاقِيَة', wordMeaning: 'قناة للماء', targetLetter: 'س', options: [{ letter: 'س', letterName: 'سين', isCorrect: true, explanation: 'بداية الكلمة سين.' }, { letter: 'ص', letterName: 'صاد', isCorrect: false, explanation: 'الصاد حرف مفخم مختلف.' }], ruleTip: 'قارن شكل الحرف وصوته داخل الكلمة.' },
+      { id: 2, family: 'تمييز السين والصاد', spokenWord: 'صَابُون', wordMeaning: 'مادة للتنظيف', targetLetter: 'ص', options: [{ letter: 'س', letterName: 'سين', isCorrect: false, explanation: 'السين لا تطابق بداية الكلمة.' }, { letter: 'ص', letterName: 'صاد', isCorrect: true, explanation: 'بداية الكلمة صاد.' }], ruleTip: 'تدرب على الحروف المتقاربة في الصوت.' },
+      { id: 3, family: 'تمييز الطاء والتاء', spokenWord: 'طَائِر', wordMeaning: 'حيوان له جناحان', targetLetter: 'ط', options: [{ letter: 'ط', letterName: 'طاء', isCorrect: true, explanation: 'بداية الكلمة طاء.' }, { letter: 'ت', letterName: 'تاء', isCorrect: false, explanation: 'التاء حرف مختلف في الرسم والصوت.' }], ruleTip: 'تتبّع الحرف في بداية الكلمة.' },
+      { id: 4, family: 'تمييز الظاء والضاد', spokenWord: 'ظِلّ', wordMeaning: 'منطقة يحجب عنها الضوء', targetLetter: 'ظ', options: [{ letter: 'ض', letterName: 'ضاد', isCorrect: false, explanation: 'الضاد لا تطابق الحرف المكتوب.' }, { letter: 'ظ', letterName: 'ظاء', isCorrect: true, explanation: 'الكلمة تبدأ بالظاء.' }], ruleTip: 'انتبه إلى اختلاف شكل الظاء والضاد.' },
+    ],
+    advanced: [
+      { id: 1, family: 'تمييز الميم والنون في الكلمات الطويلة', spokenWord: 'مَعْلُومَات', wordMeaning: 'حقائق أو بيانات', targetLetter: 'م', options: [{ letter: 'م', letterName: 'ميم', isCorrect: true, explanation: 'الكلمة تبدأ بالميم.' }, { letter: 'ن', letterName: 'نون', isCorrect: false, explanation: 'النون حرف مختلف.' }], ruleTip: 'افحص بداية الكلمة قبل قراءة بقيتها.' },
+      { id: 2, family: 'تمييز الضاد والدال', spokenWord: 'ضَوْء', wordMeaning: 'ما يساعد على الرؤية', targetLetter: 'ض', options: [{ letter: 'د', letterName: 'دال', isCorrect: false, explanation: 'الدال لا تطابق أول حرف.' }, { letter: 'ض', letterName: 'ضاد', isCorrect: true, explanation: 'الكلمة تبدأ بالضاد.' }], ruleTip: 'راجع اتجاه الحرف وموضع النقطة.' },
+      { id: 3, family: 'تمييز الغين والعين', spokenWord: 'غِذَاء', wordMeaning: 'ما يأكله الكائن الحي', targetLetter: 'غ', options: [{ letter: 'غ', letterName: 'غين', isCorrect: true, explanation: 'الكلمة تبدأ بالغين.' }, { letter: 'ع', letterName: 'عين', isCorrect: false, explanation: 'العين بلا نقطة فوقها.' }], ruleTip: 'قارن الغين والعين في بداية الكلمة.' },
+      { id: 4, family: 'تمييز الهاء والحاء', spokenWord: 'هِجْرَة', wordMeaning: 'انتقال من مكان إلى آخر', targetLetter: 'ه', options: [{ letter: 'ح', letterName: 'حاء', isCorrect: false, explanation: 'الحاء لا تطابق الحرف الأول.' }, { letter: 'ه', letterName: 'هاء', isCorrect: true, explanation: 'الكلمة تبدأ بالهاء.' }], ruleTip: 'لاحظ الاختلاف بين شكل الهاء والحاء.' },
     ],
   };
 
-  // 4. Number line drills
-  const mathDrills: RemediationMathDrill[] = [
-    { id: 1, targetNumber: 42, min: 0, max: 100, prompt: 'قدّر موقع العدد ٤٢ (انتبه لعدم عكسه إلى ٢٤) من ٠ إلى ١٠٠:' },
-    { id: 2, targetNumber: 73, min: 0, max: 100, prompt: 'قدّر موقع العدد ٧٣ (٧ عشرات و ٣ آحاد) من ٠ إلى ١٠٠:' },
-    { id: 3, targetNumber: 28, min: 0, max: 100, prompt: 'قدّر موقع العدد ٢٨ على خط الأعداد من ٠ إلى ١٠٠:' },
-    { id: 4, targetNumber: 135, min: 0, max: 200, prompt: 'قدّر موقع العدد ١٣٥ على خط الأعداد من ٠ إلى ٢٠٠:' },
-  ];
+  const syllableBank: Record<string, RemediationSyllableDrill[]> = {
+    foundational: [
+      { id: 1, targetWord: 'بُسْتَان', wordMeaning: 'مكان فيه أشجار ونباتات', syllables: ['بُسْ', 'تَان'] },
+      { id: 2, targetWord: 'تُفَّاح', wordMeaning: 'فاكهة معروفة', syllables: ['تُفْ', 'فَاح'] },
+      { id: 3, targetWord: 'قَلَم', wordMeaning: 'أداة للكتابة', syllables: ['قَ', 'لَم'] },
+      { id: 4, targetWord: 'مَدْرَسَة', wordMeaning: 'مكان للتعلم', syllables: ['مَدْ', 'رَ', 'سَة'] },
+    ],
+    developing: [
+      { id: 1, targetWord: 'سَاقِيَة', wordMeaning: 'قناة للماء', syllables: ['سَا', 'قِ', 'يَة'] },
+      { id: 2, targetWord: 'حَدِيقَة', wordMeaning: 'مكان للنباتات', syllables: ['حَ', 'دِي', 'قَة'] },
+      { id: 3, targetWord: 'مَكْتَبَة', wordMeaning: 'مكان للكتب', syllables: ['مَكْ', 'تَ', 'بَة'] },
+      { id: 4, targetWord: 'مَعْلُومَة', wordMeaning: 'فكرة أو حقيقة معروفة', syllables: ['مَعْ', 'لُو', 'مَة'] },
+    ],
+    advanced: [
+      { id: 1, targetWord: 'مَعْلُومَات', wordMeaning: 'حقائق أو بيانات', syllables: ['مَعْ', 'لُو', 'مَات'] },
+      { id: 2, targetWord: 'مُخْتَبَر', wordMeaning: 'مكان للتجارب العلمية', syllables: ['مُخْ', 'تَ', 'بَر'] },
+      { id: 3, targetWord: 'الْبِيئَة', wordMeaning: 'المحيط الذي تعيش فيه الكائنات', syllables: ['الْ', 'بِي', 'ئَة'] },
+      { id: 4, targetWord: 'الطَّاقَة', wordMeaning: 'القدرة على إحداث تغيير أو حركة', syllables: ['الطَّ', 'ا', 'قَة'] },
+    ],
+  };
+
+  const mathBank: Record<string, RemediationMathDrill[]> = {
+    foundational: [
+      { id: 1, targetNumber: 7, min: 0, max: 20, prompt: 'ضع العدد ٧ على خط الأعداد من ٠ إلى ٢٠.' },
+      { id: 2, targetNumber: 12, min: 0, max: 20, prompt: 'قدّر موقع العدد ١٢ على خط الأعداد من ٠ إلى ٢٠.' },
+      { id: 3, targetNumber: 16, min: 0, max: 20, prompt: 'أيّهما أقرب إلى ١٦: عشرة أم عشرون؟ ثم حدّد موقعه.' },
+      { id: 4, targetNumber: 5, min: 0, max: 20, prompt: 'ضع العدد ٥ بين ٠ و٢٠ وحدّد العدد الأقرب إليه.' },
+    ],
+    developing: [
+      { id: 1, targetNumber: 34, min: 0, max: 100, prompt: 'قدّر موقع العدد ٣٤ على خط الأعداد من ٠ إلى ١٠٠.' },
+      { id: 2, targetNumber: 58, min: 0, max: 100, prompt: 'ضع العدد ٥٨ بين ٠ و١٠٠.' },
+      { id: 3, targetNumber: 71, min: 0, max: 100, prompt: 'قدّر موقع العدد ٧١ على خط الأعداد من ٠ إلى ١٠٠.' },
+      { id: 4, targetNumber: 26, min: 0, max: 100, prompt: 'حدّد موقع العدد ٢٦ على خط الأعداد من ٠ إلى ١٠٠.' },
+    ],
+    advanced: [
+      { id: 1, targetNumber: 135, min: 0, max: 1000, prompt: 'قدّر موقع العدد ١٣٥ على خط الأعداد من ٠ إلى ١٠٠٠.' },
+      { id: 2, targetNumber: 428, min: 0, max: 1000, prompt: 'حدّد موقع العدد ٤٢٨ بين ٠ و١٠٠٠.' },
+      { id: 3, targetNumber: 760, min: 0, max: 1000, prompt: 'قدّر موقع العدد ٧٦٠ على خط الأعداد من ٠ إلى ١٠٠٠.' },
+      { id: 4, targetNumber: 205, min: 0, max: 1000, prompt: 'ضع العدد ٢٠٥ على خط الأعداد من ٠ إلى ١٠٠٠.' },
+    ],
+  };
+
+  const normalizeArabic = (value: string) =>
+    value.replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[\s.,،؛:!?؟'"“”(){}\[\]\\-]/g, '').toLowerCase();
+
+  const normalizeBandWord = (value: string) => normalizeArabic(value);
+  const gradeSyllables = syllableBank[band];
+  const reviewed = targetsTeacherReviewed
+    ? effectiveWords
+        .map((word) => gradeSyllables.find((drill) => normalizeBandWord(drill.targetWord) === normalizeBandWord(word)))
+        .filter((drill): drill is RemediationSyllableDrill => Boolean(drill))
+    : [];
+  const uniqueSyllables = new Map<string, RemediationSyllableDrill>();
+  for (const drill of [...reviewed, ...gradeSyllables]) {
+    if (!uniqueSyllables.has(normalizeBandWord(drill.targetWord))) uniqueSyllables.set(normalizeBandWord(drill.targetWord), drill);
+  }
+  const syllableDrills = [...uniqueSyllables.values()].slice(0, 4);
+  const mathDrills = mathBank[band];
+  const phonicsDrills = phonicsBank[band];
+
+  const pacerByBand: Record<string, RemediationPacerPassage> = {
+    foundational: { id: 1, title: 'قصة قصيرة للقراءة والتظليل', gradeLevel: `الصف ${gradeLevel} · مستوى تأسيسي`, words: ['فِي', 'صَبَاحٍ', 'جَمِيلٍ،', 'زَارَ', 'عَلِيٌّ', 'جَدَّتَهُ.', 'حَمَلَ', 'سَلَّةً', 'فِيهَا', 'تُفَّاحٌ', 'وَمَوْزٌ.', 'شَكَرَتْهُ', 'الْجَدَّةُ', 'وَقَدَّمَتْ', 'لَهُ', 'مَاءً', 'بَعْدَ', 'اللَّعِبِ.'] },
+    developing: { id: 2, title: 'قصة قصيرة للقراءة والتظليل', gradeLevel: `الصف ${gradeLevel} · مستوى متوسط`, words: ['فِي', 'صَبَاحِ', 'يَوْمٍ', 'مُشْرِقٍ،', 'خَرَجَ', 'عُمَرُ', 'إِلَى', 'الْبُسْتَانِ،', 'حَيْثُ', 'تَجْرِي', 'مِيَاهُ', 'السَّاقِيَةِ', 'بِهُدُوءٍ.', 'تَفَقَّدَ', 'الزَّرْعَ', 'ثُمَّ', 'عَادَ', 'إِلَى', 'بَيْتِهِ.'] },
+    advanced: { id: 3, title: 'نص قصير للقراءة والتظليل', gradeLevel: `الصف ${gradeLevel} · مستوى متقدم`, words: ['سَجَّلَ', 'الطُّلَّابُ', 'مُلَاحَظَاتِهِمْ', 'بَعْدَ', 'مُقَابَلَةِ', 'كِبَارِ', 'السِّنِّ.', 'رَاجَعُوا', 'الْأَسْمَاءَ', 'وَالتَّوَارِيخَ', 'وَقَارَنُوا', 'الْحِكَايَاتِ', 'بِالْمَصَادِرِ', 'الْمَكْتُوبَةِ.', 'دَوَّنُوا', 'مَوَاضِعَ', 'الِاخْتِلَافِ', 'قَبْلَ', 'نَشْرِ', 'الْمُلَخَّصِ.'] },
+  };
+  const pacerPassage = pacerByBand[band];
 
   return {
     clinicalRationale: targetsTeacherReviewed && effectiveWords.length > 0
-      ? `أنشطة تعليمية مقترحة للصف ${gradeLevel}. أُضيفت الكلمات التي راجعها المعلم إلى قائمة أهداف قابلة للمراجعة: ${effectiveWords.slice(0, 8).join('، ')}. هذا لا يثبت وجود اضطراب ولا يمثل بروتوكول علاج مُعتمدًا؛ ينبغي اختيار النشاط بحسب السياق ومراجعة المعلم.`
-      : `أنشطة عامة للصف ${gradeLevel} للتدرب على الحروف والمقاطع وخط الأعداد. الكلمات الواردة أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. هذه الخطة ليست اختبارًا معياريًا أو بروتوكول علاج مُعتمدًا.`,
+      ? `أنشطة تعليمية للصف ${gradeLevel}. لا تُستخدم الكلمات التي راجعها المعلم لتخصيص التدريب إلا إذا طابقت كلمة موجودة في بنك تدريبي مضبوط. لا تثبت النتائج وجود اضطراب ولا تمثل الخطة اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
+      : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب مستوى القراءة، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
     phonicsDrills,
     syllableDrills,
     pacerPassage,

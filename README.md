@@ -75,3 +75,12 @@ npm run build
 ## حالة المشروع
 
 بصيرة في مرحلة النموذج الأولي والتحقق. لا نعلن وجود اعتماد سريري، أو تحقق مستقل من دقة المؤشرات، أو امتثال قانوني نهائي، أو نتائج تجارية/إيرادية ما لم توثّق هذه النتائج بأدلة منفصلة وقابلة للمراجعة.
+
+
+## Deployment and repository rights
+
+The production build generates a browser bundle in `dist/` and a bundled Node.js server entry point at `server.js`. Run `npm run build` before `npm start`, or use the supplied multi-stage Dockerfile. Production deployment must configure unique access-code, session-signing, and storage-encryption secrets.
+
+This repository grants no public reuse license. The notice in `LICENSE` does not itself prove ownership; contributor assignments and third-party dependency and asset licenses must be reviewed before investment or commercial distribution.
+
+Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.

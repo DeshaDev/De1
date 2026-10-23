@@ -62,7 +62,7 @@ test('teacher-reviewed target status is stated narrowly and does not imply diagn
   });
 
   assert.match(plan.clinicalRationale, /راجعها المعلم/);
-  assert.match(plan.clinicalRationale, /لا يثبت وجود اضطراب/);
+  assert.match(plan.clinicalRationale, /لا تثبت النتائج وجود اضطراب/);
   assert.doesNotMatch(plan.clinicalRationale, /تشخيص مؤكد|خطة علاج معتمدة/);
 });
 
@@ -102,4 +102,23 @@ test('structural checks normalize Arabic diacritics when comparing target letter
   const withDiacritics = structuredClone(plan);
   withDiacritics.phonicsDrills[0].options[0].letter = 'سَـ';
   assert.equal(isStructurallyValidRemediationSessionPlan(withDiacritics), true);
+});
+
+test('activity content changes across grade bands and number-line ranges match the band', () => {
+  const lower = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 1, effectiveWords: [], targetsTeacherReviewed: false });
+  const middle = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: [], targetsTeacherReviewed: false });
+  const upper = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 6, effectiveWords: [], targetsTeacherReviewed: false });
+  assert.notEqual(lower.phonicsDrills[0].spokenWord, middle.phonicsDrills[0].spokenWord);
+  assert.notEqual(middle.phonicsDrills[0].spokenWord, upper.phonicsDrills[0].spokenWord);
+  assert.equal(lower.mathDrills[0].max, 20);
+  assert.equal(middle.mathDrills[0].max, 100);
+  assert.equal(upper.mathDrills[0].max, 1000);
+  assert.notEqual(lower.pacerPassage.words.join(' '), upper.pacerPassage.words.join(' '));
+});
+
+test('only a teacher-reviewed word present in the curated bank can influence the selected syllable practice', () => {
+  const plan = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَاقِيَة'], targetsTeacherReviewed: true });
+  assert.equal(normalizeArabic(plan.syllableDrills[0].targetWord), normalizeArabic('سَاقِيَة'));
+  const unmatched = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['كلمة غير مدرجة'], targetsTeacherReviewed: true });
+  assert.notEqual(normalizeArabic(unmatched.syllableDrills[0].targetWord), normalizeArabic('كلمة غير مدرجة'));
 });

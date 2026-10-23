@@ -1,4 +1,4 @@
-name: Desca Clinical CI & Verification
+name: Baseera Product CI
 
 on:
   push:
@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
+      - name: Install browser-test tooling
+        run: npm install --no-save --package-lock=false --legacy-peer-deps @playwright/test@1.56.1
+
+      - name: Install Chromium for end-to-end tests
+        run: npx playwright install --with-deps chromium
+
       - name: Run TypeScript static analysis (lint)
         run: npm run lint
 
@@ -33,3 +39,12 @@ jobs:
       # fallback regressions cannot be hidden by the test-before-build order.
       - name: Run unit and HTTP integration tests
         run: npm test
+
+      - name: Verify production server bundle exists
+        run: test -s server.js
+
+      - name: Smoke-test production server
+        run: node scripts/production-smoke-test.mjs
+
+      - name: Run browser end-to-end smoke tests
+        run: npm run e2e

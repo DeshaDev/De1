@@ -11,3 +11,9 @@ coverage/
 .runtime-store/
 !/src/data/
 !/src/data/**
+.agents/
+__pycache__/
+*.pyc
+server.js
+playwright-report/
+test-results/
