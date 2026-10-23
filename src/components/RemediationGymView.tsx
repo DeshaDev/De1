@@ -41,6 +41,8 @@ interface RemediationGymViewProps {
   onSelectStudent: (id: string) => void;
   onNavigateTab: (tab: AppTabId) => void;
   onOpenReport?: () => void;
+  /** Only signed-in clinicians can request server-generated activity plans. */
+  canGeneratePlan?: boolean;
 }
 
 export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
@@ -49,6 +51,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   onSelectStudent,
   onNavigateTab,
   onOpenReport,
+  canGeneratePlan = false,
 }) => {
   // Active Station Tab: phonics | syllables | pacer | math
   const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math'>('phonics');
@@ -137,6 +140,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   // Optional authenticated generation of new educational activities for the selected grade.
   const fetchAiSession = async (student: StudentRecord, announce: boolean = true) => {
+    if (!canGeneratePlan) {
+      setAiStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتوليد خطة جديدة من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
+      return;
+    }
     setIsLoadingAi(true);
     setAiStatusMessage('');
     setActiveScaffold(null);
@@ -192,10 +199,17 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     }
   };
 
-  // Auto-fetch personalized session on student switch
+  // Only request protected server plans for an authenticated clinician.
+  // Keep general activities immediately available for children without a teacher session.
   useEffect(() => {
-    fetchAiSession(activeStudent, false);
-  }, [activeStudent.id]);
+    if (canGeneratePlan) {
+      void fetchAiSession(activeStudent, false);
+    } else {
+      setAiSession(null);
+      setAiSource(null);
+      setAiStatusMessage('');
+    }
+  }, [activeStudent.id, canGeneratePlan]);
 
   // Station 1: Phonics letter pick
   const handleSelectPhonicsLetter = (option: RemediationPhonicsOption) => {
