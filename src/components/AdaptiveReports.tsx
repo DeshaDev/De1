@@ -231,7 +231,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       );
     }
     if (studentData.speech) {
-      observations.push(`ودقة مطابقة النطق المسجلة ${studentData.speech.averageConfidence}%`);
+      observations.push(`بلغت قيمة الثقة التي أعادها نظام التعرّف الصوتي ${studentData.speech.averageConfidence}%. لا تمثل هذه القيمة دقة النطق، وتحتاج الكلمات المقترحة إلى مراجعة بشرية.`);
     }
     if (studentData.tactile) {
       observations.push(
