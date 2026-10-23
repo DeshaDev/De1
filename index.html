@@ -2,36 +2,7 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      (function () {
-        var isBenign = function (args) {
-          if (!args || !args.length) return false;
-          var s = Array.prototype.slice
-            .call(args)
-            .map(function (a) {
-              return typeof a === 'string' ? a : a && a.message ? a.message : '';
-            })
-            .join(' ');
-          return (
-            s.indexOf('TensorFlow Lite') !== -1 ||
-            s.indexOf('XNNPACK') !== -1 ||
-            s.indexOf('INFO:') !== -1 ||
-            s.indexOf('absl::InitializeLog') !== -1 ||
-            s.indexOf('gl_context') !== -1
-          );
-        };
-        var origErr = console.error;
-        console.error = function () {
-          if (isBenign(arguments)) return;
-          return origErr.apply(console, arguments);
-        };
-        var origWarn = console.warn;
-        console.warn = function () {
-          if (isBenign(arguments)) return;
-          return origWarn.apply(console, arguments);
-        };
-      })();
-    </script>
+pt>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>بصيرة | نتعلّم القراءة والحساب خطوة بخطوة</title>
     <meta name="description" content="بصيرة منصة عربية لاستكشاف مهارات القراءة والفهم والحساب ومتابعة الأداء داخل الأنشطة. لا تستخدم الكاميرا أو تتبع العين؛ والقراءة الجهرية اختيارية. النتائج تعليمية استرشادية وليست تشخيصاً." />
