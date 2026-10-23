@@ -1559,6 +1559,7 @@ export default function App() {
           <EyeTrackingLabView
             onCompleteSession={handleCompleteNewSession}
             activeStudent={selectedStudent}
+            canVerifyAsTeacher={clinicalSession?.role === 'clinician'}
             onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
           />
         )}
