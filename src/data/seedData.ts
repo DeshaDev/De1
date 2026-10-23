@@ -1,5 +1,4 @@
 import {
-  WordFixation,
   SubitizingTrialResult,
   NumberLineTrialResult,
   TranscodingTrialResult,
@@ -52,7 +51,7 @@ export interface StudentAssessmentSnapshot {
   completedAt: string;
   passageId: string;
   /** Reading modality is retained so history never conflates silent WPM with oral WCPM. */
-  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+  assessmentModality?: 'voice_only' | 'reading_only';
   wcpm?: number | null;
   teacherVerified?: boolean;
   wpm: number;
@@ -88,7 +87,7 @@ export interface StudentRecord {
   sessionCompletedAt?: string;
   sessionRoleLabel?: string;
   assessmentHistory?: StudentAssessmentSnapshot[];
-  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+  assessmentModality?: 'voice_only' | 'reading_only';
   /** Explicit provenance tag distinguishing client-reported session evidence from synthetic demos. */
   evidenceProvenance?: 'client-reported' | 'demo-synthetic';
   evidenceProvenanceLabelAr?: string;
@@ -125,21 +124,9 @@ export interface StudentRecord {
   audioRecordingStarted?: boolean;
   guardianAudioConsentRecordedAt?: string;
   speechRecognitionUsed?: boolean;
-  // Dyslexia / Eye-Tracking & Blink Rate metrics
+  // Reading performance metrics (no camera, video, or eye-tracking data)
   wpm: number;
   wcpm?: number | null;
-  avgFixationMs: number;
-  regressionRate: number;
-  regressionCount: number;
-  blinkCount?: number;
-  blinksPerMinute?: number;
-  visualStrainLevel?: 'unassessed';
-  visualStrainLabelAr?: string;
-  gazeCoveragePercent?: number;
-  observedWordCount?: number;
-  totalPassageWordCount?: number;
-  calibrationAccuracyPercent?: number;
-  calibrationValidationMethod?: string;
   // Oral Reading Phonological & Dialect Alignment metrics
   oralReadingAssessed?: boolean;
   spokenTranscript?: string;
@@ -155,7 +142,6 @@ export interface StudentRecord {
   readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
   readingRiskLabelAr: string;
   problematicWords: string[];
-  fixations: WordFixation[];
   comprehensionScore: number; // 0-100
   // Dyscalculia metrics (explicitly supports unassessed state until Dyscalculia Lab is completed)
   dyscalculiaAssessed?: boolean;
@@ -933,32 +919,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     dialectRegionAr: 'اللهجة الخليجية / السعودية',
     guardianConsentGiven: false,
     wpm: 39,
-    avgFixationMs: 445,
-    regressionRate: 34,
-    regressionCount: 14,
-    blinkCount: 22,
-    blinksPerMinute: 26,
-    visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
     readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['لِمُشَاهَدَةِ', 'الكَوَاكِبِ', 'المُضِيئَةِ', 'المِنْظَارَ', 'مُلَاحَظَاتِهِمْ'],
     comprehensionScore: 50,
-    fixations: G3_ASTRONOMY_WORDS.map((word, idx) => {
-      const heavyIndices = new Set([2, 3, 8, 9, 10, 12, 23, 24, 35]);
-      const isHeavy = heavyIndices.has(idx);
-      return {
-        wordIndex: idx,
-        word,
-        durationMs: isHeavy ? 560 + (idx % 3) * 45 : 270 + (idx % 4) * 30,
-        visits: isHeavy ? 3 : 1,
-        regressedFromIndex: isHeavy && idx < G3_ASTRONOMY_WORDS.length - 1 ? idx + 1 : undefined,
-        blinks: isHeavy ? 2 : 0,
-        observed: true,
-      };
-    }),
     dyscalculiaAssessed: true,
     subitizingAccuracy: 67,
     avgSubitizingMs: 1980,
@@ -973,7 +939,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       clinicalSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
+        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1014,26 +980,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     dialectRegionAr: 'اللهجة الشامية / الفصحى',
     guardianConsentGiven: false,
     wpm: 88,
-    avgFixationMs: 235,
-    regressionRate: 9,
-    regressionCount: 3,
-    blinkCount: 7,
-    blinksPerMinute: 12,
-    visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
     readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['مُلَاحَظَاتِهِمْ'],
     comprehensionScore: 100,
-    fixations: G3_ASTRONOMY_WORDS.map((word, idx) => ({
-      wordIndex: idx,
-      word,
-      durationMs: idx === 35 ? 410 : 195 + ((idx * 13) % 50),
-      visits: idx === 35 ? 2 : 1,
-      observed: true,
-    })),
     dyscalculiaAssessed: true,
     subitizingAccuracy: 60,
     avgSubitizingMs: 2150,
@@ -1048,7 +1000,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       clinicalSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
+        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1083,26 +1035,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     dialectRegionAr: 'اللهجة المصرية / الخليجية',
     guardianConsentGiven: false,
     wpm: 64,
-    avgFixationMs: 345,
-    regressionRate: 21,
-    regressionCount: 7,
-    blinkCount: 15,
-    blinksPerMinute: 19,
-    visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
     readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['تتميزُ', 'الأفلاجِ', 'الينابيعِ', 'الوارفةِ'],
     comprehensionScore: 100,
-    fixations: G4_OASIS_WORDS.map((word, idx) => ({
-      wordIndex: idx,
-      word,
-      durationMs: idx % 7 === 0 ? 450 : 295 + ((idx * 19) % 60),
-      visits: idx % 7 === 0 ? 2 : 1,
-      observed: true,
-    })),
     dyscalculiaAssessed: true,
     subitizingAccuracy: 83,
     avgSubitizingMs: 1290,
@@ -1117,7 +1055,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       clinicalSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
+        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1146,26 +1084,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     dialectRegionAr: 'الفصحى المعيارية / الخليجية',
     guardianConsentGiven: false,
     wpm: 118,
-    avgFixationMs: 210,
-    regressionRate: 6,
-    regressionCount: 2,
-    blinkCount: 6,
-    blinksPerMinute: 11,
-    visualStrainLevel: 'unassessed',
-    visualStrainLabelAr: 'قياسات رصد اصطناعية للعرض فقط؛ لا تستدل على إجهاد بصري.',
     dyslexiaRiskScore: null,
     readingHeuristicIndicator: null,
     readingRiskLevel: 'unassessed',
     readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: [],
     comprehensionScore: 100,
-    fixations: G5_SOLAR_WORDS.map((w, idx) => ({
-      wordIndex: idx,
-      word: w,
-      durationMs: 185 + ((idx * 17) % 55),
-      visits: 1,
-      observed: true,
-    })),
     dyscalculiaAssessed: true,
     subitizingAccuracy: 100,
     avgSubitizingMs: 890,
@@ -1180,7 +1104,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       clinicalSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'القياسات أو الرسوم في هذه الحالة اصطناعية للتوضيح فقط. لا يُستنتج منها أداء طبيعي أو صعوبة بصرية.',
+        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
