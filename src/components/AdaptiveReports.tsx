@@ -322,7 +322,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
               </div>
               <button
-                onClick={() => onNavigateTab && onNavigateTab('eye-lab')}
+                onClick={() => onNavigateTab && onNavigateTab('reading-lab')}
                 className="mt-6 w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>ابدأ اختبار القراءة</span>

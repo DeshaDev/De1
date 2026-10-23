@@ -440,7 +440,7 @@ export default function App() {
       setStudents((prev) => [newStudent, ...prev]);
       setSelectedStudentId(newStudent.id);
     }
-    setActiveTab('eye-lab');
+    setActiveTab('reading-lab');
     setAiStatusBanner(
       `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لا تُعرض نتيجة فرز قبل إكمال الجلسة.`
     );
@@ -788,7 +788,7 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'eye-lab', label: 'القراءة', icon: BookOpen },
+              { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
               { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
               { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: Type },
               { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
@@ -821,7 +821,7 @@ export default function App() {
             <button
               type="button"
               className="baseera-primary-action baseera-header-cta"
-              onClick={() => setActiveTab(activeTab === 'home' ? 'eye-lab' : 'home')}
+              onClick={() => setActiveTab(activeTab === 'home' ? 'reading-lab' : 'home')}
             >
               <span>{activeTab === 'home' ? 'ابدأ نشاطًا' : 'الرئيسية'}</span>
               <ArrowLeft aria-hidden="true" size={17} />
@@ -862,7 +862,7 @@ export default function App() {
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
-          { id: 'eye-lab', label: 'القراءة', icon: BookOpen },
+          { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
           { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
           { id: 'adaptive-reader', label: 'القارئ', icon: Type },
           { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
@@ -999,7 +999,7 @@ export default function App() {
                   <span className="baseera-summary-label">خطوتك القادمة</span>
                   <strong>{selectedStudent.sessionStatus === 'completed' ? 'واصل التدرّب' : 'ابدأ بنشاط قصير'}</strong>
                   <p>اختر نشاطًا مناسبًا مع ولي أمرك أو معلّمك.</p>
-                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab(selectedStudent.sessionStatus === 'completed' ? 'remediation-gym' : 'eye-lab')}>{selectedStudent.sessionStatus === 'completed' ? 'اذهب للتدريب' : 'ابدأ القراءة'} <ArrowLeft aria-hidden="true" size={15} /></button>
+                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab(selectedStudent.sessionStatus === 'completed' ? 'remediation-gym' : 'reading-lab')}>{selectedStudent.sessionStatus === 'completed' ? 'اذهب للتدريب' : 'ابدأ القراءة'} <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
               </div>
             </section>
@@ -1248,7 +1248,7 @@ export default function App() {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setActiveTab('eye-lab')}
+                        onClick={() => setActiveTab('reading-lab')}
                         className="font-semibold text-[#2563EB] hover:underline cursor-pointer"
                       >
                         بدء نشاط قراءة جديد ←
@@ -1532,7 +1532,7 @@ export default function App() {
         )}
 
         {/* Camera-free reading and comprehension session */}
-        {activeTab === 'eye-lab' && (
+        {activeTab === 'reading-lab' && (
           <ReadingAssessmentView
             onCompleteSession={handleCompleteNewSession}
             activeStudent={selectedStudent}

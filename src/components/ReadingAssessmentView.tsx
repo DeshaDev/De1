@@ -50,7 +50,7 @@ interface Props {
   canVerifyAsTeacher?: boolean;
 }
 
-export const EyeTrackingLabView: React.FC<Props> = ({
+export const ReadingAssessmentView: React.FC<Props> = ({
   onCompleteSession,
   activeStudent,
   onProceedToMathLab,
@@ -1402,4 +1402,4 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   );
 };
 
-export default EyeTrackingLabView;
+export default ReadingAssessmentView;

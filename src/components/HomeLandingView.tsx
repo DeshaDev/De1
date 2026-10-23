@@ -21,7 +21,7 @@ import { StudentRecord } from '../data/seedData';
 
 export type AppTabId =
   | 'home'
-  | 'eye-lab'
+  | 'reading-lab'
   | 'adaptive-reports'
   | 'dyscalculia-lab'
   | 'remediation-gym'
@@ -63,7 +63,7 @@ const SAMPLE_WORDS = [
 
 const ACTIVITIES = [
   {
-    id: 'eye-lab',
+    id: 'reading-lab',
     title: 'رحلة القراءة',
     description: 'اقرأ نصًا قصيرًا، ثم أجب عن أسئلة الفهم.',
     action: 'ابدأ القراءة',
@@ -162,7 +162,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <button
               type="button"
               className="baseera-primary-action"
-              onClick={() => onNavigateTab('eye-lab')}
+              onClick={() => onNavigateTab('reading-lab')}
             >
               جرّب رحلة القراءة
               <ArrowLeft aria-hidden="true" size={19} />
@@ -343,7 +343,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <button
               type="button"
               className="baseera-text-action"
-              onClick={() => onSelectExistingDemoJourney(demoStudent.id, 'eye-lab')}
+              onClick={() => onSelectExistingDemoJourney(demoStudent.id, 'reading-lab')}
             >
               تجربة نموذج توضيحي
             </button>
