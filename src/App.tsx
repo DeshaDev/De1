@@ -173,12 +173,10 @@ export default function App() {
     sessionId: `session-${record.id}-${Date.now()}`,
     completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
     passageId: record.passageId,
-    assessmentModality: record.assessmentModality,
+    assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
     wcpm: record.wcpm ?? record.oralWcpm ?? null,
     teacherVerified: record.teacherVerified === true,
     wpm: record.wpm,
-    avgFixationMs: record.avgFixationMs,
-    regressionRate: record.regressionRate,
     comprehensionScore: record.comprehensionScore,
     problematicWords: [...(record.problematicWords || [])],
     dyslexiaRiskScore: record.dyslexiaRiskScore,
@@ -197,24 +195,9 @@ export default function App() {
     passageId: record.passageId,
     dialectCode: record.dialectCode || record.dialect || 'egyptian',
     dialectRegionAr: record.dialectRegionAr,
-    assessmentModality: record.assessmentModality || 'reading_only',
-    readingDurationSeconds:
-      record.readingDurationSeconds ??
-      Math.max(
-        4,
-        Math.ceil(
-          (record.fixations || []).reduce(
-            (sum, f) => sum + (f.observed ? f.durationMs : 0),
-            0
-          ) / 1000
-        ) + 2
-      ),
-    blinkCount: record.blinkCount ?? 0,
-    ...(record.calibrationAccuracyPercent !== undefined
-      ? { calibrationAccuracyPercent: record.calibrationAccuracyPercent }
-      : {}),
-    ...(record.calibrationValidationMethod
-      ? { calibrationValidationMethod: record.calibrationValidationMethod }
+    assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
+    ...(typeof record.readingDurationSeconds === 'number' && Number.isFinite(record.readingDurationSeconds)
+      ? { readingDurationSeconds: record.readingDurationSeconds }
       : {}),
     oralReadingAssessed: record.oralReadingAssessed,
     spokenTranscript: record.spokenTranscript,
@@ -229,7 +212,6 @@ export default function App() {
     phoneticSubstitutionCount: record.phoneticSubstitutionCount,
     dialectVariantCount: record.dialectVariantCount,
     omissionCount: record.omissionCount,
-    fixations: record.fixations || [],
     ...(record.comprehensionAnswers
       ? { comprehensionAnswers: record.comprehensionAnswers }
       : {}),
@@ -447,7 +429,7 @@ export default function App() {
         mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
         clinicalReport: {
           clinicalSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
-          ocularMotorAnalysis: 'لا توجد بيانات نظر مكتملة لهذه الجلسة.',
+          ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
           orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر نص منطوق فعلي.',
           dyscalculiaSpatialAnalysis: 'لم يُستكمل فحص الحساب بعد.',
           interventionExercises: [],
@@ -594,7 +576,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
-          assessmentModality: selectedStudent.assessmentModality || 'reading_only',
+          assessmentModality: selectedStudent.assessmentModality === 'voice_only' || selectedStudent.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
           guardianConsentGiven: selectedStudent.guardianConsentGiven === true,
           guardianConsentRecordedAt: selectedStudent.guardianConsentRecordedAt,
           guardianConsentSource: selectedStudent.guardianConsentSource,
@@ -604,12 +586,6 @@ export default function App() {
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           comprehensionScore: selectedStudent.comprehensionScore,
-          avgFixationMs: selectedStudent.avgFixationMs,
-          regressionRate: selectedStudent.regressionRate,
-          gazeCoveragePercent: selectedStudent.gazeCoveragePercent,
-          observedWordCount: selectedStudent.observedWordCount,
-          totalPassageWordCount: selectedStudent.totalPassageWordCount,
-          calibrationAccuracyPercent: selectedStudent.calibrationAccuracyPercent,
           problematicWords: selectedStudent.problematicWords,
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,

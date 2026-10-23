@@ -45,7 +45,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const hasTactileData = Boolean(currentAssessment?.tactileResults?.summary);
   const hasReadingData = Boolean(
     currentAssessment?.readingResults ||
-    currentAssessment?.eyeTrackingResults?.wpm ||
     (student && student.sessionStatus === 'completed' && student.wpm > 0)
   );
 
@@ -71,7 +70,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       oralReadingAssessed?: boolean;
       oralAccuracyPercent?: number | null;
       teacherVerified?: boolean;
-      assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+      assessmentModality?: 'voice_only' | 'reading_only';
       spokenTranscript?: string;
       durationSec: number;
       comprehensionScore: number;
@@ -91,15 +90,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
         passageTitle: currentAssessment.readingResults.passageTitle,
       };
-    } else if (currentAssessment?.eyeTrackingResults?.wpm) {
-      readingSummary = {
-        wpm: currentAssessment.eyeTrackingResults.wpm,
-        wcpm: currentAssessment.eyeTrackingResults.wcpm ?? null,
-        assessmentModality: currentAssessment.eyeTrackingResults.assessmentModality,
-        spokenTranscript: currentAssessment.eyeTrackingResults.spokenTranscript || '',
-        durationSec: currentAssessment.eyeTrackingResults.readingDurationSeconds || 0,
-        comprehensionScore: currentAssessment.eyeTrackingResults.comprehensionScore || 0,
-      };
     } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
       readingSummary = {
         wpm: student.wpm,
@@ -107,7 +97,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         oralReadingAssessed: student.oralReadingAssessed,
         oralAccuracyPercent: student.oralAccuracyPercent ?? null,
         teacherVerified: student.teacherVerified,
-        assessmentModality: student.assessmentModality,
+        assessmentModality: student.assessmentModality === 'voice_only' || student.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
         spokenTranscript: student.spokenTranscript || '',
         durationSec: student.readingDurationSeconds || 0,
         comprehensionScore: student.comprehensionScore ?? 0,
@@ -645,7 +635,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   تقرير الفرز التربوي الاسترشادي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  تحليل مبني على المقاييس الفعلية المثبتة — لا يُعتد به كتشخيص سريري مستقل دون فحص أخصائي معتمد
+                  ملاحظات وصفية من البيانات المسجّلة في الأنشطة؛ لا تمثل معيارًا معياريًا أو تشخيصًا سريريًا
                 </p>
               </div>
 
@@ -672,8 +662,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <tr className="border-b border-slate-200 text-slate-500 font-bold">
                     <th className="py-3 px-4">المحور</th>
                     <th className="py-3 px-4">المؤشر المقاس</th>
-                    <th className="py-3 px-4">القيمة الفعلية</th>
-                    <th className="py-3 px-4">المؤشر الاسترشادي للصف</th>
+                    <th className="py-3 px-4">القيمة المسجّلة</th>
+                    <th className="py-3 px-4">حدود التفسير</th>
                     <th className="py-3 px-4">الحالة</th>
                   </tr>
                 </thead>
@@ -824,13 +814,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://research.asu.edu.eg/handle/12345678/51928" target="_blank" rel="noreferrer">فتح سجل جامعة عين شمس</a>
               </article>
               <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <h4 className="font-bold text-teal-300 block mb-2">التعرّف على كلام الأطفال بالعربية — Little STT (2025)</h4>
-                <p>اختبرت الدراسة Whisper على 355 ملفًا صوتيًا قصيرًا من 288 طفلًا يتحدثون لهجة شامية، وسجل أفضل نموذج فيها WER قدره 0.66. هذه نتيجة لذلك النموذج والمجموعة، ولا تمثل تلقائيًا التعرف الصوتي في متصفح المستخدم.</p>
+                <h4 className="font-bold text-teal-300 block mb-2">مجموعة Arabic Little STT للتعرّف على كلام الأطفال بالعربية (2025)</h4>
+                <p>تضم المجموعة 355 عبارة منطوقة من 288 طفلًا ناطقًا باللهجة الشامية (6–13 سنة)، واختبرت الدراسة ثمانية نماذج Whisper؛ سجّل Whisper Large-v3 أفضل WER في الدراسة (0.66). هذه نتيجة للمجموعة والنماذج المختبرة، ولا تمثل أداء التعرف الصوتي داخل متصفح المستخدم.</p>
                 <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://arxiv.org/abs/2510.23319" target="_blank" rel="noreferrer">فتح الدراسة ومجموعة البيانات</a>
               </article>
               <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <h4 className="font-bold text-teal-300 block mb-2">بطارية مغربية لعسر الحساب (2026)</h4>
-                <p>تصف الدراسة بطارية من 79 بندًا وتسعة مجالات مع دليل صلاحية أولي من عينة مغربية. نشاط بصيرة الحالي يتضمن مهام قصيرة فقط، وليس هذه البطارية أو بديلًا عنها.</p>
+                <h4 className="font-bold text-teal-300 block mb-2">A Dyscalculia Diagnostic Battery for Moroccan Children (2026)</h4>
+                <p>تصف الدراسة بطارية من 79 بندًا وتسعة مجالات، مع أدلة صلاحية أولية لدى 128 طفلًا نمائيًا و32 طفلًا ذوي تشخيص مستقل بعسر الحساب، في سياق الصف الرابع بالمغرب. ليست هذه البطارية جزءًا من بصيرة، ولا تثبت صلاحية أنشطتها أو توفر معيارًا قطريًا أو عربيًا عامًا.</p>
                 <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://doi.org/10.1177/07342829261484042" target="_blank" rel="noreferrer">فتح الدراسة المنشورة</a>
               </article>
             </div>

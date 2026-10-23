@@ -909,7 +909,7 @@ export function buildDeterministicClinicalReport(params: {
     params.dyscalculiaAssessed && typeof params.numberLinePAE === 'number';
   const numberLinePracticeSuggested =
     isMathTested && ((params.numberLinePAE ?? 0) > 0 || (params.reversalErrorCount ?? 0) > 0);
-  const isReadingOnly = params.assessmentModality === 'reading_only';
+  const isReadingOnly = params.assessmentModality !== 'voice_only';
   const isVoiceOnly = params.assessmentModality === 'voice_only';
   const oralText = params.oralReadingAssessed
     ? ' محاذاة القراءة الجهرية (' + params.dialectLabelAr + ') سجلت مطابقة آلية/بشرية قدرها ' +
@@ -985,37 +985,17 @@ export function buildDeterministicClinicalReport(params: {
       '): معدل إتمام النص التقديري ' + readingRateText + ' في نص مرجعي من ' +
       (params.totalPassageWordCount > 0 ? String(params.totalPassageWordCount) : 'عدد كلمات غير متاح') +
       ' كلمة، ونتيجة أسئلة الفهم ' + (typeof params.comprehensionScore === 'number' ? String(params.comprehensionScore) + '%' : 'غير متاحة') +
-      '. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. لا ينتج هذا النشاط معيارًا تشخيصيًا.'
-    : isVoiceOnly
-      ? 'جلسة قراءة جهرية تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
-        '): المعدل المسجل ' + readingRateText + '.' + oralText +
-        ' هذا ملخص وصفي وليس تصنيفًا معياريًا أو تشخيصًا.'
-      : 'بيانات رصد بصري مسجلة في جلسة الطالب (' + params.studentName + '، الصف ' +
-        params.gradeLevel + '): تغطية ' + params.gazeCoveragePercent + '% (' +
-        params.observedWordCount + '/' + params.totalPassageWordCount +
-        ' كلمة)، ومتوسط تثبيت ' + params.avgFixationMs + ' مللي ثانية، وتراجعات مرصودة ' +
-        params.regressionCount + '، ومعدل رمش مسجل ' + params.blinksPerMinute +
-        '/دقيقة.' + oralText +
-        ' هذه أوصاف للقياسات وليست معيارًا تشخيصيًا؛ لا تُستنتج درجة خطر قبل تحقق مستقل على عينة عربية مناسبة.';
+      '. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. هذه نتيجة وصفية للنشاط وليست معيارًا معياريًا أو تشخيصًا.'
+    : 'جلسة قراءة جهرية تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
+      '): المعدل المسجل ' + readingRateText + '.' + oralText +
+      ' هذا ملخص وصفي وليس تصنيفًا معياريًا أو تشخيصًا.';
 
   return {
     clinicalSummary,
-    ocularMotorAnalysis: isReadingOnly
-      ? 'أُجريت الجلسة بقراءة النص والإجابة عن أسئلة الفهم دون كاميرا أو تتبع للعين. لذلك لم تُسجّل بيانات التثبيت أو التراجعات أو الرمش من الكاميرا.'
-      : isVoiceOnly
-        ? 'أُجريت الجلسة بالقراءة الجهرية دون تتبع للعين؛ لا توجد بيانات عن التثبيتات أو القفزات البصرية.'
-        : 'بيانات رصد بصري وصفية: ' + params.observedWordCount + ' كلمة مرصودة، ومتوسط تثبيت ' +
-          params.avgFixationMs + ' مللي ثانية، وتراجعات ' + params.regressionCount +
-          '، ورمش ' + params.blinkCount + ' (' + params.blinksPerMinute +
-          '/دقيقة)، ودقة المعايرة المسجلة ' + params.calibrationAccuracyPercent +
-          '% (' + params.calibrationValidationLabelAr +
-          '). لا يمكن تفسير هذه القيم بوصفها خطرًا سريريًا دون تحقق مستقل.',
+    ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
     orthographicAndPhonologicalPatterns: isReadingOnly
-      ? 'لم تُقيّم أنماط الإملاء أو النطق في الجلسة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
-      : isVoiceOnly
-        ? 'مخرجات المحاذاة الصوتية أولية أو راجعها المعلم بحسب نوع الجلسة. الكلمات والبدائل اللهجية المرصودة تحتاج إلى مراجعة بشرية قبل تفسيرها.' + oralText
-        : 'هذه أوصاف آلية للكلمات المرصودة وليست تفسيرًا تشخيصيًا. الكلمات المقترحة للمراجعة، إن وجدت: ' +
-          (params.problematicWords.slice(0, 6).join('، ') || 'لا توجد كلمات محددة للمراجعة') + '.' + oralText,
+      ? 'لم تُقيّم أنماط الإملاء أو النطق في جلسة القراءة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
+      : 'مخرجات محاذاة القراءة الجهرية أولية أو راجعها المعلّم بحسب نوع الجلسة. قد يخطئ التفريغ الآلي أو يخلط بين اختلافات اللهجة وأخطاء القراءة؛ يجب مراجعة النتائج بشريًا، ولا تمثل تشخيصًا.' + oralText,
     dyscalculiaSpatialAnalysis: !isMathTested
       ? 'لم تُنفّذ مهام الحساب في هذه الجلسة؛ لا توجد نتائج حسابية أو درجة خطر. يمكن إجراء الأنشطة الحسابية الوصفية عند الحاجة.'
       : 'مقاييس وصفية للمهام المنفذة: خطأ تقدير خط الأعداد ' + params.numberLinePAE +
@@ -1158,23 +1138,37 @@ export function validateAndDeriveSessionFromEvidence(
   }
 
   const rawModality = String(evidenceObj.assessmentModality ?? rawBody.assessmentModality ?? '').trim();
-  const hasEyeEvidence =
+  const legacyEyeFields = [
+    'calibrationAccuracyPercent', 'calibrationValidationMethod',
+    'gazeCoveragePercent', 'observedWordCount', 'totalPassageWordCount',
+    'avgFixationMs', 'regressionRate', 'regressionCount', 'blinksPerMinute',
+    'visualStrainLabelAr',
+  ];
+  const hasLegacyEyeMetrics = legacyEyeFields.some((key) =>
+    Object.prototype.hasOwnProperty.call(evidenceObj, key) ||
+    Object.prototype.hasOwnProperty.call(rawBody, key)
+  );
+  const hasObservedFixations =
     (Array.isArray(evidenceObj.fixations) && evidenceObj.fixations.length > 0) ||
-    (Array.isArray(rawBody.fixations) && rawBody.fixations.length > 0) ||
-    Number.isFinite(Number(evidenceObj.calibrationAccuracyPercent ?? rawBody.calibrationAccuracyPercent));
-
-  const assessmentModality: 'voice_only' | 'eye_voice' | 'reading_only' =
-    rawModality === 'voice_only'
-      ? 'voice_only'
-      : (rawModality === 'reading_only'
-          ? 'reading_only'
-          : (rawModality === 'eye_voice' || hasEyeEvidence
-              ? 'eye_voice'
-              : 'reading_only'));
-
+    (Array.isArray(rawBody.fixations) && rawBody.fixations.length > 0);
+  const reportedBlinks = Number(evidenceObj.blinkCount ?? rawBody.blinkCount ?? 0);
+  if (
+    rawModality === 'eye_voice' ||
+    (rawModality !== '' && rawModality !== 'voice_only' && rawModality !== 'reading_only') ||
+    hasLegacyEyeMetrics || hasObservedFixations ||
+    (Number.isFinite(reportedBlinks) && reportedBlinks > 0)
+  ) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: 'الكاميرا وتتبع العين غير مدعومين في الإصدار الحالي. أرسل بيانات القراءة والفهم، أو القراءة الجهرية الاختيارية فقط.',
+    };
+  }
+  const assessmentModality: 'voice_only' | 'reading_only' =
+    rawModality === 'voice_only' ? 'voice_only' : 'reading_only';
   const isVoiceOnlyModality = assessmentModality === 'voice_only';
   const isReadingOnlyModality = assessmentModality === 'reading_only';
-  const isNoEyeModality = isVoiceOnlyModality || isReadingOnlyModality;
+  const isNoEyeModality = true;
 
   let calibrationAccuracyPercent: number | undefined = undefined;
   let normalizedCalMethod = {

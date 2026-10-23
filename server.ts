@@ -1220,22 +1220,19 @@ async function startServer() {
     const updatedReport = buildDeterministicClinicalReport({
       studentName: current.name,
       gradeLevel: current.gradeLevel,
-      dialectLabelAr: current.dialectRegionAr || 'الفصحى المعيارية / الخليجية',
-      gazeCoveragePercent: current.gazeCoveragePercent ?? 100,
-      observedWordCount: current.observedWordCount ?? current.fixations.length,
-      totalPassageWordCount:
-        current.totalPassageWordCount ?? current.fixations.length,
+      dialectLabelAr: current.dialectRegionAr || 'العربية الفصحى',
+      gazeCoveragePercent: 0,
+      observedWordCount: 0,
+      totalPassageWordCount: 0,
       wpm: current.wpm,
       avgFixationMs: current.avgFixationMs,
       regressionRate: current.regressionRate,
       regressionCount: current.regressionCount,
       blinkCount: current.blinkCount ?? 0,
       blinksPerMinute: current.blinksPerMinute ?? 0,
-      visualStrainLabelAr:
-        current.visualStrainLabelAr || 'معدل رمش طبيعي ومريح بصرياً',
-      calibrationAccuracyPercent: current.calibrationAccuracyPercent ?? 85,
-      calibrationValidationLabelAr:
-        current.calibrationValidationMethod || 'تحقق مستقل (Independent Holdout)',
+      visualStrainLabelAr: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين.',
+      calibrationAccuracyPercent: 0,
+      calibrationValidationLabelAr: 'غير منطبق؛ لا توجد معايرة كاميرا في هذا الإصدار.',
       problematicWords: current.problematicWords || [],
       oralReadingAssessed: current.oralReadingAssessed === true,
       oralAccuracyPercent: current.oralAccuracyPercent ?? null,
@@ -1475,103 +1472,66 @@ async function startServer() {
     }
   );
 
-  const wasmDir = path.join(
-    __dirname,
-    'node_modules',
-    '@mediapipe',
-    'tasks-vision',
-    'wasm'
-  );
-
-  app.get('/mediapipe-wasm/:filename', (req, res, next) => {
-    const filename = path.basename(req.params.filename || '');
-    if (!filename.endsWith('.js')) {
-      next();
-      return;
-    }
-    const filePath = path.join(wasmDir, filename);
-    if (!fs.existsSync(filePath)) {
-      next();
-      return;
-    }
-    try {
-      const rawJs = fs.readFileSync(filePath, 'utf8');
-      const patchedJs = rawJs
-        .replace(/console\.error\.bind\(console\)/g, '(() => {})')
-        .replace(/console\.warn\.bind\(console\)/g, '(() => {})')
-        .replace(/console\.warn\.apply\(console,\s*arguments\)/g, 'undefined');
-      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
-      res.send(patchedJs);
-    } catch {
-      next();
-    }
-  });
-
-  app.use('/mediapipe-wasm', express.static(wasmDir));
-
   // Prevent the server from becoming an unauthenticated paid AI proxy.
   app.use('/api/ai', requireClinicalAuth('ai:analyze'), aiRateLimiter);
 
-  // 1. Clinical AI Analysis of Eye-Tracking Dyslexia & Dyscalculia Screening
+  // Generate a descriptive learning report only; camera/eye-tracking inputs are not supported.
   app.post(
     '/api/ai/analyze-session',
     requireClinicalAuth('ai:analyze'),
     async (req, res) => {
+      const body = (req.body || {}) as Record<string, unknown>;
       const {
-        studentName,
-        guardianConsentGiven,
-        guardianConsentRecordedAt,
-        guardianConsentSource,
-        guardianAudioConsentGiven,
-        guardianAudioConsentRecordedAt,
-        speechRecognitionUsed = false,
-        audioRecordingStarted = false,
-        gradeLevel,
-        wpm,
-        comprehensionScore,
-        avgFixationMs,
-        regressionRate,
-        gazeCoveragePercent,
-        observedWordCount,
-        totalPassageWordCount,
-        calibrationAccuracyPercent,
-        problematicWords = [],
-        oralReadingAssessed = false,
-        oralAccuracyPercent = null,
-        phoneticSubstitutionCount = 0,
-        dialectVariantCount = 0,
-        dyscalculiaAssessed = false,
-        numberLinePAE = null,
-        subitizingAccuracy = null,
-        reversalErrorCount = null,
-      } = req.body || {};
+        studentName, assessmentModality,
+        guardianConsentGiven, guardianConsentRecordedAt, guardianConsentSource,
+        guardianAudioConsentGiven, guardianAudioConsentRecordedAt,
+        speechRecognitionUsed = false, audioRecordingStarted = false,
+        gradeLevel, wpm, comprehensionScore, problematicWords = [],
+        oralReadingAssessed = false, oralAccuracyPercent = null,
+        phoneticSubstitutionCount = 0, dialectVariantCount = 0,
+        dyscalculiaAssessed = false, numberLinePAE = null,
+        subitizingAccuracy = null, reversalErrorCount = null,
+      } = body;
 
       if (
-        typeof studentName !== 'string' ||
-        !studentName.trim() ||
-        studentName.length > 120 ||
-        !Array.isArray(problematicWords)
+        typeof studentName !== 'string' || !studentName.trim() ||
+        studentName.length > 120 || !Array.isArray(problematicWords)
       ) {
-        res
-          .status(400)
-          .json({ error: 'بيانات الجلسة غير مكتملة أو غير صالحة.' });
+        res.status(400).json({ error: 'بيانات الجلسة غير مكتملة أو غير صالحة.' });
+        return;
+      }
+      if (assessmentModality !== 'reading_only' && assessmentModality !== 'voice_only') {
+        res.status(400).json({
+          error: 'هذا الإصدار يدعم القراءة الصامتة أو القراءة الجهرية الاختيارية فقط، ولا يدعم الكاميرا أو تتبع العين.',
+        });
         return;
       }
 
-      const consentValidation =
-        validateExplicitGuardianConsent(guardianConsentGiven);
+      const rejectedEyeFields = [
+        'avgFixationMs', 'regressionRate', 'gazeCoveragePercent',
+        'observedWordCount', 'totalPassageWordCount',
+        'calibrationAccuracyPercent', 'calibrationValidationMethod',
+        'blinkCount', 'blinksPerMinute',
+      ].filter((key) => Object.prototype.hasOwnProperty.call(body, key));
+      if (
+        rejectedEyeFields.length > 0 ||
+        (Array.isArray(body.fixations) && body.fixations.length > 0)
+      ) {
+        res.status(400).json({
+          error: 'أرسل بيانات القراءة دون حقول الكاميرا أو تتبع العين القديمة.',
+          rejectedFields: [...rejectedEyeFields, ...(Array.isArray(body.fixations) && body.fixations.length > 0 ? ['fixations'] : [])],
+        });
+        return;
+      }
+
+      const consentValidation = validateExplicitGuardianConsent(guardianConsentGiven);
       const consentTimestampValid =
         typeof guardianConsentRecordedAt === 'string' &&
         Number.isFinite(Date.parse(guardianConsentRecordedAt));
       const consentSourceValid =
         typeof guardianConsentSource === 'string' &&
         guardianConsentSource.trim().length > 0;
-      if (
-        !consentValidation.valid ||
-        !consentTimestampValid ||
-        !consentSourceValid
-      ) {
+      if (!consentValidation.valid || !consentTimestampValid || !consentSourceValid) {
         res.status(403).json({
           error: consentValidation.valid
             ? 'يلزم تسجيل وقت الموافقة ومصدرها قبل إنشاء التقرير.'
@@ -1591,102 +1551,36 @@ async function startServer() {
         return;
       }
 
-      const reqModality = req.body?.assessmentModality;
-      const isNoEyeModality =
-        reqModality === 'reading_only' ||
-        reqModality === 'voice_only' ||
-        (oralReadingAssessed === true && (observedWordCount === 0 || observedWordCount === undefined || calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined)) ||
-        (observedWordCount === 0 && (calibrationAccuracyPercent === null || calibrationAccuracyPercent === undefined));
-
-      if (!isNoEyeModality) {
-        const hasValidCoverage =
-          typeof gazeCoveragePercent === 'number' &&
-          typeof observedWordCount === 'number' &&
-          typeof totalPassageWordCount === 'number' &&
-          Number.isFinite(gazeCoveragePercent) &&
-          Number.isFinite(observedWordCount) &&
-          Number.isFinite(totalPassageWordCount) &&
-          totalPassageWordCount > 0 &&
-          observedWordCount >= 4 &&
-          observedWordCount <= totalPassageWordCount &&
-          gazeCoveragePercent >= 25 &&
-          observedWordCount / totalPassageWordCount >= 0.25;
-        if (!hasValidCoverage) {
-          res.status(422).json({
-            error:
-              'بيانات تتبع العين غير كافية لإصدار تقرير. يلزم رصد 4 كلمات على الأقل وتغطية 25% من النص دون تعويض اصطناعي.',
-            reportBlocked: true,
-          });
-          return;
-        }
-        if (
-          typeof calibrationAccuracyPercent !== 'number' ||
-          !Number.isFinite(calibrationAccuracyPercent) ||
-          calibrationAccuracyPercent < 70
-        ) {
-          res.status(422).json({
-            error:
-              'دقة التحقق من معايرة الكاميرا منخفضة أو غير متاحة؛ تم حجب التقرير بدلاً من إصدار نتيجة غير موثوقة.',
-            reportBlocked: true,
-          });
-          return;
-        }
-      }
-
-      if (!isNoEyeModality) {
-        res.status(422).json({
-          error: 'هذا الإصدار يدعم القراءة الصامتة أو الجهرية فقط؛ لم يعد يصدر تقارير عن تتبع العين بالكاميرا.',
-          reportBlocked: true,
-        });
-        return;
-      }
-
-      // Build a descriptive report from supplied observations only. Do not ask a generative
-      // model to infer dyslexia/dyscalculia, gaze behavior, or treatment from one short session.
-      const safeWords = problematicWords
-        .filter((word: unknown): word is string => typeof word === 'string')
-        .slice(0, 8)
-        .map((word: string) => word.trim().slice(0, 60))
-        .filter(Boolean);
       const asFiniteNumber = (value: unknown): number | null =>
         typeof value === 'number' && Number.isFinite(value) ? value : null;
-      const requestedAssessmentModality = reqModality === 'voice_only'
-        ? 'voice_only'
-        : isNoEyeModality
-          ? 'reading_only'
-          : 'eye_voice';
+      const safeWords = assessmentModality === 'voice_only' && oralReadingAssessed === true
+        ? (problematicWords as unknown[])
+            .filter((word): word is string => typeof word === 'string')
+            .slice(0, 8)
+            .map((word) => word.trim().slice(0, 60))
+            .filter(Boolean)
+        : [];
 
-      const descriptiveReport = buildDeterministicClinicalReport({
+      const report = buildDeterministicClinicalReport({
         studentName: stripArabicPatronymics(studentName),
         gradeLevel: Number.isInteger(Number(gradeLevel)) && Number(gradeLevel) >= 1 && Number(gradeLevel) <= 6
           ? Number(gradeLevel)
           : 3,
         dialectLabelAr: 'اللهجة المختارة في الجلسة',
-        gazeCoveragePercent: isNoEyeModality ? 0 : (asFiniteNumber(gazeCoveragePercent) ?? 0),
-        observedWordCount: isNoEyeModality ? 0 : (asFiniteNumber(observedWordCount) ?? 0),
-        totalPassageWordCount: asFiniteNumber(totalPassageWordCount) ?? 0,
+        gazeCoveragePercent: 0, observedWordCount: 0, totalPassageWordCount: 0,
         wpm: Math.max(0, Math.round(asFiniteNumber(wpm) ?? 0)),
-        comprehensionScore: asFiniteNumber(req.body?.comprehensionScore),
-        avgFixationMs: isNoEyeModality ? 0 : (asFiniteNumber(avgFixationMs) ?? 0),
-        regressionRate: isNoEyeModality ? 0 : (asFiniteNumber(regressionRate) ?? 0),
-        regressionCount: isNoEyeModality ? 0 : 0,
-        blinkCount: 0,
-        blinksPerMinute: 0,
-        visualStrainLabelAr: isNoEyeModality
-          ? 'غير منطبق؛ لا تستخدم هذه الجلسة الكاميرا'
-          : 'قياسات تقنية وصفية؛ لم يُصنّف الإجهاد البصري',
-        calibrationAccuracyPercent: isNoEyeModality
-          ? 0
-          : (asFiniteNumber(calibrationAccuracyPercent) ?? 0),
-        calibrationValidationLabelAr: isNoEyeModality
-          ? 'غير منطبق'
-          : 'دقة معايرة واردة من الجلسة؛ لا تعني تحققًا معياريًا مستقلاً',
+        comprehensionScore: asFiniteNumber(comprehensionScore),
+        avgFixationMs: 0, regressionRate: 0, regressionCount: 0,
+        blinkCount: 0, blinksPerMinute: 0,
+        visualStrainLabelAr: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين.',
+        calibrationAccuracyPercent: 0,
+        calibrationValidationLabelAr: 'غير منطبق؛ لا توجد معايرة كاميرا في هذا الإصدار.',
         problematicWords: safeWords,
-        oralReadingAssessed: oralReadingAssessed === true,
+        oralReadingAssessed: oralReadingAssessed === true && assessmentModality === 'voice_only',
         oralAccuracyPercent: asFiniteNumber(oralAccuracyPercent),
         phoneticSubstitutionCount: Math.max(0, Math.round(asFiniteNumber(phoneticSubstitutionCount) ?? 0)),
         dialectVariantCount: Math.max(0, Math.round(asFiniteNumber(dialectVariantCount) ?? 0)),
-        assessmentModality: requestedAssessmentModality,
+        assessmentModality,
         dyscalculiaAssessed: dyscalculiaAssessed === true,
         numberLinePAE: asFiniteNumber(numberLinePAE),
         subitizingAccuracy: asFiniteNumber(subitizingAccuracy),
@@ -1694,8 +1588,8 @@ async function startServer() {
       });
 
       res.json({
-        report: descriptiveReport,
-        source: 'descriptive-server-report',
+        report,
+        source: 'descriptive-learning-report',
         usesExternalAI: false,
         diagnosticClassification: null,
       });

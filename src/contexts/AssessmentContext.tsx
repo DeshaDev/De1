@@ -11,7 +11,11 @@ const loadSavedAssessment = (): CombinedAssessmentData | null => {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as CombinedAssessmentData & { eyeTrackingResults?: unknown };
+    if (!saved || typeof saved !== 'object') return null;
+    delete saved.eyeTrackingResults;
+    return saved;
   } catch {
     return null;
   }
@@ -80,7 +84,7 @@ export interface TactileAssessmentResult {
 export interface ReadingAssessmentResult {
   passageId: string;
   passageTitle: string;
-  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+  assessmentModality?: 'voice_only' | 'reading_only';
   gradeLevel: number;
   wordCount: number;
   durationSeconds: number;
@@ -107,7 +111,6 @@ export interface CombinedAssessmentData {
   speechResults: SpeechAssessmentResult | null;
   tactileResults: TactileAssessmentResult | null;
   readingResults?: ReadingAssessmentResult | null;
-  eyeTrackingResults?: any | null;
 };
 
 interface AssessmentContextType {
@@ -117,7 +120,6 @@ interface AssessmentContextType {
   saveSpeechResults: (results: SpeechAssessmentResult) => void;
   saveTactileResults: (results: TactileAssessmentResult) => void;
   saveReadingResults: (results: ReadingAssessmentResult) => void;
-  saveEyeTrackingResults: (results: any) => void;
   saveSpeechAnalysisResults: (results: any) => void;
   saveTactileAnalyticsResults: (results: any) => void;
   getAllAssessments: () => CombinedAssessmentData[];
@@ -163,7 +165,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
       speechResults: null,
       tactileResults: null,
       readingResults: null,
-      eyeTrackingResults: null,
     };
     setCurrentAssessment(fresh);
     persistAssessment(fresh);
@@ -178,7 +179,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         speechResults: results,
         tactileResults: prev?.tactileResults || null,
         readingResults: prev?.readingResults || null,
-        eyeTrackingResults: prev?.eyeTrackingResults || null,
       };
       persistAssessment(next);
       return next;
@@ -194,7 +194,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         speechResults: prev?.speechResults || null,
         tactileResults: results,
         readingResults: prev?.readingResults || null,
-        eyeTrackingResults: prev?.eyeTrackingResults || null,
       };
       persistAssessment(next);
       return next;
@@ -210,33 +209,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         speechResults: prev?.speechResults || null,
         tactileResults: prev?.tactileResults || null,
         readingResults: results,
-        eyeTrackingResults: {
-          assessmentModality: results.assessmentModality,
-          spokenTranscript: results.spokenTranscript || '',
-          wpm: results.wpm,
-          wcpm: results.wcpm,
-          readingDurationSeconds: results.durationSeconds,
-          comprehensionScore: results.comprehensionScore,
-          oralReadingAssessed: results.oralReadingAssessed,
-          oralAccuracyPercent: results.oralAccuracyPercent,
-          completedAt: results.completedAt,
-        },
-      };
-      persistAssessment(next);
-      return next;
-    });
-  };
-
-  const saveEyeTrackingResults = (results: any) => {
-    setCurrentAssessment(prev => {
-      const next: CombinedAssessmentData = {
-        studentId: prev?.studentId || 'student-1',
-        studentName: prev?.studentName || 'الطالب',
-        age: prev?.age || 8,
-        speechResults: prev?.speechResults || null,
-        tactileResults: prev?.tactileResults || null,
-        readingResults: prev?.readingResults || null,
-        eyeTrackingResults: results,
       };
       persistAssessment(next);
       return next;
@@ -401,7 +373,6 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         saveSpeechResults,
         saveTactileResults,
     saveReadingResults,
-        saveEyeTrackingResults,
         saveSpeechAnalysisResults,
         saveTactileAnalyticsResults,
         getAllAssessments,
