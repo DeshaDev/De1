@@ -21,9 +21,9 @@ import {
 } from './studentDataSecurity';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
-const TEST_SECRET = 'test-clinical-hmac-secret-key-2026-secure';
+const TEST_SECRET = 'test-learning-hmac-secret-key-2026-secure';
 
-describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting Unit Tests', () => {
+describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting Unit Tests', () => {
   it('issues and verifies a Baseera session token with full scopes and Arabic tenant display name', () => {
     const issued = issueBaseeraSessionToken(
       'school_admin',
