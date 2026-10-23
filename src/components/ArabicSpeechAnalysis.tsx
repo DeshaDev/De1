@@ -551,8 +551,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     const cleanSpoken = normalizeArabicTranscript(rawTranscript);
     const exactTranscriptMatch = Boolean(cleanSpoken) && cleanSpoken === cleanExpected;
     const transcriptComparison = classifyTranscriptComparison(cleanExpected, cleanSpoken);
-    const speechRecognitionConfidence =
-      speechConfidenceRef.current > 0 ? speechConfidenceRef.current : null;
+    const speechRecognitionConfidence = speechConfidenceRef.current;
 
     const report: WordAnalysisReport = {
       wordId: targetWord.id,
