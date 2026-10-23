@@ -289,6 +289,35 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(derived.derivedFields.teacherVerifierRole, 'أخصائي مصادق عليه عبر الحساب');
   });
 
+  await t.test('Client-submitted teacherVerified is ignored without an authenticated clinician reviewer', () => {
+    const rawPayload = {
+      passageId: passage.id,
+      assessmentModality: 'voice_only',
+      readingDurationSeconds: 60,
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
+      oralReadingAssessed: true,
+      spokenTranscript: 'قرأت ثلاث كلمات فقط',
+      teacherVerified: true,
+      teacherVerifierRole: 'معلم صعوبات تعلم',
+      verifiedWordsAlignment: passage.words.map((word) => ({ word, status: 'correct' as const })),
+    };
+
+    const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
+      name: 'طالب اختبار',
+      gradeLevel: 3,
+    });
+
+    assert.equal(derived.valid, true);
+    assert.ok(derived.derivedFields);
+    assert.equal(derived.derivedFields.teacherVerified, false);
+    assert.equal(derived.derivedFields.teacherVerifierId, undefined);
+    assert.equal(derived.derivedFields.wcpm === passage.words.length, false);
+    assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
+  });
+
   await t.test('Server Validation: rejects corrupted or mismatched verifiedWordsAlignment', () => {
     // Array length does not match passage words length
     const invalidLengthPayload = {
