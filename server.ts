@@ -1776,7 +1776,7 @@ async function startServer() {
   });
 
   // 2b. Optional AI-assisted educational activity planner; not a diagnostic or validated treatment engine.
-  app.post('/api/remediation/generate-personalized-session', requireBaseeraAuth('students:read'), aiRateLimiter, async (req, res) => {
+  app.post('/api/remediation/curated-session', requireBaseeraAuth('students:read'), aiRateLimiter, async (req, res) => {
     const rawBody = req.body as Record<string, unknown> | null;
     if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
       res.status(400).json({ error: 'بيانات التدريب غير صالحة.' });

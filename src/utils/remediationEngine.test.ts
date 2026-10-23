@@ -139,3 +139,30 @@ test('every grade band produces a structurally valid curated plan', () => {
     );
   }
 });
+
+
+test('each exact grade receives eight curated tasks per station and a different text from its adjacent grade', () => {
+  for (let gradeLevel = 1; gradeLevel <= 6; gradeLevel += 1) {
+    const plan = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel, effectiveWords: [], targetsTeacherReviewed: false });
+    assert.equal(plan.phonicsDrills.length, 8);
+    assert.equal(plan.syllableDrills.length, 8);
+    assert.equal(plan.mathDrills.length, 8);
+    assert.ok(plan.pacerPassage.words.length >= 20);
+    assert.ok(isStructurallyValidRemediationSessionPlan(plan));
+  }
+  for (const [firstGrade, secondGrade] of [[1, 2], [3, 4], [5, 6]]) {
+    const first = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: firstGrade, effectiveWords: [], targetsTeacherReviewed: false });
+    const second = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: secondGrade, effectiveWords: [], targetsTeacherReviewed: false });
+    assert.notDeepEqual(first.phonicsDrills.map((item) => item.spokenWord), second.phonicsDrills.map((item) => item.spokenWord));
+    assert.notDeepEqual(first.syllableDrills.map((item) => item.targetWord), second.syllableDrills.map((item) => item.targetWord));
+    assert.notDeepEqual(first.mathDrills.map((item) => item.targetNumber), second.mathDrills.map((item) => item.targetNumber));
+    assert.notEqual(first.pacerPassage.words.join(' '), second.pacerPassage.words.join(' '));
+  }
+});
+
+test('teacher-reviewed words can select matching practice from the expanded bank', () => {
+  const oddGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَاقِيَة'], targetsTeacherReviewed: true });
+  assert.equal(normalizeArabic(oddGrade.syllableDrills[0].targetWord), normalizeArabic('سَاقِيَة'));
+  const evenGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 4, effectiveWords: ['مَدِينَة'], targetsTeacherReviewed: true });
+  assert.equal(normalizeArabic(evenGrade.syllableDrills[0].targetWord), normalizeArabic('مَدِينَة'));
+});

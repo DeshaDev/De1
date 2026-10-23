@@ -41,7 +41,7 @@ interface RemediationGymViewProps {
   onSelectStudent: (id: string) => void;
   onNavigateTab: (tab: AppTabId) => void;
   onOpenReport?: () => void;
-  /** Only signed-in school administrators can request server-generated activity plans. */
+  /** Only signed-in school administrators can load the curated activity bank. */
   canGeneratePlan?: boolean;
 }
 
@@ -56,11 +56,11 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Active Station Tab: phonics | syllables | pacer | math
   const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math'>('phonics');
 
-  // Optional AI-assisted session plan for general educational activities
-  const [aiSession, setAiSession] = useState<RemediationSessionPlan | null>(null);
-  const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
-  const [aiStatusMessage, setAiStatusMessage] = useState<string>('');
-  const [aiSource, setAiSource] = useState<string | null>(null);
+  // Curated grade-specific practice selected from reviewed content
+  const [curatedSession, setCuratedSession] = useState<RemediationSessionPlan | null>(null);
+  const [isLoadingCurated, setIsLoadingCurated] = useState<boolean>(false);
+  const [activityStatusMessage, setActivityStatusMessage] = useState<string>('');
+  const [curatedSource, setCuratedSource] = useState<string | null>(null);
   const [showActivityRationale, setShowActivityRationale] = useState<boolean>(false);
   const [activeScaffold, setActiveScaffold] = useState<{ title: string; text: string; audioText: string } | null>(null);
 
@@ -124,7 +124,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     });
   }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, observedTargetWords]);
 
-  const effectivePlan: RemediationSessionPlan = aiSession || fallbackPlan;
+  const effectivePlan: RemediationSessionPlan = curatedSession || fallbackPlan;
   const phonicsList: RemediationPhonicsDrill[] = effectivePlan.phonicsDrills;
   const syllableList: RemediationSyllableDrill[] = effectivePlan.syllableDrills;
   const currentPassage: RemediationPacerPassage = effectivePlan.pacerPassage;
@@ -156,17 +156,17 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setTimeout(() => setCelebrationMessage(''), 3500);
   };
 
-  // Optional authenticated selection of curated educational activities for the selected grade.
-  const fetchAiSession = async (student: StudentRecord, announce: boolean = true) => {
+  // Authenticated loading of curated educational activities for the selected grade.
+  const fetchCuratedSession = async (student: StudentRecord, announce: boolean = true) => {
     if (!canGeneratePlan) {
-      setAiStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
+      setActivityStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
       return;
     }
-    setIsLoadingAi(true);
-    setAiStatusMessage('');
+    setIsLoadingCurated(true);
+    setActivityStatusMessage('');
     setActiveScaffold(null);
     try {
-      const res = await authenticatedFetch('/api/remediation/generate-personalized-session', {
+      const res = await authenticatedFetch('/api/remediation/curated-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -177,7 +177,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       });
 
       if (!res.ok) {
-        setAiStatusMessage(
+        setActivityStatusMessage(
           res.status === 401 || res.status === 403
             ? 'الأنشطة العامة متاحة الآن. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.'
             : 'تعذّر تحميل أنشطة الصف؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
@@ -187,12 +187,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
       const data = await res.json();
       if (!data?.session) {
-        setAiStatusMessage('لم يصل مخطط صالح؛ استمر بالأنشطة العامة دون تخصيص.');
+        setActivityStatusMessage('لم يصل مخطط صالح؛ استمر بالأنشطة العامة دون تخصيص.');
         return;
       }
 
-      setAiSession(data.session);
-      setAiSource(data.source || 'curated-grade-banded');
+      setCuratedSession(data.session);
+      setCuratedSource(data.source || 'curated-grade-banded');
       setPhonicsIdx(0);
       setSyllableIdx(0);
       setPacerWordIdx(0);
@@ -211,9 +211,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         );
       }
     } catch {
-      setAiStatusMessage('تعذّر الاتصال بالخادم؛ استمر بالأنشطة التعليمية العامة الحالية.');
+      setActivityStatusMessage('تعذّر الاتصال بالخادم؛ استمر بالأنشطة التعليمية العامة الحالية.');
     } finally {
-      setIsLoadingAi(false);
+      setIsLoadingCurated(false);
     }
   };
 
@@ -221,11 +221,11 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Keep general activities immediately available for children without a teacher session.
   useEffect(() => {
     if (canGeneratePlan) {
-      void fetchAiSession(activeStudent, false);
+      void fetchCuratedSession(activeStudent, false);
     } else {
-      setAiSession(null);
-      setAiSource(null);
-      setAiStatusMessage('');
+      setCuratedSession(null);
+      setCuratedSource(null);
+      setActivityStatusMessage('');
     }
   }, [activeStudent.id, canGeneratePlan]);
 
@@ -392,7 +392,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 التدريب المتدرّج للقراءة والحساب
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                {aiSession && aiSource === 'curated-grade-banded' ? 'بنك أنشطة متدرج حسب الصف' : 'أنشطة تدريبية عامة'}
+                {curatedSession && curatedSource === 'curated-grade-banded' ? 'بنك أنشطة متدرج حسب الصف' : 'أنشطة تدريبية عامة'}
               </span>
             </div>
             <p className="text-[11px] text-emerald-200/90 flex items-center gap-1.5 flex-wrap">
@@ -421,12 +421,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
           <button
             type="button"
-            onClick={() => fetchAiSession(activeStudent, true)}
-            disabled={isLoadingAi}
+            onClick={() => fetchCuratedSession(activeStudent, true)}
+            disabled={isLoadingCurated}
             className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAi ? 'animate-spin' : ''}`} />
-            <span>{isLoadingAi ? 'جارٍ التحميل...' : 'تحديث أنشطة الصف'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingCurated ? 'animate-spin' : ''}`} />
+            <span>{isLoadingCurated ? 'جارٍ التحميل...' : 'تحديث أنشطة الصف'}</span>
           </button>
         </div>
       </div>
@@ -434,7 +434,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
         يعتمد تحديث الأنشطة على بنك ثابت متدرج حسب الصف. لا تُعرض أنشطة مولّدة آليًا للأطفال قبل مراجعة لغوية وتربوية متخصصة. ولا تؤثر الكلمات التي راجعها المعلّم في النشاط إلا إذا طابقت كلمة موجودة في بنك الأنشطة.
       </p>
-      {aiStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{aiStatusMessage}</p>}
+      {activityStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{activityStatusMessage}</p>}
 
       {/* Optional Educational Activity Rationale */}
       {showActivityRationale && (

@@ -196,7 +196,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('requires a clinical session for AI training and never trusts client-supplied words as teacher-reviewed', async () => {
-    const noSession = await fetch(`${baseUrl}/api/remediation/generate-personalized-session`, {
+    const noSession = await fetch(`${baseUrl}/api/remediation/curated-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gradeLevel: 3, problematicWords: ['كلمات اخترعها العميل'] }),
@@ -204,7 +204,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(noSession.status, 401);
 
     const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
-    const forgedTargets = await fetch(`${baseUrl}/api/remediation/generate-personalized-session`, {
+    const forgedTargets = await fetch(`${baseUrl}/api/remediation/curated-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
