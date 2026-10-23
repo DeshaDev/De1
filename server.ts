@@ -1955,6 +1955,7 @@ async function startServer() {
       studentName: 'الطالب',
       gradeLevel: Number(gradeLevel),
       effectiveWords,
+      targetsTeacherReviewed: hasTeacherReviewedTargets,
     });
 
     res.json({
