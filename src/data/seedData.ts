@@ -56,8 +56,10 @@ export interface StudentAssessmentSnapshot {
   wcpm?: number | null;
   teacherVerified?: boolean;
   wpm: number;
-  avgFixationMs: number;
-  regressionRate: number;
+  /** @deprecated Legacy snapshots may contain camera metrics; new sessions never collect these fields. */
+  avgFixationMs?: number;
+  /** @deprecated Legacy snapshots may contain camera metrics; new sessions never collect these fields. */
+  regressionRate?: number;
   comprehensionScore: number;
   problematicWords: string[];
   dyslexiaRiskScore: number | null;
