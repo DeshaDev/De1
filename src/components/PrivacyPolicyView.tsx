@@ -32,7 +32,7 @@ function PolicySection({
     <section className="space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex items-center gap-3 text-slate-900">
         <span className="rounded-xl bg-teal-50 p-2 text-teal-800">
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <Icon className="h-5 w-5" aria-hidden={true} />
         </span>
         <h2 className="text-lg font-extrabold">{title}</h2>
       </div>
@@ -45,7 +45,7 @@ export const PrivacyPolicyView: React.FC = () => (
   <main dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
     <header className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-teal-800">
-        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+        <ShieldCheck className="h-5 w-5" aria-hidden={true} />
         <span>الخصوصية وحماية البيانات</span>
         <span className="text-slate-400">·</span>
         <span className="font-medium text-slate-500">آخر تحديث: 23 أكتوبر 2026</span>
@@ -57,7 +57,7 @@ export const PrivacyPolicyView: React.FC = () => (
         تشرح هذه السياسة أنواع البيانات التي قد تعالجها بصيرة، وأغراض استخدامها، والخيارات المتاحة للأفراد وأولياء الأمور والمؤسسات التعليمية. صُممت المنصة للأنشطة التعليمية العربية في القراءة والفهم والحساب، ولا تقدم تشخيصًا طبيًا أو نفسيًا.
       </p>
       <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-950">
-        <EyeOff className="mt-1 h-5 w-5 shrink-0" aria-hidden="true" />
+        <EyeOff className="mt-1 h-5 w-5 shrink-0" aria-hidden={true} />
         <p>
           <strong>لا تستخدم بصيرة الكاميرا أو تتبع العين.</strong> لا تطلب المنصة إذن الكاميرا، ولا تجمع صورًا أو مقاطع فيديو أو قياسات نظر. قد يُطلب إذن الميكروفون فقط إذا اختار المستخدم جلسة القراءة الجهرية بنفسه.
         </p>
@@ -76,13 +76,13 @@ export const PrivacyPolicyView: React.FC = () => (
       </p>
       <div className="flex flex-wrap gap-4 text-sm">
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={QATAR_LAW_URL} target="_blank" rel="noreferrer">
-          قانون حماية خصوصية البيانات الشخصية القطري <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          قانون حماية خصوصية البيانات الشخصية القطري <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={NCSA_GUIDANCE_URL} target="_blank" rel="noreferrer">
-          إرشادات الوكالة الوطنية للأمن السيبراني <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          إرشادات الوكالة الوطنية للأمن السيبراني <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={QATAR_CHILD_DATA_URL} target="_blank" rel="noreferrer">
-          المادة (17): المواقع الموجهة للأطفال <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          المادة (17): المواقع الموجهة للأطفال <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
       </div>
     </PolicySection>
@@ -164,7 +164,7 @@ export const PrivacyPolicyView: React.FC = () => (
 
     <section className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-8 text-slate-700">
       <div className="mb-2 flex items-center gap-2 font-extrabold text-slate-900">
-        <FileText className="h-5 w-5 text-teal-800" aria-hidden="true" />
+        <FileText className="h-5 w-5 text-teal-800" aria-hidden={true} />
         <h2>تحديث السياسة</h2>
       </div>
       <p>
