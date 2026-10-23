@@ -243,7 +243,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                 rawConfidence >= 0 &&
                 rawConfidence <= 1
                   ? Math.round(rawConfidence * 100)
-                  : 0;
+                  : null;
               interimTranscriptRef.current = transcript.trim();
               setInterimTranscript(transcript.trim());
             } else {
