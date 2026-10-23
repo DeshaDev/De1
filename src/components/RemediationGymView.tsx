@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { authenticatedFetch } from '../utils/apiAuth';
 import {
   Sparkles,
   Trophy,
@@ -138,13 +139,13 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setIsLoadingAi(true);
     setActiveScaffold(null);
     try {
-      const res = await fetch('/api/remediation/generate-personalized-session', {
+      const res = await authenticatedFetch('/api/remediation/generate-personalized-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          studentId: student.id,
           gradeLevel: student.gradeLevel,
           dialect: student.dialectCode || 'msa',
-          problematicWords: observedTargetWords,
         }),
       });
 
