@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { segmentArabicWordIntoSyllables } from '../utils/clinicalMetrics';
+import { compareArabicTranscript, type TranscriptComparison } from '../utils/transcriptComparison';
 
 export interface TestWord {
   id: number;
@@ -149,12 +150,6 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
   }
 ];
 
-export interface TranscriptComparison {
-  status: 'exact_match' | 'transcript_difference' | 'unavailable';
-  labelArabic: string;
-  notes: string;
-}
-
 export interface WordAnalysisReport {
   wordId: number;
   targetWord: string;
@@ -186,6 +181,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingTranscript, setIsProcessingTranscript] = useState(false);
+  const [isPreparingRecording, setIsPreparingRecording] = useState(false);
   const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null);
   const [speechApiSupported, setSpeechApiSupported] = useState(true);
 
@@ -220,11 +216,6 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   currentWordRef.current = currentWord;
   const recordingWordRef = useRef<TestWord | null>(null);
   const progressPercent = Math.round((currentWordIndex / ARABIC_PRACTICE_WORDS.length) * 100);
-
-  // Clean diacritics for normalization
-  const stripDiacritics = (text: string) => {
-    return text.replace(/[\u064B-\u065F\u0670]/g, '');
-  };
 
   // 1. Initialize Speech Recognition on Mount
   useEffect(() => {
@@ -470,7 +461,13 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   const startWordRecording = async () => {
     const recordingTarget = currentWord;
     recordingWordRef.current = recordingTarget;
-    const ready = await ensureAudioPipeline();
+    setIsPreparingRecording(true);
+    let ready = false;
+    try {
+      ready = await ensureAudioPipeline();
+    } finally {
+      setIsPreparingRecording(false);
+    }
     if (!ready || !mediaRecorderRef.current) return;
 
     audioChunksRef.current = [];
@@ -512,61 +509,25 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     }
   };
 
-  // Text-only comparison of the browser-produced transcript. This is not a clinical measure.
-  const normalizeArabicTranscript = (value: string) =>
-    stripDiacritics(value)
-      .replace(/[ـ]/g, '')
-      .replace(/[\s.,،؛:!?؟'"“”(){}\[\]\-]/g, '')
-      .trim();
-
-  const classifyTranscriptComparison = (
-    expected: string,
-    recognized: string
-  ): TranscriptComparison => {
-    if (!recognized) {
-      return {
-        status: 'unavailable',
-        labelArabic: 'لم يتوفر تفريغ نصي واضح',
-        notes: 'لم يُرجع المتصفح نصًا نهائيًا واضحًا. أعد المحاولة أو استمع إلى التسجيل وراجعه يدويًا.',
-      };
-    }
-    if (recognized === expected) {
-      return {
-        status: 'exact_match',
-        labelArabic: 'التفريغ يطابق الكلمة المستهدفة نصيًا',
-        notes: 'هذه مطابقة نصية بعد تطبيع التشكيل وعلامات الترقيم؛ لا تثبت وحدها صحة النطق ولا تقيس الوعي الفونولوجي.',
-      };
-    }
-    return {
-      status: 'transcript_difference',
-      labelArabic: 'اختلاف بين التفريغ والكلمة المستهدفة',
-      notes: 'قد يرجع الاختلاف إلى التعرف الصوتي أو اللهجة أو التسجيل أو طريقة النطق. استمع إلى التسجيل وراجع التفريغ يدويًا قبل تفسيره.',
-    };
-  };
-
   const processTranscriptComparison = (blobUrl: string) => {
     const targetWord = recordingWordRef.current ?? currentWordRef.current;
     const rawTranscript = speechTranscriptRef.current.trim() || interimTranscriptRef.current.trim();
-    const cleanExpected = normalizeArabicTranscript(targetWord.word);
-    const cleanSpoken = normalizeArabicTranscript(rawTranscript);
-    const exactTranscriptMatch = Boolean(cleanSpoken) && cleanSpoken === cleanExpected;
-    const transcriptComparison = classifyTranscriptComparison(cleanExpected, cleanSpoken);
-    const speechRecognitionConfidence = speechConfidenceRef.current;
+    const comparison = compareArabicTranscript(targetWord.word, rawTranscript);
 
     const report: WordAnalysisReport = {
       wordId: targetWord.id,
       targetWord: targetWord.word,
       spokenTranscript: rawTranscript,
-      normalizedSpoken: cleanSpoken,
-      exactTranscriptMatch,
-      speechRecognitionConfidence,
-      transcriptComparison,
+      normalizedSpoken: comparison.normalizedRecognized,
+      exactTranscriptMatch: comparison.exactMatch,
+      speechRecognitionConfidence: speechConfidenceRef.current,
+      transcriptComparison: comparison.comparison,
       audioBlobUrl: blobUrl,
       syllables: segmentArabicWordIntoSyllables(targetWord.word),
     };
 
     setCompletedReports((prev) => {
-      const filtered = prev.filter((item) => item.wordId !== currentWord.id);
+      const filtered = prev.filter((item) => item.wordId !== targetWord.id);
       return [...filtered, report];
     });
   };
@@ -600,7 +561,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
       stopWordRecording();
       return;
     }
-    if (isProcessingTranscript) return;
+    if (isProcessingTranscript || isPreparingRecording) return;
 
     if (currentWordIndex < ARABIC_PRACTICE_WORDS.length - 1) {
       setCurrentWordIndex((prev) => prev + 1);
@@ -613,7 +574,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   };
 
   const handlePrevWord = () => {
-    if (isRecording || isProcessingTranscript) return;
+    if (isRecording || isProcessingTranscript || isPreparingRecording) return;
     if (currentWordIndex > 0) {
       setCurrentWordIndex((prev) => prev - 1);
       interimTranscriptRef.current = '';
@@ -844,7 +805,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                       isRecording ? 'bg-red-500 animate-ping' : 'bg-slate-600'
                     }`}
                   />
-                  <span>{isRecording ? 'جارٍ تسجيل الكلمة...' : isProcessingTranscript ? 'جارٍ حفظ التفريغ...' : 'الميكروفون في وضع الاستعداد'}</span>
+                  <span>{isPreparingRecording ? 'جارٍ تجهيز الميكروفون...' : isRecording ? 'جارٍ تسجيل الكلمة...' : isProcessingTranscript ? 'جارٍ حفظ التفريغ...' : 'الميكروفون في وضع الاستعداد'}</span>
                 </div>
                 <div className="flex items-center gap-2 font-mono">
                   <span>مستوى الإشارة:</span>
@@ -868,10 +829,11 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
               {!isRecording ? (
                 <button
                   onClick={startWordRecording}
-                  className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-3 text-lg"
+                  disabled={isPreparingRecording}
+                  className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-3 text-lg"
                 >
                   <Mic className="w-6 h-6" />
-                  <span>اضغط للقراءة والتسجيل</span>
+                  <span>{isPreparingRecording ? 'جارٍ تجهيز الميكروفون...' : 'اضغط للقراءة والتسجيل'}</span>
                 </button>
               ) : (
                 <button
@@ -900,7 +862,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
             <div className="w-full flex items-center justify-between pt-6 mt-6 border-t border-slate-100">
               <button
                 onClick={handlePrevWord}
-                disabled={currentWordIndex === 0 || isRecording || isProcessingTranscript}
+                disabled={currentWordIndex === 0 || isRecording || isProcessingTranscript || isPreparingRecording}
                 className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
                   currentWordIndex === 0
                     ? 'border-slate-200 text-slate-300 cursor-not-allowed'
@@ -912,7 +874,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
 
               <button
                 onClick={handleNextWord}
-                disabled={isProcessingTranscript}
+                disabled={isProcessingTranscript || isPreparingRecording}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white transition-colors flex items-center gap-2"
               >
                 <span>
@@ -974,7 +936,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                   return (
                     <button
                       key={w.id}
-                      disabled={isRecording || isProcessingTranscript}
+                      disabled={isRecording || isProcessingTranscript || isPreparingRecording}
                       onClick={() => {
                         if (isRecording) stopWordRecording();
                         setCurrentWordIndex(idx);
