@@ -58,7 +58,7 @@ const SAMPLE_GAZE_PRESETS: Record<
     ],
   },
   nominal: {
-    label: 'عينة اصطناعية لمسار نظر قارئ طلق (للعرض التوضيحي فقط)',
+    label: 'بيانات اصطناعية بمسار مختلف (للمقارنة التقنية فقط)',
     samples: [
       { x: 780, y: 180, timestampMs: 0, wordIndex: 0 },
       { x: 782, y: 181, timestampMs: 110, wordIndex: 0 },
@@ -395,7 +395,6 @@ export const ClinicalAlgorithmsView: React.FC = () => {
       },
       oralAlignmentDemo: {
         referenceWordCount: targetOralPassageWords.length,
-        transcriptWordCount: spokenTranscript.trim() ? spokenTranscript.trim().split(/\\s+/).filter(Boolean).length : 0,
         wcpmIsNormed: false,
         diagnosticClassification: null,
       },
@@ -547,9 +546,11 @@ export const ClinicalAlgorithmsView: React.FC = () => {
                   dir="ltr"
                   className="text-2xl font-bold font-mono tabular-nums text-slate-900"
                 >
-                  {currentIRTEstimate.theta >= 0
-                    ? `+${currentIRTEstimate.theta.toFixed(2)}`
-                    : currentIRTEstimate.theta.toFixed(2)}
+                  {irtHistory.length === 0
+                    ? '—'
+                    : currentIRTEstimate.theta >= 0
+                      ? `+${currentIRTEstimate.theta.toFixed(2)}`
+                      : currentIRTEstimate.theta.toFixed(2)}
                 </span>
                 <span className="text-xs font-mono text-[#0284C7] font-semibold">
                   {irtHistory.length > 0 ? `رتبة نظرية داخل النموذج: ${currentIRTEstimate.modelBasedRank} (ليست مئينًا سكانيًا)` : 'لا توجد بيانات؛ أجب عن بند تجريبي لعرض حسابات النموذج'}
