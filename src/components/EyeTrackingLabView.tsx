@@ -154,14 +154,25 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   // cannot be stored as if the entire reference passage had been read.
   const minimumReadingDurationSeconds = Math.ceil((passage.words.length * 60) / 300);
 
-  // Scroll/focus before the browser paints the reading stage, so the child sees the passage
-  // immediately instead of a flash of the previous header/footer position.
+  // Reading focus mode removes navigation chrome before the browser paints the passage.
+  // This keeps the child on the actual text instead of the sticky header, footer, or floating dock.
   useLayoutEffect(() => {
-    if (stage !== 'reading') return;
+    if (typeof document === 'undefined') return;
+    const body = document.body;
+    if (stage !== 'reading') {
+      body.classList.remove('baseera-reading-focus');
+      return;
+    }
+
+    body.classList.add('baseera-reading-focus');
     const target = readingPassageRef.current;
-    if (!target) return;
+    if (!target) {
+      return () => body.classList.remove('baseera-reading-focus');
+    }
+
     target.scrollIntoView({ behavior: 'auto', block: 'start' });
     target.focus({ preventScroll: true });
+    return () => body.classList.remove('baseera-reading-focus');
   }, [stage, passage.id]);
 
   // Start timing only when the selected reading mode is ready.
@@ -909,7 +920,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
               aria-label="نص القراءة الحالي"
               className="scroll-mt-28 py-6 px-4 md:px-8 text-right select-none space-y-6 outline-none"
               style={{
-                scrollMarginTop: '112px',
+                scrollMarginTop: '16px',
                 fontSize: `${fontSizePx}px`,
                 lineHeight: '2.5',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
