@@ -438,7 +438,7 @@ export default function App() {
     }
     setActiveTab('reading-lab');
     setAiStatusBanner(
-      `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لا تُعرض نتيجة فرز قبل إكمال الجلسة.`
+      `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لن تظهر ملاحظات الجلسة قبل إكمالها.`
     );
   };
 
@@ -1041,7 +1041,7 @@ export default function App() {
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" />
                   <span>
-                    مؤشرات فرز استرشادية غير تشخيصية ·{' '}
+                    مؤشرات أداء تعليمية وصفية ·{' '}
                     {isPersistedStoreLoaded
                       ? 'قاعدة البيانات متصلة'
                       : 'وضع الجلسة'}
@@ -1295,13 +1295,13 @@ export default function App() {
                 </aside>
               </div>
             )}
-            {/* SUB-VIEW 3: AI SCREENING REPORT & INDIVIDUALIZED SUPPORT PLAN */}
+            {/* SUB-VIEW 3: LEARNING PERFORMANCE SUMMARY & SUPPORT PLAN */}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
-                      <span>تقرير الفرز القرائي والحسابي الاسترشادي</span>
+                      <span>ملخص الأداء القرائي والحسابي الاسترشادي</span>
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                         مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية توضيحية' : 'بيانات الجلسة المسجلة')}
                       </span>
@@ -1324,7 +1324,7 @@ export default function App() {
                     type="button"
                     onClick={async () => {
                       const shareText = [
-                        'تقرير فرز تربوي استرشادي — ملخص مجهول الهوية',
+                        'ملخص أداء تعليمي — نسخة مجهولة الهوية',
                         'اسم الطالب: محذوف للخصوصية',
                         `الصف: ${selectedStudent.gradeLevel}`,
                         `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
@@ -1403,7 +1403,7 @@ export default function App() {
                   <div className="p-6 sm:p-8 space-y-6">
                     <div className="space-y-2">
                       <h3 className="text-sm font-bold text-slate-900">
-                        ٠١. ملخص المؤشرات القرائية والفرز الأولي
+                        ٠١. ملخص الأداء القرائي والحسابي
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {selectedStudent.clinicalReport.clinicalSummary}
@@ -1483,7 +1483,7 @@ export default function App() {
                         )
                       ) : (
                         <div className="p-4 text-xs text-slate-600 leading-relaxed">
-                          ستظهر أنشطة المساندة اليومية المخصصة تلقائيًا فور إتمام جلسة القراءة وحساب مؤشرات الفرز.
+                          ستظهر أنشطة المساندة اليومية بعد إتمام الجلسة وتسجيل النتائج الوصفية.
                         </div>
                       )}
                     </div>

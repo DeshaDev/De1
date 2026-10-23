@@ -1,5 +1,5 @@
 /**
- * Adaptive Multi-Axis Screening Reports (تقارير الفرز التربوي الاسترشادي متعدد المحاور)
+ * Learning Performance Summaries (ملخصات الأداء التعليمي وخطط المساندة)
  * Tri-modal evaluation: Voice Phonology + Reading Fluency & Comprehension + Tactile Math
  * Strictly evidence-based: NO fake defaults, NO uncalibrated eye metrics, NO unvalidated risk bands.
  */
@@ -299,7 +299,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           </div>
 
           <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 mb-3">
-            حالة التقرير: في انتظار إجراء الاختبارات الفعلية
+            حالة التقرير: في انتظار إكمال الأنشطة التعليمية
           </span>
 
           <h2 className="text-3xl font-black text-slate-900 mb-3">
@@ -325,7 +325,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 onClick={() => onNavigateTab && onNavigateTab('reading-lab')}
                 className="mt-6 w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>ابدأ اختبار القراءة</span>
+                <span>ابدأ نشاط القراءة</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
@@ -382,10 +382,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            منظومة الفرز التربوي الشامل وخطط الدعم
+            متابعة الأداء التعليمي وخطط المساندة
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            تقرير الأداء القرائي ونتائج الفرز التربوي
+            تقرير الأداء القرائي وخطة المساندة
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             مؤشرات أداء مقاسة للطالب:{' '}
@@ -632,7 +632,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   خطة دعم تعليمي قابلة للتخصيص
                 </span>
                 <h2 className="text-3xl font-black mb-1">
-                  تقرير الفرز التربوي الاسترشادي: {studentData.studentName}
+                  تقرير الأداء التعليمي الاسترشادي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
                   ملاحظات وصفية من البيانات المسجّلة في الأنشطة؛ لا تمثل معيارًا معياريًا أو تشخيصًا سريريًا
