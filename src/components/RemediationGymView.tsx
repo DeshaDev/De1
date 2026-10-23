@@ -74,8 +74,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [assembledSyllables, setAssembledSyllables] = useState<string[]>([]);
   const [syllableComplete, setSyllableComplete] = useState<boolean>(false);
 
-  // Station 3: Eye Saccadic Pacer state
-  const [pacerWpm, setPacerWpm] = useState<number>(90);
+  // Station 3: optional paced word highlighting state
+  const [pacerWpm, setPacerWpm] = useState<number>(45);
   const [pacerPlaying, setPacerPlaying] = useState<boolean>(false);
   const [pacerWordIdx, setPacerWordIdx] = useState<number>(0);
   const pacerTimerRef = useRef<number | null>(null);
@@ -235,7 +235,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setActiveScaffold(null);
   };
 
-  // Station 3: Saccadic Pacer Loop
+  // Station 3: optional paced word highlighting loop
   useEffect(() => {
     if (!pacerPlaying) {
       if (pacerTimerRef.current) clearInterval(pacerTimerRef.current);
@@ -270,7 +270,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setMathErrorAbs(diff);
     setMathAnswered(true);
     if (diff <= 5) {
-      triggerCelebration(`دقة ممتازة! العدد هو ${currentMath.targetNumber} (+35 نقطة)`, 35);
+      triggerCelebration(`أحسنت! اقتربت من الموقع المطلوب. العدد المرجعي هو ${currentMath.targetNumber} (+35 نقطة)`, 35);
       speakText('أحسنت! تقدير دقيق لموقع العدد');
     } else {
       speakText(`العدد هو ${currentMath.targetNumber}`);
@@ -802,7 +802,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 3: SACCADIC PACER (Clean, Focused) */}
+      {/* STATION 3: OPTIONAL PACED WORD HIGHLIGHTING (Clean, Focused) */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'pacer' && (
         <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
@@ -812,7 +812,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 إبراز الكلمات بإيقاع قابل للتعديل
               </span>
               <span className="text-xs font-medium text-slate-500">
-                إبراز كلمة تلو الأخرى؛ لا يقيس حركة العين أو يعالجها
+                يعرض الكلمات بالتتابع؛ اختر إيقاعًا مريحًا، ولا يُستخدم للحكم على سرعة الطفل
               </span>
             </div>
 
@@ -853,8 +853,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 «{currentPassage.title}» · {currentPassage.gradeLevel}
               </span>
               <div className="flex items-center gap-1.5 font-mono">
-                <span>إيقاع الإبراز:</span>
-                {[60, 90, 120].map((w) => (
+                <span>الإيقاع:</span>
+                {[30, 45, 60].map((w) => (
                   <button
                     key={w}
                     type="button"
