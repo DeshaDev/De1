@@ -1793,24 +1793,28 @@ async function startServer() {
 
       const simplifiedText = record.simplifiedText;
       const keyIdea = record.keyIdea;
-      const normalizeArabicForMatch = (value: string) =>
+      const normalizeForMatch = (value: string) =>
         value.normalize('NFC')
           .replace(/[\u064B-\u065F\u0670ـ]/g, '')
-          .replace(/[^\u0621-\u064A]/g, '');
-      const searchableText = normalizeArabicForMatch(text + ' ' + simplifiedText);
+          .replace(/[\s·,،;؛.:!?؟\-]/g, '')
+          .toLocaleLowerCase();
+      const searchableText = normalizeForMatch(text + ' ' + simplifiedText);
       const wordBreakdowns = record.wordBreakdowns
         .filter((item): item is Record<string, unknown> =>
           Boolean(item && typeof item === 'object' && !Array.isArray(item))
         )
-        .filter((item) =>
-          typeof item.word === 'string' &&
-          item.word.trim().length > 0 &&
-          item.word.length <= 80 &&
-          searchableText.includes(normalizeArabicForMatch(item.word)) &&
-          typeof item.syllables === 'string' && item.syllables.length <= 180 &&
-          typeof item.root === 'string' && item.root.length <= 80 &&
-          typeof item.meaning === 'string' && item.meaning.length <= 240
-        )
+        .filter((item) => {
+          const normalizedWord =
+            typeof item.word === 'string' ? normalizeForMatch(item.word) : '';
+          return typeof item.word === 'string' &&
+            item.word.trim().length > 0 &&
+            item.word.length <= 80 &&
+            normalizedWord.length > 0 &&
+            searchableText.includes(normalizedWord) &&
+            typeof item.syllables === 'string' && item.syllables.length <= 180 &&
+            typeof item.root === 'string' && item.root.length <= 80 &&
+            typeof item.meaning === 'string' && item.meaning.length <= 240;
+        })
         .slice(0, 4)
         .map((item) => ({
           word: String(item.word),
