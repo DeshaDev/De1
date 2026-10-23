@@ -1863,8 +1863,10 @@ async function startServer() {
     const trustedTargetWords = storedStudent &&
       storedStudent.sessionStatus === 'completed' &&
       storedStudent.teacherVerified === true &&
-      Array.isArray(storedStudent.problematicWords)
-      ? storedStudent.problematicWords
+      Array.isArray(storedStudent.verifiedWordsAlignment)
+      ? storedStudent.verifiedWordsAlignment
+          .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+          .map((item) => item.word)
       : [];
     const cleanWords = trustedTargetWords
       .filter((word: unknown): word is string => typeof word === 'string')
