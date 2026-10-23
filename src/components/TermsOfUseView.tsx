@@ -14,7 +14,7 @@ function TermsSection({
     <section className="space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex items-center gap-3">
         <span className="rounded-xl bg-teal-50 p-2 text-teal-800">
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <Icon className="h-5 w-5" aria-hidden={true} />
         </span>
         <h2 className="text-lg font-extrabold text-slate-900">{title}</h2>
       </div>
@@ -27,7 +27,7 @@ export const TermsOfUseView: React.FC = () => (
   <main dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
     <header className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-teal-800">
-        <FileText className="h-5 w-5" aria-hidden="true" />
+        <FileText className="h-5 w-5" aria-hidden={true} />
         <span>شروط الاستخدام</span>
         <span className="text-slate-400">·</span>
         <span className="font-medium text-slate-500">آخر تحديث: 23 أكتوبر 2026</span>
