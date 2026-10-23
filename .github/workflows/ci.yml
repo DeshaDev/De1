@@ -8,9 +8,8 @@ on:
 
 jobs:
   verify-and-build:
-    name: Typecheck, Unit Tests & Production Build
+    name: Typecheck, Unit Tests, Production Build & Smoke Tests
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,24 +28,24 @@ jobs:
       - name: Install Chromium for end-to-end tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run TypeScript static analysis (lint)
+      - name: Run TypeScript static analysis
         run: npm run lint
 
-      - name: Build production bundle
+      - name: Build production frontend and server
         run: npm run build
 
-      # Run HTTP integration tests against the built dist/ directory so SPA
-      # fallback regressions cannot be hidden by the test-before-build order.
       - name: Run unit and HTTP integration tests
         run: npm test
 
-      - name: Verify production server bundle exists
-        run: test -s server.js
+      - name: Verify production artifacts
+        run: |
+          test -s server.js
+          test -s dist/index.html
 
       - name: Build production Docker image
         run: docker build --pull -t baseera-ci-smoke .
 
-      - name: Smoke-test the production Docker image with synthetic credentials
+      - name: Smoke-test production Docker image with synthetic data
         shell: bash
         run: |
           set -euo pipefail
@@ -56,7 +55,7 @@ jobs:
           encryption_key="$(printf '0%.0s' {1..64})"
           docker run -d --name baseera-ci-smoke -p 4317:3000 \
             -e BASEERA_TENANT_CREDENTIALS="$tenant_json" \
-            -e BASEERA_SESSION_SECRET='ci-session-secret-that-is-only-for-tests-2026' \
+            -e BASEERA_SESSION_SECRET='ci-session-secret-only-for-tests-2026' \
             -e BASEERA_STORE_ENCRYPTION_KEY="$encryption_key" \
             -e BASEERA_DATA_DIR='/tmp/baseera-ci-store' \
             -e TRUST_PROXY_HOPS='0' \
@@ -69,16 +68,8 @@ jobs:
             sleep 1
           done
           grep -q 'بصيرة' /tmp/baseera-docker-response.html
-          ! grep -q '^pt>
-      - name: Smoke-test production server
-        run: node scripts/production-smoke-test.mjs
 
-      - name: Run browser end-to-end smoke tests
-        run: npm run e2e
- /tmp/baseera-docker-response.html
-
-
-      - name: Smoke-test production server
+      - name: Smoke-test production server entry point
         run: node scripts/production-smoke-test.mjs
 
       - name: Run browser end-to-end smoke tests
