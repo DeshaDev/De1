@@ -139,28 +139,28 @@ test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny 
   assert.equal(deleteAttempt.allowed, false);
   assert.equal(deleteAttempt.statusCode, 403);
 
-  // 3. Clinician role has full scopes
-  const clinicianSession = issueBaseeraSessionToken(
-    'clinician',
+  // 3. School administrator role has full scopes
+  const schoolAdminSession = issueBaseeraSessionToken(
+    'school_admin',
     'د. سارة',
     secret
   );
-  const verifiedClinician = verifyBaseeraSessionToken(
-    clinicianSession.token,
+  const verifiedSchoolAdmin = verifyBaseeraSessionToken(
+    schoolAdminSession.token,
     secret
   );
   assert.equal(
-    authorizeSessionScope(verifiedClinician, 'students:delete').allowed,
+    authorizeSessionScope(verifiedSchoolAdmin, 'students:delete').allowed,
     true
   );
   assert.equal(
-    authorizeSessionScope(verifiedClinician, 'ai:analyze').allowed,
+    authorizeSessionScope(verifiedSchoolAdmin, 'ai:analyze').allowed,
     true
   );
 
   // 4. Tampered token is rejected
   assert.equal(
-    verifyBaseeraSessionToken(`${clinicianSession.token}tampered`, secret),
+    verifyBaseeraSessionToken(`${schoolAdminSession.token}tampered`, secret),
     null
   );
 
