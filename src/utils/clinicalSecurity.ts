@@ -899,7 +899,7 @@ export function buildDeterministicClinicalReport(params: {
   oralAccuracyPercent: number | null;
   phoneticSubstitutionCount: number;
   dialectVariantCount: number;
-  assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+  assessmentModality?: 'voice_only' | 'reading_only';
   dyscalculiaAssessed: boolean;
   numberLinePAE: number | null;
   subitizingAccuracy: number | null;
@@ -1075,7 +1075,7 @@ export interface DerivedSessionEvidenceResult {
     readingRiskLabelAr: string;
     problematicWords: string[];
     fixations: WordFixation[];
-    assessmentModality?: 'voice_only' | 'eye_voice' | 'reading_only';
+    assessmentModality?: 'voice_only' | 'reading_only';
     dyscalculiaAssessed: boolean;
     mathTrials?: StudentMathTrialsPayload;
     subitizingAccuracy: number | null;

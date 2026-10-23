@@ -144,10 +144,6 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       oralReadingAssessed: true,
       readingDurationSeconds: 48,
       comprehensionScore: 100,
-      fixations: [],
-      regressionCount: 0,
-      regressionRate: 0,
-      blinkCount: 0,
       passageId: 'passage-grade-3-01',
     };
 
