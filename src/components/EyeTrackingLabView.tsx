@@ -8,7 +8,7 @@
  *  3. Reading Comprehension (Comprehension questions score %)
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import {
   BookOpen,
   Clock,
@@ -150,8 +150,9 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     return sentences.length > 0 ? sentences : [text];
   }, [passage]);
 
-  // After the stage changes, place the reading passage at the top of the viewport.
-  useEffect(() => {
+  // Scroll/focus before the browser paints the reading stage, so the child sees the passage
+  // immediately instead of a flash of the previous header/footer position.
+  useLayoutEffect(() => {
     if (stage !== 'reading') return;
     const target = readingPassageRef.current;
     if (!target) return;
