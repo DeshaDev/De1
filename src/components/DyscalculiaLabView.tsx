@@ -1127,7 +1127,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 </span>
               </div>
               <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">متوسط زمن الاستجابة في المهام</span>
+                <span className="text-slate-600">متوسط زمن الاستجابة في تمييز الكميات</span>
                 <span className="font-mono tabular-nums font-semibold text-slate-900">
                   {answeredSubitizingCount > 0 && computedMetrics.avgSubitizingMs !== null
                     ? String(computedMetrics.avgSubitizingMs) + ' مللي ثانية'
