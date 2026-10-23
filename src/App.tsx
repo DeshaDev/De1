@@ -32,7 +32,7 @@ import {
   ClinicalSessionInfo,
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
-import EyeTrackingLabView from './components/EyeTrackingLabView';
+import ReadingAssessmentView from './components/ReadingAssessmentView';
 import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
@@ -1556,7 +1556,7 @@ export default function App() {
 
         {/* Camera-free reading and comprehension session */}
         {activeTab === 'eye-lab' && (
-          <EyeTrackingLabView
+          <ReadingAssessmentView
             onCompleteSession={handleCompleteNewSession}
             activeStudent={selectedStudent}
             canVerifyAsTeacher={clinicalSession?.role === 'clinician'}
