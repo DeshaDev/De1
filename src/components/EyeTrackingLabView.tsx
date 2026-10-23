@@ -139,6 +139,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   // Comprehension questions state
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [comprehensionError, setComprehensionError] = useState('');
 
   // Final derived metrics
   const [measuredWpm, setMeasuredWpm] = useState(0);
@@ -207,6 +208,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     setMeasuredAccuracyPercent(undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
+    setComprehensionError('');
     setComprehensionScore(0);
     setMeasuredWpm(0);
     setFinalDurationSec(0);
@@ -504,6 +506,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Handle question selection
   const handleSelectOption = (questionIdx: number, optionIdx: number) => {
+    setComprehensionError('');
     setSelectedAnswers(prev => ({
       ...prev,
       [questionIdx]: optionIdx,
@@ -514,6 +517,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const handleFinishComprehension = () => {
     let correctCount = 0;
     const questions = passage.comprehensionQuestions || [];
+    if (questions.length === 0 || questions.some((_, idx) => typeof selectedAnswers[idx] !== 'number')) {
+      setComprehensionError('لا يمكن احتساب الفهم قبل توفر سؤال واحد على الأقل والإجابة عن جميع الأسئلة. راجع الإجابات ثم حاول مرة أخرى.');
+      return;
+    }
 
     questions.forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correctIndex) {
@@ -521,8 +528,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       }
     });
 
-    const scorePercent =
-      questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 100;
+    const scorePercent = Math.round((correctCount / questions.length) * 100);
 
     setComprehensionScore(scorePercent);
 
@@ -554,11 +560,15 @@ export const EyeTrackingLabView: React.FC<Props> = ({
   const handleCommitSession = () => {
     const baseStudent = activeStudent || INITIAL_STUDENTS[0];
     const nowIso = new Date().toISOString();
+    const questions = passage.comprehensionQuestions || [];
+    if (questions.length === 0 || questions.some((_, idx) => typeof selectedAnswers[idx] !== 'number')) {
+      setComprehensionError('لم تُحفظ الجلسة لأن بعض إجابات الفهم غير مكتملة. أكمل الأسئلة أولًا.');
+      setStage('comprehension');
+      return;
+    }
 
-    // Ensure answers array is ordered and complete according to questions length
-    const answersArray = (passage.comprehensionQuestions || []).map((_, idx) =>
-      typeof selectedAnswers[idx] === 'number' ? selectedAnswers[idx] : 0
-    );
+    // Save only the options the child actually selected; never fabricate a default answer.
+    const answersArray = questions.map((_, idx) => selectedAnswers[idx]);
 
     const cleanTranscript = (spokenTranscriptRef.current || spokenTranscript || '').trim();
     const hasAudioCaptured =
@@ -1200,6 +1210,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 المهارة المستهدفة: {passage.comprehensionQuestions[currentQuestionIndex]?.skillLabelAr}
               </p>
             </div>
+
+            {comprehensionError && (
+              <p role="alert" className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950">{comprehensionError}</p>
+            )}
 
             {/* Current Question */}
             {passage.comprehensionQuestions[currentQuestionIndex] && (
