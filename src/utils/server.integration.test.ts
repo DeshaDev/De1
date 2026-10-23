@@ -7,9 +7,9 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
-const SCHOOL_A_CLINICIAN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
+const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
 const SCHOOL_A_EDUCATOR_CODE = 'f0ab09100c10d620b00517b933ab8c45109b7c8eab249f34';
-const SCHOOL_B_CLINICIAN_CODE = '3a105ca0e52fb126fd4ed59979ea6ac2e8ddcd0f0edfcd53';
+const SCHOOL_B_ADMIN_CODE = '3a105ca0e52fb126fd4ed59979ea6ac2e8ddcd0f0edfcd53';
 const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368';
 
 const TEST_ENV = {
@@ -23,11 +23,11 @@ const TEST_ENV = {
     'test-hmac-signing-secret-32chars-minimum-distinct-2026!',
   BASEERA_TENANT_CREDENTIALS: JSON.stringify({
     school_a: {
-      school_admin: SCHOOL_A_CLINICIAN_CODE,
+      school_admin: SCHOOL_A_ADMIN_CODE,
       educator_readonly: SCHOOL_A_EDUCATOR_CODE,
     },
     school_b: {
-      school_admin: SCHOOL_B_CLINICIAN_CODE,
+      school_admin: SCHOOL_B_ADMIN_CODE,
       educator_readonly: SCHOOL_B_EDUCATOR_CODE,
     },
   }),
@@ -166,7 +166,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
   it('allows >10 consecutive valid logins without triggering 429 and returns Arabic school display name', async () => {
     for (let i = 0; i < 11; i++) {
-      const session = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+      const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
       assert.equal(session.tenantId, 'school_a');
       assert.equal(session.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
     }
@@ -203,7 +203,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(noSession.status, 401);
 
-    const session = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const forgedTargets = await fetch(`${baseUrl}/api/remediation/generate-personalized-session`, {
       method: 'POST',
       headers: {
@@ -228,15 +228,15 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
-    const schoolAClinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
-    const schoolBClinician = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
+    const schoolAAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const schoolBAdmin = await loginWithCode(SCHOOL_B_ADMIN_CODE);
 
     // 1. Attempt to inject dyslexiaRiskScore or readingRiskLevel or tenantId -> 400
     const forgedRes = await fetch(`${baseUrl}/api/students`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${schoolAClinician.token}`,
+        Authorization: `Bearer ${schoolAAdmin.token}`,
       },
       body: JSON.stringify({
         id: 'stu-forged-1',
@@ -256,7 +256,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${schoolAClinician.token}`,
+        Authorization: `Bearer ${schoolAAdmin.token}`,
       },
       body: JSON.stringify({
         id: 'stu-impossible-1',
@@ -275,7 +275,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${schoolAClinician.token}`,
+        Authorization: `Bearer ${schoolAAdmin.token}`,
       },
       body: JSON.stringify({
         id: 'stu-too-fast-1',
@@ -294,7 +294,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${schoolAClinician.token}`,
+        Authorization: `Bearer ${schoolAAdmin.token}`,
       },
       body: JSON.stringify({
         id: 'stu-http-school-a-1',
@@ -321,7 +321,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${schoolBClinician.token}`,
+        Authorization: `Bearer ${schoolBAdmin.token}`,
       },
       body: JSON.stringify({
         id: 'stu-http-school-a-1',
@@ -336,14 +336,14 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('enforces strict 4-field PATCH and saves updated AI learningReport + mathTrials via dedicated PUT routes', async () => {
-    const school administrator = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const schoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
 
     // 1. Sending { learningReport } to PATCH /api/students/:id returns 400
     const badPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${school administrator.token}`,
+        Authorization: `Bearer ${schoolAdmin.token}`,
       },
       body: JSON.stringify({
         learningReport: { learningSummary: 'محاولة عبر المسار الخاطئ' },
@@ -356,7 +356,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${school administrator.token}`,
+        Authorization: `Bearer ${schoolAdmin.token}`,
       },
       body: JSON.stringify({
         name: 'نورة بنت سعد العتيبي',
@@ -399,7 +399,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${school administrator.token}`,
+          Authorization: `Bearer ${schoolAdmin.token}`,
         },
         body: JSON.stringify({ learningReport: updatedReport }),
       }
@@ -421,7 +421,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     ] as const) {
       const deprecatedRes = await fetch(`${baseUrl}${route}`, {
         method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${schoolAdmin.token}` },
         body: JSON.stringify({ learningReport: updatedReport }),
       });
       assert.equal(deprecatedRes.status, 404);
@@ -434,7 +434,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${school administrator.token}`,
+          Authorization: `Bearer ${schoolAdmin.token}`,
         },
         body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
       }
@@ -445,7 +445,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(mathBody.student.reversalErrorCount, 1);
     const forgedEnvelopeRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${schoolAdmin.token}` },
       body: JSON.stringify({ mathTrials: buildCanonicalMathTrials(), mathRiskLevel: 'nominal' }),
     });
     assert.equal(forgedEnvelopeRes.status, 400);
@@ -453,7 +453,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     forgedNested.subitizingTrials[0].mathRiskLevel = 'nominal';
     const forgedNestedRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${schoolAdmin.token}` },
       body: JSON.stringify({ mathTrials: forgedNested }),
     });
     assert.equal(forgedNestedRes.status, 400);
@@ -463,7 +463,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     ] as const) {
       const deprecatedRes = await fetch(`${baseUrl}${route}`, {
         method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${schoolAdmin.token}` },
         body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
       });
       assert.equal(deprecatedRes.status, 404);
@@ -478,7 +478,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${school administrator.token}`,
+          Authorization: `Bearer ${schoolAdmin.token}`,
         },
         body: JSON.stringify({ mathTrials: badTrials }),
       }
@@ -487,7 +487,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('persists revoked tokens, audit logs (without child PII), and saved reports across server restart in encrypted security-state.json (mode 600)', async () => {
-    const school administratorA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const schoolAdminA = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const educatorA = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
 
     // Educator is forbidden from reading audit logs
@@ -496,9 +496,9 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(educatorAuditRes.status, 403);
 
-    // Clinician can read tenant-isolated audit logs and they contain zero child PII
+    // School admin can read tenant-isolated audit logs and they contain zero child PII
     const auditRes = await fetch(`${baseUrl}/api/audit-logs`, {
-      headers: { Authorization: `Bearer ${school administratorA.token}` },
+      headers: { Authorization: `Bearer ${schoolAdminA.token}` },
     });
     assert.equal(auditRes.status, 200);
     const auditBody = (await auditRes.json()) as { auditLogs: Array<Record<string, any>> };
@@ -507,10 +507,10 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(serializedAudit.includes('نورة'), false);
     assert.equal(serializedAudit.includes('خالد'), false);
 
-    // Revoke school administratorA token via logout
+    // Revoke schoolAdminA token via logout
     const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${school administratorA.token}` },
+      headers: { Authorization: `Bearer ${schoolAdminA.token}` },
     });
     assert.equal(logoutRes.status, 204);
 
@@ -527,14 +527,14 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
     // Revoked token MUST still return 401 after restart
     const afterRestartRevoked = await fetch(`${baseUrl}/api/students`, {
-      headers: { Authorization: `Bearer ${school administratorA.token}` },
+      headers: { Authorization: `Bearer ${schoolAdminA.token}` },
     });
     assert.equal(afterRestartRevoked.status, 401);
 
     // Fresh login sees persisted report with non-empty recommendations and persisted audit logs
-    const freshClinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const freshSchoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const getStudentsRes = await fetch(`${baseUrl}/api/students`, {
-      headers: { Authorization: `Bearer ${freshClinician.token}` },
+      headers: { Authorization: `Bearer ${freshSchoolAdmin.token}` },
     });
     assert.equal(getStudentsRes.status, 200);
     const studentsData = (await getStudentsRes.json()) as { students: Array<Record<string, any>> };
@@ -558,7 +558,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     }
 
     const schoolBStartedAt = Date.now();
-    const validSchoolB = await loginWithCode(SCHOOL_B_CLINICIAN_CODE);
+    const validSchoolB = await loginWithCode(SCHOOL_B_ADMIN_CODE);
     assert.equal(validSchoolB.tenantId, 'school_b');
     assert.ok(
       Date.now() - schoolBStartedAt >= 1_500,
@@ -566,7 +566,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     );
 
     const schoolAStartedAt = Date.now();
-    const validSchoolA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const validSchoolA = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     assert.equal(validSchoolA.tenantId, 'school_a');
     assert.ok(
       Date.now() - schoolAStartedAt >= 1_500,
