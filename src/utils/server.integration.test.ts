@@ -14,6 +14,7 @@ const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368
 
 const TEST_ENV = {
   ...process.env,
+  GEMINI_API_KEY: '', // Keep integration tests deterministic and prevent external model calls.
   NODE_ENV: 'production',
   TRUST_PROXY_HOPS: '0',
   CLINICAL_STORE_ENCRYPTION_KEY:
@@ -204,6 +205,38 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       ((await deleteUnknownPage.json()) as { error: string }).error,
       'المسار غير موجود.'
     );
+  });
+
+  it('requires a clinical session for AI training and never trusts client-supplied words as teacher-reviewed', async () => {
+    const noSession = await fetch(`${baseUrl}/api/remediation/generate-personalized-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gradeLevel: 3, problematicWords: ['كلمات اخترعها العميل'] }),
+    });
+    assert.equal(noSession.status, 401);
+
+    const session = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const forgedTargets = await fetch(`${baseUrl}/api/remediation/generate-personalized-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.token}`,
+      },
+      body: JSON.stringify({
+        gradeLevel: 3,
+        dialect: 'msa',
+        problematicWords: ['كلمات اخترعها العميل'],
+      }),
+    });
+    assert.equal(forgedTargets.status, 200);
+    const payload = (await forgedTargets.json()) as {
+      targetWordsUsed: string[];
+      targetWordsAreTeacherReviewed: boolean;
+      session: { clinicalRationale: string };
+    };
+    assert.deepEqual(payload.targetWordsUsed, []);
+    assert.equal(payload.targetWordsAreTeacherReviewed, false);
+    assert.match(payload.session.clinicalRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
