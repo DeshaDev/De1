@@ -91,3 +91,15 @@ test('structural checks reject mismatched Arabic syllables and phonics examples'
   badPhonics.phonicsDrills[0].spokenWord = 'كِتَاب';
   assert.equal(isStructurallyValidRemediationSessionPlan(badPhonics), false);
 });
+
+test('structural checks normalize Arabic diacritics when comparing target letters', () => {
+  const plan = generateAdaptiveRemediationPlan({
+    studentName: 'طفل تجريبي',
+    gradeLevel: 3,
+    effectiveWords: [],
+    targetsTeacherReviewed: false,
+  });
+  const withDiacritics = structuredClone(plan);
+  withDiacritics.phonicsDrills[0].options[0].letter = 'سَـ';
+  assert.equal(isStructurallyValidRemediationSessionPlan(withDiacritics), true);
+});
