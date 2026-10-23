@@ -46,12 +46,15 @@ interface Props {
   onCompleteSession: (record: StudentRecord) => void;
   activeStudent?: StudentRecord;
   onProceedToMathLab?: () => void;
+  /** A signed-in clinician account is required to certify human-reviewed WCPM in the stored record. */
+  canVerifyAsTeacher?: boolean;
 }
 
 export const EyeTrackingLabView: React.FC<Props> = ({
   onCompleteSession,
   activeStudent,
   onProceedToMathLab,
+  canVerifyAsTeacher = false,
 }) => {
   const { saveReadingResults } = useAssessment();
 
@@ -196,6 +199,18 @@ export const EyeTrackingLabView: React.FC<Props> = ({
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
     setReadingModeNotice('');
+    // A retry starts a new session. Never carry forward prior answers or review status.
+    setTeacherVerified(false);
+    setTeacherOverridesCount(0);
+    setVerifiedWords([]);
+    setMeasuredWcpm(undefined);
+    setMeasuredAccuracyPercent(undefined);
+    setSelectedAnswers({});
+    setCurrentQuestionIndex(0);
+    setComprehensionScore(0);
+    setMeasuredWpm(0);
+    setFinalDurationSec(0);
+    setIsListening(false);
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
       audioPlaybackUrlRef.current = null;
@@ -478,9 +493,10 @@ export const EyeTrackingLabView: React.FC<Props> = ({
 
   // Teacher confirms verification and proceeds to comprehension
   const handleConfirmVerification = () => {
-    setTeacherVerified(true);
-    setMeasuredWcpm(teacherStats.liveWcpm);
-    setMeasuredAccuracyPercent(teacherStats.liveAccuracy);
+    // A local manual pass is not an authenticated teacher attestation.
+    setTeacherVerified(canVerifyAsTeacher);
+    setMeasuredWcpm(canVerifyAsTeacher ? teacherStats.liveWcpm : undefined);
+    setMeasuredAccuracyPercent(canVerifyAsTeacher ? teacherStats.liveAccuracy : undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -576,11 +592,11 @@ export const EyeTrackingLabView: React.FC<Props> = ({
       oralWcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
       oralReadingAssessed: readingMode === 'oral_audio',
       oralAccuracyPercent: readingMode === 'oral_audio' ? (measuredAccuracyPercent ?? null) : null,
-      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
-      teacherVerifierRole: 'معلم / أخصائي قرائي',
-      teacherVerificationTimestamp: teacherVerified ? nowIso : undefined,
-      teacherWordOverridesCount: teacherOverridesCount,
-      verifiedWordsAlignment: verifiedWords,
+      teacherVerified: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified,
+      teacherVerifierRole: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? 'معلم / أخصائي قرائي' : undefined,
+      teacherVerificationTimestamp: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? nowIso : undefined,
+      teacherWordOverridesCount: readingMode === 'oral_audio' && canVerifyAsTeacher ? teacherOverridesCount : undefined,
+      verifiedWordsAlignment: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? verifiedWords : undefined,
       spokenTranscript: readingMode === 'oral_audio' ? cleanTranscript : undefined,
       speechRecognitionUsed: hasAudioCaptured,
       audioRecordingStarted,
@@ -980,13 +996,13 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 mb-2">
                 <UserCheck className="w-4 h-4 text-amber-700" />
-                <span>مراجعة وتأكيد المعلم / الأخصائي القرائي (Human-in-the-Loop Review)</span>
+                <span>مراجعة كلمات القراءة الجهرية</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
-                تدقيق دقة نطق الكلمات وحساب طلاقة الكلمات الصحيحة (WCPM)
+                مراجعة التفريغ الصوتي والكلمات
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                التفريغ الآلي مسودة قد تخطئ في الكلمات أو اللهجة أو الحركات؛ لا تعتمد نسبة الدقة أو WCPM قبل الاستماع إلى التسجيل ومراجعة كل كلمة. انقر على الكلمة لتغيير تصنيفها، ثم اعتمد النتيجة بعد المراجعة.
+                التفريغ الآلي مسودة قد تخطئ في الكلمات أو اللهجة أو الحركات؛ استمع إلى التسجيل وراجع الكلمات واحدة واحدة. لا يُسجَّل WCPM بوصفه معتمدًا إلا عبر حساب معلّم مخوّل.
               </p>
             </div>
 
@@ -1148,7 +1164,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
                 <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>سيتم توثيق مراجعة المعلم واعتماد الطلاقة بدقة WCPM في التقرير الشامل.</span>
+                <span>{canVerifyAsTeacher ? 'سيُرسل التدقيق مع حساب المعلّم المخوّل ليشتق الخادم قيمة WCPM المعتمدة.' : 'هذه مراجعة محلية للتعلّم فقط؛ سجّل الدخول بحساب معلّم مخوّل لاعتماد WCPM في سجل الطالب.'}</span>
               </div>
 
               <button
@@ -1157,7 +1173,7 @@ export const EyeTrackingLabView: React.FC<Props> = ({
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>اعتماد تدقيق المعلم والانتقال لأسئلة الفهم</span>
+                <span>{canVerifyAsTeacher ? 'اعتماد مراجعة المعلّم والانتقال لأسئلة الفهم' : 'متابعة دون اعتماد رسمي والانتقال لأسئلة الفهم'}</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
