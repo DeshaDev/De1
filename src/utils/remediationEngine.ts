@@ -43,7 +43,7 @@ export interface RemediationMathDrill {
 }
 
 export interface RemediationSessionPlan {
-  /** Legacy API field name; content is educational context, never a clinical rationale. */
+  /** Legacy API field name; content is educational context, never a learning rationale. */
   learningRationale: string;
   phonicsDrills: RemediationPhonicsDrill[];
   syllableDrills: RemediationSyllableDrill[];

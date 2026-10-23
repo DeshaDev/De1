@@ -35,7 +35,7 @@ export function getTenantDisplayLabelAr(session: BaseeraSessionInfo): string {
   return cleanId ? `مدرسة (${cleanId})` : 'المدرسة المعتمدة';
 }
 
-const SESSION_STORAGE_KEY = 'baseera_clinical_session_v1';
+const SESSION_STORAGE_KEY = 'baseera_session_v1';
 let cachedSession: BaseeraSessionInfo | null = null;
 
 export function getStoredBaseeraSession(): BaseeraSessionInfo | null {
@@ -133,7 +133,7 @@ export function clearBaseeraSession(): void {
   }
 }
 
-export async function ensureClinicalSession(): Promise<BaseeraSessionInfo | null> {
+export async function ensureBaseeraSession(): Promise<BaseeraSessionInfo | null> {
   return getStoredBaseeraSession();
 }
 
@@ -145,7 +145,7 @@ export async function authenticatedFetch(
   input: string,
   init: RequestInit = {}
 ): Promise<Response> {
-  const session = await ensureClinicalSession();
+  const session = await ensureBaseeraSession();
   const headers = new Headers(init.headers || {});
   if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
   const response = await fetch(input, { ...init, headers });

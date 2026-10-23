@@ -16,7 +16,7 @@ import {
 import {
   segmentArabicWordIntoSyllables,
   getConfusableLetterGroup,
-} from '../utils/clinicalMetrics';
+} from '../utils/learningMetrics';
 import {
   analyzeTextWithDyslexico,
   computeDyslexicoWeightedLevenshtein,
@@ -170,9 +170,9 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
     [dyslexicoAnalysis]
   );
 
-  const phonologicalCandidatesCount = useMemo(
+  const reviewCandidatesCount = useMemo(
     () =>
-      dyslexicoAnalysis.filter((item) => item.isDyslexiaScreeningCandidate)
+      dyslexicoAnalysis.filter((item) => item.requiresTeacherReview)
         .length,
     [dyslexicoAnalysis]
   );
@@ -1106,7 +1106,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               <p className="text-xs text-slate-600 leading-relaxed">
                 يقترح المحرك ثلاث فئات لغوية من النص المكتوب؛ قد يخطئ في السياق أو اللهجة:
                 <strong className="text-rose-700 mx-1">
-                  (١) فروق كتابية محتملة ({phonologicalCandidatesCount})
+                  (١) فروق كتابية محتملة ({reviewCandidatesCount})
                 </strong>
                 ،
                 <strong className="text-amber-800 mx-1">
@@ -1191,7 +1191,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
                   <span>نتائج المراجعة اللغوية الأولية (انقر لتجربة المقابل المقترح):</span>
                   <span className="font-mono tabular-nums">
-                    إبدالات: {phonologicalCandidatesCount} · إملاء:{' '}
+                    إبدالات: {reviewCandidatesCount} · إملاء:{' '}
                     {orthographicConventionsCount} · لهجة:{' '}
                     {validDialectTokensCount}
                   </span>
@@ -1437,7 +1437,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                           {item.bestCorrection}
                         </td>
                         <td className="py-3 px-3 font-semibold">
-                          {item.isDyslexiaScreeningCandidate ? (
+                          {item.requiresTeacherReview ? (
                             <span className="text-amber-800">
                               لا يكفي للاستدلال؛ راجع السياق والأداء الفعلي
                             </span>

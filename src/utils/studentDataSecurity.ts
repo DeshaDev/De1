@@ -10,7 +10,7 @@ import {
   NumberLineTrialResult,
   TranscodingTrialResult,
   calculateDyscalculiaMetrics,
-} from './clinicalMetrics';
+} from './learningMetrics';
 import {
   ARABIC_DIALECT_PROFILES,
   ArabicDialectCode,
@@ -492,7 +492,7 @@ export function recordFailedAuthAttempt(
 }
 
 // ============================================================================
-// Strict Zod Schemas for Profile PATCH, Clinical Report Update, and Evidence
+// Strict Zod Schemas for Profile PATCH, Learning Report Update, and Evidence
 // ============================================================================
 
 /**
@@ -523,7 +523,7 @@ export const StudentProfilePatchSchema = z
   });
 
 /**
- * Strict schema for saving an updated clinical report (`PUT /api/students/:id/report`).
+ * Strict schema for saving an updated learning report (`PUT /api/students/:id/report`).
  * Requires non-empty exercises and accommodations so saved reports never render blank sections.
  */
 export const LearningReportSchema = z

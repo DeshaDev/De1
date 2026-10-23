@@ -1,65 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  detectOculomotorEventsIDTStyle,
-  runOculomotorHeuristicInference,
   encodeSoundex,
   encodeDoubleMetaphoneLite,
   encodeArabicPhoneticSkeleton,
   computeStandardLevenshtein,
   computeDyslexicoWeightedLevenshtein,
   analyzeTextWithDyslexico,
-  computeIRT2PLProbability,
-  computeIRTFisherInformation,
-  estimateIRTAbilityEAP,
-  selectNextAdaptiveIRTItem,
-  CLINICAL_IRT_ITEM_BANK,
   evaluateOralReadingAlignment,
   normalizeArabicDialectWord,
   ARABIC_DIALECT_PROFILES,
-  type RawGazeSample,
 } from './dyslexiaEngines.ts';
-
-test('I-DT-style heuristic detector extracts fixation events and regression candidates', () => {
-  // Simulate an RTL reading trace:
-  // Fixation 1 at x=700 (word 0, 0..260ms)
-  // Forward saccade to x=550 (word 1, 280..620ms)
-  // Regressive saccade back to x=695 (word 0, 640..1080ms)
-  const samples: RawGazeSample[] = [
-    { x: 700, y: 200, timestampMs: 0, wordIndex: 0 },
-    { x: 703, y: 202, timestampMs: 90, wordIndex: 0 },
-    { x: 698, y: 199, timestampMs: 180, wordIndex: 0 },
-    { x: 701, y: 201, timestampMs: 260, wordIndex: 0 },
-    // Saccade jump left to word 1
-    { x: 550, y: 202, timestampMs: 290, wordIndex: 1 },
-    { x: 554, y: 200, timestampMs: 410, wordIndex: 1 },
-    { x: 548, y: 203, timestampMs: 530, wordIndex: 1 },
-    { x: 551, y: 201, timestampMs: 630, wordIndex: 1 },
-    // Regressive jump right back to word 0
-    { x: 695, y: 200, timestampMs: 660, wordIndex: 0 },
-    { x: 699, y: 202, timestampMs: 820, wordIndex: 0 },
-    { x: 696, y: 198, timestampMs: 960, wordIndex: 0 },
-    { x: 697, y: 201, timestampMs: 1120, wordIndex: 0 },
-  ];
-
-  const { fixations, saccades } = detectOculomotorEventsIDTStyle(samples, {
-    minFixationDurationMs: 120,
-    maxDispersionPx: 30,
-    readingDirection: 'rtl',
-  });
-
-  assert.equal(fixations.length, 3);
-  assert.equal(saccades.length, 2);
-  assert.equal(saccades[0].direction, 'forward');
-  assert.equal(saccades[1].direction, 'regressive');
-
-  const mlResult = runOculomotorHeuristicInference(samples, 5, {
-    readingDirection: 'rtl',
-  });
-  assert.equal(mlResult.ruleVotes.length, 5);
-  assert.ok(mlResult.heuristicRiskScore >= 40);
-  assert.equal(mlResult.features.regressiveSaccadeCount, 1);
-});
 
 test('Dyslexico Soundex, Double Metaphone, and Arabic Phonetic Skeleton match dyslexic spellings', () => {
   // "froot" and "fruit" share the exact same Soundex (F630) and Metaphone (FRT)
@@ -114,37 +65,6 @@ test('Dyslexico Weighted Levenshtein assigns near-zero cost to b/d reversals, tr
   assert.equal(analysis[2].bestCorrection, 'المنظار');
 });
 
-test('Marker/Parallel Learning 2PL IRT engine updates theta, SE, and selects maximum Fisher Information item', () => {
-  const pMid = computeIRT2PLProbability(0, 1.5, 0);
-  assert.ok(Math.abs(pMid - 0.5) < 1e-6);
-
-  const infoPeak = computeIRTFisherInformation(0, 2.0, 0);
-  const infoOff = computeIRTFisherInformation(2.0, 2.0, 0);
-  assert.ok(infoPeak > infoOff);
-
-  // Correct responses increase theta; incorrect responses decrease theta
-  const highEst = estimateIRTAbilityEAP([
-    { discriminationA: 1.8, difficultyB: 0.0, correct: true },
-    { discriminationA: 2.0, difficultyB: 0.8, correct: true },
-  ]);
-  const lowEst = estimateIRTAbilityEAP([
-    { discriminationA: 1.8, difficultyB: 0.0, correct: false },
-    { discriminationA: 1.5, difficultyB: -1.0, correct: false },
-  ]);
-
-  assert.ok(highEst.theta > 0.4);
-  assert.ok(lowEst.theta < -0.4);
-  assert.ok(highEst.standardError < 1.0);
-
-  const nextSelection = selectNextAdaptiveIRTItem(
-    CLINICAL_IRT_ITEM_BANK,
-    ['irt-1'],
-    0.6
-  );
-  assert.ok(nextSelection.nextItem !== null);
-  assert.notEqual(nextSelection.nextItem?.id, 'irt-1');
-});
-
 test('Oral reading fluency alignment computes WCPM, phonetic substitutions, and understands Arabic dialects without false penalty', () => {
   const refWords = ['ذهب', 'الطالب', 'إلى', 'المدرسة', 'صباحاً'];
   const transcript = 'ذهب التالب إلى المدرسه';
@@ -183,20 +103,20 @@ test('Dyslexico 3-way Arabic linguistic classification strictly separates letter
   const talib = byWord.get('التالب');
   assert.ok(talib);
   assert.equal(talib.variationCategory, 'phonological_or_visual_confusion');
-  assert.equal(talib.isDyslexiaScreeningCandidate, true);
+  assert.equal(talib.requiresTeacherReview, true);
   assert.equal(talib.bestCorrection, 'الطالب');
 
   const mindhar = byWord.get('المنضار');
   assert.ok(mindhar);
   assert.equal(mindhar.variationCategory, 'phonological_or_visual_confusion');
-  assert.equal(mindhar.isDyslexiaScreeningCandidate, true);
+  assert.equal(mindhar.requiresTeacherReview, true);
   assert.equal(mindhar.bestCorrection, 'المنظار');
 
   // 2) "المدرسه" -> common digital orthographic convention (ه vs ة), NOT a dyslexia candidate
   const madrasa = byWord.get('المدرسه');
   assert.ok(madrasa);
   assert.equal(madrasa.variationCategory, 'orthographic_convention');
-  assert.equal(madrasa.isDyslexiaScreeningCandidate, false);
+  assert.equal(madrasa.requiresTeacherReview, false);
   assert.equal(madrasa.bestCorrection, 'المدرسة');
 
   // 3) "وشاف" (with proclitic و) and "صوب" -> valid Arabic dialect lexical usage, NOT an error and NOT a dyslexia candidate
@@ -204,14 +124,14 @@ test('Dyslexico 3-way Arabic linguistic classification strictly separates letter
   assert.ok(washaf);
   assert.equal(washaf.variationCategory, 'valid_dialect_lexical');
   assert.equal(washaf.isCorrect, true);
-  assert.equal(washaf.isDyslexiaScreeningCandidate, false);
+  assert.equal(washaf.requiresTeacherReview, false);
   assert.equal(washaf.bestCorrection, 'شاهد');
 
   const sawb = byWord.get('صوب');
   assert.ok(sawb);
   assert.equal(sawb.variationCategory, 'valid_dialect_lexical');
   assert.equal(sawb.isCorrect, true);
-  assert.equal(sawb.isDyslexiaScreeningCandidate, false);
+  assert.equal(sawb.requiresTeacherReview, false);
 });
 
 test('Oral reading alignment supports multi-target dialect synonyms, tanween pause forms, and systematic phonological shifts across unseen words', async () => {
@@ -333,12 +253,12 @@ test('analyzeTextWithDyslexico actively changes token classification based on se
     egByWord.get('تلاميز')?.variationCategory,
     'dialect_phonological_shift'
   );
-  assert.equal(egByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, false);
+  assert.equal(egByWord.get('تلاميز')?.requiresTeacherReview, false);
   assert.equal(
     egByWord.get('الأرية')?.variationCategory,
     'dialect_phonological_shift'
   );
-  assert.equal(egByWord.get('الأرية')?.isDyslexiaScreeningCandidate, false);
+  assert.equal(egByWord.get('الأرية')?.requiresTeacherReview, false);
 
   // 2) In Gulf dialect: "تلاميز" and "الأرية" are NOT Gulf phonological shifts, so they are flagged as confusions,
   // whereas "مسيد" (ج->ي) IS a valid Gulf phonological shift
@@ -348,7 +268,7 @@ test('analyzeTextWithDyslexico actively changes token classification based on se
     gulfByWord.get('تلاميز')?.variationCategory,
     'phonological_or_visual_confusion'
   );
-  assert.equal(gulfByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, true);
+  assert.equal(gulfByWord.get('تلاميز')?.requiresTeacherReview, true);
   assert.equal(
     gulfByWord.get('الأرية')?.variationCategory,
     'phonological_or_visual_confusion'
@@ -357,14 +277,14 @@ test('analyzeTextWithDyslexico actively changes token classification based on se
     gulfByWord.get('مسيد')?.variationCategory,
     'dialect_phonological_shift'
   );
-  assert.equal(gulfByWord.get('مسيد')?.isDyslexiaScreeningCandidate, false);
+  assert.equal(gulfByWord.get('مسيد')?.requiresTeacherReview, false);
 
   // 3) In strict MSA mode ('msa'): neither Egyptian nor Gulf phonological shifts are exempted
   const msaTokens = analyzeTextWithDyslexico('زار تلاميز مسيد في الأرية', 'msa');
   const msaByWord = new Map(msaTokens.map((t) => [t.originalWord, t]));
-  assert.equal(msaByWord.get('تلاميز')?.isDyslexiaScreeningCandidate, true);
-  assert.equal(msaByWord.get('مسيد')?.isDyslexiaScreeningCandidate, true);
-  assert.equal(msaByWord.get('الأرية')?.isDyslexiaScreeningCandidate, true);
+  assert.equal(msaByWord.get('تلاميز')?.requiresTeacherReview, true);
+  assert.equal(msaByWord.get('مسيد')?.requiresTeacherReview, true);
+  assert.equal(msaByWord.get('الأرية')?.requiresTeacherReview, true);
 });
 
 

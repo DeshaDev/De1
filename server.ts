@@ -29,7 +29,7 @@ import {
   validateAndDeriveMathTrials,
   validateAndDeriveSessionFromEvidence,
   buildDeterministicLearningReport,
-} from './src/utils/clinicalSecurity';
+} from './src/utils/studentDataSecurity';
 
 dotenv.config();
 
@@ -167,7 +167,7 @@ function isBaseeraAuthConfigured(): boolean {
       ({ accessCode }) =>
         accessCode === BASEERA_SESSION_SECRET ||
         accessCode === storeKeyHex ||
-        accessCode === 'BASEERA-CLINICAL-2026'
+        accessCode === 'BASEERA-UNSAFE-DEMO-CODE'
     ) &&
     getStoreEncryptionKey() !== null
   );
@@ -386,7 +386,7 @@ function savePersistedStudents(records: StudentRecord[]): boolean {
     encryptJsonPayload(records, key, 'baseera-aes-256-gcm-v1')
   );
   if (!ok) {
-    console.warn('Failed to persist the encrypted clinical store.');
+    console.warn('Failed to persist the encrypted student-data store.');
   }
   return ok;
 }
@@ -417,7 +417,7 @@ function loadPersistedStudents(): StudentRecord[] {
       'baseera-aes-256-gcm-v1'
     );
     if (!Array.isArray(decoded.data)) {
-      throw new Error('Invalid clinical store payload');
+      throw new Error('Invalid student-data store payload');
     }
     const cleaned = decoded.data.map((record) =>
       sanitizeStudentRecord({
@@ -436,7 +436,7 @@ function loadPersistedStudents(): StudentRecord[] {
     ) {
       baseeraStoreReady = false;
       console.warn(
-        'Clinical store could not be safely migrated to the current camera-free and non-diagnostic schema.'
+        'Student-data store could not be safely migrated to the current camera-free and non-diagnostic schema.'
       );
       return createSeededStudents();
     }
@@ -445,7 +445,7 @@ function loadPersistedStudents(): StudentRecord[] {
   } catch {
     baseeraStoreReady = false;
     console.warn(
-      'Failed to load the encrypted clinical store; protected persistence endpoints remain disabled.'
+      'Failed to load the encrypted student-data store; protected persistence endpoints remain disabled.'
     );
     return createSeededStudents();
   }
@@ -608,7 +608,7 @@ function commitStudentMutationWithAudit(
 }
 
 // Role-Based Access Control (RBAC) Middleware for protecting child records & AI analysis
-function requireClinicalAuth(requiredScope: BaseeraScope) {
+function requireBaseeraAuth(requiredScope: BaseeraScope) {
   return (
     req: express.Request,
     res: express.Response,
@@ -623,7 +623,7 @@ function requireClinicalAuth(requiredScope: BaseeraScope) {
     }
     const rawHeader =
       (req.headers.authorization as string) ||
-      (req.headers['x-clinical-session-token'] as string) ||
+      (req.headers['x-baseera-session-token'] as string) ||
       '';
     const verifiedSession = verifyBaseeraSessionToken(
       rawHeader,
@@ -709,7 +709,7 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
   loadSecurityState();
 
-  // Educator / Clinician Authentication & RBAC Session Issuing Endpoint.
+  // School administrator / educator authentication & RBAC Session Issuing Endpoint.
   // Failed attempts are IP-scoped; unauthenticated tenant hints never influence throttling.
   app.post('/api/auth/session', async (req, res) => {
     if (!isBaseeraAuthConfigured() || !baseeraStoreReady || !securityStateReady) {
@@ -833,7 +833,7 @@ async function startServer() {
 
   app.get(
     '/api/auth/session',
-    requireClinicalAuth('students:read'),
+    requireBaseeraAuth('students:read'),
     (req, res) => {
       res.json({
         authenticated: true,
@@ -844,7 +844,7 @@ async function startServer() {
 
   app.post(
     '/api/auth/logout',
-    requireClinicalAuth('students:read'),
+    requireBaseeraAuth('students:read'),
     (req, res) => {
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       REVOKED_BASEERA_SESSIONS.set(session.sessionId, session.expiresAt);
@@ -859,10 +859,10 @@ async function startServer() {
     }
   );
 
-  // Clinician-only, tenant-isolated, PII-free Audit Log endpoint
+  // School-admin-only, tenant-isolated, PII-free Audit Log endpoint
   app.get(
     '/api/audit-logs',
-    requireClinicalAuth('audit:read'),
+    requireBaseeraAuth('audit:read'),
     (req, res) => {
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
       res.json({
@@ -875,7 +875,7 @@ async function startServer() {
   );
 
   // Each authenticated school sees only its own records.
-  app.get('/api/students', requireClinicalAuth('students:read'), (req, res) => {
+  app.get('/api/students', requireBaseeraAuth('students:read'), (req, res) => {
     const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     res.json({
       students: studentsDb.filter(
@@ -889,7 +889,7 @@ async function startServer() {
   // Create new student record with server-derived reading & math metrics from client-reported evidence
   app.post(
     '/api/students',
-    requireClinicalAuth('students:write'),
+    requireBaseeraAuth('students:write'),
     (req, res) => {
       const incoming = req.body as Record<string, unknown> | null;
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
@@ -1065,7 +1065,7 @@ async function startServer() {
   // Store repeat screenings as sessions attached to the existing student identity.
   app.post(
     '/api/students/:id/sessions',
-    requireClinicalAuth('students:write'),
+    requireBaseeraAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
@@ -1335,11 +1335,11 @@ async function startServer() {
 
   app.put(
     '/api/students/:id/math',
-    requireClinicalAuth('students:write'),
+    requireBaseeraAuth('students:write'),
     handleMathTrialsUpdate
   );
 
-  // Dedicated endpoint to persist an updated AI or clinician report (Fixing Finding 1)
+  // Dedicated endpoint to persist an updated AI or learning report (Fixing Finding 1)
   const handleUpdateLearningReport = (
     req: express.Request,
     res: express.Response
@@ -1414,14 +1414,14 @@ async function startServer() {
 
   app.put(
     '/api/students/:id/learning-report',
-    requireClinicalAuth('students:write'),
+    requireBaseeraAuth('students:write'),
     handleUpdateLearningReport
   );
 
   // Strict 4-field profile PATCH (`name`, `schoolName`, `gradeLevel`, `ageYears` only)
   app.patch(
     '/api/students/:id',
-    requireClinicalAuth('students:write'),
+    requireBaseeraAuth('students:write'),
     (req, res) => {
       const { id } = req.params;
       const rawUpdates = req.body as Record<string, unknown> | null;
@@ -1492,7 +1492,7 @@ async function startServer() {
 
   app.delete(
     '/api/students/:id',
-    requireClinicalAuth('students:delete'),
+    requireBaseeraAuth('students:delete'),
     (req, res) => {
       const { id } = req.params;
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
@@ -1526,12 +1526,12 @@ async function startServer() {
   );
 
   // Prevent the server from becoming an unauthenticated paid AI proxy.
-  app.use('/api/ai', requireClinicalAuth('ai:analyze'), aiRateLimiter);
+  app.use('/api/ai', requireBaseeraAuth('ai:analyze'), aiRateLimiter);
 
   // Generate a descriptive learning report only; camera/eye-tracking inputs are not supported.
   app.post(
     '/api/ai/analyze-session',
-    requireClinicalAuth('ai:analyze'),
+    requireBaseeraAuth('ai:analyze'),
     async (req, res) => {
       const body = (req.body || {}) as Record<string, unknown>;
       const {
@@ -1776,7 +1776,7 @@ async function startServer() {
   });
 
   // 2b. Optional AI-assisted educational activity planner; not a diagnostic or validated treatment engine.
-  app.post('/api/remediation/generate-personalized-session', requireClinicalAuth('students:read'), aiRateLimiter, async (req, res) => {
+  app.post('/api/remediation/generate-personalized-session', requireBaseeraAuth('students:read'), aiRateLimiter, async (req, res) => {
     const rawBody = req.body as Record<string, unknown> | null;
     if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
       res.status(400).json({ error: 'بيانات التدريب غير صالحة.' });
@@ -1788,17 +1788,15 @@ async function startServer() {
       res.status(400).json({ error: 'يجب اختيار صف دراسي من 1 إلى 6.' });
       return;
     }
+
     const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof rawBody.studentId === 'string' ? rawBody.studentId.trim().slice(0, 160) : '';
-    // Personalization is derived from the tenant-scoped server record, never from client-supplied words.
     const storedStudent = studentId
       ? studentsDb.find((student) => student.id === studentId && student.tenantId === session.tenantId && student.isDemoRecord !== true)
       : undefined;
     const gradeLevel = storedStudent?.gradeLevel ?? requestedGrade;
-    const allowedDialects = new Set(['msa', 'gulf', 'egyptian', 'levantine', 'maghrebi']);
-    const dialect = typeof rawBody.dialect === 'string' && allowedDialects.has(rawBody.dialect)
-      ? rawBody.dialect
-      : 'msa';
+
+    // Personalization may only use teacher-verified targets from a completed, tenant-scoped session.
     const trustedTargetWords = storedStudent &&
       storedStudent.sessionStatus === 'completed' &&
       storedStudent.teacherVerified === true &&
@@ -1812,154 +1810,30 @@ async function startServer() {
       .slice(0, 8)
       .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
       .filter(Boolean);
-
     const hasTeacherReviewedTargets = cleanWords.length > 0;
-    const effectiveWords =
-      hasTeacherReviewedTargets ? cleanWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'];
-    const targetContext = hasTeacherReviewedTargets
-      ? 'هذه كلمات راجعها معلم يدويًا ويمكن استخدامها أهدافًا تدريبية.'
-      : 'هذه أمثلة عامة للتدريب وليست أخطاء مرصودة لدى الطالب؛ لا تنسبها إليه.';
 
-    const ai = getGenAIClient();
-    if (ai) {
-      try {
-        const prompt = `أنت مساعد تربوي لإنشاء أنشطة تعليمية عربية للقراءة والحس العددي. أنشئ خطة تدريب تعليمية، لا تشخيصًا ولا علاجًا سريريًا، ولا تدّع أنها برنامج علاجي معتمد أو أنها تعتمد على بيانات لم تصل إليك.
-الطفل في الصف ${gradeLevel}، واللهجة المفضلة ${dialect}. لا تحتاج إلى اسم الطفل أو أي مُعرّف شخصي.
-سياق الأهداف: ${targetContext}
-قائمة العمل: [${effectiveWords.join('، ')}].
-
-المطلوب:
-1. phonicsDrills: أربعة أنشطة قصيرة للتدرب على تمييز الحروف العربية المتقاربة في الرسم أو الصوت (ب/ت/ث، ج/ح/خ، س/ش، د/ذ)، بخيارات واضحة وتغذية راجعة تعليمية بسيطة.
-2. syllableDrills: أربع كلمات مناسبة للصف مقسمة إلى مقاطع عربية صحيحة؛ لا تفكك الكلمة بطريقة تخالف النطق المكتوب.
-3. pacerPassage: نص مفهوم من 16–22 كلمة مناسب للصف، مع كلمات يمكن قراءتها ببطء وبتركيز؛ لا تدّع أنه تمرين علاجي لحركة العين.
-4. mathDrills: أربعة أنشطة اختيارية لخط الأعداد والقيمة المكانية، مع شرح يعلّم الخطوات بدل وصف الطفل بأنه متعثر.
-5. learningRationale: أبق اسم الحقل للتوافق البرمجي، لكن اكتب داخله مبررًا تعليميًا موجزًا، لا حكمًا إكلينيكيًا.
-اجعل التعليمات لطيفة وقصيرة وملائمة للطفل. إذا كانت الكلمات أمثلة عامة، فقل ذلك ولا تنسبها إلى أداء الطالب.`;
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                learningRationale: { type: Type.STRING },
-                phonicsDrills: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.INTEGER },
-                      family: { type: Type.STRING },
-                      spokenWord: { type: Type.STRING },
-                      wordMeaning: { type: Type.STRING },
-                      targetLetter: { type: Type.STRING },
-                      options: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.OBJECT,
-                          properties: {
-                            letter: { type: Type.STRING },
-                            letterName: { type: Type.STRING },
-                            isCorrect: { type: Type.BOOLEAN },
-                            explanation: { type: Type.STRING },
-                          },
-                          required: ['letter', 'letterName', 'isCorrect', 'explanation'],
-                        },
-                      },
-                      ruleTip: { type: Type.STRING },
-                    },
-                    required: ['id', 'family', 'spokenWord', 'wordMeaning', 'targetLetter', 'options', 'ruleTip'],
-                  },
-                },
-                syllableDrills: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.INTEGER },
-                      targetWord: { type: Type.STRING },
-                      wordMeaning: { type: Type.STRING },
-                      syllables: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                      },
-                    },
-                    required: ['id', 'targetWord', 'wordMeaning', 'syllables'],
-                  },
-                },
-                pacerPassage: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.INTEGER },
-                    title: { type: Type.STRING },
-                    gradeLevel: { type: Type.STRING },
-                    words: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                    },
-                  },
-                  required: ['id', 'title', 'gradeLevel', 'words'],
-                },
-                mathDrills: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.INTEGER },
-                      targetNumber: { type: Type.INTEGER },
-                      min: { type: Type.INTEGER },
-                      max: { type: Type.INTEGER },
-                      prompt: { type: Type.STRING },
-                    },
-                    required: ['id', 'targetNumber', 'min', 'max', 'prompt'],
-                  },
-                },
-              },
-              required: ['learningRationale', 'phonicsDrills', 'syllableDrills', 'pacerPassage', 'mathDrills'],
-            },
-          },
-        });
-
-        const parsed: unknown = JSON.parse((response.text || '{}').trim());
-        if (!isStructurallyValidRemediationSessionPlan(parsed)) {
-          throw new Error('AI-generated educational plan failed structural consistency checks.');
-        }
-        // The model's free-form rationale is never shown as trusted assessment. Replace it
-        // with a deterministic, provenance-aware explanation authored by the application.
-        parsed.learningRationale = hasTeacherReviewedTargets
-          ? `اقتراح أنشطة تعليمية للصف ${gradeLevel}. أُرسلت كلمات راجعها المعلّم ضمن سياق التوليد، لكن يجب مراجعة ارتباط كل تمرين بالكلمة قبل استخدامه. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`
-          : `اقتراح أنشطة عامة للصف ${gradeLevel}. لا توجد كلمات خطأ موثّقة أُرسلت للتخصيص؛ أمثلة النص ليست أخطاء مرصودة لدى الطفل. لا تمثل هذه الخطة تشخيصًا أو برنامج علاج مُعتمدًا.`;
-        res.json({
-          source: 'gemini-3.8-flash-ai',
-          targetWordsUsed: hasTeacherReviewedTargets ? effectiveWords : [],
-          targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
-          session: parsed,
-        });
-        return;
-      } catch (err) {
-        console.warn('Gemini remediation synthesis fallback triggered:', err);
-      }
-    }
-
-    // Deterministic grade-level educational fallback if the model is unavailable.
-    const deterministicSession = generateAdaptiveRemediationPlan({
+    // Do not show structurally valid but linguistically unreviewed model-generated child activities.
+    // Until a qualified Arabic-language reviewer validates generated items, serve only the curated,
+    // grade-banded bank. Teacher-reviewed target words affect the plan only when they match a bank item.
+    const sessionPlan = generateAdaptiveRemediationPlan({
       studentName: 'الطالب',
-      gradeLevel: Number(gradeLevel),
-      effectiveWords,
+      gradeLevel,
+      effectiveWords: cleanWords,
       targetsTeacherReviewed: hasTeacherReviewedTargets,
     });
+    if (!isStructurallyValidRemediationSessionPlan(sessionPlan)) {
+      res.status(500).json({ error: 'تعذّر تحميل بنك الأنشطة المعتمد بنيويًا.' });
+      return;
+    }
 
     res.json({
-      source: 'rule-based-learning-plan',
-      targetWordsUsed: hasTeacherReviewedTargets ? effectiveWords : [],
+      source: 'curated-grade-banded',
+      targetWordsUsed: hasTeacherReviewedTargets ? cleanWords : [],
       targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
-      session: deterministicSession,
+      session: sessionPlan,
     });
   });
 
-  // 3. Gemini Text-to-Speech (gemini-3.8-flash-lite-tts) for Auditory Support
   app.post('/api/ai/tts', async (req, res) => {
     const { text } = req.body || {};
     if (
@@ -2053,7 +1927,7 @@ async function startServer() {
   });
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Baseera Clinical Server running on http://localhost:${PORT}`);
+    console.log(`Baseera Server running on http://localhost:${PORT}`);
   });
 }
 

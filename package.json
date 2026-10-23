@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/utils/clinicalMetrics.test.ts src/utils/dyslexiaEngines.test.ts src/utils/clinicalSecurity.test.ts src/utils/server.integration.test.ts src/utils/cameraFreeIntegration.test.ts src/utils/scientificIntegrity.test.ts src/utils/remediationEngine.test.ts src/utils/transcriptComparison.test.ts src/data/readingContentQuality.test.ts",
+    "test": "tsx --test src/utils/learningMetrics.test.ts src/utils/dyslexiaEngines.test.ts src/utils/studentDataSecurity.test.ts src/utils/server.integration.test.ts src/utils/cameraFreeIntegration.test.ts src/utils/scientificIntegrity.test.ts src/utils/remediationEngine.test.ts src/utils/transcriptComparison.test.ts src/data/readingContentQuality.test.ts",
     "e2e": "playwright test"
   },
   "dependencies": {
@@ -35,8 +35,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "@types/express": "^4.17.21",
-    "@playwright/test": "1.56.1"
+    "@types/express": "^4.17.21"
   },
   "description": "Baseera: Arabic educational activities for reading, comprehension, and mathematics; no camera or eye tracking."
 }

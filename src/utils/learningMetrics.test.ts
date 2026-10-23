@@ -4,13 +4,13 @@ import {
   calculateDyscalculiaMetrics,
   segmentArabicWordIntoSyllables,
   getConfusableLetterGroup,
-} from './clinicalMetrics.ts';
+} from './learningMetrics.ts';
 import {
   issueBaseeraSessionToken,
   verifyBaseeraSessionToken,
   authorizeSessionScope,
   validateExplicitGuardianConsent,
-} from './clinicalSecurity.ts';
+} from './studentDataSecurity.ts';
 
 test('calculateDyscalculiaMetrics reports measured task observations without inventing a risk classification', () => {
   const subitizing = [
@@ -109,7 +109,7 @@ test('calculateDyscalculiaMetrics normalizes PAE by scale range (scaleMax - scal
   assert.equal(metrics.avgNumberLineMs, 1550);
 });
 
-test('clinicalSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny guardian consent', () => {
+test('studentDataSecurity enforces HMAC-SHA256 RBAC scopes and strict default-deny guardian consent', () => {
   const secret = 'unit-test-hmac-secret-2026';
 
   // 1. Unauthenticated request is rejected with 401

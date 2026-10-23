@@ -22,7 +22,7 @@ import {
   Check
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
-import { segmentArabicWordIntoSyllables } from '../utils/clinicalMetrics';
+import { segmentArabicWordIntoSyllables } from '../utils/learningMetrics';
 import { compareArabicTranscript, type TranscriptComparison } from '../utils/transcriptComparison';
 
 export interface TestWord {

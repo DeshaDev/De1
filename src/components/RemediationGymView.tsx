@@ -41,7 +41,7 @@ interface RemediationGymViewProps {
   onSelectStudent: (id: string) => void;
   onNavigateTab: (tab: AppTabId) => void;
   onOpenReport?: () => void;
-  /** Only signed-in clinicians can request server-generated activity plans. */
+  /** Only signed-in school administrators can request server-generated activity plans. */
   canGeneratePlan?: boolean;
 }
 
@@ -156,10 +156,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setTimeout(() => setCelebrationMessage(''), 3500);
   };
 
-  // Optional authenticated generation of new educational activities for the selected grade.
+  // Optional authenticated selection of curated educational activities for the selected grade.
   const fetchAiSession = async (student: StudentRecord, announce: boolean = true) => {
     if (!canGeneratePlan) {
-      setAiStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتوليد خطة جديدة من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
+      setAiStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
       return;
     }
     setIsLoadingAi(true);
@@ -179,8 +179,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       if (!res.ok) {
         setAiStatusMessage(
           res.status === 401 || res.status === 403
-            ? 'الأنشطة العامة متاحة الآن. لتوليد خطة جديدة من الخادم، سجّل الدخول بحساب معلّم مخوّل.'
-            : 'تعذّر توليد خطة جديدة؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
+            ? 'الأنشطة العامة متاحة الآن. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.'
+            : 'تعذّر تحميل أنشطة الصف؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
         );
         return;
       }
@@ -192,7 +192,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       }
 
       setAiSession(data.session);
-      setAiSource(data.source || 'rule-based-learning-plan');
+      setAiSource(data.source || 'curated-grade-banded');
       setPhonicsIdx(0);
       setSyllableIdx(0);
       setPacerWordIdx(0);
@@ -206,7 +206,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
       if (announce) {
         triggerCelebration(
-          `تم إعداد أنشطة تعليمية مقترحة للصف ${student.gradeLevel}.`,
+          `تم اختيار أنشطة تعليمية للصف ${student.gradeLevel}.`,
           40
         );
       }
@@ -217,7 +217,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     }
   };
 
-  // Only request protected server plans for an authenticated clinician.
+  // Only request the curated server plan for an authenticated school administrator.
   // Keep general activities immediately available for children without a teacher session.
   useEffect(() => {
     if (canGeneratePlan) {
@@ -335,7 +335,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       currentPhonics.ruleTip ||
       `استمع لصوت حرف ال${currentPhonics.targetLetter} في بداية كلمة «${currentPhonics.spokenWord}»، وانتبه لعدد النقاط وموضعها.`;
     setActiveScaffold({
-      title: `مساعد الذكاء الاصطناعي (عائلة ${currentPhonics.family})`,
+      title: `مساعدة النشاط (عائلة ${currentPhonics.family})`,
       text: hint,
       audioText: hint,
     });
@@ -392,7 +392,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 التدريب المتدرّج للقراءة والحساب
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                {aiSession && aiSource === 'gemini-3.8-flash-ai' ? 'اقتراح مولّد آليًا — يحتاج مراجعة' : aiSession ? 'خطة تدريب مولّدة بالقواعد' : 'أنشطة تدريبية'}
+                {aiSession && aiSource === 'curated-grade-banded' ? 'بنك أنشطة متدرج حسب الصف' : 'أنشطة تدريبية عامة'}
               </span>
             </div>
             <p className="text-[11px] text-emerald-200/90 flex items-center gap-1.5 flex-wrap">
@@ -426,13 +426,13 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAi ? 'animate-spin' : ''}`} />
-            <span>{isLoadingAi ? 'جارٍ التوليد...' : 'تحديث بالذكاء الاصطناعي'}</span>
+            <span>{isLoadingAi ? 'جارٍ التحميل...' : 'تحديث أنشطة الصف'}</span>
           </button>
         </div>
       </div>
 
       <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-        عند طلب توليد أنشطة جديدة، يُرسل الصف واللهجة وكلمات التدريب التي راجعها المعلّم إلى خدمة التوليد إذا كانت مفعّلة. لا يُرسل اسم الطفل أو رقم سجله إلى نموذج التوليد. ويمكنك متابعة الأنشطة العامة دون طلب توليد جديد.
+        يعتمد تحديث الأنشطة على بنك ثابت متدرج حسب الصف. لا تُعرض أنشطة مولّدة آليًا للأطفال قبل مراجعة لغوية وتربوية متخصصة. ولا تؤثر الكلمات التي راجعها المعلّم في النشاط إلا إذا طابقت كلمة موجودة في بنك الأنشطة.
       </p>
       {aiStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{aiStatusMessage}</p>}
 

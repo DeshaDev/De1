@@ -4,7 +4,7 @@ import { ARABIC_READING_PASSAGES } from '../data/seedData';
 import {
   validateAndDeriveSessionFromEvidence,
   buildDeterministicLearningReport,
-} from './clinicalSecurity';
+} from './studentDataSecurity';
 
 test('Camera-Free Reading-Only Modality Integration', async (t) => {
   const passage = ARABIC_READING_PASSAGES[0]; // Grade 2, 52 words

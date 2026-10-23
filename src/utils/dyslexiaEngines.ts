@@ -1,529 +1,10 @@
 /**
- * Early-stage screening prototypes:
- * 1. I-DT-style dispersion-threshold gaze-event extraction implemented in this repository.
- * 2. Hand-authored heuristic rules, not a trained Random Forest/RNN or a third-party company's model.
- * 3. Arabic phonological/orthographic comparison and an experimental IRT-style item-selection demo.
- * The item parameters and risk thresholds have not been calibrated on representative student data.
+ * Arabic language comparison helpers for educational reading practice.
+ * These heuristic outputs are exploratory, are not normed, and do not diagnose learning disorders.
+ * This product contains no camera or eye-tracking workflow.
  */
 
-// ============================================================================
-// 1. REPOSITORY-IMPLEMENTED I-DT-STYLE OCULOMOTOR EVENT EXTRACTION
-// ============================================================================
-
-export interface RawGazeSample {
-  x: number;
-  y: number;
-  timestampMs: number;
-  wordIndex?: number | null;
-  confidence?: number;
-}
-
-export interface DetectedFixationEvent {
-  id: number;
-  startTimeMs: number;
-  endTimeMs: number;
-  durationMs: number;
-  centroidX: number;
-  centroidY: number;
-  dispersionPx: number;
-  sampleCount: number;
-  wordIndex: number | null;
-}
-
-export interface DetectedSaccadeEvent {
-  id: number;
-  startTimeMs: number;
-  endTimeMs: number;
-  durationMs: number;
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
-  amplitudePx: number;
-  peakVelocityPxPerSec: number;
-  direction: 'forward' | 'regressive' | 'line_sweep';
-  fromWordIndex: number | null;
-  toWordIndex: number | null;
-}
-
-export interface OculomotorFeatureVector {
-  fixationCount: number;
-  meanFixationDurationMs: number;
-  stdFixationDurationMs: number;
-  p90FixationDurationMs: number;
-  saccadeCount: number;
-  forwardSaccadeCount: number;
-  regressiveSaccadeCount: number;
-  regressionRatePercent: number;
-  regressionsPer100Words: number;
-  meanSaccadeAmplitudePx: number;
-  totalScanpathLengthPx: number;
-  temporalDurationAutocorrelation: number;
-}
-
-export interface HeuristicRuleVote {
-  ruleId: number;
-  ruleNameAr: string;
-  primaryFeature: string;
-  normalizedRuleScore: number;
-  decisionPathAr: string;
-}
-
-export interface OculomotorHeuristicResult {
-  heuristicRiskScore: number; // 0..100 heuristic risk score
-  classification: 'nominal' | 'moderate_risk' | 'high_dyslexia_risk';
-  classificationLabelAr: string;
-  modelArchitectureType: 'heuristic_rule_ensemble';
-  clinicalValidationDisclaimerAr: string;
-  ruleVotes: HeuristicRuleVote[];
-  temporalHeuristicScore: number; // 0..100 temporal sequence instability
-  weightedIndicators: {
-    featureNameAr: string;
-    weightPercent: number;
-    observedValue: string;
-    heuristicReferenceRange: string;
-  }[];
-  features: OculomotorFeatureVector;
-  fixations: DetectedFixationEvent[];
-  saccades: DetectedSaccadeEvent[];
-}
-
-export interface OculomotorDetectionOptions {
-  minFixationDurationMs?: number; // Default 120ms (clinical reading threshold)
-  maxDispersionPx?: number; // Default 45px (~1.2 deg visual angle)
-  readingDirection?: 'rtl' | 'ltr'; // Default 'rtl' for Arabic
-}
-
-/**
- * Repository implementation inspired by dispersion-threshold and velocity-threshold
- * event-detection approaches (I-DT/I-VT); this is not the PyGaze or GazeParser package.
- */
-export function detectOculomotorEventsIDTStyle(
-  samples: RawGazeSample[],
-  options?: OculomotorDetectionOptions
-): {
-  fixations: DetectedFixationEvent[];
-  saccades: DetectedSaccadeEvent[];
-} {
-  const minDur = options?.minFixationDurationMs ?? 120;
-  const maxDisp = options?.maxDispersionPx ?? 45;
-  const dir = options?.readingDirection ?? 'rtl';
-
-  if (!samples || samples.length < 2) {
-    return { fixations: [], saccades: [] };
-  }
-
-  // Sort chronologically
-  const sorted = [...samples].sort((a, b) => a.timestampMs - b.timestampMs);
-  const fixations: DetectedFixationEvent[] = [];
-
-  const calcDispersion = (windowSamples: RawGazeSample[]): number => {
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const s of windowSamples) {
-      if (s.x < minX) minX = s.x;
-      if (s.x > maxX) maxX = s.x;
-      if (s.y < minY) minY = s.y;
-      if (s.y > maxY) maxY = s.y;
-    }
-    return maxX - minX + (maxY - minY);
-  };
-
-  let i = 0;
-  while (i < sorted.length) {
-    // Expand window until duration >= minDur
-    let j = i;
-    while (
-      j < sorted.length &&
-      sorted[j].timestampMs - sorted[i].timestampMs < minDur
-    ) {
-      j++;
-    }
-
-    if (j >= sorted.length) {
-      break;
-    }
-
-    let windowSlice = sorted.slice(i, j + 1);
-    if (calcDispersion(windowSlice) <= maxDisp) {
-      // Expand window as long as dispersion remains within maxDisp
-      while (j + 1 < sorted.length) {
-        const candidateSlice = sorted.slice(i, j + 2);
-        if (calcDispersion(candidateSlice) <= maxDisp) {
-          j++;
-          windowSlice = candidateSlice;
-        } else {
-          break;
-        }
-      }
-
-      const startTimeMs = windowSlice[0].timestampMs;
-      const endTimeMs = windowSlice[windowSlice.length - 1].timestampMs;
-      const durationMs = Math.max(minDur, Math.round(endTimeMs - startTimeMs));
-      const centroidX =
-        Math.round(
-          (windowSlice.reduce((acc, s) => acc + s.x, 0) / windowSlice.length) *
-            10
-        ) / 10;
-      const centroidY =
-        Math.round(
-          (windowSlice.reduce((acc, s) => acc + s.y, 0) / windowSlice.length) *
-            10
-        ) / 10;
-      const dispersionPx = Math.round(calcDispersion(windowSlice) * 10) / 10;
-
-      // Majority vote for wordIndex during fixation window
-      const wordCounts = new Map<number, number>();
-      for (const s of windowSlice) {
-        if (typeof s.wordIndex === 'number' && s.wordIndex >= 0) {
-          wordCounts.set(s.wordIndex, (wordCounts.get(s.wordIndex) || 0) + 1);
-        }
-      }
-      let dominantWordIdx: number | null = null;
-      let bestCount = 0;
-      for (const [wIdx, cnt] of wordCounts.entries()) {
-        if (cnt > bestCount) {
-          bestCount = cnt;
-          dominantWordIdx = wIdx;
-        }
-      }
-
-      fixations.push({
-        id: fixations.length + 1,
-        startTimeMs,
-        endTimeMs,
-        durationMs,
-        centroidX,
-        centroidY,
-        dispersionPx,
-        sampleCount: windowSlice.length,
-        wordIndex: dominantWordIdx,
-      });
-
-      i = j + 1;
-    } else {
-      i++;
-    }
-  }
-
-  // Construct Saccades between consecutive Fixations
-  const saccades: DetectedSaccadeEvent[] = [];
-  for (let k = 0; k < fixations.length - 1; k++) {
-    const f1 = fixations[k];
-    const f2 = fixations[k + 1];
-    const dx = f2.centroidX - f1.centroidX;
-    const dy = f2.centroidY - f1.centroidY;
-    const amplitudePx = Math.round(Math.hypot(dx, dy) * 10) / 10;
-    const durationMs = Math.max(16, Math.round(f2.startTimeMs - f1.endTimeMs));
-    const peakVelocityPxPerSec = Math.round(
-      (amplitudePx / (durationMs / 1000)) * 1.65
-    );
-
-    let direction: 'forward' | 'regressive' | 'line_sweep' = 'forward';
-    if (Math.abs(dy) > 48 && Math.abs(dx) > 120) {
-      // Line return sweep
-      direction = 'line_sweep';
-    } else if (
-      typeof f1.wordIndex === 'number' &&
-      typeof f2.wordIndex === 'number' &&
-      f1.wordIndex !== f2.wordIndex
-    ) {
-      direction = f2.wordIndex < f1.wordIndex ? 'regressive' : 'forward';
-    } else {
-      // Coordinate-based progression: in RTL (Arabic), reading moves right-to-left (dx < 0)
-      if (dir === 'rtl') {
-        direction = dx > 14 ? 'regressive' : 'forward';
-      } else {
-        direction = dx < -14 ? 'regressive' : 'forward';
-      }
-    }
-
-    saccades.push({
-      id: k + 1,
-      startTimeMs: f1.endTimeMs,
-      endTimeMs: f2.startTimeMs,
-      durationMs,
-      startX: f1.centroidX,
-      startY: f1.centroidY,
-      endX: f2.centroidX,
-      endY: f2.centroidY,
-      amplitudePx,
-      peakVelocityPxPerSec,
-      direction,
-      fromWordIndex: f1.wordIndex,
-      toWordIndex: f2.wordIndex,
-    });
-  }
-
-  return { fixations, saccades };
-}
-
-/**
- * Extracts oculomotor features and applies five manually weighted heuristic rules.
- * This is not a trained machine-learning model or a reproduction of any vendor architecture.
- */
-export function runOculomotorHeuristicInference(
-  samples: RawGazeSample[],
-  wordCount: number = 25,
-  options?: OculomotorDetectionOptions
-): OculomotorHeuristicResult {
-  const { fixations, saccades } = detectOculomotorEventsIDTStyle(samples, options);
-
-  const durations = fixations.map((f) => f.durationMs);
-  const fixationCount = fixations.length;
-  const meanFixationDurationMs =
-    fixationCount > 0
-      ? Math.round(durations.reduce((a, b) => a + b, 0) / fixationCount)
-      : 0;
-
-  const variance =
-    fixationCount > 1
-      ? durations.reduce(
-          (acc, d) => acc + Math.pow(d - meanFixationDurationMs, 2),
-          0
-        ) / fixationCount
-      : 0;
-  const stdFixationDurationMs = Math.round(Math.sqrt(variance));
-
-  const sortedDurations = [...durations].sort((a, b) => a - b);
-  const p90FixationDurationMs =
-    sortedDurations.length > 0
-      ? sortedDurations[Math.floor(sortedDurations.length * 0.9)]
-      : 0;
-
-  const saccadeCount = saccades.length;
-  const regressiveSaccadeCount = saccades.filter(
-    (s) => s.direction === 'regressive'
-  ).length;
-  const forwardSaccadeCount = saccades.filter(
-    (s) => s.direction === 'forward'
-  ).length;
-
-  const regressionRatePercent =
-    saccadeCount > 0
-      ? Math.round((regressiveSaccadeCount / saccadeCount) * 1000) / 10
-      : 0;
-
-  const regressionsPer100Words =
-    wordCount > 0
-      ? Math.round((regressiveSaccadeCount / wordCount) * 100 * 10) / 10
-      : 0;
-
-  const totalScanpathLengthPx = Math.round(
-    saccades.reduce((acc, s) => acc + s.amplitudePx, 0)
-  );
-  const meanSaccadeAmplitudePx =
-    saccadeCount > 0 ? Math.round(totalScanpathLengthPx / saccadeCount) : 0;
-
-  // Compute temporal sequence lag-1 autocorrelation & recurrent state gate
-  let temporalDurationAutocorrelation = 0;
-  if (durations.length >= 3 && variance > 1) {
-    let cov = 0;
-    for (let i = 0; i < durations.length - 1; i++) {
-      cov +=
-        (durations[i] - meanFixationDurationMs) *
-        (durations[i + 1] - meanFixationDurationMs);
-    }
-    temporalDurationAutocorrelation =
-      Math.round((cov / ((durations.length - 1) * variance)) * 100) / 100;
-  }
-
-  // Exponentially smoothed heuristic state over fixation durations and regressions (not an RNN).
-  let hiddenState = 0.25;
-  for (let i = 0; i < fixations.length; i++) {
-    const durNorm = Math.min(1, Math.max(0, (fixations[i].durationMs - 200) / 350));
-    const isReg =
-      i > 0 && saccades[i - 1]?.direction === 'regressive' ? 1.0 : 0.0;
-    const inputGate = 0.65 * durNorm + 0.35 * isReg;
-    hiddenState = 0.6 * hiddenState + 0.4 * inputGate;
-  }
-  const temporalHeuristicScore = Math.round(
-    Math.min(99, Math.max(4, hiddenState * 100))
-  );
-
-  const features: OculomotorFeatureVector = {
-    fixationCount,
-    meanFixationDurationMs,
-    stdFixationDurationMs,
-    p90FixationDurationMs,
-    saccadeCount,
-    forwardSaccadeCount,
-    regressiveSaccadeCount,
-    regressionRatePercent,
-    regressionsPer100Words,
-    meanSaccadeAmplitudePx,
-    totalScanpathLengthPx,
-    temporalDurationAutocorrelation,
-  };
-
-  // Five hand-authored heuristic rules; thresholds and weights are not clinically calibrated.
-  // Rule 1: Fixation-duration thresholds (Lexical & Phonological Processing Latency)
-  const rule1Score =
-    meanFixationDurationMs >= 380
-      ? 0.88
-      : meanFixationDurationMs >= 310
-        ? 0.62
-        : meanFixationDurationMs >= 260
-          ? 0.35
-          : 0.12;
-  const rule1Vote: HeuristicRuleVote = {
-    ruleId: 1,
-    ruleNameAr: 'شجرة القرار ١: كمون التثبيت البؤري (Fixation Latency)',
-    primaryFeature: 'meanFixationDurationMs',
-    normalizedRuleScore: rule1Score,
-    decisionPathAr:
-      meanFixationDurationMs >= 310
-        ? `زمن التثبيت المحسوب ${meanFixationDurationMs}ms تجاوز حد المحاكاة 310ms.`
-        : `زمن التثبيت المحسوب ${meanFixationDurationMs}ms لا يتجاوز حد المحاكاة 310ms.`,
-  };
-
-  // Rule 2: Regressive-saccade density
-  const rule2Score =
-    regressionRatePercent >= 28
-      ? 0.91
-      : regressionRatePercent >= 19
-        ? 0.64
-        : regressionRatePercent >= 12
-          ? 0.32
-          : 0.10;
-  const rule2Vote: HeuristicRuleVote = {
-    ruleId: 2,
-    ruleNameAr: 'شجرة القرار ٢: كثافة القفزات التراجعية (Regressive Saccades)',
-    primaryFeature: 'regressionRatePercent',
-    normalizedRuleScore: rule2Score,
-    decisionPathAr:
-      regressionRatePercent >= 19
-        ? `نسبة التراجع المحسوبة ${regressionRatePercent}% تجاوزت حد المحاكاة 19%.`
-        : `نسبة التراجع المحسوبة ${regressionRatePercent}% لا تتجاوز حد المحاكاة 19%.`,
-  };
-
-  // Rule 3: Upper-tail fixation duration
-  const rule3Score =
-    p90FixationDurationMs >= 520
-      ? 0.86
-      : p90FixationDurationMs >= 390
-        ? 0.58
-        : 0.15;
-  const rule3Vote: HeuristicRuleVote = {
-    ruleId: 3,
-    ruleNameAr: 'شجرة القرار ٣: ذروة التثبيتات المطوّلة (P90 Lexical Bottleneck)',
-    primaryFeature: 'p90FixationDurationMs',
-    normalizedRuleScore: rule3Score,
-    decisionPathAr:
-      p90FixationDurationMs >= 390
-        ? `قيمة P90 في هذه العينة ${p90FixationDurationMs}ms تجاوزت حد المحاكاة 390ms.`
-        : `قيمة P90 في هذه العينة ${p90FixationDurationMs}ms لا تتجاوز حد المحاكاة 390ms.`,
-  };
-
-  // Rule 4: Saccade amplitude
-  const rule4Score =
-    meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 55
-      ? 0.78
-      : meanSaccadeAmplitudePx <= 80
-        ? 0.48
-        : 0.16;
-  const rule4Vote: HeuristicRuleVote = {
-    ruleId: 4,
-    ruleNameAr: 'شجرة القرار ٤: مدى القفزة البصرية والتزاحم (Saccadic Span)',
-    primaryFeature: 'meanSaccadeAmplitudePx',
-    normalizedRuleScore: rule4Score,
-    decisionPathAr:
-      meanSaccadeAmplitudePx > 0 && meanSaccadeAmplitudePx <= 65
-        ? `متوسط الإزاحة ${meanSaccadeAmplitudePx}px يقع في نطاق المحاكاة الأعلى حساسية.`
-        : `متوسط الإزاحة ${meanSaccadeAmplitudePx}px خارج نطاق المحاكاة الأعلى حساسية.`,
-  };
-
-  // Rule 5: Smoothed temporal heuristic state
-  const rule5Score = temporalHeuristicScore / 100;
-  const rule5Vote: HeuristicRuleVote = {
-    ruleId: 5,
-    ruleNameAr: 'شجرة القرار ٥: الشبكة التسلسلية الزمنية (Smoothed temporal heuristic rule)',
-    primaryFeature: 'temporalHeuristicScore',
-    normalizedRuleScore: Math.round(rule5Score * 100) / 100,
-    decisionPathAr:
-      temporalHeuristicScore >= 55
-        ? `المؤشر الزمني الداخلي ${temporalHeuristicScore}% تجاوز عتبة المحاكاة 55%.`
-        : `المؤشر الزمني الداخلي ${temporalHeuristicScore}% لا يتجاوز عتبة المحاكاة 55%.`,
-  };
-
-  const ruleVotes = [rule1Vote, rule2Vote, rule3Vote, rule4Vote, rule5Vote];
-
-  // Weighted combination of manually selected heuristic rule scores
-  const ensembleProb =
-    rule1Score * 0.28 +
-    rule2Score * 0.26 +
-    rule3Score * 0.16 +
-    rule4Score * 0.12 +
-    rule5Score * 0.18;
-
-  const heuristicRiskScore = Math.round(
-    Math.min(98, Math.max(4, ensembleProb * 100))
-  );
-
-  let classification: 'nominal' | 'moderate_risk' | 'high_dyslexia_risk' =
-    'nominal';
-  let classificationLabelAr = 'مؤشر فرز أولي ضمن النطاق المتوقع (طلاقة بصرية سريعة)';
-  if (heuristicRiskScore >= 62) {
-    classification = 'high_dyslexia_risk';
-    classificationLabelAr =
-      'مؤشر فرز أولي مرتفع لعسر القراءة (يستوجب تقييماً سريرياً متخصصاً)';
-  } else if (heuristicRiskScore >= 38) {
-    classification = 'moderate_risk';
-    classificationLabelAr =
-      'مؤشر فرز أولي متوسط لصعوبات المعالجة الفونولوجية يتطلب متابعة';
-  }
-
-  return {
-    heuristicRiskScore,
-    classification,
-    classificationLabelAr,
-    modelArchitectureType: 'heuristic_rule_ensemble',
-    clinicalValidationDisclaimerAr:
-      'يعتمد هذا المصنف على ٥ قواعد قرار استدلالية موزونة (Heuristic Rule Ensemble) مع تراكم تسلسلي زمني للميزات الحركية البصرية المستخلصة، وهو أداة فرز تربوية أولية غير مُجازة سريرياً ولا تُغني عن التشخيص الإكلينيكي المعتمد.',
-    ruleVotes,
-    temporalHeuristicScore,
-    weightedIndicators: [
-      {
-        featureNameAr: 'متوسط زمن التثبيت البؤري (Mean Fixation Duration)',
-        weightPercent: 28,
-        observedValue: `${meanFixationDurationMs} ms`,
-        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 200–260 ms',
-      },
-      {
-        featureNameAr: 'نسبة القفزات التراجعية (Regressive Saccade Ratio)',
-        weightPercent: 26,
-        observedValue: `${regressionRatePercent}% (${regressionsPer100Words}/100 كلمة)`,
-        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 8–15%',
-      },
-      {
-        featureNameAr: 'بوابة التسلسل الزمني المتكرر (Smoothed temporal heuristic state)',
-        weightPercent: 18,
-        observedValue: `${temporalHeuristicScore}%`,
-        heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 35%',
-      },
-      {
-        featureNameAr: 'مدة التثبيت عند الرتبة المئوية ٩٠ داخل الجلسة (P90 Fixation Burst)',
-        weightPercent: 16,
-        observedValue: `${p90FixationDurationMs} ms`,
-        heuristicReferenceRange: 'عتبة داخلية غير معيارية: أقل من 350 ms',
-      },
-      {
-        featureNameAr: 'متوسط مدى القفزة البصرية (Mean Saccade Amplitude)',
-        weightPercent: 12,
-        observedValue: `${meanSaccadeAmplitudePx} px`,
-        heuristicReferenceRange: 'عتبة داخلية غير معيارية: 70–130 px',
-      },
-    ],
-    features,
-    fixations,
-    saccades,
-  };
-}
-
-// ============================================================================
-// 2. DYSLEXICO ENGINE: PHONETIC MATCHING & WEIGHTED LEVENSHTEIN DISTANCE
+// 1. ARABIC PHONETIC AND ORTHOGRAPHIC COMPARISON
 // ============================================================================
 
 export type DyslexicPatternType =
@@ -553,7 +34,7 @@ export interface DyslexicoWordAnalysis {
   isCorrect: boolean;
   variationCategory: LinguisticVariationCategory;
   variationCategoryLabelAr: string;
-  isDyslexiaScreeningCandidate: boolean;
+  requiresTeacherReview: boolean;
   contextualCautionAr: string;
   language: 'ar' | 'en';
   phoneticCodeInput: string;
@@ -988,7 +469,7 @@ export function computeDyslexicoWeightedLevenshtein(
 }
 
 // Built-in bilingual lexicon for real-time Dyslexico spellchecking & phonetic matching
-const ENGLISH_CLINICAL_LEXICON = [
+const ENGLISH_SPECIALIST_TERMINOLOGY = [
   'fruit',
   'the',
   'reading',
@@ -1698,7 +1179,7 @@ export function normalizeArabicDialectWord(
   };
 }
 
-const ARABIC_CLINICAL_LEXICON = [
+const ARABIC_SPECIALIST_TERMINOLOGY = [
   'قرأ',
   'الطالب',
   'طلاب',
@@ -1981,8 +1462,8 @@ export function analyzeTextWithDyslexico(
     const language: 'ar' | 'en' = isArabic ? 'ar' : 'en';
 
     const lexicon = isArabic
-      ? ARABIC_CLINICAL_LEXICON
-      : ENGLISH_CLINICAL_LEXICON;
+      ? ARABIC_SPECIALIST_TERMINOLOGY
+      : ENGLISH_SPECIALIST_TERMINOLOGY;
 
     const phoneticCodeInput = isArabic
       ? encodeArabicPhoneticSkeleton(cleanWord)
@@ -2008,7 +1489,7 @@ export function analyzeTextWithDyslexico(
         isCorrect: true,
         variationCategory: 'exact_lexicon_match',
         variationCategoryLabelAr: 'كلمة فصيحة/معجمية مطابقة',
-        isDyslexiaScreeningCandidate: false,
+        requiresTeacherReview: false,
         contextualCautionAr: 'مطابقة تامة للمعجم العربي المدرسي.',
         language,
         phoneticCodeInput,
@@ -2126,7 +1607,7 @@ export function analyzeTextWithDyslexico(
       'phonological_or_visual_confusion';
     let variationCategoryLabelAr =
       'تبديل حرفي بصري أو صوتي محتمل (يتطلب تكرار السياق)';
-    let isDyslexiaScreeningCandidate = true;
+    let requiresTeacherReview = true;
     let isCorrectToken = false;
     let contextualCautionAr =
       'ملاحظة حرفية منفردة — الخطأ الفردي لا يساوي عسر القراءة؛ يلزم النظر إلى سياق القراءة وتكرار النمط.';
@@ -2138,7 +1619,7 @@ export function analyzeTextWithDyslexico(
       variationCategory = 'valid_dialect_lexical';
       variationCategoryLabelAr =
         'استعمال لهجي أو معجمي عربي صحيح (لا يُعدّ خطأً)';
-      isDyslexiaScreeningCandidate = false;
+      requiresTeacherReview = false;
       isCorrectToken = true;
       contextualCautionAr =
         dialectCheck.dialectNoteAr ||
@@ -2151,7 +1632,7 @@ export function analyzeTextWithDyslexico(
       variationCategory = 'dialect_phonological_shift';
       variationCategoryLabelAr =
         'نطق لهجي صوتي طبيعي مطابق للهجة المحددة (لا يُعدّ مؤشر عسر قراءة)';
-      isDyslexiaScreeningCandidate = false;
+      requiresTeacherReview = false;
       isCorrectToken = true;
       contextualCautionAr =
         dialectCheck?.dialectNoteAr ||
@@ -2165,7 +1646,7 @@ export function analyzeTextWithDyslexico(
       variationCategory = 'orthographic_convention';
       variationCategoryLabelAr =
         'اختلاف إملائي أو تطبيع كتابي (ليس مؤشر عسر قراءة)';
-      isDyslexiaScreeningCandidate = false;
+      requiresTeacherReview = false;
       isCorrectToken = false;
       contextualCautionAr =
         dialectCheck?.dialectNoteAr ||
@@ -2178,7 +1659,7 @@ export function analyzeTextWithDyslexico(
       isCorrect: isCorrectToken,
       variationCategory,
       variationCategoryLabelAr,
-      isDyslexiaScreeningCandidate,
+      requiresTeacherReview,
       contextualCautionAr,
       language,
       phoneticCodeInput,
@@ -2201,300 +1682,7 @@ export function analyzeTextWithDyslexico(
 }
 
 // ============================================================================
-// 3. MARKER LEARNING & PARALLEL LEARNING: 2PL IRT ADAPTIVE ENGINE & SPEECH
-// ============================================================================
-
-export interface IRTAssessmentItem {
-  id: string;
-  domain:
-    | 'phonological_awareness'
-    | 'orthographic_mirror'
-    | 'ran_lexical'
-    | 'morphological_decoding';
-  domainLabelAr: string;
-  promptAr: string;
-  stimulusText: string;
-  options: string[];
-  correctIndex: number;
-  discriminationA: number; // a_i in [0.8, 2.4]
-  difficultyB: number; // b_i in [-2.5, +2.5]
-  clinicalRationaleAr: string;
-}
-
-export interface IRTResponseRecord {
-  item: IRTAssessmentItem;
-  selectedIndex: number;
-  correct: boolean;
-  reactionTimeMs: number;
-  thetaBefore: number;
-  thetaAfter: number;
-  standardErrorAfter: number;
-  itemInformation: number;
-}
-
-export const CLINICAL_IRT_ITEM_BANK: IRTAssessmentItem[] = [
-  {
-    id: 'irt-1',
-    domain: 'orthographic_mirror',
-    domainLabelAr: 'التمييز البصري للحروف المتناظرة',
-    promptAr: 'اختر الكلمة الصحيحة إملائياً التي تعني «الجهاز البصري لرصد الكواكب»:',
-    stimulusText: 'المِـ...ـظار الفلكي',
-    options: ['المِنْظَار', 'المِنْضَار', 'المِتْظَار', 'المِنْطَار'],
-    correctIndex: 0,
-    discriminationA: 1.45,
-    difficultyB: -1.4,
-    clinicalRationaleAr: 'مثال تعليمي لملاحظة اختلاف حرف داخل كلمة؛ ليس بندًا معياريًا مثبتًا ولا يقيس خطر عسر القراءة.',
-  },
-  {
-    id: 'irt-2',
-    domain: 'phonological_awareness',
-    domainLabelAr: 'الوعي الفونولوجي والمقاطع الصوتية',
-    promptAr: 'ما التقطيع المقطعي الصوتي الصحيح لكلمة «مُسْتَقْبَلٌ»؟',
-    stimulusText: 'مُسْتَقْبَلٌ',
-    options: [
-      'مُسْ / تَقْ / بَ / لٌ',
-      'مُ / سْتَ / قْبَ / لٌ',
-      'مُسْتَ / قْ / بَلٌ',
-      'مُ / سْ / تَقْبَلٌ',
-    ],
-    correctIndex: 0,
-    discriminationA: 1.75,
-    difficultyB: -0.6,
-    clinicalRationaleAr: 'مثال على تقسيم كلمة إلى مقاطع مكتوبة؛ صحة التقسيم تحتاج مراجعة لغوية ولا يقيس الذاكرة العاملة.',
-  },
-  {
-    id: 'irt-3',
-    domain: 'orthographic_mirror',
-    domainLabelAr: 'مقاومة القلب البصري والمرآوي',
-    promptAr: 'إذا حذفنا النقطة الأولى من كلمة «تَثَبَّتَ» واستبدلناها بباء، فما الكلمة الناتجة؟',
-    stimulusText: 'تَثَبَّتَ ← ؟',
-    options: ['بَثَبَّتَ', 'تَبَبَّتَ', 'ثَتَبَّتَ', 'نَثَبَّتَ'],
-    correctIndex: 0,
-    discriminationA: 1.6,
-    difficultyB: 0.0,
-    clinicalRationaleAr: 'مثال بصري على مواضع النقاط في الحروف؛ لا يقيس قدرة مكانية معيارية.',
-  },
-  {
-    id: 'irt-4',
-    domain: 'morphological_decoding',
-    domainLabelAr: 'الاشتقاق الصرفي والجذر الثلاثي',
-    promptAr: 'أي الكلمات التالية تشترك في الجذر اللغوي نفسه مع كلمة «مُلَاحَظَة»؟',
-    stimulusText: 'الجذر: (ل - ح - ظ)',
-    options: ['لَحْظَةٌ', 'مَحْفُوظٌ', 'حَظِيرَةٌ', 'لَافِظَةٌ'],
-    correctIndex: 0,
-    discriminationA: 1.9,
-    difficultyB: 0.65,
-    clinicalRationaleAr: 'مثال لغوي عن الجذر الثلاثي؛ قد تتطلب الإجابات شرحًا صرفيًا بحسب مستوى المتعلم.',
-  },
-  {
-    id: 'irt-5',
-    domain: 'phonological_awareness',
-    domainLabelAr: 'المعالجة الفونولوجية العكسية',
-    promptAr: 'عند عكس ترتيب أصوات كلمة «قَلَم» من الأخير إلى الأول، نحصل على:',
-    stimulusText: 'ق - ل - م  ⇄  ؟',
-    options: ['مَلَق', 'لَقَم', 'مَقَل', 'فَلَق'],
-    correctIndex: 0,
-    discriminationA: 2.1,
-    difficultyB: 1.25,
-    clinicalRationaleAr: 'تمرين عكسي لترتيب حروف كلمة، غير مُعاير ولا توجد بيانات هنا تثبت الحساسية أو النوعية أو صلاحيته لفرز عسر القراءة.',
-  },
-  {
-    id: 'irt-6',
-    domain: 'ran_lexical',
-    domainLabelAr: 'فك الترميز الصوتي واللهجي العربي',
-    promptAr: 'ما الصورة الفصيحة الصحيحة للكلمة التي قد ينطقها أو يكتبها الطالب باللهجة الدارجة «تَلَامِيز»؟',
-    stimulusText: 'النطق الصوتي: «تَلَامِيز» ← الفصحى: ؟',
-    options: ['تَلَامِيذُ', 'تَلَامِيسُ', 'تَلَامِيثُ', 'طَلَامِيذُ'],
-    correctIndex: 0,
-    discriminationA: 1.5,
-    difficultyB: -0.9,
-    clinicalRationaleAr: 'مثال يشرح فرقًا إملائيًا شائعًا بين النطق واللهجة والرسم؛ لا يُصنّف اختلاف اللهجة بوصفه خطأ مرضيًا.',
-  },
-  {
-    id: 'irt-7',
-    domain: 'morphological_decoding',
-    domainLabelAr: 'التحليل الفونولوجي المتقدم للكلمات الطويلة',
-    promptAr: 'كم مقطعاً صوتياً في كلمة «يَسْتَخْرِجُونَهَا»؟',
-    stimulusText: 'يَسْ · تَخْ · رِ · جُو · نَ · هَا',
-    options: ['٦ مقاطع صوتية', '٤ مقاطع صوتية', '٥ مقاطع صوتية', '٨ مقاطع صوتية'],
-    correctIndex: 0,
-    discriminationA: 2.25,
-    difficultyB: 1.85,
-    clinicalRationaleAr: 'مثال على كلمة طويلة وتقسيم مقطعي مقترح؛ لا يقيس سعة معالجة معيارية.',
-  },
-];
-
-/**
- * 2-Parameter Logistic (2PL) Item Response Theory Probability:
- * P(X = 1 | theta, a, b) = 1 / (1 + exp(-a * (theta - b)))
- */
-export function computeIRT2PLProbability(
-  theta: number,
-  discriminationA: number,
-  difficultyB: number
-): number {
-  const exponent = -discriminationA * (theta - difficultyB);
-  return 1 / (1 + Math.exp(exponent));
-}
-
-/**
- * Fisher Information I_i(theta) = a_i^2 * P_i(theta) * (1 - P_i(theta))
- */
-export function computeIRTFisherInformation(
-  theta: number,
-  discriminationA: number,
-  difficultyB: number
-): number {
-  const p = computeIRT2PLProbability(theta, discriminationA, difficultyB);
-  return Math.pow(discriminationA, 2) * p * (1 - p);
-}
-
-/**
- * Bayesian Expected A Posteriori (EAP) estimator for latent trait theta in [-3.0, +3.0]
- * using 61 Gauss-Hermite / uniform quadrature nodes with a Standard Normal N(0, 1) prior.
- */
-export function estimateIRTAbilityEAP(
-  responses: {
-    discriminationA: number;
-    difficultyB: number;
-    correct: boolean;
-    reactionTimeMs?: number;
-  }[]
-): {
-  theta: number;
-  standardError: number;
-  totalFisherInformation: number;
-  modelBasedRank: number;
-  interpretationLabelAr: string;
-  riskLevel: 'nominal' | 'moderate' | 'high';
-} {
-  if (!responses || responses.length === 0) {
-    return {
-      theta: 0,
-      standardError: 1.0,
-      totalFisherInformation: 1.0,
-      modelBasedRank: 50,
-      interpretationLabelAr: 'مؤشر حسابي تجريبي؛ لا توجد بيانات كافية بعد',
-      riskLevel: 'nominal',
-    };
-  }
-
-  const nodes: number[] = [];
-  for (let t = -3.0; t <= 3.001; t += 0.1) {
-    nodes.push(Math.round(t * 100) / 100);
-  }
-
-  let numerator = 0;
-  let denominator = 0;
-  const posteriors: number[] = [];
-
-  for (const qNode of nodes) {
-    // Prior N(0, 1) density
-    const prior = Math.exp(-0.5 * qNode * qNode);
-    let likelihood = 1.0;
-    for (const r of responses) {
-      const p = computeIRT2PLProbability(
-        qNode,
-        r.discriminationA,
-        r.difficultyB
-      );
-      likelihood *= r.correct ? p : 1 - p;
-    }
-    const post = prior * likelihood;
-    posteriors.push(post);
-    numerator += qNode * post;
-    denominator += post;
-  }
-
-  const rawTheta = denominator > 0 ? numerator / denominator : 0;
-  const theta = Math.round(Math.max(-3.0, Math.min(3.0, rawTheta)) * 100) / 100;
-
-  // Total Fisher Information at estimated theta + prior precision (1.0)
-  let itemInfoSum = 0;
-  for (const r of responses) {
-    itemInfoSum += computeIRTFisherInformation(
-      theta,
-      r.discriminationA,
-      r.difficultyB
-    );
-  }
-  const totalFisherInformation = Math.round((1.0 + itemInfoSum) * 100) / 100;
-  const standardError =
-    Math.round((1 / Math.sqrt(totalFisherInformation)) * 100) / 100;
-
-  // Map theta to a standard-normal reference rank; this is theoretical, not a student-population norm.
-  const z = theta;
-  const t = 1 / (1 + 0.2316419 * Math.abs(z));
-  const d = 0.3989423 * Math.exp((-z * z) / 2);
-  const prob =
-    d *
-    t *
-    (0.3193815 +
-      t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  const cdf = z >= 0 ? 1 - prob : prob;
-  const modelBasedRank = Math.max(1, Math.min(99, Math.round(cdf * 100)));
-
-  let riskLevel: 'nominal' | 'moderate' | 'high' = 'nominal';
-  let interpretationLabelAr =
-    'المؤشر الحسابي التجريبي قريب من مركز التوزيع الافتراضي؛ لا يمثل معيارًا عمريًا';
-  if (theta <= -0.75) {
-    riskLevel = 'high';
-    interpretationLabelAr =
-      'المؤشر الحسابي التجريبي منخفض مقارنة بالتوزيع الافتراضي؛ لا يشخّص اضطراب تعلم';
-  } else if (theta < 0.0) {
-    riskLevel = 'moderate';
-    interpretationLabelAr =
-      'المؤشر الحسابي التجريبي دون مركز التوزيع الافتراضي؛ يلزم تفسيره في سياق تقييم شامل';
-  }
-
-  return {
-    theta,
-    standardError,
-    totalFisherInformation,
-    modelBasedRank,
-    interpretationLabelAr,
-    riskLevel,
-  };
-}
-
-/**
- * Selects the next unadministered item from the bank that maximizes Fisher Information I_i(theta)
- * at the student's current ability estimate theta.
- */
-export function selectNextAdaptiveIRTItem(
-  itemBank: IRTAssessmentItem[],
-  administeredIds: string[],
-  currentTheta: number
-): {
-  nextItem: IRTAssessmentItem | null;
-  maxFisherInformation: number;
-} {
-  const administeredSet = new Set(administeredIds);
-  const available = itemBank.filter((item) => !administeredSet.has(item.id));
-  if (available.length === 0) {
-    return { nextItem: null, maxFisherInformation: 0 };
-  }
-
-  let bestItem = available[0];
-  let bestInfo = -1;
-
-  for (const item of available) {
-    const info = computeIRTFisherInformation(
-      currentTheta,
-      item.discriminationA,
-      item.difficultyB
-    );
-    if (info > bestInfo) {
-      bestInfo = info;
-      bestItem = item;
-    }
-  }
-
-  return {
-    nextItem: bestItem,
-    maxFisherInformation: Math.round(bestInfo * 100) / 100,
-  };
-}
+// 2. ORAL READING ALIGNMENT (EXPLORATORY, HUMAN-REVIEW REQUIRED)
 
 export interface OralWordAlignmentItem {
   targetWord: string;
@@ -2614,7 +1802,7 @@ export function computeStandardSequenceWer(
 
 /**
  * Aligns oral reading transcript against target passage words using Dyslexico phonetic/weighted matching
- * and Arabic Dialect Normalization to compute clinical WCPM and distinguish dialectal pronunciation from dyslexia.
+ * and Arabic Dialect Normalization to compute reviewed oral-reading WCPM and distinguish dialectal pronunciation from dyslexia.
  */
 export function evaluateOralReadingAlignment(
   referenceWordsInput: string[] | string,

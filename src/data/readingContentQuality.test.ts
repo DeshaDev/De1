@@ -35,3 +35,32 @@ test('correct answers are not systematically the uniquely longest choice', () =>
   const ratio = uniquelyLongestCorrect / questions.length;
   assert.ok(ratio <= 0.5, `Too many correct answers are uniquely longest: ${uniquelyLongestCorrect}/${questions.length}`);
 });
+
+
+test('inferential answer choices require applying the passage rather than copying a long phrase', () => {
+  const tokens = (value: string) => value.replace(/[\u064B-\u065F\u0670ـ]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  const longestExactRun = (answer: string[], passage: string[]) => {
+    let best = 0;
+    for (let i = 0; i < answer.length; i += 1) {
+      for (let j = 0; j < passage.length; j += 1) {
+        let k = 0;
+        while (i + k < answer.length && j + k < passage.length && answer[i + k] === passage[j + k]) k += 1;
+        best = Math.max(best, k);
+      }
+    }
+    return best;
+  };
+  const inferential = ARABIC_READING_PASSAGES.flatMap((passage) =>
+    passage.comprehensionQuestions
+      .filter((question) => question.skillType === 'inferential')
+      .map((question) => ({ passage, question }))
+  );
+  assert.ok(inferential.length >= 10);
+  for (const { passage, question } of inferential) {
+    const answer = tokens(question.options[question.correctIndex]);
+    const passageTokens = tokens(passage.words.join(' '));
+    const copiedRun = longestExactRun(answer, passageTokens);
+    assert.ok(copiedRun <= 4,
+      `${passage.id}: inferential answer copies a ${copiedRun}-word sequence from the passage: ${question.question}`);
+  }
+});

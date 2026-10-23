@@ -18,13 +18,13 @@ import {
   buildDeterministicLearningReport,
   StudentProfilePatchSchema,
   LearningReportUpdateEnvelopeSchema,
-} from './clinicalSecurity';
+} from './studentDataSecurity';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
 const TEST_SECRET = 'test-clinical-hmac-secret-key-2026-secure';
 
 describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting Unit Tests', () => {
-  it('issues and verifies a clinician session token with full scopes and Arabic tenant display name', () => {
+  it('issues and verifies a Baseera session token with full scopes and Arabic tenant display name', () => {
     const issued = issueBaseeraSessionToken(
       'school_admin',
       'د. سارة المنصور',
@@ -119,7 +119,7 @@ describe('Clinical RBAC, Evidence Derivation, Plausibility Gates & Rate Limiting
       isStrongBaseeraAccessCode('3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d'),
       true
     );
-    assert.equal(isStrongBaseeraAccessCode('A-clinician-secret-0123456789abc'), false);
+    assert.equal(isStrongBaseeraAccessCode('A-school administrator-secret-0123456789abc'), false);
     assert.equal(isStrongBaseeraAccessCode('a'.repeat(48)), false);
     assert.equal(isStrongBaseeraAccessCode('0123456789abcdef'.repeat(3)), false);
     assert.equal(isStrongBaseeraAccessCode('f'.repeat(47)), false);

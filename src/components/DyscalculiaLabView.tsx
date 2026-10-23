@@ -18,7 +18,7 @@ import {
   NumberLineTrialResult,
   TranscodingTrialResult,
   calculateDyscalculiaMetrics,
-} from '../utils/clinicalMetrics';
+} from '../utils/learningMetrics';
 
 interface DyscalculiaLabViewProps {
   students: StudentRecord[];

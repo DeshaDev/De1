@@ -87,3 +87,14 @@ Playwright browser smoke tests run in CI against the production preview build. T
 
 
 **Live demo:** No public hosted demo is currently available. The repository and automated CI checks should not be presented as a deployed production service.
+
+
+### Optional browser smoke tests
+
+The CI pipeline installs Playwright separately so the production dependency lock remains minimal. To run the browser smoke tests locally, install the browser-test tooling, install Chromium, then run the E2E script:
+
+```bash
+npm install --no-save --package-lock=false --legacy-peer-deps @playwright/test@1.56.1
+npx playwright install chromium
+npm run e2e
+```

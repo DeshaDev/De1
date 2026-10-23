@@ -336,14 +336,14 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('enforces strict 4-field PATCH and saves updated AI learningReport + mathTrials via dedicated PUT routes', async () => {
-    const clinician = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const school administrator = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
 
     // 1. Sending { learningReport } to PATCH /api/students/:id returns 400
     const badPatch = await fetch(`${baseUrl}/api/students/stu-http-school-a-1`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${clinician.token}`,
+        Authorization: `Bearer ${school administrator.token}`,
       },
       body: JSON.stringify({
         learningReport: { learningSummary: 'محاولة عبر المسار الخاطئ' },
@@ -356,7 +356,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${clinician.token}`,
+        Authorization: `Bearer ${school administrator.token}`,
       },
       body: JSON.stringify({
         name: 'نورة بنت سعد العتيبي',
@@ -399,7 +399,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${clinician.token}`,
+          Authorization: `Bearer ${school administrator.token}`,
         },
         body: JSON.stringify({ learningReport: updatedReport }),
       }
@@ -421,7 +421,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     ] as const) {
       const deprecatedRes = await fetch(`${baseUrl}${route}`, {
         method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
         body: JSON.stringify({ learningReport: updatedReport }),
       });
       assert.equal(deprecatedRes.status, 404);
@@ -434,7 +434,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${clinician.token}`,
+          Authorization: `Bearer ${school administrator.token}`,
         },
         body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
       }
@@ -445,7 +445,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(mathBody.student.reversalErrorCount, 1);
     const forgedEnvelopeRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
       body: JSON.stringify({ mathTrials: buildCanonicalMathTrials(), mathRiskLevel: 'nominal' }),
     });
     assert.equal(forgedEnvelopeRes.status, 400);
@@ -453,7 +453,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     forgedNested.subitizingTrials[0].mathRiskLevel = 'nominal';
     const forgedNestedRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
       body: JSON.stringify({ mathTrials: forgedNested }),
     });
     assert.equal(forgedNestedRes.status, 400);
@@ -463,7 +463,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     ] as const) {
       const deprecatedRes = await fetch(`${baseUrl}${route}`, {
         method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clinician.token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${school administrator.token}` },
         body: JSON.stringify({ mathTrials: buildCanonicalMathTrials() }),
       });
       assert.equal(deprecatedRes.status, 404);
@@ -478,7 +478,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${clinician.token}`,
+          Authorization: `Bearer ${school administrator.token}`,
         },
         body: JSON.stringify({ mathTrials: badTrials }),
       }
@@ -487,7 +487,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('persists revoked tokens, audit logs (without child PII), and saved reports across server restart in encrypted security-state.json (mode 600)', async () => {
-    const clinicianA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
+    const school administratorA = await loginWithCode(SCHOOL_A_CLINICIAN_CODE);
     const educatorA = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
 
     // Educator is forbidden from reading audit logs
@@ -498,7 +498,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
     // Clinician can read tenant-isolated audit logs and they contain zero child PII
     const auditRes = await fetch(`${baseUrl}/api/audit-logs`, {
-      headers: { Authorization: `Bearer ${clinicianA.token}` },
+      headers: { Authorization: `Bearer ${school administratorA.token}` },
     });
     assert.equal(auditRes.status, 200);
     const auditBody = (await auditRes.json()) as { auditLogs: Array<Record<string, any>> };
@@ -507,10 +507,10 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(serializedAudit.includes('نورة'), false);
     assert.equal(serializedAudit.includes('خالد'), false);
 
-    // Revoke clinicianA token via logout
+    // Revoke school administratorA token via logout
     const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${clinicianA.token}` },
+      headers: { Authorization: `Bearer ${school administratorA.token}` },
     });
     assert.equal(logoutRes.status, 204);
 
@@ -527,7 +527,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
     // Revoked token MUST still return 401 after restart
     const afterRestartRevoked = await fetch(`${baseUrl}/api/students`, {
-      headers: { Authorization: `Bearer ${clinicianA.token}` },
+      headers: { Authorization: `Bearer ${school administratorA.token}` },
     });
     assert.equal(afterRestartRevoked.status, 401);
 

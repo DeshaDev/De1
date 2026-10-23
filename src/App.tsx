@@ -74,8 +74,8 @@ export default function App() {
   const [pendingServerRecord, setPendingServerRecord] =
     useState<StudentRecord | null>(null);
   const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(false);
-  const [clinicalAccessCode, setBaseeraAccessCode] = useState<string>('');
-  const [clinicalLoginError, setBaseeraLoginError] = useState<string>('');
+  const [baseeraAccessCode, setBaseeraAccessCode] = useState<string>('');
+  const [baseeraLoginError, setBaseeraLoginError] = useState<string>('');
   const [isBaseeraLoggingIn, setIsBaseeraLoggingIn] = useState<boolean>(false);
 
   // Roster filtering & search
@@ -654,7 +654,7 @@ export default function App() {
     setIsBaseeraLoggingIn(true);
     try {
       const session = await loginBaseeraSession(
-        clinicalAccessCode.trim(),
+        baseeraAccessCode.trim(),
         'school_admin',
         'مسؤول المدرسة'
       );
@@ -742,18 +742,18 @@ export default function App() {
     >
       <a className="baseera-skip-link" href="#main-content">تجاوز إلى المحتوى</a>
       {showBaseeraLogin && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-login-title">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="baseera-login-title">
           <form
             onSubmit={(event) => { event.preventDefault(); void handleBaseeraLogin(); }}
             className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
           >
-            <h2 id="clinical-login-title" className="text-lg font-bold">دخول المعلّم أو الأخصائي</h2>
+            <h2 id="baseera-login-title" className="text-lg font-bold">دخول المعلّم أو الأخصائي</h2>
             <p className="text-sm text-slate-600">أدخل رمز المدرسة الذي سلّمه لك مسؤول النظام. تُحدَّد صلاحيات الحساب تلقائيًا.</p>
             <label className="block space-y-1 text-sm font-medium">
               <span>رمز الوصول</span>
-              <input autoComplete="current-password" type="password" value={clinicalAccessCode} onChange={(event) => setBaseeraAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
+              <input autoComplete="current-password" type="password" value={baseeraAccessCode} onChange={(event) => setBaseeraAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
             </label>
-            {clinicalLoginError && <p role="alert" className="text-sm text-red-700">{clinicalLoginError}</p>}
+            {baseeraLoginError && <p role="alert" className="text-sm text-red-700">{baseeraLoginError}</p>}
             <div className="flex gap-2">
               <button type="submit" disabled={isBaseeraLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
                 {isBaseeraLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}

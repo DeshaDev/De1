@@ -6,7 +6,7 @@ import {
   computeStandardSequenceWer,
 } from './dyslexiaEngines';
 import { ARABIC_READING_PASSAGES, StudentRecord, INITIAL_STUDENTS } from '../data/seedData';
-import { validateAndDeriveSessionFromEvidence } from './clinicalSecurity';
+import { validateAndDeriveSessionFromEvidence } from './studentDataSecurity';
 
 test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
   const passage = ARABIC_READING_PASSAGES[0]; // "الْقِطَّةُ الْبَيْضَاءُ" (52 words)
