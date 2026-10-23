@@ -1,6 +1,6 @@
 /**
  * Learning Performance Summaries (ملخصات الأداء التعليمي وخطط المساندة)
- * Tri-modal evaluation: Voice Phonology + Reading Fluency & Comprehension + Tactile Math
+ * Descriptive summaries from reading, speech-transcript comparison, and number-sense tasks
  * Strictly evidence-based: NO fake defaults, NO uncalibrated eye metrics, NO unvalidated risk bands.
  */
 
@@ -42,13 +42,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
   // Check if ANY verified assessment data has been gathered
   const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
-  const hasTactileData = Boolean(currentAssessment?.tactileResults?.summary);
+  const hasMathData = Boolean(student?.dyscalculiaAssessed === true && student.mathTrials);
   const hasReadingData = Boolean(
     currentAssessment?.readingResults ||
     (student && student.sessionStatus === 'completed' && student.wpm > 0)
   );
 
-  const hasAnyAssessmentData = hasSpeechData || hasTactileData || hasReadingData;
+  const hasAnyAssessmentData = hasSpeechData || hasMathData || hasReadingData;
 
   // Synthesize student data strictly from genuine assessments
   const studentData = useMemo(() => {
@@ -60,8 +60,20 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     // Speech data (only present if actually assessed)
     const speechSummary = currentAssessment?.speechResults?.summary || null;
 
-    // Tactile data (only present if actually assessed)
-    const tactileSummary = currentAssessment?.tactileResults?.summary || null;
+    // Use the completed, stored number-sense trials; never infer a generic score from legacy activity data.
+    const trials = student?.mathTrials;
+    const mathSummary = student?.dyscalculiaAssessed === true && trials
+      ? {
+          tasksRecorded:
+            (trials.subitizingTrials?.length || 0) +
+            (trials.numberLineTrials?.length || 0) +
+            (trials.transcodingTrials?.length || 0),
+          subitizingAccuracy: student.subitizingAccuracy,
+          numberLinePAE: student.numberLinePAE,
+          transcodingAccuracy: student.transcodingAccuracy,
+          reversalErrorCount: student.reversalErrorCount,
+        }
+      : null;
 
     // Reading session data (strictly measured: WPM, WCPM, duration, comprehension)
     let readingSummary: {
@@ -110,7 +122,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       grade,
       date,
       speech: speechSummary,
-      tactile: tactileSummary,
+      math: mathSummary,
       reading: readingSummary,
       learningReport: student?.learningReport,
     };
@@ -171,10 +183,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       }
     }
 
-    if (studentData.tactile) {
+    if (studentData.math) {
+      const details: string[] = [];
+      if (typeof studentData.math.subitizingAccuracy === 'number') details.push('تمييز الكميات ' + studentData.math.subitizingAccuracy + '%');
+      if (typeof studentData.math.numberLinePAE === 'number') details.push('الخطأ المطلق في خط الأعداد ' + studentData.math.numberLinePAE + '%');
+      if (typeof studentData.math.transcodingAccuracy === 'number') details.push('ترميز الأعداد ' + studentData.math.transcodingAccuracy + '%');
       observations.push(
-        'المهام العددية المسجلة: ' + studentData.tactile.correctAnswers + ' من ' +
-        studentData.tactile.totalTasks + '. وصف للجلسة القصيرة، وليس درجة خطر معيارية.'
+        'مقاييس وصفية من ' + studentData.math.tasksRecorded + ' محاولات حسابية مكتملة: ' +
+        (details.length ? details.join('؛ ') : 'لا توجد مقاييس رقمية مكتملة') +
+        '. تصف هذه المهام وحدها ولا تمثل معيارًا عمريًا أو تصنيفًا تشخيصيًا.'
       );
     }
 
@@ -233,9 +250,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         '. لا تمثل هذه القيمة دقة النطق؛ راجع أي اختلاف بين التفريغ والكلمة المستهدفة.'
       );
     }
-    if (studentData.tactile) {
+    if (studentData.math) {
+      const details: string[] = [];
+      if (typeof studentData.math.subitizingAccuracy === 'number') details.push('دقة تمييز الكميات ' + studentData.math.subitizingAccuracy + '%');
+      if (typeof studentData.math.numberLinePAE === 'number') details.push('خطأ خط الأعداد ' + studentData.math.numberLinePAE + '%');
+      if (typeof studentData.math.transcodingAccuracy === 'number') details.push('دقة ترميز الأعداد ' + studentData.math.transcodingAccuracy + '%');
       observations.push(
-        `وأنجز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام للحس العددي`
+        'تم تسجيل ' + studentData.math.tasksRecorded + ' محاولات في مهام الحساب' +
+        (details.length ? '، ' + details.join('، ') : '') +
+        '. هذه ملاحظات للمهام المكتملة فقط.'
       );
     }
 
@@ -360,7 +383,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </button>
             </div>
 
-            {/* 3. Tactile Math Card */}
+            {/* 3. Number-sense activity card */}
             <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-purple-300 transition-colors flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
@@ -570,23 +593,25 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
               </div>
 
-              {/* 3. Tactile Math */}
+              {/* 3. Number-sense task observations */}
               <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-100 text-right">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
                     <Hand className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold text-purple-700 font-mono">
-                    {studentData.tactile
-                      ? `${studentData.tactile.correctAnswers}/${studentData.tactile.totalTasks} مهام`
-                      : 'لم يُجرَ'}
+                    {studentData.math ? `${studentData.math.tasksRecorded} محاولات` : 'لم تُسجّل'}
                   </span>
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">الحس العددي واللمسي</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">مهام الحساب والحس العددي</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  {studentData.tactile
-                    ? `إنجاز ${studentData.tactile.correctAnswers} من أصل ${studentData.tactile.totalTasks} مهام بمتوسط استجابة ${studentData.tactile.averageReactionTime} ثانية.`
-                    : 'لم يكتمل فحص الحساب في هذه الجلسة بعد.'}
+                  {studentData.math
+                    ? [
+                        typeof studentData.math.subitizingAccuracy === 'number' ? `تمييز الكميات: ${studentData.math.subitizingAccuracy}%` : '',
+                        typeof studentData.math.numberLinePAE === 'number' ? `خطأ خط الأعداد: ${studentData.math.numberLinePAE}%` : '',
+                        typeof studentData.math.transcodingAccuracy === 'number' ? `ترميز الأعداد: ${studentData.math.transcodingAccuracy}%` : '',
+                      ].filter(Boolean).join('؛ ') || 'تم حفظ المحاولات دون مقاييس رقمية متاحة.'
+                    : 'لم تُحفظ بعد محاولات حساب مكتملة لهذا الطالب.'}
                 </p>
               </div>
             </div>
@@ -774,19 +799,19 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     </td>
                   </tr>
 
-                  {/* Tactile Math */}
+                  {/* Number-sense task observations */}
                   <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">الحس العددي</td>
-                    <td className="py-3.5 px-4 text-slate-600">إنجاز مهام خط الأعداد والكميات</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-900">مهام الحساب</td>
+                    <td className="py-3.5 px-4 text-slate-600">تمييز الكميات، وتقدير خط الأعداد، وترميز الأرقام</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-purple-700">
-                      {studentData.tactile
-                        ? `${studentData.tactile.correctAnswers}/${studentData.tactile.totalTasks}`
+                      {studentData.math
+                        ? `${studentData.math.tasksRecorded} محاولات`
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">عدد المهام لا يكفي لتصنيف الخطر</td>
                     <td className="py-3.5 px-4">
-                      {studentData.tactile ? (
-                        <span className="text-slate-600">وصف لأداء هذه الجلسة</span>
+                      {studentData.math ? (
+                        <span className="text-slate-600">مقاييس وصفية للمهام المكتملة، دون معيار أو تصنيف</span>
                       ) : (
                         <span className="text-slate-400">غير مكتمل</span>
                       )}
