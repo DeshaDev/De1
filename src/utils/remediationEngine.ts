@@ -1,6 +1,6 @@
 /**
- * Baseera Adaptive Remediation & AI Scaffolding Engine
- * Inspired by Orton-Gillingham Arabic Adaptation & Amira Learning / Dytective architecture.
+ * Baseera: reusable Arabic literacy and number-sense practice activities.
+ * This prototype does not implement or claim a validated screening or treatment protocol.
  */
 
 export interface RemediationPhonicsOption {
@@ -51,25 +51,26 @@ export interface RemediationSessionPlan {
 }
 
 /**
- * Deterministic clinical fallback synthesizer.
- * Derives customized exercises based on the exact problematic words detected during eye-tracking.
+ * Deterministic fallback for general educational practice.
+ * It does not infer a learning difficulty or claim that errors were observed unless targets were teacher-reviewed.
  */
 export function generateAdaptiveRemediationPlan(params: {
   studentName: string;
   gradeLevel: number;
   effectiveWords: string[];
+  targetsTeacherReviewed?: boolean;
 }): RemediationSessionPlan {
-  const { studentName, gradeLevel, effectiveWords } = params;
-  const focusWord1 = effectiveWords[0] || 'السَّاقِيَةِ';
-  const focusWord2 = effectiveWords[1] || 'بُسْتَانِ';
+  const { gradeLevel, effectiveWords, targetsTeacherReviewed = false } = params;
+  // These are fixed examples whose target letters match the actual word; arbitrary
+  // student targets must never be substituted into a phonics item for another letter.
 
   // 1. Phonics Drills targeting student's actual words
   const phonicsDrills: RemediationPhonicsDrill[] = [
     {
       id: 1,
       family: 'عائلة السين والصاد (الترقيق والتفخيم)',
-      spokenWord: focusWord1.replace(/[^\u0621-\u064A\u064B-\u0652]/g, '') || 'سَاقِيَة',
-      wordMeaning: 'مفردة مستهدفة من جلسة فحص القراءة الخاصة بالطالب',
+      spokenWord: 'سَاقِيَة',
+      wordMeaning: 'مثال تدريبي على صوت السين والتمييز بينها وبين الصاد',
       targetLetter: 'س',
       options: [
         {
@@ -90,7 +91,7 @@ export function generateAdaptiveRemediationPlan(params: {
     {
       id: 2,
       family: 'عائلة الباء والتاء والثاء (الإعجام والتنقيط)',
-      spokenWord: focusWord2.replace(/[^\u0621-\u064A\u064B-\u0652]/g, '') || 'بُسْتَان',
+      spokenWord: 'بُسْتَان',
       wordMeaning: 'حديقة غناء تحوي الأشجار والأزهار',
       targetLetter: 'ب',
       options: [
@@ -173,32 +174,32 @@ export function generateAdaptiveRemediationPlan(params: {
       id: 1,
       targetWord: 'سَاقِيَة',
       wordMeaning: 'قناة مائية تسقي الحقول والزروع',
-      syllables: ['سَا', 'قِـ', 'ـيَـ', 'ـةُ'],
+      syllables: ['سَا', 'قِ', 'يَة'],
     },
     {
       id: 2,
       targetWord: 'بُسْتَان',
       wordMeaning: 'واحة الأشجار والأزهار',
-      syllables: ['بُسْـ', 'ـتَا', 'نُ'],
+      syllables: ['بُسْ', 'تَان'],
     },
     {
       id: 3,
       targetWord: 'مَدْرَسَة',
       wordMeaning: 'صرح التعليم والمعرفة',
-      syllables: ['مَدْ', 'رَ', 'سَـ', 'ـةُ'],
+      syllables: ['مَدْ', 'رَ', 'سَة'],
     },
     {
       id: 4,
       targetWord: 'عُصْفُور',
       wordMeaning: 'طائر صغير مغرد',
-      syllables: ['عُصْـ', 'ـفُـ', 'ـورُ'],
+      syllables: ['عُصْ', 'فُور'],
     },
   ];
 
-  // 3. Saccadic Pacer Contextual Passage embedding the student's words
+  // 3. A short general passage with adjustable word-highlighting (not eye-movement training).
   const pacerPassage: RemediationPacerPassage = {
     id: 1,
-    title: `قصة تدريبية مخصصة للطالب ${studentName}`,
+    title: 'قصة قصيرة للقراءة والتظليل',
     gradeLevel: `الصف ${gradeLevel}`,
     words: [
       'فِي',
@@ -230,7 +231,9 @@ export function generateAdaptiveRemediationPlan(params: {
   ];
 
   return {
-    clinicalRationale: `صُممت هذه الجلسة العلاجية خصيصاً للطالب (${studentName}) بناءً على مؤشرات فحص تتبع حركة العين والتحليل الصوتي. تم استهداف فك اللبس بين السين والصاد وعائلة الحروف المنقوطة، مع دمج مفردات التعثر المرصودة [${effectiveWords.join('، ')}] في تمرين التقطيع المقطعي وقصة المسرّع البصري لتقليل القفزات التراجعية، وتثبيت الإدراك المكاني للعددين 42 و73 لمنع عكس الخانات.`,
+    clinicalRationale: targetsTeacherReviewed && effectiveWords.length > 0
+      ? `أنشطة تعليمية مقترحة للصف ${gradeLevel}. أُضيفت الكلمات التي راجعها المعلم إلى قائمة أهداف قابلة للمراجعة: ${effectiveWords.slice(0, 8).join('، ')}. هذا لا يثبت وجود اضطراب ولا يمثل بروتوكول علاج مُعتمدًا؛ ينبغي اختيار النشاط بحسب السياق ومراجعة المعلم.`
+      : `أنشطة عامة للصف ${gradeLevel} للتدرب على الحروف والمقاطع وخط الأعداد. الكلمات الواردة أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. هذه الخطة ليست اختبارًا معياريًا أو بروتوكول علاج مُعتمدًا.`,
     phonicsDrills,
     syllableDrills,
     pacerPassage,
