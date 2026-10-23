@@ -235,16 +235,18 @@ test('Oral reading alignment supports multi-target dialect synonyms, tanween pau
   assert.ok(res.dialectVariantCount >= 4);
 });
 
-test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4, 5, and 6 with >=50 words each and 3 diacritic levels', async () => {
+test('Graded Arabic reading bank contains multiple passages for each grade 1–6, all >=50 words, across three diacritic levels', async () => {
   const { ARABIC_READING_PASSAGES } = await import('../data/seedData.ts');
-  assert.equal(ARABIC_READING_PASSAGES.length, 7);
+  assert.equal(ARABIC_READING_PASSAGES.length, 12);
 
   const grades = new Set(ARABIC_READING_PASSAGES.map((p) => p.gradeLevel));
+  assert.ok(grades.has(1), 'Must include Grade 1');
   assert.ok(grades.has(2), 'Must include Grade 2');
   assert.ok(grades.has(3), 'Must include Grade 3');
   assert.ok(grades.has(4), 'Must include Grade 4');
   assert.ok(grades.has(5), 'Must include Grade 5');
   assert.ok(grades.has(6), 'Must include Grade 6');
+  for (let grade = 1; grade <= 6; grade += 1) assert.ok(ARABIC_READING_PASSAGES.filter((p) => p.gradeLevel === grade).length >= 2, `Grade ${grade} needs multiple passages`);
 
   const diacriticLevels = new Set(
     ARABIC_READING_PASSAGES.map((p) => p.diacriticLevel)
@@ -264,9 +266,9 @@ test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4
   assert.ok(!catPassage.words.includes('حَلِيبٌ'));
   assert.ok(!catPassage.words.includes('وَخُبْزٌ'));
 
-  // Verify exact word counts match README documentation (52, 53, 55, 57, 55, 58, 65; range 52-65)
+  // Every passage declares its exact token count; content is expected to be at least 50 words.
   const actualWordCounts = ARABIC_READING_PASSAGES.map((p) => p.words.length);
-  assert.deepEqual(actualWordCounts, [52, 53, 55, 57, 55, 58, 65]);
+  assert.deepEqual(actualWordCounts, [52, 53, 55, 57, 55, 58, 65, 50, 50, 50, 79, 78]);
 
   // Verify Grade 4 Oasis passage is partial diacritics (not over-vowelized)
   const oasis = ARABIC_READING_PASSAGES.find((p) => p.id === 'passage-g4-oasis');
@@ -312,16 +314,11 @@ test('Graded Arabic reading bank provides 7 passages covering all Grades 2, 3, 4
     }
   }
 
-  // Across all 28 questions, each option position (A=0, B=1, C=2) must be balanced (8 to 11 each; here 9, 10, 9)
-  assert.equal(
-    answerPositionCounts[0] + answerPositionCounts[1] + answerPositionCounts[2],
-    28
-  );
+  // Across the expanded 48-question bank, rotate the correct answer position to reduce guessing cues.
+  assert.equal(answerPositionCounts.reduce((sum, count) => sum + count, 0), 48);
   for (let pos = 0; pos < 3; pos++) {
-    assert.ok(
-      answerPositionCounts[pos] >= 8 && answerPositionCounts[pos] <= 11,
-      `Option index ${pos} count is ${answerPositionCounts[pos]}/28 — must be balanced between 8 and 11`
-    );
+    assert.ok(answerPositionCounts[pos] >= 13 && answerPositionCounts[pos] <= 19,
+      `Option index ${pos} count is ${answerPositionCounts[pos]}/48 — distribution is too uneven`);
   }
 });
 
