@@ -39,6 +39,7 @@ import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
 import { ClinicalAlgorithmsView } from './components/ClinicalAlgorithmsView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
+import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -1611,6 +1612,7 @@ export default function App() {
           <ClinicalAlgorithmsView />
         )}
         {activeTab === 'privacy' && <PrivacyPolicyView />}
+        {activeTab === 'terms' && <TermsOfUseView />}
         </div>
       </main>
 
@@ -1625,7 +1627,8 @@ export default function App() {
           </div>
           <nav className="baseera-footer-links" aria-label="روابط إضافية">
             <button type="button" onClick={() => setActiveTab('home')}>الرئيسية</button>
-            <button type="button" onClick={() => setActiveTab('privacy')}>الخصوصية</button>
+            <button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button>
+            <button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button>
             <button type="button" onClick={() => setActiveTab('dashboard')}>للمعلّم ووليّ الأمر</button>
           </nav>
           <p className="baseera-footer-note">النتائج تعليمية استرشادية وليست تشخيصًا طبيًا.</p>
