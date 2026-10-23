@@ -28,7 +28,8 @@ export type AppTabId =
   | 'adaptive-reader'
   | 'dashboard'
   | 'algorithms-lab'
-  | 'privacy';
+  | 'privacy'
+  | 'terms';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];
@@ -165,7 +166,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               className="baseera-primary-action"
               onClick={() => onNavigateTab('eye-lab')}
             >
-              هيا نبدأ
+              جرّب رحلة القراءة
               <ArrowLeft aria-hidden="true" size={19} />
             </button>
             <button
@@ -173,13 +174,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               className="baseera-secondary-action"
               onClick={() => onNavigateTab('adaptive-reader')}
             >
-              جرّب القارئ الميسّر
+              اكتشف القارئ الميسّر
               <BookOpen aria-hidden="true" size={18} />
             </button>
           </div>
           <div className="baseera-promise-row" aria-label="مميزات بصيرة">
-            <span><ShieldCheck aria-hidden="true" size={18} /> لا تحتاج الأنشطة إلى كاميرا</span>
-            <span><Heart aria-hidden="true" size={18} /> كل طفل يتعلّم بطريقته</span>
+            <span><ShieldCheck aria-hidden="true" size={18} /> لا كاميرا ولا تتبّع للعين</span>
+            <span><Heart aria-hidden="true" size={18} /> نتائج تعليمية استرشادية</span>
           </div>
         </div>
 
@@ -328,8 +329,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="baseera-family-copy">
           <h2 id="baseera-family-title">لوليّ الأمر والمعلّم</h2>
           <p>
-            تعرض بصيرة مؤشرات تعليمية استرشادية تساعد على اختيار أنشطة المساندة.
-            لا تُعدّ النتائج تشخيصًا طبيًا، ويُفضّل تفسيرها مع مختص عند الحاجة.
+            تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة أو عسر الحساب. يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
           </p>
         </div>
         <div className="baseera-family-actions">
