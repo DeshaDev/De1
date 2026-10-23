@@ -1607,7 +1607,7 @@ export default function App() {
 
         {/* VIEW 5: CLINICAL ALGORITHMS & ADAPTIVE IRT / PYGAZE ML LAB */}
         {activeTab === 'algorithms-lab' && (
-          <ClinicalAlgorithmsView selectedStudent={selectedStudent} />
+          <ClinicalAlgorithmsView />
         )}
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         </div>
