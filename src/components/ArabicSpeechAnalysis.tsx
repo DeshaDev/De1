@@ -40,7 +40,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 1,
     word: 'بَيْتٌ',
     category: 'visual-confusable',
-    categoryLabel: 'تمييز الحروف المتشابهة رسمًا',
+    categoryLabel: 'مثال تدريبي: حروف متشابهة رسمًا',
     targetPhoneme: 'ب',
     description: 'التمييز بين عائلة (ب / ت / ث / ن / ي) بحسب موضع وعدد النقاط'
   },
@@ -48,7 +48,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 2,
     word: 'تِينٌ',
     category: 'visual-confusable',
-    categoryLabel: 'تمييز الحروف المتشابهة رسمًا',
+    categoryLabel: 'مثال تدريبي: حروف متشابهة رسمًا',
     targetPhoneme: 'ت',
     description: 'نقطتان فوق الحرف'
   },
@@ -56,7 +56,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 3,
     word: 'ثَوْبٌ',
     category: 'visual-confusable',
-    categoryLabel: 'تمييز الحروف المتشابهة رسمًا',
+    categoryLabel: 'مثال تدريبي: حروف متشابهة رسمًا',
     targetPhoneme: 'ث',
     description: 'ثلاث نقاط لثوية'
   },
@@ -64,7 +64,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 4,
     word: 'خَاتَمٌ',
     category: 'visual-confusable',
-    categoryLabel: 'تمييز الحروف المتشابهة رسمًا',
+    categoryLabel: 'مثال تدريبي: حروف متشابهة رسمًا',
     targetPhoneme: 'خ',
     description: 'التمييز بين عائلة (ج / ح / خ)'
   },
@@ -72,7 +72,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 5,
     word: 'ذَهَبٌ',
     category: 'visual-confusable',
-    categoryLabel: 'تمييز الحروف المتشابهة رسمًا',
+    categoryLabel: 'مثال تدريبي: حروف متشابهة رسمًا',
     targetPhoneme: 'ذ',
     description: 'التمييز بين الدال والذال'
   },
@@ -82,7 +82,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 6,
     word: 'طَبِيبٌ',
     category: 'phonetic-contrasts',
-    categoryLabel: 'المفخمة والمرققة (ت / ط)',
+    categoryLabel: 'مثال تدريبي: تاء / طاء',
     targetPhoneme: 'ط',
     description: 'التمييز الإطباقي والتفخيمي لصوت الطاء مقابل التاء'
   },
@@ -90,7 +90,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 7,
     word: 'صَيْفٌ',
     category: 'phonetic-contrasts',
-    categoryLabel: 'المفخمة والمرققة (س / ص)',
+    categoryLabel: 'مثال تدريبي: سين / صاد',
     targetPhoneme: 'ص',
     description: 'صوت الصاد المفخم مقابل السين المرقق'
   },
@@ -98,7 +98,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 8,
     word: 'قَلْبٌ',
     category: 'phonetic-contrasts',
-    categoryLabel: 'الاحتكاكية واللهوية (ك / ق)',
+    categoryLabel: 'مثال تدريبي: كاف / قاف',
     targetPhoneme: 'ق',
     description: 'صوت القاف اللهوي مقابل الكاف الحنكي'
   },
@@ -108,7 +108,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 9,
     word: 'كَتَبَ',
     category: 'diacritics',
-    categoryLabel: 'الحركات الثلاث المتوالية',
+    categoryLabel: 'مثال تدريبي: حركات قصيرة',
     targetPhoneme: 'فتحة',
     description: 'ضبط تسلسل الفتحات الثلاث بدون تمطيط أو تسكين'
   },
@@ -116,7 +116,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 10,
     word: 'كُتُبٌ',
     category: 'diacritics',
-    categoryLabel: 'الضم المزدوج والتنوين',
+    categoryLabel: 'مثال تدريبي: ضمة وتنوين',
     targetPhoneme: 'ضمة',
     description: 'الانتقال بين ضمتين متتاليتين وتنوين الضم'
   },
@@ -126,7 +126,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 11,
     word: 'بَابٌ',
     category: 'vowel-lengths',
-    categoryLabel: 'المد الطويل بالألف',
+    categoryLabel: 'مثال تدريبي: مد الألف',
     targetPhoneme: 'ا',
     description: 'المد الصوتي الطبيعي بمقدار حركتين'
   },
@@ -134,7 +134,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 12,
     word: 'سَرِيرٌ',
     category: 'vowel-lengths',
-    categoryLabel: 'المد الطويل بالياء',
+    categoryLabel: 'مثال تدريبي: مد الياء',
     targetPhoneme: 'ي',
     description: 'إشباع الكسرة لتوليد مد الياء'
   },
@@ -144,7 +144,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     id: 13,
     word: 'مُعَلِّمٌ',
     category: 'geminates',
-    categoryLabel: 'التضعيف والشدّة مع الكسر',
+    categoryLabel: 'مثال تدريبي: الشدة',
     targetPhoneme: 'لّ',
     description: 'نطق الحرف المشدد بالوقف والضغط الصوتي السليم'
   }
@@ -184,6 +184,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
   const [isPreparingRecording, setIsPreparingRecording] = useState(false);
   const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null);
   const [speechApiSupported, setSpeechApiSupported] = useState(true);
+  const [audioSetupError, setAudioSetupError] = useState('');
 
   // Live feedback
   const [liveAudioLevel, setLiveAudioLevel] = useState(0);
@@ -296,6 +297,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
 
   // 2. Setup Audio Hardware Pipeline
   const ensureAudioPipeline = async (): Promise<boolean> => {
+    setAudioSetupError('');
     try {
       if (mediaStreamRef.current && mediaRecorderRef.current) {
         return true;
@@ -356,7 +358,7 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
     } catch (err) {
       console.error('Microphone error:', err);
       setHasMicrophonePermission(false);
-      alert('تعذر الوصول إلى الميكروفون. يرجى التأكد من توصيل الميكروفون ومنح الإذن في المتصفح.');
+      setAudioSetupError('تعذر الوصول إلى الميكروفون. تحقق من إذن المتصفح واتصال الميكروفون، ثم أعد المحاولة.');
       return false;
     }
   };
@@ -681,15 +683,27 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
           </div>
 
           <button
-            onClick={() => {
-              ensureAudioPipeline();
-              setStage('instructions');
+            onClick={async () => {
+              setIsPreparingRecording(true);
+              let ready = false;
+              try {
+                ready = await ensureAudioPipeline();
+              } finally {
+                setIsPreparingRecording(false);
+              }
+              if (ready) setStage('instructions');
             }}
-            className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-3 mx-auto text-lg"
+            disabled={isPreparingRecording}
+            className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-3 mx-auto text-lg"
           >
-            <span>بدء التعليمات وتجهيز الميكروفون</span>
+            <span>{isPreparingRecording ? 'جارٍ تجهيز الميكروفون...' : 'بدء التعليمات وتجهيز الميكروفون'}</span>
             <ChevronLeft className="w-5 h-5" />
           </button>
+          {audioSetupError && (
+            <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm leading-6 text-rose-800" role="alert">
+              {audioSetupError}
+            </p>
+          )}
         </div>
       )}
 
@@ -789,6 +803,12 @@ export const ArabicSpeechAnalysis: React.FC<ArabicSpeechAnalysisProps> = ({
                 ))}
               </div>
             </div>
+
+            {audioSetupError && (
+              <p className="w-full rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm leading-6 text-rose-800" role="alert">
+                {audioSetupError}
+              </p>
+            )}
 
             {/* Audio Waveform Live Canvas */}
             <div className="w-full my-4 bg-slate-900 rounded-2xl p-3 flex flex-col items-center shadow-md">
