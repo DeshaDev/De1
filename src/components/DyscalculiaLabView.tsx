@@ -170,10 +170,17 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const handleSelectSubitizing = (patternId: number, chosenCount: number) => {
     if (!readySubitizingIds[patternId] || visibleSubitizingIds[patternId]) return;
     const startTs = trialStartTimestampRef.current[patternId] || performance.now();
-    const elapsed = Math.max(
-      220,
-      Math.min(4500, Math.round(performance.now() - startTs))
-    );
+    const elapsed = Math.round(performance.now() - startTs);
+    if (elapsed < 150 || elapsed > 15_000) {
+      handleRestartSubitizingTimer(patternId);
+      setValidationError(
+        elapsed < 150
+          ? 'كانت الاستجابة أسرع من حدّ القياس التقني؛ ستُعاد المحاولة بدل تسجيل زمن غير موثوق.'
+          : 'انتهت مهلة هذه المحاولة (15 ثانية)؛ أُعيد عرضها لتسجيل محاولة جديدة بدل اختصار زمنها.'
+      );
+      setSaveMessage('');
+      return;
+    }
     setSubitizingSelections((prev) => ({
       ...prev,
       [patternId]: { chosen: chosenCount, rtMs: elapsed },
