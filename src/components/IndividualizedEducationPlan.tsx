@@ -102,12 +102,12 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
     } else {
       weeks.push({
         weekNum: 1,
-        titleAr: 'النمذجة القرائية والقراءة المتزامنة مع المعلم',
+        titleAr: 'النمذجة القرائية والقراءة المتزامنة بالذكاء الاصطناعي',
         domainAr: 'الطلاقة القرائية (ORF)',
         baselineAr: `معدل الطلاقة الحالي: ${primaryDeficit.score}% مقارنة بالهدف الصفي`,
         smartGoalAr: 'تحسين استرسال القراءة في جمل قصيرة دون انقطاع بين الكلمات',
         durationDailyAr: '15 دقيقة يومياً',
-        activitiesAr: 'القراءة المزدوجة (Paired Reading) حيث يقرأ المعلم بصوت مسموع مع الطالب ويخفض صوته تدريجياً.',
+        activitiesAr: 'القراءة المزدوجة التفاعلية (Interactive Paired Reading) حيث يستمع الطالب للنموذج الصوتي الذكي ويقرأ معه بالتزامن.',
         checkpointAr: 'رصد عدد الكلمات الصحيحة في الدقيقة (WCPM) لنص قصير مألوف.',
         themeColor: 'sky',
       });
@@ -122,7 +122,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
       smartGoalAr: 'رفع نسبة الإنجاز المشتركة بمقدار 15% مقارنة بنتيجة الجلسة الأولى',
       durationDailyAr: '15 دقيقة يومياً',
       activitiesAr: 'الجمع بين نطق المقاطع بسرعة مع استخدام وسائط بصرية مشكولة، والربط بين الصوت وشكل الحرف.',
-      checkpointAr: 'مراجعة المعلم لسجل محاولات الطالب في صالة التدريب.',
+      checkpointAr: 'التحليل الآلي بالذكاء الاصطناعي لسجل محاولات الطالب في صالة التدريب.',
       themeColor: 'sky',
     });
 
@@ -241,10 +241,10 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
       <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 mb-8 text-right">
         <div className="flex items-center gap-2 mb-2 text-slate-900 font-bold text-sm">
           <Edit3 className="w-4 h-4 text-teal-600" />
-          <span>ملاحظات المعلم وتعديلات الخطة المقترحة (قابلة للتخصيص):</span>
+          <span>تخصيص وتعديل أهداف الخطة الذكية:</span>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          يمكن للمعلم أو الأخصائي إضافة تكييفات إضافية، تعديل الأوقات، أو تخصيص الأهداف وفق استجابة الطالب للتدخل (RTI).
+          يمكن تخصيص التسهيلات الإضافية وتعديل الأوقات ومواءمة الأهداف وفق استجابة الطالب للتدخل الذكي (RTI).
         </p>
         <textarea
           value={teacherCustomNotes}
@@ -300,7 +300,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
               <strong>ألعاب التسمية الشفوية:</strong> ممارسة ألعاب استرجاع المفردات شفوياً وبشكل مرح في المنزل.
             </li>
             <li>
-              <strong>التواصل الدوري مع المدرسة:</strong> متابعة مدى استجابة الطفل وملاحظات المعلم الأسبوعية.
+              <strong>المتابعة الدورية للتقدم:</strong> متابعة مؤشرات استجابة الطفل ومعدلات التطور الأسبوعية في المنصة.
             </li>
           </ul>
         </div>
@@ -310,7 +310,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
       <div className="p-3.5 rounded-2xl bg-slate-100 border border-slate-200 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
         <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
         <span>
-          <strong>ملاحظة تربوية:</strong> تمثل هذه الخطة مقترحاً لمساندة المعلم والأخصائي، وتخضع للتكييف والمراجعة المستمرة وفق استجابة الطفل الفعلية (Response to Intervention).
+          <strong>ملاحظة تربوية:</strong> تمثل هذه الخطة برنامج دعم فردي مولّد بالذكاء الاصطناعي، وتخضع للتكييف والمواءمة المستمرة وفق استجابة الطفل الفعلية (Response to Intervention).
         </span>
       </div>
     </div>

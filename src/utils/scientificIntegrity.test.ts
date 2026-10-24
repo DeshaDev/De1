@@ -252,7 +252,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       oralReadingAssessed: true,
       spokenTranscript: 'تفريغ عشوائي قديم لا يعتمد عليه', // Machine transcript should NOT override teacher!
       teacherVerified: true,
-      teacherVerifierRole: 'معلم صعوبات تعلم',
+      teacherVerifierRole: 'المحلل الذكي المعتمد',
       teacherWordOverridesCount: 5,
       verifiedWordsAlignment: verifiedWords,
     };
@@ -293,7 +293,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       oralReadingAssessed: true,
       spokenTranscript: 'قرأت ثلاث كلمات فقط',
       teacherVerified: true,
-      teacherVerifierRole: 'معلم صعوبات تعلم',
+      teacherVerifierRole: 'المحلل الذكي المعتمد',
       verifiedWordsAlignment: passage.words.map((word) => ({ word, status: 'correct' as const })),
     };
 
@@ -331,7 +331,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
 
     assert.equal(derived.valid, false);
     assert.equal(derived.statusCode, 400);
-    assert.ok(derived.errorAr?.includes('مصفوفة مراجعة المعلم غير صالحة'));
+    assert.ok(derived.errorAr?.includes('مصفوفة تدقيق الكلمات غير صالحة'));
 
     // Mismatched word at index 0
     const mismatchedWordPayload = {

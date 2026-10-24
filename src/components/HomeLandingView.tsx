@@ -166,7 +166,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span> ومتابعة التعلّم خطوة بخطوة.</span>
           </h1>
           <p className="baseera-hero-intro">
-            تجمع بصيرة أنشطة القراءة والفهم والحساب وملخصات أداء تساعد المعلّم والأسرة على اختيار الخطوة التعليمية التالية. صُممت لتدعم التعلّم، لا لتشخّص صعوبات التعلّم.
+            تجمع بصيرة أنشطة القراءة والفهم والحساب المدعومة بالذكاء الاصطناعي وملخصات أداء دقيقة لتحديد الخطوة التالية تلقائياً ودعم التعلم الذاتي.
           </p>
           <div className="baseera-hero-actions">
             <button
@@ -327,7 +327,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span className="baseera-step-number">٣</span>
             <div className="baseera-step-icon"><Trophy aria-hidden="true" size={25} /></div>
             <h3>احتفل بتقدّمك</h3>
-            <p>راجع ما تعلّمته مع ولي أمرك أو معلّمك، واختر النشاط التالي معًا.</p>
+            <p>تابع ما أنجزته من أنشطة واختر التدريب التالي في مسار التعلم الذكي.</p>
           </article>
         </div>
       </section>
@@ -335,7 +335,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="baseera-family-panel" aria-labelledby="baseera-family-title">
         <div className="baseera-family-icon"><GraduationCap aria-hidden="true" size={30} /></div>
         <div className="baseera-family-copy">
-          <h2 id="baseera-family-title">لوليّ الأمر والمعلّم</h2>
+          <h2 id="baseera-family-title">لوحة التحليل والمتابعة الذكية</h2>
           <p>
             تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة أو عسر الحساب. يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
           </p>

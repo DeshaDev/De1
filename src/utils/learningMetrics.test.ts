@@ -120,7 +120,7 @@ test('studentDataSecurity enforces HMAC-SHA256 RBAC scopes and strict default-de
   // 2. Educator readonly role can read students but is forbidden (403) from deleting or writing
   const readonlySession = issueBaseeraSessionToken(
     'educator_readonly',
-    'معلم الصف',
+    'المحلل الذكي المعتمد',
     secret
   );
   const verifiedReadonly = verifyBaseeraSessionToken(

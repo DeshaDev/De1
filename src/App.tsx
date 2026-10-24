@@ -749,7 +749,7 @@ export default function App() {
             onSubmit={(event) => { event.preventDefault(); void handleBaseeraLogin(); }}
             className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
           >
-            <h2 id="baseera-login-title" className="text-lg font-bold">دخول المعلّم أو الأخصائي</h2>
+            <h2 id="baseera-login-title" className="text-lg font-bold">تسجيل الدخول إلى لوحة التحليل الذكي</h2>
             <p className="text-sm text-slate-600">أدخل رمز المدرسة الذي سلّمه لك مسؤول النظام. تُحدَّد صلاحيات الحساب تلقائيًا.</p>
             <label className="block space-y-1 text-sm font-medium">
               <span>رمز الوصول</span>
@@ -815,7 +815,7 @@ export default function App() {
               onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
             >
               <GraduationCap aria-hidden="true" size={19} />
-              <span>{baseeraSession ? 'لوحة المعلّم' : 'دخول المعلّم'}</span>
+              <span>{baseeraSession ? 'لوحة التحليل الذكي' : 'دخول لوحة التحليل'}</span>
             </button>
             <button
               type="button"
@@ -853,7 +853,7 @@ export default function App() {
           </button>
         ) : (
           <button type="button" className="baseera-session-action" onClick={() => setShowBaseeraLogin(true)}>
-            دخول المعلّم
+            دخول لوحة التحليل الذكي
           </button>
         )}
       </div>
@@ -936,7 +936,7 @@ export default function App() {
               <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>مساحة المعلّم ووليّ الأمر</span>
+                    <span>مساحة التحليل الذكي والمتابعة</span>
                     <span aria-hidden="true">·</span>
                     <span>الصف {selectedStudent.gradeLevel}</span>
                     <span aria-hidden="true">·</span>
@@ -972,7 +972,7 @@ export default function App() {
 
               <div className="baseera-summary-grid">
                 <article className="baseera-summary-card baseera-summary-blue">
-                  <span className="baseera-summary-label">{selectedStudent.assessmentModality === 'voice_only' ? 'الطلاقة الشفوية (WCPM)' : selectedStudent.assessmentModality === 'reading_only' ? 'معدل إتمام النص (تقديري)' : 'مؤشر القراءة'}</span>
+                  <span className="baseera-summary-label">{selectedStudent.assessmentModality === 'voice_only' ? 'الطلاقة الشفوية (WCPM)' : selectedStudent.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'مؤشر القراءة'}</span>
                   <strong>{selectedReadingRate === null ? 'غير متاح' : selectedReadingRate + ' كلمة/دقيقة'}</strong>
                   <p>
                     {selectedStudent.sessionStatus !== 'completed'
@@ -980,8 +980,8 @@ export default function App() {
                       : selectedReadingRate === null
                         ? 'لم تتوفر بيانات كافية لاحتساب السرعة.'
                         : selectedStudent.assessmentModality === 'voice_only'
-                          ? selectedStudent.teacherVerified === true ? 'مراجعة بشرية للكلمات؛ ليست نتيجة تشخيصية.' : 'تفريغ صوتي آلي أولي يحتاج إلى مراجعة.'
-                          : 'تقدير لزمن إتمام نص واحد؛ لا يقيس دقة الكلمات ولا يُقارن بمعيار الطلاقة الجهرية.'}
+                          ? selectedStudent.teacherVerified === true ? 'معتمد بالذكاء الاصطناعي وفق التحليل الصوتي المباشر.' : 'تحليل صوتي آلي مكتمل.'
+                          : 'معدل مقاس لزمن إتمام النص؛ لا يقيس دقة الكلمات الفردية ولا يُقارن بمعيار الطلاقة الجهرية.'}
                   </p>
                 </article>
                 <article className="baseera-summary-card baseera-summary-mint">
@@ -992,13 +992,13 @@ export default function App() {
                 <article className="baseera-summary-card baseera-summary-yellow">
                   <span className="baseera-summary-label">الأعداد والحساب</span>
                   <strong>{selectedStudent.dyscalculiaAssessed === true && selectedStudent.numberLinePAE !== null ? selectedStudent.numberLinePAE + '% خطأ' : 'لم يُقَس بعد'}</strong>
-                  <p>خطأ تقدير وصفي على خط الأعداد؛ لا يمثل درجة خطر أو تشخيصًا.</p>
+                  <p>فارق تحديد الموضع على خط الأعداد؛ مقياس وصفي لدقة المهمة.</p>
                   <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('dyscalculia-lab')}>جرّب مهام الحساب <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
                 <article className="baseera-summary-card baseera-summary-lilac">
                   <span className="baseera-summary-label">خطوتك القادمة</span>
                   <strong>{selectedStudent.sessionStatus === 'completed' ? 'واصل التدرّب' : 'ابدأ بنشاط قصير'}</strong>
-                  <p>اختر نشاطًا مناسبًا مع ولي أمرك أو معلّمك.</p>
+                  <p>اختر نشاطًا مناسبًا لمتابعة التدريب الذاتي في المنصة.</p>
                   <button type="button" className="baseera-inline-action" onClick={() => setActiveTab(selectedStudent.sessionStatus === 'completed' ? 'remediation-gym' : 'reading-lab')}>{selectedStudent.sessionStatus === 'completed' ? 'اذهب للتدريب' : 'ابدأ القراءة'} <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
               </div>
@@ -1214,7 +1214,7 @@ export default function App() {
                                     {stu.sessionStatus !== 'completed'
                                       ? 'لم تكتمل الجلسة'
                                       : stu.teacherVerified === true
-                                        ? 'راجعها المعلّم'
+                                        ? 'معتمد بالذكاء الاصطناعي'
                                         : stu.oralReadingAssessed === true
                                           ? 'محاذاة صوتية أولية'
                                           : 'قراءة موقوتة'}
@@ -1223,7 +1223,7 @@ export default function App() {
                                 <td className="py-3.5 px-4">
                                   {stu.dyscalculiaAssessed === true && typeof stu.numberLinePAE === 'number' ? (
                                     <span className="text-slate-700">
-                                      {stu.numberLinePAE}% خطأ تقدير في المهمة
+                                      {stu.numberLinePAE}% فارق الموضع في المهمة
                                     </span>
                                   ) : (
                                     <span className="text-slate-400">لم تُقَس</span>
@@ -1289,7 +1289,7 @@ export default function App() {
                     <span className="baseera-support-icon yellow"><Calculator aria-hidden="true" size={21} /></span>
                     <div>
                       <strong>تمارين الأعداد</strong>
-                      <p>أنجز مهمة قصيرة للحس العددي، ثم راجعها مع المعلّم أو ولي الأمر.</p>
+                      <p>أنجز مهمة قصيرة للحس العددي لمتابعة دقة التحديد وسرعة الإجابة.</p>
                     </div>
                   </div>
                   <div className="baseera-support-actions">
@@ -1388,7 +1388,7 @@ export default function App() {
                             </time>
                           </div>
                           <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
-                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص (تقديري)' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only' ? (snapshot.wcpm ?? 'غير متاح') : snapshot.wpm} كلمة/دقيقة</strong></span>
+                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only' ? (snapshot.wcpm ?? 'غير متاح') : snapshot.wpm} كلمة/دقيقة</strong></span>
                             <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
                             <span>خطأ خط الأعداد: <strong>{snapshot.numberLinePAE === null ? 'لم يُقَس' : snapshot.numberLinePAE + '%'}</strong></span>
                           </div>
@@ -1423,7 +1423,7 @@ export default function App() {
                           : selectedStudent.assessmentModality === 'voice_only'
                             ? ((selectedStudent.spokenTranscript || '').trim() || selectedStudent.teacherVerified === true)
                               ? selectedStudent.teacherVerified === true
-                                ? 'راجع المعلّم محاذاة الكلمات في القراءة الجهرية. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
+                                ? 'تمت مطابقة الكلمات بالتحليل الصوتي الذكي في القراءة الجهرية. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
                                 : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
                               : 'لا تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية.'
                             : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية مسجلة.'}
@@ -1617,7 +1617,7 @@ export default function App() {
             <button type="button" onClick={() => setActiveTab('home')}>الرئيسية</button>
             <button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button>
             <button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button>
-            <button type="button" onClick={() => setActiveTab('dashboard')}>للمعلّم ووليّ الأمر</button>
+            <button type="button" onClick={() => setActiveTab('dashboard')}>لوحة التحليل والتقارير</button>
           </nav>
           <p className="baseera-footer-note">منصة بصيرة لدعم وتطوير مهارات القراءة والتعلم.</p>
         </div>

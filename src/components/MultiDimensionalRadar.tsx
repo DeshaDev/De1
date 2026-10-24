@@ -19,7 +19,7 @@ const AXES = [
   { key: 'ranSpeed', labelAr: 'سرعة التسمية (RAN)', angle: -18, descriptionAr: 'معدل سرعة تسمية 20 عنصراً قياساً لمعيار 20 ثانية' },
   { key: 'pseudoDecoding', labelAr: 'فك الترميز (12 كلمة)', angle: 54, descriptionAr: 'نسبة الدقة في قراءة الكلمات غير المعجمية الموزونة' },
   { key: 'phonemicAwareness', labelAr: 'الوعي الصوتي (Phonemic)', angle: 126, descriptionAr: 'نسبة إتقان مهام العزل والحذف والدمج الفصحى' },
-  { key: 'numeracy', labelAr: 'الحس العددي (Math)', angle: 198, descriptionAr: 'دقة تقدير مواضع الأرقام على خط الأعداد' },
+  { key: 'numeracy', labelAr: 'الحس العددي (Math)', angle: 198, descriptionAr: 'دقة تحديد مواضع الأرقام على خط الأعداد' },
 ] as const;
 
 export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) => {
@@ -61,7 +61,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
             <span>ملف مهارات القراءة والتعلم الشامل</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            عرض بصري نسبي لتوزيع أداء الطالب في مهام الجلسة لمساعدة المعلم على استكشاف التباين بين المهارات
+            عرض بصري نسبي لتوزيع أداء الطالب في مهام الجلسة بالذكاء الاصطناعي لاستكشاف التباين بين المهارات
           </p>
         </div>
         <span className="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full font-mono">
@@ -197,7 +197,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
               <span className="font-bold text-purple-950">5. الحس العددي:</span>
               <span className="font-mono font-black text-purple-800 text-sm">{Math.round(scores.numeracy)}%</span>
             </div>
-            <p className="text-[10px] text-purple-800/80">دقة التقدير في خط الأعداد ومهام الحساب المرصودة</p>
+            <p className="text-[10px] text-purple-800/80">دقة تحديد الموضع في خط الأعداد ومهام الحساب المرصودة</p>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
       <div className="mt-5 pt-3 border-t border-slate-100 flex items-start gap-2.5 text-[11px] text-slate-500 leading-relaxed">
         <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
         <span>
-          <strong>ملاحظة تربوية:</strong> توضح الدرجات المعروضة (0–100%) نسب إنجاز المهام المسجلة في الجلسة لمساعدة المعلم على استكشاف مجالات القوة وجوانب الدعم المستقبلي.
+          <strong>ملاحظة تقنية:</strong> توضح الدرجات المعروضة (0–100%) نسب إنجاز المهام المسجلة في الجلسة بالذكاء الاصطناعي لاستكشاف مجالات القوة وجوانب التطوير المستقبلي.
         </span>
       </div>
     </div>

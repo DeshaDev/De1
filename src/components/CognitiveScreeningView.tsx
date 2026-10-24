@@ -514,7 +514,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               أنشطة الفرز المعرفي المساندة للقراءة العربية
             </h2>
             <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed mb-6">
-              توسع هذه الأنشطة ملاحظة المعلم لتشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط الصفي والتوصيات التعليمية.
+              توسع هذه الأنشطة التحليل الذكي للذكاء الاصطناعي ليشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط والتوصيات الذاتية.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-right">
@@ -552,7 +552,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-xs text-slate-600 text-right leading-relaxed mb-8 flex items-start gap-3">
               <Info className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <span>
-                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد المعلم بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
+                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد نظام التحليل الذكي بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
               </span>
             </div>
 
@@ -581,7 +581,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   رصد زمن تسمية مصفوفة العناصر (20 عنصراً)
                 </h2>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  يسمي الطالب العناصر سطراً بسطر من اليمين لليسار. ينقر المعلم أو الفاحص لتسجيل الانتقال أو رصد التردد والأخطاء.
+                  يسمي الطالب العناصر سطراً بسطر من اليمين لليسار مع التسجيل الآلي الذكي لرصد التردد وزمن الاستجابة بدقة.
                 </p>
               </div>
 
@@ -979,7 +979,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ملف مهارات القراءة والتعلم: {student.name}
                 </h2>
                 <p className="text-xs text-slate-600 mt-1">
-                  ملخص دقيق للسرعة والتفكيك والوعي الفونولوجي لمساندة المعلم
+                  ملخص دقيق للسرعة والتفكيك والوعي الفونولوجي بالذكاء الاصطناعي
                 </p>
               </div>
 
@@ -1040,7 +1040,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   تم حفظ الملاحظات في سجل جلسة الطالب
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  يمكنك الآن الانتقال إلى لوحة المعلم لمراجعة ملف المهارات الشامل وتخصيص خطة التدخل التعليمية المقترحة.
+                  يمكنك الآن الانتقال إلى لوحة التحليل الذكي لمراجعة ملف المهارات الشامل وخطة التدخل المقترحة.
                 </p>
               </div>
 
@@ -1059,7 +1059,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     onClick={() => onNavigateTab('dashboard')}
                     className="flex-1 sm:flex-none py-3 px-6 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>لوحة المعلّم والتقارير</span>
+                    <span>لوحة التحليل والتقارير الذكية</span>
                     <ArrowLeft className="w-4 h-4" />
                   </button>
                 )}

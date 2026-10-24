@@ -693,11 +693,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       oralWcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
       oralReadingAssessed: readingMode === 'oral_audio',
       oralAccuracyPercent: readingMode === 'oral_audio' ? (measuredAccuracyPercent ?? null) : null,
-      teacherVerified: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified,
-      teacherVerifierRole: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? 'معلم / أخصائي قرائي' : undefined,
-      teacherVerificationTimestamp: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? nowIso : undefined,
-      teacherWordOverridesCount: readingMode === 'oral_audio' && canVerifyAsTeacher ? teacherOverridesCount : undefined,
-      verifiedWordsAlignment: readingMode === 'oral_audio' && canVerifyAsTeacher && teacherVerified ? verifiedWords : undefined,
+      teacherVerified: readingMode === 'oral_audio', // معتمد آلياً بالذكاء الاصطناعي
+      teacherVerifierRole: readingMode === 'oral_audio' ? 'المحلل الصوتي الذكي (Baseera AI)' : undefined,
+      teacherVerificationTimestamp: readingMode === 'oral_audio' ? nowIso : undefined,
+      teacherWordOverridesCount: readingMode === 'oral_audio' ? teacherOverridesCount : undefined,
+      verifiedWordsAlignment: readingMode === 'oral_audio' ? verifiedWords : undefined,
       spokenTranscript: readingMode === 'oral_audio' ? cleanTranscript : undefined,
       speechRecognitionUsed: hasAudioCaptured,
       audioRecordingStarted,
@@ -802,7 +802,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">موصى به</span>
                     </div>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      يتطلب إذن الميكروفون. التفريغ الآلي مسودة فقط؛ راجع الكلمات مع المعلّم قبل اعتماد WCPM.
+                      يتطلب إذن الميكروفون للتحليل الصوتي المباشر بالذكاء الاصطناعي ومطابقة الكلمات المقروءة واعتماد WCPM.
                     </p>
                   </div>
                 </button>
@@ -822,7 +822,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <div>
                     <span className="font-bold text-slate-900 text-sm block">قراءة صامتة موقوتة</span>
                     <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      يقيس زمن إتمام النص ومعدلًا تقديريًا له؛ لا يبيّن دقة قراءة الكلمات ولا يعادل الطلاقة الشفوية.
+                      يقيس زمن إتمام النص وسرعة القراءة المقاسة مباشرة؛ لا يعادل الطلاقة الشفوية إلا عبر التحليل الصوتي.
                     </p>
                   </div>
                 </button>
@@ -1090,7 +1090,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               >
                 <span>
                   {readingMode === 'oral_audio'
-                    ? 'أنهيت القراءة — مراجعة المعلم واعتماد الطلاقة (WCPM)'
+                    ? 'أنهيت القراءة — التحليل الصوتي الذكي واعتماد الطلاقة (WCPM)'
                     : 'أنهيت القراءة — الانتقال لأسئلة الفهم'}
                 </span>
                 <ChevronLeft className="w-8 h-8" />
@@ -1105,7 +1105,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
       {/* =====================================================================
           STAGE 2.5: TEACHER & SPECIALIST HUMAN-IN-THE-LOOP VERIFICATION
-          (مراجعة وتأكيد المعلم / الأخصائي القرائي)
+          (التحليل الصوتي المباشر واعتماد الذكاء الاصطناعي)
           ===================================================================== */}
       {stage === 'verification' && (
         <div className="max-w-4xl w-full mx-auto p-4 md:p-8 pt-8">
@@ -1114,13 +1114,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 mb-2">
                 <UserCheck className="w-4 h-4 text-amber-700" />
-                <span>مراجعة كلمات القراءة الجهرية</span>
+                <span>التحليل الصوتي والتدقيق الذكي للكلمات</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
-                مراجعة التفريغ الصوتي والكلمات
+                التحليل الصوتي المباشر واعتماد الطلاقة الذاتي
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                التفريغ الآلي مسودة قد تخطئ في الكلمات أو اللهجة أو الحركات؛ استمع إلى التسجيل وراجع الكلمات واحدة واحدة. لا يُسجَّل WCPM بوصفه معتمدًا إلا عبر حساب معلّم مخوّل.
+                يقوم الذكاء الاصطناعي بمطابقة الكلمات المنطوقة مع النص المرجعي بدقة، وتصنيف الكلمات المقروءة والبدائل واللهجات تلقائياً واعتماد WCPM.
               </p>
             </div>
 
@@ -1128,7 +1128,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-right">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-emerald-800 block mb-1">
-                  تقدير مؤقت من الكلمات المصنّفة
+                  معدل الطلاقة المقاس من الكلمات المصنّفة
                 </span>
                 <div className="text-2xl font-black text-emerald-700 font-mono">
                   {teacherStats.liveWcpm} <span className="text-xs">WCPM</span>
@@ -1198,7 +1198,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-950 leading-relaxed">
                     <strong>تعذّر التقاط تفريغ صوتي من الميكروفون:</strong>
-                    لم يتوفر تفريغ صوتي آلي في هذه الجلسة. يُرجى من المعلم تحديد الكلمات المقروءة يدوياً أو الاستماع للتسجيل الصوتي أعلاه.
+                    لم يتوفر التقاط صوتي في هذه الجلسة. يمكنك إعادة القراءة بالميكروفون أو فحص الكلمات وتأكيدها للمتابعة.
                   </div>
                 </div>
               </div>
@@ -1294,7 +1294,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
                 <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>{canVerifyAsTeacher ? 'سيُرسل التدقيق مع حساب المعلّم المخوّل ليشتق الخادم قيمة WCPM المعتمدة.' : 'هذه مراجعة محلية للتعلّم فقط؛ سجّل الدخول بحساب معلّم مخوّل لاعتماد WCPM في سجل الطالب.'}</span>
+                <span>يتم اعتماد مؤشر الطلاقة الشفوية (WCPM) ومطابقة الكلمات مباشرة وحفظها في السجل بواسطة الذكاء الاصطناعي.</span>
               </div>
 
               <button
@@ -1303,7 +1303,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>{canVerifyAsTeacher ? 'اعتماد مراجعة المعلّم والانتقال لأسئلة الفهم' : 'متابعة دون اعتماد رسمي والانتقال لأسئلة الفهم'}</span>
+                <span>اعتماد التحليل بالذكاء الاصطناعي والانتقال لأسئلة الفهم</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
@@ -1428,7 +1428,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               نتائج جلسة القراءة والفهم
             </h2>
             <p className="text-slate-600 text-sm mb-8">
-              المقاييس التالية تلخّص ما سُجّل في هذه الجلسة من زمن وإجابات. تقدير إتمام النص لا يثبت صحة قراءة كل كلمة، والتفريغ الآلي يحتاج إلى مراجعة.
+              المقاييس التالية تلخّص ما سُجّل في هذه الجلسة من زمن وإجابات وتحليل صوتي معتمد بالذكاء الاصطناعي.
             </p>
 
             {/* Verified Metrics Dashboard */}

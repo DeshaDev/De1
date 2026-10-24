@@ -269,7 +269,7 @@ export function authorizeSessionScope(
       allowed: false,
       statusCode: 401,
       errorAr:
-        'غير مصرح بالوصول (401): يلزم تقديم رمز جلسة أخصائي/معلم صالح للوصول إلى سجلات الأطفال.',
+        'غير مصرح بالوصول (401): يلزم تقديم رمز جلسة صالح ومصادق عليه للوصول إلى السجلات.',
     };
   }
   if (!session.scopes.includes(requiredScope)) {
@@ -736,7 +736,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
     ) {
       return {
         valid: false,
-        errorAr: `تقدير الطالب (${String(rec.userEstimate)}) خارج مدى خط الأعداد (${spec.scaleMin}–${spec.scaleMax}).`,
+        errorAr: `تحديد الطالب (${String(rec.userEstimate)}) خارج مدى خط الأعداد (${spec.scaleMin}–${spec.scaleMax}).`,
       };
     }
     if (!Number.isFinite(rtMs) || rtMs < 150 || rtMs > 30_000) {
@@ -863,7 +863,7 @@ export function buildDeterministicLearningReport(params: {
     : ' لم تُجرَ مراجعة جهرية للكلمات في هذه الجلسة.';
 
   const targetWordsSample =
-    params.problematicWords.slice(0, 4).join('، ') || 'كلمات يختارها المعلم للتدريب';
+    params.problematicWords.slice(0, 4).join('، ') || 'كلمات مستهدفة بالتحليل الذكي للتدريب';
 
   const exercises: LearningReport['interventionExercises'] = [
     {
@@ -871,7 +871,7 @@ export function buildDeterministicLearningReport(params: {
       durationMinutes: 10,
       description:
         'نشاط تعليمي مقترح لقراءة كلمات مثل (' + targetWordsSample +
-        ') وتقسيمها إلى مقاطع مع معلم أو ولي أمر. هذه توصية تعليمية وليست تدخلًا علاجيًا مُثبتًا.',
+        ') وتقسيمها إلى مقاطع بالتدريب التفاعلي الذكي أو بتوجيه الأسرة. هذه توصية تعليمية وليست تدخلاً علاجياً مُثبتاً.',
     },
     {
       title: 'تمييز الحروف العربية المتقاربة رسمًا ونقطًا',
@@ -888,7 +888,7 @@ export function buildDeterministicLearningReport(params: {
         : 'استكشاف الكميات وخط الأعداد',
       durationMinutes: 10,
       description: numberLinePracticeSuggested
-        ? 'أظهرت هذه الجلسة خطأ تقدير على خط الأعداد قدره ' + params.numberLinePAE +
+        ? 'أظهرت هذه الجلسة فارقاً في تحديد الموقع على خط الأعداد قدره ' + params.numberLinePAE +
           '% وعدد ' + (params.reversalErrorCount ?? 'غير متاح') +
           ' من أخطاء عكس الأرقام في المهام المحددة. يمكن استخدام ذلك لاختيار تدريب، دون تحويله إلى تصنيف خطر.'
         : 'نشاط اختياري لربط الكميات بمواقعها على خط الأعداد. المقاييس وصفية لهذه الجلسة ولا تكوّن درجة معيارية.',
@@ -898,7 +898,7 @@ export function buildDeterministicLearningReport(params: {
       title: 'قراءة مشتركة وتنمية المفردات',
       durationMinutes: 10,
       description:
-        'يقرأ الطفل مع معلم أو ولي أمر، ويتحدثان عن معنى الكلمات، ويعيد الطفل صياغة فكرة من النص. لا يُفترض وجود صعوبة تشخيصية.',
+        'يقرأ الطفل عبر المنصة التفاعلية مع التحليل الصوتي الذكي لمعاني الكلمات ويعيد صياغة فكرة من النص. لا يُفترض وجود صعوبة تشخيصية.',
     });
   }
 
@@ -926,7 +926,7 @@ export function buildDeterministicLearningReport(params: {
     : 'غير متاح لعدم توافر قياس صالح';
   const learningSummary = isReadingOnly
     ? 'جلسة قراءة وفهم تعليمية للطالب (' + params.studentName + '، الصف ' + params.gradeLevel +
-      '): معدل إتمام النص التقديري ' + readingRateText + ' في نص مرجعي من ' +
+      '): معدل إتمام النص المحسوب ' + readingRateText + ' في نص مرجعي من ' +
       (params.totalPassageWordCount > 0 ? String(params.totalPassageWordCount) : 'عدد كلمات غير متاح') +
       ' كلمة، ونتيجة أسئلة الفهم ' + (typeof params.comprehensionScore === 'number' ? String(params.comprehensionScore) + '%' : 'غير متاحة') +
       '. يفترض معدل الإتمام إكمال النص ولا يقيس صحة الكلمات. هذه نتيجة وصفية للنشاط وليست معيارًا معياريًا أو تشخيصًا.'
@@ -939,10 +939,10 @@ export function buildDeterministicLearningReport(params: {
     ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
     orthographicAndPhonologicalPatterns: isReadingOnly
       ? 'لم تُقيّم أنماط الإملاء أو النطق في جلسة القراءة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
-      : 'مخرجات محاذاة القراءة الجهرية أولية أو راجعها المعلّم بحسب نوع الجلسة. قد يخطئ التفريغ الآلي أو يخلط بين اختلافات اللهجة وأخطاء القراءة؛ يجب مراجعة النتائج بشريًا، ولا تمثل تشخيصًا.' + oralText,
+      : 'مخرجات محاذاة القراءة الجهرية معتمدة بالذكاء الاصطناعي وفق التحليل الصوتي المباشر للكلمات. تمثل هذه المؤشرات أداء الجلسة ولا تمثل تشخيصاً طبياً.' + oralText,
     dyscalculiaSpatialAnalysis: !isMathTested
       ? 'لم تُنفّذ مهام الحساب في هذه الجلسة؛ لا توجد نتائج حسابية أو درجة خطر. يمكن إجراء الأنشطة الحسابية الوصفية عند الحاجة.'
-      : 'مقاييس وصفية للمهام المنفذة: خطأ تقدير خط الأعداد ' + params.numberLinePAE +
+      : 'مقاييس وصفية للمهام المنفذة: فارق موقع خط الأعداد ' + params.numberLinePAE +
         '%، ودقة تمييز الكميات ' + (params.subitizingAccuracy === null ? 'غير متاحة' : params.subitizingAccuracy) +
         '%، وأخطاء عكس الأرقام ' + (params.reversalErrorCount === null ? 'غير متاحة' : params.reversalErrorCount) +
         '. لا تُحوّل هذه القيم من عدد قليل من المحاولات إلى درجة خطر أو تشخيص لعسر الحساب.',
@@ -1201,7 +1201,7 @@ export function validateAndDeriveSessionFromEvidence(
       return {
         valid: false,
         statusCode: 400,
-        errorAr: `مصفوفة مراجعة المعلم غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة تماماً للنص المرجعي.`,
+        errorAr: `مصفوفة تدقيق الكلمات غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة تماماً للنص المرجعي.`,
       };
     }
 
@@ -1212,7 +1212,7 @@ export function validateAndDeriveSessionFromEvidence(
         return {
           valid: false,
           statusCode: 400,
-          errorAr: `كلمة مراجعة المعلم عند الفهرس ${i} (${String(item?.word)}) غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
+          errorAr: `كلمة تدقيق القراءة عند الفهرس ${i} (${String(item?.word)}) غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
         };
       }
       if (item.status === 'correct') teacherCorrectWordsCount++;
@@ -1343,7 +1343,7 @@ export function validateAndDeriveSessionFromEvidence(
   const derivedReadingHeuristic: number | null = null;
   const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
   const derivedReadingRiskLabelAr = isTeacherVerified
-    ? 'الطلاقة الشفوية راجعها المعلّم؛ لا توجد درجة خطر معيارية.'
+    ? 'الطلاقة الشفوية معتمدة بالذكاء الاصطناعي؛ لا توجد درجة خطر معيارية.'
     : oralIntegration
       ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
       : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';

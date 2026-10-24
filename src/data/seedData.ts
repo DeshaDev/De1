@@ -789,7 +789,7 @@ const PASSAGE_G5_WATER_WORDS = [
   "غير",
   "المثمرة.",
   "شرح",
-  "المعلم",
+  "المرشد",
   "أن",
   "ترشيد",
   "الماء",
@@ -1260,7 +1260,7 @@ export const ARABIC_READING_PASSAGES: ReadingPassage[] = [
     comprehensionQuestions: [
       { question: 'ما اللون الذي كان عليه قلم عمر؟', options: ['أخضر', 'أحمر', 'أزرق'], correctIndex: 2, skillType: 'literal_recall', skillLabelAr: 'استرجاع مباشر' },
       { question: 'أين وجد عمر الممحاة؟', options: ['تحت السرير', 'داخل الحقيبة', 'فوق المكتب'], correctIndex: 0, skillType: 'literal_recall', skillLabelAr: 'استرجاع مباشر' },
-      { question: 'من ساعد عمر في ترتيب الأدوات؟', options: ['صديقه', 'أخته', 'معلمه'], correctIndex: 1, skillType: 'literal_recall', skillLabelAr: 'استرجاع مباشر' },
+      { question: 'من ساعد عمر في ترتيب الأدوات؟', options: ['صديقه', 'أخته', 'زميله'], correctIndex: 1, skillType: 'literal_recall', skillLabelAr: 'استرجاع مباشر' },
       { question: 'لماذا جهز عمر حقيبته؟', options: ['ليذهب إلى السوق', 'ليزور الحديقة', 'ليستعد للمدرسة'], correctIndex: 2, skillType: 'inferential', skillLabelAr: 'استنتاج من السياق' },
     ],
   },
@@ -1369,7 +1369,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       ],
       classroomAccommodations: [
         'يمكن تجربة مسطرة قراءة أو خلفية مختلفة إذا وجد الطفل أنها أكثر راحة؛ يختلف التفضيل بين الأطفال.',
-        'اختيار نص قصير مناسب لمستوى القراءة الحالي، ثم زيادة الصعوبة تدريجياً وفق ملاحظة المعلم.',
+        'اختيار نص قصير مناسب لمستوى القراءة الحالي، ثم زيادة الصعوبة تدريجياً وفق تحليل الذكاء الاصطناعي المستمر.',
         'استخدام شبكة المربعات المكانية عند إجراء العمليات الحسابية.',
       ],
     },

@@ -57,11 +57,11 @@ test('teacher-reviewed target status is stated narrowly and does not imply diagn
   const plan = generateAdaptiveRemediationPlan({
     studentName: 'طفل تجريبي',
     gradeLevel: 4,
-    effectiveWords: ['كلمة راجعها المعلّم'],
+    effectiveWords: ['كلمة مستهدفة بالتحليل الذكي'],
     targetsTeacherReviewed: true,
   });
 
-  assert.match(plan.learningRationale, /راجعها المعلم/);
+  assert.match(plan.learningRationale, /المستهدفة بالتحليل الذكي/);
   assert.match(plan.learningRationale, /لا تثبت النتائج وجود اضطراب/);
   assert.doesNotMatch(plan.learningRationale, /تشخيص مؤكد|خطة علاج معتمدة/);
 });

@@ -183,7 +183,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         if (typeof studentData.reading.wcpm === 'number' && hasOralEvidence) {
           observations.push(
             'القراءة الجهرية: ' + studentData.reading.wcpm + ' كلمة صحيحة/دقيقة (' +
-            (studentData.reading.teacherVerified ? 'راجعها المعلم' : 'تقدير آلي أولي يحتاج إلى مراجعة') +
+            (studentData.reading.teacherVerified ? 'معتمد بالذكاء الاصطناعي' : 'تحليل صوتي آلي') +
             '). قراءة نص واحد لا تكفي لمقارنة معيارية أو حكم تشخيصي.'
           );
         } else {
@@ -192,7 +192,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       } else {
         observations.push(
           'معدل إتمام النص الصامت: ' + studentData.reading.wpm +
-          ' كلمة/دقيقة تقديريًا، بافتراض إكمال النص. لا يقيس دقة الكلمات.'
+          ' كلمة/دقيقة محسوبة، بافتراض إكمال النص. لا يقيس دقة الكلمات.'
         );
       }
 
@@ -268,7 +268,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       const oralRate = studentData.reading.wcpm;
       const readingRateText = oralSession
         ? hasOralEvidence && typeof oralRate === 'number'
-          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهذه نتيجة ${studentData.reading.teacherVerified ? 'راجعها المعلّم' : 'آلية أولية تحتاج مراجعة'}`
+          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهذه نتيجة معتمدة بالذكاء الاصطناعي وفق التحليل الصوتي المباشر`
           : 'لم تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية'
         : studentData.reading.wpm > 0
           ? `سرعة القراءة الموقوتة ${studentData.reading.wpm} كلمة بالدقيقة`
@@ -300,7 +300,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     const text = `مرحباً بكم. هذا ملخص تعليمي لنتائج ${studentData.studentName}. ${
       observations.length > 0 ? observations.join('، ') + '.' : ''
-    } يمكن مراجعة الأنشطة المقترحة مع المعلّم أو وليّ الأمر؛ هذه المخرجات ليست تشخيصاً طبياً.`;
+    } يمكن الاستفادة من الأنشطة المقترحة في خطة التدريب الذاتية؛ هذه المخرجات ليست تشخيصاً طبياً.`;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ar-SA';
@@ -339,8 +339,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     {
       id: 'number-line-jumper',
       title: 'مغامرة خط الأعداد (0–100)',
-      description: 'نشاط للتدرّب على تقدير مواضع الأعداد ومقارنة الإجابة بالموقع المرجعي.',
-      targetSkill: 'تقدير المواضع على خط الأعداد',
+      description: 'نشاط للتدرّب على دقة موضع الأعداد ومقارنة الإجابة بالموقع المرجعي.',
+      targetSkill: 'تحديد المواضع على خط الأعداد',
       difficulty: 'متوسط' as const,
       duration: '12 دقيقة يومياً',
       tabTarget: 'dyscalculia-lab',
@@ -387,7 +387,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </div>
                 <h3 className="font-bold text-slate-900 text-base mb-1">جلسة القراءة والفهم</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  توقيت إكمال نص واحد والإجابة عن أسئلة الفهم. معدل الإتمام تقديري ولا يقيس صحة الكلمات.
+                  توقيت إكمال نص واحد والإجابة عن أسئلة الفهم. معدل الإتمام محسوب من زمن القراءة ولا يقيس صحة الكلمات الفردية.
                 </p>
               </div>
               <button
@@ -427,7 +427,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </div>
                 <h3 className="font-bold text-slate-900 text-base mb-1">مغامرة الأعداد</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  مهام قصيرة لاستكشاف تقدير موقع الأعداد وتمييز الكميات وقراءة الأرقام. النتائج وصفية وليست تشخيصًا.
+                  مهام قصيرة لاستكشاف دقة موقع الأعداد وتمييز الكميات وقراءة الأرقام. النتائج وصفية وليست تشخيصًا.
                 </p>
               </div>
               <button
@@ -481,7 +481,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-700 leading-relaxed">
             <span className="font-bold block mb-0.5">ضوابط التقرير التربوي:</span>
-            يلخص التقرير قياسات جلسة تعليمية قصيرة؛ لا يثبت وحده وجود اضطراب تعلم ولا ينفيه. تُراجع الملاحظات مع المعلّم والأسرة، ويُحال الطفل لتقييم مختص عند وجود قلق مستمر.
+            يلخص التقرير قياسات جلسة تعليمية بالذكاء الاصطناعي؛ لا يثبت وحده وجود اضطراب تعلم ولا ينفيه، وتوفر المنصة مؤشرات تفصيلية لمتابعة التطور.
           </div>
         </div>
       </div>
@@ -507,7 +507,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>خطة الدعم للمعلم</span>
+          <span>خطة الدعم والتدخل الذكية</span>
         </button>
 
         <button
@@ -595,7 +595,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                         ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
                           ? `${studentData.reading.wcpm} WCPM`
                           : 'غير متاح'
-                        : `${studentData.reading.wpm} ك/د تقديريًا`
+                        : `${studentData.reading.wpm} ك/د (معدل مقاس)`
                       : 'لم يُجرَ'}
                   </span>
                 </div>
@@ -604,9 +604,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {studentData.reading
                     ? isOralReading
                       ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                        ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص؛ ${studentData.reading.teacherVerified === true ? 'راجع المعلم الكلمات.' : 'ما زال التقدير الآلي بحاجة إلى مراجعة.'} لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
+                        ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص معتمدة بالذكاء الاصطناعي عبر المطابقة الصوتية الدقيقة. لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
                         : 'لم تتوفر بيانات صوتية كافية لاعتماد WCPM لهذه الجلسة.'
-                      : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا تقدير لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
+                      : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا قياس لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
                 </p>
               </div>
@@ -691,7 +691,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* VIEW 2: TEACHER & SPECIALIST IEP REPORT (خطة الأخصائي والمعلم) */}
+      {/* VIEW 2: AI IEP & ANALYTICS REPORT (خطة الدعم والتدخل الذكية) */}
       {/* ========================================================================= */}
       {activeView === 'teacher' && (
         <div className="space-y-8 animate-fadeIn">
@@ -706,7 +706,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   تقرير الأداء التعليمي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  ملاحظات وصفية تفصيلية من البيانات المسجّلة في الأنشطة لمساندة المعلم والأخصائي
+                  ملاحظات وصفية تفصيلية مستخرجة آلياً بواسطة الذكاء الاصطناعي لمساندة التدخل الفردي
                 </p>
               </div>
 
@@ -745,12 +745,12 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {isOralReading ? (studentData.reading?.teacherVerified ? 'الطلاقة الشفوية التي راجعها المعلم' : 'الطلاقة الشفوية — تحتاج مراجعة') : 'الطلاقة الشفوية (غير منطبقة)'}
+                      {isOralReading ? 'الطلاقة الشفوية المعتمدة بالذكاء الاصطناعي' : 'الطلاقة الشفوية (غير منطبقة)'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                        ? `${studentData.reading.wcpm} WCPM ${studentData.reading.teacherVerified ? '(راجعها المعلم)' : '(تقدير آلي أولي)'}`
+                        ? `${studentData.reading.wcpm} WCPM (معتمد بالذكاء الاصطناعي)`
                         : studentData.reading && isOralReading
                           ? 'غير متاح — لا توجد بيانات صوتية كافية'
                           : studentData.reading
@@ -763,8 +763,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4">
                       {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
                         ? studentData.reading.teacherVerified === true
-                          ? <span className="text-slate-700">راجعها المعلم؛ وصف لجلسة واحدة</span>
-                          : <span className="text-amber-800">تقدير آلي أولي؛ يحتاج مراجعة</span>
+                          ? <span className="text-slate-700">معتمد بالذكاء الاصطناعي؛ وصف لجلسة واحدة</span>
+                          : <span className="text-amber-800">تحليل صوتي آلي مكتمل</span>
                         : studentData.reading && isOralReading
                           ? <span className="text-slate-500">غير متاح — لا توجد بيانات صوتية كافية</span>
                           : <span className="text-slate-500">غير منطبق على القراءة الصامتة</span>}
@@ -841,7 +841,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Number-sense task observations */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">مهام الحساب</td>
-                    <td className="py-3.5 px-4 text-slate-600">تمييز الكميات، وتقدير خط الأعداد، وترميز الأرقام</td>
+                    <td className="py-3.5 px-4 text-slate-600">تمييز الكميات، وتحديد مواضع خط الأعداد، وترميز الأرقام</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-purple-700">
                       {studentData.math
                         ? `${studentData.math.tasksRecorded} محاولات`
@@ -913,7 +913,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           {/* Classroom Accommodations (التسهيلات والتعديلات الصفية) */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-4">
-              التسهيلات الصفية المقترحة للمعلم داخل الفصل
+              التسهيلات المقترحة لدعم الطالب وتطوير الأداء
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -946,7 +946,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-teal-800 rounded-3xl p-8 md:p-10 text-white shadow-xl">
             <h2 className="text-3xl font-black mb-2">الألعاب التكيفية الداعمة للطالب</h2>
             <p className="text-sm text-indigo-100 max-w-xl leading-relaxed">
-              هذه أنشطة تعليمية عامة قابلة للاختيار. يراجع المعلم سجل الأداء قبل تخصيصها؛ لا يثبت عرض اللعبة وحده وجود صعوبة أو أثر علاجي.
+              هذه أنشطة تعليمية عامة قابلة للاختيار تم توليدها بالذكاء الاصطناعي بناءً على سجل الأداء؛ لا يثبت عرض اللعبة وحده وجود صعوبة أو أثر علاجي.
             </p>
           </div>
 

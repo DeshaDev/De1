@@ -224,8 +224,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       numberLineStartRef.current[trialId] = performance.now();
       setValidationError(
         elapsed < 150
-          ? 'كانت الاستجابة أسرع من حدّ القياس التقني لهذه المهمة؛ حرّك المؤشر مجددًا ثم ثبّت تقديرك.'
-          : 'استغرق التقدير أكثر من 30 ثانية؛ أعد تقدير الموقع ثم ثبّت الإجابة لقياس المحاولة من جديد.'
+          ? 'كانت الاستجابة أسرع من حدّ القياس التقني لهذه المهمة؛ حرّك المؤشر مجددًا ثم ثبّت تحديدك للموقع.'
+          : 'استغرقت الاستجابة أكثر من 30 ثانية؛ أعد تحديد الموقع ثم ثبّت الإجابة لقياس المحاولة من جديد.'
       );
       setSaveMessage('');
       return;
@@ -522,7 +522,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="text-xs text-[#0284C7] font-semibold">
                 المحطة ٠٢
               </div>
-              <div className="text-sm mt-0.5">تقدير الموقع على خط الأعداد</div>
+              <div className="text-sm mt-0.5">تحديد الموقع على خط الأعداد</div>
             </div>
             <span className="text-xs font-mono tabular-nums text-slate-500">
               {answeredNumberLineCount}/2
@@ -628,7 +628,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                               انقر هنا لبدء وميض النقاط
                             </span>
                             <span className="text-[11px] text-slate-500 block mt-0.5">
-                              (تظهر النقاط لـ 0.8 ثانية ثم تختفي لاختبار التقدير السريع)
+                              (تظهر النقاط لـ 0.8 ثانية ثم تختفي لاختبار التمييز السريع للكميات)
                             </span>
                           </div>
                         </button>
@@ -730,10 +730,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    ٠٢. تقدير الموقع على خط الأعداد غير المدرّج
+                    ٠٢. تحديد الموقع على خط الأعداد غير المدرّج
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    حرّك المؤشر أو اضغط «تثبيت التقدير» لكل مهمة لتسجيل موقع العدد المتوقع (المكتمل: {answeredNumberLineCount}/2)
+                    حرّك المؤشر أو اضغط «تثبيت الموقع» لكل مهمة لتسجيل موقع العدد المتوقع (المكتمل: {answeredNumberLineCount}/2)
                   </p>
                 </div>
 
@@ -746,7 +746,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   <span>
                     {showTargetOverlay
                       ? 'إخفاء الإجابات المرجعية'
-                      : 'مؤشر استكشافي لتقدير الموقع'}
+                      : 'مؤشر دقة تحديد الموقع'}
                   </span>
                 </button>
               </div>
@@ -756,12 +756,12 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-900 text-sm">
-                      المهمة الأولى (مدى 0–100): حرّك المؤشر إلى تقديرك للعدد 37 ثم ثبّت الإجابة مرة واحدة.
+                      المهمة الأولى (مدى 0–100): حرّك المؤشر إلى موقع العدد 37 ثم ثبّت الإجابة مرة واحدة.
                     </span>
                     <div className="flex items-center gap-3">
                       {numberLineSelections[1] ? (
                         <span className="font-mono tabular-nums text-slate-700">
-                          تقدير الطالب:{' '}
+                          موقع الطالب المحدد:{' '}
                           <strong>{numberLineSelections[1].estimate}</strong> ·
                           نسبة الخطأ المطبّع (وصفية):{' '}
                           <strong
@@ -786,14 +786,14 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
                         className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        تثبيت التقدير (1)
+                        تثبيت الموقع (1)
                       </button>
                     </div>
                   </div>
 
                   <div dir="ltr" className="space-y-2">
                     <label htmlFor="nl-slider-37" className="sr-only">
-                      تقدير موقع العدد 37 على خط الأعداد من 0 إلى 100
+                      تحديد موقع العدد 37 على خط الأعداد من 0 إلى 100
                     </label>
                     <input
                       id="nl-slider-37"
@@ -829,12 +829,12 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-900 text-sm">
-                      المهمة الثانية (مدى 0–200): حرّك المؤشر إلى تقديرك للعدد 156 ثم ثبّت الإجابة مرة واحدة.
+                      المهمة الثانية (مدى 0–200): حرّك المؤشر إلى موقع العدد 156 ثم ثبّت الإجابة مرة واحدة.
                     </span>
                     <div className="flex items-center gap-3">
                       {numberLineSelections[2] ? (
                         <span className="font-mono tabular-nums text-slate-700">
-                          تقدير الطالب:{' '}
+                          موقع الطالب المحدد:{' '}
                           <strong>{numberLineSelections[2].estimate}</strong> ·
                           نسبة الخطأ المطبّع (وصفية):{' '}
                           <strong
@@ -861,14 +861,14 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                         onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
                         className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
                       >
-                        تثبيت التقدير (2)
+                        تثبيت الموقع (2)
                       </button>
                     </div>
                   </div>
 
                   <div dir="ltr" className="space-y-2">
                     <label htmlFor="nl-slider-156" className="sr-only">
-                      تقدير موقع العدد 156 على خط الأعداد من 0 إلى 200
+                      تحديد موقع العدد 156 على خط الأعداد من 0 إلى 200
                     </label>
                     <input
                       id="nl-slider-156"

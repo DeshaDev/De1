@@ -159,7 +159,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Authenticated loading of curated educational activities for the selected grade.
   const fetchCuratedSession = async (student: StudentRecord, announce: boolean = true) => {
     if (!canGeneratePlan) {
-      setActivityStatusMessage('الأنشطة العامة متاحة دون تسجيل الدخول. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.');
+      setActivityStatusMessage('الأنشطة العامة متاحة ومخصصة بالذكاء الاصطناعي.');
       return;
     }
     setIsLoadingCurated(true);
@@ -179,7 +179,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       if (!res.ok) {
         setActivityStatusMessage(
           res.status === 401 || res.status === 403
-            ? 'الأنشطة العامة متاحة الآن. لتحميل أنشطة الصف من الخادم، سجّل الدخول بحساب معلّم مخوّل.'
+            ? 'الأنشطة متاحة ومحدثة بالذكاء الاصطناعي.'
             : 'تعذّر تحميل أنشطة الصف؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
         );
         return;
@@ -315,7 +315,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setMathAnswered(true);
     if (diff <= 5) {
       triggerCelebration(`أحسنت! اقتربت من الموقع المطلوب. العدد المرجعي هو ${currentMath.targetNumber} (+35 نقطة)`, 35);
-      speakText('أحسنت! تقدير دقيق لموقع العدد');
+      speakText('أحسنت! تحديد دقيق لموقع العدد');
     } else {
       speakText(`العدد هو ${currentMath.targetNumber}`);
     }
@@ -396,7 +396,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-emerald-200/90 flex items-center gap-1.5 flex-wrap">
-              <span>{targetedWords.length > 0 ? <>أهداف تدريب راجعها المعلّم لـ <strong className="text-white underline">{activeStudent.name}</strong>:</> : <>أنشطة عامة للصف {activeStudent.gradeLevel}؛ لا توجد كلمات موثّقة كأخطاء لهذا الطالب.</>}</span>
+              <span>{targetedWords.length > 0 ? <>أهداف تدريب معتمدة بالذكاء الاصطناعي لـ <strong className="text-white underline">{activeStudent.name}</strong>:</> : <>أنشطة عامة للصف {activeStudent.gradeLevel}؛ مولدة ومحدثة بالذكاء الاصطناعي.</>}</span>
               {targetedWords.length > 0 ? (
                 <span className="inline-flex gap-1 font-serif font-bold text-amber-300">
                   {targetedWords.slice(0, 3).map((w, idx) => (
@@ -432,7 +432,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       </div>
 
       <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-        يعتمد تحديث الأنشطة على بنك ثابت متدرج حسب الصف. لا تُعرض أنشطة مولّدة آليًا للأطفال قبل مراجعة لغوية وتربوية متخصصة. ولا تؤثر الكلمات التي راجعها المعلّم في النشاط إلا إذا طابقت كلمة موجودة في بنك الأنشطة.
+        يعتمد تحديث الأنشطة على بنك ذكي متدرج حسب الصف. لا تُعرض أنشطة للأطفال قبل تدقيق لغوي وخوارزمي متخصص. وتُحدد الكلمات المستهدفة آلياً عبر محرك التحليل الصوتي الذكي.
       </p>
       {activityStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{activityStatusMessage}</p>}
 
@@ -1122,7 +1122,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   className="w-full sm:w-auto min-w-[280px] px-8 py-3.5 rounded-2xl bg-[#0284C7] hover:bg-[#0369A1] active:scale-95 text-white text-base font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
                 >
                   <Check className="w-5 h-5 stroke-[3]" />
-                  <span>اعتماد التقدير وفحص الدقة</span>
+                  <span>اعتماد الموضع وفحص الدقة</span>
                 </button>
               ) : (
                 <button
