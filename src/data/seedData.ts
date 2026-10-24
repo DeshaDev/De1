@@ -57,6 +57,7 @@ export interface StudentAssessmentSnapshot {
   wpm: number;
   comprehensionScore: number;
   problematicWords: string[];
+  cognitiveResults?: CognitiveScreeningData | null;
   dyslexiaRiskScore: number | null;
   readingHeuristicIndicator: number | null;
   readingRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
@@ -65,6 +66,20 @@ export interface StudentAssessmentSnapshot {
   transcodingAccuracy: number | null;
   dyscalculiaRiskScore: number | null;
   mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
+}
+
+export interface CognitiveScreeningData {
+  ranSpeedItemsPerSec: number;
+  ranDurationSeconds: number;
+  ranHesitationCount: number;
+  ranCategory: 'colors' | 'digits' | 'objects';
+  ranStatus: 'fast' | 'average' | 'slow_at_risk';
+  ranStatusLabelAr: string;
+  pseudoWordScorePercent: number;
+  pseudoWordWordsRead: number;
+  pseudoWordTotalCount: number;
+  phonemicAwarenessScorePercent: number;
+  completedAt: string;
 }
 
 export interface StudentMathTrialsPayload {
@@ -1302,6 +1317,19 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     readingRiskLevel: 'unassessed',
     readingRiskLabelAr: 'بيانات اصطناعية للتوضيح؛ لا تصنيف خطر معياري.',
     problematicWords: ['لِمُشَاهَدَةِ', 'الكَوَاكِبِ', 'المُضِيئَةِ', 'المِنْظَارَ', 'مُلَاحَظَاتِهِمْ'],
+    cognitiveResults: {
+      ranSpeedItemsPerSec: 1.15,
+      ranDurationSeconds: 35,
+      ranHesitationCount: 4,
+      ranCategory: 'colors',
+      ranStatus: 'slow_at_risk',
+      ranStatusLabelAr: 'بطء ملحوظ في سرعة الاسترجاع (أقل من المتوقع للصف الثالث)',
+      pseudoWordScorePercent: 62,
+      pseudoWordWordsRead: 5,
+      pseudoWordTotalCount: 8,
+      phonemicAwarenessScorePercent: 75,
+      completedAt: '٢٠٢٦/١٠/١٩',
+    },
     comprehensionScore: 50,
     dyscalculiaAssessed: true,
     subitizingAccuracy: 67,

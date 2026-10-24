@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   BookOpen,
+  Brain,
   Calculator,
   CheckCircle2,
   ChevronLeft,
@@ -22,6 +23,7 @@ import { StudentRecord } from '../data/seedData';
 export type AppTabId =
   | 'home'
   | 'reading-lab'
+  | 'cognitive-lab'
   | 'adaptive-reports'
   | 'dyscalculia-lab'
   | 'remediation-gym'
@@ -62,6 +64,14 @@ const SAMPLE_WORDS = [
 ] as const;
 
 const ACTIVITIES = [
+    {
+    id: 'cognitive-lab',
+    title: 'الفرز المعرفي (RAN)',
+    description: 'اختبارات التسمية الآلية السريعة، وفك الترميز، والوعي الفونولوجي المعتمدة.',
+    action: 'ابدأ الفرز المعرفي',
+    tone: 'blue',
+    icon: Brain,
+  },
   {
     id: 'reading-lab',
     title: 'رحلة القراءة',

@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { CognitiveScreeningData } from '../data/seedData';
 
 const STORAGE_KEY = 'baseera_active_assessment';
 
@@ -89,6 +90,7 @@ export interface CombinedAssessmentData {
   age: number;
   speechResults: SpeechAssessmentResult | null;
   readingResults?: ReadingAssessmentResult | null;
+  cognitiveResults?: CognitiveScreeningData | null;
 };
 
 interface AssessmentContextType {
@@ -97,6 +99,7 @@ interface AssessmentContextType {
   startNewAssessment: (studentName: string, age?: number, studentId?: string) => void;
   saveSpeechResults: (results: SpeechAssessmentResult) => void;
   saveReadingResults: (results: ReadingAssessmentResult) => void;
+  saveCognitiveResults: (results: CognitiveScreeningData) => void;
   saveSpeechAnalysisResults: (results: any) => void;
   getAllAssessments: () => CombinedAssessmentData[];
   clearCurrentAssessment: () => void;
@@ -153,6 +156,21 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         age: results.age || prev?.age || 8,
         speechResults: results,
         readingResults: prev?.readingResults || null,
+      };
+      persistAssessment(next);
+      return next;
+    });
+  };
+
+    const saveCognitiveResults = (results: CognitiveScreeningData) => {
+    setCurrentAssessment(prev => {
+      const next: CombinedAssessmentData = {
+        studentId: prev?.studentId || 'student-1',
+        studentName: prev?.studentName || 'الطالب',
+        age: prev?.age || 8,
+        speechResults: prev?.speechResults || null,
+        readingResults: prev?.readingResults || null,
+        cognitiveResults: results,
       };
       persistAssessment(next);
       return next;
@@ -236,7 +254,8 @@ export const AssessmentProvider: React.FC<AssessmentProviderProps> = ({ children
         startNewAssessment,
         saveSpeechResults,
     saveReadingResults,
-        saveSpeechAnalysisResults,
+        saveCognitiveResults,
+saveSpeechAnalysisResults,
         getAllAssessments,
         clearCurrentAssessment,
       }}

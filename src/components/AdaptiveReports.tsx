@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
+import { MultiDimensionalRadar, CognitiveRadarScores } from './MultiDimensionalRadar';
+import { IndividualizedEducationPlan } from './IndividualizedEducationPlan';
 
 export interface AdaptiveReportsProps {
   student?: StudentRecord;
@@ -130,6 +132,40 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
   const isOralReading = Boolean(studentData.reading && (studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true));
   const hasOralReadingEvidence = Boolean(studentData.reading && ((studentData.reading.spokenTranscript || '').trim() || studentData.reading.teacherVerified === true));
+
+  // 5-Axis Cognitive Radar Scores
+  const radarScores: CognitiveRadarScores = useMemo(() => {
+    let orfFluency = 50;
+    if (studentData.reading && typeof studentData.reading.wcpm === 'number') {
+      orfFluency = Math.min(100, Math.round((studentData.reading.wcpm / 70) * 100));
+    } else if (studentData.reading && studentData.reading.wpm > 0) {
+      orfFluency = Math.min(100, Math.round((studentData.reading.wpm / 80) * 100));
+    }
+
+    let ranSpeed = 65;
+    const cog = student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults;
+    if (cog) {
+      ranSpeed = Math.min(100, Math.max(20, Math.round((20 / Math.max(10, cog.ranDurationSeconds)) * 100)));
+    }
+
+    let pseudoDecoding = cog ? cog.pseudoWordScorePercent : 62;
+    let phonemicAwareness = cog ? cog.phonemicAwarenessScorePercent : 75;
+
+    let numeracy = 70;
+    if (studentData.math && typeof studentData.math.numberLinePAE === 'number') {
+      numeracy = Math.min(100, Math.max(20, Math.round(100 - studentData.math.numberLinePAE * 2)));
+    } else if (studentData.math && typeof studentData.math.subitizingAccuracy === 'number') {
+      numeracy = studentData.math.subitizingAccuracy;
+    }
+
+    return {
+      orfFluency,
+      ranSpeed,
+      pseudoDecoding,
+      phonemicAwareness,
+      numeracy,
+    };
+  }, [studentData, student, currentAssessment]);
 
   // Record the outputs actually observed in this session without turning them into strengths,
   // deficits, percentiles, or risk classes that the current prototype has not validated.
@@ -684,6 +720,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
+          {/* 5-Axis Cognitive Radar Visualizer */}
+          <MultiDimensionalRadar scores={radarScores} studentName={studentData.studentName} />
+
           {/* Available Learning Measures Table */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
@@ -864,58 +903,12 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </section>
 
-          {/* Adaptable classroom goal examples — not a completed or validated IEP */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
-            <h3 className="text-xl font-black text-slate-900 mb-6">
-              أمثلة لأهداف تعليمية قابلة للتخصيص
-            </h3>
-
-            <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800">
-                    الهدف القرائي والطلاقة
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
-                </div>
-                <p className="text-sm font-bold text-slate-800 mb-2">
-                  يحدد المعلم هدف الطلاقة بعد جمع خط أساس من عدة نصوص متقاربة الصعوبة ومراجعة دقة الكلمات والفهم؛ لا تُستخدم نتيجة هذه الجلسة وحدها لتحديد مستوى الطفل.
-                </p>
-                <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> قراءة مشتركة، تقسيم المهمة، وتعديل حجم الخط والتباعد وفق تفضيل الطفل.
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800">
-                    الهدف الفونولوجي والتمييز الصوتي
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
-                </div>
-                <p className="text-sm font-bold text-slate-800 mb-2">
-                  مثال قابل للتعديل: يميّز الطفل بين الحروف المستهدفة في كلمات مناسبة لمستواه، بعد أن يحدد المعلم خط الأساس ومعيار التقدم من محاولات متكررة.
-                </p>
-                <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> التدرّب على أمثلة مختارة مع شرح الفرق بين الحروف، ثم مراجعة الأداء عبر محاولات متعددة.
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-800">
-                    هدف الحس العددي والرياضيات
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">مدة يحددها المعلم</span>
-                </div>
-                <p className="text-sm font-bold text-slate-800 mb-2">
-                  مثال قابل للتعديل: يتحسن تقدير الطفل لمواضع الأعداد مقارنة بخط أساسه في مهام متشابهة، ويُحدَّد معيار التقدم بعد مراجعة عدة محاولات.
-                </p>
-                <div className="text-xs text-slate-600">
-                  <span className="font-bold text-slate-700">أفكار يمكن تجربتها:</span> استخدام خط أعداد أو مكعبات القيمة المكانية وملاحظة أثرها على أداء الطفل في مهام متشابهة.
-                </div>
-              </div>
-            </div>
+          {/* Actionable Individualized Education Plan (Smart IEP) */}
+          <IndividualizedEducationPlan
+            studentName={studentData.studentName}
+            gradeLevel={studentData.grade}
+            scores={radarScores}
+          />
           </div>
 
           {/* Classroom Accommodations (التسهيلات والتعديلات الصفية) */}

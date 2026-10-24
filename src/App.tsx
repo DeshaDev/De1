@@ -6,6 +6,7 @@ import {
   BarChart3,
   Home,
   BookOpen,
+  Brain,
   Calculator,
   Gamepad2,
   GraduationCap,
@@ -34,6 +35,7 @@ import {
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
 import ReadingAssessmentView from './components/ReadingAssessmentView';
+import CognitiveScreeningView from './components/CognitiveScreeningView';
 import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
@@ -785,6 +787,7 @@ export default function App() {
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
               { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
+              { id: 'cognitive-lab', label: 'الفرز المعرفي (RAN)', icon: Brain },
               { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
               { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: Type },
               { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
@@ -859,6 +862,7 @@ export default function App() {
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
           { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
+          { id: 'cognitive-lab', label: 'الفرز المعرفي', icon: Brain },
           { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
           { id: 'adaptive-reader', label: 'القارئ', icon: Type },
           { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
@@ -1525,6 +1529,21 @@ export default function App() {
               </section>
             )}
           </div>
+        )}
+
+        {/* Multi-Dimensional Cognitive Screening Lab (RAN, Pseudo-words, Phonology) */}
+        {activeTab === 'cognitive-lab' && (
+          <CognitiveScreeningView
+            student={selectedStudent}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+            onCompleteScreening={(cogData) => {
+              setSelectedStudent(prev => ({
+                ...prev,
+                cognitiveResults: cogData,
+              }));
+              setActiveTab('dashboard');
+            }}
+          />
         )}
 
         {/* Camera-free reading and comprehension session */}
