@@ -1899,10 +1899,29 @@ async function startServer() {
   // aligner fallback is allowed to masquerade as an acoustic assessment.
   app.post('/api/ai/pronunciation-assessment', async (req, res) => {
     const body = req.body || {};
-    const { referenceText, referenceWords, audioWavBase64, durationSeconds, language } = body;
+    const {
+      referenceText,
+      referenceWords,
+      audioWavBase64,
+      durationSeconds,
+      language,
+      guardianConsentRecordedAt,
+      guardianAudioConsentRecordedAt,
+    } = body;
 
-    // Explicit parent and audio consent are required before audio leaves this device.
-    if (body.guardianConsentGiven !== true || body.guardianAudioConsentGiven !== true) {
+    const validConsentTimestamp = (value: unknown): boolean => {
+      if (typeof value !== 'string') return false;
+      const timestamp = Date.parse(value);
+      return Number.isFinite(timestamp) && timestamp <= Date.now() + 5 * 60 * 1000;
+    };
+
+    // Explicit and timestamped parent/audio consent are required before audio leaves this device.
+    if (
+      body.guardianConsentGiven !== true ||
+      body.guardianAudioConsentGiven !== true ||
+      !validConsentTimestamp(guardianConsentRecordedAt) ||
+      !validConsentTimestamp(guardianAudioConsentRecordedAt)
+    ) {
       res.status(403).json({
         code: 'AUDIO_CONSENT_REQUIRED',
         error: 'يلزم توثيق موافقة ولي الأمر والموافقة الصريحة على معالجة التسجيل الصوتي.',
