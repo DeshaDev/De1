@@ -1859,7 +1859,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   setMeasuredWpm(undefined);
                   setMeasuredWcpm(undefined);
                   setMeasuredAccuracyPercent(undefined);
-                  setMeasuredWpm(undefined);
+                  setAudioCaptureFailed(false);
+                  setReadingModeNotice('');
+                  setAudioPlaybackUrl(null);
+                  recordedAudioBlobRef.current = null;
                   setFinalDurationSec(0);
                 }}
                 className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 px-6 rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm"
