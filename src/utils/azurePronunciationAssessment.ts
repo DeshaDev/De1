@@ -349,7 +349,9 @@ export async function assessReadingAudioWithAzure(args: {
   speechConfig.speechRecognitionLanguage = args.language;
   speechConfig.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, '1200');
   const audioConfig = sdk.AudioConfig.fromWavFileInput(wav);
-  const recognizer = new sdk.SpeechRecognizer(speechConfig, args.language, audioConfig);
+  // Node SDK signature is SpeechRecognizer(speechConfig, audioConfig); locale belongs
+  // on SpeechConfig, otherwise the second argument would be a string instead of audio.
+  const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
   const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
     args.referenceText,
     sdk.PronunciationAssessmentGradingSystem.HundredMark,
