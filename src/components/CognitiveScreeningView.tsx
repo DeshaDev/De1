@@ -135,7 +135,7 @@ export interface PseudoWordItem {
   nonLexicalRootAr: string;
 }
 
-export const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
+const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
   // المستوى الأول: ثلاثي مجرد بحركات قصيرة (فَعَلَ) - جذور مهملة في المعاجم العربية
   { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ظ-ف-ك) مهمل معجمياً' },
   { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ف-ث-ل) مهمل معجمياً' },
@@ -172,7 +172,7 @@ export interface PhonemicTask {
   explanationAr: string;
 }
 
-export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
+const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
   {
     id: 'ph-isolation-1',
     categoryAr: 'عزل الصوت الأول',
