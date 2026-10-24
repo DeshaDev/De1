@@ -15,6 +15,7 @@ import {
   evaluateOralReadingAlignment,
   OralReadingFluencyResult,
   OralWordAlignmentItem,
+  ArabicDialectCode,
 } from './dyslexiaEngines';
 
 export type SpeechEngineProvider =
@@ -115,13 +116,23 @@ export function alignSpeechWithReferenceText(
     };
   }
 
-  // Use Dynamic Programming Sequence Alignment
+  // The legacy callers pass display labels; convert them to the engine's stable dialect codes.
+  const normalizedDialect: ArabicDialectCode =
+    dialect === 'egyptian' || dialect === 'ar-EG' || dialect.includes('المصرية')
+      ? 'egyptian'
+      : dialect === 'gulf' || dialect === 'ar-SA' || dialect.includes('الخليج')
+        ? 'gulf'
+        : dialect === 'levantine' || dialect === 'maghrebi'
+          ? dialect
+          : 'msa';
+
+  // Use Dynamic Programming Sequence Alignment.
   const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
     referenceWords,
     spokenTranscript,
     cleanDuration,
     0,
-    dialect
+    normalizedDialect
   );
 
   let correctCount = 0;
