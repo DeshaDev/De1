@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
+import { evaluatePronunciationWithAzureOrLocal } from './src/utils/pronunciationAssessment';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   BaseeraRole,
@@ -1891,6 +1892,46 @@ async function startServer() {
     } catch (err) {
       console.warn('Gemini TTS error:', err);
       res.status(503).json({ useBrowserFallback: true });
+    }
+  });
+
+  // Reference-Text Pronunciation Assessment & Alignment (Azure Speech & Local Aligner)
+  app.post('/api/ai/pronunciation-assessment', async (req, res) => {
+    try {
+      const {
+        referenceText,
+        referenceWords,
+        spokenTranscript,
+        audioWavBase64,
+        durationSeconds,
+        language,
+      } = req.body || {};
+
+      if (!referenceText || typeof referenceText !== 'string') {
+        res.status(400).json({ error: 'يلزم توفير النص المرجعي للقراءة.' });
+        return;
+      }
+
+      const words =
+        Array.isArray(referenceWords) && referenceWords.length > 0
+          ? referenceWords
+          : referenceText.trim().split(/\s+/);
+
+      const result = await evaluatePronunciationWithAzureOrLocal({
+        referenceText,
+        referenceWords: words,
+        spokenTranscript:
+          typeof spokenTranscript === 'string' ? spokenTranscript : '',
+        audioWavBase64:
+          typeof audioWavBase64 === 'string' ? audioWavBase64 : undefined,
+        durationSeconds: Number(durationSeconds) || 30,
+        language: language === 'ar-EG' ? 'ar-EG' : 'ar-SA',
+      });
+
+      res.json(result);
+    } catch (err) {
+      console.error('Pronunciation assessment route error:', err);
+      res.status(500).json({ error: 'فشل في تقييم النطق مقابل النص المرجعي.' });
     }
   });
 

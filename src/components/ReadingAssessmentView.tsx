@@ -544,6 +544,46 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     };
   }, [verifiedWords, finalDurationSec]);
 
+  // Speak Arabic word aloud via Web Speech Synthesis
+  const handleSpeakWord = (word: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const clean = word.replace(/[.,!?،؟؛:"«»()[\]]/g, '').trim();
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = 'ar-SA';
+    utter.rate = 0.85;
+    window.speechSynthesis.speak(utter);
+  };
+
+  // Comprehensive summary metrics of reading words
+  const summaryStats = useMemo(() => {
+    let correct = 0;
+    let errors = 0;
+    let omitted = 0;
+    let dialect = 0;
+
+    verifiedWords.forEach(w => {
+      if (w.status === 'correct') correct += 1;
+      else if (w.status === 'dialect_variant') dialect += 1;
+      else if (w.status === 'phonetic_substitution') errors += 1;
+      else if (w.status === 'omitted') omitted += 1;
+    });
+
+    const effective = correct + dialect;
+    const total = Math.max(1, verifiedWords.length);
+    const accuracyPercent = Math.round((effective / total) * 100);
+
+    return {
+      correct,
+      errors,
+      omitted,
+      dialect,
+      effective,
+      total,
+      accuracyPercent,
+    };
+  }, [verifiedWords]);
+
   // Mark all words as correct (quick action for fluent reading)
   const handleMarkAllCorrect = () => {
     setTeacherOverridesCount(prev => prev + 1);
@@ -1398,69 +1438,183 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             </p>
 
             {/* Verified Metrics Dashboard */}
-            <div className={`grid grid-cols-1 ${typeof measuredWcpm === 'number' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4 mb-8 text-right`}>
-              {/* 1. WCPM (If Oral Audio Mode) */}
-              {typeof measuredWcpm === 'number' && (
-                <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 shadow-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-emerald-900">
-                      طلاقة الكلمات الصحيحة
-                    </span>
-                    <span className="text-[10px] bg-emerald-200 text-emerald-950 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <UserCheck className="w-3 h-3" />
-                      معتمد
-                    </span>
-                  </div>
-                  <div className="text-3xl font-black text-emerald-700 font-mono">
-                    {measuredWcpm}{' '}
-                    <span className="text-sm font-semibold">WCPM</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-700 mt-2">
-                    دقة لفظية: {measuredAccuracyPercent === undefined ? 'غير متاحة' : `${measuredAccuracyPercent}%`} (بمراجعة المعلم)
-                  </p>
-                </div>
-              )}
-
-              {/* 2. Total WPM */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-right">
+              {/* 1. Reading Speed (Human-Friendly words per minute) */}
               <div className="bg-teal-50 border border-teal-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-teal-800 block mb-1">
-                  {readingMode === 'timed_silent' ? 'معدل إتمام النص (تقديري)' : 'معدل كلمات التفريغ الآلي'}
+                <span className="text-xs font-bold text-teal-900 block mb-1">
+                  سرعة القراءة
                 </span>
                 <div className="text-3xl font-black text-teal-700 font-mono">
                   {measuredWpm}{' '}
-                  <span className="text-sm font-semibold">WPM</span>
+                  <span className="text-sm font-semibold">كلمة / دقيقة</span>
                 </div>
-                <p className="text-[11px] text-teal-700 mt-2">
-                  {readingMode === 'timed_silent' ? `تقدير مبني على عدد كلمات النص (${passage.words.length}) وزمن الجلسة (${finalDurationSec} ثانية)، بافتراض إكمال النص.` : 'يعتمد على كلمات التعرّف الصوتي الآلي؛ ليس WCPM ولا يُعتمد دون مراجعة.'}
+                <p className="text-[11px] text-teal-800 mt-2 leading-relaxed">
+                  قرأ الطالب {passage.words.length} كلمة خلال {finalDurationSec} ثانية. (المعدل المتوقع لصفه: {passage.gradeLevel <= 2 ? '50-70' : passage.gradeLevel === 3 ? '60-80' : '70-95'} ك/د).
                 </p>
               </div>
 
-              {/* 3. Reading Time */}
+              {/* 2. Reading Time */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-slate-800 block mb-1">
+                <span className="text-xs font-bold text-slate-900 block mb-1">
                   زمن القراءة المستغرق
                 </span>
-                <div className="text-3xl font-black text-slate-700 font-mono">
+                <div className="text-3xl font-black text-slate-800 font-mono">
                   {finalDurationSec}{' '}
                   <span className="text-sm font-semibold">ثانية</span>
                 </div>
                 <p className="text-[11px] text-slate-600 mt-2">
-                  مؤقت دقيق من بدء القراءة حتى إعلان الانتهاء
+                  الوقت الفعلي من بدء القراءة حتى إعلان الانتهاء
                 </p>
               </div>
 
-              {/* 4. Comprehension */}
+              {/* 3. Word Accuracy Percent */}
+              <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5">
+                <span className="text-xs font-black text-emerald-950 block mb-1">
+                  دقة نطق الكلمات
+                </span>
+                <div className="text-3xl font-black text-emerald-700 font-mono">
+                  {summaryStats.accuracyPercent}%
+                </div>
+                <p className="text-[11px] text-emerald-800 mt-2">
+                  {summaryStats.correct} صحيحة · {summaryStats.errors} تعثر/إبدال · {summaryStats.omitted} تخطي
+                </p>
+              </div>
+
+              {/* 4. Comprehension Score */}
               <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-indigo-800 block mb-1">
-                  درجة الفهم القرائي
+                <span className="text-xs font-bold text-indigo-950 block mb-1">
+                  درجة الفهم والاستيعاب
                 </span>
                 <div className="text-3xl font-black text-indigo-700 font-mono">
                   {comprehensionScore}%
                 </div>
-                <p className="text-[11px] text-indigo-700 mt-2">
-                  نسبة الإجابات الصحيحة في أسئلة النص
+                <p className="text-[11px] text-indigo-800 mt-2">
+                  أجاب بشكل سليم عن {Math.round((comprehensionScore / 100) * (passage.comprehensionQuestions?.length || 1))} من {passage.comprehensionQuestions?.length || 1} أسئلة
                 </p>
               </div>
+            </div>
+
+            {/* =================================================================
+                WORD-BY-WORD READING DIAGNOSTIC CANVAS
+                Where the parent & teacher see exactly what words had errors!
+                ================================================================= */}
+            <div className="mb-8 p-6 md:p-8 rounded-3xl bg-white border border-slate-200 shadow-sm text-right">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                <div>
+                  <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-teal-600" />
+                    <span>تحليل قراءة الكلمات في النص: أين أخطأ أو تعثر الطالب؟</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    فحص تفصيلي لكل كلمة في القصة. اضغط على أي كلمة للاستماع لنطقها السليم، أو لمراجعة الكلمة التي تم نطقها.
+                  </p>
+                </div>
+
+                {/* Status Badges Legend */}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 font-bold border border-emerald-300">
+                    🟢 صحيحة: {summaryStats.correct}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-950 font-bold border border-amber-300">
+                    🟠 إبدال / تعثر: {summaryStats.errors}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
+                    🔴 متخطاة / لم تُنطق: {summaryStats.omitted}
+                  </span>
+                </div>
+              </div>
+
+              {/* Full Passage Words with Visual Status Highlighting */}
+              <div
+                className="p-6 md:p-8 rounded-3xl bg-slate-50 border border-slate-200 flex flex-wrap gap-2.5 items-center justify-start text-right leading-loose select-none"
+                style={{ fontSize: '20px' }}
+              >
+                {verifiedWords.map((item, idx) => {
+                  let badgeClass = 'bg-white border-slate-300 text-slate-800 hover:border-slate-400';
+                  let statusTitle = 'صحيحة';
+
+                  if (item.status === 'correct') {
+                    badgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200';
+                    statusTitle = 'صحيحة بطلاقة';
+                  } else if (item.status === 'dialect_variant') {
+                    badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
+                    statusTitle = 'بديل لهجي فصيح';
+                  } else if (item.status === 'phonetic_substitution') {
+                    badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 font-black ring-2 ring-amber-300 hover:bg-amber-200';
+                    statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
+                  } else if (item.status === 'omitted') {
+                    badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
+                    statusTitle = 'تخطي / لم تُنطق';
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        handleSpeakWord(item.word);
+                        handleToggleWordStatus(idx);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
+                      title={`${item.word}: ${statusTitle} (انقر للاستماع أو تعديل التقييم)`}
+                    >
+                      <span className="font-bold">{item.word}</span>
+                      {item.status === 'phonetic_substitution' && item.spokenWord && (
+                        <span className="text-[10px] font-mono text-amber-800 bg-white/80 px-1 rounded-sm">
+                          نُطقت: {item.spokenWord}
+                        </span>
+                      )}
+                      {item.status === 'omitted' && (
+                        <span className="text-[9px] font-mono text-rose-800">
+                          تخطي
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Target Words Practice Recommendation */}
+              {summaryStats.errors + summaryStats.omitted > 0 && (
+                <div className="mt-5 p-5 rounded-2xl bg-amber-50/80 border border-amber-200 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-bold text-sm text-amber-950 mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>كلمات واجه فيها الطفل صعوبة وتحتاج إلى تعزيز:</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {verifiedWords
+                        .filter(w => w.status !== 'correct' && w.status !== 'dialect_variant')
+                        .map((w, i) => (
+                          <span
+                            key={i}
+                            onClick={() => handleSpeakWord(w.word)}
+                            className="px-3 py-1 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs font-bold cursor-pointer hover:bg-amber-100 flex items-center gap-1 shadow-2xs"
+                            title="انقر للاستماع للنطق السليم"
+                          >
+                            <Volume2 className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{w.word}</span>
+                            {w.spokenWord && (
+                              <span className="text-[10px] text-slate-500 font-normal">
+                                (بدل: {w.spokenWord})
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+
+                  {onNavigateTab && (
+                    <button
+                      onClick={() => onNavigateTab('remediation-gym')}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>تدريب فوري على هذه الكلمات</span>
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}

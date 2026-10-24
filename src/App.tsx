@@ -1553,6 +1553,7 @@ export default function App() {
             activeStudent={selectedStudent}
             canVerifyAsTeacher={baseeraSession?.role === 'school_admin'}
             onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
           />
         )}
 
