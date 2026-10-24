@@ -131,6 +131,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     }>
   >([]);
   const [teacherVerified, setTeacherVerified] = useState(false);
+  const [humanReviewConfirmed, setHumanReviewConfirmed] = useState(false);
   const [teacherOverridesCount, setTeacherOverridesCount] = useState(0);
   const [measuredWcpm, setMeasuredWcpm] = useState<number | undefined>(undefined);
   const [measuredAccuracyPercent, setMeasuredAccuracyPercent] = useState<number | undefined>(undefined);
@@ -226,6 +227,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setReadingModeNotice('');
     // A retry starts a new session. Never carry forward prior answers or review status.
     setTeacherVerified(false);
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(0);
     setVerifiedWords([]);
     setMeasuredWcpm(undefined);
@@ -550,6 +552,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         });
 
         setVerifiedWords(mappedWords);
+        setHumanReviewConfirmed(false);
         setSpokenTranscript(result.transcript.trim());
         spokenTranscriptRef.current = result.transcript.trim();
         setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
@@ -607,6 +610,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   // Manual word-level overrides are restricted to an authorized school reviewer.
   const handleToggleWordStatus = (index: number) => {
     if (!canVerifyAsTeacher) return;
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => {
       const next = [...prev];
@@ -687,14 +691,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   // Mark all words as correct (quick action for fluent reading)
   const handleMarkAllCorrect = () => {
     if (!canVerifyAsTeacher) return;
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
   };
 
-  // Finalize the machine assessment separately from human certification.
+  // The machine score and a human review are separate attestations.
   const handleConfirmVerification = () => {
     const machineAssessmentComplete = azureAssessmentComplete && teacherStats.unconfirmed === 0;
-    setTeacherVerified(canVerifyAsTeacher && machineAssessmentComplete);
+    setTeacherVerified(
+      canVerifyAsTeacher && machineAssessmentComplete && humanReviewConfirmed
+    );
     setMeasuredWcpm(machineAssessmentComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
     setMeasuredAccuracyPercent(machineAssessmentComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
     setSelectedAnswers({});
@@ -1446,6 +1453,22 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 })}
               </div>
             </div>
+
+            {/* Human certification is a separate, explicit attestation from Azure's score. */}
+            {canVerifyAsTeacher && azureAssessmentComplete && teacherStats.unconfirmed === 0 && (
+              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-right text-sm text-sky-950 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={humanReviewConfirmed}
+                  onChange={event => setHumanReviewConfirmed(event.target.checked)}
+                  className="mt-1 h-5 w-5 shrink-0 accent-sky-700"
+                />
+                <span>
+                  <strong className="block mb-1">تأكيد المراجعة البشرية</strong>
+                  أؤكد أنني استمعت إلى التسجيل وراجعت الكلمات وتصنيفات تقييم Azure، وأنني أتحمل مسؤولية اعتماد هذه المراجعة باسم حساب المدرسة.
+                </span>
+              </label>
+            )}
 
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
