@@ -1179,7 +1179,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Real-time Spoken Transcript Readout */}
               <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
-                <span className="text-teal-400 font-bold shrink-0">ما التقطه الذكاء الاصطناعي لحظياً:</span>
+                <span className="text-teal-400 font-bold shrink-0">معاينة التعرف الصوتي في المتصفح (للعرض فقط):</span>
                 <span className="text-slate-200 font-mono truncate max-w-xl">
                   {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع، ستظهر الكلمات الملتقطة هنا فوراً...'}
                 </span>
@@ -1231,7 +1231,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               >
                 <span>
                   {readingMode === 'oral_audio'
-                    ? 'أنهيت القراءة — التحليل الصوتي الذكي واعتماد الطلاقة (WCPM)'
+                    ? 'أنهيت القراءة — تقييم النطق من التسجيل الصوتي'
                     : 'أنهيت القراءة — الانتقال لأسئلة الفهم'}
                 </span>
                 <ChevronLeft className="w-8 h-8" />
@@ -1371,7 +1371,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             {spokenTranscript && (
               <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
                 <span className="text-xs font-bold text-slate-800 block mb-1">
-                  التفريغ الصوتي التلقائي الملتقط من قراءة الطالب:
+                  النص الذي استخرجه Microsoft Azure من التسجيل:
                 </span>
                 <p className="text-xs text-slate-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-slate-100">
                   {spokenTranscript}
@@ -1633,7 +1633,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <p className="text-[11px] text-teal-800 mt-2 leading-relaxed">
                   {readingMode === 'oral_audio'
-                    ? 'لا يُعرض معدل موثوق من عدد الكلمات التي أخطأ المتصفح في تفريغها.'
+                    ? azureAssessmentComplete
+                      ? 'المعدل مستخرج من تقييم التسجيل الصوتي في Azure، وليس من المعاينة اللحظية للمتصفح.'
+                      : 'لا يُعرض معدل موثوق لأن تقييم التسجيل الصوتي لم يكتمل.'
                     : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معياراً تشخيصياً.'}
                 </p>
               </div>
