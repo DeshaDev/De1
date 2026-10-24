@@ -696,14 +696,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
   };
 
-  // The machine score and a human review are separate attestations.
+  // Azure may fail, but an authorized reviewer can still assess the recorded audio manually.
   const handleConfirmVerification = () => {
-    const machineAssessmentComplete = azureAssessmentComplete && teacherStats.unconfirmed === 0;
-    setTeacherVerified(
-      canVerifyAsTeacher && machineAssessmentComplete && humanReviewConfirmed
-    );
-    setMeasuredWcpm(machineAssessmentComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
-    setMeasuredAccuracyPercent(machineAssessmentComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
+    const wordReviewComplete = teacherStats.unconfirmed === 0;
+    const canCertify = canVerifyAsTeacher && wordReviewComplete && humanReviewConfirmed;
+    setTeacherVerified(canCertify);
+    setMeasuredWcpm(wordReviewComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
+    setMeasuredAccuracyPercent(wordReviewComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -1455,7 +1454,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             </div>
 
             {/* Human certification is a separate, explicit attestation from Azure's score. */}
-            {canVerifyAsTeacher && azureAssessmentComplete && teacherStats.unconfirmed === 0 && (
+            {canVerifyAsTeacher && Boolean(audioPlaybackUrl) && teacherStats.unconfirmed === 0 && (
               <label className="mt-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-right text-sm text-sky-950 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1465,7 +1464,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 />
                 <span>
                   <strong className="block mb-1">تأكيد المراجعة البشرية</strong>
-                  أؤكد أنني استمعت إلى التسجيل وراجعت الكلمات وتصنيفات تقييم Azure، وأنني أتحمل مسؤولية اعتماد هذه المراجعة باسم حساب المدرسة.
+                  {azureAssessmentComplete
+                    ? 'استمعت إلى التسجيل وراجعت تصنيفات Azure لجميع الكلمات، وأؤكد اعتمادها باسم حساب المدرسة.'
+                    : 'لم تكتمل نتيجة Azure أو بقيت كلمات غير محسومة آلياً؛ استمعت إلى التسجيل كاملاً وصنفت جميع الكلمات يدوياً، وأؤكد صحة هذه المراجعة باسم حساب المدرسة.'}
                 </span>
               </label>
             )}
@@ -1474,9 +1475,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
                 <FileCheck2 className="w-5 h-5 text-sky-700 shrink-0" />
-                <span>{azureAssessmentComplete
-                  ? 'اكتمل تقييم Azure لجميع كلمات النص. تبقى صفة «مراجَع بشرياً» منفصلة وتتطلب صلاحية المدرسة.'
-                  : 'إذا بقيت كلمات غير محسومة، فلن يُعتمد WCPM أو معدل الدقة لهذه الجلسة.'}</span>
+                <span>{teacherVerified
+                  ? 'اكتملت مراجعة الكلمات واعتمدها مسؤول المدرسة بعد الاستماع إلى التسجيل.'
+                  : azureAssessmentComplete
+                    ? 'اكتمل تقييم Azure آلياً، لكن اعتماد السجل كمراجَع بشرياً يتطلب تأكيد المراجع المخوّل.'
+                    : 'يمكن لمسؤول المدرسة مراجعة التسجيل يدوياً. لن يُعتمد WCPM إلا بعد حسم الكلمات وتأكيد المراجعة البشرية.'}</span>
               </div>
 
               <button
