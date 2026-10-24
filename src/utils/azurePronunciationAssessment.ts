@@ -65,7 +65,7 @@ function safeScore(value: unknown): number | null {
     : null;
 }
 
-function normalizeRawWords(records: any[]): AzureRawWord[] {
+export function normalizeAzureWordResults(records: unknown[]): AzureRawWord[] {
   return records.flatMap((record: any) => {
     if (!record || typeof record.Word !== 'string' || !record.Word.trim()) return [];
     // The Azure SDK returns scores inside each word's PronunciationAssessment object.
@@ -284,7 +284,7 @@ function extractWordsAndMetrics(payloads: any[]): { words: AzureRawWord[]; metri
   const metricRows: Array<{ metrics: ReturnType<typeof normalizeAssessmentMetrics>; count: number }> = [];
   for (const payload of payloads) {
     const nBest = payload?.NBest?.[0] ?? payload?.nBest?.[0];
-    words.push(...normalizeRawWords(nBest?.Words ?? nBest?.words ?? []));
+    words.push(...normalizeAzureWordResults(nBest?.Words ?? nBest?.words ?? []));
     const count = Array.isArray(nBest?.Words) ? nBest.Words.length : 1;
     metricRows.push({ metrics: normalizeAssessmentMetrics(payload), count: Math.max(1, count) });
   }
