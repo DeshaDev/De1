@@ -135,7 +135,7 @@ export interface PseudoWordItem {
   nonLexicalRootAr: string;
 }
 
-const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
+export const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
   // المستوى الأول: ثلاثي مجرد بحركات قصيرة (فَعَلَ) - جذور مهملة في المعاجم العربية
   { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ظ-ف-ك) مهمل معجمياً' },
   { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ف-ث-ل) مهمل معجمياً' },
@@ -172,7 +172,7 @@ export interface PhonemicTask {
   explanationAr: string;
 }
 
-const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
+export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
   {
     id: 'ph-isolation-1',
     categoryAr: 'عزل الصوت الأول',
@@ -851,7 +851,11 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       ranDurationSeconds: ranMetrics.durSec,
       ranHesitationCount: ranMetrics.hesitationCount,
       ranCategory,
+      ranStatus: ranMetrics.durSec <= 22 ? 'fast' : ranMetrics.durSec >= 35 ? 'slow_at_risk' : 'average',
+      ranStatusLabelAr: ranMetrics.statusLabelAr,
       pseudoWordScorePercent: pseudoMetrics.percent,
+      pseudoWordWordsRead: pseudoMetrics.correctCount,
+      pseudoWordTotalCount: pseudoMetrics.totalCount,
       phonemicAwarenessScorePercent: phonemicMetrics.percent,
       completedAt: new Date().toISOString(),
     };
