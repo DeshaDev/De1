@@ -99,7 +99,7 @@ interface TenantCredential {
 
 /** Role and tenant are derived from an independently provisioned secret, never from request claims. */
 function getTenantCredentialEntries(): TenantCredential[] {
-  const raw = (process.env.BASEERA_TENANT_CREDENTIALS || '').trim();
+  const raw = (process.env.BASEERA_TENANT_CREDENTIALS || process.env.CLINICAL_TENANT_CREDENTIALS || '').trim();
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -127,7 +127,7 @@ function getTenantCredentialEntries(): TenantCredential[] {
         customSchoolName
       );
       for (const role of ['school_admin', 'educator_readonly'] as const) {
-        const accessCode = credentials[role];
+        const accessCode = (credentials[role] || (role === 'school_admin' ? credentials.clinician : undefined)) as string | undefined;
         if (
           !isStrongBaseeraAccessCode(accessCode) ||
           seenCodes.has(accessCode)
@@ -149,7 +149,7 @@ function getTenantCredentialEntries(): TenantCredential[] {
 }
 
 function getStoreEncryptionKey(): Buffer | null {
-  const raw = (process.env.BASEERA_STORE_ENCRYPTION_KEY || '').trim();
+  const raw = (process.env.BASEERA_STORE_ENCRYPTION_KEY || process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim();
   if (!/^[a-f0-9]{64}$/i.test(raw)) return null;
   return Buffer.from(raw, 'hex');
 }
