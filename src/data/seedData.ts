@@ -98,6 +98,7 @@ export interface StudentRecord {
   sessionCompletedAt?: string;
   sessionRoleLabel?: string;
   assessmentHistory?: StudentAssessmentSnapshot[];
+  cognitiveResults?: CognitiveScreeningData | null;
   assessmentModality?: 'voice_only' | 'reading_only';
   /** Explicit provenance tag distinguishing client-reported session evidence from synthetic demos. */
   evidenceProvenance?: 'client-reported' | 'demo-synthetic';
