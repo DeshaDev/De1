@@ -1835,64 +1835,107 @@ async function startServer() {
     });
   });
 
+  // Cache for natural Arabic neural audio clips to provide instant playback with 0ms delay
+  const ttsAudioCache = new Map<string, { audioBase64: string; mimeType: string; source: string }>();
+
   app.post('/api/ai/tts', async (req, res) => {
-    const { text } = req.body || {};
-    if (
-      !text ||
-      typeof text !== 'string' ||
-      !text.trim() ||
-      text.length > 8000
-    ) {
+    const { text, voice, rate } = req.body || {};
+    if (!text || typeof text !== 'string' || !text.trim() || text.length > 8000) {
       res.status(400).json({
         error: 'يلزم إدخال نص صالح لا يتجاوز 8,000 حرف لتحويله إلى صوت.',
       });
       return;
     }
 
-    const ai = getGenAIClient();
-    if (!ai) {
-      res.status(503).json({
-        error:
-          'خدمة الصوت السحابية غير مفعلة حالياً، سيتم استخدام القارئ الصوتي المحلي للمتصفح.',
-        useBrowserFallback: true,
-      });
+    const cleanText = text.trim();
+    const selectedVoice = voice === 'ar-EG-SalmaNeural' ? 'ar-EG-SalmaNeural' :
+                         voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
+                         'ar-SA-ZariyahNeural';
+    const prosodyRate = typeof rate === 'string' ? rate : '-5%';
+    const cacheKey = `${selectedVoice}_${prosodyRate}_${cleanText}`;
+
+    if (ttsAudioCache.has(cacheKey)) {
+      res.json(ttsAudioCache.get(cacheKey));
       return;
     }
 
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash-lite-tts',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: `اقرأ النص العربي التالي بوضوح وهدوء وتأنٍ مناسب لطالب يتدرب على القراءة: ${text}`,
-              },
-            ],
+    // Tier 1: Microsoft Azure Arabic Neural Speech (Studio-quality human pronunciation with flawless makharij)
+    const azureKey = process.env.AZURE_SPEECH_KEY?.trim();
+    const azureRegion = process.env.AZURE_SPEECH_REGION?.trim();
+
+    if (azureKey && azureRegion) {
+      try {
+        const escaped = cleanText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="0%">${escaped}</prosody></voice></speak>`;
+
+        const endpoint = `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
+        const azureRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+            'User-Agent': 'Baseera-Pedagogical-Audio',
           },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
+          body: ssml,
+        });
+
+        if (azureRes.ok) {
+          const arrayBuffer = await azureRes.arrayBuffer();
+          const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+          const payload = { audioBase64, mimeType: 'audio/mp3', source: 'azure_neural_arabic' };
+          ttsAudioCache.set(cacheKey, payload);
+          res.json(payload);
+          return;
+        } else {
+          console.warn('[Azure TTS] Unfulfilled status:', azureRes.status);
+        }
+      } catch (azureErr) {
+        console.warn('[Azure TTS] Request error:', azureErr);
+      }
+    }
+
+    // Tier 2: Gemini TTS fallback
+    const ai = getGenAIClient();
+    if (ai) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash-lite-tts',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `اقرأ النص العربي التالي بوضوح وهدوء وتأنٍ مناسب لطالب يتدرب على القراءة: ${cleanText}` }],
+            },
+          ],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
             },
           },
-        },
-      });
+        });
 
-      const base64Audio =
-        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        res.json({ audioBase64: base64Audio, mimeType: 'audio/wav' });
-        return;
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          const payload = { audioBase64: base64Audio, mimeType: 'audio/wav', source: 'gemini_tts' };
+          ttsAudioCache.set(cacheKey, payload);
+          res.json(payload);
+          return;
+        }
+      } catch (err) {
+        console.warn('Gemini TTS fallback error:', err);
       }
-      res.status(503).json({ useBrowserFallback: true });
-    } catch (err) {
-      console.warn('Gemini TTS error:', err);
-      res.status(503).json({ useBrowserFallback: true });
     }
+
+    res.status(503).json({
+      error: 'خدمة الصوت السحابية غير مفعلة، جاري استخدام النطق المحلي للمتصفح.',
+      useBrowserFallback: true,
+    });
   });
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local

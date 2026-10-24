@@ -30,6 +30,7 @@ import {
   SkipForward,
 } from 'lucide-react';
 import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
+import { playNaturalArabicAudio } from '../utils/naturalSpeech';
 import { useAssessment } from '../contexts/AssessmentContext';
 
 interface Props {
@@ -855,14 +856,9 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     return { correctCount: correct, totalCount: total, percent };
   }, [phonemicAnswers]);
 
-  // Speak Arabic prompt via Web Speech Synthesis for prompt audibility
+  // Speak Arabic prompt via 100% natural neural Arabic voice
   const handleSpeakText = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'ar-SA';
-    utter.rate = 0.9;
-    window.speechSynthesis.speak(utter);
+    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-5%' });
   };
 
   // Finalize complete screening results

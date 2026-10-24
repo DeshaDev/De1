@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { authenticatedFetch } from '../utils/apiAuth';
+import { playNaturalArabicAudio } from '../utils/naturalSpeech';
 import {
   Sparkles,
   Trophy,
@@ -134,19 +135,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const currentSyllable = syllableList[syllableIdx] || syllableList[0];
   const currentMath = mathList[mathIdx] || mathList[0];
 
-  // Arabic TTS helper
+  // 100% Natural Arabic Neural Speech Player (Authentic human pronunciation with studio-grade phoneme makharij)
   const speakText = (text: string) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'ar-SA';
-        u.rate = 0.88;
-        window.speechSynthesis.speak(u);
-      } catch (err) {
-        console.warn('Speech synthesis error:', err);
-      }
-    }
+    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-5%' });
   };
 
   // Positive celebration
