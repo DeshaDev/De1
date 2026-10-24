@@ -74,27 +74,21 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [guardianConsentRecordedAt, setGuardianConsentRecordedAt] = useState<string | undefined>(
     activeStudent?.guardianConsentRecordedAt
   );
-  const [audioConsentChecked, setAudioConsentChecked] = useState(
-    Boolean(activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-  );
+  // Recording permission is specific to this session and must be reconfirmed each time.
+  const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [guardianAudioConsentRecordedAt, setGuardianAudioConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianAudioConsentRecordedAt
+    undefined
   );
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
   const effectiveGuardianConsentTimestamp = guardianConsentRecordedAt || activeStudent?.guardianConsentRecordedAt;
-  const effectiveAudioConsentTimestamp = guardianAudioConsentRecordedAt || activeStudent?.guardianAudioConsentRecordedAt;
   const hasValidGuardianConsentRecord = Boolean(effectiveGuardianConsentTimestamp && Number.isFinite(Date.parse(effectiveGuardianConsentTimestamp)));
-  const hasValidAudioConsentRecord = Boolean(effectiveAudioConsentTimestamp && Number.isFinite(Date.parse(effectiveAudioConsentTimestamp)));
+  const hasValidAudioConsentRecord = Boolean(guardianAudioConsentRecordedAt && Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)));
 
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
 
-  // Reading mode: oral audio with teacher verification vs timed silent reading
-  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>(
-    (activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-      ? 'oral_audio'
-      : 'timed_silent'
-  );
+  // Oral recording is opt-in for every new session.
+  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('timed_silent');
   const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
     activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian'
   );
@@ -1847,7 +1841,27 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </button>
 
               <button
-                onClick={() => setStage('intro')}
+                onClick={() => {
+                  setStage('intro');
+                  setReadingMode('timed_silent');
+                  setAudioConsentChecked(false);
+                  setGuardianAudioConsentRecordedAt(undefined);
+                  setAzureAssessmentComplete(false);
+                  setAzureAssessmentMode('');
+                  setPronunciationAssessmentError('');
+                  setSpokenTranscript('');
+                  spokenTranscriptRef.current = '';
+                  finalTranscriptsRef.current = [];
+                  currentInterimRef.current = '';
+                  setVerifiedWords([]);
+                  setTeacherVerified(false);
+                  setHumanReviewConfirmed(false);
+                  setMeasuredWpm(undefined);
+                  setMeasuredWcpm(undefined);
+                  setMeasuredAccuracyPercent(undefined);
+                  setMeasuredWpm(undefined);
+                  setFinalDurationSec(0);
+                }}
                 className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 px-6 rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm"
               >
                 <RotateCcw className="w-4 h-4" />
