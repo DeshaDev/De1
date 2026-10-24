@@ -56,6 +56,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 }) => {
   // Active Station Tab: phonics | syllables | pacer | math
   const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math'>('phonics');
+  const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
   // Curated grade-specific practice selected from reviewed content
   const [curatedSession, setCuratedSession] = useState<RemediationSessionPlan | null>(null);
@@ -137,7 +138,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   // 100% Natural Arabic Neural Speech Player (Authentic human pronunciation with studio-grade phoneme makharij)
   const speakText = (text: string) => {
-    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-5%' });
+    playNaturalArabicAudio(text, { voice: selectedVoice, rate: '-5%' });
   };
 
   // Positive celebration
@@ -483,10 +484,28 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
 
         {/* Left: Quick student & Gamification Pills */}
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs flex-wrap">
           <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg font-mono font-bold text-amber-900">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-            <span>{xpPoints} XP في الجلسة</span>
+            <span>{xpPoints} XP</span>
+          </div>
+
+          <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg text-emerald-900 font-medium">
+            <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+            <select
+              value={selectedVoice}
+              onChange={(e) => {
+                const nextVoice = e.target.value as 'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural';
+                setSelectedVoice(nextVoice);
+                playNaturalArabicAudio('مَرْحَبًا بِكَ، أَنَا مُعَلِّمُكَ فِي بَصِيرَة', { voice: nextVoice });
+              }}
+              className="bg-transparent border-none text-[11px] font-bold text-emerald-950 focus:outline-none cursor-pointer"
+              title="الصوت البشري الطبيعي للتدريب (Azure Neural Arabic)"
+            >
+              <option value="ar-SA-ZariyahNeural">🎙️ المعلمة زارية (فصيح سعودي)</option>
+              <option value="ar-EG-SalmaNeural">🎙️ المعلمة سلمى (مصري فصيح)</option>
+              <option value="ar-SA-HamedNeural">🎙️ الأستاذ حامد (فصيح رجالي)</option>
+            </select>
           </div>
 
           <select
