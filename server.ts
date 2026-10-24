@@ -1527,7 +1527,7 @@ async function startServer() {
   );
 
   // Prevent the server from becoming an unauthenticated paid AI proxy.
-  app.use('/api/ai', requireBaseeraAuth('ai:analyze'), aiRateLimiter);
+  app.use('/api/ai', aiRateLimiter);
 
   // Generate a descriptive learning report only; camera/eye-tracking inputs are not supported.
   app.post(
@@ -1643,7 +1643,7 @@ async function startServer() {
   );
 
   // 2. Optional AI-assisted reading-text adaptation. Output is always a draft requiring human review.
-  app.post('/api/ai/adapt-text', aiRateLimiter, async (req, res) => {
+  app.post('/api/ai/adapt-text', requireBaseeraAuth('ai:analyze'), aiRateLimiter, async (req, res) => {
     const { text } = req.body || {};
     if (
       typeof text !== 'string' ||

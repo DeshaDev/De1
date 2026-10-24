@@ -1440,16 +1440,15 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-800">
-                  {canVerifyAsTeacher ? 'يمكن للمراجع المخوّل تعديل التصنيف بعد الاستماع إلى التسجيل:' : 'نتيجة التقييم الآلي للكلمات (التعديل متاح لمراجع المدرسة المخوّل):'}
+                  فحص الذكاء الاصطناعي لكلمات النص (اضغط على أي كلمة للاستماع لنطقها السليم):
                 </span>
                 <button
                   type="button"
                   onClick={handleMarkAllCorrect}
-                  disabled={!canVerifyAsTeacher || (audioCaptureFailed && !audioPlaybackUrl)}
-                  className="text-xs font-bold text-teal-700 hover:text-teal-900 disabled:opacity-40 disabled:cursor-not-allowed bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
-                  title={audioCaptureFailed && !audioPlaybackUrl ? 'تعذر التقاط صوت لتأكيد القراءة الكاملة' : 'تعليم جميع الكلمات كقراءة صحيحة'}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
+                  title="تأكيد قراءة جميع كلمات النص كصحيحة"
                 >
-                  ✓ تعليم الكل كقراءة صحيحة
+                  ✓ تأكيد قراءة جميع الكلمات بطلاقة
                 </button>
               </div>
 
@@ -1462,10 +1461,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   ● لهجة مقبولة (Dialect)
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-bold">
-                  ● إبدال لفظي (Substitution)
+                  ● إبدال صوتي (Substitution)
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 font-bold">
-                  ● غير محسوم آلياً (Unconfirmed)
+                  ● تخطي / لم تُنطق (Omission)
                 </span>
               </div>
 
@@ -1485,26 +1484,30 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
                     statusTitle = 'بديل لهجي مقبول';
                   } else if (item.status === 'phonetic_substitution') {
-                    badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold';
-                    statusTitle = 'إبدال صوتي / تعثر';
+                    badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold ring-2 ring-amber-300';
+                    statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
-                    statusTitle = 'غير محسومة آلياً؛ قد يكون التعرّف الصوتي لم يلتقطها';
+                    statusTitle = 'غير محسومة آلياً';
                   } else if (item.status === 'omitted') {
-                    badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through hover:bg-rose-200';
-                    statusTitle = 'متخطاة / محذوفة';
+                    badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
+                    statusTitle = 'تخطي / لم تُنطق';
                   }
 
                   return (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => handleToggleWordStatus(idx)}
-                      disabled={!canVerifyAsTeacher}
-                      className={`px-3 py-1.5 rounded-xl border transition-all ${canVerifyAsTeacher ? 'cursor-pointer' : 'cursor-default'} shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
-                      title={`${item.word}: ${statusTitle} (انقر للتغيير)`}
+                      onClick={() => handleSpeakWord(item.word)}
+                      className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
+                      title={`${item.word}: ${statusTitle} (انقر للاستماع للنطق السليم)`}
                     >
                       <span className="font-bold">{item.word}</span>
+                      {item.status === 'phonetic_substitution' && item.spokenWord && (
+                        <span className="text-[10px] font-mono text-amber-800 bg-white/80 px-1 rounded-sm">
+                          نُطقت: {item.spokenWord}
+                        </span>
+                      )}
                       <span className="text-[9px] font-normal opacity-70">
                         {statusTitle}
                       </span>
