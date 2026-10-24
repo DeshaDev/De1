@@ -43,6 +43,7 @@ import {
   ArabicDialectCode,
   ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
+import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
 
 interface Props {
   onCompleteSession: (record: StudentRecord) => void;
@@ -110,6 +111,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
   const [readingModeNotice, setReadingModeNotice] = useState('');
+  const [isAssessingPronunciation, setIsAssessingPronunciation] = useState(false);
+  const [pronunciationAssessmentError, setPronunciationAssessmentError] = useState('');
+  const [azureAssessmentMode, setAzureAssessmentMode] = useState('');
+  const [azureAssessmentComplete, setAzureAssessmentComplete] = useState(false);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeStreamRef = useRef<MediaStream | null>(null);
@@ -117,6 +122,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const audioPlaybackUrlRef = useRef<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRecordingStartedRef = useRef(false);
+  const recordedAudioBlobRef = useRef<Blob | null>(null);
+  const recorderStopResolverRef = useRef<((blob: Blob | null) => void) | null>(null);
 
   // Teacher verification & Human-in-the-Loop review state
   const [verifiedWords, setVerifiedWords] = useState<
@@ -233,6 +240,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setMeasuredWpm(undefined);
     setFinalDurationSec(0);
     setIsListening(false);
+    recordedAudioBlobRef.current = null;
+    setPronunciationAssessmentError('');
+    setAzureAssessmentMode('');
+    setAzureAssessmentComplete(false);
+    setIsAssessingPronunciation(false);
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
       audioPlaybackUrlRef.current = null;
@@ -350,7 +362,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           if (event.data.size > 0) audioChunksRef.current.push(event.data);
         };
         recorder.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          recordedAudioBlobRef.current = blob.size > 0 ? blob : null;
           if (blob.size > 0) {
             const url = URL.createObjectURL(blob);
             audioPlaybackUrlRef.current = url;
@@ -360,6 +373,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             activeStreamRef.current.getTracks().forEach(track => track.stop());
             activeStreamRef.current = null;
           }
+          const resolveStop = recorderStopResolverRef.current;
+          recorderStopResolverRef.current = null;
+          if (resolveStop) resolveStop(recordedAudioBlobRef.current);
         };
         recorder.start();
         audioRecordingStartedRef.current = true;
@@ -373,6 +389,25 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       });
   };
 
+  // Wait for MediaRecorder's final dataavailable/stop events before sending the audio to Azure.
+  const stopAndGetRecordedAudio = (): Promise<Blob | null> => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      return Promise.resolve(recordedAudioBlobRef.current);
+    }
+    return new Promise(resolve => {
+      recorderStopResolverRef.current = resolve;
+      try {
+        recorder.stop();
+      } catch {
+        recorderStopResolverRef.current = null;
+        resolve(recordedAudioBlobRef.current);
+      } finally {
+        mediaRecorderRef.current = null;
+      }
+    });
+  };
+
   // Finish reading, stop timer and stop speech recognition & audio recorder
   const handleFinishReading = async () => {
     const readingFinishedAt = Date.now();
@@ -380,14 +415,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {
-        // ignore
-      }
-      mediaRecorderRef.current = null;
-    }
+    const recordedAudio = readingMode === 'oral_audio'
+      ? await stopAndGetRecordedAudio()
+      : null;
 
     if (activeStreamRef.current) {
       try {
