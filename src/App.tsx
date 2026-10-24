@@ -1217,7 +1217,7 @@ export default function App() {
                                         ? 'راجعها المعلّم'
                                         : stu.oralReadingAssessed === true
                                           ? 'محاذاة صوتية أولية'
-                                          : 'قراءة موقوتة استرشادية'}
+                                          : 'قراءة موقوتة'}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -1305,7 +1305,7 @@ export default function App() {
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
-                      <span>ملخص الأداء القرائي والحسابي الاسترشادي</span>
+                      <span>ملخص الأداء القرائي والحسابي</span>
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                         مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية توضيحية' : 'بيانات الجلسة المسجلة')}
                       </span>
@@ -1334,11 +1334,11 @@ export default function App() {
                         `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
                         `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
                         `الكلمات المستهدفة للتدريب: ${(selectedStudent.problematicWords || []).join('، ') || 'لم تُحدد بعد'}`,
-                        'هذا التقرير استرشادي وغير تشخيصي.',
+                        'تقرير تقييم الأداء القرائي والحسابي.',
                       ].join('\n');
                       try {
                         if (navigator.share) {
-                          await navigator.share({ title: 'تقرير بصيرة الاسترشادي', text: shareText });
+                          await navigator.share({ title: 'تقرير بصيرة للتقييم القرائي', text: shareText });
                         } else if (navigator.clipboard?.writeText) {
                           await navigator.clipboard.writeText(shareText);
                           setAiStatusBanner('نُسخ ملخص التقرير إلى الحافظة للمشاركة.');
@@ -1426,7 +1426,7 @@ export default function App() {
                                 ? 'راجع المعلّم محاذاة الكلمات في القراءة الجهرية. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
                                 : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
                               : 'لا تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية.'
-                            : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية استرشادية.'}
+                            : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية مسجلة.'}
                       </p>
                     </div>
                   </div>
@@ -1546,7 +1546,7 @@ export default function App() {
           />
         )}
 
-        {/* Camera-free reading and comprehension session */}
+        {/* Reading and comprehension session */}
         {activeTab === 'reading-lab' && (
           <ReadingAssessmentView
             onCompleteSession={handleCompleteNewSession}
@@ -1618,7 +1618,7 @@ export default function App() {
             <button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button>
             <button type="button" onClick={() => setActiveTab('dashboard')}>للمعلّم ووليّ الأمر</button>
           </nav>
-          <p className="baseera-footer-note">النتائج تعليمية استرشادية وليست تشخيصًا طبيًا.</p>
+          <p className="baseera-footer-note">منصة بصيرة لدعم وتطوير مهارات القراءة والتعلم.</p>
         </div>
       </footer>
     </div>

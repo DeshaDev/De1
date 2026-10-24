@@ -59,7 +59,7 @@ export const PrivacyPolicyView: React.FC = () => (
       <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-950">
         <EyeOff className="mt-1 h-5 w-5 shrink-0" aria-hidden={true} />
         <p>
-          <strong>لا تستخدم بصيرة الكاميرا أو تتبع العين.</strong> لا تطلب المنصة إذن الكاميرا، ولا تجمع صورًا أو مقاطع فيديو أو قياسات نظر. قد يُطلب إذن الميكروفون فقط إذا اختار المستخدم جلسة القراءة الجهرية بنفسه.
+          <strong>حماية خصوصية الأطفال والطلاب:</strong> تلتزم بصيرة التزاماً تاماً بعدم جمع أي صور أو مقاطع فيديو. قد يُطلب إذن الميكروفون اختيارياً فقط في حال رغبة المستخدم في ممارسة القراءة الجهرية داخل المتصفح.
         </p>
       </div>
     </header>

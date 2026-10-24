@@ -118,7 +118,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
       weekNum: 2,
       titleAr: `دمج التمارين: تعزيز ${primaryDeficit.name} مع ${secondaryDeficit.name}`,
       domainAr: `${primaryDeficit.name} + ${secondaryDeficit.name}`,
-      baselineAr: `خط أساس مساند: ${secondaryDeficit.score}% في ${secondaryDeficit.name}`,
+      baselineAr: `الدرجة المسجلة: ${secondaryDeficit.score}% في ${secondaryDeficit.name}`,
       smartGoalAr: 'رفع نسبة الإنجاز المشتركة بمقدار 15% مقارنة بنتيجة الجلسة الأولى',
       durationDailyAr: '15 دقيقة يومياً',
       activitiesAr: 'الجمع بين نطق المقاطع بسرعة مع استخدام وسائط بصرية مشكولة، والربط بين الصوت وشكل الحرف.',
@@ -172,7 +172,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
             خطة العمل التربوية المقترحة (4 أسابيع) للطالب: {studentName}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            خطة استرشادية ديناميكية مبنية على أدنى المهارات أداءً في هذه الجلسة: <strong className="text-slate-800 font-bold">{primaryDeficit.name}</strong> ({primaryDeficit.score}%)
+            خطة عمل تعليمية مبنية على أدنى المهارات أداءً في هذه الجلسة: <strong className="text-slate-800 font-bold">{primaryDeficit.name}</strong> ({primaryDeficit.score}%)
           </p>
         </div>
 
@@ -273,7 +273,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
               <strong>تجنب القراءة الجهرية المفاجئة:</strong> إعطاء فرصة للتحضير المسبق وتجنب الطلب المفاجئ أمام الأقران.
             </li>
             <li>
-              <strong>أدوات تتبع القراءة:</strong> السماح باستخدام مسطرة القراءة البصرية أو المؤشر لتتبع الأسطر.
+              <strong>أدوات تيسير القراءة:</strong> السماح باستخدام مسطرة القراءة أو المؤشر لتحديد الأسطر ومنع التشتت.
             </li>
             <li>
               <strong>وضوح الخط:</strong> استخدام خط عربي مشكول بحجم مناسب (18pt+) وتباعد كافٍ بين الأسطر.
@@ -310,7 +310,7 @@ export const IndividualizedEducationPlan: React.FC<Props> = ({
       <div className="p-3.5 rounded-2xl bg-slate-100 border border-slate-200 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
         <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
         <span>
-          <strong>إخلاء مسؤولية تربوي:</strong> هذه الخطة مقترح استرشادي مبني على رصد أداء جلسة رقمية أولية، وتخضع للمراجعة والتعديل المستمر من المعلم أو الأخصائي المختص وفق استجابة الطفل الفعلية (Response to Intervention). لا تعتبر خطة تربوية فردية (IEP) رسمية ملزمة ما لم تعتمدها لجنة التربية الخاصة بالمدرسة.
+          <strong>ملاحظة تربوية:</strong> تمثل هذه الخطة مقترحاً لمساندة المعلم والأخصائي، وتخضع للتكييف والمراجعة المستمرة وفق استجابة الطفل الفعلية (Response to Intervention).
         </span>
       </div>
     </div>

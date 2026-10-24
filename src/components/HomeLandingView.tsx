@@ -187,8 +187,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </button>
           </div>
           <div className="baseera-promise-row" aria-label="مميزات بصيرة">
-            <span><ShieldCheck aria-hidden="true" size={18} /> لا كاميرا ولا تتبّع للعين</span>
-            <span><Heart aria-hidden="true" size={18} /> نتائج تعليمية استرشادية</span>
+            <span><ShieldCheck aria-hidden="true" size={18} /> بيئة تعليمية آمنة للطفل</span>
+            <span><Heart aria-hidden="true" size={18} /> تقييم معرفي وخطط دعم فردية</span>
           </div>
         </div>
 

@@ -342,7 +342,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       ? Math.round(ranItemLatenciesMs.reduce((a, b) => a + b, 0) / ranItemLatenciesMs.length)
       : Math.round((durSec * 1000) / itemsCount);
 
-    let statusLabelAr = 'معدل تسمية استرشادي ضمن المتوسط المعتاد';
+    let statusLabelAr = 'معدل تسمية طبيعي ضمن المتوسط المعتاد';
     if (durSec <= 22) {
       statusLabelAr = 'سرعة استرجاع لفظي نشطة في هذه الجلسة';
     } else if (durSec >= 35) {
@@ -449,7 +449,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               </div>
               <div>
                 <h1 className="text-xl md:text-2xl font-black text-slate-900">
-                  أنشطة الفرز المعرفي الاسترشادية لمهارات القراءة
+                  أنشطة الفرز المعرفي لمهارات القراءة
                 </h1>
                 <p className="text-xs text-slate-500">
                   مهام رصدية لقياس سرعة الاسترجاع، التفكيك الصوتي للكلمات غير الحقيقية، والوعي الفونولوجي
@@ -497,7 +497,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             </div>
             <div className="flex items-center gap-2 text-emerald-800 font-semibold">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>ملاحظة تعليمية مباشرة بدون استخدام كاميرا أو تتبع للعين</span>
+              <span>تقييم تفاعلي مباشر وآمن للطفل</span>
             </div>
           </div>
         </div>
@@ -514,7 +514,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               أنشطة الفرز المعرفي المساندة للقراءة العربية
             </h2>
             <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed mb-6">
-              توسع هذه الأنشطة ملاحظة المعلم لتشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط الصفي والتوصيات الاسترشادية.
+              توسع هذه الأنشطة ملاحظة المعلم لتشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط الصفي والتوصيات التعليمية.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-right">
@@ -524,7 +524,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 </div>
                 <h3 className="font-bold text-slate-900 text-sm mb-1">1. التسمية السريعة (RAN)</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  تسمية 20 عنصراً مألوفاً لتسجيل زمن الاستجابة وترددات التوقف الاسترشادية.
+                  تسمية 20 عنصراً مألوفاً لتسجيل زمن الاستجابة وترددات التوقف.
                 </p>
               </div>
 
@@ -552,7 +552,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-xs text-slate-600 text-right leading-relaxed mb-8 flex items-start gap-3">
               <Info className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <span>
-                <strong>تنويه منهجي:</strong> هذه الأنشطة أداة استرشادية لجمع ملاحظات وصفية مساندة للمعلم، وليست بطارية تشخيصية مقننة سريرياً أو بديلاً عن الفحص النفسي والتربوي المعتمد.
+                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد المعلم بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
               </span>
             </div>
 
@@ -958,7 +958,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white font-extrabold text-sm py-3.5 px-8 rounded-xl flex items-center gap-2 mx-auto shadow-md transition-all cursor-pointer"
                 >
                   <Award className="w-5 h-5 text-amber-300" />
-                  <span>اعتماد الملاحظات وعرض الملف الاسترشادي</span>
+                  <span>اعتماد الملاحظات وعرض الملف المعرفي الشامل</span>
                 </button>
               </div>
             )}
@@ -976,10 +976,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ملخص رصد الأنشطة المكتملة
                 </span>
                 <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
-                  ملف مهارات القراءة الاسترشادي: {student.name}
+                  ملف مهارات القراءة والتعلم: {student.name}
                 </h2>
                 <p className="text-xs text-slate-600 mt-1">
-                  رصد أولي للسرعة والتفكيك والوعي الفونولوجي لإفادة المعلم
+                  ملخص دقيق للسرعة والتفكيك والوعي الفونولوجي لمساندة المعلم
                 </p>
               </div>
 
@@ -1040,7 +1040,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   تم حفظ الملاحظات في سجل جلسة الطالب
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  يمكنك الآن الانتقال إلى لوحة المعلم لمراجعة ملف المهارات الاسترشادي وتخصيص خطة التدخل التعليمية المقترحة.
+                  يمكنك الآن الانتقال إلى لوحة المعلم لمراجعة ملف المهارات الشامل وتخصيص خطة التدخل التعليمية المقترحة.
                 </p>
               </div>
 

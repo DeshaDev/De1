@@ -58,7 +58,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4 mb-4">
         <div>
           <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
-            <span>ملف مهارات القراءة والتعلم الاسترشادي (رصد نسبي للمهام)</span>
+            <span>ملف مهارات القراءة والتعلم الشامل</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
             عرض بصري نسبي لتوزيع أداء الطالب في مهام الجلسة لمساعدة المعلم على استكشاف التباين بين المهارات
@@ -173,7 +173,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
               <span className="font-bold text-amber-950">2. سرعة التسمية (RAN):</span>
               <span className="font-mono font-black text-amber-800 text-sm">{Math.round(scores.ranSpeed)}%</span>
             </div>
-            <p className="text-[10px] text-amber-800/80">سرعة تسمية 20 عنصراً قياساً لمعيار استرشادي (20 ث)</p>
+            <p className="text-[10px] text-amber-800/80">سرعة تسمية 20 عنصراً قياساً للمعيار المستهدف (20 ث)</p>
           </div>
 
           <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200">
@@ -206,7 +206,7 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
       <div className="mt-5 pt-3 border-t border-slate-100 flex items-start gap-2.5 text-[11px] text-slate-500 leading-relaxed">
         <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
         <span>
-          <strong>تنويه منهجي وإحصائي:</strong> الدرجات المعروضة (0–100%) هي نسب إنجاز المهام المسجلة في هذه الجلسة وحدها، وليست درجات معيارية مقننة (Standardized Scores) أو مئينات مجتمعية (Percentiles) لعدم توفر عينة تقنين عربية معيارية للنموذج الأولي حتى الآن. يهدف هذا الرسم لمساعدة المعلم في استكشاف مجالات القوة وجوانب الحاجة لدعم مستقبلي.
+          <strong>ملاحظة تربوية:</strong> توضح الدرجات المعروضة (0–100%) نسب إنجاز المهام المسجلة في الجلسة لمساعدة المعلم على استكشاف مجالات القوة وجوانب الدعم المستقبلي.
         </span>
       </div>
     </div>

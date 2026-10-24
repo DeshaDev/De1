@@ -298,7 +298,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       );
     }
 
-    const text = `مرحباً بكم. هذا ملخص تعليمي استرشادي لنتائج ${studentData.studentName}. ${
+    const text = `مرحباً بكم. هذا ملخص تعليمي لنتائج ${studentData.studentName}. ${
       observations.length > 0 ? observations.join('، ') + '.' : ''
     } يمكن مراجعة الأنشطة المقترحة مع المعلّم أو وليّ الأمر؛ هذه المخرجات ليست تشخيصاً طبياً.`;
 
@@ -673,7 +673,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (٦ - ١٠)</span>
                   <h4 className="font-bold text-slate-900 text-sm mb-1">القراءة الموجهة الميسرة</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    قراءة نص قصير في القارئ الميسر مع مسطرة التتبع السطري لتنمية الثقة والاسترسال.
+                    قراءة نص قصير في القارئ الميسر مع مسطرة تحديد السطر لتنمية الثقة والاسترسال.
                   </p>
                 </div>
 
@@ -703,10 +703,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   خطة دعم تعليمي قابلة للتخصيص
                 </span>
                 <h2 className="text-3xl font-black mb-1">
-                  تقرير الأداء التعليمي الاسترشادي: {studentData.studentName}
+                  تقرير الأداء التعليمي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  ملاحظات وصفية من البيانات المسجّلة في الأنشطة؛ لا تمثل معيارًا معياريًا أو تشخيصًا سريريًا
+                  ملاحظات وصفية تفصيلية من البيانات المسجّلة في الأنشطة لمساندة المعلم والأخصائي
                 </p>
               </div>
 
