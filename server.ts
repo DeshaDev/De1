@@ -1939,6 +1939,24 @@ async function startServer() {
       return;
     }
 
+    // Score only the exact text configured by the product; the browser cannot submit
+    // arbitrary target text and later associate that result with a different passage.
+    const trustedPassage = ARABIC_READING_PASSAGES.find(
+      (item) => item.id === body.passageId
+    );
+    if (
+      !trustedPassage ||
+      referenceWords.length !== trustedPassage.words.length ||
+      referenceWords.some((word: string, index: number) => word !== trustedPassage.words[index]) ||
+      referenceText.trim() !== trustedPassage.words.join(' ')
+    ) {
+      res.status(400).json({
+        code: 'REFERENCE_PASSAGE_MISMATCH',
+        error: 'النص المرجعي لا يطابق نص القراءة المعتمد في بصيرة؛ أعد تحميل الصفحة.',
+      });
+      return;
+    }
+
     if (language !== 'ar-EG' && language !== 'ar-SA') {
       res.status(400).json({
         code: 'UNSUPPORTED_PRONUNCIATION_LOCALE',
