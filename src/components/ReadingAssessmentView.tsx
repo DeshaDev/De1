@@ -36,10 +36,6 @@ import {
 } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
 import {
-  evaluateOralReadingAlignment,
-  toConservativeAutomatedOralReadingStatus,
-  OralReadingFluencyResult,
-  OralWordAlignmentItem,
   ArabicDialectCode,
   ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
@@ -603,8 +599,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     }
   };
 
-  // Toggle word status during Teacher Verification (Human-in-the-Loop)
+  // Manual word-level overrides are restricted to an authorized school reviewer.
   const handleToggleWordStatus = (index: number) => {
+    if (!canVerifyAsTeacher) return;
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => {
       const next = [...prev];
@@ -684,17 +681,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Mark all words as correct (quick action for fluent reading)
   const handleMarkAllCorrect = () => {
+    if (!canVerifyAsTeacher) return;
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
   };
 
-  // Teacher confirms verification and proceeds to comprehension
+  // Finalize the machine assessment separately from human certification.
   const handleConfirmVerification = () => {
-    // Only an authorized reviewer with a fully resolved word-level review may certify.
-    const canCertify = canVerifyAsTeacher && teacherStats.unconfirmed === 0;
-    setTeacherVerified(canCertify);
-    setMeasuredWcpm(canCertify ? (teacherStats.liveWcpm ?? undefined) : undefined);
-    setMeasuredAccuracyPercent(canCertify ? (teacherStats.liveAccuracy ?? undefined) : undefined);
+    const machineAssessmentComplete = azureAssessmentComplete && teacherStats.unconfirmed === 0;
+    setTeacherVerified(canVerifyAsTeacher && machineAssessmentComplete);
+    setMeasuredWcpm(machineAssessmentComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
+    setMeasuredAccuracyPercent(machineAssessmentComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -1224,6 +1221,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </span>
                 <ChevronLeft className="w-8 h-8" />
               </button>
+              {isAssessingPronunciation && (
+                <div role="status" aria-live="polite" className="mt-4 w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-950 text-sm font-bold text-center">
+                  جارٍ تحويل التسجيل النهائي وإرساله إلى Microsoft Azure لتقييم النطق الفعلي. لن يُستخدم تفريغ Chrome بديلاً عن التقييم.
+                </div>
+              )}
               <p className="text-slate-500 text-xs mt-3 text-center">
                 اقرأ النص كاملًا وبهدوء؛ لن يتاح إنهاء الجلسة إلا بعد مرور وقت كافٍ لحفظ قياسها بصورة سليمة.
               </p>
@@ -1246,11 +1248,26 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <span>التحليل الصوتي والتدقيق الذكي للكلمات</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
-                التحليل الصوتي المباشر واعتماد الطلاقة الذاتي
+                تقييم النطق من التسجيل الصوتي
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                هذه مطابقة آلية أولية للتفريغ الصوتي، وليست دليلاً قاطعاً على صحة النطق. الكلمات التي لم يحسمها التعرّف لن تُصنّف على أنها أخطاء من الطفل، ولن تُستخدم لاعتماد WCPM.
+                المصدر: Microsoft Azure Speech Pronunciation Assessment. يُرسل التسجيل النهائي بعد موافقة ولي الأمر الصريحة. الكلمات غير المحسومة لا تُحتسب أخطاء على الطفل ولا تدخل في WCPM أو الدقة.
               </p>
+              {azureAssessmentMode && (
+                <p className="text-[11px] text-sky-900 mt-2" role="status">{azureAssessmentMode}</p>
+              )}
+              {pronunciationAssessmentError && (
+                <div role="alert" className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-right text-sm text-rose-950">
+                  <div className="font-black mb-1">لم يكتمل تقييم الصوت الحقيقي</div>
+                  <p>{pronunciationAssessmentError}</p>
+                  <p className="mt-2 text-xs">لن نعرض درجات من تفريغ Chrome على أنها نتيجة Azure. تأكد من بيانات الخدمة وملف .env على الخادم، ثم أعد التسجيل.</p>
+                </div>
+              )}
+              {!pronunciationAssessmentError && !azureAssessmentComplete && (
+                <p className="text-xs text-amber-900 mt-2">
+                  ما تزال بعض الكلمات غير محسومة؛ لن تُحسب درجة عامة أو WCPM موثوق حتى تُحلّ هذه الحالات.
+                </p>
+              )}
             </div>
 
             {/* Live Metrics Dashboard */}
@@ -1351,12 +1368,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-800">
-                  انقر على الكلمة لتعديل تقييمها:
+                  {canVerifyAsTeacher ? 'يمكن للمراجع المخوّل تعديل التصنيف بعد الاستماع إلى التسجيل:' : 'نتيجة التقييم الآلي للكلمات (التعديل متاح لمراجع المدرسة المخوّل):'}
                 </span>
                 <button
                   type="button"
                   onClick={handleMarkAllCorrect}
-                  disabled={audioCaptureFailed && !audioPlaybackUrl}
+                  disabled={!canVerifyAsTeacher || (audioCaptureFailed && !audioPlaybackUrl)}
                   className="text-xs font-bold text-teal-700 hover:text-teal-900 disabled:opacity-40 disabled:cursor-not-allowed bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
                   title={audioCaptureFailed && !audioPlaybackUrl ? 'تعذر التقاط صوت لتأكيد القراءة الكاملة' : 'تعليم جميع الكلمات كقراءة صحيحة'}
                 >
@@ -1411,7 +1428,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       key={idx}
                       type="button"
                       onClick={() => handleToggleWordStatus(idx)}
-                      className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
+                      disabled={!canVerifyAsTeacher}
+                      className={`px-3 py-1.5 rounded-xl border transition-all ${canVerifyAsTeacher ? 'cursor-pointer' : 'cursor-default'} shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
                       title={`${item.word}: ${statusTitle} (انقر للتغيير)`}
                     >
                       <span className="font-bold">{item.word}</span>
@@ -1427,8 +1445,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>التصنيف المعروض تقدير آلي أولي. إذا بقيت كلمات غير محسومة، فلن يُعتمد WCPM أو معدل الدقة لهذه الجلسة.</span>
+                <FileCheck2 className="w-5 h-5 text-sky-700 shrink-0" />
+                <span>{azureAssessmentComplete
+                  ? 'اكتمل تقييم Azure لجميع كلمات النص. تبقى صفة «مراجَع بشرياً» منفصلة وتتطلب صلاحية المدرسة.'
+                  : 'إذا بقيت كلمات غير محسومة، فلن يُعتمد WCPM أو معدل الدقة لهذه الجلسة.'}</span>
               </div>
 
               <button
@@ -1437,7 +1457,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>متابعة إلى أسئلة الفهم دون اعتماد مؤشرات غير مكتملة</span>
+                <span>متابعة إلى أسئلة الفهم</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
