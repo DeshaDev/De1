@@ -464,68 +464,139 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     );
     setFinalDurationSec(elapsedSec);
 
-    // Only finalized ASR segments may enter analysis; interim text is provisional.
+    // Browser recognition remains a live preview only. Final assessment uses the captured audio.
     currentInterimRef.current = '';
-    const cleanTranscript = finalTranscriptsRef.current.join(' ').trim();
-    spokenTranscriptRef.current = cleanTranscript;
-    setSpokenTranscript(cleanTranscript);
+    const browserPreviewTranscript = finalTranscriptsRef.current.join(' ').trim();
+    spokenTranscriptRef.current = browserPreviewTranscript;
+    setSpokenTranscript(browserPreviewTranscript);
 
-    // Calculate real WPM strictly from measured evidence:
-    // For oral reading: measured from actual spoken words read per minute
-    // For timed silent reading: rate of completing the reference passage
     if (readingMode === 'oral_audio') {
-      // Browser ASR token count is not a validated oral-reading speed measure.
       setMeasuredWpm(undefined);
+      setIsAssessingPronunciation(true);
+      setPronunciationAssessmentError('');
+      setAudioCaptureFailed(false);
+      setAzureAssessmentComplete(false);
+      setAzureAssessmentMode('');
+      const unresolvedWords = passage.words.map(word => ({
+        word,
+        status: 'unconfirmed' as const,
+        spokenWord: null,
+      }));
+
+      try {
+        if (!recordedAudio || recordedAudio.size === 0) {
+          throw new Error('لم يصل التسجيل النهائي من الميكروفون. أعد التسجيل وتأكد من سماح المتصفح بالميكروفون.');
+        }
+        if (!guardianConsentChecked || !audioConsentChecked) {
+          throw new Error('يلزم تأكيد موافقة ولي الأمر والموافقة المنفصلة على إرسال التسجيل لتقييم الصوت.');
+        }
+
+        const locale: 'ar-EG' | 'ar-SA' | null =
+          studentDialect === 'egyptian'
+            ? 'ar-EG'
+            : studentDialect === 'gulf' || studentDialect === 'msa'
+              ? 'ar-SA'
+              : null;
+        if (!locale) {
+          throw new Error('نموذج تقييم النطق في Azure يدعم هنا العربية المصرية والسعودية/الفصحى فقط. لم نستخدم نموذج لهجة أخرى بدلاً منها بصمت.');
+        }
+
+        setReadingModeNotice('يجري تحويل التسجيل إلى WAV وإرساله إلى Microsoft Azure لتقييم الصوت الفعلي…');
+        const audioWavBase64 = await convertRecordedAudioToWavBase64(recordedAudio, 16000);
+        const response = await fetch('/api/ai/pronunciation-assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            passageId: passage.id,
+            referenceText: passage.words.join(' '),
+            referenceWords: passage.words,
+            audioWavBase64,
+            durationSeconds: elapsedSec,
+            language: locale,
+            guardianConsentGiven: guardianConsentChecked,
+            guardianAudioConsentGiven: audioConsentChecked,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof result.error === 'string'
+            ? result.error
+            : 'تعذر إكمال تقييم النطق عبر Azure.');
+        }
+        if (
+          result.sourceModel !== 'azure_pronunciation_assessment' ||
+          !Array.isArray(result.words) ||
+          result.words.length !== passage.words.length ||
+          typeof result.transcript !== 'string' ||
+          !result.transcript.trim()
+        ) {
+          throw new Error('أعاد مزود الصوت نتيجة ناقصة أو غير متوافقة مع النص المرجعي؛ لم نعتمدها.');
+        }
+
+        const mappedWords = result.words.map((item: any, idx: number) => {
+          const errorType = String(item.errorType || 'Unconfirmed');
+          const status =
+            errorType === 'None' ? 'correct' :
+            errorType === 'DialectVariant' ? 'dialect_variant' :
+            errorType === 'Omission' ? 'omitted' :
+            errorType === 'Substitution' || errorType === 'Mispronunciation' ? 'phonetic_substitution' :
+            'unconfirmed';
+          return {
+            word: passage.words[idx],
+            status,
+            spokenWord: typeof item.spokenWord === 'string' ? item.spokenWord : null,
+          };
+        });
+
+        setVerifiedWords(mappedWords);
+        setSpokenTranscript(result.transcript.trim());
+        spokenTranscriptRef.current = result.transcript.trim();
+        setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
+          ? 'تقييم Azure بالنص المرجعي ووسوم الحذف والإضافة'
+          : 'تقييم Azure المستمر مع محاذاة محافظة للنص المرجعي');
+        const assessmentComplete =
+          result.assessmentComplete === true &&
+          mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
+        setAzureAssessmentComplete(assessmentComplete);
+        setMeasuredWcpm(
+          assessmentComplete && Number.isFinite(result.wordsCorrectPerMinute)
+            ? Number(result.wordsCorrectPerMinute)
+            : undefined
+        );
+        setMeasuredAccuracyPercent(
+          assessmentComplete && Number.isFinite(result.wordAccuracyPercent)
+            ? Number(result.wordAccuracyPercent)
+            : undefined
+        );
+        setMeasuredWpm(
+          assessmentComplete && Number.isFinite(result.wordsPerMinute)
+            ? Number(result.wordsPerMinute)
+            : undefined
+        );
+        setReadingModeNotice('');
+        setStage('verification');
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : 'تعذر تقييم الصوت الفعلي.';
+        setPronunciationAssessmentError(message);
+        setAudioCaptureFailed(true);
+        setVerifiedWords(unresolvedWords);
+        setSpokenTranscript('');
+        spokenTranscriptRef.current = '';
+        setMeasuredWpm(undefined);
+        setMeasuredWcpm(undefined);
+        setMeasuredAccuracyPercent(undefined);
+        setAzureAssessmentComplete(false);
+        setAzureAssessmentMode('');
+        setStage('verification');
+      } finally {
+        setIsAssessingPronunciation(false);
+      }
     } else {
       const calculatedWpm = Math.round((passage.words.length / elapsedSec) * 60);
       setMeasuredWpm(calculatedWpm);
-    }
-
-    // If oral audio mode, transition to Teacher Verification stage
-    if (readingMode === 'oral_audio') {
-      const hasSpeechTokens = cleanTranscript.length > 0;
-
-      if (!hasSpeechTokens) {
-        // DO NOT SUBSTITUTE TARGET TEXT!
-        // When speech recognition captures nothing, state that clearly and do not inflate metrics.
-        setAudioCaptureFailed(true);
-        const initialWords = passage.words.map(targetWord => ({
-          word: targetWord,
-          // Missing transcript is a recognition failure, not proof the child skipped every word.
-          status: 'unconfirmed' as const,
-        }));
-        setVerifiedWords(initialWords);
-        setMeasuredWcpm(undefined);
-        setMeasuredAccuracyPercent(undefined);
-        setStage('verification');
-      } else {
-        setAudioCaptureFailed(false);
-        const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
-          passage.words,
-          cleanTranscript,
-          elapsedSec,
-          0,
-          studentDialect
-        );
-
-        const initialWords = passage.words.map((targetWord, idx) => {
-          const aligned = alignmentResult.alignment[idx];
-          return {
-            word: targetWord,
-            status: toConservativeAutomatedOralReadingStatus(aligned),
-            spokenWord: aligned?.spokenWord ?? null,
-          };
-        });
-        const hasUnconfirmedWords = initialWords.some(word => word.status === 'unconfirmed');
-
-        setVerifiedWords(initialWords);
-        // Do not publish a passage-level score while ASR-derived words remain unresolved.
-        setMeasuredWcpm(hasUnconfirmedWords ? undefined : alignmentResult.wcpm);
-        setMeasuredAccuracyPercent(hasUnconfirmedWords ? undefined : alignmentResult.accuracyPercent);
-        setStage('verification');
-      }
-    } else {
-      // Timed silent reading mode: jump directly to comprehension
+      // Timed silent reading mode: jump directly to comprehension.
       setSelectedAnswers({});
       setCurrentQuestionIndex(0);
       setStage('comprehension');
