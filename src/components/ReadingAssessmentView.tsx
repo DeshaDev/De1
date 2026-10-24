@@ -633,7 +633,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               item.errorType === 'DialectVariant' ? ('dialect_variant' as const) :
               item.errorType === 'Omission' ? ('omitted' as const) :
               item.errorType === 'Substitution' || item.errorType === 'Mispronunciation' ? ('phonetic_substitution' as const) :
-              ('correct' as const);
+              ('unconfirmed' as const);
             return {
               word: passage.words[idx] || item.word,
               status,
@@ -1427,12 +1427,75 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             {/* Captured Speech Transcript Display */}
             {spokenTranscript && (
               <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-                <span className="text-xs font-bold text-slate-800 block mb-1">
-                  النص الذي استخرجه Microsoft Azure من التسجيل:
-                </span>
-                <p className="text-xs text-slate-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-slate-100">
-                  {spokenTranscript}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-teal-600" />
+                    <span>ما سمعه الميكروفون وسجّله الذكاء الاصطناعي أثناء قراءتك:</span>
+                  </span>
+                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                    {azureAssessmentMode || 'التفريغ الصوتي الفعلي'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-800 leading-relaxed font-sans bg-white p-3.5 rounded-xl border border-slate-200 font-medium">
+                  "{spokenTranscript}"
                 </p>
+              </div>
+            )}
+
+            {/* Miscue Diagnostic Table if errors or substitutions detected */}
+            {verifiedWords.some(w => w.status !== 'correct') && (
+              <div className="mb-6 p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-right">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                    <span>🔍 تفاصيل الفروق والأخطاء الصوتية المرصودة في قراءتك:</span>
+                  </span>
+                  <span className="text-[11px] text-amber-800 font-bold">
+                    {verifiedWords.filter(w => w.status !== 'correct').length} موضع اختلاف
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {verifiedWords
+                    .filter(w => w.status !== 'correct')
+                    .map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-wrap items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-amber-100 text-xs shadow-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
+                            الكلمة الأصلية: "{item.word}"
+                          </span>
+                          <span className="text-slate-400">←</span>
+                          {item.status === 'omitted' ? (
+                            <span className="text-rose-700 font-bold bg-rose-50 px-2.5 py-0.5 rounded-md border border-rose-200">
+                              تخطي / لم يلتقط الميكروفون نطقها
+                            </span>
+                          ) : item.status === 'phonetic_substitution' ? (
+                            <span className="text-amber-800 font-bold bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-300">
+                              نطقك المسموع: "{item.spokenWord || 'كلمة غير مطابقة'}"
+                            </span>
+                          ) : item.status === 'dialect_variant' ? (
+                            <span className="text-sky-800 font-medium bg-sky-50 px-2.5 py-0.5 rounded-md border border-sky-200">
+                              بديل لهجي مقبول: "{item.spokenWord}"
+                            </span>
+                          ) : (
+                            <span className="text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                              غير محسومة آلياً
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold">
+                          {item.status === 'omitted' ? (
+                            <span className="text-rose-600">❌ حذف / تخطي</span>
+                          ) : item.status === 'phonetic_substitution' ? (
+                            <span className="text-amber-600">⚠️ إبدال صوتي</span>
+                          ) : (
+                            <span className="text-sky-600">لهجة</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
 
@@ -1517,17 +1580,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 100% Autonomous AI Assessment Certification Badge */}
-            <div className="mt-5 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-right flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            {/* Autonomous AI Assessment Certification Badge */}
+            <div className="mt-5 p-4 rounded-2xl bg-teal-50 border border-teal-200 text-right flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="block text-emerald-950 text-sm font-black mb-1">
-                  اعتماد التقييم الصوتي بالذكاء الاصطناعي 100%
+                <strong className="block text-teal-950 text-sm font-black mb-1">
+                  التقييم الصوتي بالذكاء الاصطناعي (دقة القراءة الفعلية: {measuredAccuracyPercent ?? Math.round(((verifiedWords.filter(w => w.status === 'correct' || w.status === 'dialect_variant').length) / (passage.words.length || 1)) * 100)}%)
                 </strong>
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  {azureAssessmentComplete
-                    ? 'تم فحص جميع كلمات النص ومطابقتها صوتياً آلياً بواسطة الذكاء الاصطناعي. تم حساب معدل الطلاقة والدقة بدقة متناهية دون الحاجة لأي مراجعة يدوية.'
-                    : 'يجري استكمال مطابقة كلمات النص صوتياً بواسطة الذكاء الاصطناعي.'}
+                <p className="text-xs text-teal-800 leading-relaxed">
+                  {azureAssessmentMode
+                    ? `${azureAssessmentMode}. تم فحص كل كلمة بمقارنتها بالتسجيل الفعلي: الكلمات الخضراء طابقت النطق، والكلمات الملونة الأخرى أظهرت حذفاً أو إبدالاً صوتياً.`
+                    : 'تم فحص الكلمات صوتياً ومطابقتها بالتسجيل الفعلي دون تزييف أي نتيجة.'}
                 </p>
               </div>
             </div>

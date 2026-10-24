@@ -1984,6 +1984,7 @@ async function startServer() {
       return;
     }
 
+    console.log(`[Azure Assessment] Incoming audio evaluation for passage: "${body.passageId}" | Duration: ${durationSeconds}s | Language: ${language}`);
     try {
       const result = await assessReadingAudioWithAzure({
         referenceText: referenceText.trim(),
@@ -1993,10 +1994,11 @@ async function startServer() {
         language,
         dialectLabel: language === 'ar-EG' ? 'المصرية' : 'الفصحى المعيارية / الخليجية',
       });
+      console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
       res.json(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
-      console.error('Azure Speech pronunciation assessment failed:', message);
+      console.warn(`[Azure Assessment] Azure service call unfulfilled: ${message}. Falling back cleanly to Tier 2 Baseera Voice AI Aligner.`);
 
       if ([
         'INVALID_AUDIO_PAYLOAD',
