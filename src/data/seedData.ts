@@ -128,7 +128,8 @@ export interface StudentRecord {
   teacherWordOverridesCount?: number;
   verifiedWordsAlignment?: Array<{
     word: string;
-    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted' | 'unconfirmed';
+    spokenWord?: string | null;
   }>;
   guardianAudioConsentGiven?: boolean;
   audioRecordingConsentGiven?: boolean;
