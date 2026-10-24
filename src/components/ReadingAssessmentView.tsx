@@ -36,6 +36,7 @@ import {
 import { useAssessment } from '../contexts/AssessmentContext';
 import {
   evaluateOralReadingAlignment,
+  toConservativeAutomatedOralReadingStatus,
   OralReadingFluencyResult,
   OralWordAlignmentItem,
   ArabicDialectCode,
@@ -118,7 +119,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [verifiedWords, setVerifiedWords] = useState<
     Array<{
       word: string;
-      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted' | 'unconfirmed';
+      spokenWord?: string | null;
     }>
   >([]);
   const [teacherVerified, setTeacherVerified] = useState(false);
@@ -144,7 +146,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [comprehensionError, setComprehensionError] = useState('');
 
   // Final derived metrics
-  const [measuredWpm, setMeasuredWpm] = useState(0);
+  const [measuredWpm, setMeasuredWpm] = useState<number | undefined>(undefined);
   const [finalDurationSec, setFinalDurationSec] = useState(0);
   const [comprehensionScore, setComprehensionScore] = useState(0);
 
@@ -210,6 +212,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setReadingSeconds(0);
     setIsReadingActive(false);
     spokenTranscriptRef.current = '';
+    finalTranscriptsRef.current = [];
+    currentInterimRef.current = '';
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
     setReadingModeNotice('');
@@ -288,12 +292,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         };
 
         recognition.onend = () => {
-          // If reading session is active, create a FRESH instance so Chromium never drops out
+          // Interim hypotheses can be revised; only recognizer-final segments are scoreable.
           if (isReadingActiveRef.current) {
-            if (currentInterimRef.current) {
-              finalTranscriptsRef.current.push(currentInterimRef.current);
-              currentInterimRef.current = '';
-            }
+            currentInterimRef.current = '';
+            const finalizedTranscript = finalTranscriptsRef.current.join(' ').trim();
+            spokenTranscriptRef.current = finalizedTranscript;
+            setSpokenTranscript(finalizedTranscript);
             setTimeout(() => {
               if (isReadingActiveRef.current) {
                 try {
@@ -427,16 +431,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     );
     setFinalDurationSec(elapsedSec);
 
-    if (currentInterimRef.current) {
-      finalTranscriptsRef.current.push(currentInterimRef.current);
-      currentInterimRef.current = '';
-    }
-    const cleanTranscript = (
-      spokenTranscriptRef.current ||
-      finalTranscriptsRef.current.join(' ') ||
-      spokenTranscript ||
-      ''
-    ).trim();
+    // Only finalized ASR segments may enter analysis; interim text is provisional.
+    currentInterimRef.current = '';
+    const cleanTranscript = finalTranscriptsRef.current.join(' ').trim();
+    spokenTranscriptRef.current = cleanTranscript;
+    setSpokenTranscript(cleanTranscript);
 
     // Calculate real WPM strictly from measured evidence:
     // For oral reading: measured from actual spoken words read per minute
@@ -462,7 +461,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         setAudioCaptureFailed(true);
         const initialWords = passage.words.map(targetWord => ({
           word: targetWord,
-          status: 'omitted' as const, // Default to omitted until teacher explicitly verifies
+          // Missing transcript is a recognition failure, not proof the child skipped every word.
+          status: 'unconfirmed' as const,
         }));
         setVerifiedWords(initialWords);
         setMeasuredWcpm(undefined);
@@ -480,16 +480,18 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
         const initialWords = passage.words.map((targetWord, idx) => {
           const aligned = alignmentResult.alignment[idx];
-          const status = aligned ? aligned.status : 'omitted';
           return {
             word: targetWord,
-            status: status as 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted',
+            status: toConservativeAutomatedOralReadingStatus(aligned),
+            spokenWord: aligned?.spokenWord ?? null,
           };
         });
+        const hasUnconfirmedWords = initialWords.some(word => word.status === 'unconfirmed');
 
         setVerifiedWords(initialWords);
-        setMeasuredWcpm(alignmentResult.wcpm);
-        setMeasuredAccuracyPercent(alignmentResult.accuracyPercent);
+        // Do not publish a passage-level score while ASR-derived words remain unresolved.
+        setMeasuredWcpm(hasUnconfirmedWords ? undefined : alignmentResult.wcpm);
+        setMeasuredAccuracyPercent(hasUnconfirmedWords ? undefined : alignmentResult.accuracyPercent);
         setStage('verification');
       }
     } else {
@@ -506,11 +508,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setVerifiedWords(prev => {
       const next = [...prev];
       const current = next[index];
-      const cycle: Array<'correct' | 'phonetic_substitution' | 'omitted' | 'dialect_variant'> = [
+      const cycle: Array<'correct' | 'phonetic_substitution' | 'omitted' | 'dialect_variant' | 'unconfirmed'> = [
         'correct',
         'phonetic_substitution',
         'omitted',
         'dialect_variant',
+        'unconfirmed',
       ];
       const currentIdx = cycle.indexOf(current.status);
       const nextStatus = cycle[(currentIdx + 1) % cycle.length];
@@ -525,28 +528,23 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     let errors = 0;
     let omitted = 0;
     let dialect = 0;
+    let unconfirmed = 0;
 
     verifiedWords.forEach(w => {
       if (w.status === 'correct') correct += 1;
       else if (w.status === 'dialect_variant') dialect += 1;
       else if (w.status === 'phonetic_substitution') errors += 1;
       else if (w.status === 'omitted') omitted += 1;
+      else if (w.status === 'unconfirmed') unconfirmed += 1;
     });
 
     const effectiveWords = correct + dialect;
     const duration = finalDurationSec || 60;
-    const liveWcpm = Math.max(0, Math.round((effectiveWords / duration) * 60));
-    const liveAccuracy = Math.round((effectiveWords / Math.max(1, verifiedWords.length)) * 100);
+    const complete = unconfirmed === 0;
+    const liveWcpm = complete ? Math.max(0, Math.round((effectiveWords / duration) * 60)) : null;
+    const liveAccuracy = complete ? Math.round((effectiveWords / Math.max(1, verifiedWords.length) * 100)) : null;
 
-    return {
-      correct,
-      errors,
-      omitted,
-      dialect,
-      effectiveWords,
-      liveWcpm,
-      liveAccuracy,
-    };
+    return { correct, errors, omitted, dialect, unconfirmed, effectiveWords, liveWcpm, liveAccuracy };
   }, [verifiedWords, finalDurationSec]);
 
   // Speak Arabic word aloud via Web Speech Synthesis
@@ -566,27 +564,21 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     let errors = 0;
     let omitted = 0;
     let dialect = 0;
+    let unconfirmed = 0;
 
     verifiedWords.forEach(w => {
       if (w.status === 'correct') correct += 1;
       else if (w.status === 'dialect_variant') dialect += 1;
       else if (w.status === 'phonetic_substitution') errors += 1;
       else if (w.status === 'omitted') omitted += 1;
+      else if (w.status === 'unconfirmed') unconfirmed += 1;
     });
 
     const effective = correct + dialect;
     const total = Math.max(1, verifiedWords.length);
-    const accuracyPercent = Math.round((effective / total) * 100);
+    const accuracyPercent = unconfirmed > 0 ? null : Math.round((effective / total) * 100);
 
-    return {
-      correct,
-      errors,
-      omitted,
-      dialect,
-      effective,
-      total,
-      accuracyPercent,
-    };
+    return { correct, errors, omitted, dialect, unconfirmed, effective, total, accuracyPercent };
   }, [verifiedWords]);
 
   // Mark all words as correct (quick action for fluent reading)
@@ -597,10 +589,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Teacher confirms verification and proceeds to comprehension
   const handleConfirmVerification = () => {
-    // A local manual pass is not an authenticated teacher attestation.
-    setTeacherVerified(canVerifyAsTeacher);
-    setMeasuredWcpm(canVerifyAsTeacher ? teacherStats.liveWcpm : undefined);
-    setMeasuredAccuracyPercent(canVerifyAsTeacher ? teacherStats.liveAccuracy : undefined);
+    // Only an authorized reviewer with a fully resolved word-level review may certify.
+    const canCertify = canVerifyAsTeacher && teacherStats.unconfirmed === 0;
+    setTeacherVerified(canCertify);
+    setMeasuredWcpm(canCertify ? (teacherStats.liveWcpm ?? undefined) : undefined);
+    setMeasuredAccuracyPercent(canCertify ? (teacherStats.liveAccuracy ?? undefined) : undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
