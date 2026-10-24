@@ -343,20 +343,68 @@ export async function assessReadingAudioWithAzure(args: {
     throw new Error('UNSUPPORTED_WAV_FORMAT');
   }
 
+  // Azure short-audio REST assessment processes the complete WAV file (including pauses)
+  // and supports EnableMiscue. The SDK's recognizeOnceAsync can stop at the first long pause.
+  const enableMiscue = args.durationSeconds <= 28;
+  if (enableMiscue) {
+    const pronunciationParameters = {
+      ReferenceText: args.referenceText,
+      GradingSystem: 'HundredMark',
+      Granularity: 'Word',
+      Dimension: 'Comprehensive',
+      EnableMiscue: true,
+    };
+    const pronunciationHeader = Buffer.from(JSON.stringify(pronunciationParameters)).toString('base64');
+    const endpoint =
+      `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(args.language)}&format=detailed`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': key,
+        'Pronunciation-Assessment': pronunciationHeader,
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        Accept: 'application/json',
+      },
+      body: wav,
+    });
+    if (!response.ok) {
+      throw new Error(`AZURE_SHORT_AUDIO_HTTP_${response.status}`);
+    }
+
+    const payload: any = await response.json();
+    const nBest = payload?.NBest?.[0] ?? payload?.nBest?.[0];
+    const transcript = String(
+      payload?.DisplayText ?? nBest?.Display ?? nBest?.Lexical ?? nBest?.ITN ?? ''
+    ).trim();
+    if (!transcript) throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
+
+    const provider = extractWordsAndMetrics([payload]);
+    if (provider.words.length === 0) throw new Error('AZURE_NO_WORD_LEVEL_RESULTS');
+
+    return mapAzureAssessmentToReferenceWords({
+      referenceWords: args.referenceWords,
+      transcript,
+      durationSeconds: args.durationSeconds,
+      dialectLabel: args.dialectLabel,
+      enableMiscue: true,
+      providerWords: provider.words,
+      globalMetrics: provider.metrics,
+    });
+  }
+
+  // Azure SDK continuous mode is required beyond short clips. Microsoft documents that
+  // EnableMiscue is unsupported there, so unmatched reference words remain unresolved.
   const sdk: any = await import('microsoft-cognitiveservices-speech-sdk');
-  const enableMiscue = args.durationSeconds <= 28 && args.referenceText.length <= 100;
   const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
   speechConfig.speechRecognitionLanguage = args.language;
   speechConfig.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, '1200');
   const audioConfig = sdk.AudioConfig.fromWavFileInput(wav);
-  // Node SDK signature is SpeechRecognizer(speechConfig, audioConfig); locale belongs
-  // on SpeechConfig, otherwise the second argument would be a string instead of audio.
   const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
   const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
     args.referenceText,
     sdk.PronunciationAssessmentGradingSystem.HundredMark,
     sdk.PronunciationAssessmentGranularity.Word,
-    enableMiscue
+    false
   );
   pronunciationConfig.applyTo(recognizer);
 
@@ -368,74 +416,50 @@ export async function assessReadingAudioWithAzure(args: {
       if (typeof result.text === 'string' && result.text.trim()) transcripts.push(result.text.trim());
       const json = result.properties?.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult);
       if (json) {
-        try { payloads.push(JSON.parse(json)); } catch { /* malformed provider payload is handled below */ }
+        try { payloads.push(JSON.parse(json)); } catch { /* malformed provider payload handled below */ }
       }
     };
 
-    if (enableMiscue) {
-      await new Promise<void>((resolve, reject) => {
-        recognizer.recognizeOnceAsync(
-          (result: any) => {
-            try {
-              processResult(result);
-              if (result?.reason === sdk.ResultReason.Canceled) {
-                const details = sdk.CancellationDetails.fromResult(result);
-                reject(new Error(details?.errorDetails || 'AZURE_RECOGNITION_CANCELED'));
-              } else {
-                resolve();
-              }
-            } catch (error) {
-              reject(error);
-            }
-          },
-          (error: any) => reject(new Error(String(error || 'AZURE_RECOGNITION_FAILED')))
-        );
-      });
-    } else {
-      await new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const timeout = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          try { recognizer.stopContinuousRecognitionAsync(); } catch { /* already closed */ }
-          reject(new Error('AZURE_RECOGNITION_TIMEOUT'));
-        }, 90_000);
-        const finish = (error?: Error) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeout);
-          if (error) reject(error);
-          else resolve();
-        };
-        recognizer.recognized = (_sender: unknown, event: any) => processResult(event?.result);
-        recognizer.canceled = (_sender: unknown, event: any) => {
-          if (event?.reason === sdk.CancellationReason.Error) {
-            finish(new Error(String(event?.errorDetails || event?.errorCode || 'AZURE_RECOGNITION_CANCELED')));
-          }
-        };
-        recognizer.sessionStopped = () => finish();
-        recognizer.startContinuousRecognitionAsync(
-          () => undefined,
-          (error: any) => finish(new Error(String(error || 'AZURE_RECOGNITION_FAILED')))
-        );
-      });
-    }
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try { recognizer.stopContinuousRecognitionAsync(); } catch { /* already closed */ }
+        reject(new Error('AZURE_RECOGNITION_TIMEOUT'));
+      }, 90_000);
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error) reject(error);
+        else resolve();
+      };
+      recognizer.recognized = (_sender: unknown, event: any) => processResult(event?.result);
+      recognizer.canceled = (_sender: unknown, event: any) => {
+        if (event?.reason === sdk.CancellationReason.Error) {
+          finish(new Error(String(event?.errorDetails || event?.errorCode || 'AZURE_RECOGNITION_CANCELED')));
+        }
+      };
+      recognizer.sessionStopped = () => finish();
+      recognizer.startContinuousRecognitionAsync(
+        () => undefined,
+        (error: any) => finish(new Error(String(error || 'AZURE_RECOGNITION_FAILED')))
+      );
+    });
 
     const transcript = transcripts.join(' ').replace(/\s+/g, ' ').trim();
-    if (!transcript || payloads.length === 0) {
-      throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
-    }
+    if (!transcript || payloads.length === 0) throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
+
     const provider = extractWordsAndMetrics(payloads);
-    if (provider.words.length === 0) {
-      throw new Error('AZURE_NO_WORD_LEVEL_RESULTS');
-    }
+    if (provider.words.length === 0) throw new Error('AZURE_NO_WORD_LEVEL_RESULTS');
 
     return mapAzureAssessmentToReferenceWords({
       referenceWords: args.referenceWords,
       transcript,
       durationSeconds: args.durationSeconds,
       dialectLabel: args.dialectLabel,
-      enableMiscue,
+      enableMiscue: false,
       providerWords: provider.words,
       globalMetrics: provider.metrics,
     });
