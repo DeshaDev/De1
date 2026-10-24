@@ -203,7 +203,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
           word: targetWord,
           errorType: 'Unconfirmed',
           accuracyScore: score,
-          spokenWord: alignedWord.spokenWord,
+          spokenWord: alignedWord.spokenWord ?? null,
           notesAr: 'يوجد اختلاف بين النص والتفريغ، لكن Azure لم يؤكد خطأ النطق؛ النتيجة غير محسومة.',
         };
       }
@@ -212,7 +212,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         word: targetWord,
         errorType: 'Substitution',
         accuracyScore: score,
-        spokenWord: alignedWord.spokenWord,
+        spokenWord: alignedWord.spokenWord ?? null,
         notesAr: 'رُصد اختلاف لفظي وأيده تقييم النطق الصوتي.',
       };
     }
@@ -223,7 +223,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         word: targetWord,
         errorType: 'Mispronunciation',
         accuracyScore: score,
-        spokenWord: alignedWord.spokenWord,
+        spokenWord: alignedWord.spokenWord ?? null,
         notesAr: 'رصد Azure انخفاضاً في دقة نطق الكلمة.',
       };
     }
@@ -234,7 +234,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         word: targetWord,
         errorType: 'DialectVariant',
         accuracyScore: score,
-        spokenWord: alignedWord.spokenWord,
+        spokenWord: alignedWord.spokenWord ?? null,
         notesAr: alignedWord.notesAr || 'بديل لهجي مقبول في المطابقة.',
       };
     }
