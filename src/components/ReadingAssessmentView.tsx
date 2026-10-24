@@ -12,6 +12,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import {
   BookOpen,
   Clock,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -47,6 +48,7 @@ interface Props {
   onCompleteSession: (record: StudentRecord) => void;
   activeStudent?: StudentRecord;
   onProceedToMathLab?: () => void;
+  onNavigateTab?: (tab: string) => void;
   /** A signed-in school administrator account is required to certify human-reviewed WCPM in the stored record. */
   canVerifyAsTeacher?: boolean;
 }
@@ -55,6 +57,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   onCompleteSession,
   activeStudent,
   onProceedToMathLab,
+  onNavigateTab,
   canVerifyAsTeacher = false,
 }) => {
   const { saveReadingResults } = useAssessment();
