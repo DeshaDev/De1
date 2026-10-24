@@ -35,6 +35,7 @@ import {
   ReadingPassage,
 } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
+import { authenticatedFetch } from '../utils/apiAuth';
 import {
   ArabicDialectCode,
   ARABIC_DIALECT_PROFILES,
@@ -499,7 +500,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
         setReadingModeNotice('يجري تحويل التسجيل إلى WAV وإرساله إلى Microsoft Azure لتقييم الصوت الفعلي…');
         const audioWavBase64 = await convertRecordedAudioToWavBase64(recordedAudio, 16000);
-        const response = await fetch('/api/ai/pronunciation-assessment', {
+        const response = await authenticatedFetch('/api/ai/pronunciation-assessment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -515,9 +516,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(typeof result.error === 'string'
-            ? result.error
-            : 'تعذر إكمال تقييم النطق عبر Azure.');
+          const message =
+            response.status === 401 || response.status === 403
+              ? 'يلزم تسجيل الدخول إلى حساب المدرسة المخوّل بتقييم الذكاء الاصطناعي قبل إرسال التسجيل إلى Azure.'
+              : typeof result.error === 'string'
+                ? result.error
+                : 'تعذر إكمال تقييم النطق عبر Azure.';
+          throw new Error(message);
         }
         if (
           result.sourceModel !== 'azure_pronunciation_assessment' ||
