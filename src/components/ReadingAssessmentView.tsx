@@ -586,7 +586,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           ? error.message
           : 'تعذر تقييم الصوت الفعلي.';
         setPronunciationAssessmentError(message);
-        setAudioCaptureFailed(true);
+        // Distinguish a failed Azure assessment from a failed microphone recording.
+        // A saved recording remains available for an authorized human review.
+        setAudioCaptureFailed(!recordedAudio || recordedAudio.size === 0);
         setVerifiedWords(unresolvedWords);
         setSpokenTranscript('');
         spokenTranscriptRef.current = '';
