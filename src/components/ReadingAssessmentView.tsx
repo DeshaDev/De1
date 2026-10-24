@@ -35,14 +35,12 @@ import {
   ReadingPassage,
 } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
+import { authenticatedFetch } from '../utils/apiAuth';
 import {
-  evaluateOralReadingAlignment,
-  toConservativeAutomatedOralReadingStatus,
-  OralReadingFluencyResult,
-  OralWordAlignmentItem,
   ArabicDialectCode,
   ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
+import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
 
 interface Props {
   onCompleteSession: (record: StudentRecord) => void;
@@ -76,27 +74,21 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [guardianConsentRecordedAt, setGuardianConsentRecordedAt] = useState<string | undefined>(
     activeStudent?.guardianConsentRecordedAt
   );
-  const [audioConsentChecked, setAudioConsentChecked] = useState(
-    Boolean(activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-  );
+  // Recording permission is specific to this session and must be reconfirmed each time.
+  const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [guardianAudioConsentRecordedAt, setGuardianAudioConsentRecordedAt] = useState<string | undefined>(
-    activeStudent?.guardianAudioConsentRecordedAt
+    undefined
   );
   const passage: ReadingPassage = ARABIC_READING_PASSAGES[selectedPassageIndex] || ARABIC_READING_PASSAGES[0];
   const effectiveGuardianConsentTimestamp = guardianConsentRecordedAt || activeStudent?.guardianConsentRecordedAt;
-  const effectiveAudioConsentTimestamp = guardianAudioConsentRecordedAt || activeStudent?.guardianAudioConsentRecordedAt;
   const hasValidGuardianConsentRecord = Boolean(effectiveGuardianConsentTimestamp && Number.isFinite(Date.parse(effectiveGuardianConsentTimestamp)));
-  const hasValidAudioConsentRecord = Boolean(effectiveAudioConsentTimestamp && Number.isFinite(Date.parse(effectiveAudioConsentTimestamp)));
+  const hasValidAudioConsentRecord = Boolean(guardianAudioConsentRecordedAt && Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)));
 
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
 
-  // Reading mode: oral audio with teacher verification vs timed silent reading
-  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>(
-    (activeStudent?.guardianAudioConsentGiven || activeStudent?.audioRecordingConsentGiven)
-      ? 'oral_audio'
-      : 'timed_silent'
-  );
+  // Oral recording is opt-in for every new session.
+  const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('timed_silent');
   const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
     activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian'
   );
@@ -110,6 +102,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
   const [readingModeNotice, setReadingModeNotice] = useState('');
+  const [isAssessingPronunciation, setIsAssessingPronunciation] = useState(false);
+  const [pronunciationAssessmentError, setPronunciationAssessmentError] = useState('');
+  const [azureAssessmentMode, setAzureAssessmentMode] = useState('');
+  const [azureAssessmentComplete, setAzureAssessmentComplete] = useState(false);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeStreamRef = useRef<MediaStream | null>(null);
@@ -117,6 +113,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const audioPlaybackUrlRef = useRef<string | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRecordingStartedRef = useRef(false);
+  const recordedAudioBlobRef = useRef<Blob | null>(null);
+  const recorderStopResolverRef = useRef<((blob: Blob | null) => void) | null>(null);
 
   // Teacher verification & Human-in-the-Loop review state
   const [verifiedWords, setVerifiedWords] = useState<
@@ -127,6 +125,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     }>
   >([]);
   const [teacherVerified, setTeacherVerified] = useState(false);
+  const [humanReviewConfirmed, setHumanReviewConfirmed] = useState(false);
   const [teacherOverridesCount, setTeacherOverridesCount] = useState(0);
   const [measuredWcpm, setMeasuredWcpm] = useState<number | undefined>(undefined);
   const [measuredAccuracyPercent, setMeasuredAccuracyPercent] = useState<number | undefined>(undefined);
@@ -222,6 +221,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setReadingModeNotice('');
     // A retry starts a new session. Never carry forward prior answers or review status.
     setTeacherVerified(false);
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(0);
     setVerifiedWords([]);
     setMeasuredWcpm(undefined);
@@ -233,6 +233,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setMeasuredWpm(undefined);
     setFinalDurationSec(0);
     setIsListening(false);
+    recordedAudioBlobRef.current = null;
+    setPronunciationAssessmentError('');
+    setAzureAssessmentMode('');
+    setAzureAssessmentComplete(false);
+    setIsAssessingPronunciation(false);
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
       audioPlaybackUrlRef.current = null;
@@ -350,7 +355,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           if (event.data.size > 0) audioChunksRef.current.push(event.data);
         };
         recorder.onstop = () => {
-          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          recordedAudioBlobRef.current = blob.size > 0 ? blob : null;
           if (blob.size > 0) {
             const url = URL.createObjectURL(blob);
             audioPlaybackUrlRef.current = url;
@@ -360,6 +366,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             activeStreamRef.current.getTracks().forEach(track => track.stop());
             activeStreamRef.current = null;
           }
+          const resolveStop = recorderStopResolverRef.current;
+          recorderStopResolverRef.current = null;
+          if (resolveStop) resolveStop(recordedAudioBlobRef.current);
         };
         recorder.start();
         audioRecordingStartedRef.current = true;
@@ -373,6 +382,25 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       });
   };
 
+  // Wait for MediaRecorder's final dataavailable/stop events before sending the audio to Azure.
+  const stopAndGetRecordedAudio = (): Promise<Blob | null> => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      return Promise.resolve(recordedAudioBlobRef.current);
+    }
+    return new Promise(resolve => {
+      recorderStopResolverRef.current = resolve;
+      try {
+        recorder.stop();
+      } catch {
+        recorderStopResolverRef.current = null;
+        resolve(recordedAudioBlobRef.current);
+      } finally {
+        mediaRecorderRef.current = null;
+      }
+    });
+  };
+
   // Finish reading, stop timer and stop speech recognition & audio recorder
   const handleFinishReading = async () => {
     const readingFinishedAt = Date.now();
@@ -380,14 +408,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     if (timerRef.current) clearInterval(timerRef.current);
     setIsReadingActive(false);
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {
-        // ignore
-      }
-      mediaRecorderRef.current = null;
-    }
+    const recordedAudio = readingMode === 'oral_audio'
+      ? await stopAndGetRecordedAudio()
+      : null;
 
     if (activeStreamRef.current) {
       try {
@@ -434,76 +457,158 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     );
     setFinalDurationSec(elapsedSec);
 
-    // Only finalized ASR segments may enter analysis; interim text is provisional.
+    // Browser recognition remains a live preview only. Final assessment uses the captured audio.
     currentInterimRef.current = '';
-    const cleanTranscript = finalTranscriptsRef.current.join(' ').trim();
-    spokenTranscriptRef.current = cleanTranscript;
-    setSpokenTranscript(cleanTranscript);
+    const browserPreviewTranscript = finalTranscriptsRef.current.join(' ').trim();
+    spokenTranscriptRef.current = browserPreviewTranscript;
+    setSpokenTranscript(browserPreviewTranscript);
 
-    // Calculate real WPM strictly from measured evidence:
-    // For oral reading: measured from actual spoken words read per minute
-    // For timed silent reading: rate of completing the reference passage
     if (readingMode === 'oral_audio') {
-      // Browser ASR token count is not a validated oral-reading speed measure.
       setMeasuredWpm(undefined);
+      setIsAssessingPronunciation(true);
+      setPronunciationAssessmentError('');
+      setAudioCaptureFailed(false);
+      setAzureAssessmentComplete(false);
+      setAzureAssessmentMode('');
+      const unresolvedWords = passage.words.map(word => ({
+        word,
+        status: 'unconfirmed' as const,
+        spokenWord: null,
+      }));
+
+      try {
+        if (!recordedAudio || recordedAudio.size === 0) {
+          throw new Error('لم يصل التسجيل النهائي من الميكروفون. أعد التسجيل وتأكد من سماح المتصفح بالميكروفون.');
+        }
+        if (!guardianConsentChecked || !audioConsentChecked) {
+          throw new Error('يلزم تأكيد موافقة ولي الأمر والموافقة المنفصلة على إرسال التسجيل لتقييم الصوت.');
+        }
+
+        const locale: 'ar-EG' | 'ar-SA' | null =
+          studentDialect === 'egyptian'
+            ? 'ar-EG'
+            : studentDialect === 'gulf' || studentDialect === 'msa'
+              ? 'ar-SA'
+              : null;
+        if (!locale) {
+          throw new Error('نموذج تقييم النطق في Azure يدعم هنا العربية المصرية والسعودية/الفصحى فقط. لم نستخدم نموذج لهجة أخرى بدلاً منها بصمت.');
+        }
+
+        setReadingModeNotice('يجري تحويل التسجيل إلى WAV وإرساله إلى Microsoft Azure لتقييم الصوت الفعلي…');
+        const audioWavBase64 = await convertRecordedAudioToWavBase64(recordedAudio, 16000);
+        const response = await authenticatedFetch('/api/ai/pronunciation-assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            passageId: passage.id,
+            referenceText: passage.words.join(' '),
+            referenceWords: passage.words,
+            audioWavBase64,
+            durationSeconds: elapsedSec,
+            language: locale,
+            guardianConsentGiven: guardianConsentChecked,
+            guardianConsentRecordedAt,
+            guardianAudioConsentGiven: audioConsentChecked,
+            guardianAudioConsentRecordedAt,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message =
+            response.status === 401 || response.status === 403
+              ? 'يلزم تسجيل الدخول إلى حساب المدرسة المخوّل بتقييم الذكاء الاصطناعي قبل إرسال التسجيل إلى Azure.'
+              : typeof result.error === 'string'
+                ? result.error
+                : 'تعذر إكمال تقييم النطق عبر Azure.';
+          throw new Error(message);
+        }
+        if (
+          result.sourceModel !== 'azure_pronunciation_assessment' ||
+          !Array.isArray(result.words) ||
+          result.words.length !== passage.words.length ||
+          typeof result.transcript !== 'string' ||
+          !result.transcript.trim()
+        ) {
+          throw new Error('أعاد مزود الصوت نتيجة ناقصة أو غير متوافقة مع النص المرجعي؛ لم نعتمدها.');
+        }
+
+        const mappedWords = result.words.map((item: any, idx: number) => {
+          const errorType = String(item.errorType || 'Unconfirmed');
+          const status =
+            errorType === 'None' ? 'correct' :
+            errorType === 'DialectVariant' ? 'dialect_variant' :
+            errorType === 'Omission' ? 'omitted' :
+            errorType === 'Substitution' || errorType === 'Mispronunciation' ? 'phonetic_substitution' :
+            'unconfirmed';
+          return {
+            word: passage.words[idx],
+            status,
+            spokenWord: typeof item.spokenWord === 'string' ? item.spokenWord : null,
+          };
+        });
+
+        setVerifiedWords(mappedWords);
+        setHumanReviewConfirmed(false);
+        setSpokenTranscript(result.transcript.trim());
+        spokenTranscriptRef.current = result.transcript.trim();
+        setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
+          ? 'تقييم Azure بالنص المرجعي ووسوم الحذف والإضافة'
+          : 'تقييم Azure المستمر مع محاذاة محافظة للنص المرجعي');
+        const assessmentComplete =
+          result.assessmentComplete === true &&
+          mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
+        setAzureAssessmentComplete(assessmentComplete);
+        setMeasuredWcpm(
+          assessmentComplete && Number.isFinite(result.wordsCorrectPerMinute)
+            ? Number(result.wordsCorrectPerMinute)
+            : undefined
+        );
+        setMeasuredAccuracyPercent(
+          assessmentComplete && Number.isFinite(result.wordAccuracyPercent)
+            ? Number(result.wordAccuracyPercent)
+            : undefined
+        );
+        setMeasuredWpm(
+          assessmentComplete && Number.isFinite(result.wordsPerMinute)
+            ? Number(result.wordsPerMinute)
+            : undefined
+        );
+        setReadingModeNotice('');
+        setStage('verification');
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : 'تعذر تقييم الصوت الفعلي.';
+        setPronunciationAssessmentError(message);
+        // Distinguish a failed Azure assessment from a failed microphone recording.
+        // A saved recording remains available for an authorized human review.
+        setAudioCaptureFailed(!recordedAudio || recordedAudio.size === 0);
+        setVerifiedWords(unresolvedWords);
+        setSpokenTranscript('');
+        spokenTranscriptRef.current = '';
+        setMeasuredWpm(undefined);
+        setMeasuredWcpm(undefined);
+        setMeasuredAccuracyPercent(undefined);
+        setAzureAssessmentComplete(false);
+        setAzureAssessmentMode('');
+        setStage('verification');
+      } finally {
+        setIsAssessingPronunciation(false);
+      }
     } else {
       const calculatedWpm = Math.round((passage.words.length / elapsedSec) * 60);
       setMeasuredWpm(calculatedWpm);
-    }
-
-    // If oral audio mode, transition to Teacher Verification stage
-    if (readingMode === 'oral_audio') {
-      const hasSpeechTokens = cleanTranscript.length > 0;
-
-      if (!hasSpeechTokens) {
-        // DO NOT SUBSTITUTE TARGET TEXT!
-        // When speech recognition captures nothing, state that clearly and do not inflate metrics.
-        setAudioCaptureFailed(true);
-        const initialWords = passage.words.map(targetWord => ({
-          word: targetWord,
-          // Missing transcript is a recognition failure, not proof the child skipped every word.
-          status: 'unconfirmed' as const,
-        }));
-        setVerifiedWords(initialWords);
-        setMeasuredWcpm(undefined);
-        setMeasuredAccuracyPercent(undefined);
-        setStage('verification');
-      } else {
-        setAudioCaptureFailed(false);
-        const alignmentResult: OralReadingFluencyResult = evaluateOralReadingAlignment(
-          passage.words,
-          cleanTranscript,
-          elapsedSec,
-          0,
-          studentDialect
-        );
-
-        const initialWords = passage.words.map((targetWord, idx) => {
-          const aligned = alignmentResult.alignment[idx];
-          return {
-            word: targetWord,
-            status: toConservativeAutomatedOralReadingStatus(aligned),
-            spokenWord: aligned?.spokenWord ?? null,
-          };
-        });
-        const hasUnconfirmedWords = initialWords.some(word => word.status === 'unconfirmed');
-
-        setVerifiedWords(initialWords);
-        // Do not publish a passage-level score while ASR-derived words remain unresolved.
-        setMeasuredWcpm(hasUnconfirmedWords ? undefined : alignmentResult.wcpm);
-        setMeasuredAccuracyPercent(hasUnconfirmedWords ? undefined : alignmentResult.accuracyPercent);
-        setStage('verification');
-      }
-    } else {
-      // Timed silent reading mode: jump directly to comprehension
+      // Timed silent reading mode: jump directly to comprehension.
       setSelectedAnswers({});
       setCurrentQuestionIndex(0);
       setStage('comprehension');
     }
   };
 
-  // Toggle word status during Teacher Verification (Human-in-the-Loop)
+  // Manual word-level overrides are restricted to an authorized school reviewer.
   const handleToggleWordStatus = (index: number) => {
+    if (!canVerifyAsTeacher) return;
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => {
       const next = [...prev];
@@ -583,17 +688,19 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Mark all words as correct (quick action for fluent reading)
   const handleMarkAllCorrect = () => {
+    if (!canVerifyAsTeacher) return;
+    setHumanReviewConfirmed(false);
     setTeacherOverridesCount(prev => prev + 1);
     setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
   };
 
-  // Teacher confirms verification and proceeds to comprehension
+  // Azure may fail, but an authorized reviewer can still assess the recorded audio manually.
   const handleConfirmVerification = () => {
-    // Only an authorized reviewer with a fully resolved word-level review may certify.
-    const canCertify = canVerifyAsTeacher && teacherStats.unconfirmed === 0;
+    const wordReviewComplete = teacherStats.unconfirmed === 0;
+    const canCertify = canVerifyAsTeacher && wordReviewComplete && humanReviewConfirmed;
     setTeacherVerified(canCertify);
-    setMeasuredWcpm(canCertify ? (teacherStats.liveWcpm ?? undefined) : undefined);
-    setMeasuredAccuracyPercent(canCertify ? (teacherStats.liveAccuracy ?? undefined) : undefined);
+    setMeasuredWcpm(wordReviewComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
+    setMeasuredAccuracyPercent(wordReviewComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -1066,7 +1173,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Real-time Spoken Transcript Readout */}
               <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
-                <span className="text-teal-400 font-bold shrink-0">ما التقطه الذكاء الاصطناعي لحظياً:</span>
+                <span className="text-teal-400 font-bold shrink-0">معاينة التعرف الصوتي في المتصفح (للعرض فقط):</span>
                 <span className="text-slate-200 font-mono truncate max-w-xl">
                   {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع، ستظهر الكلمات الملتقطة هنا فوراً...'}
                 </span>
@@ -1118,11 +1225,16 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               >
                 <span>
                   {readingMode === 'oral_audio'
-                    ? 'أنهيت القراءة — التحليل الصوتي الذكي واعتماد الطلاقة (WCPM)'
+                    ? 'أنهيت القراءة — تقييم النطق من التسجيل الصوتي'
                     : 'أنهيت القراءة — الانتقال لأسئلة الفهم'}
                 </span>
                 <ChevronLeft className="w-8 h-8" />
               </button>
+              {isAssessingPronunciation && (
+                <div role="status" aria-live="polite" className="mt-4 w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-950 text-sm font-bold text-center">
+                  جارٍ تحويل التسجيل النهائي وإرساله إلى Microsoft Azure لتقييم النطق الفعلي. لن يُستخدم تفريغ Chrome بديلاً عن التقييم.
+                </div>
+              )}
               <p className="text-slate-500 text-xs mt-3 text-center">
                 اقرأ النص كاملًا وبهدوء؛ لن يتاح إنهاء الجلسة إلا بعد مرور وقت كافٍ لحفظ قياسها بصورة سليمة.
               </p>
@@ -1145,11 +1257,26 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <span>التحليل الصوتي والتدقيق الذكي للكلمات</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
-                التحليل الصوتي المباشر واعتماد الطلاقة الذاتي
+                تقييم النطق من التسجيل الصوتي
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                هذه مطابقة آلية أولية للتفريغ الصوتي، وليست دليلاً قاطعاً على صحة النطق. الكلمات التي لم يحسمها التعرّف لن تُصنّف على أنها أخطاء من الطفل، ولن تُستخدم لاعتماد WCPM.
+                المصدر: Microsoft Azure Speech Pronunciation Assessment. يُرسل التسجيل النهائي بعد موافقة ولي الأمر الصريحة. الكلمات غير المحسومة لا تُحتسب أخطاء على الطفل ولا تدخل في WCPM أو الدقة.
               </p>
+              {azureAssessmentMode && (
+                <p className="text-[11px] text-sky-900 mt-2" role="status">{azureAssessmentMode}</p>
+              )}
+              {pronunciationAssessmentError && (
+                <div role="alert" className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-right text-sm text-rose-950">
+                  <div className="font-black mb-1">لم يكتمل تقييم الصوت الحقيقي</div>
+                  <p>{pronunciationAssessmentError}</p>
+                  <p className="mt-2 text-xs">لن نعرض درجات من تفريغ Chrome على أنها نتيجة Azure. تأكد من بيانات الخدمة وملف .env على الخادم، ثم أعد التسجيل.</p>
+                </div>
+              )}
+              {!pronunciationAssessmentError && !azureAssessmentComplete && (
+                <p className="text-xs text-amber-900 mt-2">
+                  ما تزال بعض الكلمات غير محسومة؛ لن تُحسب درجة عامة أو WCPM موثوق حتى تُحلّ هذه الحالات.
+                </p>
+              )}
             </div>
 
             {/* Live Metrics Dashboard */}
@@ -1238,7 +1365,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             {spokenTranscript && (
               <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
                 <span className="text-xs font-bold text-slate-800 block mb-1">
-                  التفريغ الصوتي التلقائي الملتقط من قراءة الطالب:
+                  النص الذي استخرجه Microsoft Azure من التسجيل:
                 </span>
                 <p className="text-xs text-slate-700 leading-relaxed font-sans bg-white p-3 rounded-xl border border-slate-100">
                   {spokenTranscript}
@@ -1250,12 +1377,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-800">
-                  انقر على الكلمة لتعديل تقييمها:
+                  {canVerifyAsTeacher ? 'يمكن للمراجع المخوّل تعديل التصنيف بعد الاستماع إلى التسجيل:' : 'نتيجة التقييم الآلي للكلمات (التعديل متاح لمراجع المدرسة المخوّل):'}
                 </span>
                 <button
                   type="button"
                   onClick={handleMarkAllCorrect}
-                  disabled={audioCaptureFailed && !audioPlaybackUrl}
+                  disabled={!canVerifyAsTeacher || (audioCaptureFailed && !audioPlaybackUrl)}
                   className="text-xs font-bold text-teal-700 hover:text-teal-900 disabled:opacity-40 disabled:cursor-not-allowed bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
                   title={audioCaptureFailed && !audioPlaybackUrl ? 'تعذر التقاط صوت لتأكيد القراءة الكاملة' : 'تعليم جميع الكلمات كقراءة صحيحة'}
                 >
@@ -1310,7 +1437,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       key={idx}
                       type="button"
                       onClick={() => handleToggleWordStatus(idx)}
-                      className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
+                      disabled={!canVerifyAsTeacher}
+                      className={`px-3 py-1.5 rounded-xl border transition-all ${canVerifyAsTeacher ? 'cursor-pointer' : 'cursor-default'} shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
                       title={`${item.word}: ${statusTitle} (انقر للتغيير)`}
                     >
                       <span className="font-bold">{item.word}</span>
@@ -1323,11 +1451,33 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
+            {/* Human certification is a separate, explicit attestation from Azure's score. */}
+            {canVerifyAsTeacher && Boolean(audioPlaybackUrl) && teacherStats.unconfirmed === 0 && (
+              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-right text-sm text-sky-950 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={humanReviewConfirmed}
+                  onChange={event => setHumanReviewConfirmed(event.target.checked)}
+                  className="mt-1 h-5 w-5 shrink-0 accent-sky-700"
+                />
+                <span>
+                  <strong className="block mb-1">تأكيد المراجعة البشرية</strong>
+                  {azureAssessmentComplete
+                    ? 'استمعت إلى التسجيل وراجعت تصنيفات Azure لجميع الكلمات، وأؤكد اعتمادها باسم حساب المدرسة.'
+                    : 'لم تكتمل نتيجة Azure أو بقيت كلمات غير محسومة آلياً؛ استمعت إلى التسجيل كاملاً وصنفت جميع الكلمات يدوياً، وأؤكد صحة هذه المراجعة باسم حساب المدرسة.'}
+                </span>
+              </label>
+            )}
+
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>التصنيف المعروض تقدير آلي أولي. إذا بقيت كلمات غير محسومة، فلن يُعتمد WCPM أو معدل الدقة لهذه الجلسة.</span>
+                <FileCheck2 className="w-5 h-5 text-sky-700 shrink-0" />
+                <span>{teacherVerified
+                  ? 'اكتملت مراجعة الكلمات واعتمدها مسؤول المدرسة بعد الاستماع إلى التسجيل.'
+                  : azureAssessmentComplete
+                    ? 'اكتمل تقييم Azure آلياً، لكن اعتماد السجل كمراجَع بشرياً يتطلب تأكيد المراجع المخوّل.'
+                    : 'يمكن لمسؤول المدرسة مراجعة التسجيل يدوياً. لن يُعتمد WCPM إلا بعد حسم الكلمات وتأكيد المراجعة البشرية.'}</span>
               </div>
 
               <button
@@ -1336,7 +1486,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>متابعة إلى أسئلة الفهم دون اعتماد مؤشرات غير مكتملة</span>
+                <span>متابعة إلى أسئلة الفهم</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
@@ -1477,7 +1627,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <p className="text-[11px] text-teal-800 mt-2 leading-relaxed">
                   {readingMode === 'oral_audio'
-                    ? 'لا يُعرض معدل موثوق من عدد الكلمات التي أخطأ المتصفح في تفريغها.'
+                    ? azureAssessmentComplete
+                      ? 'المعدل مستخرج من تقييم التسجيل الصوتي في Azure، وليس من المعاينة اللحظية للمتصفح.'
+                      : 'لا يُعرض معدل موثوق لأن تقييم التسجيل الصوتي لم يكتمل.'
                     : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معياراً تشخيصياً.'}
                 </p>
               </div>
@@ -1689,7 +1841,30 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </button>
 
               <button
-                onClick={() => setStage('intro')}
+                onClick={() => {
+                  setStage('intro');
+                  setReadingMode('timed_silent');
+                  setAudioConsentChecked(false);
+                  setGuardianAudioConsentRecordedAt(undefined);
+                  setAzureAssessmentComplete(false);
+                  setAzureAssessmentMode('');
+                  setPronunciationAssessmentError('');
+                  setSpokenTranscript('');
+                  spokenTranscriptRef.current = '';
+                  finalTranscriptsRef.current = [];
+                  currentInterimRef.current = '';
+                  setVerifiedWords([]);
+                  setTeacherVerified(false);
+                  setHumanReviewConfirmed(false);
+                  setMeasuredWpm(undefined);
+                  setMeasuredWcpm(undefined);
+                  setMeasuredAccuracyPercent(undefined);
+                  setAudioCaptureFailed(false);
+                  setReadingModeNotice('');
+                  setAudioPlaybackUrl(null);
+                  recordedAudioBlobRef.current = null;
+                  setFinalDurationSec(0);
+                }}
                 className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 px-6 rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm"
               >
                 <RotateCcw className="w-4 h-4" />

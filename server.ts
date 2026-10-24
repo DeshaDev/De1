@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
-import { evaluatePronunciationWithAzureOrLocal } from './src/utils/pronunciationAssessment';
+import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   BaseeraRole,
@@ -1895,43 +1895,130 @@ async function startServer() {
     }
   });
 
-  // Reference-Text Pronunciation Assessment & Alignment (Azure Speech & Local Aligner)
+  // Real audio-based Azure pronunciation assessment. No browser transcript/local
+  // aligner fallback is allowed to masquerade as an acoustic assessment.
   app.post('/api/ai/pronunciation-assessment', async (req, res) => {
-    try {
-      const {
-        referenceText,
-        referenceWords,
-        spokenTranscript,
-        audioWavBase64,
-        durationSeconds,
-        language,
-      } = req.body || {};
+    const body = req.body || {};
+    const {
+      referenceText,
+      referenceWords,
+      audioWavBase64,
+      durationSeconds,
+      language,
+      guardianConsentRecordedAt,
+      guardianAudioConsentRecordedAt,
+    } = body;
 
-      if (!referenceText || typeof referenceText !== 'string') {
-        res.status(400).json({ error: 'يلزم توفير النص المرجعي للقراءة.' });
-        return;
-      }
+    const validConsentTimestamp = (value: unknown): boolean => {
+      if (typeof value !== 'string') return false;
+      const timestamp = Date.parse(value);
+      return Number.isFinite(timestamp) && timestamp <= Date.now() + 5 * 60 * 1000;
+    };
 
-      const words =
-        Array.isArray(referenceWords) && referenceWords.length > 0
-          ? referenceWords
-          : referenceText.trim().split(/\s+/);
-
-      const result = await evaluatePronunciationWithAzureOrLocal({
-        referenceText,
-        referenceWords: words,
-        spokenTranscript:
-          typeof spokenTranscript === 'string' ? spokenTranscript : '',
-        audioWavBase64:
-          typeof audioWavBase64 === 'string' ? audioWavBase64 : undefined,
-        durationSeconds: Number(durationSeconds) || 30,
-        language: language === 'ar-EG' ? 'ar-EG' : 'ar-SA',
+    // Explicit and timestamped parent/audio consent are required before audio leaves this device.
+    if (
+      body.guardianConsentGiven !== true ||
+      body.guardianAudioConsentGiven !== true ||
+      !validConsentTimestamp(guardianConsentRecordedAt) ||
+      !validConsentTimestamp(guardianAudioConsentRecordedAt)
+    ) {
+      res.status(403).json({
+        code: 'AUDIO_CONSENT_REQUIRED',
+        error: 'يلزم توثيق موافقة ولي الأمر والموافقة الصريحة على معالجة التسجيل الصوتي.',
       });
+      return;
+    }
 
+    if (!process.env.AZURE_SPEECH_KEY?.trim() || !process.env.AZURE_SPEECH_REGION?.trim()) {
+      res.status(503).json({
+        code: 'AZURE_SPEECH_NOT_CONFIGURED',
+        error: 'تقييم الصوت الحقيقي غير مهيأ بعد. أضف بيانات اعتماد Azure Speech إلى ملف .env على الخادم ثم أعد تشغيله.',
+      });
+      return;
+    }
+
+    if (
+      typeof referenceText !== 'string' ||
+      !referenceText.trim() ||
+      referenceText.length > 6000 ||
+      !Array.isArray(referenceWords) ||
+      referenceWords.length < 2 ||
+      referenceWords.length > 300 ||
+      !referenceWords.every((word: unknown) => typeof word === 'string' && word.trim()) ||
+      typeof audioWavBase64 !== 'string' ||
+      audioWavBase64.length > 4_500_000 ||
+      !Number.isFinite(Number(durationSeconds)) ||
+      Number(durationSeconds) < 1 ||
+      Number(durationSeconds) > 600
+    ) {
+      res.status(400).json({
+        code: 'INVALID_ASSESSMENT_INPUT',
+        error: 'بيانات التسجيل أو النص المرجعي غير صالحة للتحليل.',
+      });
+      return;
+    }
+
+    // Score only the exact text configured by the product; the browser cannot submit
+    // arbitrary target text and later associate that result with a different passage.
+    const trustedPassage = ARABIC_READING_PASSAGES.find(
+      (item) => item.id === body.passageId
+    );
+    if (
+      !trustedPassage ||
+      referenceWords.length !== trustedPassage.words.length ||
+      referenceWords.some((word: string, index: number) => word !== trustedPassage.words[index]) ||
+      referenceText.trim() !== trustedPassage.words.join(' ')
+    ) {
+      res.status(400).json({
+        code: 'REFERENCE_PASSAGE_MISMATCH',
+        error: 'النص المرجعي لا يطابق نص القراءة المعتمد في بصيرة؛ أعد تحميل الصفحة.',
+      });
+      return;
+    }
+
+    if (language !== 'ar-EG' && language !== 'ar-SA') {
+      res.status(400).json({
+        code: 'UNSUPPORTED_PRONUNCIATION_LOCALE',
+        error: 'تقييم النطق الصوتي في هذا المسار يدعم حالياً النموذج المصري ar-EG أو السعودي ar-SA فقط. لم تُحوّل اللهجات الأخرى إلى نموذج مختلف بصمت.',
+      });
+      return;
+    }
+
+    try {
+      const result = await assessReadingAudioWithAzure({
+        referenceText: referenceText.trim(),
+        referenceWords,
+        audioWavBase64,
+        durationSeconds: Number(durationSeconds),
+        language,
+        dialectLabel: language === 'ar-EG' ? 'المصرية' : 'الفصحى المعيارية / الخليجية',
+      });
       res.json(result);
     } catch (err) {
-      console.error('Pronunciation assessment route error:', err);
-      res.status(500).json({ error: 'فشل في تقييم النطق مقابل النص المرجعي.' });
+      const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
+      console.error('Azure Speech pronunciation assessment failed:', message);
+
+      if ([
+        'INVALID_AUDIO_PAYLOAD',
+        'INVALID_REFERENCE_WORDS',
+        'INVALID_AUDIO_DURATION',
+        'INVALID_WAV_HEADER',
+        'UNSUPPORTED_WAV_FORMAT',
+      ].includes(message)) {
+        res.status(400).json({ code: message, error: 'التسجيل غير صالح؛ أعد المحاولة بعد تسجيل الصوت من جديد.' });
+        return;
+      }
+      if (message === 'AZURE_NO_RECOGNIZED_SPEECH' || message === 'AZURE_NO_WORD_LEVEL_RESULTS') {
+        res.status(422).json({
+          code: message,
+          error: 'لم يتمكن Azure من استخراج كلمات قابلة للتقييم من هذا التسجيل. لم تُسجّل النتيجة على أنها أخطاء قراءة.',
+        });
+        return;
+      }
+      res.status(502).json({
+        code: 'AZURE_SPEECH_ASSESSMENT_FAILED',
+        error: 'تعذر إكمال تقييم الصوت من Microsoft Azure. لم يتم استخدام تفريغ المتصفح بديلاً عن تقييم الصوت.',
+      });
     }
   });
 
