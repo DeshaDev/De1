@@ -513,7 +513,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             durationSeconds: elapsedSec,
             language: locale,
             guardianConsentGiven: guardianConsentChecked,
+            guardianConsentRecordedAt,
             guardianAudioConsentGiven: audioConsentChecked,
+            guardianAudioConsentRecordedAt,
           }),
         });
         const result = await response.json().catch(() => ({}));
