@@ -24,7 +24,7 @@ jobs:
           node-version: 22
 
       - name: Generate lockfile from package manifest
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund --legacy-peer-deps
 
       - name: Commit the lockfile and remove this one-time workflow
         shell: bash
