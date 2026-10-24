@@ -23,6 +23,10 @@ import {
   Zap,
   ShieldCheck,
   Info,
+  Mic,
+  MicOff,
+  Radio,
+  SkipForward,
 } from 'lucide-react';
 import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
@@ -34,7 +38,7 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
-// 1. RAN (Rapid Automatized Naming) Stimuli Sets
+// 1. RAN (Rapid Automatized Naming) Stimuli Sets & Vocabulary Maps
 // ---------------------------------------------------------------------------
 interface RanItem {
   id: string;
@@ -66,6 +70,44 @@ const RAN_OBJECTS: RanItem[] = [
   { id: 'o-star', labelAr: 'نَجْمَة', visualValue: '⭐', type: 'object' },
   { id: 'o-book', labelAr: 'كِتَاب', visualValue: '📖', type: 'object' },
 ];
+
+// Arabic Normalization for robust speech matching
+function normalizeArabicForRan(str: string): string {
+  return str
+    .replace(/[\u064B-\u065F\u0670]/g, '') // remove tashkeel
+    .replace(/\u0640/g, '') // remove tatweel
+    .replace(/[إأآا]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/[^\u0621-\u064A0-9\s]/g, ' ')
+    .trim();
+}
+
+// Synonyms and spoken variants for instant speech classification
+const RAN_VOCABULARY_MAP: Record<string, string[]> = {
+  // Colors
+  'c-red': ['احمر', 'حمراء', 'حمرا', 'حمر'],
+  'c-blue': ['ازرق', 'زرقاء', 'زرقا', 'كحلي'],
+  'c-green': ['اخضر', 'خضراء', 'خضرا'],
+  'c-yellow': ['اصفر', 'صفراء', 'صفرا'],
+  'c-black': ['اسود', 'سوداء', 'سودا'],
+
+  // Digits
+  'd-2': ['اثنان', 'اثنين', 'اتنين', 'تنين', 'اثنتان', 'ثنتين', '2', '٢'],
+  'd-4': ['اربعة', 'اربع', 'اربعه', '4', '٤'],
+  'd-6': ['ستة', 'سته', 'ست', '6', '٦'],
+  'd-7': ['سبعة', 'سبعه', 'سبع', '7', '٧'],
+  'd-9': ['تسعة', 'تسعه', 'تسع', '9', '٩'],
+
+  // Objects
+  'o-tree': ['شجرة', 'شجره', 'شجر'],
+  'o-hand': ['يد', 'كف', 'ايد'],
+  'o-door': ['باب'],
+  'o-star': ['نجمة', 'نجمه', 'نجم'],
+  'o-book': ['كتاب', 'دفتر'],
+};
 
 // Generate standard 20-item pseudo-random matrix (4 rows x 5 cols)
 function generateRanMatrix(items: RanItem[], count = 20): RanItem[] {
@@ -208,15 +250,14 @@ export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
 // Helper to play synthesized Web Audio tone for auditory feedback
 function playChime(freq = 520, type: OscillatorType = 'sine', duration = 0.15) {
   try {
-    if (typeof window === 'undefined') return;
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -237,7 +278,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   // -------------------------------------------------------------------------
   const [activeStage, setActiveStage] = useState<'intro' | 'ran' | 'pseudo' | 'phonemic' | 'summary'>('intro');
 
-  // --- 1. RAN State & Per-Item Latency Instrumentation ---
+  // --- 1. RAN State & Autonomous Voice AI State ---
   const [ranCategory, setRanCategory] = useState<'colors' | 'digits' | 'objects'>('colors');
   const [ranMatrix, setRanMatrix] = useState<RanItem[]>(() => generateRanMatrix(RAN_COLORS, 20));
   const [ranCurrentIndex, setRanCurrentIndex] = useState(0);
@@ -249,11 +290,63 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const [ranHesitations, setRanHesitations] = useState(0);
   const [ranErrors, setRanErrors] = useState(0);
   const [ranFinalDurationSec, setRanFinalDurationSec] = useState<number | null>(null);
+
+  // Audio recording & Speech recognition for RAN
+  const [ranIsListening, setRanIsListening] = useState(false);
+  const [ranAudioUrl, setRanAudioUrl] = useState<string | null>(null);
+  const [ranLastHeardWord, setRanLastHeardWord] = useState('');
+  const [ranHeardStatus, setRanHeardStatus] = useState<{ word: string; isMatch: boolean; message: string } | null>(null);
+  const ranMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const ranAudioChunksRef = useRef<Blob[]>([]);
+  const ranRecognitionRef = useRef<any>(null);
+  const ranStreamRef = useRef<MediaStream | null>(null);
   const ranTimerRef = useRef<any>(null);
 
-  // --- 2. Pseudo-word State ---
+  // Synchronized refs for real-time speech matching callback
+  const ranCurrentIndexRef = useRef(0);
+  const ranIsRunningRef = useRef(false);
+  const ranMatrixRef = useRef<RanItem[]>(ranMatrix);
+  const ranLastItemTimeRef = useRef<number>(0);
+  const ranCategoryRef = useRef(ranCategory);
+
+  useEffect(() => {
+    ranCurrentIndexRef.current = ranCurrentIndex;
+  }, [ranCurrentIndex]);
+
+  useEffect(() => {
+    ranIsRunningRef.current = ranIsRunning;
+  }, [ranIsRunning]);
+
+  useEffect(() => {
+    ranMatrixRef.current = ranMatrix;
+  }, [ranMatrix]);
+
+  useEffect(() => {
+    ranCategoryRef.current = ranCategory;
+  }, [ranCategory]);
+
+  // --- 2. Pseudo-word State & Voice Recognition ---
   const [pseudoRatings, setPseudoRatings] = useState<Record<string, 'correct' | 'hesitant' | 'misread'>>({});
   const [pseudoCurrentIndex, setPseudoCurrentIndex] = useState(0);
+  const [pseudoIsRunning, setPseudoIsRunning] = useState(false);
+  const [pseudoIsListening, setPseudoIsListening] = useState(false);
+  const [pseudoAudioUrl, setPseudoAudioUrl] = useState<string | null>(null);
+  const [pseudoLastHeardWord, setPseudoLastHeardWord] = useState('');
+  const [pseudoWordStartTime, setPseudoWordStartTime] = useState<number>(0);
+  const pseudoMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const pseudoAudioChunksRef = useRef<Blob[]>([]);
+  const pseudoRecognitionRef = useRef<any>(null);
+  const pseudoStreamRef = useRef<MediaStream | null>(null);
+  const pseudoCurrentIndexRef = useRef(0);
+  const pseudoIsRunningRef = useRef(false);
+
+  useEffect(() => {
+    pseudoCurrentIndexRef.current = pseudoCurrentIndex;
+  }, [pseudoCurrentIndex]);
+
+  useEffect(() => {
+    pseudoIsRunningRef.current = pseudoIsRunning;
+  }, [pseudoIsRunning]);
 
   // --- 3. Phonemic Tasks State ---
   const [phonemicAnswers, setPhonemicAnswers] = useState<Record<string, number>>({});
@@ -264,14 +357,21 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     const pool =
       ranCategory === 'colors' ? RAN_COLORS :
       ranCategory === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
-    setRanMatrix(generateRanMatrix(pool, 20));
+    const generated = generateRanMatrix(pool, 20);
+    setRanMatrix(generated);
+    ranMatrixRef.current = generated;
     setRanCurrentIndex(0);
+    ranCurrentIndexRef.current = 0;
     setRanIsRunning(false);
+    ranIsRunningRef.current = false;
     setRanElapsedMs(0);
     setRanFinalDurationSec(null);
     setRanItemLatenciesMs([]);
     setRanHesitations(0);
     setRanErrors(0);
+    setRanAudioUrl(null);
+    setRanLastHeardWord('');
+    setRanHeardStatus(null);
   }, [ranCategory]);
 
   // RAN Stopwatch Loop
@@ -279,7 +379,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     if (ranIsRunning) {
       ranTimerRef.current = setInterval(() => {
         if (ranStartTime) {
-          setRanElapsedMs(Date.now() - ranStartTime);
+          const elapsed = Date.now() - ranStartTime;
+          setRanElapsedMs(elapsed);
+
+          // Check if the student stayed silent on the current item > 1800ms
+          const now = Date.now();
+          if (ranLastItemTimeRef.current && now - ranLastItemTimeRef.current > 1900) {
+            // mark subtle hesitation indicator if not already triggered
+          }
         }
       }, 50);
     } else {
@@ -290,47 +397,225 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     };
   }, [ranIsRunning, ranStartTime]);
 
-  // Start RAN test
-  const handleStartRan = () => {
-    setRanCurrentIndex(0);
-    setRanElapsedMs(0);
-    setRanHesitations(0);
-    setRanErrors(0);
-    setRanItemLatenciesMs([]);
-    setRanFinalDurationSec(null);
-    const now = Date.now();
-    setRanStartTime(now);
-    setRanLastItemTime(now);
-    setRanIsRunning(true);
-    playChime(660, 'sine', 0.2);
-  };
+  // Clean up all audio streams and recognizers on unmount
+  useEffect(() => {
+    return () => {
+      stopRan();
+      stopPseudo();
+    };
+  }, []);
+
+  // Stop RAN and cleanup recording
+  const stopRan = useCallback(() => {
+    ranIsRunningRef.current = false;
+    setRanIsRunning(false);
+    if (ranTimerRef.current) clearInterval(ranTimerRef.current);
+
+    if (ranRecognitionRef.current) {
+      try {
+        ranRecognitionRef.current.onend = null;
+        ranRecognitionRef.current.stop();
+      } catch {}
+      ranRecognitionRef.current = null;
+    }
+    if (ranMediaRecorderRef.current && ranMediaRecorderRef.current.state !== 'inactive') {
+      try {
+        ranMediaRecorderRef.current.stop();
+      } catch {}
+    }
+    if (ranStreamRef.current) {
+      ranStreamRef.current.getTracks().forEach(t => t.stop());
+      ranStreamRef.current = null;
+    }
+    setRanIsListening(false);
+  }, []);
 
   // Record item transition with precise per-item latency logging
-  const handleRanNext = (type: 'normal' | 'hesitation' | 'error' = 'normal') => {
-    if (!ranIsRunning) return;
+  const handleRanNext = useCallback((type: 'normal' | 'hesitation' | 'error' = 'normal') => {
+    if (!ranIsRunningRef.current) return;
     const now = Date.now();
-    const itemLatency = ranLastItemTime ? Math.max(50, now - ranLastItemTime) : 500;
+    const prevTime = ranLastItemTimeRef.current || now;
+    const itemLatency = Math.max(80, now - prevTime);
+
     setRanItemLatenciesMs(prev => [...prev, itemLatency]);
     setRanLastItemTime(now);
+    ranLastItemTimeRef.current = now;
 
-    // Detect hesitation: explicit button or duration > 1400ms on a single item
-    if (type === 'hesitation' || itemLatency > 1400) {
+    // Detect hesitation if explicit or duration > 1600ms on a single item
+    if (type === 'hesitation' || itemLatency > 1600) {
       setRanHesitations(prev => prev + 1);
     }
     if (type === 'error') {
       setRanErrors(prev => prev + 1);
     }
 
-    if (ranCurrentIndex + 1 < ranMatrix.length) {
-      setRanCurrentIndex(prev => prev + 1);
+    const curIdx = ranCurrentIndexRef.current;
+    const matrix = ranMatrixRef.current;
+
+    if (curIdx + 1 < matrix.length) {
+      const nextIdx = curIdx + 1;
+      setRanCurrentIndex(nextIdx);
+      ranCurrentIndexRef.current = nextIdx;
       playChime(type === 'error' ? 320 : 540, 'triangle', 0.08);
     } else {
       // Completed RAN matrix
       const totalSec = Math.max(1, Math.round((now - (ranStartTime || now)) / 1000));
-      setRanIsRunning(false);
+      stopRan();
       setRanFinalDurationSec(totalSec);
       playChime(880, 'sine', 0.3);
     }
+  }, [ranStartTime, stopRan]);
+
+  // Real-time speech recognition for RAN
+  const startRanSpeechRecognition = useCallback(() => {
+    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      console.warn('SpeechRecognition API not supported in this browser.');
+      return;
+    }
+
+    try {
+      if (ranRecognitionRef.current) {
+        try {
+          ranRecognitionRef.current.onend = null;
+          ranRecognitionRef.current.stop();
+        } catch {}
+      }
+
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event: any) => {
+        if (!ranIsRunningRef.current) return;
+        const curIdx = ranCurrentIndexRef.current;
+        const matrix = ranMatrixRef.current;
+        if (curIdx >= matrix.length) return;
+
+        const target = matrix[curIdx];
+        const validVariants = RAN_VOCABULARY_MAP[target.id] || [target.labelAr];
+
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += (event.results[i][0]?.transcript || '') + ' ';
+        }
+
+        const normalized = normalizeArabicForRan(transcript);
+        if (!normalized) return;
+
+        const tokens = normalized.split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) return;
+        const latestToken = tokens[tokens.length - 1];
+        setRanLastHeardWord(latestToken);
+
+        // Check if ANY token in the spoken phrase matches the expected item
+        const isMatch = tokens.some(token =>
+          validVariants.some(variant => token.includes(variant) || variant.includes(token))
+        );
+
+        if (isMatch) {
+          setRanHeardStatus({
+            word: latestToken,
+            isMatch: true,
+            message: `✓ التقط الذكاء الاصطناعي: "${target.labelAr}" بدقة`,
+          });
+          handleRanNext('normal');
+          return;
+        }
+
+        // Check if the student spoke another element in the current pool (misnaming error)
+        const pool = ranCategoryRef.current === 'colors' ? RAN_COLORS :
+                     ranCategoryRef.current === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
+
+        const wrongItem = pool.find(item =>
+          item.id !== target.id &&
+          (RAN_VOCABULARY_MAP[item.id] || []).some(v => latestToken.includes(v) || v.includes(latestToken))
+        );
+
+        if (wrongItem) {
+          setRanHeardStatus({
+            word: latestToken,
+            isMatch: false,
+            message: `❌ رصد إبدال: نطق "${latestToken}" والمطلوب "${target.labelAr}"`,
+          });
+          handleRanNext('error');
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        if (e.error === 'no-speech' || e.error === 'audio-capture') return;
+      };
+
+      recognition.onend = () => {
+        if (ranIsRunningRef.current) {
+          setTimeout(() => {
+            if (ranIsRunningRef.current) {
+              try {
+                startRanSpeechRecognition();
+              } catch {}
+            }
+          }, 40);
+        } else {
+          setRanIsListening(false);
+        }
+      };
+
+      recognition.start();
+      ranRecognitionRef.current = recognition;
+      setRanIsListening(true);
+    } catch (e) {
+      console.warn('RAN SpeechRecognition start error:', e);
+    }
+  }, [handleRanNext]);
+
+  // Start RAN with real microphone recording and real-time speech matching
+  const handleStartRan = async () => {
+    setRanCurrentIndex(0);
+    ranCurrentIndexRef.current = 0;
+    setRanElapsedMs(0);
+    setRanHesitations(0);
+    setRanErrors(0);
+    setRanItemLatenciesMs([]);
+    setRanFinalDurationSec(null);
+    setRanAudioUrl(null);
+    setRanLastHeardWord('');
+    setRanHeardStatus(null);
+
+    const now = Date.now();
+    setRanStartTime(now);
+    setRanLastItemTime(now);
+    ranLastItemTimeRef.current = now;
+    setRanIsRunning(true);
+    ranIsRunningRef.current = true;
+    playChime(660, 'sine', 0.2);
+
+    // 1. Microphone Audio Recording via MediaRecorder
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        ranStreamRef.current = stream;
+        ranAudioChunksRef.current = [];
+        const recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            ranAudioChunksRef.current.push(e.data);
+          }
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(ranAudioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setRanAudioUrl(url);
+        };
+        recorder.start(250);
+        ranMediaRecorderRef.current = recorder;
+      }
+    } catch (err) {
+      console.warn('Microphone recording error:', err);
+    }
+
+    // 2. Start Real-time Speech Recognition
+    startRanSpeechRecognition();
   };
 
   // Compute RAN Speed & Benchmarks transparently
@@ -359,15 +644,156 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     };
   }, [ranFinalDurationSec, ranElapsedMs, ranMatrix.length, ranItemLatenciesMs, ranHesitations, ranErrors]);
 
-  // Rate pseudo word
-  const handleRatePseudo = (wordId: string, rating: 'correct' | 'hesitant' | 'misread') => {
+  // -------------------------------------------------------------------------
+  // Pseudo-word Autonomous Voice AI Handler
+  // -------------------------------------------------------------------------
+  const stopPseudo = useCallback(() => {
+    pseudoIsRunningRef.current = false;
+    setPseudoIsRunning(false);
+    if (pseudoRecognitionRef.current) {
+      try {
+        pseudoRecognitionRef.current.onend = null;
+        pseudoRecognitionRef.current.stop();
+      } catch {}
+      pseudoRecognitionRef.current = null;
+    }
+    if (pseudoMediaRecorderRef.current && pseudoMediaRecorderRef.current.state !== 'inactive') {
+      try {
+        pseudoMediaRecorderRef.current.stop();
+      } catch {}
+    }
+    if (pseudoStreamRef.current) {
+      pseudoStreamRef.current.getTracks().forEach(t => t.stop());
+      pseudoStreamRef.current = null;
+    }
+    setPseudoIsListening(false);
+  }, []);
+
+  const handleRatePseudo = useCallback((wordId: string, rating: 'correct' | 'hesitant' | 'misread') => {
     setPseudoRatings(prev => ({ ...prev, [wordId]: rating }));
     if (rating === 'correct') playChime(660, 'sine', 0.1);
     else playChime(320, 'sawtooth', 0.15);
 
-    if (pseudoCurrentIndex + 1 < VERIFIED_ARABIC_PSEUDO_WORDS.length) {
-      setPseudoCurrentIndex(prev => prev + 1);
+    const curIdx = pseudoCurrentIndexRef.current;
+    if (curIdx + 1 < VERIFIED_ARABIC_PSEUDO_WORDS.length) {
+      const nextIdx = curIdx + 1;
+      setPseudoCurrentIndex(nextIdx);
+      pseudoCurrentIndexRef.current = nextIdx;
+      setPseudoWordStartTime(Date.now());
+      setPseudoLastHeardWord('');
+    } else {
+      stopPseudo();
     }
+  }, [stopPseudo]);
+
+  const startPseudoSpeechRecognition = useCallback(() => {
+    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) return;
+
+    try {
+      if (pseudoRecognitionRef.current) {
+        try {
+          pseudoRecognitionRef.current.onend = null;
+          pseudoRecognitionRef.current.stop();
+        } catch {}
+      }
+
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event: any) => {
+        if (!pseudoIsRunningRef.current) return;
+        const curIdx = pseudoCurrentIndexRef.current;
+        if (curIdx >= VERIFIED_ARABIC_PSEUDO_WORDS.length) return;
+
+        const targetWord = VERIFIED_ARABIC_PSEUDO_WORDS[curIdx];
+        const normalizedTarget = normalizeArabicForRan(targetWord.word);
+
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += (event.results[i][0]?.transcript || '') + ' ';
+        }
+
+        const normalized = normalizeArabicForRan(transcript);
+        if (!normalized) return;
+
+        const tokens = normalized.split(/\s+/).filter(Boolean);
+        const lastToken = tokens[tokens.length - 1];
+        setPseudoLastHeardWord(lastToken);
+
+        const now = Date.now();
+        const latency = pseudoWordStartTime ? now - pseudoWordStartTime : 1000;
+
+        // Check matching
+        if (lastToken.includes(normalizedTarget) || normalizedTarget.includes(lastToken)) {
+          const rating = latency > 2400 ? 'hesitant' : 'correct';
+          setTimeout(() => {
+            handleRatePseudo(targetWord.id, rating);
+          }, 400);
+        }
+      };
+
+      recognition.onerror = () => {};
+
+      recognition.onend = () => {
+        if (pseudoIsRunningRef.current) {
+          setTimeout(() => {
+            if (pseudoIsRunningRef.current) {
+              try {
+                startPseudoSpeechRecognition();
+              } catch {}
+            }
+          }, 40);
+        } else {
+          setPseudoIsListening(false);
+        }
+      };
+
+      recognition.start();
+      pseudoRecognitionRef.current = recognition;
+      setPseudoIsListening(true);
+    } catch (e) {
+      console.warn('Pseudo SpeechRecognition error:', e);
+    }
+  }, [handleRatePseudo, pseudoWordStartTime]);
+
+  const handleStartPseudoSession = async () => {
+    setPseudoCurrentIndex(0);
+    pseudoCurrentIndexRef.current = 0;
+    setPseudoRatings({});
+    setPseudoAudioUrl(null);
+    setPseudoLastHeardWord('');
+    setPseudoIsRunning(true);
+    pseudoIsRunningRef.current = true;
+    setPseudoWordStartTime(Date.now());
+    playChime(660, 'sine', 0.2);
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        pseudoStreamRef.current = stream;
+        pseudoAudioChunksRef.current = [];
+        const recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            pseudoAudioChunksRef.current.push(e.data);
+          }
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(pseudoAudioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setPseudoAudioUrl(url);
+        };
+        recorder.start(250);
+        pseudoMediaRecorderRef.current = recorder;
+      }
+    } catch (err) {
+      console.warn('Microphone recording error:', err);
+    }
+
+    startPseudoSpeechRecognition();
   };
 
   // Compute Pseudo-word Score
@@ -458,7 +884,15 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             </div>
 
             {/* Stages Step Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl text-xs font-bold">
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
+              <button
+                onClick={() => setActiveStage('intro')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  activeStage === 'intro' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                المقدمة
+              </button>
               <button
                 onClick={() => setActiveStage('ran')}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
@@ -473,7 +907,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   activeStage === 'pseudo' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                2. فك الترميز (12 كلمة)
+                2. الكلمات غير المعجمية
               </button>
               <button
                 onClick={() => setActiveStage('phonemic')}
@@ -483,91 +917,118 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               >
                 3. الوعي الصوتي
               </button>
+              <button
+                onClick={() => setActiveStage('summary')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  activeStage === 'summary' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                الملف الشامل
+              </button>
             </div>
           </div>
 
-          {/* Student Banner */}
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900">الطالب:</span>
-              <span className="bg-teal-100/70 text-teal-900 px-2.5 py-0.5 rounded-lg font-bold">
-                {student.name}
+          <div className="flex flex-wrap items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center gap-3">
+              <span>الطالب: <strong className="text-slate-800">{student.name}</strong></span>
+              <span>·</span>
+              <span>الصف: <strong className="text-slate-800">{student.gradeLevel}</strong></span>
+              <span>·</span>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                تسجيل وتحليل صوتي مباشر بالذكاء الاصطناعي
               </span>
-              <span>· الصف {student.gradeLevel} ({student.ageYears} سنوات)</span>
             </div>
-            <div className="flex items-center gap-2 text-emerald-800 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>تقييم تفاعلي مباشر وآمن للطفل</span>
-            </div>
+            {onNavigateTab && (
+              <button
+                onClick={() => onNavigateTab('dashboard')}
+                className="text-teal-700 hover:text-teal-800 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <span>العودة للوحة الرئيسية</span>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* ===================================================================
-            STAGE 1: INTRO TO BATTERY
+            STAGE 1: BATTERY INTRO & RATIONALE
             =================================================================== */}
         {activeStage === 'intro' && (
-          <div className="bg-white rounded-3xl p-6 md:p-10 shadow-xl border border-slate-200/80 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-teal-50 text-teal-600 border border-teal-200 mx-auto flex items-center justify-center mb-5">
-              <Brain className="w-10 h-10" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-3">
-              أنشطة الفرز المعرفي المساندة للقراءة العربية
-            </h2>
-            <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed mb-6">
-              توسع هذه الأنشطة التحليل الذكي للذكاء الاصطناعي ليشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط والتوصيات الذاتية.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-right">
-              <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold mb-3">
-                  <Timer className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-sm mb-1">1. التسمية السريعة (RAN)</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  تسمية 20 عنصراً مألوفاً لتسجيل زمن الاستجابة وترددات التوقف.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-200">
-                <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold mb-3">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-sm mb-1">2. فك ترميز الكلمات غير المعجمية</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  قراءة 12 كلمة مصطنعة موزونة صرفياً لقياس فك الترميز الصرفي دون حفظ مسبق.
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold mb-3">
-                  <Volume2 className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-sm mb-1">3. ألعاب الوعي الصوتي</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  مهام تفاعلية في عزل وحذف ودمج المقاطع باللغة العربية الفصحى.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-xs text-slate-600 text-right leading-relaxed mb-8 flex items-start gap-3">
-              <Info className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
-              <span>
-                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد نظام التحليل الذكي بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80 space-y-6">
+            <div className="border-b border-slate-100 pb-5">
+              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                بروتوكول الفرز المعرفي متعدد الأبعاد
               </span>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
+                بطارية التقييم المعرفي لمساندة الكشف المبكر
+              </h2>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                توسع هذه الأنشطة التحليل الذكي للذكاء الاصطناعي ليشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط والتوصيات الذاتية.
+              </p>
             </div>
 
-            <button
-              onClick={() => setActiveStage('ran')}
-              className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-lg py-4 px-10 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center gap-3 mx-auto"
-            >
-              <span>الانتقال إلى نشاط التسمية السريعة (RAN)</span>
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+            {/* 3 Pillars Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 text-right space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-800 flex items-center justify-center font-black">
+                  ١
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-sm">
+                  التسمية الآلية السريعة (RAN)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  قياس سرعة استرجاع التسميات اللفظية للألوان والأرقام تلقائياً عبر ميكروفون الذكاء الاصطناعي مع رصد الترددات بدقة.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-200 text-right space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-800 flex items-center justify-center font-black">
+                  ٢
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-sm">
+                  قراءة الكلمات غير المعجمية (Pseudo-Words)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  12 كلمة موزونة صرفياً ومنعدمة المعنى المعجمي لقياس التفكيك الفونولوجي بدلاً من الاعتماد على الحفظ البصري.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200 text-right space-y-2">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-800 flex items-center justify-center font-black">
+                  ٣
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-sm">
+                  ألعاب الوعي الصوتي (Phonemic Awareness)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  6 بنود صوتية فصحى متدرجة لقياس عزل الصوت الأول، الحذف، الدمج، والسجع بشكل تفاعلي.
+                </p>
+              </div>
+            </div>
+
+            {/* Scientific Integrity Note */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد نظام التحليل الذكي بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
+              </div>
+            </div>
+
+            {/* Start Button */}
+            <div className="pt-4 flex justify-end">
+              <button
+                onClick={() => setActiveStage('ran')}
+                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-base py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center gap-3 cursor-pointer"
+              >
+                <span>الانتقال للمحور 1: التسمية الآلية السريعة (RAN)</span>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
 
         {/* ===================================================================
-            STAGE 2: RAN (RAPID AUTOMATIZED NAMING) LAB
+            STAGE 2: RAN (RAPID AUTOMATIZED NAMING) LAB - 100% VOICE AI DRIVEN
             =================================================================== */}
         {activeStage === 'ran' && (
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80">
@@ -578,10 +1039,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   المحور 1: التسمية الآلية السريعة (RAN)
                 </span>
                 <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
-                  رصد زمن تسمية مصفوفة العناصر (20 عنصراً)
+                  رصد زمن تسمية مصفوفة العناصر (20 عنصراً) بالذكاء الاصطناعي
                 </h2>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  يسمي الطالب العناصر سطراً بسطر من اليمين لليسار مع التسجيل الآلي الذكي لرصد التردد وزمن الاستجابة بدقة.
+                  يسمي الطالب العناصر بصوته سطراً بسطر من اليمين لليسار. يستمع الذكاء الاصطناعي مباشرة ويسجل الصوت وينقل المؤشر تلقائياً عند نطق العنصر دون الحاجة للمس الشاشة.
                 </p>
               </div>
 
@@ -623,8 +1084,8 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Timer & Instrumentation Control Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 text-white p-4 rounded-2xl mb-6 shadow-sm">
+            {/* Timer & Autonomous Voice Control Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 text-white p-4 md:p-5 rounded-2xl mb-6 shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Clock className={`w-5 h-5 ${ranIsRunning ? 'text-amber-400 animate-spin' : 'text-slate-400'}`} />
@@ -647,36 +1108,29 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 {!ranIsRunning && ranFinalDurationSec === null && (
                   <button
                     onClick={handleStartRan}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-3 rounded-xl text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>بدء التوقيت</span>
+                    <Mic className="w-5 h-5 fill-current" />
+                    <span>بدء التسمية بالذكاء الاصطناعي (تسجيل صوتي)</span>
                   </button>
                 )}
 
                 {ranIsRunning && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleRanNext('normal')}
-                      className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
-                      title="تسمية صحيحة وانتقال للعنصر التالي"
-                    >
-                      <span>التالي (صحيح)</span>
-                      <ArrowLeft className="w-4 h-4" />
-                    </button>
+                  <div className="flex items-center gap-3">
+                    {/* Live Voice Indicator HUD */}
+                    <div className="flex items-center gap-2 bg-emerald-900/80 border border-emerald-500/60 text-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold animate-pulse">
+                      <Radio className="w-4 h-4 text-emerald-400 animate-ping" />
+                      <span>الذكاء الاصطناعي يسجل ويستمع لصوتك الآن</span>
+                    </div>
+
+                    {/* Hands-Free Skip Fallback if child is completely silent */}
                     <button
                       onClick={() => handleRanNext('hesitation')}
-                      className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-2 rounded-xl text-xs cursor-pointer shadow-xs"
-                      title="تسجيل سكتة أو توقف ملحوظ"
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-xl transition-all cursor-pointer border border-slate-700 flex items-center gap-1"
+                      title="تخطي العنصر الحالي في حالة الصمت التام"
                     >
-                      <span>+ تردد / توقف</span>
-                    </button>
-                    <button
-                      onClick={() => handleRanNext('error')}
-                      className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-2 rounded-xl text-xs cursor-pointer shadow-xs"
-                      title="تسجيل خطأ في تسمية العنصر"
-                    >
-                      <span>+ خطأ نطق</span>
+                      <SkipForward className="w-3.5 h-3.5" />
+                      <span>تخطي</span>
                     </button>
                   </div>
                 )}
@@ -684,7 +1138,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 {ranFinalDurationSec !== null && (
                   <button
                     onClick={handleStartRan}
-                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>إعادة النشاط</span>
@@ -693,7 +1147,22 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 4x5 Visual Grid Matrix */}
+            {/* Live AI Speech Recognition Readout Chip */}
+            {ranIsRunning && ranHeardStatus && (
+              <div className={`p-3 rounded-2xl mb-4 text-xs font-bold flex items-center justify-between border transition-all ${
+                ranHeardStatus.isMatch
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                  : 'bg-rose-50 border-rose-300 text-rose-900'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4" />
+                  <span>{ranHeardStatus.message}</span>
+                </div>
+                <span className="text-[11px] opacity-75">الانتقال التلقائي مفعل عبر الصوت</span>
+              </div>
+            )}
+
+            {/* 4x5 Visual Grid Matrix - Hands-Free Voice Driven */}
             <div className="grid grid-cols-5 gap-3 md:gap-4 p-4 md:p-6 bg-slate-50 rounded-3xl border border-slate-200 mb-6">
               {ranMatrix.map((item, idx) => {
                 const isCurrent = ranIsRunning && idx === ranCurrentIndex;
@@ -702,12 +1171,9 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 return (
                   <div
                     key={idx}
-                    onClick={() => {
-                      if (ranIsRunning && idx === ranCurrentIndex) handleRanNext('normal');
-                    }}
-                    className={`aspect-square rounded-2xl p-2 flex flex-col items-center justify-center border-2 transition-all cursor-pointer select-none relative ${
+                    className={`aspect-square rounded-2xl p-2 flex flex-col items-center justify-center border-2 transition-all select-none relative ${
                       isCurrent
-                        ? 'border-teal-500 bg-teal-50 shadow-lg scale-105 ring-4 ring-teal-200'
+                        ? 'border-emerald-500 bg-emerald-50 shadow-xl scale-105 ring-4 ring-emerald-300 animate-pulse'
                         : isPassed
                         ? 'border-slate-200 bg-white/70 opacity-40'
                         : 'border-slate-200 bg-white hover:border-slate-300'
@@ -737,8 +1203,8 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     </span>
 
                     {isCurrent && (
-                      <span className="absolute -top-2 -right-2 bg-teal-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold shadow-xs">
-                        الحالي
+                      <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold shadow-xs">
+                        انطق الآن 🎙️
                       </span>
                     )}
                   </div>
@@ -746,68 +1212,81 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               })}
             </div>
 
-            {/* Post-Activity Detailed Instrumentation Box */}
+            {/* Post-Activity Detailed Instrumentation Box & Audio Player */}
             {ranFinalDurationSec !== null && (
-              <div className="p-5 rounded-2xl bg-teal-50 border border-teal-200 flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div>
-                  <span className="text-xs font-bold text-teal-900 block mb-1">
-                    المؤشرات المرصودة لنشاط التسمية السريعة (RAN):
-                  </span>
-                  <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-slate-900">
-                    <span>
-                      الزمن الكلي: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.durSec} ث</strong>
+              <div className="p-6 rounded-2xl bg-teal-50 border border-teal-200 mb-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-teal-900 block mb-1">
+                      المؤشرات المرصودة لنشاط التسمية السريعة (RAN) المعتمدة بالذكاء الاصطناعي:
                     </span>
-                    <span>
-                      المعدل: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.speedItemsPerSec}</strong> عنصر/ثانية
-                    </span>
-                    <span>
-                      متوسط زمن العنصر: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.meanLatencyMs} ms</strong>
-                    </span>
-                    <span>
-                      الترددات: <strong className="font-mono text-amber-800 font-bold">{ranMetrics.hesitationCount}</strong>
-                    </span>
-                    <span>
-                      الأخطاء: <strong className="font-mono text-rose-800 font-bold">{ranMetrics.errorCount}</strong>
-                    </span>
+                    <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-slate-900">
+                      <span>
+                        الزمن الكلي: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.durSec} ث</strong>
+                      </span>
+                      <span>
+                        المعدل: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.speedItemsPerSec}</strong> عنصر/ثانية
+                      </span>
+                      <span>
+                        متوسط زمن العنصر: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.meanLatencyMs} ms</strong>
+                      </span>
+                      <span>
+                        الترددات: <strong className="font-mono text-amber-800 font-bold">{ranMetrics.hesitationCount}</strong>
+                      </span>
+                      <span>
+                        الأخطاء: <strong className="font-mono text-rose-800 font-bold">{ranMetrics.errorCount}</strong>
+                      </span>
+                    </div>
+                    <p className="text-xs text-teal-950 font-medium mt-2">
+                      {ranMetrics.statusLabelAr}
+                    </p>
                   </div>
-                  <p className="text-xs text-teal-950 font-medium mt-2">
-                    {ranMetrics.statusLabelAr}
-                  </p>
+
+                  <button
+                    onClick={() => setActiveStage('pseudo')}
+                    className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                  >
+                    <span>الانتقال للمحور 2: الكلمات غير المعجمية</span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => setActiveStage('pseudo')}
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-                >
-                  <span>الانتقال لنشاط فك الكلمات غير المعجمية</span>
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
+                {/* Session Audio Player for Verification */}
+                {ranAudioUrl && (
+                  <div className="p-4 rounded-xl bg-white border border-teal-200 shadow-xs">
+                    <div className="flex items-center gap-2 text-xs font-bold text-teal-900 mb-2">
+                      <Volume2 className="w-4 h-4 text-teal-600" />
+                      <span>تسجيل الجلسة الصوتي الكامل (استمع للتحقق من أداء الطالب):</span>
+                    </div>
+                    <audio controls src={ranAudioUrl} className="w-full h-10" />
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
         {/* ===================================================================
-            STAGE 3: PSEUDO-WORD DECODING (12 Verified Non-Words)
+            STAGE 3: PSEUDO-WORDS DECODING LAB (12 Non-Words) - VOICE AI DRIVEN
             =================================================================== */}
         {activeStage === 'pseudo' && (
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80">
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                المحور 2: فك الترميز الصوتي (قراءة 12 كلمة غير حقيقية)
+                المحور 2: الكلمات غير المعجمية (Non-Word Decoding)
               </span>
               <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
-                قراءة كلمات مبنية على أوزان صرفية من جذور غير معجمية
+                قراءة الكلمات غير الحقيقية وفك الترميز الفونولوجي بالذكاء الاصطناعي
               </h2>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                هذه الكلمات خالية من المعنى في المعاجم العربية (جذور مهملة: ظفك، فثل، دخز، زخب، رثق) وتتبع بدقة أوزان الصرف العربي. يقيس هذا النشاط قدرة الطفل على التهجئة الصافية دون الاتكاء على الحفظ البصري للكلمات الشائعة.
+                كلمات تخضع لأوزان الصرف العربي الأصيلة ولكنها مهملة معجمياً؛ يستمع الذكاء الاصطناعي لقراءة الطالب ويحلل التفكيك بدقة.
               </p>
             </div>
 
-            {/* Current Active Word Flashcard */}
             {pseudoCurrentIndex < VERIFIED_ARABIC_PSEUDO_WORDS.length ? (
-              <div className="max-w-md mx-auto text-center mb-8">
-                <div className="p-8 md:p-10 rounded-3xl bg-slate-900 text-white shadow-xl border border-slate-800 mb-5 relative overflow-hidden">
+              <div className="max-w-xl mx-auto text-center">
+                {/* Visual Flashcard */}
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden">
                   <div className="flex items-center justify-between mb-4 text-xs">
                     <span className="font-bold text-teal-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                       {pseudoCurrentIndex + 1} من {VERIFIED_ARABIC_PSEUDO_WORDS.length} (الوزن: {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].patternAr})
@@ -831,35 +1310,48 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Evaluator 3-Button Rater */}
-                <span className="text-xs font-bold text-slate-700 block mb-3">
-                  تسجيل ملاحظة القراءة لهذا البند:
-                </span>
-                <div className="grid grid-cols-3 gap-3">
+                {/* Voice AI Status & Start Session */}
+                {!pseudoIsRunning && Object.keys(pseudoRatings).length === 0 ? (
                   <button
-                    onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct')}
-                    className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                    onClick={handleStartPseudoSession}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-8 py-4 rounded-2xl text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all cursor-pointer mx-auto"
                   >
-                    <Check className="w-5 h-5 text-emerald-600" />
-                    <span>قراءة صحيحة دقيقة</span>
+                    <Mic className="w-5 h-5 fill-current" />
+                    <span>بدء قراءة الكلمات بالذكاء الاصطناعي (تسجيل صوتي)</span>
                   </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-3 bg-slate-900 text-white p-4 rounded-2xl">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 animate-pulse">
+                        <Radio className="w-4 h-4 animate-ping" />
+                        <span>الذكاء الاصطناعي يستمع لقراءتك الآن: اقرأ الكلمة بوضوح</span>
+                      </div>
+                      {pseudoLastHeardWord && (
+                        <span className="text-xs font-mono bg-slate-800 px-3 py-1 rounded-xl text-teal-300 border border-slate-700">
+                          التقط: "{pseudoLastHeardWord}"
+                        </span>
+                      )}
+                    </div>
 
-                  <button
-                    onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'hesitant')}
-                    className="p-3.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
-                  >
-                    <Clock className="w-5 h-5 text-amber-600" />
-                    <span>تهجئة متباطئة / تردد</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'misread')}
-                    className="p-3.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 rounded-2xl text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
-                  >
-                    <X className="w-5 h-5 text-rose-600" />
-                    <span>خطأ / إبدال صوتي</span>
-                  </button>
-                </div>
+                    {/* Quick confirmation or skip */}
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct')}
+                        className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span>تأكيد القراءة الصحيحة والانتقال</span>
+                      </button>
+                      <button
+                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'misread')}
+                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <SkipForward className="w-4 h-4" />
+                        <span>تخطي للكلمة التالية</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               /* All pseudo-words evaluated */
@@ -872,12 +1364,19 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   {pseudoMetrics.percent}%
                 </div>
                 <p className="text-xs text-slate-600 mb-4">
-                  تم فك ترميز {pseudoMetrics.correctCount} من إجمالي {pseudoMetrics.totalCount} كلمات بشكل سليم.
+                  تم فك ترميز {pseudoMetrics.correctCount} من إجمالي {pseudoMetrics.totalCount} كلمات موزونة بنجاح.
                 </p>
+
+                {pseudoAudioUrl && (
+                  <div className="p-3 rounded-xl bg-white border border-teal-200 shadow-xs mb-4 text-right">
+                    <span className="text-xs font-bold text-teal-900 block mb-1">تسجيل قراءة الكلمات:</span>
+                    <audio controls src={pseudoAudioUrl} className="w-full h-10" />
+                  </div>
+                )}
 
                 <button
                   onClick={() => setActiveStage('phonemic')}
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3 px-8 rounded-xl flex items-center gap-2 mx-auto shadow-sm transition-all cursor-pointer"
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center gap-2 mx-auto shadow-sm transition-all cursor-pointer"
                 >
                   <span>الانتقال للمحور 3: الوعي الصوتي والفونولوجي</span>
                   <ChevronLeft className="w-4 h-4" />
@@ -900,7 +1399,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 تمييز الأصوات، الحذف، والدمج باللغة الفصحى (6 بنود متدرجة)
               </h2>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                بنود صوتية فصحى تراعي الحياد اللهجي؛ يستمع الطفل للتحدي (أو يقرؤه الفاحص) ويختار الإجابة الصحيحة.
+                بنود صوتية فصحى تراعي الحياد اللهجي؛ يستمع الطفل للتحدي ويختار الإجابة الصحيحة.
               </p>
             </div>
 
@@ -1006,6 +1505,12 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <p className="text-[11px] text-amber-900 font-semibold mt-1">
                   {ranMetrics.statusLabelAr}
                 </p>
+                {ranAudioUrl && (
+                  <div className="mt-3 pt-3 border-t border-amber-200">
+                    <span className="text-[10px] text-amber-800 font-bold block mb-1">تسجيل صوت الجلسة:</span>
+                    <audio controls src={ranAudioUrl} className="w-full h-8" />
+                  </div>
+                )}
               </div>
 
               <div className="p-5 rounded-2xl bg-teal-50/80 border border-teal-200 text-right">
@@ -1018,6 +1523,12 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <p className="text-[11px] text-teal-900 font-semibold mt-1">
                   فك شفرة {pseudoMetrics.correctCount} من {pseudoMetrics.totalCount} كلمات موزونة
                 </p>
+                {pseudoAudioUrl && (
+                  <div className="mt-3 pt-3 border-t border-teal-200">
+                    <span className="text-[10px] text-teal-800 font-bold block mb-1">تسجيل القراءة:</span>
+                    <audio controls src={pseudoAudioUrl} className="w-full h-8" />
+                  </div>
+                )}
               </div>
 
               <div className="p-5 rounded-2xl bg-indigo-50/80 border border-indigo-200 text-right">
