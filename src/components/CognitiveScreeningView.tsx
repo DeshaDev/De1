@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Sparkles,
+  ChevronRight,
   Clock,
   Play,
   RotateCcw,
@@ -308,6 +309,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const ranMatrixRef = useRef<RanItem[]>(ranMatrix);
   const ranLastItemTimeRef = useRef<number>(0);
   const ranCategoryRef = useRef(ranCategory);
+  const lastRanAdvancementTimeRef = useRef<number>(0);
 
   useEffect(() => {
     ranCurrentIndexRef.current = ranCurrentIndex;
@@ -434,6 +436,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const handleRanNext = useCallback((type: 'normal' | 'hesitation' | 'error' = 'normal') => {
     if (!ranIsRunningRef.current) return;
     const now = Date.now();
+    lastRanAdvancementTimeRef.current = now;
     const prevTime = ranLastItemTimeRef.current || now;
     const itemLatency = Math.max(80, now - prevTime);
 
@@ -489,6 +492,12 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
       recognition.onresult = (event: any) => {
         if (!ranIsRunningRef.current) return;
+        const now = Date.now();
+        // Cooldown: prevent one spoken token from immediately scoring on consecutive items
+        if (now - lastRanAdvancementTimeRef.current < 650) {
+          return;
+        }
+
         const curIdx = ranCurrentIndexRef.current;
         const matrix = ranMatrixRef.current;
         if (curIdx >= matrix.length) return;
@@ -497,8 +506,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const validVariants = RAN_VOCABULARY_MAP[target.id] || [target.labelAr];
 
         let transcript = '';
+        let hasFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
           transcript += (event.results[i][0]?.transcript || '') + ' ';
+          if (event.results[i].isFinal) hasFinal = true;
         }
 
         const normalized = normalizeArabicForRan(transcript);
@@ -515,6 +526,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         );
 
         if (isMatch) {
+          lastRanAdvancementTimeRef.current = Date.now();
           setRanHeardStatus({
             word: latestToken,
             isMatch: true,
@@ -524,22 +536,25 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           return;
         }
 
-        // Check if the student spoke another element in the current pool (misnaming error)
-        const pool = ranCategoryRef.current === 'colors' ? RAN_COLORS :
-                     ranCategoryRef.current === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
+        // Only count an error if the recognized phrase was finalized (not interim jitter)
+        if (hasFinal) {
+          const pool = ranCategoryRef.current === 'colors' ? RAN_COLORS :
+                       ranCategoryRef.current === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
 
-        const wrongItem = pool.find(item =>
-          item.id !== target.id &&
-          (RAN_VOCABULARY_MAP[item.id] || []).some(v => latestToken.includes(v) || v.includes(latestToken))
-        );
+          const wrongItem = pool.find(item =>
+            item.id !== target.id &&
+            (RAN_VOCABULARY_MAP[item.id] || []).some(v => latestToken.includes(v) || v.includes(latestToken))
+          );
 
-        if (wrongItem) {
-          setRanHeardStatus({
-            word: latestToken,
-            isMatch: false,
-            message: `❌ رصد إبدال: نطق "${latestToken}" والمطلوب "${target.labelAr}"`,
-          });
-          handleRanNext('error');
+          if (wrongItem) {
+            lastRanAdvancementTimeRef.current = Date.now();
+            setRanHeardStatus({
+              word: latestToken,
+              isMatch: false,
+              message: `❌ رصد إبدال: نطق "${latestToken}" والمطلوب "${target.labelAr}"`,
+            });
+            handleRanNext('error');
+          }
         }
       };
 
@@ -1175,13 +1190,19 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 return (
                   <div
                     key={idx}
+                    onClick={() => {
+                      if (ranIsRunning && isCurrent) {
+                        handleRanNext('normal');
+                      }
+                    }}
                     className={`aspect-square rounded-2xl p-2 flex flex-col items-center justify-center border-2 transition-all select-none relative ${
                       isCurrent
-                        ? 'border-emerald-500 bg-emerald-50 shadow-xl scale-105 ring-4 ring-emerald-300 animate-pulse'
+                        ? 'border-emerald-500 bg-emerald-50 shadow-xl scale-105 ring-4 ring-emerald-300 animate-pulse cursor-pointer hover:bg-emerald-100'
                         : isPassed
                         ? 'border-slate-200 bg-white/70 opacity-40'
                         : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
+                    title={isCurrent ? 'اضغط هنا أو انطق الكلمة أو اضغط مسافة Space' : undefined}
                   >
                     {item.type === 'color' && (
                       <div
@@ -1215,6 +1236,35 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 );
               })}
             </div>
+
+            {/* Quick Action Controls for RAN */}
+            {ranIsRunning && (
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => handleRanNext('normal')}
+                  className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>✓ نطق سليم / التالي (أو اضغط مسافة Space)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRanNext('hesitation')}
+                  className="px-4 py-3 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>⚠️ تردد</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRanNext('error')}
+                  className="px-4 py-3 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4 text-rose-700" />
+                  <span>❌ خطأ في التسمية</span>
+                </button>
+              </div>
+            )}
 
             {/* Post-Activity Detailed Instrumentation Box & Audio Player */}
             {ranFinalDurationSec !== null && (
@@ -1290,7 +1340,15 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             {pseudoCurrentIndex < VERIFIED_ARABIC_PSEUDO_WORDS.length ? (
               <div className="max-w-xl mx-auto text-center">
                 {/* Visual Flashcard */}
-                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden">
+                <div
+                  onClick={() => {
+                    if (pseudoCurrentIndex < VERIFIED_ARABIC_PSEUDO_WORDS.length) {
+                      handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct');
+                    }
+                  }}
+                  className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden cursor-pointer hover:border-teal-400 transition-all select-none"
+                  title="انقر على البطاقة أو اضغط مسافة Space للانتقال للكلمة التالية"
+                >
                   <div className="flex items-center justify-between mb-4 text-xs">
                     <span className="font-bold text-teal-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                       {pseudoCurrentIndex + 1} من {VERIFIED_ARABIC_PSEUDO_WORDS.length} (الوزن: {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].patternAr})
@@ -1338,20 +1396,29 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     </div>
 
                     {/* Quick confirmation or skip */}
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center gap-3">
                       <button
+                        type="button"
                         onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct')}
-                        className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-extrabold flex items-center gap-2 shadow-md transition-all cursor-pointer"
                       >
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        <span>تأكيد القراءة الصحيحة والانتقال</span>
+                        <Check className="w-4 h-4" />
+                        <span>✓ قراءة صحيحة وتالٍ (مسافة Space)</span>
                       </button>
                       <button
-                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'misread')}
-                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        type="button"
+                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'hesitant')}
+                        className="px-4 py-3.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <SkipForward className="w-4 h-4" />
-                        <span>تخطي للكلمة التالية</span>
+                        <span>⚠️ تردد / تهجّى ببطء</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'misread')}
+                        className="px-4 py-3.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <X className="w-4 h-4 text-rose-700" />
+                        <span>❌ نطق غير دقيق</span>
                       </button>
                     </div>
                   </div>
@@ -1439,6 +1506,31 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         {option}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Phonemic Question Navigation Footer */}
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-indigo-100 text-xs">
+                    <button
+                      type="button"
+                      disabled={phonemicCurrentIdx === 0}
+                      onClick={() => setPhonemicCurrentIdx(prev => Math.max(0, prev - 1))}
+                      className="px-3.5 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 font-bold disabled:opacity-40 cursor-pointer flex items-center gap-1 shadow-xs hover:bg-indigo-50"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      <span>البند السابق</span>
+                    </button>
+                    <span className="text-indigo-900 font-black">
+                      بند {phonemicCurrentIdx + 1} من {VERIFIED_PHONEMIC_TASKS.length}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={phonemicCurrentIdx >= VERIFIED_PHONEMIC_TASKS.length - 1}
+                      onClick={() => setPhonemicCurrentIdx(prev => Math.min(VERIFIED_PHONEMIC_TASKS.length - 1, prev + 1))}
+                      className="px-3.5 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 font-bold disabled:opacity-40 cursor-pointer flex items-center gap-1 shadow-xs hover:bg-indigo-50"
+                    >
+                      <span>البند التالي</span>
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1583,6 +1675,46 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           </div>
         )}
 
+        {/* Persistent Global Stage Switcher Footer */}
+        <div className="bg-white rounded-3xl p-4 md:p-5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-700">
+          <button
+            type="button"
+            onClick={() => {
+              const stages: Array<'intro' | 'ran' | 'pseudo' | 'phonemic' | 'summary'> = ['intro', 'ran', 'pseudo', 'phonemic', 'summary'];
+              const curIdx = stages.indexOf(activeStage);
+              if (curIdx > 0) setActiveStage(stages[curIdx - 1]);
+            }}
+            disabled={activeStage === 'intro'}
+            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <ChevronRight className="w-4 h-4" />
+            <span>المحور السابق</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500">أنت الآن في:</span>
+            <span className="text-teal-900 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200 font-black">
+              {activeStage === 'intro' ? 'المقدمة والتعليمات' :
+               activeStage === 'ran' ? '1. التسمية السريعة (RAN)' :
+               activeStage === 'pseudo' ? '2. الكلمات غير المعجمية' :
+               activeStage === 'phonemic' ? '3. الوعي الصوتي والفونولوجي' : 'الملف المعرفي الشامل'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const stages: Array<'intro' | 'ran' | 'pseudo' | 'phonemic' | 'summary'> = ['intro', 'ran', 'pseudo', 'phonemic', 'summary'];
+              const curIdx = stages.indexOf(activeStage);
+              if (curIdx < stages.length - 1) setActiveStage(stages[curIdx + 1]);
+            }}
+            disabled={activeStage === 'summary'}
+            className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-30 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+          >
+            <span>المحور التالي</span>
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
