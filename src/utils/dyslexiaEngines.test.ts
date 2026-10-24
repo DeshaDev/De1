@@ -8,6 +8,7 @@ import {
   computeDyslexicoWeightedLevenshtein,
   analyzeTextWithDyslexico,
   evaluateOralReadingAlignment,
+  toConservativeAutomatedOralReadingStatus,
   normalizeArabicDialectWord,
   ARABIC_DIALECT_PROFILES,
 } from './dyslexiaEngines.ts';
@@ -63,6 +64,35 @@ test('Dyslexico Weighted Levenshtein assigns near-zero cost to b/d reversals, tr
   assert.equal(analysis[0].bestCorrection, 'the');
   assert.equal(analysis[1].bestCorrection, 'fruit');
   assert.equal(analysis[2].bestCorrection, 'المنظار');
+});
+
+test('unmatched ASR token is aligned as a substitution instead of a false omission', () => {
+  const result = evaluateOralReadingAlignment(
+    ['خَرَجَتْ', 'سَلْمَى', 'الْبَيْتُ'],
+    'خرجت سلمى شجرة',
+    10,
+    0,
+    'msa'
+  );
+  assert.equal(result.alignment.length, 3);
+  assert.equal(result.alignment[2].targetWord, 'الْبَيْتُ');
+  assert.equal(result.alignment[2].spokenWord, 'شجرة');
+  assert.equal(result.alignment[2].status, 'phonetic_substitution');
+  assert.equal(result.omittedWordsCount, 0);
+  assert.equal(result.phoneticSubstitutionCount, 1);
+});
+
+test('ASR-only omissions/substitutions remain unconfirmed, not attributed to the child', () => {
+  assert.equal(toConservativeAutomatedOralReadingStatus({
+    targetWord: 'الحديقة', spokenWord: null, status: 'omitted', weightedDistance: 1,
+  }), 'unconfirmed');
+  assert.equal(toConservativeAutomatedOralReadingStatus({
+    targetWord: 'الشجرة', spokenWord: 'شجرة', status: 'phonetic_substitution', weightedDistance: 1,
+  }), 'unconfirmed');
+  assert.equal(toConservativeAutomatedOralReadingStatus({
+    targetWord: 'البيت', spokenWord: 'البيت', status: 'correct', weightedDistance: 0,
+  }), 'correct');
+  assert.equal(toConservativeAutomatedOralReadingStatus(undefined), 'unconfirmed');
 });
 
 test('Oral reading fluency alignment computes WCPM, phonetic substitutions, and understands Arabic dialects without false penalty', () => {
