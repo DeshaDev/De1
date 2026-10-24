@@ -1232,15 +1232,13 @@ export function validateAndDeriveSessionFromEvidence(
     teacherAccuracyPercent = Math.min(100, Math.max(0, Math.round((effectiveTeacherWords / passage.words.length) * 100)));
   }
 
-  const oralReadingAssessed =
-    isTeacherVerified ||
-    (Boolean(evidenceObj.oralReadingAssessed ?? rawBody.oralReadingAssessed) &&
-      spokenTranscript.length > 0);
+  // Browser ASR output alone is not validated evidence of the child's oral reading.
+  const oralReadingAssessed = isTeacherVerified;
 
   // Always evaluate oral reading alignment against the FULL reference passage words
   // to avoid artificially inflating accuracy if the child read only a fraction of the text.
   const oralMetrics =
-    spokenTranscript.length > 0
+    isTeacherVerified && spokenTranscript.length > 0
       ? evaluateOralReadingAlignment(
           passage.words,
           spokenTranscript,
@@ -1326,10 +1324,6 @@ export function validateAndDeriveSessionFromEvidence(
     const durationMin = Math.max(0.05, readingDurationSeconds / 60);
     const attemptedWords = teacherCorrectWordsCount + teacherDialectVariantCount + teacherSubstitutionCount;
     derivedWpm = Math.round((attemptedWords / durationMin));
-  } else if (spokenTranscript.trim().length > 0) {
-    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
-    const spokenTokensCount = spokenTranscript.trim().split(/\s+/).filter(Boolean).length;
-    derivedWpm = Math.round((spokenTokensCount / durationMin));
   } else if (isVoiceOnlyModality) {
     // Keep zero only as the stored numeric sentinel; reports must display this as unavailable without evidence.
     derivedWpm = 0;
@@ -1343,10 +1337,8 @@ export function validateAndDeriveSessionFromEvidence(
   const derivedReadingHeuristic: number | null = null;
   const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
   const derivedReadingRiskLabelAr = isTeacherVerified
-    ? 'الطلاقة الشفوية معتمدة بالذكاء الاصطناعي؛ لا توجد درجة خطر معيارية.'
-    : oralIntegration
-      ? 'التفريغ الصوتي الآلي أولي؛ لا توجد درجة خطر معيارية.'
-      : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
+    ? 'الطلاقة الشفوية راجعها مراجع مخوّل؛ لا توجد درجة خطر معيارية.'
+    : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
   const learningReport = buildDeterministicLearningReport({
     studentName: studentMeta.name,

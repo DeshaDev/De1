@@ -1537,10 +1537,11 @@ export default function App() {
             student={selectedStudent}
             onNavigateTab={(tab) => setActiveTab(tab as any)}
             onCompleteScreening={(cogData) => {
-              setSelectedStudent(prev => ({
-                ...prev,
-                cognitiveResults: cogData,
-              }));
+              setStudents(prev => prev.map(student =>
+                student.id === selectedStudent.id
+                  ? { ...student, cognitiveResults: cogData }
+                  : student
+              ));
               setActiveTab('dashboard');
             }}
           />

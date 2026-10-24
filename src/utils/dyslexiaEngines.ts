@@ -1692,6 +1692,18 @@ export interface OralWordAlignmentItem {
   dialectNoteAr?: string;
 }
 
+/** A browser transcript mismatch is not proof that the child made a reading error. */
+export type AutomatedOralReadingStatus = OralWordAlignmentItem['status'] | 'unconfirmed';
+
+export function toConservativeAutomatedOralReadingStatus(
+  aligned: OralWordAlignmentItem | undefined | null
+): AutomatedOralReadingStatus {
+  if (!aligned || aligned.status === 'omitted' || aligned.status === 'phonetic_substitution') {
+    return 'unconfirmed';
+  }
+  return aligned.status;
+}
+
 export interface OralReadingFluencyResult {
   wcpm: number; // Words Correct Per Minute
   totalWords: number;
@@ -1980,12 +1992,14 @@ export function evaluateOralReadingAlignment(
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0) {
       const c = memo[i - 1][j - 1];
-      if (Math.abs(dp[i][j] - (dp[i - 1][j - 1] + c.cost)) < 1e-5 && c.status !== 'mismatch') {
+      if (Math.abs(dp[i][j] - (dp[i - 1][j - 1] + c.cost)) < 1e-5) {
+        // Preserve an unmatched spoken token against its target instead of falsely deleting it.
+        const alignedStatus = c.status === 'mismatch' ? 'phonetic_substitution' : c.status;
         reversedAlignment.push({
           targetWord: referenceWords[i - 1],
           spokenWord: spokenTokens[j - 1],
-          status: c.status,
-          weightedDistance: c.weightedDistance,
+          status: alignedStatus,
+          weightedDistance: c.status === 'mismatch' ? Math.max(1, c.weightedDistance) : c.weightedDistance,
           dialectNoteAr: c.dialectNoteAr,
         });
         if (c.status === 'correct') {
@@ -1993,7 +2007,7 @@ export function evaluateOralReadingAlignment(
         } else if (c.status === 'dialect_variant') {
           dialectVariantCount++;
           correctWordsCount++;
-        } else if (c.status === 'phonetic_substitution') {
+        } else if (c.status === 'phonetic_substitution' || c.status === 'mismatch') {
           phoneticSubstitutionCount++;
         }
         i--;
