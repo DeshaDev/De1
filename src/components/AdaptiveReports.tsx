@@ -909,7 +909,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             gradeLevel={studentData.grade}
             scores={radarScores}
           />
-          </div>
 
           {/* Classroom Accommodations (التسهيلات والتعديلات الصفية) */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
