@@ -310,6 +310,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const ranLastItemTimeRef = useRef<number>(0);
   const ranCategoryRef = useRef(ranCategory);
   const lastRanAdvancementTimeRef = useRef<number>(0);
+  const consumedRanResultIndexRef = useRef<number>(-1);
 
   useEffect(() => {
     ranCurrentIndexRef.current = ranCurrentIndex;
@@ -493,8 +494,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       recognition.onresult = (event: any) => {
         if (!ranIsRunningRef.current) return;
         const now = Date.now();
-        // Cooldown: prevent one spoken token from immediately scoring on consecutive items
-        if (now - lastRanAdvancementTimeRef.current < 650) {
+        if (now - lastRanAdvancementTimeRef.current < 450) {
           return;
         }
 
@@ -505,9 +505,11 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const target = matrix[curIdx];
         const validVariants = RAN_VOCABULARY_MAP[target.id] || [target.labelAr];
 
+        // Process only unconsumed results to prevent the previous word from being re-evaluated
+        const startIdx = Math.max(event.resultIndex, consumedRanResultIndexRef.current + 1);
         let transcript = '';
         let hasFinal = false;
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = startIdx; i < event.results.length; i++) {
           transcript += (event.results[i][0]?.transcript || '') + ' ';
           if (event.results[i].isFinal) hasFinal = true;
         }
@@ -520,23 +522,25 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const latestToken = tokens[tokens.length - 1];
         setRanLastHeardWord(latestToken);
 
-        // Check if ANY token in the spoken phrase matches the expected item
+        // Check if ANY token in the unconsumed speech matches the target item
         const isMatch = tokens.some(token =>
           validVariants.some(variant => token.includes(variant) || variant.includes(token))
         );
 
         if (isMatch) {
+          consumedRanResultIndexRef.current = event.results.length - 1;
           lastRanAdvancementTimeRef.current = Date.now();
           setRanHeardStatus({
             word: latestToken,
             isMatch: true,
-            message: `✓ التقط الذكاء الاصطناعي: "${target.labelAr}" بدقة`,
+            message: `✓ رائع: "${target.labelAr}"`,
           });
           handleRanNext('normal');
           return;
         }
 
-        // Only count an error if the recognized phrase was finalized (not interim jitter)
+        // If a different item was spoken, note the hesitation/error BUT DO NOT AUTO-SKIP the circle!
+        // Keeping the circle active prevents desynchronization and cascading errors.
         if (hasFinal) {
           const pool = ranCategoryRef.current === 'colors' ? RAN_COLORS :
                        ranCategoryRef.current === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
@@ -547,13 +551,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           );
 
           if (wrongItem) {
-            lastRanAdvancementTimeRef.current = Date.now();
+            consumedRanResultIndexRef.current = event.results.length - 1;
+            setRanErrors(prev => prev + 1);
             setRanHeardStatus({
               word: latestToken,
               isMatch: false,
-              message: `❌ رصد إبدال: نطق "${latestToken}" والمطلوب "${target.labelAr}"`,
+              message: `⚠️ سُمع: "${latestToken}" (المطلوب: "${target.labelAr}") - أعد النطق أو اضغط مسافة لتخطيها`,
             });
-            handleRanNext('error');
+            playChime(320, 'triangle', 0.08);
           }
         }
       };
@@ -588,6 +593,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const handleStartRan = async () => {
     setRanCurrentIndex(0);
     ranCurrentIndexRef.current = 0;
+    consumedRanResultIndexRef.current = -1;
     setRanElapsedMs(0);
     setRanHesitations(0);
     setRanErrors(0);
