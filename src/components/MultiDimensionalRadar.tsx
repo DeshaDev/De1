@@ -1,4 +1,5 @@
 import React from 'react';
+import { Info } from 'lucide-react';
 
 export interface CognitiveRadarScores {
   orfFluency: number; // 0 - 100
@@ -14,11 +15,11 @@ interface Props {
 }
 
 const AXES = [
-  { key: 'orfFluency', labelAr: 'الطلاقة الشفوية (ORF)', angle: -90 },
-  { key: 'ranSpeed', labelAr: 'سرعة التسمية (RAN)', angle: -18 },
-  { key: 'pseudoDecoding', labelAr: 'فك الترميز (Pseudo)', angle: 54 },
-  { key: 'phonemicAwareness', labelAr: 'الوعي الصوتي (Phonemic)', angle: 126 },
-  { key: 'numeracy', labelAr: 'الحس العددي (Math)', angle: 198 },
+  { key: 'orfFluency', labelAr: 'الطلاقة الشفوية (ORF)', angle: -90, descriptionAr: 'نسبة الكلمات الصحيحة بالدقيقة مقارنة بالهدف الصفي' },
+  { key: 'ranSpeed', labelAr: 'سرعة التسمية (RAN)', angle: -18, descriptionAr: 'معدل سرعة تسمية 20 عنصراً قياساً لمعيار 20 ثانية' },
+  { key: 'pseudoDecoding', labelAr: 'فك الترميز (12 كلمة)', angle: 54, descriptionAr: 'نسبة الدقة في قراءة الكلمات غير المعجمية الموزونة' },
+  { key: 'phonemicAwareness', labelAr: 'الوعي الصوتي (Phonemic)', angle: 126, descriptionAr: 'نسبة إتقان مهام العزل والحذف والدمج الفصحى' },
+  { key: 'numeracy', labelAr: 'الحس العددي (Math)', angle: 198, descriptionAr: 'دقة تقدير مواضع الأرقام على خط الأعداد' },
 ] as const;
 
 export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) => {
@@ -57,10 +58,10 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4 mb-4">
         <div>
           <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
-            <span>مخطط الرادار المعرفي خماسي الأبعاد (5-Axis Cognitive Radar)</span>
+            <span>ملف مهارات القراءة والتعلم الاسترشادي (رصد نسبي للمهام)</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            توزيع الأداء النسبي للطالب عبر ركائز القراءة، المعالجة السريعة، والرياضيات
+            عرض بصري نسبي لتوزيع أداء الطالب في مهام الجلسة لمساعدة المعلم على استكشاف التباين بين المهارات
           </p>
         </div>
         <span className="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full font-mono">
@@ -158,28 +159,55 @@ export const MultiDimensionalRadar: React.FC<Props> = ({ scores, studentName }) 
         </div>
 
         {/* Legend & Pillar Scores Table */}
-        <div className="w-full md:w-64 space-y-2.5 text-xs text-right">
-          <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
-            <span className="font-bold text-teal-950">1. الطلاقة الشفوية (ORF):</span>
-            <span className="font-mono font-black text-teal-800 text-sm">{Math.round(scores.orfFluency)}%</span>
+        <div className="w-full md:w-72 space-y-2.5 text-xs text-right">
+          <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-teal-950">1. الطلاقة الشفوية (ORF):</span>
+              <span className="font-mono font-black text-teal-800 text-sm">{Math.round(scores.orfFluency)}%</span>
+            </div>
+            <p className="text-[10px] text-teal-800/80">نسبة دقة الكلمات المقروءة ومعدلها في نص الجلسة</p>
           </div>
-          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
-            <span className="font-bold text-amber-950">2. سرعة التسمية (RAN):</span>
-            <span className="font-mono font-black text-amber-800 text-sm">{Math.round(scores.ranSpeed)}%</span>
+
+          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-amber-950">2. سرعة التسمية (RAN):</span>
+              <span className="font-mono font-black text-amber-800 text-sm">{Math.round(scores.ranSpeed)}%</span>
+            </div>
+            <p className="text-[10px] text-amber-800/80">سرعة تسمية 20 عنصراً قياساً لمعيار استرشادي (20 ث)</p>
           </div>
-          <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-between">
-            <span className="font-bold text-sky-950">3. فك الترميز النقي:</span>
-            <span className="font-mono font-black text-sky-800 text-sm">{Math.round(scores.pseudoDecoding)}%</span>
+
+          <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-sky-950">3. فك الكلمات غير المعجمية:</span>
+              <span className="font-mono font-black text-sky-800 text-sm">{Math.round(scores.pseudoDecoding)}%</span>
+            </div>
+            <p className="text-[10px] text-sky-800/80">نسبة دقة فك الكلمات المصطنعة الموزونة (12 كلمة)</p>
           </div>
-          <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
-            <span className="font-bold text-indigo-950">4. الوعي الفونولوجي:</span>
-            <span className="font-mono font-black text-indigo-800 text-sm">{Math.round(scores.phonemicAwareness)}%</span>
+
+          <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-indigo-950">4. الوعي الصوتي والفونولوجي:</span>
+              <span className="font-mono font-black text-indigo-800 text-sm">{Math.round(scores.phonemicAwareness)}%</span>
+            </div>
+            <p className="text-[10px] text-indigo-800/80">نسبة إتقان 6 مهام صوتية (عزل، حذف، دمج، وسجع)</p>
           </div>
-          <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between">
-            <span className="font-bold text-purple-950">5. الحس العددي:</span>
-            <span className="font-mono font-black text-purple-800 text-sm">{Math.round(scores.numeracy)}%</span>
+
+          <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold text-purple-950">5. الحس العددي:</span>
+              <span className="font-mono font-black text-purple-800 text-sm">{Math.round(scores.numeracy)}%</span>
+            </div>
+            <p className="text-[10px] text-purple-800/80">دقة التقدير في خط الأعداد ومهام الحساب المرصودة</p>
           </div>
         </div>
+      </div>
+
+      {/* Methodological Transparency Footnote */}
+      <div className="mt-5 pt-3 border-t border-slate-100 flex items-start gap-2.5 text-[11px] text-slate-500 leading-relaxed">
+        <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+        <span>
+          <strong>تنويه منهجي وإحصائي:</strong> الدرجات المعروضة (0–100%) هي نسب إنجاز المهام المسجلة في هذه الجلسة وحدها، وليست درجات معيارية مقننة (Standardized Scores) أو مئينات مجتمعية (Percentiles) لعدم توفر عينة تقنين عربية معيارية للنموذج الأولي حتى الآن. يهدف هذا الرسم لمساعدة المعلم في استكشاف مجالات القوة وجوانب الحاجة لدعم مستقبلي.
+        </span>
       </div>
     </div>
   );

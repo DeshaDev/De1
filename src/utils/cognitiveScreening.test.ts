@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS } from '../data/seedData';
+import { VERIFIED_ARABIC_PSEUDO_WORDS, VERIFIED_PHONEMIC_TASKS } from '../components/CognitiveScreeningView';
 
-test('Multi-Dimensional Cognitive Screening Battery (RAN, Pseudo-words & Phonology)', async (t) => {
-  await t.test('RAN (Rapid Automatized Naming): accurately calculates items per second and detects latency risk', () => {
+test('Cognitive Screening & Observational Profile Battery', async (t) => {
+  await t.test('RAN (Rapid Automatized Naming): accurately calculates items per second and latency', () => {
     const totalItems = 20;
     const fastDurationSec = 18;
     const slowDurationSec = 40;
@@ -12,24 +12,40 @@ test('Multi-Dimensional Cognitive Screening Battery (RAN, Pseudo-words & Phonolo
     const slowSpeed = +(totalItems / slowDurationSec).toFixed(2);
 
     assert.ok(fastSpeed > 1.0, 'Fast reader should achieve > 1.0 items per second');
-    assert.ok(slowSpeed < 0.6, 'At-risk reader has low naming retrieval speed < 0.6 items/sec');
+    assert.ok(slowSpeed < 0.6, 'Slower reader has naming retrieval speed < 0.6 items/sec');
 
-    // Threshold check
-    const isAtRisk = slowDurationSec >= 35;
-    assert.equal(isAtRisk, true, 'RAN duration >= 35s marks slow lexical retrieval risk');
+    // Threshold check for observation
+    const isAtObservation = slowDurationSec >= 35;
+    assert.equal(isAtObservation, true, 'RAN duration >= 35s marks slow retrieval observation');
   });
 
-  await t.test('Arabic Pseudo-words: follow authentic Arabic morphological weights (فَعْلَلَ / مِفْعَال)', () => {
-    const samplePseudoWords = ['سَلْطَمَ', 'مِفْرَاخ', 'كَرْنَفَ', 'بَيْدَقَة', 'شَنْطَبَ'];
+  await t.test('Arabic Pseudo-words: strictly verified non-lexical roots adhering to authentic morphological templates', () => {
+    assert.equal(VERIFIED_ARABIC_PSEUDO_WORDS.length, 12, 'Should provide 12 graded pseudo-words');
 
-    // Ensure all pseudo-words contain authentic Arabic letters and diacritics
-    samplePseudoWords.forEach(word => {
-      assert.ok(word.length >= 4, `Word "${word}" should be at least 4 characters`);
-      assert.match(word, /^[\u0621-\u064A\u064B-\u0652\u0670]+$/, `Word "${word}" must be valid Arabic script`);
+    // Words known to be real Arabic words that MUST NOT be present:
+    const bannedRealWords = ['نَشَدَ', 'مِفْرَاخ', 'كَرْنَفَ', 'بَيْدَقَة', 'قُرْطُم', 'شَمْس', 'قَلَم'];
+
+    VERIFIED_ARABIC_PSEUDO_WORDS.forEach(item => {
+      // Must not be in banned real words
+      assert.ok(!bannedRealWords.includes(item.word), `Pseudo-word "${item.word}" must not be a real dictionary word`);
+      // Valid Arabic script
+      assert.match(item.word, /^[\u0621-\u064A\u064B-\u0652\u0670]+$/, `Word "${item.word}" must be valid vocalized Arabic script`);
+      assert.ok(item.patternAr.length > 0, 'Must have specified morphological template');
+      assert.ok(item.syllablesAr.length > 0, 'Must provide syllable decomposition');
     });
   });
 
-  await t.test('Multi-Dimensional Radar Scores: normalizes all 5 cognitive axes within 0-100 range', () => {
+  await t.test('Phonemic Awareness subtests: dialect-neutral standard Arabic items with valid answers', () => {
+    assert.equal(VERIFIED_PHONEMIC_TASKS.length, 6, 'Should provide 6 phonological awareness items');
+
+    VERIFIED_PHONEMIC_TASKS.forEach(task => {
+      assert.ok(task.optionsAr.length >= 3, `Task "${task.id}" must have at least 3 options`);
+      assert.ok(task.correctIndex >= 0 && task.correctIndex < task.optionsAr.length, `Valid correct index for ${task.id}`);
+      assert.ok(task.audioSpeechPrompt.length > 0, `Auditory prompt defined for ${task.id}`);
+    });
+  });
+
+  await t.test('Multi-Dimensional Radar Scores: normalizes all 5 observational axes within 0-100 range', () => {
     const rawMetrics = {
       wcpm: 68,
       ranSeconds: 25,
