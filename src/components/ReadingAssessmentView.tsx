@@ -277,25 +277,19 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         };
 
         recognition.onend = () => {
-          // If reading session is active, auto-restart so sentence pauses NEVER disconnect the recognizer
+          // If reading session is active, create a FRESH instance so Chromium never drops out
           if (isReadingActiveRef.current) {
             if (currentInterimRef.current) {
               finalTranscriptsRef.current.push(currentInterimRef.current);
               currentInterimRef.current = '';
             }
-            try {
-              recognition.start();
-              setIsListening(true);
-            } catch {
-              setTimeout(() => {
-                if (isReadingActiveRef.current) {
-                  try {
-                    recognition.start();
-                    setIsListening(true);
-                  } catch {}
-                }
-              }, 100);
-            }
+            setTimeout(() => {
+              if (isReadingActiveRef.current) {
+                try {
+                  startSpeechRecognition();
+                } catch {}
+              }
+            }, 30);
           } else {
             setIsListening(false);
           }
@@ -1521,6 +1515,27 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
                     🔴 متخطاة / لم تُنطق: {summaryStats.omitted}
                   </span>
+                </div>
+              </div>
+
+              {/* Quick Action Bar for Instant Verification & Audio Fairness */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="text-xs text-slate-700 leading-relaxed">
+                  <span className="font-bold text-slate-900">ملاحظة القراءة والميكروفون:</span> إذا قرأ الطالب النص كاملاً بصوته ولكن أسقط ميكروفون المتصفح بعض الكلمات، يمكنك اعتماد قراءتها كاملة بنقرة واحدة:
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTeacherOverridesCount(prev => prev + 1);
+                      setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                    title="اعتماد قراءة جميع كلمات النص كصحيحة"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>✓ تأكيد قراءة جميع الكلمات بطلاقة</span>
+                  </button>
                 </div>
               </div>
 
