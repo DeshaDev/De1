@@ -159,6 +159,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   // Match the server's technical ceiling so an incomplete, implausibly fast session
   // cannot be stored as if the entire reference passage had been read.
   const minimumReadingDurationSeconds = Math.ceil((passage.words.length * 60) / 300);
+  // Normalized spoken words set for real-time live word highlighting
+  const spokenWordsNormalizedSet = useMemo(() => {
+    if (!spokenTranscript) return new Set<string>();
+    const tokens = spokenTranscript
+      .replace(/[.,!?،؟؛:"«»()[\]]/g, ' ')
+      .split(/\s+/)
+      .map(w => w.replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[إأآا]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim())
+      .filter(Boolean);
+    return new Set(tokens);
+  }, [spokenTranscript]);
+
 
   // Reading focus mode removes navigation chrome before the browser paints the passage.
   // This keeps the child on the actual text instead of the sticky header, footer, or floating dock.
@@ -1022,28 +1033,51 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Live Real-Time Speech Feedback Bar */}
-            {readingMode === 'oral_audio' && (
-              <div className="mb-5 p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-950 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <span className="relative flex h-3 w-3 shrink-0">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isListening ? 'bg-emerald-400 opacity-75' : 'bg-amber-400'}`}></span>
-                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isListening ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
-                  </span>
-                  <span className="font-bold shrink-0">
-                    {isListening ? 'الميكروفون يستمع لقراءتك الآن:' : 'جاري استقبال الصوت...'}
-                  </span>
-                  <span className="font-sans text-slate-700 bg-white/90 px-3 py-1 rounded-xl border border-emerald-100 max-w-md truncate">
-                    {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-8).join(' ')}..."` : 'اقرأ بصوت واضح ومسموع...'}
-                  </span>
+            {/* Prominent Live Voice AI & Recording HUD */}
+            <div className="mb-6 p-4 md:p-5 bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl border border-teal-500/40 shadow-xl space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-emerald-400 opacity-75"></span>
+                    <Mic className="w-5 h-5 text-emerald-400 relative z-10" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm text-emerald-300">
+                        تسجيل صوتي وتحليل ذكي مباشر (Live Voice AI)
+                      </span>
+                      <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        تسجيل جارٍ
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      الذكاء الاصطناعي يستمع لقراءتك ويسجل صوتك الآن — اقرأ الكلمات بصوت واضح ومسموع
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-3 py-1 rounded-full font-mono">
+
+                {/* Animated Audio Equalizer Bars */}
+                <div className="flex items-center gap-1 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700">
+                  <span className="w-1 bg-emerald-400 rounded-full animate-pulse h-3"></span>
+                  <span className="w-1 bg-teal-400 rounded-full animate-pulse h-5" style={{ animationDelay: '0.15s' }}></span>
+                  <span className="w-1 bg-emerald-300 rounded-full animate-pulse h-4" style={{ animationDelay: '0.3s' }}></span>
+                  <span className="w-1 bg-teal-300 rounded-full animate-pulse h-6" style={{ animationDelay: '0.45s' }}></span>
+                  <span className="w-1 bg-emerald-400 rounded-full animate-pulse h-3" style={{ animationDelay: '0.2s' }}></span>
+                  <span className="text-[11px] font-mono text-emerald-300 font-bold mr-2">
                     {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة مُلتقطة
                   </span>
                 </div>
               </div>
-            )}
+
+              {/* Real-time Spoken Transcript Readout */}
+              <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
+                <span className="text-teal-400 font-bold shrink-0">ما التقطه الذكاء الاصطناعي لحظياً:</span>
+                <span className="text-slate-200 font-mono truncate max-w-xl">
+                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع، ستظهر الكلمات الملتقطة هنا فوراً...'}
+                </span>
+              </div>
+            </div>
 
             {/* Arabic Reading Passage with Tashkeel */}
             <div
