@@ -441,11 +441,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     // For oral reading: measured from actual spoken words read per minute
     // For timed silent reading: rate of completing the reference passage
     if (readingMode === 'oral_audio') {
-      const spokenTokens = cleanTranscript.split(/\s+/).filter(Boolean);
-      const calculatedWpm = spokenTokens.length > 0
-        ? Math.round((spokenTokens.length / elapsedSec) * 60)
-        : 0;
-      setMeasuredWpm(calculatedWpm);
+      // Browser ASR token count is not a validated oral-reading speed measure.
+      setMeasuredWpm(undefined);
     } else {
       const calculatedWpm = Math.round((passage.words.length / elapsedSec) * 60);
       setMeasuredWpm(calculatedWpm);
@@ -634,9 +631,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       gradeLevel: passage.gradeLevel,
       wordCount: passage.words.length,
       durationSeconds: finalDurationSec,
-      wpm: measuredWpm,
+      wpm: measuredWpm ?? 0,
       wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
-      oralReadingAssessed: readingMode === 'oral_audio',
+      oralReadingAssessed: readingMode === 'oral_audio' && teacherVerified,
       oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
       teacherVerified: readingMode === 'oral_audio' && teacherVerified,
       assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
@@ -692,14 +689,15 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         ARABIC_DIALECT_PROFILES.find(d => d.code === studentDialect)?.labelAr ||
         'اللهجة المصرية',
       readingDurationSeconds: finalDurationSec,
-      wpm: measuredWpm,
+      wpm: measuredWpm ?? 0,
       wcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
       oralWcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
-      oralReadingAssessed: readingMode === 'oral_audio',
+      oralReadingAssessed: readingMode === 'oral_audio' && teacherVerified,
       oralAccuracyPercent: readingMode === 'oral_audio' ? (measuredAccuracyPercent ?? null) : null,
-      teacherVerified: readingMode === 'oral_audio', // معتمد آلياً بالذكاء الاصطناعي
-      teacherVerifierRole: readingMode === 'oral_audio' ? 'المحلل الصوتي الذكي (Baseera AI)' : undefined,
-      teacherVerificationTimestamp: readingMode === 'oral_audio' ? nowIso : undefined,
+      // An automated transcript is not a human teacher attestation.
+      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      teacherVerifierRole: readingMode === 'oral_audio' && teacherVerified ? 'مراجع المدرسة (مراجعة بشرية)' : undefined,
+      teacherVerificationTimestamp: readingMode === 'oral_audio' && teacherVerified ? nowIso : undefined,
       teacherWordOverridesCount: readingMode === 'oral_audio' ? teacherOverridesCount : undefined,
       verifiedWordsAlignment: readingMode === 'oral_audio' ? verifiedWords : undefined,
       spokenTranscript: readingMode === 'oral_audio' ? cleanTranscript : undefined,
@@ -1147,7 +1145,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 التحليل الصوتي المباشر واعتماد الطلاقة الذاتي
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                يقوم الذكاء الاصطناعي بمطابقة الكلمات المنطوقة مع النص المرجعي بدقة، وتصنيف الكلمات المقروءة والبدائل واللهجات تلقائياً واعتماد WCPM.
+                هذه مطابقة آلية أولية للتفريغ الصوتي، وليست دليلاً قاطعاً على صحة النطق. الكلمات التي لم يحسمها التعرّف لن تُصنّف على أنها أخطاء من الطفل، ولن تُستخدم لاعتماد WCPM.
               </p>
             </div>
 
@@ -1158,10 +1156,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   معدل الطلاقة المقاس من الكلمات المصنّفة
                 </span>
                 <div className="text-2xl font-black text-emerald-700 font-mono">
-                  {teacherStats.liveWcpm} <span className="text-xs">WCPM</span>
+                  {teacherStats.liveWcpm ?? 'غير متاح'} <span className="text-xs">WCPM</span>
                 </div>
                 <span className="text-[10px] text-emerald-600">
-                  {teacherStats.effectiveWords} كلمة مصنّفة صحيحة ÷ {finalDurationSec} ث
+                  {teacherStats.unconfirmed > 0
+                    ? 'لا يمكن حساب معدل موثوق قبل حسم الكلمات غير المؤكدة.'
+                    : teacherStats.effectiveWords + ' كلمة مطابقة ÷ ' + finalDurationSec + ' ث'}
                 </span>
               </div>
 
@@ -1170,7 +1170,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   مطابقة وفق التصنيفات الحالية
                 </span>
                 <div className="text-2xl font-black text-teal-700 font-mono">
-                  {teacherStats.liveAccuracy}%
+                  {teacherStats.liveAccuracy === null ? 'غير متاح' : teacherStats.liveAccuracy + '%'}
                 </div>
                 <span className="text-[10px] text-teal-600">
                   من إجمالي {verifiedWords.length} كلمة
@@ -1191,13 +1191,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-rose-800 block mb-1">
-                  الكلمات التي صنّفها التفريغ متخطاة
+                  كلمات لم يحسمها التعرّف الصوتي
                 </span>
                 <div className="text-2xl font-black text-rose-700 font-mono">
-                  {teacherStats.omitted}
+                  {teacherStats.unconfirmed}
                 </div>
                 <span className="text-[10px] text-rose-600">
-                  كلمات صنّفها التفريغ على أنها متخطاة
+                  لا يعني عدم التعرّف أن الطفل لم ينطق الكلمة
                 </span>
               </div>
             </div>
@@ -1272,7 +1272,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   ● إبدال لفظي (Substitution)
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 font-bold">
-                  ● تخطي / حذف (Omitted)
+                  ● غير محسوم آلياً (Unconfirmed)
                 </span>
               </div>
 
@@ -1294,6 +1294,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold';
                     statusTitle = 'إبدال صوتي / تعثر';
+                  } else if (item.status === 'unconfirmed') {
+                    badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
+                    statusTitle = 'غير محسومة آلياً؛ قد يكون التعرّف الصوتي لم يلتقطها';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through hover:bg-rose-200';
                     statusTitle = 'متخطاة / محذوفة';
@@ -1321,7 +1324,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs text-slate-600 text-right flex items-center gap-2">
                 <FileCheck2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>يتم اعتماد مؤشر الطلاقة الشفوية (WCPM) ومطابقة الكلمات مباشرة وحفظها في السجل بواسطة الذكاء الاصطناعي.</span>
+                <span>التصنيف المعروض تقدير آلي أولي. إذا بقيت كلمات غير محسومة، فلن يُعتمد WCPM أو معدل الدقة لهذه الجلسة.</span>
               </div>
 
               <button
@@ -1330,7 +1333,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-lg rounded-2xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>اعتماد التحليل بالذكاء الاصطناعي والانتقال لأسئلة الفهم</span>
+                <span>متابعة إلى أسئلة الفهم دون اعتماد مؤشرات غير مكتملة</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
@@ -1466,11 +1469,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   سرعة القراءة
                 </span>
                 <div className="text-3xl font-black text-teal-700 font-mono">
-                  {measuredWpm}{' '}
+                  {measuredWpm ?? 'غير متاح'}{' '}
                   <span className="text-sm font-semibold">كلمة / دقيقة</span>
                 </div>
                 <p className="text-[11px] text-teal-800 mt-2 leading-relaxed">
-                  قرأ الطالب {passage.words.length} كلمة خلال {finalDurationSec} ثانية. (المعدل المتوقع لصفه: {passage.gradeLevel <= 2 ? '50-70' : passage.gradeLevel === 3 ? '60-80' : '70-95'} ك/د).
+                  {readingMode === 'oral_audio'
+                    ? 'لا يُعرض معدل موثوق من عدد الكلمات التي أخطأ المتصفح في تفريغها.'
+                    : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معياراً تشخيصياً.'}
                 </p>
               </div>
 
@@ -1494,10 +1499,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   دقة نطق الكلمات
                 </span>
                 <div className="text-3xl font-black text-emerald-700 font-mono">
-                  {summaryStats.accuracyPercent}%
+                  {summaryStats.accuracyPercent === null ? 'غير متاح' : summaryStats.accuracyPercent + '%'}
                 </div>
                 <p className="text-[11px] text-emerald-800 mt-2">
-                  {summaryStats.correct} صحيحة · {summaryStats.errors} تعثر/إبدال · {summaryStats.omitted} تخطي
+                  {summaryStats.correct} مطابقة نصية · {summaryStats.errors} اختلاف محتمل · {summaryStats.omitted} حذف مؤكد · {summaryStats.unconfirmed} غير محسومة
                 </p>
               </div>
 
@@ -1540,7 +1545,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     🟠 إبدال / تعثر: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
-                    🔴 متخطاة / لم تُنطق: {summaryStats.omitted}
+                    🔴 حذف مؤكد بعد المراجعة: {summaryStats.omitted}
+                  </span>
+                  <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
+                    ⚪ غير محسومة آلياً: {summaryStats.unconfirmed}
                   </span>
                 </div>
               </div>
@@ -1577,13 +1585,16 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
                   if (item.status === 'correct') {
                     badgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200';
-                    statusTitle = 'صحيحة بطلاقة';
+                    statusTitle = 'مطابقة نصية آلية';
                   } else if (item.status === 'dialect_variant') {
                     badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
                     statusTitle = 'بديل لهجي فصيح';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 font-black ring-2 ring-amber-300 hover:bg-amber-200';
                     statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
+                  } else if (item.status === 'unconfirmed') {
+                    badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
+                    statusTitle = 'غير محسومة آلياً؛ قد يكون التعرّف الصوتي لم يلتقطها';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
                     statusTitle = 'تخطي / لم تُنطق';
@@ -1606,7 +1617,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           نُطقت: {item.spokenWord}
                         </span>
                       )}
-                      {item.status === 'omitted' && (
+                      {item.status === 'unconfirmed' && (
+                    <span className="text-[9px] font-mono text-slate-700">
+                      غير محسومة آلياً
+                    </span>
+                  )}
+                  {item.status === 'omitted' && (
                         <span className="text-[9px] font-mono text-rose-800">
                           تخطي
                         </span>
