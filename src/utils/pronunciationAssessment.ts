@@ -17,6 +17,30 @@ import {
   OralWordAlignmentItem,
 } from './dyslexiaEngines';
 
+export type SpeechEngineProvider =
+  | 'local_dp_aligner'
+  | 'azure_speech'
+  | 'whisper_transcribe'
+  | 'dessa_speech_to_speech';
+
+export interface DessaModelAdapterConfig {
+  /** Dessa full-duplex speech-to-speech configuration (Block / Jack Dorsey) */
+  enabled: boolean;
+  modelVariant: 'dessa-conversational-v1' | 'dessa-research-preview';
+  fullDuplexMode: boolean;
+  endpointUrl?: string;
+  apiKey?: string;
+  statusNotesAr: string;
+}
+
+export const DESSA_INTEGRATION_PROFILE: DessaModelAdapterConfig = {
+  enabled: false,
+  modelVariant: 'dessa-research-preview',
+  fullDuplexMode: true,
+  statusNotesAr:
+    'نموذج Dessa (Block / Jack Dorsey) قيد المعاينة البحثية المغلقة (Research Preview) بدون واجهة API عامة متاحة حتى الآن. تم إعداد موصل الربط المعماري لاستقبال الواجهة فور فتحها.',
+};
+
 export type WordErrorType =
   | 'None'
   | 'Omission'
