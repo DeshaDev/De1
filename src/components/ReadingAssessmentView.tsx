@@ -227,7 +227,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setCurrentQuestionIndex(0);
     setComprehensionError('');
     setComprehensionScore(0);
-    setMeasuredWpm(0);
+    setMeasuredWpm(undefined);
     setFinalDurationSec(0);
     setIsListening(false);
     if (audioPlaybackUrlRef.current) {
