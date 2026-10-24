@@ -1835,6 +1835,226 @@ async function startServer() {
     });
   });
 
+  // Arabic Decodable Story Generation API (Inspired by LUCA AI StoryGen)
+  app.post('/api/ai/generate-story', async (req, res) => {
+    const { interest, targetPhoneme, gradeLevel, studentName } = req.body || {};
+    const cleanInterest = typeof interest === 'string' && interest.trim() ? interest.trim() : 'الفضاء والمغامرة';
+    const cleanPhoneme = typeof targetPhoneme === 'string' && targetPhoneme.trim() ? targetPhoneme.trim() : 'س / ص';
+    const cleanGrade = Number.isInteger(gradeLevel) ? Number(gradeLevel) : 2;
+    const cleanName = typeof studentName === 'string' && studentName.trim() ? studentName.trim() : 'سامي';
+
+    const fallbackStory = {
+      title: `مُغَامَرَةُ ${cleanName} فِي عَالَمِ ${cleanInterest}`,
+      story: `سَافَرَ ${cleanName} فِي رِحْلَةٍ سَرِيعَةٍ مُمْتِعَةٍ. شَاهَدَ ${cleanName} أَشْيَاءَ جَمِيلَةً تَلْمَعُ كَالذَّهَبِ فِي السَّمَاءِ، وَسَمِعَ صَوْتًا صَادِرًا مِنَ الْمَكَانِ الْبَعِيدِ. صَمَدَ ${cleanName} بِشَجَاعَةٍ وَصَافَحَ صَدِيقَهُ بِسُرُورٍ وَأَمَانٍ.`,
+      targetPhoneme: cleanPhoneme,
+      targetWords: ['سَافَرَ', 'سَرِيعَةٍ', 'السَّمَاءِ', 'سَمِعَ', 'صَوْتًا', 'صَادِرًا', 'صَمَدَ', 'صَافَحَ', 'صَدِيقَهُ', 'بِسُرُورٍ'],
+      articulatoryTip: {
+        sound: cleanPhoneme,
+        description: 'انتبه لمخارج الحروف وصوتها المفخم والمرقق مع التشكيل السليم.',
+        mouthShape: 'rounded',
+      },
+      questions: [
+        {
+          question: `مَاذَا فَعَلَ ${cleanName} فِي رِحْلَتِهِ؟`,
+          options: ['سَافَرَ فِي رِحْلَةٍ سَرِيعَةٍ مُمْتِعَةٍ', 'نَامَ فِي الْغُرْفَةِ', 'جَلَسَ يَبْكِي'],
+          answerIndex: 0,
+        },
+        {
+          question: 'كَيْفَ صَافَحَ صَدِيقَهُ؟',
+          options: ['بِسُرُورٍ وَأَمَانٍ', 'بِخَوْفٍ شَدِيدٍ', 'بِغَضَبٍ'],
+          answerIndex: 0,
+        },
+      ],
+      source: 'curated_bank',
+    };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      res.json(fallbackStory);
+      return;
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: `أنت خبير في علم القراءة (Science of Reading) وعلاج صعوبات القراءة وعسر القراءة (Dyslexia) باللغة العربية.
+قم بتوليد قصة قصيرة تعليمية موجهة وفك شفرة (Decodable Story) مخصصة للطفل، مضبوطة بالشكل التام (مشكولة بنسبة 100% بالحركات والتنوين والسكون دون أي كلمة غير مشكولة).
+المعايير:
+- اهتمام الطفل: ${cleanInterest}
+- اسم البطل في القصة: ${cleanName}
+- الفونيم أو القاعدة المستهدفة: ${cleanPhoneme}
+- المستوى الدراسي: الصف ${cleanGrade} الابتدائي.
+- الطول: بين 35 إلى 60 كلمة فقط، جمل قصيرة سهلة التركيب.
+- ركّز بكثافة على كلمات تحتوي على الفونيم المستهدف: ${cleanPhoneme}.
+- أضف نصيحة بصرية لنطق مخرج الحرف (شكل الشفتين واللسان).
+- أضف سؤالين بسيطين لقياس الفهم مع خيارات صحيحة.`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: 'عنوان القصة مشكولاً' },
+              story: { type: Type.STRING, description: 'نص القصة مشكولاً بالكامل 100%' },
+              targetPhoneme: { type: Type.STRING },
+              targetWords: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'الكلمات التي وردت في القصة وتحتوي الفونيم المستهدف',
+              },
+              articulatoryTip: {
+                type: Type.OBJECT,
+                properties: {
+                  sound: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  mouthShape: { type: Type.STRING, description: 'rounded | open | teeth | throat' },
+                },
+                required: ['sound', 'description', 'mouthShape'],
+              },
+              questions: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    question: { type: Type.STRING },
+                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    answerIndex: { type: Type.INTEGER },
+                  },
+                  required: ['question', 'options', 'answerIndex'],
+                },
+              },
+            },
+            required: ['title', 'story', 'targetPhoneme', 'targetWords', 'articulatoryTip', 'questions'],
+          },
+        },
+      });
+
+      const parsed = JSON.parse((response.text || '{}').trim());
+      if (parsed && parsed.story && parsed.title) {
+        res.json({ ...parsed, source: 'gemini-3.8-flash' });
+        return;
+      }
+      res.json(fallbackStory);
+    } catch (err) {
+      console.warn('StoryGen API error, returning fallback:', err);
+      res.json(fallbackStory);
+    }
+  });
+
+  // Individualized Education Plan (IEP) Generator API
+  app.post('/api/ai/generate-iep', async (req, res) => {
+    const {
+      studentName = 'الطالب',
+      gradeLevel = 2,
+      wcpm = 45,
+      accuracy = 85,
+      ranDurationSec = 35,
+      ranCategory = 'الألوان',
+      pseudoAccuracy = 70,
+      phonemicScore = 4,
+      observedTargets = [],
+    } = req.body || {};
+
+    const cleanTargets = Array.isArray(observedTargets) ? observedTargets.slice(0, 5) : [];
+    const targetsText = cleanTargets.length > 0 ? cleanTargets.join('، ') : 'الأزواج الصوتية المتجانسة والمقاطع الساكنة';
+
+    const fallbackIep = {
+      studentName,
+      gradeLevel,
+      date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
+      baselineSummary: `أظهر التقييم الشفوي للطالب(ة) ${studentName} في الصف ${gradeLevel} معدل طلاقة قرائية يبلغ ${wcpm} كلمة/دقيقة بدقة ${accuracy}%. كما بلغت مدة التسمية السريعة (RAN) لـ ${ranCategory} ${ranDurationSec} ثانية، مع دقة ${pseudoAccuracy}% في فك الكلمات غير المعجمية، ودرجة ${phonemicScore}/6 في الوعي الصوتي. تم رصد صعوبات متكررة في: ${targetsText}. تشير هذه النتائج إلى مؤشرات خطورة فونولوجية تستدعي خطة تدخل مكثفة.`,
+      annualGoals: [
+        `رفع معدل الطلاقة القرائية الشفوية (WCPM) من ${wcpm} إلى ${Math.round(wcpm * 1.5) + 15} كلمة صحيحة في الدقيقة في نصوص الصف ${gradeLevel} المشكولة.`,
+        `تحقيق دقة لا تقل عن 92% في التمييز السمعي والنطقي للأزواج الصوتية المتشابهة في الكلمات والجمل المستهدفة.`,
+        `إتقان فك ترميز الكلمات غير المعجمية (Pseudo-words) بدقة 90% للتأكد من رسوخ مهارات فك الشفرة وتراجع التخمين.`,
+      ],
+      shortTermObjectives: [
+        `الهدف المرحلي 1 (4 أسابيع): إتقان التمييز بين 20 زوجاً من الكلمات المستهدفة (${targetsText}) بدقة 85% عبر السبرنت اليومي.`,
+        `الهدف المرحلي 2 (8 أسابيع): قراءة نصوص ديكودر مشكولة تشتمل على 40-60 كلمة دون تردد ملحوظ بمعدل يفوق ${Math.round(wcpm * 1.25)} ك/د.`,
+        `الهدف المرحلي 3 (12 أسبوعاً): إتمام 5 دقائق تدريب يومي شيدت فيه التلقائية وسرعة الاسترجاع الذهني بنسبة تحسن 30%.`,
+      ],
+      accommodations: [
+        'منح وقت إضافي (25% إلى 50%) في كافة مهام القراءة والتقييمات التحريرية.',
+        'توفير تظليل بصري أو مسطرة قراءة للحد من القفز بين الأسطر وتشتت المسار البصري.',
+        'الاعتماد التام على نصوص مشكولة بخطوط واضحة ومسافات كافية بين الكلمات (1.5x).',
+        'تجنب مطالبة الطالب بالقراءة الجهرية المفاجئة أمام زملائه دون تحضير وتدريب مسبق.',
+        'إتاحة الاستماع للنصوص الطويلة عبر قارئ الصوت البشري الطبيعي، مع تقطيع الأسئلة المركبة إلى خطوات بسيطة.',
+      ],
+      weeklySchedule: [
+        { day: 'الأحد', activity: 'سبرنت التدريب الخاطف (5 دقائق): إحماء التمييز الصوتي + قراءة قصة موجهة', durationMinutes: 10 },
+        { day: 'الإثنين', activity: 'تفكيك مقطعي ملون وتدريب السكون وحروف المد', durationMinutes: 10 },
+        { day: 'الثلاثاء', activity: 'قراءة قصة الذكاء الاصطناعي التكيفية (StoryGen) ومناقشة أسئلة الفهم', durationMinutes: 15 },
+        { day: 'الأربعاء', activity: 'سبرنت التسمية السريعة والتظليل الصوتي (Audio Shadowing)', durationMinutes: 10 },
+        { day: 'الخميس', activity: 'مراجعة أسبوعية واحتفال بنقاط الإنجاز والشارات المكتسبة', durationMinutes: 10 },
+      ],
+      clinicalDisclaimer: 'تنويه مهني وقانوني هام: هذه الوثيقة خطة تدخل تربوي فردي مبنية على مؤشرات الفرز الصوتي والقرائي. رصد مواطن الصعوبة لا يُعد بمفرده تشخيصاً سريرياً نهائياً لعسر القراءة (Dyslexia)، ويوصى بإحالة الطالب إلى تقييم نفسي-تربوي وعصبي شامل لدى أخصائي معتمد في حال استمرار الصعوبة بعد 12 أسبوعاً من التدخل المنظم.',
+      source: 'clinical_rule_engine',
+    };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      res.json(fallbackIep);
+      return;
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: `أنت مستشار تربوي إكلينيكي متخصص في صعوبات التعلم وعسر القراءة (Dyslexia).
+قم بتوليد خطة تربوية فردية متقدمة (IEP - Individualized Education Plan) للطالب بناءً على مؤشرات التقييم الصوتي والقرائي التالية:
+- اسم الطالب: ${studentName}، الصف: ${gradeLevel}
+- معدل الطلاقة الشفوية (WCPM): ${wcpm} كلمة/دقيقة، دقة القراءة: ${accuracy}%
+- اختبار التسمية التلقائية السريعة (RAN): ${ranDurationSec} ثانية
+- دقة فك الكلمات غير المعجمية: ${pseudoAccuracy}%، درجة الوعي الصوتي: ${phonemicScore}/6
+- مواطن الضعف المرصودة: ${targetsText}
+
+شروط الخطة:
+1. صياغة أهداف سنوية وأهداف مرحلية ذكية وقابلة للقياس (SMART Goals).
+2. قائمة تكييفات وتيسيرات صفية واختبارية عملية ومقبولة في المدارس.
+3. جدول زمني أسبوعي للتدخل يتضمن "سبرنت 5 دقائق يومي" وجلسات التفكيك الصوتي.
+4. كتابة تنبيه صريح يوضح أن الفرز وتحديد الصعوبات لا يمثلان وحدهما تشخيصاً عصبياً-نفسياً لعسر القراءة، مع تحديد ضوابط الإحالة.`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              studentName: { type: Type.STRING },
+              gradeLevel: { type: Type.INTEGER },
+              date: { type: Type.STRING },
+              baselineSummary: { type: Type.STRING },
+              annualGoals: { type: Type.ARRAY, items: { type: Type.STRING } },
+              shortTermObjectives: { type: Type.ARRAY, items: { type: Type.STRING } },
+              accommodations: { type: Type.ARRAY, items: { type: Type.STRING } },
+              weeklySchedule: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    day: { type: Type.STRING },
+                    activity: { type: Type.STRING },
+                    durationMinutes: { type: Type.INTEGER },
+                  },
+                  required: ['day', 'activity', 'durationMinutes'],
+                },
+              },
+              clinicalDisclaimer: { type: Type.STRING },
+            },
+            required: ['studentName', 'gradeLevel', 'date', 'baselineSummary', 'annualGoals', 'shortTermObjectives', 'accommodations', 'weeklySchedule', 'clinicalDisclaimer'],
+          },
+        },
+      });
+
+      const parsed = JSON.parse((response.text || '{}').trim());
+      if (parsed && Array.isArray(parsed.annualGoals) && parsed.baselineSummary) {
+        res.json({ ...parsed, source: 'gemini-3.8-flash' });
+        return;
+      }
+      res.json(fallbackIep);
+    } catch (err) {
+      console.warn('IEP generation error, using fallback:', err);
+      res.json(fallbackIep);
+    }
+  });
+
   // Cache for natural Arabic neural audio clips to provide instant playback with 0ms delay
   const ttsAudioCache = new Map<string, { audioBase64: string; mimeType: string; source: string }>();
 

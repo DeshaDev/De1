@@ -23,7 +23,12 @@ import {
   Info,
   X,
   RefreshCw,
+  Flame,
+  FileText,
 } from 'lucide-react';
+import { DailySprintStation } from './remediation/DailySprintStation';
+import { StoryGenStation } from './remediation/StoryGenStation';
+import { IEPStation } from './remediation/IEPStation';
 import { StudentRecord } from '../data/seedData';
 import { AppTabId } from './HomeLandingView';
 import {
@@ -55,7 +60,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   canGeneratePlan = false,
 }) => {
   // Active Station Tab: phonics | syllables | pacer | math
-  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math'>('phonics');
+  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep'>('phonics');
   const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
   // Curated grade-specific practice selected from reviewed content
@@ -459,6 +464,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             { id: 'syllables', label: '٢. تركيب المقاطع', icon: BookOpen },
             { id: 'pacer', label: '٣. إبراز الكلمات', icon: Eye },
             { id: 'math', label: '٤. خط الأعداد', icon: Calculator },
+            { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
+            { id: 'storygen', label: '📖 قصص الذكاء الاصطناعي', icon: Sparkles },
+            { id: 'iep', label: '📋 الخطة التربوية (IEP)', icon: FileText },
           ].map((st) => {
             const Icon = st.icon;
             const isActive = activeStation === st.id;
@@ -1150,6 +1158,38 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* STATION 5: 5-MINUTE DAILY SPRINT (VTO READING MODEL)          */}
+      {/* ------------------------------------------------------------- */}
+      {activeStation === 'sprint' && (
+        <DailySprintStation
+          activeStudent={activeStudent}
+          speakText={speakText}
+          triggerCelebration={triggerCelebration}
+        />
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* STATION 6: ADAPTIVE DECODABLE STORYGEN (LUCA AI MODEL)       */}
+      {/* ------------------------------------------------------------- */}
+      {activeStation === 'storygen' && (
+        <StoryGenStation
+          activeStudent={activeStudent}
+          speakText={speakText}
+          triggerCelebration={triggerCelebration}
+        />
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* STATION 7: INDIVIDUALIZED EDUCATION PLAN (IEP GENERATOR)     */}
+      {/* ------------------------------------------------------------- */}
+      {activeStation === 'iep' && (
+        <IEPStation
+          activeStudent={activeStudent}
+          speakText={speakText}
+        />
       )}
     </div>
   );
