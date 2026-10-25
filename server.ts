@@ -663,9 +663,14 @@ function aiRateLimiter(
   const windowMs = 60_000;
   const maxRequestsPerMinute = 20;
 
+  // Bound the number of attacker-controlled IP keys as well as each sliding window.
   const history = (aiRateLimitBuckets.get(clientIp) || []).filter(
     (ts) => now - ts < windowMs
   );
+  if (!aiRateLimitBuckets.has(clientIp) && aiRateLimitBuckets.size >= 5_000) {
+    const oldestKey = aiRateLimitBuckets.keys().next().value;
+    if (oldestKey !== undefined) aiRateLimitBuckets.delete(oldestKey);
+  }
   if (history.length >= maxRequestsPerMinute) {
     res.setHeader('Retry-After', '60');
     res.status(429).json({
@@ -676,7 +681,6 @@ function aiRateLimiter(
   }
   history.push(now);
   aiRateLimitBuckets.set(clientIp, history);
-  saveSecurityState();
   next();
 }
 
@@ -1836,8 +1840,8 @@ async function startServer() {
   });
 
   // Arabic Decodable Story Generation API (Exact Phonemic Focus + Zero English Leakage)
-  app.post('/api/ai/generate-story', async (req, res) => {
-    const { interest, targetPhoneme, gradeLevel, studentName } = req.body || {};
+  app.post('/api/ai/generate-story', requireBaseeraAuth('ai:analyze'), async (req, res) => {
+    const { interest, targetPhoneme, gradeLevel } = req.body || {};
     const interestMap: Record<string, string> = {
       space: 'الْفَضَاءِ',
       animals: 'الْحَيَوَانَاتِ',
@@ -1848,7 +1852,8 @@ async function startServer() {
     const cleanInterest = typeof interest === 'string' && interest.trim() ? (interestMap[interest.trim()] || interest.trim()) : 'الْمُغَامَرَةِ';
     const cleanPhoneme = typeof targetPhoneme === 'string' && targetPhoneme.trim() ? targetPhoneme.trim() : 'س / ص';
     const cleanGrade = Number.isInteger(gradeLevel) ? Number(gradeLevel) : 2;
-    const cleanName = typeof studentName === 'string' && studentName.trim() ? studentName.trim() : 'البطل';
+    // Never accept or forward identifying child names to external generation providers.
+    const cleanName = 'بطل';
 
     // Dedicated stories per phonemic pair so the fallback NEVER confuses phonemes!
     const phonemeStories: Record<string, any> = {
@@ -1965,7 +1970,7 @@ async function startServer() {
 قم بتوليد قصة قصيرة تعليمية موجهة وفك شفرة (Decodable Story) مخصصة للطفل، مضبوطة بالشكل التام (مشكولة بنسبة 100% بالحركات والتنوين والسكون دون أي كلمة غير مشكولة).
 المعايير:
 - اهتمام الطفل: ${cleanInterest}
-- اسم البطل في القصة: ${cleanName}
+- اسم الشخصية الخيالية في القصة: بطل (لا تستخدم أي اسم شخصي أو مُعرّف لطفل)
 - الفونيم أو القاعدة المستهدفة: ${cleanPhoneme}
 - المستوى الدراسي: الصف ${cleanGrade} الابتدائي.
 - الطول: بين 35 إلى 60 كلمة فقط، جمل قصيرة سهلة التركيب.
@@ -2024,127 +2029,37 @@ async function startServer() {
     }
   });
 
-  // Individualized Education Plan (IEP) Generator API
-  app.post('/api/ai/generate-iep', async (req, res) => {
-    const {
-      studentName = 'الطالب',
-      gradeLevel = 2,
-      wcpm = 45,
-      accuracy = 85,
-      ranDurationSec = 35,
-      ranCategory = 'الألوان',
-      pseudoAccuracy = 70,
-      phonemicScore = 4,
-      observedTargets = [],
-    } = req.body || {};
-
-    const cleanTargets = Array.isArray(observedTargets) ? observedTargets.slice(0, 5) : [];
-    const targetsText = cleanTargets.length > 0 ? cleanTargets.join('، ') : 'الأزواج الصوتية المتجانسة والمقاطع الساكنة';
-
-    const fallbackIep = {
-      studentName,
-      gradeLevel,
-      date: new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
-      baselineSummary: `أظهر التقييم الشفوي للطالب(ة) ${studentName} في الصف ${gradeLevel} معدل طلاقة قرائية يبلغ ${wcpm} كلمة/دقيقة بدقة ${accuracy}%. كما بلغت مدة التسمية السريعة (RAN) لـ ${ranCategory} ${ranDurationSec} ثانية، مع دقة ${pseudoAccuracy}% في فك الكلمات غير المعجمية، ودرجة ${phonemicScore}/6 في الوعي الصوتي. تم رصد صعوبات متكررة في: ${targetsText}. تشير هذه النتائج إلى مؤشرات خطورة فونولوجية تستدعي خطة تدخل مكثفة.`,
-      annualGoals: [
-        `رفع معدل الطلاقة القرائية الشفوية (WCPM) من ${wcpm} إلى ${Math.round(wcpm * 1.5) + 15} كلمة صحيحة في الدقيقة في نصوص الصف ${gradeLevel} المشكولة.`,
-        `تحقيق دقة لا تقل عن 92% في التمييز السمعي والنطقي للأزواج الصوتية المتشابهة في الكلمات والجمل المستهدفة.`,
-        `إتقان فك ترميز الكلمات غير المعجمية (Pseudo-words) بدقة 90% للتأكد من رسوخ مهارات فك الشفرة وتراجع التخمين.`,
-      ],
-      shortTermObjectives: [
-        `الهدف المرحلي 1 (4 أسابيع): إتقان التمييز بين 20 زوجاً من الكلمات المستهدفة (${targetsText}) بدقة 85% عبر السبرنت اليومي.`,
-        `الهدف المرحلي 2 (8 أسابيع): قراءة نصوص ديكودر مشكولة تشتمل على 40-60 كلمة دون تردد ملحوظ بمعدل يفوق ${Math.round(wcpm * 1.25)} ك/د.`,
-        `الهدف المرحلي 3 (12 أسبوعاً): إتمام 5 دقائق تدريب يومي شيدت فيه التلقائية وسرعة الاسترجاع الذهني بنسبة تحسن 30%.`,
-      ],
-      accommodations: [
-        'منح وقت إضافي (25% إلى 50%) في كافة مهام القراءة والتقييمات التحريرية.',
-        'توفير تظليل بصري أو مسطرة قراءة للحد من القفز بين الأسطر وتشتت المسار البصري.',
-        'الاعتماد التام على نصوص مشكولة بخطوط واضحة ومسافات كافية بين الكلمات (1.5x).',
-        'تجنب مطالبة الطالب بالقراءة الجهرية المفاجئة أمام زملائه دون تحضير وتدريب مسبق.',
-        'إتاحة الاستماع للنصوص الطويلة عبر قارئ الصوت البشري الطبيعي، مع تقطيع الأسئلة المركبة إلى خطوات بسيطة.',
-      ],
-      weeklySchedule: [
-        { day: 'الأحد', activity: 'سبرنت التدريب الخاطف (5 دقائق): إحماء التمييز الصوتي + قراءة قصة موجهة', durationMinutes: 10 },
-        { day: 'الإثنين', activity: 'تفكيك مقطعي ملون وتدريب السكون وحروف المد', durationMinutes: 10 },
-        { day: 'الثلاثاء', activity: 'قراءة قصة الذكاء الاصطناعي التكيفية (StoryGen) ومناقشة أسئلة الفهم', durationMinutes: 15 },
-        { day: 'الأربعاء', activity: 'سبرنت التسمية السريعة والتظليل الصوتي (Audio Shadowing)', durationMinutes: 10 },
-        { day: 'الخميس', activity: 'مراجعة أسبوعية واحتفال بنقاط الإنجاز والشارات المكتسبة', durationMinutes: 10 },
-      ],
-      clinicalDisclaimer: 'تنويه مهني وقانوني هام: هذه الوثيقة خطة تدخل تربوي فردي مبنية على مؤشرات الفرز الصوتي والقرائي. رصد مواطن الصعوبة لا يُعد بمفرده تشخيصاً سريرياً نهائياً لعسر القراءة (Dyslexia)، ويوصى بإحالة الطالب إلى تقييم نفسي-تربوي وعصبي شامل لدى أخصائي معتمد في حال استمرار الصعوبة بعد 12 أسبوعاً من التدخل المنظم.',
-      source: 'clinical_rule_engine',
-    };
-
-    const ai = getGenAIClient();
-    if (!ai) {
-      res.json(fallbackIep);
-      return;
-    }
-
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: `أنت مستشار تربوي إكلينيكي متخصص في صعوبات التعلم وعسر القراءة (Dyslexia).
-قم بتوليد خطة تربوية فردية متقدمة (IEP - Individualized Education Plan) للطالب بناءً على مؤشرات التقييم الصوتي والقرائي التالية:
-- اسم الطالب: ${studentName}، الصف: ${gradeLevel}
-- معدل الطلاقة الشفوية (WCPM): ${wcpm} كلمة/دقيقة، دقة القراءة: ${accuracy}%
-- اختبار التسمية التلقائية السريعة (RAN): ${ranDurationSec} ثانية
-- دقة فك الكلمات غير المعجمية: ${pseudoAccuracy}%، درجة الوعي الصوتي: ${phonemicScore}/6
-- مواطن الضعف المرصودة: ${targetsText}
-
-شروط الخطة:
-1. صياغة أهداف سنوية وأهداف مرحلية ذكية وقابلة للقياس (SMART Goals).
-2. قائمة تكييفات وتيسيرات صفية واختبارية عملية ومقبولة في المدارس.
-3. جدول زمني أسبوعي للتدخل يتضمن "سبرنت 5 دقائق يومي" وجلسات التفكيك الصوتي.
-4. كتابة تنبيه صريح يوضح أن الفرز وتحديد الصعوبات لا يمثلان وحدهما تشخيصاً عصبياً-نفسياً لعسر القراءة، مع تحديد ضوابط الإحالة.`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              studentName: { type: Type.STRING },
-              gradeLevel: { type: Type.INTEGER },
-              date: { type: Type.STRING },
-              baselineSummary: { type: Type.STRING },
-              annualGoals: { type: Type.ARRAY, items: { type: Type.STRING } },
-              shortTermObjectives: { type: Type.ARRAY, items: { type: Type.STRING } },
-              accommodations: { type: Type.ARRAY, items: { type: Type.STRING } },
-              weeklySchedule: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    day: { type: Type.STRING },
-                    activity: { type: Type.STRING },
-                    durationMinutes: { type: Type.INTEGER },
-                  },
-                  required: ['day', 'activity', 'durationMinutes'],
-                },
-              },
-              clinicalDisclaimer: { type: Type.STRING },
-            },
-            required: ['studentName', 'gradeLevel', 'date', 'baselineSummary', 'annualGoals', 'shortTermObjectives', 'accommodations', 'weeklySchedule', 'clinicalDisclaimer'],
-          },
-        },
-      });
-
-      const parsed = JSON.parse((response.text || '{}').trim());
-      if (parsed && Array.isArray(parsed.annualGoals) && parsed.baselineSummary) {
-        res.json({ ...parsed, source: 'gemini-3.8-flash' });
-        return;
-      }
-      res.json(fallbackIep);
-    } catch (err) {
-      console.warn('IEP generation error, using fallback:', err);
-      res.json(fallbackIep);
-    }
+  // The former IEP generator produced unsupported, sometimes fabricated risk statements.
+  // Keep the endpoint explicitly retired so stale clients cannot generate misleading plans.
+  app.post('/api/ai/generate-iep', requireBaseeraAuth('ai:analyze'), (_req, res) => {
+    res.status(410).json({
+      code: 'IEP_GENERATOR_RETIRED',
+      error: 'تم إيقاف مولّد الخطة التربوية لأنه كان يعتمد أحيانًا على بيانات افتراضية. لا تُستخدم هذه النتائج لتصنيف الطفل أو تحديد حاجته إلى تدخل.',
+    });
   });
 
-  // Cache for natural Arabic neural audio clips to provide instant playback with 0ms delay
+  // Bounded cache: never retain an unlimited number of user-controlled audio payloads.
   const ttsAudioCache = new Map<string, { audioBase64: string; mimeType: string; source: string }>();
+  const MAX_TTS_CACHE_ENTRIES = 12;
+  const MAX_CACHED_AUDIO_CHARS = 500_000;
 
-  app.post('/api/ai/tts', async (req, res) => {
+  const cacheTtsAudio = (
+    key: string,
+    payload: { audioBase64: string; mimeType: string; source: string }
+  ) => {
+    if (!payload.audioBase64 || payload.audioBase64.length > MAX_CACHED_AUDIO_CHARS) return;
+    ttsAudioCache.delete(key);
+    while (ttsAudioCache.size >= MAX_TTS_CACHE_ENTRIES) {
+      const oldestKey = ttsAudioCache.keys().next().value;
+      if (oldestKey === undefined) break;
+      ttsAudioCache.delete(oldestKey);
+    }
+    ttsAudioCache.set(key, payload);
+  };
+
+  app.post('/api/ai/tts', requireBaseeraAuth('ai:analyze'), async (req, res) => {
     const { text, voice, rate } = req.body || {};
-    if (!text || typeof text !== 'string' || !text.trim() || text.length > 8000) {
+    if (!text || typeof text !== 'string' || !text.trim() || text.length > 1200) {
       res.status(400).json({
         error: 'يلزم إدخال نص صالح لا يتجاوز 8,000 حرف لتحويله إلى صوت.',
       });
@@ -2193,7 +2108,7 @@ async function startServer() {
           const arrayBuffer = await azureRes.arrayBuffer();
           const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
           const payload = { audioBase64, mimeType: 'audio/mp3', source: 'azure_neural_arabic' };
-          ttsAudioCache.set(cacheKey, payload);
+          cacheTtsAudio(cacheKey, payload);
           res.json(payload);
           return;
         } else {
@@ -2229,7 +2144,7 @@ async function startServer() {
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (base64Audio) {
           const payload = { audioBase64: base64Audio, mimeType: 'audio/wav', source: 'gemini_tts' };
-          ttsAudioCache.set(cacheKey, payload);
+          cacheTtsAudio(cacheKey, payload);
           res.json(payload);
           return;
         }
@@ -2246,7 +2161,7 @@ async function startServer() {
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
-  app.post('/api/ai/pronunciation-assessment', async (req, res) => {
+  app.post('/api/ai/pronunciation-assessment', requireBaseeraAuth('ai:analyze'), async (req, res) => {
     const body = req.body || {};
     const {
       referenceText,
