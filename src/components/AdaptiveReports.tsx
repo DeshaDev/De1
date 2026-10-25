@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
-import { MultiDimensionalRadar, CognitiveRadarScores } from './MultiDimensionalRadar';
+import { MultiDimensionalRadar, LearningMetric } from './MultiDimensionalRadar';
 
 export interface AdaptiveReportsProps {
   student?: StudentRecord;
@@ -132,38 +132,104 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const isOralReading = Boolean(studentData.reading && (studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true));
   const hasOralReadingEvidence = Boolean(studentData.reading && ((studentData.reading.spokenTranscript || '').trim() || studentData.reading.teacherVerified === true));
 
-  // 5-Axis Cognitive Radar Scores
-  const radarScores: CognitiveRadarScores = useMemo(() => {
-    let orfFluency = 50;
-    if (studentData.reading && typeof studentData.reading.wcpm === 'number') {
-      orfFluency = Math.min(100, Math.round((studentData.reading.wcpm / 70) * 100));
-    } else if (studentData.reading && studentData.reading.wpm > 0) {
-      orfFluency = Math.min(100, Math.round((studentData.reading.wpm / 80) * 100));
-    }
-
-    let ranSpeed = 65;
+  // Display only measures that were actually recorded, in their native units.
+  // Never fill missing observations with invented defaults or normalize unlike measures.
+  const observedMetrics: LearningMetric[] = useMemo(() => {
     const cog = student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults;
-    if (cog) {
-      ranSpeed = Math.min(100, Math.max(20, Math.round((20 / Math.max(10, cog.ranDurationSeconds)) * 100)));
-    }
-
-    let pseudoDecoding = cog ? cog.pseudoWordScorePercent : 62;
-    let phonemicAwareness = cog ? cog.phonemicAwarenessScorePercent : 75;
-
-    let numeracy = 70;
-    if (studentData.math && typeof studentData.math.numberLinePAE === 'number') {
-      numeracy = Math.min(100, Math.max(20, Math.round(100 - studentData.math.numberLinePAE * 2)));
-    } else if (studentData.math && typeof studentData.math.subitizingAccuracy === 'number') {
-      numeracy = studentData.math.subitizingAccuracy;
-    }
-
-    return {
-      orfFluency,
-      ranSpeed,
-      pseudoDecoding,
-      phonemicAwareness,
-      numeracy,
-    };
+    const reading = studentData.reading;
+    const math = studentData.math;
+    const validValue = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+    const oralSourceVerified = Boolean(
+      student &&
+      student.sessionStatus === 'completed' &&
+      (
+        (student.evidenceProvenance === 'server-verified-audio' && student.aiAssessmentVerified === true) ||
+        student.teacherVerified === true
+      )
+    );
+    const oralWcpm = oralSourceVerified
+      ? validValue(student?.wcpm ?? student?.oralWcpm ?? reading?.wcpm)
+      : null;
+    const silentWpm = reading &&
+      reading.assessmentModality !== 'voice_only' &&
+      reading.oralReadingAssessed !== true
+        ? validValue(reading.wpm)
+        : null;
+    const pseudoWordDetails = cog && typeof cog.pseudoWordWordsRead === 'number' &&
+      typeof cog.pseudoWordTotalCount === 'number'
+        ? 'أُنجز ' + cog.pseudoWordWordsRead + ' من ' + cog.pseudoWordTotalCount + ' عنصرًا في هذه المهمة.'
+        : 'تعكس النسبة العناصر المسجلة في المهمة فقط.';
+    return [
+      {
+        id: 'oral-wcpm',
+        label: 'الكلمات الصحيحة في القراءة الجهرية',
+        value: oralWcpm,
+        unit: 'كلمة/دقيقة',
+        detail: oralWcpm === null
+          ? 'لا توجد نتيجة جهرية موثقة المصدر متاحة للعرض؛ لا نستبدلها بدرجة تقديرية.'
+          : 'نتيجة جلسة صوتية موثقة المصدر. ليست معيارًا عمريًا ولا تشخيصًا.',
+        precision: 0,
+      },
+      {
+        id: 'silent-wpm',
+        label: 'معدل إتمام النص الصامت',
+        value: silentWpm,
+        unit: 'كلمة/دقيقة',
+        detail: silentWpm === null
+          ? 'غير متاح في جلسة القراءة الحالية.'
+          : 'محسوب بافتراض إتمام النص المعروض؛ لا يتحقق من صحة قراءة الكلمات فرديًا.',
+        precision: 0,
+      },
+      {
+        id: 'ran-time',
+        label: 'زمن مهمة التسمية السريعة',
+        value: cog ? validValue(cog.ranDurationSeconds) : null,
+        unit: 'ثانية',
+        detail: 'زمن المهمة المسجل كما هو؛ لم يُحوّل إلى نسبة أو معيار عمري.',
+        precision: 1,
+      },
+      {
+        id: 'pseudo-decoding',
+        label: 'دقة قراءة الكلمات غير المعجمية',
+        value: cog ? validValue(cog.pseudoWordScorePercent) : null,
+        unit: '%',
+        detail: pseudoWordDetails + ' هذه ليست درجة معيارية.',
+        precision: 0,
+      },
+      {
+        id: 'phonemic-awareness',
+        label: 'دقة مهام الوعي الصوتي',
+        value: cog ? validValue(cog.phonemicAwarenessScorePercent) : null,
+        unit: '%',
+        detail: 'نسبة الإجابات الصحيحة المسجلة في مهام هذه الجولة؛ لا تعمم على كل مهارات القراءة.',
+        precision: 0,
+      },
+      {
+        id: 'quantity',
+        label: 'دقة تمييز الكميات',
+        value: math ? validValue(math.subitizingAccuracy) : null,
+        unit: '%',
+        detail: 'أداء الطفل في مهام تمييز الكميات المنفذة فقط.',
+        precision: 0,
+      },
+      {
+        id: 'number-line-error',
+        label: 'الخطأ في موضع العدد على خط الأعداد',
+        value: math ? validValue(math.numberLinePAE) : null,
+        unit: '% خطأ',
+        detail: 'هذا مقياس خطأ؛ الأقل يعني موضعًا أقرب في المهمة، وليس قدرة رياضية عامة.',
+        precision: 1,
+      },
+      {
+        id: 'number-transcoding',
+        label: 'دقة كتابة/قراءة رموز الأعداد',
+        value: math ? validValue(math.transcodingAccuracy) : null,
+        unit: '%',
+        detail: 'دقة التحويل بين رموز الأعداد كما سجلت في المهام المنفذة.',
+        precision: 0,
+      },
+    ];
   }, [studentData, student, currentAssessment]);
 
   // Record the outputs actually observed in this session without turning them into strengths,
@@ -719,8 +785,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
-          {/* 5-Axis Cognitive Radar Visualizer */}
-          <MultiDimensionalRadar scores={radarScores} studentName={studentData.studentName} />
+          {/* Native-unit measures: no synthetic defaults or misleading shared percentage scale. */}
+          <MultiDimensionalRadar metrics={observedMetrics} studentName={studentData.studentName} />
 
           {/* Available Learning Measures Table */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
