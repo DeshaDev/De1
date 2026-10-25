@@ -1647,7 +1647,7 @@ async function startServer() {
   );
 
   // 2. Optional AI-assisted reading-text adaptation. Output is always a draft requiring human review.
-  app.post('/api/ai/adapt-text', requireBaseeraAuth('ai:analyze'), aiRateLimiter, async (req, res) => {
+  app.post('/api/ai/adapt-text', requireBaseeraAuth('ai:analyze'), async (req, res) => {
     const { text } = req.body || {};
     if (
       typeof text !== 'string' ||
