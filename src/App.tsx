@@ -832,7 +832,7 @@ export default function App() {
               title="ابدأ سبرنت اليوم (5 دقائق تدريب وتأسيس مكثف)"
             >
               <Flame aria-hidden="true" size={17} className="text-amber-300 animate-pulse" />
-              <span>⚡ سبرنت اليوم</span>
+              <span>سبرنت اليوم</span>
             </button>
           </div>
         </div>

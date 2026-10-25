@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy, Star, Flame, Award, BookOpen, Sparkles, Zap, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
+import { IconStar, IconFlame, IconTrophy, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
 import { AppTabId } from './HomeLandingView';
 
 interface ChildTrophiesViewProps {
@@ -17,7 +18,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'sprint',
       title: 'وسام البرق السريع',
       description: 'أكملت تدريب سبرنت الـ ٥ دقائق المكثف بنجاح!',
-      icon: '⚡',
+      icon: 'lightning',
       color: 'from-amber-400 to-orange-500',
       earned: true,
       category: 'طلاقة وسرعة',
@@ -26,7 +27,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'story',
       title: 'وسام حكواتي بصيرة',
       description: 'قرأت قصة مشكولة كاملة وسجلت صوتك الرائع بالذكاء الاصطناعي!',
-      icon: '📖',
+      icon: 'book',
       color: 'from-emerald-400 to-teal-500',
       earned: true,
       category: 'قراءة وفهم',
@@ -35,7 +36,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'letters',
       title: 'صائد الحروف الذهبي',
       description: 'أتقنت التمييز بين الحروف المتشابهة ومخارج الأصوات بدقة.',
-      icon: '🔤',
+      icon: 'letters',
       color: 'from-blue-400 to-indigo-500',
       earned: true,
       category: 'وعي صوتي',
@@ -44,7 +45,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'syllables',
       title: 'مهندس المقاطع والكلمات',
       description: 'ركّبت المقاطع الصوتية لتكوين الكلمات العربية بنجاح.',
-      icon: '🧩',
+      icon: 'puzzle',
       color: 'from-purple-400 to-pink-500',
       earned: true,
       category: 'تركيب لغوي',
@@ -53,7 +54,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'math',
       title: 'بطل قفزات الأرقام',
       description: 'حدّدت مواقع الأعداد بدقة على خط الأعداد التفاعلي!',
-      icon: '🔢',
+      icon: 'numbers',
       color: 'from-sky-400 to-cyan-500',
       earned: true,
       category: 'إدراك عددي',
@@ -62,7 +63,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'master',
       title: 'وسام القارئ الخارق',
       description: 'أكمل ٣ قصص إضافية هذا الأسبوع لفتح هذا الوسام الأسطوري!',
-      icon: '👑',
+      icon: 'trophy',
       color: 'from-slate-200 to-slate-300',
       earned: false,
       category: 'تحدٍ قادم',
@@ -75,8 +76,8 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border-2 border-amber-300">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-right">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur border-2 border-white/40 flex items-center justify-center text-5xl shadow-inner animate-bounce-gentle shrink-0">
-              🦅
+            <div className="w-20 h-20 rounded-3xl bg-white/30 backdrop-blur border-2 border-white/50 flex items-center justify-center shadow-inner animate-bounce-gentle shrink-0">
+              <IconBaseeraFalcon size={52} />
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black tracking-wide mb-2 text-amber-100">
@@ -84,7 +85,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
                 <span>المستوى ٣ · بطل القراءة الصاعد</span>
               </div>
               <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
-                خزانة كؤوس وأوسمة: {activeStudent.name} 🌟
+                خزانة كؤوس وأوسمة: {activeStudent.name}
               </h1>
               <p className="font-child text-sm sm:text-base text-amber-100 font-bold mt-1">
                 ما شاء الله عليك يا بطل! واصل القراءة والتدريب لتجمع كل أوسمة المملكة.
@@ -96,14 +97,14 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-amber-600">
               <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
-                ⭐ {activeStudent.comprehensionScore > 0 ? activeStudent.comprehensionScore + 80 : 120}
+                <span className="flex items-center gap-1"><IconStar size={18} /> {activeStudent.comprehensionScore > 0 ? activeStudent.comprehensionScore + 80 : 120}</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط الخبرة XP</span>
             </div>
 
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-orange-600">
               <span className="text-xl font-black text-orange-600 font-mono flex items-center justify-center gap-1">
-                🔥 ٣
+                <span className="flex items-center gap-1"><IconFlame size={18} /> ٣</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">أيام حماس</span>
             </div>
@@ -122,7 +123,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
             <span>أوسمتي المكتسبة ({BADGES.filter(b => b.earned).length} من {BADGES.length}):</span>
           </h2>
           <span className="font-child text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            مستمر في التفوق 🚀
+            مستمر في التفوق
           </span>
         </div>
 
@@ -137,8 +138,13 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${b.color} text-white flex items-center justify-center text-3xl shadow-md shrink-0`}>
-                  {b.icon}
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center justify-center shadow-xs shrink-0">
+                  {b.id === 'sprint' && <IconLightningBolt size={32} />}
+                  {b.id === 'story' && <IconStoryBook size={32} />}
+                  {b.id === 'letters' && <IconLettersBlock size={32} />}
+                  {b.id === 'syllables' && <IconPuzzlePieces size={32} />}
+                  {b.id === 'math' && <IconNumberRuler size={32} />}
+                  {b.id === 'master' && <IconTrophy size={32} />}
                 </div>
                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
                   b.earned ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-600'
@@ -159,12 +165,12 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
 
               {b.earned ? (
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-emerald-700">
-                  <span>تم التتويج بنجاح 🎉</span>
+                  <span>تم التتويج بنجاح</span>
                   <span className="font-mono text-amber-600 font-black">+25 XP</span>
                 </div>
               ) : (
                 <div className="pt-2 border-t border-dashed border-slate-200 text-[11px] font-bold text-slate-400">
-                  🔒 مقفل حتى إكمال التحدي
+                  مقفل حتى إكمال التحدي
                 </div>
               )}
             </div>
@@ -176,7 +182,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       <div className="bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 rounded-3xl p-6 text-white text-center sm:text-right flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl border-b-6 border-emerald-800">
         <div>
           <h3 className="font-child text-xl font-black mb-1">
-            جاهز لكسب وسام جديد اليوم؟ 🚀
+            جاهز لكسب وسام جديد اليوم؟
           </h3>
           <p className="font-child text-sm text-emerald-100 font-bold">
             انطلق في تحدي سبرنت الـ ٥ دقائق أو اقرأ قصة جديدة لرفع مستواك!
@@ -188,7 +194,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           onClick={() => onNavigateTab('sprint')}
           className="child-tactile-btn px-6 py-3 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 font-child font-black text-base shadow-md cursor-pointer whitespace-nowrap border-b-4 border-emerald-200 active:border-b-1 active:translate-y-1"
         >
-          <span>⚡ ابدأ سبرنت اليوم</span>
+          <span>ابدأ سبرنت اليوم</span>
         </button>
       </div>
     </div>

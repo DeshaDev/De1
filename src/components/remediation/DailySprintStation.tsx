@@ -118,7 +118,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl md:text-2xl font-black text-slate-900 font-serif">
-                تحدي الدقائق الخمس اليومي ⚡
+                تحدي الدقائق الخمس اليومي
               </h2>
             </div>
             <p className="text-xs text-amber-800 font-bold mt-0.5">
@@ -131,7 +131,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl font-bold text-amber-900 text-xs shadow-xs">
             <Flame className="w-4 h-4 fill-amber-500 text-amber-500" />
-            <span>سلسلة الالتزام: <strong className="font-mono text-sm">{streakDays}</strong> أيام متتالية 🔥</span>
+            <span>سلسلة الالتزام: <strong className="font-mono text-sm">{streakDays}</strong> أيام متتالية</span>
           </div>
 
           <div className="flex items-center gap-2 bg-slate-900 text-white px-3.5 py-1.5 rounded-xl font-mono text-sm font-bold shadow-xs">

@@ -29,6 +29,7 @@ import {
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
 import { IEPStation } from './remediation/IEPStation';
+import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
 import { StudentRecord } from '../data/seedData';
 import { AppTabId } from './HomeLandingView';
 import {
@@ -393,7 +394,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-200/80 rounded-3xl p-3.5 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center text-2xl shadow-md shadow-emerald-500/20">
-            🌟
+            ⭐
           </div>
           <div>
             <h1 className="text-sm sm:text-base font-black text-slate-900">
@@ -452,12 +453,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         {/* Right: Joyful Station Buttons */}
         <div className="flex items-center gap-2 overflow-x-auto py-0.5">
           {[
-            { id: 'phonics', label: '🔤 صائد الحروف' },
-            { id: 'syllables', label: '🧩 تركيب المقاطع' },
-            { id: 'storygen', label: '📖 قصص الأبطال' },
-            { id: 'sprint', label: '⚡ سبرنت ٥ دقائق' },
-            { id: 'math', label: '🔢 خط الأعداد' },
-            { id: 'pacer', label: '👁️ طلاقة القراءة' },
+            { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock },
+            { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces },
+            { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook },
+            { id: 'sprint', label: 'سبرنت ٥ دقائق', icon: IconLightningBolt },
+            { id: 'math', label: 'خط الأعداد', icon: IconNumberRuler },
+            { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook },
           ].map((st) => {
             const isActive = activeStation === st.id;
             return (
@@ -474,7 +475,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                     : 'bg-white hover:bg-emerald-50 text-slate-700 border-slate-300 hover:border-emerald-300'
                 )}
               >
-                <span>{st.label}</span>
+                {st.icon && <st.icon size={18} className="shrink-0" />}<span>{st.label}</span>
               </button>
             );
           })}
@@ -493,7 +494,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
             title="إعدادات الصوت والطالب للمعلم"
           >
-            <span>⚙️</span>
+            <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">خيارات</span>
           </button>
         </div>
@@ -503,7 +504,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       {showTeacherSettings && (
         <div className="p-4 rounded-3xl bg-white border-2 border-slate-200 shadow-xl space-y-3 animate-fade-slide-up">
           <div className="flex items-center justify-between font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">
-            <span>⚙️ خيارات الجلسة وتحديد الصوت:</span>
+            <span className="flex items-center gap-1.5"><Settings className="w-4 h-4" /> خيارات الجلسة وتحديد الصوت:</span>
             <button
               type="button"
               onClick={() => setShowTeacherSettings(false)}
@@ -524,9 +525,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 }}
                 className="w-full p-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
               >
-                <option value="ar-SA-ZariyahNeural">🎙️ المعلمة زارية (فصيح سعودي)</option>
-                <option value="ar-EG-SalmaNeural">🎙️ المعلمة سلمى (مصري فصيح)</option>
-                <option value="ar-SA-HamedNeural">🎙️ الأستاذ حامد (فصيح رجالي)</option>
+                <option value="ar-SA-ZariyahNeural">المعلمة زارية (فصيح سعودي)</option>
+                <option value="ar-EG-SalmaNeural">المعلمة سلمى (مصري فصيح)</option>
+                <option value="ar-SA-HamedNeural">الأستاذ حامد (فصيح رجالي)</option>
               </select>
             </div>
             <div>
@@ -610,7 +611,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#15803D] hover:bg-[#166534] active:scale-95 text-white text-sm sm:text-base font-bold transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
                   <Volume2 className="w-5 h-5 animate-pulse" />
-                  <span>🔊 استمع لنطق الكلمة</span>
+                  <span>استمع لنطق الكلمة</span>
                 </button>
 
                 {/* Optional activity hint */}
@@ -707,7 +708,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </div>
             ) : (
               <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 max-w-md mx-auto text-right">
-                💡 <span className="font-semibold">قاعدة التمييز:</span> {currentPhonics.ruleTip}
+                <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 inline ml-1" /><span className="font-semibold">قاعدة التمييز:</span> {currentPhonics.ruleTip}
               </div>
             )}
 
@@ -745,7 +746,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-mono font-bold text-slate-600 ml-1.5">
-                المرحلة {syllableIdx + 1} من {syllableList.length} 🧩
+                المرحلة {syllableIdx + 1} من {syllableList.length}
               </span>
             </div>
           </div>

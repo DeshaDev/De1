@@ -1066,3 +1066,94 @@ body.baseera-reading-focus {
 .animate-bounce-gentle {
   animation: bounce-gentle 2s ease-in-out infinite;
 }
+
+
+/* Duolingo / Feather Tactile 3D Buttons & Cards Design System */
+.duo-btn-green {
+  background-color: #58CC02;
+  border: 2px solid #45A002;
+  border-bottom-width: 5px;
+  color: #FFFFFF;
+  border-radius: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.duo-btn-green:hover {
+  background-color: #61E002;
+}
+.duo-btn-green:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+.duo-btn-blue {
+  background-color: #1CB0F6;
+  border: 2px solid #1899D6;
+  border-bottom-width: 5px;
+  color: #FFFFFF;
+  border-radius: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.duo-btn-blue:hover {
+  background-color: #2CD0FF;
+}
+.duo-btn-blue:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+.duo-btn-orange {
+  background-color: #FF9600;
+  border: 2px solid #CC7900;
+  border-bottom-width: 5px;
+  color: #FFFFFF;
+  border-radius: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.duo-btn-orange:hover {
+  background-color: #FFAA22;
+}
+.duo-btn-orange:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+.duo-btn-white {
+  background-color: #FFFFFF;
+  border: 2px solid #E2E8F0;
+  border-bottom-width: 4px;
+  color: #1E293B;
+  border-radius: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+.duo-btn-white:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+}
+.duo-btn-white:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.duo-card {
+  background-color: #FFFFFF;
+  border: 2px solid #E5E7EB;
+  border-bottom-width: 5px;
+  border-radius: 24px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.duo-card:hover {
+  border-color: #1CB0F6;
+  transform: translateY(-2px);
+}

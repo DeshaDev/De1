@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import {
-  Sparkles,
   Volume2,
-  Trophy,
   Check,
-  Star,
+  X,
   ArrowLeft,
   RotateCcw,
-  BookOpen,
+  Sparkles,
 } from 'lucide-react';
 import { StudentRecord } from '../../data/seedData';
 import {
@@ -15,6 +13,19 @@ import {
   CURATED_DECODABLE_STORIES,
   generateDecodableStory,
 } from '../../utils/adaptiveStoryGen';
+import {
+  IconStar,
+  IconTrophy,
+  IconStoryBook,
+  IconLettersBlock,
+  IconPuzzlePieces,
+  IconSpaceRocket,
+  IconForestAnimals,
+  IconSportsBall,
+  IconAdventureCompass,
+  IconMagicWand,
+  IconBaseeraFalcon,
+} from '../ui/ChildPlayfulIcons';
 
 interface StoryGenStationProps {
   activeStudent: StudentRecord;
@@ -30,23 +41,75 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   // Wizard steps: 'interest' -> 'phoneme' -> 'generating' -> 'story' -> 'quiz' -> 'celebrate'
   const [wizardStep, setWizardStep] = useState<'interest' | 'phoneme' | 'generating' | 'story' | 'quiz' | 'celebrate'>('interest');
   const [selectedInterest, setSelectedInterest] = useState<string>('space');
-  const [selectedPhoneme, setSelectedPhoneme] = useState<string>('س / ص');
+  const [, setSelectedPhoneme] = useState<string>('س / ص');
   const [story, setStory] = useState<DecodableStory>(CURATED_DECODABLE_STORIES[0]);
   const [revealedWord, setRevealedWord] = useState<string | null>(null);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
 
   const interestCards = [
-    { id: 'space', title: 'مغامرة الفضاء 🚀', desc: 'كواكب ونجوم ومراكب فضائية', gradient: 'from-indigo-600 via-purple-600 to-pink-500' },
-    { id: 'animals', title: 'عالم الحيوانات 🦁', desc: 'أصدقاء الغابة والصقر السريع', gradient: 'from-emerald-500 via-teal-600 to-cyan-600' },
-    { id: 'sports', title: 'أبطال الكرة ⚽', desc: 'مباريات حماسية وأهداف رائعة', gradient: 'from-amber-500 via-orange-500 to-rose-500' },
-    { id: 'adventure', title: 'أسرار الغابة 🌿', desc: 'رحلة استكشاف بين الأشجار والأنهار', gradient: 'from-green-600 via-emerald-700 to-teal-800' },
+    {
+      id: 'space',
+      title: 'مغامرة الفضاء',
+      desc: 'كواكب ونجوم ومراكب فضائية شيقة',
+      icon: IconSpaceRocket,
+      bg: 'bg-indigo-50 border-indigo-200 hover:border-indigo-400 text-indigo-950',
+    },
+    {
+      id: 'animals',
+      title: 'عالم الحيوانات',
+      desc: 'أصدقاء الغابة وصقر بصيرة السريع',
+      icon: IconForestAnimals,
+      bg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400 text-emerald-950',
+    },
+    {
+      id: 'sports',
+      title: 'أبطال الرياضة',
+      desc: 'مباريات حماسية وأهداف رائعة',
+      icon: IconSportsBall,
+      bg: 'bg-amber-50 border-amber-200 hover:border-amber-400 text-amber-950',
+    },
+    {
+      id: 'adventure',
+      title: 'أسرار الغابة',
+      desc: 'رحلة استكشاف بين الأشجار والأنهار',
+      icon: IconAdventureCompass,
+      bg: 'bg-teal-50 border-teal-200 hover:border-teal-400 text-teal-950',
+    },
   ];
 
   const soundChallenges = [
-    { id: 'sin_sad', sound: 'س / ص', label: 'تحدي السين والصاد', example: 'سَيْف ⚔️ مقابل صَيْف ☀️', color: 'border-blue-400 bg-blue-50/70 hover:bg-blue-100 text-blue-950' },
-    { id: 'dal_dad', sound: 'د / ض', label: 'تحدي الدال والضاد', example: 'دَلَّ 🧭 مقابل ضَلَّ 🌲', color: 'border-emerald-400 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-950' },
-    { id: 'ta_ta2', sound: 'ت / ط', label: 'تحدي التاء والطاء', example: 'تِين 🍇 مقابل طِين 🧱', color: 'border-amber-400 bg-amber-50/70 hover:bg-amber-100 text-amber-950' },
-    { id: 'sukun', sound: 'السكون', label: 'تحدي المقطع الساكن', example: 'بَدْـ · رٌ 🌙', color: 'border-purple-400 bg-purple-50/70 hover:bg-purple-100 text-purple-950' },
+    {
+      id: 'ta_ta2',
+      sound: 'ت / ط',
+      label: 'تحدي التاء والطاء',
+      exampleWord1: 'تِين',
+      exampleWord2: 'طِين',
+      badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+    },
+    {
+      id: 'sin_sad',
+      sound: 'س / ص',
+      label: 'تحدي السين والصاد',
+      exampleWord1: 'سَيْف',
+      exampleWord2: 'صَيْف',
+      badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
+    },
+    {
+      id: 'dal_dad',
+      sound: 'د / ض',
+      label: 'تحدي الدال والضاد',
+      exampleWord1: 'دَلَّ',
+      exampleWord2: 'ضَلَّ',
+      badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    },
+    {
+      id: 'sukun',
+      sound: 'السكون',
+      label: 'تحدي المقطع الساكن',
+      exampleWord1: 'بَدْـ',
+      exampleWord2: 'رٌ',
+      badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
+    },
   ];
 
   const handleChooseInterest = (interestId: string) => {
@@ -71,9 +134,11 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       setTimeout(() => {
         setWizardStep('story');
         speakText(`قصتنا اليوم عنوانها: ${generated.title}`);
-      }, 900);
+      }, 700);
     } catch {
-      setStory(CURATED_DECODABLE_STORIES[0]);
+      // Fallback: match EXACT phoneme
+      const fallback = CURATED_DECODABLE_STORIES.find((s) => s.targetPhoneme === phonemeSound) || CURATED_DECODABLE_STORIES[0];
+      setStory(fallback);
       setWizardStep('story');
     }
   };
@@ -91,7 +156,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       speakText('ممتاز! إجابة صحيحة وفهم رائع للقصة!');
       setTimeout(() => {
         setWizardStep('celebrate');
-      }, 1200);
+      }, 1000);
     } else {
       speakText('حاول مرة أخرى يا بطل، فكر في أحداث القصة');
     }
@@ -101,45 +166,57 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto py-2 px-2" dir="rtl">
-      {/* STEP 1: CHOOSE INTEREST (Pure Visual Cards) */}
+      {/* STEP 1: CHOOSE INTEREST (Pure Visual Duolingo Cards) */}
       {wizardStep === 'interest' && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-lg border-2 border-slate-100 text-center space-y-6 animate-fade-slide-up">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-slate-200/80 text-center space-y-6 animate-fade-slide-up">
           <div className="space-y-2">
-            <span className="text-3xl">✨ 📖 ✨</span>
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 font-serif">
+            <div className="w-16 h-16 mx-auto bg-amber-100 border-2 border-amber-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm animate-bounce-gentle">
+              <IconStoryBook size={38} />
+            </div>
+            <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
               عن ماذا تحب أن نقرأ اليوم يا {activeStudent.name}؟
             </h2>
-            <p className="text-sm font-bold text-slate-500">
-              اختر مغامرتك المفضلة بنقرة واحدة:
+            <p className="font-child text-sm font-bold text-slate-600">
+              اختر عالم مغامرتك المفضل بنقرة واحدة
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            {interestCards.map((card) => (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => handleChooseInterest(card.id)}
-                className={`p-6 rounded-3xl bg-gradient-to-br ${card.gradient} text-white shadow-md hover:shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer text-right space-y-2 select-none`}
-              >
-                <div className="text-2xl font-black">{card.title}</div>
-                <div className="text-xs text-white/90 font-medium">{card.desc}</div>
-              </button>
-            ))}
+            {interestCards.map((card) => {
+              const IconComp = card.icon;
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => handleChooseInterest(card.id)}
+                  className={`p-5 rounded-3xl border-2 ${card.bg} shadow-sm hover:shadow-md transition-all cursor-pointer text-right flex items-center gap-4 select-none child-tactile-btn active:translate-y-1`}
+                >
+                  <div className="shrink-0">
+                    <IconComp size={48} />
+                  </div>
+                  <div>
+                    <div className="font-child text-lg font-black">{card.title}</div>
+                    <div className="font-child text-xs opacity-80 font-bold mt-0.5">{card.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* STEP 2: CHOOSE SOUND CHALLENGE */}
       {wizardStep === 'phoneme' && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-lg border-2 border-slate-100 text-center space-y-6 animate-fade-slide-up">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-slate-200/80 text-center space-y-6 animate-fade-slide-up">
           <div className="space-y-2">
-            <span className="text-3xl">🎯 🔤 🎯</span>
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 font-serif">
+            <div className="w-16 h-16 mx-auto bg-blue-100 border-2 border-blue-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm animate-bounce-gentle">
+              <IconLettersBlock size={38} />
+            </div>
+            <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
               ما هو الصوت الذي سنتحداه في القصة؟
             </h2>
-            <p className="text-sm font-bold text-slate-500">
-              اختر التحدي لتبدأ المعلمة بكتابة القصة فوراً:
+            <p className="font-child text-sm font-bold text-slate-600">
+              اختر تحدي الحروف لتبدأ كتابة القصة فوراً
             </p>
           </div>
 
@@ -149,14 +226,20 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
                 key={challenge.id}
                 type="button"
                 onClick={() => handleChoosePhoneme(challenge.sound)}
-                className={`p-5 rounded-2xl border-2 ${challenge.color} shadow-xs hover:shadow-md hover:scale-103 active:scale-95 transition-all cursor-pointer text-right space-y-1`}
+                className="p-5 rounded-3xl border-2 border-slate-200 hover:border-emerald-400 bg-white hover:bg-emerald-50/50 shadow-sm hover:shadow-md transition-all cursor-pointer text-right space-y-2 child-tactile-btn active:translate-y-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-black font-serif">{challenge.sound}</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/80 border border-slate-200">تحدي اليوم</span>
+                  <span className="font-child text-xl font-black text-slate-900">{challenge.sound}</span>
+                  <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${challenge.badgeColor}`}>
+                    تحدي اليوم
+                  </span>
                 </div>
-                <div className="text-xs font-bold">{challenge.label}</div>
-                <div className="text-[11px] text-slate-600 font-mono">{challenge.example}</div>
+                <div className="font-child text-sm font-bold text-slate-700">{challenge.label}</div>
+                <div className="text-xs font-mono font-bold text-slate-500 flex items-center gap-1.5">
+                  <span className="text-emerald-700 font-bold">{challenge.exampleWord1}</span>
+                  <span>مقابل</span>
+                  <span className="text-amber-700 font-bold">{challenge.exampleWord2}</span>
+                </div>
               </button>
             ))}
           </div>
@@ -164,23 +247,24 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
           <button
             type="button"
             onClick={() => setWizardStep('interest')}
-            className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1 mx-auto cursor-pointer"
+            className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 mx-auto cursor-pointer pt-2"
           >
-            <span>← العودة لاختيار المغامرة</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>العودة لاختيار المغامرة</span>
           </button>
         </div>
       )}
 
       {/* STEP: GENERATING WITH PLAYFUL ANIMATION */}
       {wizardStep === 'generating' && (
-        <div className="bg-white rounded-3xl p-12 shadow-lg border-2 border-emerald-100 text-center space-y-4 animate-fade-slide-up">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl animate-bounce">
-            🪄
+        <div className="bg-white rounded-3xl p-10 sm:p-14 shadow-xl border-2 border-emerald-200 text-center space-y-4 animate-fade-slide-up">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center shadow-md animate-bounce-gentle">
+            <IconMagicWand size={44} />
           </div>
-          <h3 className="text-xl font-black text-slate-900 font-serif">
-            المعلمة زارية تكتب قصتك المشكولة الآن...
+          <h3 className="font-child text-2xl font-black text-slate-900">
+            جاري تأليف قصتك المشكولة الآن...
           </h3>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="font-child text-sm text-slate-600 font-bold">
             تجهيز الحركات، التنوين، والمغامرة الخاصة بك يا بطل!
           </p>
         </div>
@@ -188,31 +272,32 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
 
       {/* STEP 3: READ THE STORYBOOK (Joyful, Big Diacritized Text) */}
       {wizardStep === 'story' && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border-2 border-amber-200 space-y-6 animate-fade-slide-up text-right">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-amber-300/80 space-y-6 animate-fade-slide-up text-right">
           {/* Story Title & Audio Button */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-50/80 p-4 rounded-2xl border border-amber-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-amber-50/90 p-4 sm:p-5 rounded-2xl border border-amber-200">
             <div>
-              <h2 className="text-xl md:text-2xl font-black text-amber-950 font-serif">
+              <div className="inline-flex items-center gap-1.5 bg-amber-200/80 px-2.5 py-0.5 rounded-full text-xs font-black text-amber-900 mb-1.5">
+                <span>الصوت المستهدف:</span>
+                <span className="text-emerald-800">{story.targetPhoneme}</span>
+              </div>
+              <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
                 «{story.title}»
               </h2>
-              <span className="text-xs font-bold text-amber-800">
-                الصوت المتحدى في القصة: <strong className="text-emerald-700 font-black text-sm">{story.targetPhoneme}</strong>
-              </span>
             </div>
 
             <button
               type="button"
               onClick={() => speakText(story.story)}
-              className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
+              className="duo-btn-green py-3 px-5 text-sm flex items-center gap-2 cursor-pointer shrink-0"
             >
-              <Volume2 className="w-5 h-5 animate-pulse" />
-              <span>🔊 استمع للقصة كاملة</span>
+              <Volume2 className="w-4 h-4 animate-pulse" />
+              <span>استمع للقصة كاملة</span>
             </button>
           </div>
 
           {/* Story Parchment Box with Ultra-Readable Arabic Font */}
-          <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-b from-[#FFFDF7] to-[#FAF6EE] border-2 border-[#EADFC7] shadow-inner text-center leading-loose">
-            <div className="flex flex-wrap items-center justify-center gap-2.5 text-2xl sm:text-3xl md:text-4xl font-serif font-black text-slate-900">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-[#FFFDF7] to-[#FAF6EE] border-2 border-[#EADFC7] shadow-inner text-center leading-loose">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-2xl sm:text-3xl md:text-4xl font-serif font-black text-slate-900">
               {storyWords.map((word, wIdx) => {
                 const isTarget = story.targetWords.some((tw) => word.includes(tw) || tw.includes(word));
                 const isTapped = revealedWord === word;
@@ -234,17 +319,17 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
                 );
               })}
             </div>
-            <p className="text-xs text-amber-800/80 font-bold mt-4">
-              👆 المس أي كلمة باللون الأخضر للاستماع لنطقها السليم!
+            <p className="font-child text-xs text-amber-900 font-bold mt-5">
+              المس أي كلمة خضراء لسماع نطقها السليم
             </p>
           </div>
 
-          {/* Friendly Tip from Teacher */}
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 text-xl font-bold">
-              👩‍🏫
+          {/* Friendly Tip from Falcon Mascot */}
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center shrink-0 shadow-xs">
+              <IconBaseeraFalcon size={28} />
             </div>
-            <p className="text-xs text-emerald-950 font-bold leading-relaxed">
+            <p className="font-child text-xs text-emerald-950 font-bold leading-relaxed">
               {story.articulatoryTip.description}
             </p>
           </div>
@@ -256,9 +341,9 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               setWizardStep('quiz');
               speakText('والآن وقت سؤال التحدي يا بطل!');
             }}
-            className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="duo-btn-orange w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg"
           >
-            <Trophy className="w-5 h-5" />
+            <IconTrophy size={24} />
             <span>أنا جاهز لتحدي الأبطال! (+50 XP)</span>
           </button>
         </div>
@@ -266,13 +351,15 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
 
       {/* STEP 4: SINGLE FUN QUESTION (No Walls of Text!) */}
       {wizardStep === 'quiz' && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border-2 border-indigo-200 text-center space-y-6 animate-fade-slide-up">
-          <div className="space-y-1">
-            <span className="text-3xl">❓ 🧠 ❓</span>
-            <span className="text-xs font-extrabold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-indigo-200 text-center space-y-6 animate-fade-slide-up">
+          <div className="space-y-2">
+            <div className="w-14 h-14 mx-auto bg-indigo-100 border-2 border-indigo-300 rounded-2xl flex items-center justify-center mb-1 shadow-sm animate-bounce-gentle">
+              <IconPuzzlePieces size={34} />
+            </div>
+            <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 inline-block">
               سؤال الذكاء السريع
             </span>
-            <h3 className="text-xl md:text-2xl font-black text-slate-900 font-serif pt-2">
+            <h3 className="font-child text-xl sm:text-2xl font-black text-slate-900 pt-1">
               {story.questions[0]?.question || 'ماذا حدث في القصة؟'}
             </h3>
           </div>
@@ -286,16 +373,18 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
                   key={oIdx}
                   type="button"
                   onClick={() => handleAnswerQuiz(oIdx)}
-                  className={`w-full p-4 rounded-2xl text-base font-extrabold border-2 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-between ${
+                  className={`w-full p-4 rounded-2xl text-base font-black border-2 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-between font-child ${
                     isSelected
                       ? isCorrect
-                        ? 'bg-emerald-500 text-white border-emerald-600 scale-103'
+                        ? 'bg-emerald-500 text-white border-emerald-600 scale-102'
                         : 'bg-rose-100 text-rose-950 border-rose-400'
                       : 'bg-white hover:bg-indigo-50 text-slate-800 border-indigo-200'
                   }`}
                 >
                   <span>{opt}</span>
-                  {isSelected && (isCorrect ? <Check className="w-6 h-6 stroke-[3]" /> : <span>❌</span>)}
+                  {isSelected && (
+                    isCorrect ? <Check className="w-6 h-6 stroke-[3]" /> : <X className="w-6 h-6 stroke-[3] text-rose-600" />
+                  )}
                 </button>
               );
             })}
@@ -304,29 +393,30 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
           <button
             type="button"
             onClick={() => setWizardStep('story')}
-            className="text-xs font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
           >
-            ← قراءة القصة مجدداً
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>قراءة القصة مجدداً</span>
           </button>
         </div>
       )}
 
       {/* STEP 5: CELEBRATION & TROPHY */}
       {wizardStep === 'celebrate' && (
-        <div className="bg-white rounded-3xl p-8 md:p-12 shadow-2xl border-4 border-amber-300 text-center space-y-6 animate-fade-slide-up">
-          <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-5xl shadow-xl shadow-amber-300/50 animate-bounce">
-            🏆
+        <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border-4 border-amber-300 text-center space-y-6 animate-fade-slide-up">
+          <div className="w-24 h-24 mx-auto rounded-3xl bg-amber-100 border-3 border-amber-300 flex items-center justify-center shadow-lg animate-bounce-gentle">
+            <IconTrophy size={54} />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-3xl font-black text-slate-900 font-serif">
+            <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
               مبـــارك يا بطل الأبطال {activeStudent.name}!
             </h2>
-            <p className="text-base font-bold text-emerald-700">
+            <p className="font-child text-sm sm:text-base font-bold text-emerald-700">
               أتممت قراءة القصة وفهمت تفاصيلها بنجاح باهر!
             </p>
-            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl font-mono text-lg font-black text-amber-900 mt-2">
-              <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl font-mono text-base font-black text-amber-900 mt-2">
+              <IconStar size={20} />
               <span>+50 XP أضيفت لرصيدك!</span>
             </div>
           </div>
@@ -338,7 +428,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
                 setSelectedQuizAnswer(null);
                 setWizardStep('interest');
               }}
-              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm shadow-md transition-all cursor-pointer flex items-center gap-2"
+              className="duo-btn-green py-3.5 px-6 text-base flex items-center gap-2 cursor-pointer shadow-md"
             >
               <RotateCcw className="w-4 h-4" />
               <span>مغامرة وقصة جديدة</span>

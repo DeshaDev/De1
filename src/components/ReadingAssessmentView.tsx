@@ -42,6 +42,7 @@ import {
 } from '../utils/dyslexiaEngines';
 import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
 import { alignSpeechWithReferenceText } from '../utils/pronunciationAssessment';
+import { IconStoryBook, IconMicGlow, IconStar, StoryIcons } from './ui/ChildPlayfulIcons';
 
 
 export interface FluencyLevelInfo {
@@ -65,7 +66,7 @@ export const getFluencyLevelInfo = (wcpm: number, gradeLevel: number = 3): Fluen
   if (wcpm >= thresholds.expected) {
     return {
       level: 'excellent',
-      label: 'طلاقة ممتازة ومتقدمة 🚀',
+      label: 'طلاقة ممتازة ومتقدمة',
       color: 'emerald',
       badgeClass: 'bg-emerald-100 text-emerald-950 border-emerald-300',
       description: `قراءة ممتازة وسريعة تتجاوز المعدل المستهدف لصفه (${thresholds.expected} كلمة صحيحة/دقيقة).`,
@@ -74,7 +75,7 @@ export const getFluencyLevelInfo = (wcpm: number, gradeLevel: number = 3): Fluen
   if (wcpm >= thresholds.low) {
     return {
       level: 'good',
-      label: 'طلاقة طبيعية ومناسبة لصفه 🌟',
+      label: 'طلاقة طبيعية ومناسبة لصفه',
       color: 'teal',
       badgeClass: 'bg-teal-100 text-teal-950 border-teal-300',
       description: `قراءة طبيعية ضمن المعدل المألوف لطلاب الصف (${thresholds.low} - ${thresholds.expected} كلمة صحيحة/دقيقة).`,
@@ -82,7 +83,7 @@ export const getFluencyLevelInfo = (wcpm: number, gradeLevel: number = 3): Fluen
   }
   return {
     level: 'developing',
-    label: 'قراءة متأنية تحتاج إلى تدريب 🎯',
+    label: 'قراءة متأنية تحتاج إلى تدريب',
     color: 'amber',
     badgeClass: 'bg-amber-100 text-amber-950 border-amber-300',
     description: `قراءة أبطأ من المعدل المتوقع لصفه (${thresholds.low} كلمة/دقيقة)، يُنصح بالتدريب على القراءة المتكررة لتنمية الطلاقة.`,
@@ -956,11 +957,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 animate-fade-slide-up">
               {/* Header */}
               <div className="text-center space-y-2">
-                <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-amber-400 via-orange-400 to-amber-500 rounded-3xl flex items-center justify-center mb-3 shadow-lg shadow-amber-500/25 text-4xl animate-bounce-gentle">
-                  📚
+                <div className="w-16 h-16 mx-auto bg-amber-100 border-2 border-amber-300 rounded-2xl flex items-center justify-center mb-3 shadow-md animate-bounce-gentle">
+                  <IconStoryBook size={38} />
                 </div>
                 <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
-                  اختر قصة اليوم يا بطل! 🌟
+                  اختر قصة اليوم يا بطل
                 </h1>
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold">
                   اختر القصة التي تعجبك لنقرأها معاً ونكسب نجوم الطلاقة والأوسمة الذهبية!
@@ -971,13 +972,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
                 {ARABIC_READING_PASSAGES.map((p, idx) => {
                   const isSelected = selectedPassageIndex === idx;
-                  const iconObj = [
-                    { emoji: '🐱' },
-                    { emoji: '🍎' },
-                    { emoji: '🔭' },
-                    { emoji: '🏰' },
-                    { emoji: '🌊' },
-                    { emoji: '🦅' },
+                  const StoryIconComponent = [
+                    StoryIcons.cat,
+                    StoryIcons.fruit,
+                    StoryIcons.space,
+                    StoryIcons.castle,
+                    StoryIcons.sea,
+                    StoryIcons.eagle,
                   ][idx % 6];
 
                   return (
@@ -995,7 +996,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-3xl">{iconObj.emoji}</span>
+                        <div className="w-10 h-10 flex items-center justify-center"><StoryIconComponent /></div>
                         <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
                           {p.gradeLabel}
                         </span>
@@ -1038,12 +1039,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Animated Mic & Mascot */}
               <div className="space-y-3">
-                <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white text-5xl shadow-xl shadow-emerald-500/30 animate-bounce-gentle">
-                  <span className="animate-ping absolute inline-flex h-20 w-20 rounded-3xl bg-emerald-400 opacity-40"></span>
-                  <Mic className="w-12 h-12 relative z-10" />
+                <div className="w-20 h-20 mx-auto bg-emerald-100 border-3 border-emerald-400 rounded-3xl flex items-center justify-center shadow-lg animate-bounce-gentle">
+                  <IconMicGlow size={46} />
                 </div>
                 <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
-                  الميكروفون جاهز للاستماع يا بطل! 🚀
+                  الميكروفون جاهز للاستماع يا بطل
                 </h1>
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
                   اقرأ بصوتك الطبيعي الواضح، ومحرك الذكاء الاصطناعي سيستمع إليك كلمة بكلمة ليمنحك كؤوس الطلاقة ونقاط الأبطال!
@@ -1052,7 +1052,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Selected Story Pill */}
               <div className="inline-flex items-center gap-2 bg-emerald-50 border-2 border-emerald-200 px-5 py-2.5 rounded-2xl text-emerald-950 font-child font-black text-base shadow-xs">
-                <span>📖 قصة اليوم:</span>
+                <span>قصة اليوم:</span>
                 <span className="text-emerald-700">«{passage.title}»</span>
                 <span className="text-xs text-emerald-600">({passage.wordCount} كلمة)</span>
               </div>
@@ -1072,17 +1072,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     }
                     handleStartReading();
                   }}
-                  className="child-tactile-btn w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-child font-black py-5 px-8 rounded-3xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl sm:text-2xl cursor-pointer border-b-6 border-emerald-800 active:border-b-2 active:translate-y-1"
+                  className="duo-btn-green w-full py-4 sm:py-5 px-8 text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-lg"
                 >
                   <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
-                  <span>انطلق وابدأ القراءة الآن! 🚀</span>
+                  <span>انطلق وابدأ القراءة الآن</span>
                 </button>
               </div>
 
               {/* Collapsible Teacher / Specialist Drawer */}
               <details className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-right text-xs text-slate-600 space-y-3">
                 <summary className="cursor-pointer font-bold text-slate-700 hover:text-slate-900 select-none flex items-center justify-between">
-                  <span>⚙️ خيارات المعلم والأخصائي المتقدمة (نمط القراءة واللهجة)</span>
+                  <span>خيارات المعلم والأخصائي المتقدمة (نمط القراءة واللهجة)</span>
                   <span className="text-slate-400">انقر للتعديل</span>
                 </summary>
                 <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1094,14 +1094,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                         onClick={() => setReadingMode('oral_audio')}
                         className={'px-3 py-1.5 rounded-xl border text-xs font-bold ' + (readingMode === 'oral_audio' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white border-slate-200')}
                       >
-                        قراءة جهرية مسجلة 🎙️
+                        قراءة جهرية مسجلة
                       </button>
                       <button
                         type="button"
                         onClick={() => setReadingMode('timed_silent')}
                         className={'px-3 py-1.5 rounded-xl border text-xs font-bold ' + (readingMode === 'timed_silent' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-slate-200')}
                       >
-                        قراءة صامتة 📖
+                        قراءة صامتة
                       </button>
                     </div>
                   </div>
@@ -1839,10 +1839,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     🟠 إبدال / تعثر: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
-                    🔴 حذف مؤكد بعد المراجعة: {summaryStats.omitted}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> حذف مؤكد بعد المراجعة: {summaryStats.omitted}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
-                    ⚪ غير محسومة آلياً: {summaryStats.unconfirmed}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آلياً: {summaryStats.unconfirmed}
                   </span>
                 </div>
               </div>

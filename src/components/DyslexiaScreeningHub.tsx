@@ -4,6 +4,7 @@ import { StudentRecord, StudentAssessmentSnapshot } from '../data/seedData';
 import ReadingAssessmentView from './ReadingAssessmentView';
 import CognitiveScreeningView, { CognitiveScreeningData } from './CognitiveScreeningView';
 import { AppTabId } from './HomeLandingView';
+import { IconTrophy, IconStoryBook, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
 
 interface DyslexiaScreeningHubProps {
   students: StudentRecord[];
@@ -32,13 +33,13 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
       {/* Playful Hero Quest Header */}
       <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-2 border-emerald-200/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5 text-right w-full md:w-auto">
-          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20 shrink-0 animate-bounce-gentle">
-            🏆
+          <div className="w-13 h-13 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center shadow-sm shrink-0 animate-bounce-gentle">
+            <IconTrophy size={32} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-child text-lg sm:text-2xl font-black text-slate-900">
-                تحديات بطل القراءة الذكي 🌟
+                تحديات بطل القراءة الذكي
               </h1>
               <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                 مستوى الأبطال
@@ -62,7 +63,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span className="font-child font-black">📖 ١. تحدي قراءة القصة والطلاقة</span>
+            <span className="font-child font-black">١. تحدي قراءة القصة والطلاقة</span>
           </button>
 
           <button
@@ -75,7 +76,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
             }`}
           >
             <Brain className="w-4 h-4" />
-            <span className="font-child font-black">⚡ ٢. سباق سرعة الأشكال والكلمات العجيبة</span>
+            <span className="font-child font-black">٢. سباق سرعة الأشكال والكلمات</span>
           </button>
         </div>
       </div>
