@@ -145,7 +145,7 @@ function generateRanMatrix(items: RanItem[], count = 20): RanItem[] {
 
 // ---------------------------------------------------------------------------
 // 2. Pseudo-word (Non-word) Arabic Decoding Stimuli
-// Strictly non-lexical Arabic roots adhering to authentic morphological templates
+// Candidate Arabic pseudo-word stimuli; lexical absence and linguistic suitability are not independently validated.
 // ---------------------------------------------------------------------------
 export interface PseudoWordItem {
   id: string;
@@ -153,10 +153,10 @@ export interface PseudoWordItem {
   patternAr: string; // وزن الكلمة (فَعَلَ / فَعِيل / مَفْعُول / مُفْتَعِل)
   syllablesAr: string;
   linguisticLevel: 'بسيط (حركات قصيرة)' | 'متوسط (مدود)' | 'مركب (سكون ومشتقات)';
-  nonLexicalRootAr: string;
+
 }
 
-export const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
+export const ARABIC_PSEUDO_WORD_CANDIDATES: PseudoWordItem[] = [
   // المستوى الأول: ثلاثي مجرد بحركات قصيرة (فَعَلَ) - جذور مهملة في المعاجم العربية
   { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ظ-ف-ك) مهمل معجمياً' },
   { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ف-ث-ل) مهمل معجمياً' },
@@ -178,7 +178,7 @@ export const VERIFIED_ARABIC_PSEUDO_WORDS: PseudoWordItem[] = [
 
 // ---------------------------------------------------------------------------
 // 3. Phonological & Phonemic Awareness Games
-// Standard Arabic, dialect-neutral phonological subtests
+// Candidate tasks in Modern Standard Arabic; responses can vary by dialect and language exposure.
 // ---------------------------------------------------------------------------
 export interface PhonemicTask {
   id: string;
@@ -193,7 +193,7 @@ export interface PhonemicTask {
   explanationAr: string;
 }
 
-export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
+export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-isolation-1',
     categoryAr: 'عزل الصوت الأول',
@@ -201,29 +201,29 @@ export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
     promptAr: 'مَا هُوَ الصَّوْتُ الأَوَّلُ الَّذِي تَبْدَأُ بِهِ كَلِمَةُ "زُهُور"؟',
     audioSpeechPrompt: 'ما الصوت الأول في كلمة زُهُور؟',
     targetWordAr: 'زُهُور',
-    optionsAr: ['/زُ/', '/هـُ/', '/ر/'],
+    optionsAr: ['/ز/', '/ه/', '/ر/'],
     correctIndex: 0,
     difficultyAr: 'أولي',
-    explanationAr: 'الصوت الأول المستهل في "زُهُور" هو الزاي المضمومة: /زُ/',
+    explanationAr: 'الصوت الأول في «زُهُور» هو /ز/؛ الحركة التي تليه ليست جزءًا من الصامت المستهدف.',
   },
   {
     id: 'ph-elision-1',
     categoryAr: 'حذف المقطع الأول',
-    titleAr: 'حذف الصوت الأول (Initial Phoneme Deletion)',
-    promptAr: 'اسمع الكلمة: "مَسْرُور"... إذا حَذَفْنَا صَوْتَ /مَـ/ مِنْ بِدَايَتِهَا، مَا هِيَ الكَلِمَةُ الْمُتَبَقِّيَةُ؟',
-    audioSpeechPrompt: 'مَسْرُور. احذف صوت مَـ. ما الكلمة المتبقية؟',
-    targetWordAr: 'مَسْرُور',
-    optionsAr: ['سْرُور', 'نُور', 'سُرُور'],
+    titleAr: 'حذف المقطع الأول (Initial Syllable Deletion)',
+    promptAr: 'اسمع الكلمة «سَلَام». إذا حذفنا المقطع الأول /سَ/، فما الجزء المتبقي؟',
+    audioSpeechPrompt: 'سَلَام. احذف المقطع الأول سَ. ما الجزء المتبقي؟',
+    targetWordAr: 'سَلَام',
+    optionsAr: ['لَام', 'نُور', 'سُرُور'],
     correctIndex: 0,
     difficultyAr: 'متوسط',
-    explanationAr: 'حذف صوت الميم يترك التركيب الصوتي المتبقي: سْرُور',
+    explanationAr: 'بعد حذف المقطع الأول /سَ/ من «سَلام»، يبقى «لام».',
   },
   {
     id: 'ph-blending-1',
     categoryAr: 'دمج المقاطع',
     titleAr: 'دَمْجُ الأَصْوَاتِ (Phoneme Blending)',
-    promptAr: 'اسْتَمِعْ إِلَى الأَصْوَاتِ الْمُنْفَصِلَةِ: /شَـ/ + /مْـ/ + /سٌ/... مَا الكَلِمَةُ الَّتِي تَتَكَوَّنُ عِنْدَ دَمْجِهَا؟',
-    audioSpeechPrompt: 'شَـ ... مْـ ... سٌ. ما الكلمة؟',
+    promptAr: 'استمع إلى الأصوات المنفصلة /شَ/ + /مْ/ + /سْ/. ما الكلمة الناتجة عند دمجها؟',
+    audioSpeechPrompt: 'شَ ... مْ ... سْ. ما الكلمة الناتجة؟',
     targetWordAr: 'شَمْس',
     optionsAr: ['شَمْس', 'قَمَر', 'نَفْس'],
     correctIndex: 0,
@@ -246,13 +246,13 @@ export const VERIFIED_PHONEMIC_TASKS: PhonemicTask[] = [
     id: 'ph-elision-final-1',
     categoryAr: 'حذف الصوت الأخير',
     titleAr: 'حذف الصوت الأخير (Final Phoneme Deletion)',
-    promptAr: 'اسمع الكلمة: "سَمَك"... إذا حَذَفْنَا صَوْتَ /كْ/ مِنْ نِهَايَتِهَا، مَاذَا يَتَبَقَّى؟',
-    audioSpeechPrompt: 'سَمَك. احذف صوت كْ من النهاية. ما الصوت المتبقي؟',
-    targetWordAr: 'سَمَك',
-    optionsAr: ['سَمَا', 'مَكّ', 'سَمَكَة'],
+    promptAr: 'اسمع الكلمة «سَلَام». إذا حذفنا الصوت الأخير /م/، فما الكلمة المتبقية؟',
+    audioSpeechPrompt: 'سَلَام. احذف صوت الميم في النهاية. ما الكلمة المتبقية؟',
+    targetWordAr: 'سَلَام',
+    optionsAr: ['سَلا', 'مَكّ', 'سَمَكَة'],
     correctIndex: 0,
     difficultyAr: 'متقدم',
-    explanationAr: 'حذف الكاف الساكنة الأخيرة من "سَمَك" يُبقي المقطعين: سَمَا',
+    explanationAr: 'بعد حذف الميم من نهاية «سلام»، يبقى التسلسل المكتوب «سلا».',
   },
   {
     id: 'ph-discrimination-1',
@@ -355,7 +355,6 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const [pseudoIsListening, setPseudoIsListening] = useState(false);
   const [pseudoAudioUrl, setPseudoAudioUrl] = useState<string | null>(null);
   const [pseudoLastHeardWord, setPseudoLastHeardWord] = useState('');
-  const [pseudoWordStartTime, setPseudoWordStartTime] = useState<number>(0);
   const pseudoMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const pseudoAudioChunksRef = useRef<Blob[]>([]);
   const pseudoRecognitionRef = useRef<any>(null);
@@ -711,11 +710,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     else playChime(320, 'sawtooth', 0.15);
 
     const curIdx = pseudoCurrentIndexRef.current;
-    if (curIdx + 1 < VERIFIED_ARABIC_PSEUDO_WORDS.length) {
+    if (curIdx + 1 < ARABIC_PSEUDO_WORD_CANDIDATES.length) {
       const nextIdx = curIdx + 1;
       setPseudoCurrentIndex(nextIdx);
       pseudoCurrentIndexRef.current = nextIdx;
-      setPseudoWordStartTime(Date.now());
       setPseudoLastHeardWord('');
     } else {
       stopPseudo();
@@ -742,10 +740,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       recognition.onresult = (event: any) => {
         if (!pseudoIsRunningRef.current) return;
         const curIdx = pseudoCurrentIndexRef.current;
-        if (curIdx >= VERIFIED_ARABIC_PSEUDO_WORDS.length) return;
-
-        const targetWord = VERIFIED_ARABIC_PSEUDO_WORDS[curIdx];
-        const normalizedTarget = normalizeArabicForRan(targetWord.word);
+        if (curIdx >= ARABIC_PSEUDO_WORD_CANDIDATES.length) return;
 
         let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -759,16 +754,8 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const lastToken = tokens[tokens.length - 1];
         setPseudoLastHeardWord(lastToken);
 
-        const now = Date.now();
-        const latency = pseudoWordStartTime ? now - pseudoWordStartTime : 1000;
-
-        // Check matching
-        if (lastToken.includes(normalizedTarget) || normalizedTarget.includes(lastToken)) {
-          const rating = latency > 2400 ? 'hesitant' : 'correct';
-          setTimeout(() => {
-            handleRatePseudo(targetWord.id, rating);
-          }, 400);
-        }
+        // This browser transcript is an unverified clue only. Never grade or advance a pseudo-word
+        // automatically from partial/nearest-word matches; they can falsely match an invented form.
       };
 
       recognition.onerror = () => {};
@@ -793,7 +780,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     } catch (e) {
       console.warn('Pseudo SpeechRecognition error:', e);
     }
-  }, [handleRatePseudo, pseudoWordStartTime]);
+  }, []);
 
   const handleStartPseudoSession = async () => {
     setPseudoCurrentIndex(0);
@@ -803,7 +790,6 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     setPseudoLastHeardWord('');
     setPseudoIsRunning(true);
     pseudoIsRunningRef.current = true;
-    setPseudoWordStartTime(Date.now());
     playChime(660, 'sine', 0.2);
 
     try {
@@ -834,7 +820,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
   // Compute Pseudo-word Score
   const pseudoMetrics = useMemo(() => {
-    const total = VERIFIED_ARABIC_PSEUDO_WORDS.length;
+    const total = ARABIC_PSEUDO_WORD_CANDIDATES.length;
     let correct = 0;
     Object.values(pseudoRatings).forEach(r => {
       if (r === 'correct') correct += 1;
@@ -847,23 +833,23 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   // Phonemic choice answer
   const handleAnswerPhonemic = (taskId: string, choiceIdx: number) => {
     setPhonemicAnswers(prev => ({ ...prev, [taskId]: choiceIdx }));
-    const task = VERIFIED_PHONEMIC_TASKS.find(t => t.id === taskId);
+    const task = ARABIC_PHONEMIC_TASK_CANDIDATES.find(t => t.id === taskId);
     if (task && choiceIdx === task.correctIndex) {
       playChime(700, 'sine', 0.15);
     } else {
       playChime(280, 'sawtooth', 0.15);
     }
 
-    if (phonemicCurrentIdx + 1 < VERIFIED_PHONEMIC_TASKS.length) {
+    if (phonemicCurrentIdx + 1 < ARABIC_PHONEMIC_TASK_CANDIDATES.length) {
       setPhonemicCurrentIdx(prev => prev + 1);
     }
   };
 
   // Compute Phonemic Awareness Score
   const phonemicMetrics = useMemo(() => {
-    const total = VERIFIED_PHONEMIC_TASKS.length;
+    const total = ARABIC_PHONEMIC_TASK_CANDIDATES.length;
     let correct = 0;
-    VERIFIED_PHONEMIC_TASKS.forEach(t => {
+    ARABIC_PHONEMIC_TASK_CANDIDATES.forEach(t => {
       if (phonemicAnswers[t.id] === t.correctIndex) correct += 1;
     });
     const percent = Math.round((correct / total) * 100);
@@ -970,7 +956,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               <span>الصف: <strong className="text-slate-800">{student.gradeLevel}</strong></span>
               <span>·</span>
               <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                تسجيل وتحليل صوتي مباشر بالذكاء الاصطناعي
+                تسجيل صوتي لمهام القراءة
               </span>
             </div>
             {onNavigateTab && (
@@ -992,13 +978,13 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80 space-y-6">
             <div className="border-b border-slate-100 pb-5">
               <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                بروتوكول الفرز المعرفي متعدد الأبعاد
+                مجموعة أنشطة استكشافية لمهارات مرتبطة بالقراءة
               </span>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
-                بطارية التقييم المعرفي لمساندة الكشف المبكر
+                أنشطة استكشافية لبعض المهارات المرتبطة بالقراءة
               </h2>
               <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                توسع هذه الأنشطة التحليل الذكي للذكاء الاصطناعي ليشمل جوانب أساسية تسند مهارات القراءة (سرعة التسمية، التهجئة الصرفية للكلمات غير المعجمية، والوعي الصوتي)، لدعم التخطيط والتوصيات الذاتية.
+                تستكشف هذه الأنشطة زمن التسمية وقراءة صيغ تدريبية والوعي بالأصوات. نتائجها ملاحظات أولية لمهام محددة، وقد تتأثر باللغة واللهجة وجودة التعرف الصوتي؛ لا تُستخدم وحدها لتشخيص أو تصنيف الطفل.
               </p>
             </div>
 
@@ -1012,7 +998,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   التسمية الآلية السريعة (RAN)
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  قياس سرعة استرجاع التسميات اللفظية للألوان والأرقام تلقائياً عبر ميكروفون الذكاء الاصطناعي مع رصد الترددات بدقة.
+                  نشاط لتسمية ألوان أو أعداد؛ قد يسجل النظام توقيتًا والتقاطًا صوتيًا، لكن أخطاء التعرف واللهجة تؤثر في النتيجة ولا تُستخدم الحدود الزمنية الثابتة للتصنيف.
                 </p>
               </div>
 
@@ -1024,7 +1010,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   قراءة الكلمات غير المعجمية (Pseudo-Words)
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  12 كلمة موزونة صرفياً ومنعدمة المعنى المعجمي لقياس التفكيك الفونولوجي بدلاً من الاعتماد على الحفظ البصري.
+                  12 صيغة تدريبية مرشحة على أوزان عربية؛ لم تُقنّن بعد ولا نؤكد خلو كل صيغة من المعنى في جميع المعاجم واللهجات.
                 </p>
               </div>
 
@@ -1036,7 +1022,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ألعاب الوعي الصوتي (Phonemic Awareness)
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  6 بنود صوتية فصحى متدرجة لقياس عزل الصوت الأول، الحذف، الدمج، والسجع بشكل تفاعلي.
+                  ستة بنود مكتوبة بالفصحى لعزل الصوت والدمج والحذف والقافية؛ لم تُقنّن معاييرها حسب العمر أو اللهجة.
                 </p>
               </div>
             </div>
@@ -1045,7 +1031,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
               <div className="leading-relaxed">
-                <strong>تنويه منهجي:</strong> تهدف هذه الأنشطة إلى تزويد نظام التحليل الذكي بملاحظات وصفية دقيقة لتصميم خطط الدعم والتدخل التعليمي المناسبة.
+                <strong>تنويه منهجي:</strong> هذه أنشطة استكشافية أولية، وليست بطارية معيارية أو تشخيصًا. تُراجع أي نتيجة صوتية مع التسجيل نفسه؛ لا يحل التفريغ الآلي محل المراجعة البشرية.
               </div>
             </div>
 
@@ -1343,7 +1329,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80">
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                المحور 2: الكلمات غير المعجمية (Non-Word Decoding)
+                المحور 2: قراءة صيغ تدريبية مرشحة
               </span>
               <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
                 مهمة تعليمية لقراءة كلمات غير مألوفة
@@ -1353,38 +1339,33 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               </p>
             </div>
 
-            {pseudoCurrentIndex < VERIFIED_ARABIC_PSEUDO_WORDS.length ? (
+            {pseudoCurrentIndex < ARABIC_PSEUDO_WORD_CANDIDATES.length ? (
               <div className="max-w-xl mx-auto text-center">
-                {/* Visual Flashcard */}
+                {/* Visual flashcard: viewing or tapping must not mark a response correct */}
                 <div
-                  onClick={() => {
-                    if (pseudoCurrentIndex < VERIFIED_ARABIC_PSEUDO_WORDS.length) {
-                      handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct');
-                    }
-                  }}
                   className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden cursor-pointer hover:border-teal-400 transition-all select-none"
-                  title="انقر على البطاقة أو اضغط مسافة Space للانتقال للكلمة التالية"
+                  title="اقرأ الكلمة أو استمع إلى التسجيل ثم اختر الملاحظة المناسبة بالأزرار أدناه"
                 >
                   <div className="flex items-center justify-between mb-4 text-xs">
                     <span className="font-bold text-teal-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                      {pseudoCurrentIndex + 1} من {VERIFIED_ARABIC_PSEUDO_WORDS.length} (الوزن: {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].patternAr})
+                      {pseudoCurrentIndex + 1} من {ARABIC_PSEUDO_WORD_CANDIDATES.length} (الوزن: {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].patternAr})
                     </span>
                     <span className="text-slate-400 text-[11px]">
-                      {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].linguisticLevel}
+                      {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].linguisticLevel}
                     </span>
                   </div>
 
                   <div className="text-5xl md:text-6xl font-black font-serif tracking-wider my-6 text-teal-100">
-                    {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].word}
+                    {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].word}
                   </div>
 
                   <div className="text-xs text-slate-400 font-mono flex items-center justify-center gap-2">
                     <span>المقاطع الصوتية:</span>
-                    <span className="text-teal-300 font-bold">{VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].syllablesAr}</span>
+                    <span className="text-teal-300 font-bold">{ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].syllablesAr}</span>
                   </div>
 
                   <div className="text-[10px] text-slate-400 mt-3">
-                    {VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].nonLexicalRootAr}
+                    صيغة تدريبية مرشحة؛ لم تُقنّن أو تُراجع معجميًا بصورة مستقلة.
                   </div>
                 </div>
 
@@ -1395,18 +1376,18 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-8 py-4 rounded-2xl text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all cursor-pointer mx-auto"
                   >
                     <Mic className="w-5 h-5 fill-current" />
-                    <span>بدء قراءة الكلمات بالذكاء الاصطناعي (تسجيل صوتي)</span>
+                    <span>بدء تسجيل القراءة</span>
                   </button>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center justify-center gap-3 bg-slate-900 text-white p-4 rounded-2xl">
                       <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 animate-pulse">
                         <Radio className="w-4 h-4 animate-ping" />
-                        <span>الذكاء الاصطناعي يستمع لقراءتك الآن: اقرأ الكلمة بوضوح</span>
+                        <span>التسجيل يعمل؛ قد يعرض التعرف الآلي كلمة تقريبية، لكنه لا يحدد الإجابة تلقائيًا.</span>
                       </div>
                       {pseudoLastHeardWord && (
                         <span className="text-xs font-mono bg-slate-800 px-3 py-1 rounded-xl text-teal-300 border border-slate-700">
-                          التقط: "{pseudoLastHeardWord}"
+                          التعرف التقريبي: "{pseudoLastHeardWord}"
                         </span>
                       )}
                     </div>
@@ -1415,7 +1396,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     <div className="flex flex-wrap items-center justify-center gap-3">
                       <button
                         type="button"
-                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'correct')}
+                        onClick={() => handleRatePseudo(ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].id, 'correct')}
                         className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-extrabold flex items-center gap-2 shadow-md transition-all cursor-pointer"
                       >
                         <Check className="w-4 h-4" />
@@ -1423,18 +1404,18 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'hesitant')}
+                        onClick={() => handleRatePseudo(ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].id, 'hesitant')}
                         className="px-4 py-3.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <span>تردد أو تهجّى ببطء</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'misread')}
+                        onClick={() => handleRatePseudo(ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].id, 'misread')}
                         className="px-4 py-3.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <X className="w-4 h-4 text-rose-700" />
-                        <span>نطق غير دقيق</span>
+                        <span>اختلاف محتمل عن صيغة التدريب</span>
                       </button>
                     </div>
                   </div>
@@ -1486,20 +1467,20 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 تمييز الأصوات، الحذف، والدمج باللغة الفصحى (6 بنود متدرجة)
               </h2>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                بنود صوتية فصحى تراعي الحياد اللهجي؛ يستمع الطفل للتحدي ويختار الإجابة الصحيحة.
+                هذه البنود مكتوبة بالفصحى، وقد يتأثر الأداء باللهجة والخبرة اللغوية؛ لا نفترض الحياد اللهجي.
               </p>
             </div>
 
-            {phonemicCurrentIdx < VERIFIED_PHONEMIC_TASKS.length ? (
+            {phonemicCurrentIdx < ARABIC_PHONEMIC_TASK_CANDIDATES.length ? (
               <div className="max-w-xl mx-auto">
                 <div className="p-6 md:p-8 rounded-3xl bg-indigo-50/60 border border-indigo-200 mb-6 text-right">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-bold text-indigo-900 bg-indigo-100 px-3 py-1 rounded-full">
-                      بند {phonemicCurrentIdx + 1} من {VERIFIED_PHONEMIC_TASKS.length}: {VERIFIED_PHONEMIC_TASKS[phonemicCurrentIdx].titleAr}
+                      بند {phonemicCurrentIdx + 1} من {ARABIC_PHONEMIC_TASK_CANDIDATES.length}: {ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].titleAr}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleSpeakText(VERIFIED_PHONEMIC_TASKS[phonemicCurrentIdx].audioSpeechPrompt)}
+                      onClick={() => handleSpeakText(ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].audioSpeechPrompt)}
                       className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-xs cursor-pointer"
                     >
                       <Volume2 className="w-4 h-4" />
@@ -1508,15 +1489,15 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   </div>
 
                   <p className="text-base md:text-lg font-bold text-slate-900 leading-relaxed mb-6">
-                    {VERIFIED_PHONEMIC_TASKS[phonemicCurrentIdx].promptAr}
+                    {ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].promptAr}
                   </p>
 
                   {/* Choice Options */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {VERIFIED_PHONEMIC_TASKS[phonemicCurrentIdx].optionsAr.map((option, oIdx) => (
+                    {ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].optionsAr.map((option, oIdx) => (
                       <button
                         key={oIdx}
-                        onClick={() => handleAnswerPhonemic(VERIFIED_PHONEMIC_TASKS[phonemicCurrentIdx].id, oIdx)}
+                        onClick={() => handleAnswerPhonemic(ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].id, oIdx)}
                         className="p-4 rounded-2xl bg-white hover:bg-indigo-100/70 border-2 border-indigo-200 hover:border-indigo-400 text-slate-900 font-extrabold text-lg text-center transition-all cursor-pointer shadow-xs"
                       >
                         {option}
@@ -1536,12 +1517,12 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                       <span>البند السابق</span>
                     </button>
                     <span className="text-indigo-900 font-black">
-                      بند {phonemicCurrentIdx + 1} من {VERIFIED_PHONEMIC_TASKS.length}
+                      بند {phonemicCurrentIdx + 1} من {ARABIC_PHONEMIC_TASK_CANDIDATES.length}
                     </span>
                     <button
                       type="button"
-                      disabled={phonemicCurrentIdx >= VERIFIED_PHONEMIC_TASKS.length - 1}
-                      onClick={() => setPhonemicCurrentIdx(prev => Math.min(VERIFIED_PHONEMIC_TASKS.length - 1, prev + 1))}
+                      disabled={phonemicCurrentIdx >= ARABIC_PHONEMIC_TASK_CANDIDATES.length - 1}
+                      onClick={() => setPhonemicCurrentIdx(prev => Math.min(ARABIC_PHONEMIC_TASK_CANDIDATES.length - 1, prev + 1))}
                       className="px-3.5 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 font-bold disabled:opacity-40 cursor-pointer flex items-center gap-1 shadow-xs hover:bg-indigo-50"
                     >
                       <span>البند التالي</span>
@@ -1569,7 +1550,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white font-extrabold text-sm py-3.5 px-8 rounded-xl flex items-center gap-2 mx-auto shadow-md transition-all cursor-pointer"
                 >
                   <Award className="w-5 h-5 text-amber-300" />
-                  <span>اعتماد الملاحظات وعرض الملف المعرفي الشامل</span>
+                  <span>اعتماد الملاحظات وعرض ملخص نتائج الأنشطة</span>
                 </button>
               </div>
             )}
@@ -1590,7 +1571,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ملف مهارات القراءة والتعلم: {student.name}
                 </h2>
                 <p className="text-xs text-slate-600 mt-1">
-                  ملخص دقيق للسرعة والتفكيك والوعي الفونولوجي بالذكاء الاصطناعي
+                  ملخص وصفي للنتائج المرصودة في الأنشطة؛ لا يمثل معيارًا عمريًا أو تشخيصًا
                 </p>
               </div>
 
