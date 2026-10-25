@@ -55,5 +55,5 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   }
 
   await expect(page.getByRole('button', { name: /إتمام سبرنت اليوم/ })).toBeVisible();
-  expect(pageErrors.filter((message) => message.includes('Trophy is not defined'))).toEqual([]);
+  expect(pageErrors).toEqual([]);
 });
