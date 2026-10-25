@@ -131,23 +131,23 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           {BADGES.map((b) => (
             <div
               key={b.id}
-              className={`p-5 rounded-3xl border-2 transition-all flex flex-col justify-between gap-3 relative overflow-hidden ${
+              className={`p-6 rounded-3xl transition-all flex flex-col justify-between gap-3.5 relative overflow-hidden ${
                 b.earned
-                  ? 'bg-white border-slate-200/80 shadow-md hover:shadow-lg hover:-translate-y-1'
-                  : 'bg-slate-50/70 border-dashed border-slate-300 opacity-60'
+                  ? 'clay-card hover:-translate-y-1.5'
+                  : 'bg-slate-50/70 border-3 border-dashed border-slate-300 opacity-60'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="w-14 h-14 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center justify-center shadow-xs shrink-0">
-                  {b.id === 'sprint' && <IconLightningBolt size={32} />}
-                  {b.id === 'story' && <IconStoryBook size={32} />}
-                  {b.id === 'letters' && <IconLettersBlock size={32} />}
-                  {b.id === 'syllables' && <IconPuzzlePieces size={32} />}
-                  {b.id === 'math' && <IconNumberRuler size={32} />}
-                  {b.id === 'master' && <IconTrophy size={32} />}
+                <div className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-200 flex items-center justify-center shadow-xs shrink-0 animate-bounce-gentle">
+                  {b.id === 'sprint' && <IconLightningBolt size={34} />}
+                  {b.id === 'story' && <IconStoryBook size={34} />}
+                  {b.id === 'letters' && <IconLettersBlock size={34} />}
+                  {b.id === 'syllables' && <IconPuzzlePieces size={34} />}
+                  {b.id === 'math' && <IconNumberRuler size={34} />}
+                  {b.id === 'master' && <IconTrophy size={34} />}
                 </div>
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
-                  b.earned ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-600'
+                <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
+                  b.earned ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-600'
                 }`}>
                   {b.category}
                 </span>

@@ -411,3 +411,35 @@ export const IconMagicWand: React.FC<IconProps> = ({ className = 'w-8 h-8', size
     <path d="M28 20L28.5 19L29 20L30 20.5L29 21L28.5 22L28 21L27 20.5L28 20Z" fill="#FBBF24" />
   </svg>
 );
+
+// 13. RAN High-Contrast Object Vector Icons (Zero OS Emojis)
+export const IconRanTree: React.FC<IconProps> = ({ className = 'w-10 h-10', size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <path d="M20 5L9 22H14L7 31H33L26 31H31L20 5Z" fill="#10B981" stroke="#047857" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M20 5L14 15H20L12 26H20L15 31H25L20 5Z" fill="#34D399" />
+    <rect x="17" y="31" width="6" height="6" rx="1.5" fill="#854D0E" stroke="#713F12" strokeWidth="1.5" />
+  </svg>
+);
+
+export const IconRanHand: React.FC<IconProps> = ({ className = 'w-10 h-10', size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <path
+      d="M14 17V9.5C14 8.1 15.1 7 16.5 7C17.9 7 19 8.1 19 9.5V16M19 14V8.5C19 7.1 20.1 6 21.5 6C22.9 6 24 7.1 24 8.5V15M24 15V10.5C24 9.1 25.1 8 26.5 8C27.9 8 29 9.1 29 10.5V18.5M29 18.5V13.5C29 12.1 30.1 11 31.5 11C32.9 11 34 12.1 34 13.5V23C34 29.5 28.5 35 22 35C15.5 35 11 30.5 11 25V20.5C11 19.1 12.1 18 13.5 18C13.8 18 14 18.1 14 18.2V17Z"
+      fill="#FBBF24"
+      stroke="#D97706"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const IconRanDoor: React.FC<IconProps> = ({ className = 'w-10 h-10', size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+    <rect x="9" y="5" width="22" height="30" rx="3" fill="#D97706" stroke="#B45309" strokeWidth="2" />
+    <rect x="12" y="8" width="16" height="11" rx="1.5" fill="#F59E0B" />
+    <rect x="12" y="21" width="16" height="11" rx="1.5" fill="#F59E0B" />
+    <circle cx="25" cy="21" r="2.5" fill="#FDE047" stroke="#CA8A04" strokeWidth="1.5" />
+    <line x1="6" y1="36" x2="34" y2="36" stroke="#92400E" strokeWidth="2.5" strokeLinecap="round" />
+  </svg>
+);

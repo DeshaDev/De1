@@ -25,11 +25,13 @@ import {
   RefreshCw,
   Flame,
   FileText,
+  Pause,
 } from 'lucide-react';
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
 import { IEPStation } from './remediation/IEPStation';
 import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
+import { InteractiveNumberLine, toEasternArabicDigits } from './ui/InteractiveNumberLine';
 import { StudentRecord } from '../data/seedData';
 import { AppTabId } from './HomeLandingView';
 import {
@@ -675,11 +677,14 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 }`}
               >
                 {pacerPlaying ? (
-                  <span>إيقاف ❚❚</span>
+                  <>
+                    <Pause className="w-3.5 h-3.5 fill-current" />
+                    <span>إيقاف مؤقت</span>
+                  </>
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>تشغيل ▶</span>
+                    <span>تشغيل القراءة</span>
                   </>
                 )}
               </button>
@@ -816,44 +821,26 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               </h2>
             </div>
 
-            {/* Target Number */}
-            <div className="inline-block px-7 py-2.5 rounded-2xl bg-sky-50 border-2 border-sky-300">
-              <span className="text-xs font-bold text-sky-800 block">العدد المطلوب:</span>
-              <span className="text-4xl sm:text-5xl font-mono font-extrabold text-[#0284C7] tabular-nums">
-                {currentMath.targetNumber}
-              </span>
-            </div>
-
-            {/* Slider */}
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 max-w-lg mx-auto shadow-xs">
-              <div className="flex items-center justify-between text-sm font-mono font-extrabold text-slate-800">
-                <span>{currentMath.min}</span>
-                <span className="text-xs font-normal text-slate-400">
-                  المنتصف ({Math.round((currentMath.max - currentMath.min) / 2)})
-                </span>
-                <span>{currentMath.max}</span>
-              </div>
-
-              <input
-                type="range"
+            {/* Interactive Illustrated Number Line */}
+            <div className="clay-card-sky p-5 sm:p-7 space-y-4 max-w-xl mx-auto">
+              <InteractiveNumberLine
                 min={currentMath.min}
                 max={currentMath.max}
                 value={sliderVal}
-                onChange={(e) => {
-                  setSliderVal(Number(e.target.value));
+                onChange={(val) => {
+                  setSliderVal(val);
                   setMathAnswered(false);
                 }}
-                className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0284C7]"
+                targetNumber={currentMath.targetNumber}
               />
 
-              <div className="flex items-center justify-between text-xs text-slate-600 font-mono">
-                <span>المحدد: <strong className="text-slate-900 text-sm font-extrabold">{sliderVal}</strong></span>
-                {mathAnswered && mathErrorAbs !== null && (
-                  <span className={`font-bold ${mathErrorAbs <= 5 ? 'text-[#059669]' : 'text-[#D97706]'}`}>
-                    فارق الخطأ: {mathErrorAbs} أرقام
-                  </span>
-                )}
-              </div>
+              {mathAnswered && mathErrorAbs !== null && (
+                <div className={'p-3 rounded-2xl border-2 font-child font-black text-sm animate-fade-slide-up ' + (
+                  mathErrorAbs <= 5 ? 'bg-emerald-50 border-emerald-400 text-emerald-900' : 'bg-amber-50 border-amber-400 text-amber-900'
+                )}>
+                  <span>فارق القفزة عن الهدف: {toEasternArabicDigits(mathErrorAbs)} أرقام ({mathErrorAbs <= 5 ? 'دقة ممتازة وبطل خارق!' : 'قريب جداً، واصل المحاولة!'})</span>
+                </div>
+              )}
             </div>
 
             {/* Base-10 Place-Value breakdown */}

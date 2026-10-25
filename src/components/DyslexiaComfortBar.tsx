@@ -34,6 +34,8 @@ const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
     'أنت في مساحة الفرز المعرفي. تتضمن الأنشطة تسمية سريعة وقراءة كلمات غير حقيقية ومهام وعي صوتي؛ نتائجها ملاحظات تعليمية وليست تشخيصًا.',
   'reading-lab':
     'أنت في مساحة القراءة والفهم. اختر نصًا مناسبًا، واقرأ بهدوء، ثم أجب عن أسئلة الفهم. يمكن إجراء القراءة الصامتة أو الجهرية بحسب خيارات الجلسة.',
+  'dyslexia-lab':
+    'أنت في مساحة القراءة الذكية والتشخيص المعرفي الشامل.',
   'dyscalculia-lab':
     'أنت في مغامرة الأعداد. جرّب مهام إدراك الكميات وخط الأعداد والتحويل بين الأرقام لمتابعة تقدمك الذاتي بدقة.',
   'remediation-gym':
@@ -42,6 +44,14 @@ const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
     'أنت في القارئ الميسّر. يمكنك تغيير حجم الخط والتباعد، وتقسيم الكلمات إلى مقاطع، والاستماع إلى نطقها. هذه أدوات مساعدة وليست اختبارًا تشخيصيًا.',
   'adaptive-reports':
     'أنت الآن في التقارير الذكية التكيفية وخطة المساندة التربوية الفردية.',
+  sprint:
+    'أنت في تدريب سبرنت الـ ٥ دقائق المكثف لتنمية الطلاقة وسرعة القراءة.',
+  storygen:
+    'أنت في مصنع القصص التفاعلية المشكولة بالذكاء الاصطناعي.',
+  iep:
+    'أنت في خطة المساندة التربوية الفردية الذكية.',
+  trophies:
+    'أنت في خزانة الكؤوس والأوسمة وبطولات القراءة والحساب.',
   privacy:
     'أنت في سياسة الخصوصية. راجع البيانات التي قد تُعالج وخيارات الصوت وحقوق ولي الأمر قبل استخدام المنصة.',
   terms:
@@ -288,21 +298,24 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
           </div>
         )}
 
-        {/* Sleek Non-Obtrusive Floating Widget */}
-        <div className="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md border border-slate-300/80 rounded-full shadow-md hover:shadow-lg transition-all">
+        {/* Sleek Non-Obtrusive Floating Widget (40px compact pill that expands without covering child games) */}
+        <div className="flex items-center gap-1 p-1 bg-white/90 backdrop-blur-md border-2 border-slate-200 rounded-full shadow-md hover:shadow-lg transition-all">
           {/* Quick Toggle / Open Menu */}
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
             aria-expanded={isOpen}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            title={isOpen ? 'إغلاق خيارات العرض والقراءة' : 'فتح خيارات العرض والقراءة والوضع الليلي'}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               isOpen || isCustomized
-                ? 'bg-[#15803D] text-white'
-                : 'bg-slate-900 text-white hover:bg-[#15803D]'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-800 text-white hover:bg-emerald-700'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>{['reading-lab', 'dyslexia-lab', 'adaptive-reader'].includes(activeTab) ? 'خيارات القراءة' : 'راحة العرض'}</span>
+            <span className="hidden sm:inline">
+              {['reading-lab', 'dyslexia-lab', 'adaptive-reader'].includes(activeTab) ? 'خيارات القراءة' : 'راحة العرض'}
+            </span>
           </button>
 
           {/* Quick 1-Click Night / Paper Toggle */}
@@ -328,7 +341,7 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
             title="استمع لشرح الشاشة صوتياً"
             className={`p-1.5 rounded-full transition-colors cursor-pointer ${
               isSpeaking
-                ? 'bg-[#15803D] text-white'
+                ? 'bg-emerald-600 text-white'
                 : 'text-slate-700 hover:bg-slate-100'
             }`}
           >

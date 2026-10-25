@@ -12,6 +12,8 @@ import {
   Check,
   Star,
   Award,
+  Trophy,
+  X,
 } from 'lucide-react';
 import { StudentRecord } from '../../data/seedData';
 import { CURATED_DECODABLE_STORIES, DecodableStory } from '../../utils/adaptiveStoryGen';
@@ -310,7 +312,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
                     }`}
                   >
                     <span>{opt}</span>
-                    {isSelected && (isCorrect ? <Check className="w-4 h-4 text-emerald-600" /> : <span className="text-rose-600">✕</span>)}
+                    {isSelected && (isCorrect ? <Check className="w-4 h-4 text-emerald-600" /> : <X className="w-4 h-4 text-rose-600" />)}
                   </button>
                 );
               })}

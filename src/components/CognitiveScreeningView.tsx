@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
 import { playNaturalArabicAudio } from '../utils/naturalSpeech';
+import { IconRanTree, IconRanHand, IconRanDoor, IconStar, IconStoryBook } from './ui/ChildPlayfulIcons';
 import { useAssessment } from '../contexts/AssessmentContext';
 
 interface Props {
@@ -64,6 +65,24 @@ const RAN_DIGITS: RanItem[] = [
   { id: 'd-7', labelAr: 'سَبْعَة', visualValue: '٧', type: 'digit' },
   { id: 'd-9', labelAr: 'تِسْعَة', visualValue: '٩', type: 'digit' },
 ];
+
+
+export const renderRanObjectIcon = (id: string) => {
+  switch (id) {
+    case 'o-tree':
+      return <IconRanTree size={38} />;
+    case 'o-hand':
+      return <IconRanHand size={38} />;
+    case 'o-door':
+      return <IconRanDoor size={38} />;
+    case 'o-star':
+      return <IconStar size={38} />;
+    case 'o-book':
+      return <IconStoryBook size={38} />;
+    default:
+      return null;
+  }
+};
 
 const RAN_OBJECTS: RanItem[] = [
   { id: 'o-tree', labelAr: 'شَجَرَة', visualValue: '🌲', type: 'object' },
@@ -534,7 +553,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           setRanHeardStatus({
             word: latestToken,
             isMatch: true,
-            message: `✓ رائع: "${target.labelAr}"`,
+            message: `رائع ومتقن: "${target.labelAr}"`,
           });
           handleRanNext('normal');
           return;
@@ -557,7 +576,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             setRanHeardStatus({
               word: latestToken,
               isMatch: false,
-              message: `⚠️ سُمع: "${latestToken}" (المطلوب: "${target.labelAr}") - أعد النطق أو اضغط مسافة لتخطيها`,
+              message: `سُمع: "${latestToken}" (المطلوب: "${target.labelAr}") - أعد النطق أو اضغط مسافة لتخطيها`,
             });
             playChime(320, 'triangle', 0.08);
           }
@@ -1220,9 +1239,9 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     )}
 
                     {item.type === 'object' && (
-                      <span className="text-3xl md:text-4xl">
-                        {item.visualValue}
-                      </span>
+                      <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+                        {renderRanObjectIcon(item.id)}
+                      </div>
                     )}
 
                     <span className="text-[10px] md:text-xs font-bold text-slate-600 mt-1">
@@ -1231,7 +1250,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
                     {isCurrent && (
                       <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold shadow-xs">
-                        انطق الآن 🎙️
+                        انطق الآن
                       </span>
                     )}
                   </div>
@@ -1248,14 +1267,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
-                  <span>✓ نطق سليم / التالي (أو اضغط مسافة Space)</span>
+                  <span>نطق سليم وتالٍ (مسافة Space)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleRanNext('hesitation')}
                   className="px-4 py-3 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <span>⚠️ تردد</span>
+                  <span>تردد في التسمية</span>
                 </button>
                 <button
                   type="button"
@@ -1263,7 +1282,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="px-4 py-3 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4 text-rose-700" />
-                  <span>❌ خطأ في التسمية</span>
+                  <span>خطأ في التسمية</span>
                 </button>
               </div>
             )}
@@ -1405,14 +1424,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-extrabold flex items-center gap-2 shadow-md transition-all cursor-pointer"
                       >
                         <Check className="w-4 h-4" />
-                        <span>✓ قراءة صحيحة وتالٍ (مسافة Space)</span>
+                        <span>قراءة صحيحة وتالٍ (مسافة Space)</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRatePseudo(VERIFIED_ARABIC_PSEUDO_WORDS[pseudoCurrentIndex].id, 'hesitant')}
                         className="px-4 py-3.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <span>⚠️ تردد / تهجّى ببطء</span>
+                        <span>تردد أو تهجّى ببطء</span>
                       </button>
                       <button
                         type="button"
@@ -1420,7 +1439,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         className="px-4 py-3.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <X className="w-4 h-4 text-rose-700" />
-                        <span>❌ نطق غير دقيق</span>
+                        <span>نطق غير دقيق</span>
                       </button>
                     </div>
                   </div>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { BookOpen, Brain, Sparkles, Award, ShieldCheck, Flame, Star, Trophy } from 'lucide-react';
-import { StudentRecord, StudentAssessmentSnapshot } from '../data/seedData';
+import { StudentRecord, StudentAssessmentSnapshot, CognitiveScreeningData } from '../data/seedData';
 import ReadingAssessmentView from './ReadingAssessmentView';
-import CognitiveScreeningView, { CognitiveScreeningData } from './CognitiveScreeningView';
+import CognitiveScreeningView from './CognitiveScreeningView';
 import { AppTabId } from './HomeLandingView';
 import { IconTrophy, IconStoryBook, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
 
@@ -11,7 +11,7 @@ interface DyslexiaScreeningHubProps {
   activeStudent: StudentRecord;
   onSelectStudent: (id: string) => void;
   onNavigateTab: (tab: AppTabId) => void;
-  onCompleteOralSession: (session: StudentAssessmentSnapshot) => void;
+  onCompleteOralSession: (record: StudentRecord) => void;
   onCompleteCognitiveScreening: (cogData: CognitiveScreeningData) => void;
   initialSubTab?: 'oral-reading' | 'cognitive-screening';
 }
@@ -108,11 +108,9 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
       {subTab === 'oral-reading' && (
         <div className="animate-fade-slide-up">
           <ReadingAssessmentView
-            students={students}
             activeStudent={activeStudent}
             onCompleteSession={onCompleteOralSession}
-            onOpenFullReport={() => onNavigateTab('dashboard')}
-            onSwitchToStudent={onSelectStudent}
+            onNavigateTab={(tab) => onNavigateTab(tab as any)}
           />
         </div>
       )}

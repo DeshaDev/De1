@@ -953,7 +953,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   max={38}
                   value={fontSizePx}
                   onChange={(e) => setFontSizePx(Number(e.target.value))}
-                  className="w-full accent-[#0284C7] cursor-pointer"
+                  className="w-full playful-slider cursor-pointer"
                 />
               </div>
 
@@ -977,7 +977,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   max={24}
                   value={wordSpacingPx}
                   onChange={(e) => setWordSpacingPx(Number(e.target.value))}
-                  className="w-full accent-[#0284C7] cursor-pointer"
+                  className="w-full playful-slider cursor-pointer"
                 />
               </div>
 
@@ -1001,7 +1001,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   step={0.5}
                   value={letterSpacingPx}
                   onChange={(e) => setLetterSpacingPx(Number(e.target.value))}
-                  className="w-full accent-[#0284C7] cursor-pointer"
+                  className="w-full playful-slider cursor-pointer"
                 />
               </div>
 
@@ -1025,7 +1025,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   step={0.1}
                   value={lineHeightRatio}
                   onChange={(e) => setLineHeightRatio(Number(e.target.value))}
-                  className="w-full accent-[#0284C7] cursor-pointer"
+                  className="w-full playful-slider cursor-pointer"
                 />
               </div>
 
@@ -1049,7 +1049,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   step={20}
                   value={pacingIntervalMs}
                   onChange={(e) => setPacingIntervalMs(Number(e.target.value))}
-                  className="w-full accent-[#0284C7] cursor-pointer"
+                  className="w-full playful-slider cursor-pointer"
                 />
                 <div className="text-[10px] text-slate-500 mt-1">
                   {pacingSyncModeLabel}
@@ -1227,7 +1227,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                           title={`${token.variationCategoryLabelAr} — المرادف المدرسي الفصيح: ${token.bestCorrection}`}
                         >
                           <span className="text-emerald-900 font-semibold">
-                            ✓ {token.originalWord}
+                            {token.originalWord}
                           </span>
                           <span className="text-[11px] text-emerald-700 bg-white/80 px-1.5 py-0.5 rounded">
                             لهجة ({token.bestCorrection})

@@ -27,6 +27,10 @@ import {
   IconNumberRuler,
   IconLightningBolt,
 } from './ui/ChildPlayfulIcons';
+import {
+  InteractiveNumberLine,
+  toEasternArabicDigits,
+} from './ui/InteractiveNumberLine';
 
 interface DyscalculiaLabViewProps {
   students: StudentRecord[];
@@ -455,7 +459,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
         <div className="bg-slate-50 border-2 border-sky-200 rounded-3xl p-5 shadow-inner space-y-4 animate-fade-slide-up text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
             <div className="flex items-center gap-2 font-bold text-slate-800">
-              <span>🔬 مقاييس الأخصائي والتحليل الوصفي للإدراك العددي:</span>
+              <Sliders className="w-4 h-4 text-sky-600" />
+              <span>مقاييس الأخصائي والتحليل الوصفي للإدراك العددي:</span>
               <span className="text-[11px] font-normal text-slate-500">(مقاييس وصفية؛ لا تصنف الطفل ولا تُعد تشخيصًا لعسر الحساب)</span>
             </div>
 
@@ -602,15 +607,16 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleTriggerFlash(currentPattern.id)}
-                  className="duo-btn-green py-4 px-8 text-lg font-black flex items-center gap-2 cursor-pointer shadow-xl animate-bounce-gentle"
+                  className="clay-btn-emerald py-4 px-8 text-xl font-black flex items-center gap-2.5 cursor-pointer shadow-xl animate-bounce-gentle"
                 >
                   <Play className="w-5 h-5 fill-white" />
-                  <span>ابدأ وميض النجوم الآن ✨</span>
+                  <span>ابدأ وميض النجوم الآن</span>
+                  <IconStar size={22} />
                 </button>
               )}
             </div>
 
-            {/* Choice Buttons (1, 2, 3, 4) */}
+            {/* Choice Buttons (1, 2, 3, 4) with Eastern Arabic and Western Digits */}
             <div className="grid grid-cols-4 gap-3 pt-2">
               {[1, 2, 3, 4].map((num) => {
                 const isSelected = subitizingSelections[currentPattern.id]?.chosen === num;
@@ -621,15 +627,16 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     type="button"
                     disabled={!isCurrentPatternFlashed || isCurrentPatternAnswered}
                     onClick={() => handleSelectSubitizingCount(currentPattern.id, num)}
-                    className={`py-5 rounded-2xl font-child text-2xl font-black border-b-6 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`py-4 sm:py-5 rounded-2xl font-child border-b-6 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex flex-col items-center justify-center leading-tight ${
                       isSelected
                         ? isTarget
-                          ? 'duo-btn-green'
+                          ? 'duo-btn-green scale-105 ring-4 ring-emerald-300'
                           : 'bg-rose-500 text-white border-rose-700'
-                        : 'duo-btn-white'
+                        : 'duo-btn-white hover:border-amber-400'
                     }`}
                   >
-                    <span>{num}</span>
+                    <span className="text-3xl font-black">{toEasternArabicDigits(num)}</span>
+                    <span className="text-[11px] font-mono opacity-60 font-bold mt-0.5">{num}</span>
                   </button>
                 );
               })}
@@ -687,59 +694,41 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
 
             {/* Trial 1: Target 37 on 0-100 scale */}
             {activeNumberLineTrial === 1 && (
-              <div className="p-6 sm:p-8 rounded-3xl bg-amber-50/70 border-2 border-amber-200 space-y-6">
-                <div className="flex items-center justify-between text-base font-black text-slate-900">
-                  <span>الهدف المطلوب: <strong className="text-2xl text-amber-600 font-mono">٣٧</strong></span>
-                  <span className="text-xs font-bold text-slate-500">المدى: ٠ إلى ١٠٠</span>
-                </div>
-
-                {/* Slider Arena */}
-                <div dir="ltr" className="space-y-4 pt-2">
-                  <div className="relative h-12 flex items-center">
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={estimate37Draft}
-                      disabled={Boolean(numberLineSelections[1])}
-                      onChange={(e) => {
-                        setEstimate37Draft(Number(e.target.value));
-                        setNumberLineTouched((prev) => ({ ...prev, 1: true }));
-                      }}
-                      className="w-full accent-emerald-600 h-3 bg-slate-200 rounded-lg cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between font-mono font-black text-sm text-slate-600">
-                    <span>٠</span>
-                    <span className="bg-white border-2 border-amber-400 px-3 py-1 rounded-full text-amber-900 text-base shadow-xs">
-                      موقع قفزتك: {estimate37Draft}
-                    </span>
-                    <span>١٠٠</span>
-                  </div>
-                </div>
+              <div className="clay-card-amber p-6 sm:p-8 space-y-6 text-center">
+                <InteractiveNumberLine
+                  min={0}
+                  max={100}
+                  value={estimate37Draft}
+                  onChange={(val) => {
+                    setEstimate37Draft(val);
+                    setNumberLineTouched((prev) => ({ ...prev, 1: true }));
+                  }}
+                  targetNumber={37}
+                  disabled={Boolean(numberLineSelections[1])}
+                />
 
                 {!numberLineSelections[1] ? (
                   <button
                     type="button"
                     disabled={!numberLineTouched[1]}
                     onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
-                    className="duo-btn-green w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-40"
+                    className="clay-btn-emerald w-full py-4 sm:py-5 text-xl flex items-center justify-center gap-3 cursor-pointer shadow-lg disabled:opacity-40"
                   >
-                    <span>ثبّت قفزة الصقر الآن 🎯</span>
+                    <IconBaseeraFalcon size={30} />
+                    <span>ثبّت قفزة الصقر الآن</span>
                   </button>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-white border border-emerald-300 space-y-2 animate-fade-slide-up">
+                  <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 space-y-3 animate-fade-slide-up shadow-sm">
                     <p className="font-child text-base font-black text-emerald-800">
-                      قفزة رائعة يا بطل! تم تثبيت موقعك عند: {numberLineSelections[1].estimate}
+                      قفزة رائعة يا بطل! تم تثبيت موقعك عند: {toEasternArabicDigits(numberLineSelections[1].estimate)} ({numberLineSelections[1].estimate})
                     </p>
                     <button
                       type="button"
                       onClick={() => setActiveNumberLineTrial(2)}
-                      className="duo-btn-blue py-3 px-6 text-sm font-black inline-flex items-center gap-1.5 cursor-pointer"
+                      className="clay-btn-sky py-3.5 px-6 text-sm font-black inline-flex items-center gap-2 cursor-pointer shadow-md"
                     >
                       <span>المهمة التالية (العدد ١٥٦)</span>
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                     </button>
                   </div>
                 )}
@@ -748,59 +737,41 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
 
             {/* Trial 2: Target 156 on 0-200 scale */}
             {activeNumberLineTrial === 2 && (
-              <div className="p-6 sm:p-8 rounded-3xl bg-amber-50/70 border-2 border-amber-200 space-y-6">
-                <div className="flex items-center justify-between text-base font-black text-slate-900">
-                  <span>الهدف المطلوب: <strong className="text-2xl text-amber-600 font-mono">١٥٦</strong></span>
-                  <span className="text-xs font-bold text-slate-500">المدى: ٠ إلى ٢٠٠</span>
-                </div>
-
-                {/* Slider Arena */}
-                <div dir="ltr" className="space-y-4 pt-2">
-                  <div className="relative h-12 flex items-center">
-                    <input
-                      type="range"
-                      min={0}
-                      max={200}
-                      value={estimate156Draft}
-                      disabled={Boolean(numberLineSelections[2])}
-                      onChange={(e) => {
-                        setEstimate156Draft(Number(e.target.value));
-                        setNumberLineTouched((prev) => ({ ...prev, 2: true }));
-                      }}
-                      className="w-full accent-emerald-600 h-3 bg-slate-200 rounded-lg cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between font-mono font-black text-sm text-slate-600">
-                    <span>٠</span>
-                    <span className="bg-white border-2 border-amber-400 px-3 py-1 rounded-full text-amber-900 text-base shadow-xs">
-                      موقع قفزتك: {estimate156Draft}
-                    </span>
-                    <span>٢٠٠</span>
-                  </div>
-                </div>
+              <div className="clay-card-amber p-6 sm:p-8 space-y-6 text-center">
+                <InteractiveNumberLine
+                  min={0}
+                  max={200}
+                  value={estimate156Draft}
+                  onChange={(val) => {
+                    setEstimate156Draft(val);
+                    setNumberLineTouched((prev) => ({ ...prev, 2: true }));
+                  }}
+                  targetNumber={156}
+                  disabled={Boolean(numberLineSelections[2])}
+                />
 
                 {!numberLineSelections[2] ? (
                   <button
                     type="button"
                     disabled={!numberLineTouched[2]}
                     onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
-                    className="duo-btn-green w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-40"
+                    className="clay-btn-emerald w-full py-4 sm:py-5 text-xl flex items-center justify-center gap-3 cursor-pointer shadow-lg disabled:opacity-40"
                   >
-                    <span>ثبّت قفزة الصقر الآن 🎯</span>
+                    <IconBaseeraFalcon size={30} />
+                    <span>ثبّت قفزة الصقر الآن</span>
                   </button>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-white border border-emerald-300 space-y-2 animate-fade-slide-up">
+                  <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 space-y-3 animate-fade-slide-up shadow-sm">
                     <p className="font-child text-base font-black text-emerald-800">
                       ما شاء الله! اكتملت مهام خط الأعداد بنجاح
                     </p>
                     <button
                       type="button"
                       onClick={() => setActiveStation(3)}
-                      className="duo-btn-green py-3 px-6 text-sm font-black inline-flex items-center gap-1.5 cursor-pointer"
+                      className="clay-btn-emerald py-3.5 px-7 text-sm font-black inline-flex items-center gap-2 cursor-pointer shadow-md"
                     >
                       <span>انطلق للمحطة التالية (لغز الأرقام السحري)</span>
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowLeft className="w-4 h-4" />
                     </button>
                   </div>
                 )}
@@ -910,8 +881,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               <IconTrophy size={48} />
             </div>
             <div className="space-y-1">
-              <h3 className="font-child text-2xl sm:text-3xl font-black">
-                كفو يا بطل الرياضيات {activeStudent.name}! 🌟
+              <h3 className="font-child text-2xl sm:text-3xl font-black flex items-center justify-center gap-2">
+                <span>كفو يا بطل الرياضيات {activeStudent.name}!</span>
+                <IconStar size={28} />
               </h3>
               <p className="font-child text-sm sm:text-base font-bold text-amber-100">
                 أكملت مهام مغامرة الأرقام الثلاث وحصلت على وسام عبقري الحساب!

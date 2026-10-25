@@ -394,6 +394,7 @@ export async function assessReadingAudioWithAzure(args: {
 
   // Azure SDK continuous mode is required beyond short clips. Microsoft documents that
   // EnableMiscue is unsupported there, so unmatched reference words remain unresolved.
+  // @ts-ignore
   const sdk: any = await import('microsoft-cognitiveservices-speech-sdk');
   const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
   speechConfig.speechRecognitionLanguage = args.language;
