@@ -30,6 +30,7 @@ import {
   validateAndDeriveMathTrials,
   validateAndDeriveSessionFromEvidence,
   buildDeterministicLearningReport,
+  VerifiedAutomatedAudioAssessment,
 } from './src/utils/studentDataSecurity';
 
 dotenv.config();
@@ -712,6 +713,58 @@ async function startServer() {
   app.use(express.json({ limit: '5mb' }));
 
   let studentsDb: StudentRecord[] = loadPersistedStudents();
+  // Short-lived, one-use receipts bind an audio result to the same authenticated
+  // session, tenant, student, and reading passage. Audio bytes are never retained here.
+  const audioAssessmentReceipts = new Map<string, {
+    sessionId: string;
+    tenantId: string;
+    studentId: string;
+    passageId: string;
+    expiresAt: number;
+    assessment: VerifiedAutomatedAudioAssessment;
+  }>();
+  const audioAssessmentReceiptTtlMs = 10 * 60 * 1000;
+
+  const pruneAudioAssessmentReceipts = () => {
+    const now = Date.now();
+    for (const [key, value] of audioAssessmentReceipts) {
+      if (value.expiresAt <= now) audioAssessmentReceipts.delete(key);
+    }
+    while (audioAssessmentReceipts.size > 500) {
+      const oldestKey = audioAssessmentReceipts.keys().next().value;
+      if (!oldestKey) break;
+      audioAssessmentReceipts.delete(oldestKey);
+    }
+  };
+
+  const resolveAudioAssessmentReceipt = (
+    incoming: Record<string, unknown>,
+    session: VerifiedBaseeraSession,
+    studentId: string,
+    fallbackPassageId?: string
+  ): { valid: boolean; assessment?: VerifiedAutomatedAudioAssessment; receiptKey?: string } => {
+    const evidence = incoming.evidence && typeof incoming.evidence === 'object' && !Array.isArray(incoming.evidence)
+      ? incoming.evidence as Record<string, unknown>
+      : incoming;
+    const hasReceipt = Object.prototype.hasOwnProperty.call(incoming, 'aiAssessmentReceipt') ||
+      Object.prototype.hasOwnProperty.call(evidence, 'aiAssessmentReceipt');
+    if (!hasReceipt) return { valid: true };
+
+    const key = incoming.aiAssessmentReceipt ?? evidence.aiAssessmentReceipt;
+    if (typeof key !== 'string' || !/^[a-f0-9]{64}$/.test(key)) return { valid: false };
+    const stored = audioAssessmentReceipts.get(key);
+    const passageId = String(evidence.passageId ?? incoming.passageId ?? fallbackPassageId ?? '');
+    if (
+      !stored ||
+      stored.expiresAt <= Date.now() ||
+      stored.sessionId !== session.sessionId ||
+      stored.tenantId !== session.tenantId ||
+      stored.studentId !== studentId ||
+      stored.passageId !== passageId
+    ) return { valid: false };
+    return { valid: true, assessment: stored.assessment, receiptKey: key };
+  };
+
   loadSecurityState();
 
   // School administrator / educator authentication & RBAC Session Issuing Endpoint.
@@ -992,6 +1045,19 @@ async function startServer() {
         return;
       }
 
+      // A voice result is accepted only by consuming a short-lived receipt that the server
+      // issued after it evaluated the actual WAV audio for this same student and passage.
+      const audioReceipt = resolveAudioAssessmentReceipt(
+        incoming, session, id, String(incoming.passageId ?? '')
+      );
+      if (!audioReceipt.valid) {
+        res.status(409).json({
+          code: 'AUDIO_ASSESSMENT_RECEIPT_INVALID',
+          error: 'انتهت صلاحية نتيجة الصوت أو لا تخص هذه الجلسة؛ أعد تسجيل القراءة وتقييمها.',
+        });
+        return;
+      }
+
       // Server-side derivation and plausibility validation of reading & math evidence
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: cleanName,
@@ -1000,7 +1066,7 @@ async function startServer() {
         sessionId: session.sessionId,
         role: session.role,
         accountName: session.accountName,
-      });
+      }, audioReceipt.assessment);
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
           error: derived.errorAr,
@@ -1063,6 +1129,7 @@ async function startServer() {
         return;
       }
       studentsDb = committed.students;
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       res.status(201).json({ student: newRecord, persisted: true });
     }
   );
@@ -1142,6 +1209,16 @@ async function startServer() {
       }
 
       const current = studentsDb[idx];
+      const audioReceipt = resolveAudioAssessmentReceipt(
+        incoming, session, id, String(incoming.passageId ?? '')
+      );
+      if (!audioReceipt.valid) {
+        res.status(409).json({
+          code: 'AUDIO_ASSESSMENT_RECEIPT_INVALID',
+          error: 'انتهت صلاحية نتيجة الصوت أو لا تخص هذه الجلسة؛ أعد تسجيل القراءة وتقييمها.',
+        });
+        return;
+      }
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: current.name,
         gradeLevel: current.gradeLevel,
@@ -1149,7 +1226,7 @@ async function startServer() {
         sessionId: session.sessionId,
         role: session.role,
         accountName: session.accountName,
-      });
+      }, audioReceipt.assessment);
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
           error: derived.errorAr,
@@ -1238,6 +1315,7 @@ async function startServer() {
         return;
       }
       studentsDb = committed.students;
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       res.status(200).json({ student: updatedRecord, persisted: true });
     }
   );
@@ -1801,30 +1879,78 @@ async function startServer() {
       : undefined;
     const gradeLevel = storedStudent?.gradeLevel ?? requestedGrade;
 
-    // Personalization may only use teacher-verified targets from a completed, tenant-scoped session.
-    const trustedTargetWords = storedStudent &&
+    // Use only target words derived from a completed server-verified audio assessment or
+    // an explicitly legacy-reviewed session. The child never needs a teacher to unlock adaptation.
+    const hasAIValidatedAlignment = Boolean(
+      storedStudent &&
+      storedStudent.sessionStatus === 'completed' &&
+      storedStudent.aiAssessmentVerified === true &&
+      storedStudent.aiAssessmentSource === 'azure_pronunciation_assessment' &&
+      storedStudent.evidenceProvenance === 'server-verified-audio' &&
+      Array.isArray(storedStudent.verifiedWordsAlignment)
+    );
+    const hasLegacyTeacherAlignment = Boolean(
+      storedStudent &&
       storedStudent.sessionStatus === 'completed' &&
       storedStudent.teacherVerified === true &&
       Array.isArray(storedStudent.verifiedWordsAlignment)
-      ? storedStudent.verifiedWordsAlignment
-          .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
-          .map((item) => item.word)
+    );
+    const sourceAlignment = hasAIValidatedAlignment || hasLegacyTeacherAlignment
+      ? storedStudent?.verifiedWordsAlignment
       : [];
-    const cleanWords = trustedTargetWords
+    const cleanWords = (sourceAlignment || [])
+      .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+      .map((item) => item.word)
       .filter((word: unknown): word is string => typeof word === 'string')
       .slice(0, 8)
       .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
       .filter(Boolean);
-    const hasTeacherReviewedTargets = cleanWords.length > 0;
+    const hasAIValidatedTargets = hasAIValidatedAlignment && cleanWords.length > 0;
+    const hasTeacherReviewedTargets = hasLegacyTeacherAlignment && cleanWords.length > 0;
 
-    // Do not show structurally valid but linguistically unreviewed model-generated child activities.
-    // Until a qualified Arabic-language reviewer validates generated items, serve only the curated,
-    // grade-banded bank. Teacher-reviewed target words affect the plan only when they match a bank item.
+    // Turn incorrect number-line/transcoding trials into concrete educational practice
+    // targets; these are item-level observations, not dyscalculia classifications.
+    const gradeBandMax = gradeLevel <= 2 ? 20 : gradeLevel <= 4 ? 100 : 1000;
+    const mathTrials = storedStudent?.mathTrials;
+    const rawMathTargets: Array<{ targetNumber: number; min: number; max: number }> = [];
+    for (const trial of mathTrials?.numberLineTrials || []) {
+      if (
+        trial && Number.isInteger(trial.target) &&
+        Number.isFinite(trial.userEstimate) &&
+        trial.userEstimate !== trial.target
+      ) {
+        const min = Number.isInteger(trial.scaleMin) ? Number(trial.scaleMin) : 0;
+        const max = Number.isInteger(trial.scaleMax) ? Number(trial.scaleMax) : gradeBandMax;
+        if (min >= 0 && min < max && max <= 10000 && trial.target >= min && trial.target <= max) {
+          rawMathTargets.push({ targetNumber: trial.target, min, max });
+        }
+      }
+    }
+    for (const trial of mathTrials?.transcodingTrials || []) {
+      if (
+        trial && Number.isInteger(trial.targetNumber) &&
+        Number.isInteger(trial.selectedNumber) &&
+        trial.targetNumber !== trial.selectedNumber &&
+        trial.targetNumber >= 0 && trial.targetNumber <= gradeBandMax
+      ) {
+        rawMathTargets.push({ targetNumber: trial.targetNumber, min: 0, max: gradeBandMax });
+      }
+    }
+    const uniqueMathTargets = [...new Map(
+      rawMathTargets.map((target) => [`${target.targetNumber}:${target.min}:${target.max}`, target])
+    ).values()].slice(0, 8);
+    const hasAIValidatedMathTargets = uniqueMathTargets.length > 0 && Boolean(storedStudent?.dyscalculiaAssessed);
+
+    // The deterministic planner uses only matching words from its curated bank and real,
+    // validated missed-number targets. It never emits a diagnostic risk label.
     const sessionPlan = generateAdaptiveRemediationPlan({
       studentName: 'الطالب',
       gradeLevel,
       effectiveWords: cleanWords,
       targetsTeacherReviewed: hasTeacherReviewedTargets,
+      targetsAIValidated: hasAIValidatedTargets,
+      targetsMathValidated: hasAIValidatedMathTargets,
+      mathTargets: uniqueMathTargets,
     });
     if (!isStructurallyValidRemediationSessionPlan(sessionPlan)) {
       res.status(500).json({ error: 'تعذّر تحميل بنك الأنشطة المعتمد بنيويًا.' });
@@ -1832,9 +1958,13 @@ async function startServer() {
     }
 
     res.json({
-      source: 'curated-grade-banded',
-      targetWordsUsed: hasTeacherReviewedTargets ? cleanWords : [],
+      source: hasAIValidatedTargets || hasAIValidatedMathTargets
+        ? 'curated-adaptive-from-validated-ai-evidence'
+        : 'curated-grade-banded',
+      targetWordsUsed: hasAIValidatedTargets || hasTeacherReviewedTargets ? cleanWords : [],
+      targetWordsAreAIValidated: hasAIValidatedTargets,
       targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
+      mathTargetsUsed: hasAIValidatedMathTargets ? uniqueMathTargets : [],
       session: sessionPlan,
     });
   });
@@ -2172,6 +2302,15 @@ async function startServer() {
       guardianConsentRecordedAt,
       guardianAudioConsentRecordedAt,
     } = body;
+    const assessmentSession = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
+    if (!/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId)) {
+      res.status(400).json({
+        code: 'STUDENT_ID_REQUIRED',
+        error: 'تعذر ربط تقييم الصوت بسجل الطالب؛ أعد اختيار الطالب ثم أعد المحاولة.',
+      });
+      return;
+    }
 
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;
@@ -2259,7 +2398,56 @@ async function startServer() {
         dialectLabel: language === 'ar-EG' ? 'المصرية' : 'الفصحى المعيارية / الخليجية',
       });
       console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
-      res.json(result);
+
+      // A receipt is created only when every target word has a resolved Azure word-level result.
+      // It holds derived scores only; raw child audio is neither cached nor persisted.
+      const completeAndResolved =
+        result.sourceModel === 'azure_pronunciation_assessment' &&
+        result.assessmentComplete === true &&
+        result.transcript.trim().length > 0 &&
+        result.words.length === trustedPassage.words.length &&
+        result.words.every((word, index) =>
+          word.word === trustedPassage.words[index] &&
+          word.errorType !== 'Unconfirmed' &&
+          word.errorType !== 'Insertion'
+        );
+      if (!completeAndResolved || !Number.isFinite(result.wordAccuracyPercent)) {
+        res.json({ ...result, assessmentReceipt: null, receiptExpiresAt: null });
+        return;
+      }
+
+      pruneAudioAssessmentReceipts();
+      const receipt = crypto.randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + audioAssessmentReceiptTtlMs;
+      const verifiedAssessment: VerifiedAutomatedAudioAssessment = {
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        passageId: trustedPassage.id,
+        transcript: result.transcript,
+        durationSeconds: Number(durationSeconds),
+        wordAccuracyPercent: result.wordAccuracyPercent,
+        wordsCorrectPerMinute: result.wordsCorrectPerMinute,
+        wordsPerMinute: result.wordsPerMinute,
+        words: result.words.map((word) => ({
+          word: word.word,
+          errorType: word.errorType as VerifiedAutomatedAudioAssessment['words'][number]['errorType'],
+          accuracyScore: word.accuracyScore,
+          spokenWord: word.spokenWord,
+        })),
+      };
+      audioAssessmentReceipts.set(receipt, {
+        sessionId: assessmentSession.sessionId,
+        tenantId: assessmentSession.tenantId,
+        studentId,
+        passageId: trustedPassage.id,
+        expiresAt,
+        assessment: verifiedAssessment,
+      });
+      res.json({
+        ...result,
+        assessmentReceipt: receipt,
+        receiptExpiresAt: new Date(expiresAt).toISOString(),
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
       console.warn(`[Azure Assessment] Azure service call unfulfilled: ${message}. Falling back cleanly to Tier 2 Baseera Voice AI Aligner.`);

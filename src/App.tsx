@@ -217,6 +217,7 @@ export default function App() {
     oralWcpm: record.oralWcpm ?? record.wcpm ?? null,
     oralAccuracyPercent: record.oralAccuracyPercent ?? null,
     teacherVerified: record.teacherVerified === true,
+    ...(typeof record.aiAssessmentReceipt === 'string' ? { aiAssessmentReceipt: record.aiAssessmentReceipt } : {}),
     teacherVerifierRole: record.teacherVerifierRole,
     teacherVerificationTimestamp: record.teacherVerificationTimestamp,
     teacherWordOverridesCount: record.teacherWordOverridesCount,

@@ -377,3 +377,79 @@ describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate 
     );
   });
 });
+
+
+it('derives oral-reading metrics only from a complete server-verified Azure assessment', () => {
+  const passage = ARABIC_READING_PASSAGES[0];
+  const answers = passage.comprehensionQuestions.map((q) => q.correctIndex);
+  const assessment = {
+    sourceModel: 'azure_pronunciation_assessment' as const,
+    assessmentComplete: true as const,
+    passageId: passage.id,
+    transcript: passage.words.slice(1).join(' '),
+    durationSeconds: 45,
+    wordAccuracyPercent: Math.round(((passage.words.length - 1) / passage.words.length) * 100),
+    wordsCorrectPerMinute: 30,
+    wordsPerMinute: 35,
+    words: passage.words.map((word, index) => ({
+      word,
+      errorType: index === 0 ? 'Substitution' as const : 'None' as const,
+      accuracyScore: index === 0 ? 45 : 96,
+      spokenWord: index === 0 ? 'كلمة مختلفة' : word,
+    })),
+  };
+
+  const result = validateAndDeriveSessionFromEvidence(
+    {
+      assessmentModality: 'voice_only',
+      passageId: passage.id,
+      readingDurationSeconds: 45,
+      comprehensionAnswers: answers,
+    },
+    { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel },
+    undefined,
+    assessment,
+  );
+
+  assert.equal(result.valid, true);
+  assert.ok(result.derivedFields);
+  assert.equal(result.derivedFields.oralReadingAssessed, true);
+  assert.equal(result.derivedFields.aiAssessmentVerified, true);
+  assert.equal(result.derivedFields.aiAssessmentSource, 'azure_pronunciation_assessment');
+  assert.equal(result.derivedFields.evidenceProvenance, 'server-verified-audio');
+  assert.equal(result.derivedFields.oralWcpm, 30);
+  assert.equal(result.derivedFields.oralAccuracyPercent, assessment.wordAccuracyPercent);
+  assert.equal(result.derivedFields.phoneticSubstitutionCount, 1);
+  assert.equal(result.derivedFields.verifiedWordsAlignment?.[0].status, 'phonetic_substitution');
+  assert.equal(result.derivedFields.readingRiskLevel, 'unassessed');
+  assert.equal(result.derivedFields.dyslexiaRiskScore, null);
+});
+
+it('does not trust client-submitted AI flags or browser transcript as an audio assessment', () => {
+  const passage = ARABIC_READING_PASSAGES[0];
+  const answers = passage.comprehensionQuestions.map((q) => q.correctIndex);
+  const result = validateAndDeriveSessionFromEvidence(
+    {
+      assessmentModality: 'voice_only',
+      passageId: passage.id,
+      readingDurationSeconds: 45,
+      comprehensionAnswers: answers,
+      spokenTranscript: passage.words.join(' '),
+      aiAssessmentVerified: true,
+      aiAssessmentSource: 'azure_pronunciation_assessment',
+      oralReadingAssessed: true,
+      wcpm: 200,
+      oralAccuracyPercent: 100,
+    },
+    { name: 'طالب تجريبي', gradeLevel: passage.gradeLevel },
+  );
+
+  assert.equal(result.valid, true);
+  assert.ok(result.derivedFields);
+  assert.equal(result.derivedFields.aiAssessmentVerified, false);
+  assert.equal(result.derivedFields.oralReadingAssessed, false);
+  assert.equal(result.derivedFields.wcpm, null);
+  assert.equal(result.derivedFields.oralWcpm, null);
+  assert.equal(result.derivedFields.oralAccuracyPercent, null);
+  assert.equal(result.derivedFields.evidenceProvenance, 'client-reported');
+});

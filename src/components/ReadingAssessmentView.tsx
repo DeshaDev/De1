@@ -12,7 +12,6 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import {
   BookOpen,
   Clock,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -24,7 +23,6 @@ import {
   Volume2,
   Mic,
   MicOff,
-  UserCheck,
   AlertCircle,
   FileCheck2,
 } from 'lucide-react';
@@ -41,7 +39,6 @@ import {
   ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
 import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
-import { alignSpeechWithReferenceText } from '../utils/pronunciationAssessment';
 import { IconStoryBook, IconMicGlow, IconStar, StoryIcons } from './ui/ChildPlayfulIcons';
 
 
@@ -104,7 +101,6 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   activeStudent,
   onProceedToMathLab,
   onNavigateTab,
-  canVerifyAsTeacher = false,
 }) => {
   const { saveReadingResults } = useAssessment();
 
@@ -165,7 +161,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const recordedAudioBlobRef = useRef<Blob | null>(null);
   const recorderStopResolverRef = useRef<((blob: Blob | null) => void) | null>(null);
 
-  // Teacher verification & Human-in-the-Loop review state
+  // Automatic speech assessment state; only a server-issued receipt validates oral metrics.
   const [verifiedWords, setVerifiedWords] = useState<
     Array<{
       word: string;
@@ -173,9 +169,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       spokenWord?: string | null;
     }>
   >([]);
-  const [teacherVerified, setTeacherVerified] = useState(false);
-  const [humanReviewConfirmed, setHumanReviewConfirmed] = useState(false);
-  const [teacherOverridesCount, setTeacherOverridesCount] = useState(0);
+  const [aiAssessmentReceipt, setAiAssessmentReceipt] = useState<string | null>(null);
   const [measuredWcpm, setMeasuredWcpm] = useState<number | undefined>(undefined);
   const [measuredAccuracyPercent, setMeasuredAccuracyPercent] = useState<number | undefined>(undefined);
 
@@ -281,10 +275,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
     setReadingModeNotice('');
-    // A retry starts a new session. Never carry forward prior answers or review status.
-    setTeacherVerified(false);
-    setHumanReviewConfirmed(false);
-    setTeacherOverridesCount(0);
+    // A retry starts a new session. Never carry forward prior answers or a previous receipt.
+    setAiAssessmentReceipt(null);
     setVerifiedWords([]);
     setMeasuredWcpm(undefined);
     setMeasuredAccuracyPercent(undefined);
@@ -299,6 +291,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setPronunciationAssessmentError('');
     setAzureAssessmentMode('');
     setAzureAssessmentComplete(false);
+    setAiAssessmentReceipt(null);
     setIsAssessingPronunciation(false);
     if (audioPlaybackUrlRef.current) {
       URL.revokeObjectURL(audioPlaybackUrlRef.current);
@@ -557,6 +550,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                studentId: activeStudent?.id || INITIAL_STUDENTS[0].id,
                 passageId: passage.id,
                 referenceText: passage.words.join(' '),
                 referenceWords: passage.words,
@@ -593,37 +587,35 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     spokenWord: typeof item.spokenWord === 'string' ? item.spokenWord : null,
                   };
                 });
+                const receipt = typeof result.assessmentReceipt === 'string' &&
+                  /^[a-f0-9]{64}$/.test(result.assessmentReceipt)
+                    ? result.assessmentReceipt : null;
+                const assessmentComplete =
+                  Boolean(receipt) &&
+                  result.assessmentComplete === true &&
+                  Number.isFinite(result.wordAccuracyPercent) &&
+                  mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
 
                 setVerifiedWords(mappedWords);
-                // An automated provider score is not a human school review.
-                setTeacherVerified(false);
-                setHumanReviewConfirmed(false);
+                setAiAssessmentReceipt(assessmentComplete ? receipt : null);
                 setSpokenTranscript(result.transcript.trim());
                 spokenTranscriptRef.current = result.transcript.trim();
                 setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
-                  ? 'تقييم Azure بالنص المرجعي ووسوم الحذف والإضافة'
-                  : 'تقييم Azure المستمر مع محاذاة النص المرجعي');
-                const assessmentComplete =
-                  result.assessmentComplete === true &&
-                  mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
+                  ? 'تقييم صوتي من Azure بالنص المرجعي ومقارنة الكلمات'
+                  : 'تقييم صوتي من Azure مع محاذاة النص المرجعي');
                 setAzureAssessmentComplete(assessmentComplete);
-                setMeasuredWcpm(
-                  Number.isFinite(result.wordsCorrectPerMinute)
-                    ? Number(result.wordsCorrectPerMinute)
-                    : undefined
-                );
-                setMeasuredAccuracyPercent(
-                  Number.isFinite(result.wordAccuracyPercent)
-                    ? Number(result.wordAccuracyPercent)
-                    : undefined
-                );
-                setMeasuredWpm(
-                  Number.isFinite(result.wordsPerMinute)
-                    ? Number(result.wordsPerMinute)
-                    : undefined
-                );
-                setReadingModeNotice('');
+                setMeasuredWcpm(assessmentComplete && Number.isFinite(result.wordsCorrectPerMinute)
+                  ? Number(result.wordsCorrectPerMinute) : undefined);
+                setMeasuredAccuracyPercent(assessmentComplete && Number.isFinite(result.wordAccuracyPercent)
+                  ? Number(result.wordAccuracyPercent) : undefined);
+                setMeasuredWpm(assessmentComplete && Number.isFinite(result.wordsPerMinute)
+                  ? Number(result.wordsPerMinute) : undefined);
+                setPronunciationAssessmentError(assessmentComplete ? '' :
+                  'لم يحسم محرك الصوت كل الكلمات؛ لن تُحتسب درجة قراءة جهرية لهذه المحاولة. أعد التسجيل أو تابع دون درجة نطق.');
+                setReadingModeNotice(assessmentComplete ? '' :
+                  'التقييم الصوتي جزئي؛ المؤشرات النهائية غير متاحة حتى تكتمل مطابقة الكلمات.');
                 setStage('verification');
+                // Incomplete results remain provisional; they cannot be saved as completed oral metrics.
                 azureSuccess = true;
               }
             }
@@ -633,58 +625,25 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         }
       }
 
-      // Tier 2: Baseera Autonomous Voice AI Engine (Always Available Zero-Failure Fallback)
+      // Fail closed if the acoustic assessment fails; browser ASR remains a preview only.
       if (!azureSuccess) {
-        if (browserPreviewTranscript && browserPreviewTranscript.trim().length > 0) {
-          const localAssessment = alignSpeechWithReferenceText(
-            passage.words,
-            browserPreviewTranscript,
-            elapsedSec,
-            studentDialect
-          );
-
-          const mappedWords = localAssessment.words.map((item, idx) => {
-            const status =
-              item.errorType === 'None' ? ('correct' as const) :
-              item.errorType === 'DialectVariant' ? ('dialect_variant' as const) :
-              item.errorType === 'Omission' ? ('omitted' as const) :
-              item.errorType === 'Substitution' || item.errorType === 'Mispronunciation' ? ('phonetic_substitution' as const) :
-              ('unconfirmed' as const);
-            return {
-              word: passage.words[idx] || item.word,
-              status,
-              spokenWord: item.spokenWord || null,
-            };
-          });
-
-          setVerifiedWords(mappedWords);
-          // Local transcript alignment is a candidate review aid, not confirmed acoustic
-          // evidence or a school review. A reviewer must explicitly certify the words.
-          setTeacherVerified(false);
-          setHumanReviewConfirmed(false);
-          setSpokenTranscript(browserPreviewTranscript);
-          spokenTranscriptRef.current = browserPreviewTranscript;
-          setAzureAssessmentMode('مطابقة أولية للتفريغ الآلي في المتصفح؛ قد يخطئ التعرف الصوتي وتحتاج الكلمات إلى مراجعة بشرية.');
-          setAzureAssessmentComplete(false);
-          setMeasuredWcpm(localAssessment.wordsCorrectPerMinute);
-          setMeasuredAccuracyPercent(localAssessment.accuracyScore);
-          setMeasuredWpm(localAssessment.wordsPerMinute);
-          setPronunciationAssessmentError('');
-          setReadingModeNotice('');
-          setStage('verification');
-        } else {
-          setPronunciationAssessmentError('لم يتم التقاط صوت واضح من الميكروفون. يرجى التأكد من تشغيل الميكروفون والقراءة بصوت مسموع.');
-          setAudioCaptureFailed(!recordedAudio || recordedAudio.size === 0);
-          setVerifiedWords(unresolvedWords);
-          setSpokenTranscript('');
-          spokenTranscriptRef.current = '';
-          setMeasuredWpm(undefined);
-          setMeasuredWcpm(undefined);
-          setMeasuredAccuracyPercent(undefined);
-          setAzureAssessmentComplete(false);
-          setAzureAssessmentMode('');
-          setStage('verification');
-        }
+        setPronunciationAssessmentError(
+          !recordedAudio || recordedAudio.size === 0
+            ? 'لم يُلتقط تسجيل صوتي صالح. تحقق من أذونات الميكروفون ثم أعد القراءة.'
+            : studentDialect === 'levantine' || studentDialect === 'maghrebi'
+              ? 'لم يتوفر محرك تقييم صوتي موثّق لهذه اللهجة. اختر المصرية أو السعودية/الفصحى، أو تابع دون درجة نطق.'
+              : 'تعذر إكمال التقييم الصوتي الآلي. لم نستخدم تفريغ المتصفح لاحتساب درجات؛ أعد التسجيل أو تابع دون درجة نطق.'
+        );
+        setAudioCaptureFailed(!recordedAudio || recordedAudio.size === 0);
+        setVerifiedWords(unresolvedWords);
+        setAiAssessmentReceipt(null);
+        setMeasuredWpm(undefined);
+        setMeasuredWcpm(undefined);
+        setMeasuredAccuracyPercent(undefined);
+        setAzureAssessmentComplete(false);
+        setAzureAssessmentMode('');
+        setReadingModeNotice('');
+        setStage('verification');
       }
       setIsAssessingPronunciation(false);
     } else {
@@ -697,30 +656,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     }
   };
 
-  // Manual word-level overrides are restricted to an authorized school reviewer.
-  const handleToggleWordStatus = (index: number) => {
-    if (!canVerifyAsTeacher) return;
-    setHumanReviewConfirmed(false);
-    setTeacherOverridesCount(prev => prev + 1);
-    setVerifiedWords(prev => {
-      const next = [...prev];
-      const current = next[index];
-      const cycle: Array<'correct' | 'phonetic_substitution' | 'omitted' | 'dialect_variant' | 'unconfirmed'> = [
-        'correct',
-        'phonetic_substitution',
-        'omitted',
-        'dialect_variant',
-        'unconfirmed',
-      ];
-      const currentIdx = cycle.indexOf(current.status);
-      const nextStatus = cycle[(currentIdx + 1) % cycle.length];
-      next[index] = { ...current, status: nextStatus };
-      return next;
-    });
-  };
-
-  // Live recalculate WCPM from teacher-verified words
-  const teacherStats = useMemo(() => {
+  // Descriptive word counts for display only; these do not override or certify scores.
+  const wordStats = useMemo(() => {
     let correct = 0;
     let errors = 0;
     let omitted = 0;
@@ -778,21 +715,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     return { correct, errors, omitted, dialect, unconfirmed, effective, total, accuracyPercent };
   }, [verifiedWords]);
 
-  // Mark all words as correct (quick action for fluent reading)
-  const handleMarkAllCorrect = () => {
-    if (!canVerifyAsTeacher) return;
-    setHumanReviewConfirmed(false);
-    setTeacherOverridesCount(prev => prev + 1);
-    setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
-  };
-
-  // Azure may fail, but an authorized reviewer can still assess the recorded audio manually.
+  // Continue to comprehension whether or not a valid voice score was available.
   const handleConfirmVerification = () => {
-    const wordReviewComplete = teacherStats.unconfirmed === 0;
-    const canCertify = canVerifyAsTeacher && wordReviewComplete && humanReviewConfirmed;
-    setTeacherVerified(canCertify);
-    setMeasuredWcpm(wordReviewComplete ? (teacherStats.liveWcpm ?? undefined) : undefined);
-    setMeasuredAccuracyPercent(wordReviewComplete ? (teacherStats.liveAccuracy ?? undefined) : undefined);
+    if (!azureAssessmentComplete || !aiAssessmentReceipt) {
+      setAiAssessmentReceipt(null);
+      setMeasuredWcpm(undefined);
+      setMeasuredAccuracyPercent(undefined);
+      setMeasuredWpm(undefined);
+    }
     setSelectedAnswers({});
     setCurrentQuestionIndex(0);
     setStage('comprehension');
@@ -834,10 +764,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       wordCount: passage.words.length,
       durationSeconds: finalDurationSec,
       wpm: measuredWpm ?? 0,
-      wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
-      oralReadingAssessed: readingMode === 'oral_audio' && teacherVerified,
-      oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
-      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      wcpm: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? measuredWcpm : undefined,
+      oralReadingAssessed: readingMode === 'oral_audio' && azureAssessmentComplete && Boolean(aiAssessmentReceipt),
+      oralAccuracyPercent: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? measuredAccuracyPercent : undefined,
+      teacherVerified: false,
       assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
       spokenTranscript: readingMode === 'oral_audio' ? (spokenTranscriptRef.current || spokenTranscript).trim() : undefined,
       comprehensionScore: scorePercent,
@@ -892,15 +822,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         'اللهجة المصرية',
       readingDurationSeconds: finalDurationSec,
       wpm: measuredWpm ?? 0,
-      wcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
-      oralWcpm: readingMode === 'oral_audio' ? (measuredWcpm ?? null) : null,
-      oralReadingAssessed: readingMode === 'oral_audio' && teacherVerified,
-      oralAccuracyPercent: readingMode === 'oral_audio' ? (measuredAccuracyPercent ?? null) : null,
-      // An automated transcript is not a human teacher attestation.
-      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
-      teacherVerifierRole: readingMode === 'oral_audio' && teacherVerified ? 'مراجع المدرسة (مراجعة بشرية)' : undefined,
-      teacherVerificationTimestamp: readingMode === 'oral_audio' && teacherVerified ? nowIso : undefined,
-      teacherWordOverridesCount: readingMode === 'oral_audio' ? teacherOverridesCount : undefined,
+      wcpm: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? (measuredWcpm ?? null) : null,
+      oralWcpm: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? (measuredWcpm ?? null) : null,
+      oralReadingAssessed: readingMode === 'oral_audio' && azureAssessmentComplete && Boolean(aiAssessmentReceipt),
+      oralAccuracyPercent: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? (measuredAccuracyPercent ?? null) : null,
+      teacherVerified: false,
+      aiAssessmentVerified: readingMode === 'oral_audio' && azureAssessmentComplete && Boolean(aiAssessmentReceipt),
+      aiAssessmentSource: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? 'azure_pronunciation_assessment' : undefined,
+      aiAssessmentReceipt: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? aiAssessmentReceipt : undefined,
       verifiedWordsAlignment: readingMode === 'oral_audio' ? verifiedWords : undefined,
       spokenTranscript: readingMode === 'oral_audio' ? cleanTranscript : undefined,
       speechRecognitionUsed: hasAudioCaptured,
@@ -1357,10 +1286,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   معدل سرعة وطلاقة القراءة (WCPM)
                 </span>
                 <div className="text-2xl font-black text-emerald-700 font-mono">
-                  {teacherStats.liveWcpm ?? measuredWcpm ?? '0'} <span className="text-xs font-sans">كلمة صحيحة / دقيقة</span>
+                  {azureAssessmentComplete && aiAssessmentReceipt ? (measuredWcpm ?? wordStats.liveWcpm ?? 'غير متاح') : 'غير متاح'} <span className="text-xs font-sans">كلمة صحيحة / دقيقة</span>
                 </div>
                 <span className="text-[10px] text-emerald-600 block mt-1">
-                  {teacherStats.effectiveWords} كلمة صحيحة مستغرقة في {finalDurationSec} ثانية
+                  {azureAssessmentComplete && aiAssessmentReceipt
+                    ? `${wordStats.effectiveWords} كلمة مؤكدة خلال ${finalDurationSec} ثانية`
+                    : 'لا توجد درجة طلاقة صوتية مؤكدة'}
                 </span>
               </div>
 
@@ -1369,7 +1300,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   مطابقة وفق التصنيفات الحالية
                 </span>
                 <div className="text-2xl font-black text-teal-700 font-mono">
-                  {teacherStats.liveAccuracy === null ? 'غير متاح' : teacherStats.liveAccuracy + '%'}
+                  {azureAssessmentComplete && aiAssessmentReceipt && measuredAccuracyPercent !== undefined ? measuredAccuracyPercent + '%' : 'غير متاح'}
                 </div>
                 <span className="text-[10px] text-teal-600">
                   من إجمالي {verifiedWords.length} كلمة
@@ -1381,7 +1312,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   الإبدالات / التعثرات
                 </span>
                 <div className="text-2xl font-black text-amber-700 font-mono">
-                  {teacherStats.errors}
+                  {wordStats.errors}
                 </div>
                 <span className="text-[10px] text-amber-600">
                   تصنيفات تحتاج إلى مراجعة
@@ -1393,7 +1324,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   كلمات تم تخطيها (حذف)
                 </span>
                 <div className="text-2xl font-black text-rose-700 font-mono">
-                  {teacherStats.omitted}
+                  {wordStats.omitted}
                 </div>
                 <span className="text-[10px] text-rose-600">
                   كلمات لم تُنطق أثناء القراءة
@@ -1452,16 +1383,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-800">
-                  فحص الذكاء الاصطناعي لكلمات النص (اضغط على أي كلمة للاستماع لنطقها السليم):
+                  الكلمات التي عالجها المحرك الصوتي (اضغط على أي كلمة لسماع نطقها):
                 </span>
-                <button
-                  type="button"
-                  onClick={handleMarkAllCorrect}
-                  className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
-                  title="تأكيد قراءة جميع كلمات النص كصحيحة"
-                >
-                  ✓ تأكيد قراءة جميع الكلمات بطلاقة
-                </button>
+                <span className="text-[11px] text-slate-500">
+                  لا يمكن تغيير نتائج المحرك يدويًا
+                </span>
               </div>
 
               {/* Status Legend */}
@@ -1497,13 +1423,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'بديل لهجي مقبول';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold ring-2 ring-amber-300';
-                    statusTitle = item.spokenWord ? `اختلاف في التفريغ (تعرّف النظام على: "${item.spokenWord}")؛ راجع الصوت` : 'اختلاف في التفريغ يحتاج مراجعة';
+                    statusTitle = item.spokenWord ? `اختلاف محتمل في النطق (التفريغ: "${item.spokenWord}")؛ أعد التسجيل إن لم يُحسم` : 'اختلاف محتمل؛ أعد التسجيل إن لزم';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
                     statusTitle = 'غير محسومة آلياً';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
-                    statusTitle = 'تخطي محتمل في التفريغ؛ راجع التسجيل للتأكد';
+                    statusTitle = 'حذف محتمل؛ أعد التسجيل لتأكيده';
                   }
 
                   return (
@@ -1534,11 +1460,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <FileCheck2 className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-slate-950 text-sm font-black mb-1">
-                  مؤشر مطابقة آلي أولي: {measuredAccuracyPercent ?? summaryStats.accuracyPercent ?? 'غير محسوم'}{(measuredAccuracyPercent ?? summaryStats.accuracyPercent) === null || (measuredAccuracyPercent ?? summaryStats.accuracyPercent) === undefined ? '' : '%'}
+                  {azureAssessmentComplete && aiAssessmentReceipt && measuredAccuracyPercent !== undefined
+                    ? `دقة الكلمات التي قيّمها محرك الصوت: ${measuredAccuracyPercent}%`
+                    : 'درجة النطق غير متاحة لهذه المحاولة'}
                 </strong>
                 <p className="text-xs text-slate-700 leading-relaxed">
-                  {azureAssessmentMode || 'تمت مقارنة التفريغ الصوتي الآلي بالنص المرجعي.'}
-                  {' '}قد يخطئ التعرف الصوتي أو يلتبس عليه النطق اللهجي؛ هذا المؤشر ليس إثباتًا لدقة نطق الطفل ولا تشخيصًا. يجب مراجعة الكلمات غير المحسومة قبل اعتماد أي نتيجة.
+                  {azureAssessmentMode || 'يقيّم الخادم التسجيل الصوتي الحقيقي، ولا يحوّل تفريغ المتصفح إلى درجة نطق.'}
+                  {' '}النتائج وصفية وليست تشخيصًا. إذا بقيت كلمات غير محسومة، أعد التسجيل؛ لا يلزم اعتماد معلّم.
                 </p>
               </div>
             </div>
@@ -1546,20 +1474,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex-1 space-y-3 text-xs text-slate-700 text-right">
-                {canVerifyAsTeacher && (
-                  <label className="flex items-start gap-2 leading-relaxed rounded-xl border border-amber-200 bg-amber-50 p-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={humanReviewConfirmed}
-                      onChange={(event) => setHumanReviewConfirmed(event.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span>أؤكد أنني راجعت التسجيل والكلمات المعروضة يدويًا مقابل الصوت، وصححت الحالات غير المحسومة. هذا إقرار بالمراجعة البشرية وليس اعتمادًا سريريًا.</span>
-                  </label>
-                )}
                 <div className="flex items-center gap-2">
-                  <FileCheck2 className="w-5 h-5 text-slate-500 shrink-0" />
-                  <span>{teacherVerified ? 'تم توثيق مراجعة بشرية مخوّلة لهذه النتيجة.' : 'لم تُعتمد النتيجة بمراجعة بشرية؛ المتابعة إلى أسئلة الفهم لا تعني اعتماد مؤشرات النطق.'}</span>
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${azureAssessmentComplete && aiAssessmentReceipt ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  <span>{azureAssessmentComplete && aiAssessmentReceipt
+                    ? 'اكتمل تقييم الصوت آليًا على الخادم؛ ستُستخدم النتيجة في التدريب التكيفي.'
+                    : 'لم تكتمل درجة النطق آليًا؛ يمكنك إعادة القراءة أو متابعة الفهم دون درجة صوتية.'}</span>
                 </div>
               </div>
 
@@ -1789,10 +1708,15 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
               </div>
 
-              {verifiedWords.filter(w => w.status === 'phonetic_substitution' || w.status === 'omitted').length === 0 ? (
+              {!azureAssessmentComplete || !aiAssessmentReceipt ? (
+                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-sm font-bold flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                  <span>لم تكتمل مطابقة الكلمات آليًا؛ لا يمكن الجزم بدقة القراءة في هذه المحاولة. أعد التسجيل إذا أردت نتيجة صوتية.</span>
+                </div>
+              ) : verifiedWords.filter(w => w.status === 'phonetic_substitution' || w.status === 'omitted').length === 0 ? (
                 <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-sm font-bold flex items-center gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>ما شاء الله! قرأ الطفل جميع كلمات النص بدقة وطلاقة تامة دون أي إبدال أو حذف.</span>
+                  <span>لم يرصد محرك الصوت إبدالًا أو حذفًا في الكلمات التي حسمها؛ هذه نتيجة تعليمية وصفية وليست تشخيصًا.</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -1875,28 +1799,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Quick Action Bar for Instant Verification & Audio Fairness */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
                 <div className="text-xs text-slate-700 leading-relaxed">
-                  <span className="font-bold text-slate-900">ملاحظة القراءة والميكروفون:</span> إذا قرأ الطالب النص كاملاً بصوته ولكن أسقط ميكروفون المتصفح بعض الكلمات، يمكنك اعتماد قراءتها كاملة بنقرة واحدة:
+                  <span className="font-bold text-slate-900">حالة محرك الصوت:</span>{' '}
+                  {azureAssessmentComplete && aiAssessmentReceipt
+                    ? 'اكتمل التحليل الصوتي وربط الكلمات بالتدريب.'
+                    : 'لا توجد درجة نطق مؤكدة في هذه المحاولة. أعد التسجيل عند الحاجة؛ لن تُحتسب الدرجة من تفريغ المتصفح.'}
                 </div>
-                {canVerifyAsTeacher && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHumanReviewConfirmed(false);
-                        setTeacherOverridesCount(prev => prev + 1);
-                        setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
-                      }}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
-                      title="تعديل يدوي للمراجع المخوّل بعد مراجعة التسجيل"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>تعديل يدوي: جميع الكلمات صحيحة</span>
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Full Passage Words with Visual Status Highlighting */}
@@ -1913,7 +1822,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'مطابقة نصية آلية';
                   } else if (item.status === 'dialect_variant') {
                     badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
-                    statusTitle = 'بديل لهجي محتمل؛ يحتاج إلى مراجعة';
+                    statusTitle = 'بديل لهجي محتمل؛ أعد التسجيل إذا لم يحسم المحرك النطق';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 font-black ring-2 ring-amber-300 hover:bg-amber-200';
                     statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
@@ -1929,12 +1838,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => {
-                        handleSpeakWord(item.word);
-                        handleToggleWordStatus(idx);
-                      }}
+                      onClick={() => handleSpeakWord(item.word)}
                       className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
-                      title={`${item.word}: ${statusTitle} (انقر للاستماع أو تعديل التقييم)`}
+                      title={`${item.word}: ${statusTitle} (انقر للاستماع)`}
                     >
                       <span className="font-bold">{item.word}</span>
                       {item.status === 'phonetic_substitution' && item.spokenWord && (
@@ -2024,8 +1930,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   finalTranscriptsRef.current = [];
                   currentInterimRef.current = '';
                   setVerifiedWords([]);
-                  setTeacherVerified(false);
-                  setHumanReviewConfirmed(false);
+                  setAiAssessmentReceipt(null);
                   setMeasuredWpm(undefined);
                   setMeasuredWcpm(undefined);
                   setMeasuredAccuracyPercent(undefined);

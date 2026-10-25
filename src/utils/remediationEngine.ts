@@ -137,16 +137,26 @@ export function isStructurallyValidRemediationSessionPlan(value: unknown): value
 }
 
 /**
- * Deterministic fallback for evidence-based Arabic literacy and numeracy practice.
- * Provides rich, graded exercises adapted to grade levels and teacher-reviewed targets.
+ * Deterministic planner for Arabic literacy and numeracy practice.
+ * Uses validated AI word-level reading evidence and actual missed math items when available.
  */
 export function generateAdaptiveRemediationPlan(params: {
   studentName: string;
   gradeLevel: number;
   effectiveWords: string[];
   targetsTeacherReviewed?: boolean;
+  targetsAIValidated?: boolean;
+  targetsMathValidated?: boolean;
+  mathTargets?: Array<{ targetNumber: number; min: number; max: number }>;
 }): RemediationSessionPlan {
-  const { gradeLevel, effectiveWords, targetsTeacherReviewed = false } = params;
+  const {
+    gradeLevel,
+    effectiveWords,
+    targetsTeacherReviewed = false,
+    targetsAIValidated = false,
+    targetsMathValidated = false,
+    mathTargets = [],
+  } = params;
   const band = gradeLevel <= 2 ? 'foundational' : gradeLevel <= 4 ? 'developing' : 'advanced';
 
   const phonicsBank: Record<string, RemediationPhonicsDrill[]> = {
@@ -362,7 +372,8 @@ export function generateAdaptiveRemediationPlan(params: {
   const normalizeBandWord = (value: string) => normalizeArabic(value);
   const offset = gradeLevel % 2 === 0 ? 4 : 0;
   const gradeSyllables = syllableBank[band].slice(offset, offset + 8);
-  const reviewed = targetsTeacherReviewed
+  const hasTrustedReadingTargets = targetsTeacherReviewed || targetsAIValidated;
+  const reviewed = hasTrustedReadingTargets
     ? effectiveWords
         .map((word) => syllableBank[band].find((drill) => normalizeBandWord(drill.targetWord) === normalizeBandWord(word)))
         .filter((drill): drill is RemediationSyllableDrill => Boolean(drill))
@@ -372,7 +383,27 @@ export function generateAdaptiveRemediationPlan(params: {
     if (!uniqueSyllables.has(normalizeBandWord(drill.targetWord))) uniqueSyllables.set(normalizeBandWord(drill.targetWord), drill);
   }
   const syllableDrills = [...uniqueSyllables.values()].slice(0, 8);
-  const mathDrills = mathBank[band].slice(offset, offset + 8);
+  const curatedMathDrills = mathBank[band].slice(offset, offset + 8);
+  const cleanMathTargets = targetsMathValidated
+    ? mathTargets.filter((target) =>
+        Number.isInteger(target.targetNumber) &&
+        Number.isInteger(target.min) &&
+        Number.isInteger(target.max) &&
+        target.min >= 0 &&
+        target.min < target.max &&
+        target.targetNumber >= target.min &&
+        target.targetNumber <= target.max &&
+        target.max <= 10000
+      ).slice(0, 8)
+    : [];
+  const targetedMathDrills: RemediationMathDrill[] = cleanMathTargets.map((target, index) => ({
+    id: 1000 + index,
+    targetNumber: target.targetNumber,
+    min: target.min,
+    max: target.max,
+    prompt: `تدرّب على تحديد العدد ${target.targetNumber} على خط الأعداد من ${target.min} إلى ${target.max}، ثم قارن موضعك بالعدد المطلوب.`,
+  }));
+  const mathDrills = [...targetedMathDrills, ...curatedMathDrills].slice(0, 8);
   const phonicsDrills = phonicsBank[band].slice(offset, offset + 8);
 
   const pacerByBand: Record<string, RemediationPacerPassage> = {
@@ -388,9 +419,15 @@ export function generateAdaptiveRemediationPlan(params: {
   const pacerPassage = gradeLevel % 2 === 0 ? pacerAlternateByBand[band] : pacerByBand[band];
 
   return {
-    learningRationale: targetsTeacherReviewed && effectiveWords.length > 0
-      ? `أنشطة تعليمية للصف ${gradeLevel}. لا تُستخدم الكلمات المستهدفة بالتحليل الذكي لتخصيص التدريب إلا إذا طابقت كلمة موجودة في بنك تدريبي مضبوط. لا تثبت النتائج وجود اضطراب ولا تمثل الخطة اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
-      : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب مستوى القراءة، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
+    learningRationale: targetsAIValidated && effectiveWords.length > 0 && targetsMathValidated && cleanMathTargets.length > 0
+      ? `خطة تدريب للصف ${gradeLevel} بُنيت على كلمات حسمها التقييم الصوتي الآلي ومحاولات حساب موثقة آليًا، مع الاقتصار على عناصر البنك التدريبي. المؤشرات وصفية ولا تشخّص عسر القراءة أو عسر الحساب.`
+      : targetsAIValidated && effectiveWords.length > 0
+        ? `أنشطة قراءة للصف ${gradeLevel} اختيرت من نتائج التقييم الصوتي الآلي في تسجيل مكتمل، مع الاقتصار على كلمات موجودة في بنك مضبوط. هذه المؤشرات وصفية ولا تشخّص عسر القراءة.`
+        : targetsMathValidated && cleanMathTargets.length > 0
+          ? `أنشطة حساب للصف ${gradeLevel} اختيرت من محاولات عددية موثقة آليًا وأعداد أخطأ الطالب في تحديدها. هذه مؤشرات تعليمية وصفية ولا تشخّص عسر الحساب.`
+          : targetsTeacherReviewed && effectiveWords.length > 0
+            ? `أنشطة تعليمية للصف ${gradeLevel}. الكلمات المستهدفة بالتحليل الذكي مطابقة لبنك تدريبي مضبوط؛ لا تثبت النتائج وجود اضطراب ولا تمثل اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
+            : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب الصف، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
     phonicsDrills,
     syllableDrills,
     pacerPassage,
