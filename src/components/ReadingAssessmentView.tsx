@@ -12,7 +12,6 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMe
 import {
   BookOpen,
   Clock,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -24,7 +23,6 @@ import {
   Volume2,
   Mic,
   MicOff,
-  UserCheck,
   AlertCircle,
   FileCheck2,
 } from 'lucide-react';
@@ -766,10 +764,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       wordCount: passage.words.length,
       durationSeconds: finalDurationSec,
       wpm: measuredWpm ?? 0,
-      wcpm: readingMode === 'oral_audio' ? measuredWcpm : undefined,
-      oralReadingAssessed: readingMode === 'oral_audio' && teacherVerified,
-      oralAccuracyPercent: readingMode === 'oral_audio' ? measuredAccuracyPercent : undefined,
-      teacherVerified: readingMode === 'oral_audio' && teacherVerified,
+      wcpm: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? measuredWcpm : undefined,
+      oralReadingAssessed: readingMode === 'oral_audio' && azureAssessmentComplete && Boolean(aiAssessmentReceipt),
+      oralAccuracyPercent: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? measuredAccuracyPercent : undefined,
+      teacherVerified: false,
       assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
       spokenTranscript: readingMode === 'oral_audio' ? (spokenTranscriptRef.current || spokenTranscript).trim() : undefined,
       comprehensionScore: scorePercent,
@@ -1385,14 +1383,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <span className="text-xs font-bold text-slate-800">
                   فحص الذكاء الاصطناعي لكلمات النص (اضغط على أي كلمة للاستماع لنطقها السليم):
                 </span>
-                <button
-                  type="button"
-                  onClick={handleMarkAllCorrect}
-                  className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl cursor-pointer"
-                  title="تأكيد قراءة جميع كلمات النص كصحيحة"
-                >
-                  ✓ تأكيد قراءة جميع الكلمات بطلاقة
-                </button>
+                <span className="text-[11px] text-slate-500">
+                  لا يمكن تغيير نتائج المحرك يدويًا
+                </span>
               </div>
 
               {/* Status Legend */}
@@ -1434,7 +1427,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'غير محسومة آلياً';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
-                    statusTitle = 'تخطي محتمل في التفريغ؛ راجع التسجيل للتأكد';
+                    statusTitle = 'حذف محتمل؛ أعد التسجيل لتأكيده';
                   }
 
                   return (
