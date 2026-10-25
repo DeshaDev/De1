@@ -1289,7 +1289,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {azureAssessmentComplete && aiAssessmentReceipt ? (measuredWcpm ?? wordStats.liveWcpm ?? 'غير متاح') : 'غير متاح'} <span className="text-xs font-sans">كلمة صحيحة / دقيقة</span>
                 </div>
                 <span className="text-[10px] text-emerald-600 block mt-1">
-                  {wordStats.effectiveWords} كلمة صحيحة مستغرقة في {finalDurationSec} ثانية
+                  {azureAssessmentComplete && aiAssessmentReceipt
+                    ? `${wordStats.effectiveWords} كلمة مؤكدة خلال ${finalDurationSec} ثانية`
+                    : 'لا توجد درجة طلاقة صوتية مؤكدة'}
                 </span>
               </div>
 
@@ -1381,7 +1383,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-800">
-                  فحص الذكاء الاصطناعي لكلمات النص (اضغط على أي كلمة للاستماع لنطقها السليم):
+                  الكلمات التي عالجها المحرك الصوتي (اضغط على أي كلمة لسماع نطقها):
                 </span>
                 <span className="text-[11px] text-slate-500">
                   لا يمكن تغيير نتائج المحرك يدويًا
@@ -1421,7 +1423,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'بديل لهجي مقبول';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold ring-2 ring-amber-300';
-                    statusTitle = item.spokenWord ? `اختلاف في التفريغ (تعرّف النظام على: "${item.spokenWord}")؛ راجع الصوت` : 'اختلاف في التفريغ يحتاج مراجعة';
+                    statusTitle = item.spokenWord ? `اختلاف محتمل في النطق (التفريغ: "${item.spokenWord}")؛ أعد التسجيل إن لم يُحسم` : 'اختلاف محتمل؛ أعد التسجيل إن لزم';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
                     statusTitle = 'غير محسومة آلياً';
