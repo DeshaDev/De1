@@ -73,7 +73,7 @@ export interface CognitiveScreeningData {
   ranDurationSeconds: number;
   ranHesitationCount: number;
   ranCategory: 'colors' | 'digits' | 'objects';
-  ranStatus: 'fast' | 'average' | 'slow_at_risk';
+  ranStatus: 'fast' | 'average' | 'slow_at_risk' | 'unassessed';
   ranStatusLabelAr: string;
   pseudoWordScorePercent: number;
   pseudoWordWordsRead: number;
