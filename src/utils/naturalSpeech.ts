@@ -4,6 +4,8 @@
  * Provides 100% human-grade, authentic phoneme articulation with 0ms client-side caching.
  */
 
+import { authenticatedFetch } from './apiAuth';
+
 const audioMemoryCache = new Map<string, string>();
 const MAX_AUDIO_CACHE_ENTRIES = 12;
 const MAX_CACHED_AUDIO_URL_CHARS = 500_000;
@@ -89,7 +91,7 @@ export async function playNaturalArabicAudio(
 
   // 2. Fetch studio-quality neural Arabic audio from Baseera server
   try {
-    const res = await fetch('/api/ai/tts', {
+    const res = await authenticatedFetch('/api/ai/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: preparedText, voice, rate }),
