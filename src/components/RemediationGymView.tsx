@@ -448,15 +448,17 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
       {/* 2. STICKY TOP CONTROL BAR (Pinned and always visible even when scrolling) */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur border-2 border-emerald-500/40 rounded-2xl p-2.5 sm:p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5">
-        {/* Right: Station selector tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto">
+        {/* Right: Station selector tabs with clear Reading vs Math division */}
+        <div className="flex items-center gap-1.5 overflow-x-auto flex-wrap">
+          <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-lg">
+            📖 تدريبات القراءة:
+          </span>
           {[
             { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
             { id: 'storygen', label: '📖 قصص الأبطال', icon: Sparkles },
             { id: 'phonics', label: '🔤 صائد الحروف', icon: Zap },
-            { id: 'syllables', label: '🧩 تركيب الكلمات', icon: BookOpen },
+            { id: 'syllables', label: '🧩 تركيب المقاطع', icon: BookOpen },
             { id: 'pacer', label: '👁️ طلاقة القراءة', icon: Eye },
-            { id: 'math', label: '🔢 لعبة الأرقام', icon: Calculator },
           ].map((st) => {
             const Icon = st.icon;
             const isActive = activeStation === st.id;
@@ -468,9 +470,39 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   setActiveStation(st.id as any);
                   setActiveScaffold(null);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'bg-[#15803D] text-white shadow-xs'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{st.label}</span>
+              </button>
+            );
+          })}
+
+          <div className="h-5 w-px bg-slate-300 mx-1 hidden sm:block" />
+
+          <span className="text-[11px] font-black text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-lg">
+            🔢 تدريبات الحساب:
+          </span>
+          {[
+            { id: 'math', label: '🔢 خط الأعداد', icon: Calculator },
+          ].map((st) => {
+            const Icon = st.icon;
+            const isActive = activeStation === st.id;
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  setActiveStation(st.id as any);
+                  setActiveScaffold(null);
+                }}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                 }`}
               >

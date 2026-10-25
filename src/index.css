@@ -597,21 +597,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-width: 0;
+  gap: 8px;
+  flex: 1;
+  max-width: 720px;
 }
 .baseera-nav-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 44px;
-  padding: 7px 10px;
+  min-height: 42px;
+  padding: 8px 14px;
   border: 1px solid transparent;
-  border-radius: 15px;
+  border-radius: 14px;
   background: transparent;
   color: var(--baseera-muted);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 750;
   white-space: nowrap;
   cursor: pointer;

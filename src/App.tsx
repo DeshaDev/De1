@@ -41,6 +41,7 @@ import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
+import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -792,13 +793,10 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'reading-lab', label: 'القراءة الشفوية', icon: BookOpen },
-              { id: 'cognitive-lab', label: 'الفرز المعرفي (RAN)', icon: Brain },
-              { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
-              { id: 'storygen', label: '📖 قصص الذكاء الاصطناعي', icon: Sparkles },
+              { id: 'dyslexia-lab', label: 'فحص عسر القراءة', icon: Brain },
+              { id: 'dyscalculia-lab', label: 'عسر الحساب', icon: Calculator },
               { id: 'remediation-gym', label: 'صالة التدريب', icon: Gamepad2 },
-              { id: 'iep', label: '📋 الخطة التربوية (IEP)', icon: FileText },
-              { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: Type },
+              { id: 'dashboard', label: 'الخطة والتقارير', icon: FileText },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -872,12 +870,10 @@ export default function App() {
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
-          { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
-          { id: 'cognitive-lab', label: 'الفرز (RAN)', icon: Brain },
-          { id: 'sprint', label: '⚡ سبرنت', icon: Flame },
-          { id: 'storygen', label: '📖 قصص AI', icon: Sparkles },
+          { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
+          { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
           { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
-          { id: 'iep', label: '📋 الخطة', icon: FileText },
+          { id: 'dashboard', label: 'التقارير', icon: FileText },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1543,12 +1539,16 @@ export default function App() {
           </div>
         )}
 
-        {/* Multi-Dimensional Cognitive Screening Lab (RAN, Pseudo-words, Phonology) */}
-        {activeTab === 'cognitive-lab' && (
-          <CognitiveScreeningView
-            student={selectedStudent}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-            onCompleteScreening={(cogData) => {
+        {/* UNIFIED DYSLEXIA SCREENING & DIAGNOSTIC HUB (All Reading Tests in One Creative Hub) */}
+        {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab') && (
+          <DyslexiaScreeningHub
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={setSelectedStudentId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            initialSubTab={activeTab === 'cognitive-lab' ? 'cognitive-screening' : 'oral-reading'}
+            onCompleteOralSession={handleCompleteNewSession}
+            onCompleteCognitiveScreening={(cogData) => {
               setStudents(prev => prev.map(student =>
                 student.id === selectedStudent.id
                   ? { ...student, cognitiveResults: cogData }
@@ -1556,17 +1556,6 @@ export default function App() {
               ));
               setActiveTab('dashboard');
             }}
-          />
-        )}
-
-        {/* Reading and comprehension session */}
-        {activeTab === 'reading-lab' && (
-          <ReadingAssessmentView
-            onCompleteSession={handleCompleteNewSession}
-            activeStudent={selectedStudent}
-            canVerifyAsTeacher={baseeraSession?.role === 'school_admin'}
-            onProceedToMathLab={() => setActiveTab('dyscalculia-lab')}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
           />
         )}
 

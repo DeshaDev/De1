@@ -1835,38 +1835,122 @@ async function startServer() {
     });
   });
 
-  // Arabic Decodable Story Generation API (Inspired by LUCA AI StoryGen)
+  // Arabic Decodable Story Generation API (Exact Phonemic Focus + Zero English Leakage)
   app.post('/api/ai/generate-story', async (req, res) => {
     const { interest, targetPhoneme, gradeLevel, studentName } = req.body || {};
-    const cleanInterest = typeof interest === 'string' && interest.trim() ? interest.trim() : 'الفضاء والمغامرة';
+    const interestMap: Record<string, string> = {
+      space: 'الْفَضَاءِ',
+      animals: 'الْحَيَوَانَاتِ',
+      sports: 'الرِّيَاضَةِ',
+      adventure: 'الْغَابَةِ',
+      fantasy: 'الْخَيَالِ',
+    };
+    const cleanInterest = typeof interest === 'string' && interest.trim() ? (interestMap[interest.trim()] || interest.trim()) : 'الْمُغَامَرَةِ';
     const cleanPhoneme = typeof targetPhoneme === 'string' && targetPhoneme.trim() ? targetPhoneme.trim() : 'س / ص';
     const cleanGrade = Number.isInteger(gradeLevel) ? Number(gradeLevel) : 2;
-    const cleanName = typeof studentName === 'string' && studentName.trim() ? studentName.trim() : 'سامي';
+    const cleanName = typeof studentName === 'string' && studentName.trim() ? studentName.trim() : 'البطل';
 
-    const fallbackStory = {
-      title: `مُغَامَرَةُ ${cleanName} فِي عَالَمِ ${cleanInterest}`,
-      story: `سَافَرَ ${cleanName} فِي رِحْلَةٍ سَرِيعَةٍ مُمْتِعَةٍ. شَاهَدَ ${cleanName} أَشْيَاءَ جَمِيلَةً تَلْمَعُ كَالذَّهَبِ فِي السَّمَاءِ، وَسَمِعَ صَوْتًا صَادِرًا مِنَ الْمَكَانِ الْبَعِيدِ. صَمَدَ ${cleanName} بِشَجَاعَةٍ وَصَافَحَ صَدِيقَهُ بِسُرُورٍ وَأَمَانٍ.`,
-      targetPhoneme: cleanPhoneme,
-      targetWords: ['سَافَرَ', 'سَرِيعَةٍ', 'السَّمَاءِ', 'سَمِعَ', 'صَوْتًا', 'صَادِرًا', 'صَمَدَ', 'صَافَحَ', 'صَدِيقَهُ', 'بِسُرُورٍ'],
-      articulatoryTip: {
-        sound: cleanPhoneme,
-        description: 'انتبه لمخارج الحروف وصوتها المفخم والمرقق مع التشكيل السليم.',
-        mouthShape: 'rounded',
+    // Dedicated stories per phonemic pair so the fallback NEVER confuses phonemes!
+    const phonemeStories: Record<string, any> = {
+      'ت / ط': {
+        title: `طَائِرُ ${cleanName} وَالتِّينُ اللَّذِيذُ`,
+        story: `طَارَ طَائِرٌ لَطِيفٌ فَوْقَ بَسَاتِينِ التِّينِ مَعَ ${cleanName}. هَبَطَ الطَّائِرُ عَلَى طَرَفِ الطَّرِيقِ، فَوَجَدَ تَمْرًا طَيِّبًا تَرَكَهُ الْفَلَّاحُ تَحْتَ شَجَرَةٍ عَالِيَةٍ. أَكَلَ ${cleanName} وَالطَّائِرُ وَتَرَنَّمَا بِصَوْتٍ طَرُوبٍ.`,
+        targetPhoneme: 'ت / ط',
+        targetWords: ['طَارَ', 'طَائِرٌ', 'لَطِيفٌ', 'بَسَاتِينِ', 'التِّينِ', 'هَبَطَ', 'طَرَفِ', 'الطَّرِيقِ', 'تَمْرًا', 'طَيِّبًا', 'تَرَكَهُ', 'تَحْتَ', 'طَرُوبٍ'],
+        articulatoryTip: {
+          sound: 'ط مقابل ت',
+          description: 'الطاء حرف مفخم يمتلئ به الفم، بينما التاء حرف مرقق لطيف.',
+          mouthShape: 'open',
+        },
+        questions: [
+          {
+            question: `أَيْنَ هَبَطَ الطَّائِرُ مَعَ ${cleanName}؟`,
+            options: ['عَلَى طَرَفِ الطَّرِيقِ', 'فِي قَاعِ الْبَحْرِ', 'فِي السَّمَاءِ الْعَالِيَةِ'],
+            answerIndex: 0,
+          },
+          {
+            question: 'مَاذَا وَجَدَا تَحْتَ الشَّجَرَةِ؟',
+            options: ['تَمْرًا طَيِّبًا', 'حَجَرًا كَبِيرًا', 'مَاءً بَارِدًا'],
+            answerIndex: 0,
+          },
+        ],
+        source: 'curated_bank',
       },
-      questions: [
-        {
-          question: `مَاذَا فَعَلَ ${cleanName} فِي رِحْلَتِهِ؟`,
-          options: ['سَافَرَ فِي رِحْلَةٍ سَرِيعَةٍ مُمْتِعَةٍ', 'نَامَ فِي الْغُرْفَةِ', 'جَلَسَ يَبْكِي'],
-          answerIndex: 0,
+      'د / ض': {
+        title: `مُبَارَاةُ ${cleanName} وَالضَّرْبَةُ الْقَاضِيَةُ`,
+        story: `دَخَلَ ${cleanName} مَيْدَانَ الرِّيَاضَةِ بِنَشَاطٍ. رَكَضَ ${cleanName} بِقُوَّةٍ وَسَدَّدَ كُرَةً صَائِبَةً فِي الشِّبَاكِ دُونَ تَرَدُّدٍ. ضَحِكَ الْحَكَمُ وَصَفَّقَ الْجُمْهُورُ لِهَذَا الْبَطَلِ الرِّيَاضِيِّ الْمُنْضَبِطِ.`,
+        targetPhoneme: 'د / ض',
+        targetWords: ['دَخَلَ', 'مَيْدَانَ', 'الرِّيَاضَةِ', 'سَدَّدَ', 'دُونَ', 'تَرَدُّدٍ', 'ضَحِكَ', 'الرِّيَاضِيِّ', 'الْمُنْضَبِطِ'],
+        articulatoryTip: {
+          sound: 'ض مقابل د',
+          description: 'الضاد تخرج من حافة اللسان مع الأضراس العليا مع استطالة، والدال من طرف اللسان بترقيق.',
+          mouthShape: 'teeth',
         },
-        {
-          question: 'كَيْفَ صَافَحَ صَدِيقَهُ؟',
-          options: ['بِسُرُورٍ وَأَمَانٍ', 'بِخَوْفٍ شَدِيدٍ', 'بِغَضَبٍ'],
-          answerIndex: 0,
+        questions: [
+          {
+            question: `مَاذَا سَدَّدَ ${cleanName} فِي الشِّبَاكِ؟`,
+            options: ['كُرَةً صَائِبَةً', 'سَهْمًا طَوِيلًا', 'حَبْلًا قَوِيًّا'],
+            answerIndex: 0,
+          },
+          {
+            question: 'كَيْفَ كَانَتْ رَدَّةُ فِعْلِ الْجُمْهُورِ؟',
+            options: ['صَفَّقَ الْجُمْهُورُ لِلْبَطَلِ', 'غَادَرَ الْجُمْهُورُ', 'سَكَتَ الْجَمِيعُ'],
+            answerIndex: 0,
+          },
+        ],
+        source: 'curated_bank',
+      },
+      'ك / ق': {
+        title: `قَارِبُ ${cleanName} وَكَنْزُ الْقَمَرِ`,
+        story: `رَكِبَ ${cleanName} قَارِبًا صَغِيرًا قُرْبَ الشَّاطِئِ. أَبْصَرَ ${cleanName} كَنْزًا قَدِيمًا يَلْمَعُ تَحْتَ ضَوْءِ الْقَمَرِ الْقَرِيبِ. فَتَحَ صُنْدُوقَ الْكَنْزِ فَوَجَدَ كِتَابًا قَيِّمًا يَحْكِي قِصَصَ الْأَبْطَالِ.`,
+        targetPhoneme: 'ك / ق',
+        targetWords: ['رَكِبَ', 'قَارِبًا', 'قُرْبَ', 'كَنْزًا', 'قَدِيمًا', 'الْقَمَرِ', 'كِتَابًا', 'قَيِّمًا', 'قِصَصَ'],
+        articulatoryTip: {
+          sound: 'ق مقابل ك',
+          description: 'القاف من أقصى اللسان فوق عند اللهاة بتفخيم، والكاف أسفل منها بترقيق.',
+          mouthShape: 'throat',
         },
-      ],
-      source: 'curated_bank',
+        questions: [
+          {
+            question: `مَاذَا أَبْصَرَ ${cleanName} تَحْتَ ضَوْءِ الْقَمَرِ؟`,
+            options: ['كَنْزًا قَدِيمًا يَلْمَعُ', 'سَمَكَةً قَفَزَتْ', 'طَائِرًا طَارَ'],
+            answerIndex: 0,
+          },
+          {
+            question: 'مَاذَا كَانَ دَاخِلَ الصُّنْدُوقِ؟',
+            options: ['كِتَابًا قَيِّمًا لِلْأَبْطَالِ', 'ذَهَبًا وَفِضَّةً', 'أَلْعَابًا صَغِيرَةً'],
+            answerIndex: 0,
+          },
+        ],
+        source: 'curated_bank',
+      },
+      'س / ص': {
+        title: `صَقْرُ الصَّحْرَاءِ وَالسِّنْجَابُ مَعَ ${cleanName}`,
+        story: `حَلَّقَ صَقْرٌ صَغِيرٌ فَوْقَ صُخُورِ الصَّحْرَاءِ أَمَامَ ${cleanName}. أَبْصَرَ الصَّقْرُ سِنْجَابًا سَرِيعًا يَسِيرُ بَيْنَ السَّنَابِلِ. صَاحَ الصَّقْرُ بِصَوْتٍ عَالٍ، فَسَكَنَ السِّنْجَابُ فِي سِلْمٍ وَسَلَامٍ.`,
+        targetPhoneme: 'س / ص',
+        targetWords: ['صَقْرٌ', 'صَغِيرٌ', 'صُخُورِ', 'الصَّحْرَاءِ', 'أَبْصَرَ', 'سِنْجَابًا', 'سَرِيعًا', 'يَسِيرُ', 'السَّنَابِلِ', 'صَاحَ', 'بِصَوْتٍ', 'سِلْمٍ', 'وَسَلَامٍ'],
+        articulatoryTip: {
+          sound: 'ص مقابل س',
+          description: 'الصاد مفخمة ومطبقة وممتلئة بالهواء، والسين مرققة ومنفتحة بصفير لطيف.',
+          mouthShape: 'rounded',
+        },
+        questions: [
+          {
+            question: 'أَيْنَ حَلَّقَ الصَّقْرُ الصَّغِيرُ؟',
+            options: ['فَوْقَ صُخُورِ الصَّحْرَاءِ', 'قُرْبَ النَّهْرِ', 'فِي السُّوقِ'],
+            answerIndex: 0,
+          },
+          {
+            question: 'كَيْفَ كَانَتْ نِهَايَةُ الْمَشْهَدِ؟',
+            options: ['سَكَنَ السِّنْجَابُ فِي سِلْمٍ وَسَلَامٍ', 'هَرَبَ الْجَمِيعُ', 'خَافَ الصَّقْرُ'],
+            answerIndex: 0,
+          },
+        ],
+        source: 'curated_bank',
+      },
     };
+
+    const fallbackStory = phonemeStories[cleanPhoneme] || phonemeStories['س / ص'];
 
     const ai = getGenAIClient();
     if (!ai) {

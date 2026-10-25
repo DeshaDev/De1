@@ -22,13 +22,14 @@ import { StudentRecord } from '../data/seedData';
 
 export type AppTabId =
   | 'home'
+  | 'dyslexia-lab'
+  | 'dyscalculia-lab'
+  | 'remediation-gym'
+  | 'dashboard'
+  | 'adaptive-reader'
   | 'reading-lab'
   | 'cognitive-lab'
   | 'adaptive-reports'
-  | 'dyscalculia-lab'
-  | 'remediation-gym'
-  | 'adaptive-reader'
-  | 'dashboard'
   | 'privacy'
   | 'terms'
   | 'sprint'
