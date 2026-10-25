@@ -367,7 +367,11 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
   };
 
   const handleFinishSprint = () => {
-    if (isCompletedToday || sprintStep !== 3 || selectedAnswer === null) return;
+    if (
+      isCompletedToday ||
+      sprintStep !== 3 ||
+      selectedAnswer !== currentStory.questions[0]?.answerIndex
+    ) return;
 
     const today = localDateKey();
     const yesterday = localDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
@@ -736,7 +740,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             <button
               type="button"
               onClick={handleFinishSprint}
-              disabled={selectedAnswer === null}
+              disabled={selectedAnswer !== currentStory.questions[0]?.answerIndex}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trophy className="w-5 h-5 text-amber-300 fill-current" />
