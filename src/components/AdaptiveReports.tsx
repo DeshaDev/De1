@@ -151,7 +151,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   // Display only measures that were actually recorded, in their native units.
   // Never fill missing observations with invented defaults or normalize unlike measures.
   const observedMetrics: LearningMetric[] = useMemo(() => {
-    const cog = student?.isDemoRecord ? null : (student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults);
+    const cog = (currentAssessment as any)?.cognitiveResults || (student?.isDemoRecord ? null : student?.cognitiveResults);
     const reading = studentData.reading;
     const math = student?.isDemoRecord ? null : studentData.math;
     const validValue = (value: unknown): number | null =>
