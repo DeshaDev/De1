@@ -1497,7 +1497,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'بديل لهجي مقبول';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold ring-2 ring-amber-300';
-                    statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
+                    statusTitle = item.spokenWord ? `اختلاف في التفريغ (تعرّف النظام على: "${item.spokenWord}")؛ راجع الصوت` : 'اختلاف في التفريغ يحتاج مراجعة';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
                     statusTitle = 'غير محسومة آلياً';
@@ -1851,20 +1851,20 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-teal-600" />
-                    <span>تحليل قراءة الكلمات في النص: أين أخطأ أو تعثر الطالب؟</span>
+                    <span>مراجعة مطابقة كلمات النص والتفريغ الصوتي</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    فحص تفصيلي لكل كلمة في القصة. اضغط على أي كلمة للاستماع لنطقها السليم، أو لمراجعة الكلمة التي تم نطقها.
+                    مقارنة آلية أولية لكل كلمة. قد يكون الاختلاف ناتجًا عن التعرف الصوتي أو اللهجة؛ استمع إلى التسجيل قبل اعتماد أي تصنيف.
                   </p>
                 </div>
 
                 {/* Status Badges Legend */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 font-bold border border-emerald-300">
-                    🟢 صحيحة: {summaryStats.correct}
+                    🟢 مطابقة آليًا: {summaryStats.correct}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-950 font-bold border border-amber-300">
-                    🟠 إبدال / تعثر: {summaryStats.errors}
+                    🟠 اختلاف محتمل: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل يحتاج مراجعة: {summaryStats.omitted}
@@ -1913,7 +1913,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'مطابقة نصية آلية';
                   } else if (item.status === 'dialect_variant') {
                     badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
-                    statusTitle = 'بديل لهجي فصيح';
+                    statusTitle = 'بديل لهجي محتمل؛ يحتاج إلى مراجعة';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 font-black ring-2 ring-amber-300 hover:bg-amber-200';
                     statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
