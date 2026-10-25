@@ -73,7 +73,7 @@ export interface CognitiveScreeningData {
   ranDurationSeconds: number;
   ranHesitationCount: number;
   ranCategory: 'colors' | 'digits' | 'objects';
-  ranStatus: 'fast' | 'average' | 'slow_at_risk';
+  ranStatus: 'fast' | 'average' | 'slow_at_risk' | 'unassessed';
   ranStatusLabelAr: string;
   pseudoWordScorePercent: number;
   pseudoWordWordsRead: number;
@@ -1329,8 +1329,8 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       ranDurationSeconds: 35,
       ranHesitationCount: 4,
       ranCategory: 'colors',
-      ranStatus: 'slow_at_risk',
-      ranStatusLabelAr: 'بطء ملحوظ في سرعة الاسترجاع (أقل من المتوقع للصف الثالث)',
+      ranStatus: 'unassessed',
+      ranStatusLabelAr: 'بيانات تجريبية للتوضيح؛ لا توجد معايير عربية معيارية معتمدة في بصيرة.',
       pseudoWordScorePercent: 62,
       pseudoWordWordsRead: 5,
       pseudoWordTotalCount: 8,

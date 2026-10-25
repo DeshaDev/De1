@@ -1269,7 +1269,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 نتائج التقييم الصوتي والطلاقة القرائية
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                {azureAssessmentMode || 'هذه مخرجات آلية لمقارنة التسجيل بالنص المرجعي، وقد يخطئ التعرف الصوتي في الكلمات أو اللهجة. راجع الكلمات غير المحسومة قبل اعتماد النتائج؛ ولا تمثل هذه المخرجات تشخيصًا.'}
+                {azureAssessmentMode || 'هذه نتائج آلية وصفية وقد يخطئ التعرف الصوتي في الكلمات أو اللهجة. لا تُعرض درجة النطق إلا عند اكتمال التقييم والتحقق من مصدره؛ وإذا لم تتوفر الدرجة فأعد التسجيل بدل اعتماد تقدير غير مكتمل. هذه النتائج ليست تشخيصًا.'}
               </p>
               {pronunciationAssessmentError && (
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-right text-sm text-amber-950">
@@ -1612,7 +1612,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               نتائج جلسة القراءة والفهم
             </h2>
             <p className="text-slate-600 text-sm mb-8">
-              المقاييس التالية تلخّص ما سُجّل في هذه الجلسة من زمن وإجابات وتحليل صوتي معتمد بالذكاء الاصطناعي.
+              المقاييس التالية تلخّص زمن الجلسة وإجابات الفهم. لا يظهر قياس النطق إلا إذا اكتمل التقييم الصوتي ووثّق الخادم مصدره؛ وما عدا ذلك يظل غير متاح.
             </p>
 
             {/* Verified Metrics Dashboard */}
@@ -1700,10 +1700,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-amber-600" />
-                    <span>سجل الكلمات التي أخطأ بها أو بدلها الطفل (تحليل الذكاء الاصطناعي الدقيق)</span>
+                    <span>سجل الكلمات التي أشار التقييم الصوتي إلى مراجعتها</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    فحص تفصيلي للكلمات التي رصد فيها الذكاء الاصطناعي إبدالاً صوتياً أو تخطياً؛ اضغط على أيقونة الصوت للاستماع للنطق السليم.
+                    يعرض هذا الجزء اختلافات أشار إليها التقييم الصوتي المكتمل. قد تتأثر المطابقة بالنطق واللهجة، لذا تُستخدم اقتراحًا للممارسة لا حكمًا تشخيصيًا.
                   </p>
                 </div>
               </div>

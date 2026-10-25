@@ -8,7 +8,8 @@
 // ============================================================================
 
 export type DyslexicPatternType =
-  | 'visual_mirror_reversal' // b/d, p/q, ب/ت/ث, ج/ح/خ
+  | 'visual_mirror_reversal' // Kept for compatible output; intended for genuine visual reversal pairs such as Latin b/d or p/q
+  | 'grapheme_confusion' // Arabic letter-form/dot confusions; not necessarily mirror images
   | 'phonetic_spelling' // froot -> fruit, fone -> phone, ض/ظ, س/ص
   | 'kinetic_transposition' // teh -> the, form -> from
   | 'vowel_omission_or_shift' // reedig -> reading, كتابه -> كتابة
@@ -234,7 +235,7 @@ export function computeStandardLevenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
-// Mirror-reversal pairs (Visual Dyslexia: b/d, p/q, m/w, u/n, and Arabic dot-confusable graphemes)
+// Candidate visual-confusability pairs. Arabic dot-related pairs are grapheme confusions, not literal mirror reversals.
 const VISUAL_REVERSAL_PAIRS = new Set<string>([
   'b:d',
   'd:b',
@@ -324,8 +325,8 @@ const PHONETIC_CONFUSION_PAIRS = new Set<string>([
 
 /**
  * Dyslexico Weighted Damerau-Levenshtein Distance:
- * Assigns near-zero cost (0.14 - 0.22) to visual mirror reversals (b/d, p/q, ب/ت),
- * phonetic substitutions (froot/fruit, ض/ظ, ه/ة), and kinetic letter transpositions (teh/the).
+ * Heuristic text-similarity weights for candidate letter substitutions and transpositions.
+ * These values are not empirical probabilities, educational diagnoses, or validated Arabic error weights.
  */
 export function computeDyslexicoWeightedLevenshtein(
   sourceRaw: string,
@@ -394,16 +395,20 @@ export function computeDyslexicoWeightedLevenshtein(
       if (c1 === c2) {
         subCost = 0;
       } else if (VISUAL_REVERSAL_PAIRS.has(pairKey)) {
-        subCost = 0.14; // Near-zero cost for b/d, p/q, ب/ت visual reversal
-        if (
-          !detectedPatterns.some(
-            (p) => p.type === 'visual_mirror_reversal'
-          )
-        ) {
+        subCost = 0.14; // Heuristic similarity weight; not an estimate of the child's underlying skill.
+        const isArabicGraphemePair = /[\u0600-\u06FF]/u.test(c1 + c2);
+        const patternType: DyslexicPatternType = isArabicGraphemePair
+          ? 'grapheme_confusion'
+          : 'visual_mirror_reversal';
+        if (!detectedPatterns.some((p) => p.type === patternType)) {
           detectedPatterns.push({
-            type: 'visual_mirror_reversal',
-            labelAr: 'إبدال بصري للحروف المتناظرة (Visual Mirror Reversal)',
-            detailAr: `خلط بصري بين الحرف (${c1}) والحرف (${c2})`,
+            type: patternType,
+            labelAr: isArabicGraphemePair
+              ? 'التباس محتمل في شكل الحرف أو موضع النقاط'
+              : 'استبدال محتمل بين حرفين متشابهين بصريًا',
+            detailAr: isArabicGraphemePair
+              ? `تشابه محتمل في الرسم أو موضع النقاط بين (${c1}) و(${c2})؛ لا يثبت سبب الخطأ`
+              : `تشابه بصري محتمل بين الحرف (${c1}) والحرف (${c2})؛ لا يثبت سبب الخطأ`,
             costApplied: 0.14,
           });
         }

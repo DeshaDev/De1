@@ -66,6 +66,13 @@ test('Dyslexico Weighted Levenshtein assigns near-zero cost to b/d reversals, tr
   assert.equal(analysis[2].bestCorrection, 'المنظار');
 });
 
+test('Arabic dot-confusable graphemes are not mislabeled as literal mirror reversals', () => {
+  const result = computeDyslexicoWeightedLevenshtein('ب', 'ت');
+  assert.ok(result.detectedPatterns.some((pattern) => pattern.type === 'grapheme_confusion'));
+  assert.ok(result.detectedPatterns.every((pattern) => pattern.type !== 'visual_mirror_reversal'));
+  assert.match(result.detectedPatterns.find((pattern) => pattern.type === 'grapheme_confusion')?.labelAr ?? '', /موضع النقاط/);
+});
+
 test('unmatched ASR token is aligned as a substitution instead of a false omission', () => {
   const result = evaluateOralReadingAlignment(
     ['خَرَجَتْ', 'سَلْمَى', 'الْبَيْتُ'],

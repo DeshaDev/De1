@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
-import { MultiDimensionalRadar, CognitiveRadarScores } from './MultiDimensionalRadar';
+import { MultiDimensionalRadar, LearningMetric } from './MultiDimensionalRadar';
 
 export interface AdaptiveReportsProps {
   student?: StudentRecord;
@@ -43,10 +43,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
   // Check if ANY verified assessment data has been gathered
   const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
-  const hasMathData = Boolean(student?.dyscalculiaAssessed === true && student.mathTrials);
+  const hasMathData = Boolean(!student?.isDemoRecord && student?.dyscalculiaAssessed === true && student.mathTrials);
   const hasReadingData = Boolean(
     currentAssessment?.readingResults ||
-    (student && student.sessionStatus === 'completed' && student.wpm > 0)
+    (student && !student.isDemoRecord && student.sessionStatus === 'completed' && student.wpm > 0)
   );
 
   const hasAnyAssessmentData = hasSpeechData || hasMathData || hasReadingData;
@@ -103,7 +103,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
         passageTitle: currentAssessment.readingResults.passageTitle,
       };
-    } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
+    } else if (student && !student.isDemoRecord && student.sessionStatus === 'completed' && student.wpm > 0) {
       readingSummary = {
         wpm: student.wpm,
         wcpm: student.wcpm ?? student.oralWcpm ?? null,
@@ -130,40 +130,112 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   }, [student, currentAssessment]);
 
   const isOralReading = Boolean(studentData.reading && (studentData.reading.assessmentModality === 'voice_only' || studentData.reading.oralReadingAssessed === true));
-  const hasOralReadingEvidence = Boolean(studentData.reading && ((studentData.reading.spokenTranscript || '').trim() || studentData.reading.teacherVerified === true));
+  const oralEvidenceSource = student?.sessionStatus === 'completed' &&
+    student.evidenceProvenance === 'server-verified-audio' &&
+    student.aiAssessmentVerified === true
+      ? 'server-verified-audio'
+      : student?.sessionStatus === 'completed' && student.teacherVerified === true
+        ? 'legacy-human-reviewed'
+        : null;
+  const hasOralReadingEvidence = oralEvidenceSource !== null;
+  const rawOralWcpm = student?.wcpm ?? student?.oralWcpm;
+  const verifiedOralWcpm = hasOralReadingEvidence && typeof rawOralWcpm === 'number' && Number.isFinite(rawOralWcpm)
+    ? rawOralWcpm
+    : null;
+  const oralEvidenceSourceLabel = oralEvidenceSource === 'server-verified-audio'
+    ? 'نتيجة تقييم صوتي آلي موثقة من الخادم'
+    : oralEvidenceSource === 'legacy-human-reviewed'
+      ? 'نتيجة من سجل سابق موثق بالمراجعة البشرية'
+      : 'لا توجد نتيجة قراءة جهرية موثقة المصدر';
 
-  // 5-Axis Cognitive Radar Scores
-  const radarScores: CognitiveRadarScores = useMemo(() => {
-    let orfFluency = 50;
-    if (studentData.reading && typeof studentData.reading.wcpm === 'number') {
-      orfFluency = Math.min(100, Math.round((studentData.reading.wcpm / 70) * 100));
-    } else if (studentData.reading && studentData.reading.wpm > 0) {
-      orfFluency = Math.min(100, Math.round((studentData.reading.wpm / 80) * 100));
-    }
-
-    let ranSpeed = 65;
-    const cog = student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults;
-    if (cog) {
-      ranSpeed = Math.min(100, Math.max(20, Math.round((20 / Math.max(10, cog.ranDurationSeconds)) * 100)));
-    }
-
-    let pseudoDecoding = cog ? cog.pseudoWordScorePercent : 62;
-    let phonemicAwareness = cog ? cog.phonemicAwarenessScorePercent : 75;
-
-    let numeracy = 70;
-    if (studentData.math && typeof studentData.math.numberLinePAE === 'number') {
-      numeracy = Math.min(100, Math.max(20, Math.round(100 - studentData.math.numberLinePAE * 2)));
-    } else if (studentData.math && typeof studentData.math.subitizingAccuracy === 'number') {
-      numeracy = studentData.math.subitizingAccuracy;
-    }
-
-    return {
-      orfFluency,
-      ranSpeed,
-      pseudoDecoding,
-      phonemicAwareness,
-      numeracy,
-    };
+  // Display only measures that were actually recorded, in their native units.
+  // Never fill missing observations with invented defaults or normalize unlike measures.
+  const observedMetrics: LearningMetric[] = useMemo(() => {
+    const cog = (currentAssessment as any)?.cognitiveResults || (student?.isDemoRecord ? null : student?.cognitiveResults);
+    const reading = studentData.reading;
+    const math = student?.isDemoRecord ? null : studentData.math;
+    const validValue = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+    const oralWcpm = hasOralReadingEvidence ? validValue(verifiedOralWcpm) : null;
+    const silentWpm = reading &&
+      reading.assessmentModality !== 'voice_only' &&
+      reading.oralReadingAssessed !== true
+        ? validValue(reading.wpm)
+        : null;
+    const pseudoWordDetails = cog && typeof cog.pseudoWordWordsRead === 'number' &&
+      typeof cog.pseudoWordTotalCount === 'number'
+        ? 'أُنجز ' + cog.pseudoWordWordsRead + ' من ' + cog.pseudoWordTotalCount + ' عنصرًا في هذه المهمة.'
+        : 'تعكس النسبة العناصر المسجلة في المهمة فقط.';
+    return [
+      {
+        id: 'oral-wcpm',
+        label: 'الكلمات الصحيحة في القراءة الجهرية',
+        value: oralWcpm,
+        unit: 'كلمة/دقيقة',
+        detail: oralWcpm === null
+          ? 'لا توجد نتيجة جهرية موثقة المصدر متاحة للعرض؛ لا نستبدلها بدرجة تقديرية.'
+          : 'نتيجة جلسة صوتية موثقة المصدر. ليست معيارًا عمريًا ولا تشخيصًا.',
+        precision: 0,
+      },
+      {
+        id: 'silent-wpm',
+        label: 'معدل إتمام النص الصامت',
+        value: silentWpm,
+        unit: 'كلمة/دقيقة',
+        detail: silentWpm === null
+          ? 'غير متاح في جلسة القراءة الحالية.'
+          : 'محسوب بافتراض إتمام النص المعروض؛ لا يتحقق من صحة قراءة الكلمات فرديًا.',
+        precision: 0,
+      },
+      {
+        id: 'ran-time',
+        label: 'زمن مهمة التسمية السريعة',
+        value: cog ? validValue(cog.ranDurationSeconds) : null,
+        unit: 'ثانية',
+        detail: 'زمن المهمة المسجل كما هو؛ لم يُحوّل إلى نسبة أو معيار عمري.',
+        precision: 1,
+      },
+      {
+        id: 'pseudo-decoding',
+        label: 'دقة قراءة الكلمات غير المعجمية',
+        value: cog ? validValue(cog.pseudoWordScorePercent) : null,
+        unit: '%',
+        detail: pseudoWordDetails + ' هذه ليست درجة معيارية.',
+        precision: 0,
+      },
+      {
+        id: 'phonemic-awareness',
+        label: 'دقة مهام الوعي الصوتي',
+        value: cog ? validValue(cog.phonemicAwarenessScorePercent) : null,
+        unit: '%',
+        detail: 'نسبة الإجابات الصحيحة المسجلة في مهام هذه الجولة؛ لا تعمم على كل مهارات القراءة.',
+        precision: 0,
+      },
+      {
+        id: 'quantity',
+        label: 'دقة تمييز الكميات',
+        value: math ? validValue(math.subitizingAccuracy) : null,
+        unit: '%',
+        detail: 'أداء الطفل في مهام تمييز الكميات المنفذة فقط.',
+        precision: 0,
+      },
+      {
+        id: 'number-line-error',
+        label: 'الخطأ في موضع العدد على خط الأعداد',
+        value: math ? validValue(math.numberLinePAE) : null,
+        unit: '% خطأ',
+        detail: 'هذا مقياس خطأ؛ الأقل يعني موضعًا أقرب في المهمة، وليس قدرة رياضية عامة.',
+        precision: 1,
+      },
+      {
+        id: 'number-transcoding',
+        label: 'دقة كتابة/قراءة رموز الأعداد',
+        value: math ? validValue(math.transcodingAccuracy) : null,
+        unit: '%',
+        detail: 'دقة التحويل بين رموز الأعداد كما سجلت في المهام المنفذة.',
+        precision: 0,
+      },
+    ];
   }, [studentData, student, currentAssessment]);
 
   // Record the outputs actually observed in this session without turning them into strengths,
@@ -175,18 +247,17 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
     if (studentData.reading) {
       const oralSession = studentData.reading.assessmentModality === 'voice_only' ||
         studentData.reading.oralReadingAssessed === true;
-      const hasOralEvidence = Boolean((studentData.reading.spokenTranscript || '').trim()) ||
-        studentData.reading.teacherVerified === true;
+      const hasOralEvidence = hasOralReadingEvidence;
 
       if (oralSession) {
-        if (typeof studentData.reading.wcpm === 'number' && hasOralEvidence) {
+        if (typeof verifiedOralWcpm === 'number' && hasOralEvidence) {
           observations.push(
-            'القراءة الجهرية: ' + studentData.reading.wcpm + ' كلمة صحيحة/دقيقة (' +
-            (studentData.reading.teacherVerified ? 'معتمد بالذكاء الاصطناعي' : 'تحليل صوتي آلي') +
+            'القراءة الجهرية: ' + verifiedOralWcpm + ' كلمة صحيحة/دقيقة (' +
+            oralEvidenceSourceLabel +
             '). قراءة نص واحد لا تكفي لمقارنة معيارية أو حكم تشخيصي.'
           );
         } else {
-          followUp.push('لم تتوفر مراجعة صوتية كافية لاعتماد WCPM لهذه الجلسة.');
+          followUp.push('لا توجد نتيجة قراءة جهرية موثقة المصدر كافية لعرض WCPM لهذه الجلسة.');
         }
       } else {
         observations.push(
@@ -261,13 +332,11 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       const oralSession =
         studentData.reading.assessmentModality === 'voice_only' ||
         studentData.reading.oralReadingAssessed === true;
-      const hasOralEvidence =
-        Boolean((studentData.reading.spokenTranscript || '').trim()) ||
-        studentData.reading.teacherVerified === true;
-      const oralRate = studentData.reading.wcpm;
+      const hasOralEvidence = hasOralReadingEvidence;
+      const oralRate = verifiedOralWcpm;
       const readingRateText = oralSession
         ? hasOralEvidence && typeof oralRate === 'number'
-          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهذه نتيجة معتمدة بالذكاء الاصطناعي وفق التحليل الصوتي المباشر`
+          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهي ${oralEvidenceSourceLabel}`
           : 'لم تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية'
         : studentData.reading.wpm > 0
           ? `سرعة القراءة الموقوتة ${studentData.reading.wpm} كلمة بالدقيقة`
@@ -591,8 +660,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   <span className="text-xs font-bold text-teal-700 font-mono">
                     {studentData.reading
                       ? isOralReading
-                        ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                          ? `${studentData.reading.wcpm} WCPM`
+                        ? hasOralReadingEvidence && typeof verifiedOralWcpm === 'number'
+                          ? `${verifiedOralWcpm} WCPM`
                           : 'غير متاح'
                         : `${studentData.reading.wpm} ك/د (معدل مقاس)`
                       : 'لم يُجرَ'}
@@ -602,8 +671,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {studentData.reading
                     ? isOralReading
-                      ? hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                        ? `سُجل ${studentData.reading.wcpm} كلمة صحيحة/دقيقة في هذا النص معتمدة بالذكاء الاصطناعي عبر المطابقة الصوتية الدقيقة. لا تُقارن الجلسة الواحدة مباشرة بمئينات منشورة تعتمد عدة نصوص.`
+                      ? hasOralReadingEvidence && typeof verifiedOralWcpm === 'number'
+                        ? `سُجل ${verifiedOralWcpm} كلمة صحيحة/دقيقة في نتيجة موثقة المصدر. هذا وصف لجلسة واحدة، ولا يقارن مباشرة بمئينات منشورة تعتمد عدة نصوص.`
                         : 'لم تتوفر بيانات صوتية كافية لاعتماد WCPM لهذه الجلسة.'
                       : `معدل إتمام النص في هذه الجلسة ${studentData.reading.wpm} كلمة/دقيقة، مع إجابة ${studentData.reading.comprehensionScore}% من أسئلة الفهم. هذا قياس لنص واحد ولا يقيس دقة الكلمات ولا يُقارن بمعايير الطلاقة الجهرية.`
                     : 'لم يكتمل اختبار القراءة في هذه الجلسة بعد.'}
@@ -719,8 +788,8 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
             </div>
           </div>
 
-          {/* 5-Axis Cognitive Radar Visualizer */}
-          <MultiDimensionalRadar scores={radarScores} studentName={studentData.studentName} />
+          {/* Native-unit measures: no synthetic defaults or misleading shared percentage scale. */}
+          <MultiDimensionalRadar metrics={observedMetrics} studentName={studentData.studentName} />
 
           {/* Available Learning Measures Table */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
@@ -744,12 +813,12 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {isOralReading ? 'الطلاقة الشفوية المعتمدة بالذكاء الاصطناعي' : 'الطلاقة الشفوية (غير منطبقة)'}
+                      {isOralReading ? 'القراءة الجهرية الموثقة المصدر' : 'الطلاقة الشفوية (غير منطبقة)'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
-                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                        ? `${studentData.reading.wcpm} WCPM (معتمد بالذكاء الاصطناعي)`
+                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof verifiedOralWcpm === 'number'
+                        ? `${verifiedOralWcpm} WCPM (نتيجة موثقة المصدر)`
                         : studentData.reading && isOralReading
                           ? 'غير متاح — لا توجد بيانات صوتية كافية'
                           : studentData.reading
@@ -760,10 +829,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                       {isOralReading ? 'لا تقارن جلسة واحدة مباشرة بدراسة استخدمت متوسط 3 نصوص؛ لا توجد عتبة تشخيصية.' : 'لا تنطبق معايير الطلاقة الجهرية على قراءة صامتة.'}
                     </td>
                     <td className="py-3.5 px-4">
-                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof studentData.reading.wcpm === 'number'
-                        ? studentData.reading.teacherVerified === true
-                          ? <span className="text-slate-700">معتمد بالذكاء الاصطناعي؛ وصف لجلسة واحدة</span>
-                          : <span className="text-amber-800">تحليل صوتي آلي مكتمل</span>
+                      {studentData.reading && isOralReading && hasOralReadingEvidence && typeof verifiedOralWcpm === 'number'
+                        ? oralEvidenceSource === 'server-verified-audio'
+                          ? <span className="text-slate-700">تقييم صوتي آلي موثق من الخادم</span>
+                          : <span className="text-amber-800">سجل سابق موثق بالمراجعة البشرية</span>
                         : studentData.reading && isOralReading
                           ? <span className="text-slate-500">غير متاح — لا توجد بيانات صوتية كافية</span>
                           : <span className="text-slate-500">غير منطبق على القراءة الصامتة</span>}
@@ -776,13 +845,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي (WPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading
-                        ? studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true
-                          ? 'غير متاحة (غياب التفريغ الصوتي)'
+                        ? isOralReading
+                          ? verifiedOralWcpm !== null
+                            ? 'غير منطبق هنا؛ راجع WCPM الموثّق في صف القراءة الجهرية.'
+                            : 'غير متاح — لا توجد قراءة جهرية موثقة المصدر.'
                           : `${studentData.reading.wpm} كلمة/دقيقة`
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {isOralReading ? 'معدل نطق/تفريغ خلال هذه الجلسة؛ يُراجع مستقلًا عن WCPM.' : 'معدل إتمام نص واحد فقط؛ لا يقيس دقة الكلمات.'}
+                      {isOralReading ? 'لا يُستنتج WPM من التفريغ وحده؛ استخدم WCPM فقط عند توفر نتيجة موثقة المصدر.' : 'معدل إتمام نص واحد فقط؛ لا يقيس دقة الكلمات.'}
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (

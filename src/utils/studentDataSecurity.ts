@@ -908,7 +908,7 @@ export function buildDeterministicLearningReport(params: {
       description: numberLinePracticeSuggested
         ? 'أظهرت هذه الجلسة فارقاً في تحديد الموقع على خط الأعداد قدره ' + params.numberLinePAE +
           '% وعدد ' + (params.reversalErrorCount ?? 'غير متاح') +
-          ' من أخطاء عكس الأرقام في المهام المحددة. يمكن استخدام ذلك لاختيار تدريب، دون تحويله إلى تصنيف خطر.'
+          ' من أخطاء ترتيب رموز العدد في المهام المحددة. يمكن استخدام ذلك لاختيار تدريب، دون تحويله إلى تصنيف خطر.'
         : 'نشاط اختياري لربط الكميات بمواقعها على خط الأعداد. المقاييس وصفية لهذه الجلسة ولا تكوّن درجة معيارية.',
     });
   } else {
@@ -962,7 +962,7 @@ export function buildDeterministicLearningReport(params: {
       ? 'لم تُنفّذ مهام الحساب في هذه الجلسة؛ لا توجد نتائج حسابية أو درجة خطر. يمكن إجراء الأنشطة الحسابية الوصفية عند الحاجة.'
       : 'مقاييس وصفية للمهام المنفذة: فارق موقع خط الأعداد ' + params.numberLinePAE +
         '%، ودقة تمييز الكميات ' + (params.subitizingAccuracy === null ? 'غير متاحة' : params.subitizingAccuracy) +
-        '%، وأخطاء عكس الأرقام ' + (params.reversalErrorCount === null ? 'غير متاحة' : params.reversalErrorCount) +
+        '%، وأخطاء ترتيب رموز العدد ' + (params.reversalErrorCount === null ? 'غير متاحة' : params.reversalErrorCount) +
         '. لا تُحوّل هذه القيم من عدد قليل من المحاولات إلى درجة خطر أو تشخيص لعسر الحساب.',
     interventionExercises: exercises,
     classroomAccommodations: accommodations,

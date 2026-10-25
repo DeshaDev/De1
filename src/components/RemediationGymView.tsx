@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { authenticatedFetch } from '../utils/apiAuth';
+import EvidenceBasedCurriculumView from './EvidenceBasedCurriculumView';
 import { playNaturalArabicAudio } from '../utils/naturalSpeech';
 import {
   Sparkles,
@@ -427,6 +428,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Evidence-informed instructional pathway; game stations remain supplementary practice. */}
+      <EvidenceBasedCurriculumView student={activeStudent} onSpeak={speakText} />
 
       {/* 2. CHUNKY 3D CLAYMORPHIC STATION NAVIGATION BAR */}
       <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
