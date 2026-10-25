@@ -1503,7 +1503,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'غير محسومة آلياً';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
-                    statusTitle = 'تخطي / لم تُنطق';
+                    statusTitle = 'تخطي محتمل في التفريغ؛ راجع التسجيل للتأكد';
                   }
 
                   return (
@@ -1867,7 +1867,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     🟠 إبدال / تعثر: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> حذف مؤكد بعد المراجعة: {summaryStats.omitted}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل يحتاج مراجعة: {summaryStats.omitted}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آلياً: {summaryStats.unconfirmed}
@@ -1880,20 +1880,23 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="text-xs text-slate-700 leading-relaxed">
                   <span className="font-bold text-slate-900">ملاحظة القراءة والميكروفون:</span> إذا قرأ الطالب النص كاملاً بصوته ولكن أسقط ميكروفون المتصفح بعض الكلمات، يمكنك اعتماد قراءتها كاملة بنقرة واحدة:
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeacherOverridesCount(prev => prev + 1);
-                      setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
-                    }}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
-                    title="اعتماد قراءة جميع كلمات النص كصحيحة"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>✓ تأكيد قراءة جميع الكلمات بطلاقة</span>
-                  </button>
-                </div>
+                {canVerifyAsTeacher && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHumanReviewConfirmed(false);
+                        setTeacherOverridesCount(prev => prev + 1);
+                        setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                      title="تعديل يدوي للمراجع المخوّل بعد مراجعة التسجيل"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>تعديل يدوي: جميع الكلمات صحيحة</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Full Passage Words with Visual Status Highlighting */}
