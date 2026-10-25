@@ -619,9 +619,13 @@
 }
 .baseera-nav-link:hover { background: var(--baseera-surface-soft); color: var(--baseera-ink); }
 .baseera-nav-link.is-active {
-  background: var(--baseera-blue-soft);
-  border-color: var(--baseera-border);
-  color: var(--baseera-primary);
+  background: linear-gradient(180deg, #38BDF8 0%, #0284C7 100%);
+  border: 2px solid #0369A1;
+  border-bottom: 4px solid #075985;
+  color: #FFFFFF !important;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  transform: translateY(-1px);
 }
 .baseera-header-actions { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
 

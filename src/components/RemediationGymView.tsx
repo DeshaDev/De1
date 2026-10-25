@@ -397,19 +397,51 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const targetedWords = observedTargetWords;
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto pb-10 animate-fade-slide-up" dir="rtl">
-      {/* 1. SINGLE SLIM STATION NAVIGATION BAR (Zero Bloat, Zero Duplicate XP) */}
-      <div className="bg-white rounded-3xl p-2.5 sm:p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 w-full sm:w-auto">
+    <div className="space-y-5 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
+      {/* 1. PLAYFUL HERO QUEST BANNER */}
+      <div className="bg-gradient-to-r from-emerald-400 via-teal-500 to-sky-500 rounded-3xl p-5 sm:p-6 text-white shadow-xl border-3 border-emerald-300 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-center sm:text-right">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white/20 backdrop-blur border-2 border-white/40 flex items-center justify-center shrink-0 animate-bounce-gentle shadow-inner">
+            <IconBaseeraFalcon size={48} />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black text-emerald-100 mb-1.5">
+              <IconLettersBlock size={15} />
+              <span>صالة ألعاب وبطولات القراءة · البطل {activeStudent.name}</span>
+            </div>
+            <h1 className="font-child text-2xl sm:text-3xl font-black">
+              صالة تدريب وبطولات الأبطال
+            </h1>
+            <p className="font-child text-xs sm:text-sm text-emerald-100 font-bold mt-0.5">
+              اصطد الحروف وركّب المقاطع الصوتية لتجمع كؤوس ونقاط التميز!
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="bg-white text-slate-900 rounded-2xl p-2.5 px-4 shadow-md text-center min-w-[95px] border-b-4 border-amber-500">
+            <div className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
+              <IconStar size={18} />
+              <span>{xpPoints} XP</span>
+            </div>
+            <span className="font-child text-[11px] font-bold text-slate-500 block mt-0.5">نقاط البطل</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CHUNKY 3D CLAYMORPHIC STATION NAVIGATION BAR */}
+      <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 w-full sm:w-auto">
           {[
-            { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock },
-            { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces },
-            { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook },
-            { id: 'sprint', label: 'سبرنت ٥ دقائق', icon: IconLightningBolt },
-            { id: 'math', label: 'خط الأعداد', icon: IconNumberRuler },
-            { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook },
+            { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock, activeClass: 'clay-btn-emerald' },
+            { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces, activeClass: 'clay-btn-purple' },
+            { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook, activeClass: 'clay-btn-amber' },
+            { id: 'sprint', label: 'سبرنت ٥ دقائق', icon: IconLightningBolt, activeClass: 'duo-btn-orange' },
+            { id: 'math', label: 'خط الأعداد', icon: IconNumberRuler, activeClass: 'clay-btn-sky' },
+            { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook, activeClass: 'clay-btn-emerald' },
           ].map((st) => {
             const isActive = activeStation === st.id;
+            const IconComp = st.icon;
             return (
               <button
                 key={st.id}
@@ -419,34 +451,22 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   setActiveScaffold(null);
                   exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }}
-                className={'child-tactile-btn px-3.5 py-2 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer border-b-4 active:border-b-1 active:translate-y-1 ' + (
+                className={'px-4 py-2.5 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ' + (
                   isActive
-                    ? 'duo-btn-green scale-102 shadow-sm'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
+                    ? st.activeClass + ' scale-103 shadow-md'
+                    : 'duo-btn-white hover:border-sky-300'
                 )}
               >
-                {st.icon && <st.icon size={18} className="shrink-0" />}
+                <IconComp size={20} className="shrink-0" />
                 <span>{st.label}</span>
               </button>
             );
           })}
         </div>
-
-        {/* Left: Star XP Score & Student Name */}
-        <div className="flex items-center gap-2 mr-auto sm:mr-0">
-          <div className="flex items-center gap-1.5 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-2xl font-child font-black text-amber-900 text-xs sm:text-sm shadow-2xs">
-            <IconStar size={16} />
-            <span>{xpPoints} XP</span>
-          </div>
-
-          <div className="hidden sm:inline-flex items-center gap-1 bg-slate-100 text-slate-700 font-child font-bold text-xs px-3 py-1.5 rounded-2xl border border-slate-200">
-            <span>البطل:</span>
-            <span className="text-emerald-700 font-black">{activeStudent.name}</span>
-          </div>
-        </div>
       </div>
 
       {/* Floating Celebration Toast */}
+
       {celebrationMessage && (
         <div className="p-3.5 rounded-2xl bg-emerald-600 text-white font-child font-black text-sm flex items-center justify-between gap-3 shadow-lg animate-fade-slide-up">
           <div className="flex items-center gap-2">
@@ -458,83 +478,105 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 1: PHONICS (Ultra-Compact, 100% On Screen, Zero Scroll) */}
+      {/* STATION 1: PHONICS (Illustrated Claymorphic Toy Game) */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'phonics' && (
-        <div ref={exerciseCardRef} className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-xl space-y-4 max-w-xl mx-auto text-center animate-fade-slide-up">
-          {/* Minimal Step Tracker */}
-          <div className="flex items-center justify-between text-xs font-bold text-slate-500 border-b border-slate-100 pb-2">
-            <span className="font-child text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              {currentPhonics.family}
+        <div ref={exerciseCardRef} className="clay-card p-6 sm:p-9 space-y-6 max-w-2xl mx-auto text-center animate-fade-slide-up">
+          {/* Header Step & Target Sound Badge */}
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <span className="font-child text-xs font-black text-emerald-800 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-300">
+              تحدي: {currentPhonics.family}
             </span>
-            <span className="font-mono text-slate-700">
-              السؤال {phonicsIdx + 1} من {phonicsList.length}
+            <span className="font-mono text-xs font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              السؤال {toEasternArabicDigits(phonicsIdx + 1)} من {toEasternArabicDigits(phonicsList.length)}
             </span>
           </div>
 
-          {/* Audio Button */}
-          <div className="pt-1">
+          {/* Friendly Mascot Speech Card */}
+          <div className="flex items-center gap-3.5 bg-emerald-50/90 border-2 border-emerald-300 p-3.5 sm:p-4 rounded-3xl text-right shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-white border-2 border-emerald-400 flex items-center justify-center shrink-0 shadow-sm animate-bounce-gentle">
+              <IconBaseeraFalcon size={38} />
+            </div>
+            <div>
+              <span className="text-xs font-black text-emerald-950 block">صقر بصيرة الذكي:</span>
+              <p className="font-child text-xs sm:text-sm font-bold text-slate-700 mt-0.5">
+                المس الزر الأخضر لسماع الكلمة، ثم ضع الحرف الناقص في صندوق الكلمة!
+              </p>
+            </div>
+          </div>
+
+          {/* Big 3D Audio Button */}
+          <div>
             <button
               type="button"
               onClick={() => speakText(currentPhonics.spokenWord)}
-              className="duo-btn-green py-3.5 px-8 text-base font-black inline-flex items-center gap-2 cursor-pointer shadow-md mx-auto"
+              className="clay-btn-emerald py-4 px-8 text-lg sm:text-xl font-black inline-flex items-center justify-center gap-3 shadow-lg hover:scale-103 active:scale-95 cursor-pointer mx-auto w-full sm:w-auto"
             >
-              <Volume2 className="w-5 h-5 animate-pulse" />
-              <span>استمع لنطق الكلمة</span>
+              <Volume2 className="w-6 h-6 animate-pulse" />
+              <span>استمع لنطق الكلمة: « {currentPhonics.spokenWord} »</span>
             </button>
           </div>
 
-          {/* The Word with Blank */}
-          <div className="py-2">
-            <span className="text-3xl sm:text-4xl font-serif font-black text-slate-900 bg-slate-50 border-2 border-slate-200 px-6 py-2.5 rounded-2xl inline-block shadow-inner">
-              « ...{currentPhonics.spokenWord.slice(1)} »
-            </span>
+          {/* Word Puzzle Board with Glowing Dashed Missing Slot */}
+          <div className="clay-card-amber p-6 sm:p-8 space-y-3">
+            <span className="text-xs font-black text-amber-800 block">ضع الحرف الناقص لإكمال الكلمة:</span>
+            <div className="flex items-center justify-center gap-3 sm:gap-4 text-4xl sm:text-5xl md:text-6xl font-serif font-black" dir="rtl">
+              <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-3xl border-4 border-dashed border-amber-500 bg-white flex items-center justify-center font-child font-black text-amber-700 shadow-inner animate-pulse">
+                {selectedLetter || '؟'}
+              </div>
+              <span className="text-slate-900 tracking-wider">
+                {currentPhonics.spokenWord.slice(1)}
+              </span>
+            </div>
           </div>
 
-          {/* Letter Choices: Large 3D Tiles */}
-          <div className="grid grid-cols-3 gap-3 pt-1">
-            {currentPhonics.options.map((opt) => {
-              const isSelected = selectedLetter === opt.letter;
-              const showSuccess = phonicsEvaluated && isSelected && opt.isCorrect;
-              const showError = phonicsEvaluated && isSelected && !opt.isCorrect;
+          {/* Chunky 3D Alphabet Blocks */}
+          <div className="space-y-2 pt-1">
+            <span className="text-xs font-bold text-slate-500 block">اختر الحرف المناسب:</span>
+            <div className={'grid gap-4 ' + (currentPhonics.options.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+              {currentPhonics.options.map((opt) => {
+                const isSelected = selectedLetter === opt.letter;
+                const showSuccess = phonicsEvaluated && isSelected && opt.isCorrect;
+                const showError = phonicsEvaluated && isSelected && !opt.isCorrect;
 
-              return (
-                <button
-                  key={opt.letter}
-                  type="button"
-                  onClick={() => handleSelectPhonicsLetter(opt)}
-                  className={'py-5 sm:py-6 px-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none border-b-6 active:border-b-2 active:translate-y-1 ' + (
-                    showSuccess
-                      ? 'duo-btn-green scale-103 shadow-md'
-                      : showError
-                      ? 'bg-rose-500 text-white border-rose-700'
-                      : 'duo-btn-white'
-                  )}
-                >
-                  <span className="font-child text-5xl sm:text-6xl font-black">
-                    {opt.letter}
-                  </span>
-                  <span className="text-[11px] font-bold opacity-80">
-                    حرف {opt.letterName}
-                  </span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={opt.letter}
+                    type="button"
+                    onClick={() => handleSelectPhonicsLetter(opt)}
+                    className={'py-6 sm:py-8 px-4 rounded-3xl transition-all flex flex-col items-center justify-center gap-2 cursor-pointer select-none border-b-8 active:border-b-2 active:translate-y-2 ' + (
+                      showSuccess
+                        ? 'clay-btn-emerald scale-105 ring-4 ring-emerald-300'
+                        : showError
+                        ? 'bg-rose-500 text-white border-rose-700'
+                        : 'clay-card hover:border-sky-400 hover:scale-102'
+                    )}
+                  >
+                    <span className="font-child text-6xl sm:text-7xl font-black">
+                      {opt.letter}
+                    </span>
+                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                      حرف {opt.letterName}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Next Button */}
           {phonicsEvaluated && (
-            <div className="pt-2 animate-fade-slide-up">
+            <div className="pt-3 animate-fade-slide-up">
               <button
                 type="button"
                 onClick={() => {
                   handleNextPhonics();
                   exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }}
-                className="duo-btn-green w-full py-3.5 text-base font-black flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                className="clay-btn-sky w-full py-4 text-xl font-black flex items-center justify-center gap-2.5 cursor-pointer shadow-lg"
               >
-                <span>السؤال التالي</span>
-                <ArrowLeft className="w-4 h-4" />
+                <span>انطلق للسؤال التالي</span>
+                <ArrowLeft className="w-5 h-5" />
               </button>
             </div>
           )}
