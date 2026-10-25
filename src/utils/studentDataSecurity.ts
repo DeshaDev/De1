@@ -1008,6 +1008,8 @@ export interface DerivedSessionEvidenceResult {
     oralAccuracyPercent: number | null;
     oralWerPercent: number | null;
     teacherVerified?: boolean;
+    aiAssessmentVerified?: boolean;
+    aiAssessmentSource?: 'azure_pronunciation_assessment';
     teacherVerificationTimestamp?: string;
     teacherVerifierId?: string;
     teacherVerifierName?: string;
@@ -1037,7 +1039,7 @@ export interface DerivedSessionEvidenceResult {
     mathHeuristicIndicator: number | null;
     mathRiskLevel: 'nominal' | 'moderate' | 'high' | 'unassessed';
     mathRiskLabelAr: string;
-    evidenceProvenance: 'client-reported';
+    evidenceProvenance: 'client-reported' | 'server-verified-audio';
     evidenceProvenanceLabelAr: string;
     learningReport: LearningReport;
   };
