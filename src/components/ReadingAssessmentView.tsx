@@ -1272,8 +1272,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <span className="text-[10px] text-emerald-600 block mt-1">
                   {azureAssessmentComplete && aiAssessmentReceipt
-                    ? `${wordStats.effectiveWords} كلمة مؤكدة خلال ${finalDurationSec} ثانية`
-                    : 'لا توجد درجة طلاقة صوتية مؤكدة'}
+                    ? `${wordStats.effectiveWords} كلمة احتسبها محرك التقييم بعد المطابقة الآلية خلال ${finalDurationSec} ثانية`
+                    : 'لا توجد درجة صوتية مكتملة موثقة المصدر'}
                 </span>
               </div>
 
@@ -1612,7 +1612,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {readingMode === 'oral_audio'
                     ? azureAssessmentComplete
                       ? 'المعدل مستخرج من تقييم التسجيل الصوتي في Azure، وليس من المعاينة اللحظية للمتصفح.'
-                      : 'لا يُعرض معدل موثوق لأن تقييم التسجيل الصوتي لم يكتمل.'
+                      : 'لا يُعرض معدل صوتي؛ لم يكتمل تقييم التسجيل، لذلك لا نعتمد تقدير المتصفح.'
                     : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معياراً تشخيصياً.'}
                 </p>
               </div>
@@ -1786,7 +1786,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <span className="font-bold text-slate-900">حالة محرك الصوت:</span>{' '}
                   {azureAssessmentComplete && aiAssessmentReceipt
                     ? 'اكتمل التحليل الصوتي وربط الكلمات بالتدريب.'
-                    : 'لا توجد درجة نطق مؤكدة في هذه المحاولة. أعد التسجيل عند الحاجة؛ لن تُحتسب الدرجة من تفريغ المتصفح.'}
+                    : 'لا توجد درجة نطق مكتملة موثقة المصدر في هذه المحاولة. أعد التسجيل عند الحاجة؛ لن تُحتسب الدرجة من تفريغ المتصفح وحده.'}
                 </div>
               </div>
 
