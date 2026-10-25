@@ -1879,30 +1879,77 @@ async function startServer() {
       : undefined;
     const gradeLevel = storedStudent?.gradeLevel ?? requestedGrade;
 
-    // Personalization may only use teacher-verified targets from a completed, tenant-scoped session.
-    const trustedTargetWords = storedStudent &&
+    // Use only target words derived from a completed server-verified audio assessment or
+    // an explicitly legacy-reviewed session. The child never needs a teacher to unlock adaptation.
+    const hasAIValidatedAlignment = Boolean(
+      storedStudent &&
+      storedStudent.sessionStatus === 'completed' &&
+      storedStudent.aiAssessmentVerified === true &&
+      storedStudent.aiAssessmentSource === 'azure_pronunciation_assessment' &&
+      storedStudent.evidenceProvenance === 'server-verified-audio' &&
+      Array.isArray(storedStudent.verifiedWordsAlignment)
+    );
+    const hasLegacyTeacherAlignment = Boolean(
+      storedStudent &&
       storedStudent.sessionStatus === 'completed' &&
       storedStudent.teacherVerified === true &&
       Array.isArray(storedStudent.verifiedWordsAlignment)
-      ? storedStudent.verifiedWordsAlignment
-          .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
-          .map((item) => item.word)
+    );
+    const sourceAlignment = hasAIValidatedAlignment || hasLegacyTeacherAlignment
+      ? storedStudent?.verifiedWordsAlignment
       : [];
-    const cleanWords = trustedTargetWords
+    const cleanWords = (sourceAlignment || [])
+      .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
+      .map((item) => item.word)
       .filter((word: unknown): word is string => typeof word === 'string')
       .slice(0, 8)
       .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
       .filter(Boolean);
-    const hasTeacherReviewedTargets = cleanWords.length > 0;
+    const hasAIValidatedTargets = hasAIValidatedAlignment && cleanWords.length > 0;
+    const hasTeacherReviewedTargets = hasLegacyTeacherAlignment && cleanWords.length > 0;
 
-    // Do not show structurally valid but linguistically unreviewed model-generated child activities.
-    // Until a qualified Arabic-language reviewer validates generated items, serve only the curated,
-    // grade-banded bank. Teacher-reviewed target words affect the plan only when they match a bank item.
+    // Turn incorrect number-line/transcoding trials into concrete educational practice
+    // targets; these are item-level observations, not dyscalculia classifications.
+    const gradeBandMax = gradeLevel <= 2 ? 20 : gradeLevel <= 4 ? 100 : 1000;
+    const mathTrials = storedStudent?.mathTrials;
+    const rawMathTargets: Array<{ targetNumber: number; min: number; max: number }> = [];
+    for (const trial of mathTrials?.numberLineTrials || []) {
+      if (
+        trial && Number.isInteger(trial.target) &&
+        Number.isFinite(trial.userEstimate) &&
+        trial.userEstimate !== trial.target
+      ) {
+        const min = Number.isInteger(trial.scaleMin) ? Number(trial.scaleMin) : 0;
+        const max = Number.isInteger(trial.scaleMax) ? Number(trial.scaleMax) : gradeBandMax;
+        if (min >= 0 && min < max && max <= 10000 && trial.target >= min && trial.target <= max) {
+          rawMathTargets.push({ targetNumber: trial.target, min, max });
+        }
+      }
+    }
+    for (const trial of mathTrials?.transcodingTrials || []) {
+      if (
+        trial && Number.isInteger(trial.targetNumber) &&
+        Number.isInteger(trial.selectedNumber) &&
+        trial.targetNumber !== trial.selectedNumber &&
+        trial.targetNumber >= 0 && trial.targetNumber <= gradeBandMax
+      ) {
+        rawMathTargets.push({ targetNumber: trial.targetNumber, min: 0, max: gradeBandMax });
+      }
+    }
+    const uniqueMathTargets = [...new Map(
+      rawMathTargets.map((target) => [`${target.targetNumber}:${target.min}:${target.max}`, target])
+    ).values()].slice(0, 8);
+    const hasAIValidatedMathTargets = uniqueMathTargets.length > 0 && Boolean(storedStudent?.dyscalculiaAssessed);
+
+    // The deterministic planner uses only matching words from its curated bank and real,
+    // validated missed-number targets. It never emits a diagnostic risk label.
     const sessionPlan = generateAdaptiveRemediationPlan({
       studentName: 'الطالب',
       gradeLevel,
       effectiveWords: cleanWords,
       targetsTeacherReviewed: hasTeacherReviewedTargets,
+      targetsAIValidated: hasAIValidatedTargets || hasAIValidatedMathTargets,
+      mathTargets: uniqueMathTargets,
     });
     if (!isStructurallyValidRemediationSessionPlan(sessionPlan)) {
       res.status(500).json({ error: 'تعذّر تحميل بنك الأنشطة المعتمد بنيويًا.' });
@@ -1910,9 +1957,13 @@ async function startServer() {
     }
 
     res.json({
-      source: 'curated-grade-banded',
-      targetWordsUsed: hasTeacherReviewedTargets ? cleanWords : [],
+      source: hasAIValidatedTargets || hasAIValidatedMathTargets
+        ? 'curated-adaptive-from-validated-ai-evidence'
+        : 'curated-grade-banded',
+      targetWordsUsed: hasAIValidatedTargets || hasTeacherReviewedTargets ? cleanWords : [],
+      targetWordsAreAIValidated: hasAIValidatedTargets,
       targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
+      mathTargetsUsed: hasAIValidatedMathTargets ? uniqueMathTargets : [],
       session: sessionPlan,
     });
   });
