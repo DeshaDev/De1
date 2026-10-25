@@ -595,8 +595,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 });
 
                 setVerifiedWords(mappedWords);
-                setTeacherVerified(true);
-                setHumanReviewConfirmed(true);
+                // An automated provider score is not a human school review.
+                setTeacherVerified(false);
+                setHumanReviewConfirmed(false);
                 setSpokenTranscript(result.transcript.trim());
                 spokenTranscriptRef.current = result.transcript.trim();
                 setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
@@ -657,12 +658,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           });
 
           setVerifiedWords(mappedWords);
-          setTeacherVerified(true);
-          setHumanReviewConfirmed(true);
+          // Local transcript alignment is a candidate review aid, not confirmed acoustic
+          // evidence or a school review. A reviewer must explicitly certify the words.
+          setTeacherVerified(false);
+          setHumanReviewConfirmed(false);
           setSpokenTranscript(browserPreviewTranscript);
           spokenTranscriptRef.current = browserPreviewTranscript;
-          setAzureAssessmentMode('تقييم الذكاء الاصطناعي الصوتي المباشر (محرك بصيرة الذكي للمطابقة الصوتية)');
-          setAzureAssessmentComplete(true);
+          setAzureAssessmentMode('مطابقة أولية للتفريغ الآلي في المتصفح؛ قد يخطئ التعرف الصوتي وتحتاج الكلمات إلى مراجعة بشرية.');
+          setAzureAssessmentComplete(false);
           setMeasuredWcpm(localAssessment.wordsCorrectPerMinute);
           setMeasuredAccuracyPercent(localAssessment.accuracyScore);
           setMeasuredWpm(localAssessment.wordsPerMinute);
