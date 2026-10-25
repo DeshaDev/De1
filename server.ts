@@ -1075,7 +1075,6 @@ async function startServer() {
         return;
       }
 
-      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       const nowIso = new Date().toISOString();
       const newRecord: StudentRecord = {
         id,
@@ -1130,6 +1129,7 @@ async function startServer() {
         return;
       }
       studentsDb = committed.students;
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       res.status(201).json({ student: newRecord, persisted: true });
     }
   );
@@ -1235,7 +1235,6 @@ async function startServer() {
         return;
       }
 
-      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       const nowIso = new Date().toISOString();
       const previousSnapshot =
         current.sessionStatus === 'completed'
@@ -1316,6 +1315,7 @@ async function startServer() {
         return;
       }
       studentsDb = committed.students;
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       res.status(200).json({ student: updatedRecord, persisted: true });
     }
   );
