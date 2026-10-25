@@ -637,7 +637,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       ? Math.round(ranItemLatenciesMs.reduce((a, b) => a + b, 0) / ranItemLatenciesMs.length)
       : Math.round((durSec * 1000) / itemsCount);
 
-    const statusLabelAr = 'الزمن ومعدل التسمية وصفان لهذه المهمة فقط؛ لا توجد حدود معيارية عربية معتمدة داخل بصيرة، ولا يحددان وجود صعوبة تعلم.'
+    const statusLabelAr = 'الزمن ومعدل إكمال المهمة ملاحظتان وصفيتان فقط؛ يشمل الزمن انتقالات العنصر وتفاعل المستخدم، ولا يمثل معيار تسمية عربيًا مقننًا أو دليلًا على صعوبة تعلم.'
 
     return {
       durSec,
