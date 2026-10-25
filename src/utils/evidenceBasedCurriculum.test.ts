@@ -21,6 +21,8 @@ test('reading pathway teaches phonological awareness, letter-sound mapping, deco
     assert.ok(data);
     assert.equal(data.questions.length, 3);
     assert.ok(data.questions.every((item) => item.correctIndex >= 0 && item.correctIndex < item.options.length));
+    assert.ok(data.questions.every((item) => item.options.length === 3 && new Set(item.options).size === item.options.length));
+    assert.ok(data.questions.every((item) => item.prompt.trim() && item.scaffold.trim() && item.feedbackCorrect.trim()));
   }
 });
 
@@ -97,6 +99,21 @@ test('math recommendations use actual task metrics only when the math lab was co
   }, 'math');
   assert.equal(noAssessment.skillId, 'quantity-cardinality');
   assert.equal(noAssessment.isBaseline, true);
+});
+
+test('phonological-awareness prompts do not reveal the target word in writing', () => {
+  const lesson = getCurriculumLesson('reading', 'phonological-awareness');
+  assert.ok(lesson);
+  assert.ok(lesson.questions.every((item) => item.hideStimulus === true));
+  assert.doesNotMatch(lesson.model + ' ' + lesson.guidedPractice, /موز|سمك|نور/);
+});
+
+test('Arabic number notation does not instruct children to reverse numeral reading order', () => {
+  const lesson = getCurriculumLesson('math', 'number-symbol-mapping');
+  assert.ok(lesson);
+  const text = [lesson.model, lesson.guidedPractice, ...lesson.questions.map((item) => item.scaffold)].join(' ');
+  assert.doesNotMatch(text, /اقرأ العدد من اليمين إلى اليسار/);
+  assert.match(text, /واحد وعشرون/);
 });
 
 test('math course advances into multiplication and fractions only at suitable grade bands', () => {
