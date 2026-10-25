@@ -49,6 +49,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
     : 0;
   const masteredThisRound = Boolean(lesson && isFormativeMastery(score, lesson.questions.length));
   const grade = normalizeGrade(student.gradeLevel);
+  const isRecommendedLesson = lesson?.id === recommendation.skillId;
 
   useEffect(() => {
     setDomain('reading');
@@ -304,8 +305,8 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
         <aside className="space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <h4 className="text-sm font-black text-slate-900">لماذا اخترنا هذا التدريب؟</h4>
-            <p className="mt-2 text-sm leading-6 text-slate-700">{recommendation.reasonAr}</p>
-            <p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{recommendation.evidenceAr}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{isRecommendedLesson ? recommendation.reasonAr : 'هذه الخطوة التالية في تسلسل المهارات بعد إكمال الجولة السابقة.'}</p>
+            <p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{isRecommendedLesson ? recommendation.evidenceAr : 'الانتقال هنا جزء من ترتيب التعليم، ولا يعني أن نتيجة سابقة أثبتت وجود صعوبة لدى الطفل.'}</p>
           </div>
 
           {showVerifiedWords && (
