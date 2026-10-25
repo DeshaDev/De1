@@ -135,7 +135,6 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
         interest: selectedInterest,
         targetPhoneme: phonemeSound,
         gradeLevel: activeStudent.gradeLevel,
-        studentName: activeStudent.name,
       });
       setStory(generated);
       setTimeout(() => {
