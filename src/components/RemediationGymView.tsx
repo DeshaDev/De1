@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
-import { IEPStation } from './remediation/IEPStation';
 import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
 import { InteractiveNumberLine, toEasternArabicDigits } from './ui/InteractiveNumberLine';
 import { StudentRecord } from '../data/seedData';
@@ -53,7 +52,7 @@ interface RemediationGymViewProps {
   /** Only signed-in school administrators can load the curated activity bank. */
   canGeneratePlan?: boolean;
   /** Specific station to open directly (e.g., from top navigation bar) */
-  initialStation?: 'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep';
+  initialStation?: 'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen';
 }
 
 export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
@@ -65,8 +64,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   canGeneratePlan = false,
   initialStation,
 }) => {
-  // Active Station Tab: phonics | syllables | pacer | math | sprint | storygen | iep
-  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep'>(
+  // Active Station Tab: phonics | syllables | pacer | math | sprint | storygen
+  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen'>(
     initialStation || 'phonics'
   );
 
@@ -996,15 +995,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         />
       )}
 
-      {/* ------------------------------------------------------------- */}
-      {/* STATION 7: INDIVIDUALIZED EDUCATION PLAN (IEP GENERATOR)     */}
-      {/* ------------------------------------------------------------- */}
-      {activeStation === 'iep' && (
-        <IEPStation
-          activeStudent={activeStudent}
-          speakText={speakText}
-        />
-      )}
+
     </div>
   );
 };
