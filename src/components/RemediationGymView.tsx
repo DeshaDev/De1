@@ -147,7 +147,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     return generateAdaptiveRemediationPlan({
       studentName: activeStudent.name,
       gradeLevel: activeStudent.gradeLevel,
-      effectiveWords: observedTargetWords.length > 0 ? observedTargetWords : ['السَّاقِيَةِ', 'بُسْتَانِ', 'الْجَدْوَلِ'],
+      effectiveWords: observedTargetWords.length > 0 ? observedTargetWords : ['سَمَكَةٌ', 'مَدْرَسَةٌ', 'كِتَابٌ'],
       targetsTeacherReviewed: observedTargetWords.length > 0,
     });
   }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, observedTargetWords]);

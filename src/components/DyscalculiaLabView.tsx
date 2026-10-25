@@ -31,6 +31,7 @@ import {
   InteractiveNumberLine,
   toEasternArabicDigits,
 } from './ui/InteractiveNumberLine';
+import { playNaturalArabicAudio } from '../utils/naturalSpeech';
 
 interface DyscalculiaLabViewProps {
   students: StudentRecord[];
@@ -43,6 +44,7 @@ interface DyscalculiaLabViewProps {
   onOpenFinalReport?: () => void;
 }
 
+// 8 Graded Subitizing Patterns (from single dot to dice canonicals and 10-frame arrays)
 const SUBITIZING_PATTERNS: {
   id: number;
   targetCount: number;
@@ -58,13 +60,13 @@ const SUBITIZING_PATTERNS: {
   {
     id: 2,
     targetCount: 2,
-    dots: [{ cx: 82, cy: 65 }, { cx: 158, cy: 115 }],
+    dots: [{ cx: 80, cy: 65 }, { cx: 160, cy: 115 }],
     options: [1, 2, 3, 4],
   },
   {
     id: 3,
     targetCount: 3,
-    dots: [{ cx: 120, cy: 48 }, { cx: 72, cy: 130 }, { cx: 168, cy: 130 }],
+    dots: [{ cx: 120, cy: 45 }, { cx: 75, cy: 125 }, { cx: 165, cy: 125 }],
     options: [1, 2, 3, 4],
   },
   {
@@ -73,19 +75,143 @@ const SUBITIZING_PATTERNS: {
     dots: [
       { cx: 75, cy: 55 },
       { cx: 165, cy: 55 },
-      { cx: 75, cy: 130 },
-      { cx: 165, cy: 130 },
+      { cx: 75, cy: 125 },
+      { cx: 165, cy: 125 },
     ],
     options: [1, 2, 3, 4],
   },
+  {
+    id: 5,
+    targetCount: 5,
+    dots: [
+      { cx: 65, cy: 50 },
+      { cx: 175, cy: 50 },
+      { cx: 120, cy: 90 },
+      { cx: 65, cy: 130 },
+      { cx: 175, cy: 130 },
+    ],
+    options: [3, 4, 5, 6],
+  },
+  {
+    id: 6,
+    targetCount: 6,
+    dots: [
+      { cx: 70, cy: 45 },
+      { cx: 170, cy: 45 },
+      { cx: 70, cy: 90 },
+      { cx: 170, cy: 90 },
+      { cx: 70, cy: 135 },
+      { cx: 170, cy: 135 },
+    ],
+    options: [4, 5, 6, 7],
+  },
+  {
+    id: 7,
+    targetCount: 7,
+    dots: [
+      { cx: 40, cy: 60 },
+      { cx: 80, cy: 60 },
+      { cx: 120, cy: 60 },
+      { cx: 160, cy: 60 },
+      { cx: 200, cy: 60 },
+      { cx: 80, cy: 120 },
+      { cx: 160, cy: 120 },
+    ],
+    options: [5, 6, 7, 8],
+  },
+  {
+    id: 8,
+    targetCount: 8,
+    dots: [
+      { cx: 40, cy: 60 },
+      { cx: 80, cy: 60 },
+      { cx: 120, cy: 60 },
+      { cx: 160, cy: 60 },
+      { cx: 200, cy: 60 },
+      { cx: 60, cy: 120 },
+      { cx: 120, cy: 120 },
+      { cx: 180, cy: 120 },
+    ],
+    options: [6, 7, 8, 9],
+  },
 ];
 
+// 6 Graded Number Line Estimation Tasks across 0-20, 0-100, and 0-1000 scales
+interface NumberLineTaskItem {
+  id: number;
+  targetNumber: number;
+  min: number;
+  max: number;
+  defaultDraft: number;
+  title: string;
+  hintAr: string;
+}
+
+const NUMBER_LINE_TASKS: NumberLineTaskItem[] = [
+  {
+    id: 1,
+    targetNumber: 8,
+    min: 0,
+    max: 20,
+    defaultDraft: 10,
+    title: 'المهمة الأولى: اقفز إلى العدد ٨',
+    hintAr: 'خط الأعداد من ٠ إلى ٢٠، والعدد ٨ يقع قبل العشرة بخطوتين.',
+  },
+  {
+    id: 2,
+    targetNumber: 15,
+    min: 0,
+    max: 20,
+    defaultDraft: 10,
+    title: 'المهمة الثانية: اقفز إلى العدد ١٥',
+    hintAr: 'خط الأعداد من ٠ إلى ٢٠، والعدد ١٥ في المنتصف تماماً بين ١٠ و٢٠.',
+  },
+  {
+    id: 3,
+    targetNumber: 37,
+    min: 0,
+    max: 100,
+    defaultDraft: 50,
+    title: 'المهمة الثالثة: اقفز إلى العدد ٣٧',
+    hintAr: 'خط الأعداد من ٠ إلى ١٠٠، والعدد ٣٧ بين ٢٥ و٥٠ أقرب إلى الأربعين.',
+  },
+  {
+    id: 4,
+    targetNumber: 82,
+    min: 0,
+    max: 100,
+    defaultDraft: 50,
+    title: 'المهمة الرابعة: اقفز إلى العدد ٨٢',
+    hintAr: 'خط الأعداد من ٠ إلى ١٠٠، والعدد ٨٢ بعد الثمانين بخطوتين.',
+  },
+  {
+    id: 5,
+    targetNumber: 250,
+    min: 0,
+    max: 1000,
+    defaultDraft: 500,
+    title: 'المهمة الخامسة: اقفز إلى العدد ٢٥٠',
+    hintAr: 'خط الأعداد من ٠ إلى ١٠٠٠، والعدد ٢٥٠ في الربع الأول تماماً.',
+  },
+  {
+    id: 6,
+    targetNumber: 750,
+    min: 0,
+    max: 1000,
+    defaultDraft: 500,
+    title: 'المهمة السادسة: اقفز إلى العدد ٧٥٠',
+    hintAr: 'خط الأعداد من ٠ إلى ١٠٠٠، والعدد ٧٥٠ في ثلاثة أرباع المسافة نحو الألف.',
+  },
+];
+
+// 6 Targeted Transcoding & Spatial Reversal Remediation Items
 const TRANSCODING_ITEMS: {
   id: number;
   spokenText: string;
   targetNumber: number;
   reversalDistractor: number;
   options: { value: number; arabicDigits: string }[];
+  remedialTip: string;
 }[] = [
   {
     id: 1,
@@ -97,6 +223,7 @@ const TRANSCODING_ITEMS: {
       { value: 74, arabicDigits: '٧٤' },
       { value: 49, arabicDigits: '٤٩' },
     ],
+    remedialTip: 'في العربية ننطق الآحاد أولاً: سَبْعَة (٧) ثم العشرات أَرْبَعُونَ (٤) فتُكتب ٤٧.',
   },
   {
     id: 2,
@@ -108,6 +235,7 @@ const TRANSCODING_ITEMS: {
       { value: 83, arabicDigits: '٨٣' },
       { value: 63, arabicDigits: '٦٣' },
     ],
+    remedialTip: 'ثَلَاثَة (٣) بالآحاد على اليمين وثَمَانُون (٨) بالعشرات على اليسار: ٨٣.',
   },
   {
     id: 3,
@@ -119,6 +247,43 @@ const TRANSCODING_ITEMS: {
       { value: 96, arabicDigits: '٩٦' },
       { value: 66, arabicDigits: '٦٦' },
     ],
+    remedialTip: 'تِسْعَة (٩) في الآحاد وستُّون (٦) في العشرات: ٦٩.',
+  },
+  {
+    id: 4,
+    spokenText: 'اثْنَانِ وَخَمْسُونَ',
+    targetNumber: 52,
+    reversalDistractor: 25,
+    options: [
+      { value: 25, arabicDigits: '٢٥' },
+      { value: 52, arabicDigits: '٥٢' },
+      { value: 56, arabicDigits: '٥٦' },
+    ],
+    remedialTip: 'اثْنَان (٢) تنظر لليمين في الآحاد، وخَمْسُون (٥) في العشرات: ٥٢.',
+  },
+  {
+    id: 5,
+    spokenText: 'سَبْعَةٌ وَعِشْرُونَ',
+    targetNumber: 27,
+    reversalDistractor: 28,
+    options: [
+      { value: 28, arabicDigits: '٢٨' },
+      { value: 27, arabicDigits: '٢٧' },
+      { value: 72, arabicDigits: '٧٢' },
+    ],
+    remedialTip: 'الرقم سبعة (٧) مفتوح لأعلى كأنه يدعو، وثمانية (٨) تنظر لأسفل: ٢٧.',
+  },
+  {
+    id: 6,
+    spokenText: 'سِتَّةٌ وَسَبْعُونَ',
+    targetNumber: 76,
+    reversalDistractor: 67,
+    options: [
+      { value: 76, arabicDigits: '٧٦' },
+      { value: 67, arabicDigits: '٦٧' },
+      { value: 72, arabicDigits: '٧٢' },
+    ],
+    remedialTip: 'سِتَّة (٦) تنظر لليسار في الآحاد، وسَبْعُون (٧) في العشرات: ٧٦.',
   },
 ];
 
@@ -138,7 +303,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   // Specialist panel toggle (hidden by default for clean child playground)
   const [showSpecialistPanel, setShowSpecialistPanel] = useState<boolean>(false);
 
-  // Subitizing active pattern index (0 to 3)
+  // 1. Subitizing active pattern index (0 to 7)
   const [activeSubitizingIdx, setActiveSubitizingIdx] = useState<number>(0);
   const [subitizingSelections, setSubitizingSelections] = useState<
     Record<number, { chosen: number; rtMs: number }>
@@ -148,10 +313,16 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [readySubitizingIds, setReadySubitizingIds] = useState<Record<number, boolean>>({});
   const subitizingTimersRef = useRef<Record<number, number>>({});
 
-  // 2. Spatial Number Line state
-  const [activeNumberLineTrial, setActiveNumberLineTrial] = useState<1 | 2>(1);
-  const [estimate37Draft, setEstimate37Draft] = useState<number>(50);
-  const [estimate156Draft, setEstimate156Draft] = useState<number>(100);
+  // 2. Spatial Number Line state (6 graded trials)
+  const [activeNumberLineTrialIdx, setActiveNumberLineTrialIdx] = useState<number>(0);
+  const [numberLineDrafts, setNumberLineDrafts] = useState<Record<number, number>>({
+    1: 10,
+    2: 10,
+    3: 50,
+    4: 50,
+    5: 500,
+    6: 500,
+  });
   const [numberLineSelections, setNumberLineSelections] = useState<
     Record<number, { estimate: number; rtMs: number }>
   >({});
@@ -159,9 +330,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const numberLineStartRef = useRef<Record<number, number>>({
     1: performance.now(),
     2: performance.now(),
+    3: performance.now(),
+    4: performance.now(),
+    5: performance.now(),
+    6: performance.now(),
   });
 
-  // 3. Transcoding state
+  // 3. Transcoding state (6 trials)
   const [transcodingIndex, setTranscodingIndex] = useState<number>(0);
   const [transcodingSelections, setTranscodingSelections] = useState<
     Record<number, { value: number; rtMs: number }>
@@ -184,15 +359,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     };
   }, []);
 
-  // Audio speech helper
-  const handleSpeakPrompt = (_id: number, text: string) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ar-SA';
-      u.rate = 0.88;
-      window.speechSynthesis.speak(u);
-    }
+  // Studio-grade Natural Arabic Speech Player
+  const handleSpeakPrompt = (text: string) => {
+    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-5%' });
   };
 
   // 1. Trigger dot flash
@@ -208,7 +377,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     subitizingTimersRef.current[patternId] = window.setTimeout(() => {
       setVisibleSubitizingIds((prev) => ({ ...prev, [patternId]: false }));
       trialStartTimestampRef.current[patternId] = performance.now();
-    }, 800);
+    }, 850);
   };
 
   const handleSelectSubitizingCount = (patternId: number, count: number) => {
@@ -228,20 +397,23 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     }
   };
 
-  const handleRecordNumberLineEstimate = (trialKey: 1 | 2, estimate: number) => {
-    if (numberLineSelections[trialKey]) return;
-    const start = numberLineStartRef.current[trialKey] || performance.now();
+  const currentNumberLineTask = NUMBER_LINE_TASKS[activeNumberLineTrialIdx] || NUMBER_LINE_TASKS[0];
+
+  const handleRecordNumberLineEstimate = (taskId: number, estimate: number) => {
+    if (numberLineSelections[taskId]) return;
+    const start = numberLineStartRef.current[taskId] || performance.now();
     const rt = Math.round(performance.now() - start);
     setNumberLineSelections((prev) => ({
       ...prev,
-      [trialKey]: { estimate, rtMs: Math.max(200, rt) },
+      [taskId]: { estimate, rtMs: Math.max(200, rt) },
     }));
 
-    if (trialKey === 1) {
+    if (activeNumberLineTrialIdx < NUMBER_LINE_TASKS.length - 1) {
       setTimeout(() => {
-        setActiveNumberLineTrial(2);
-        numberLineStartRef.current[2] = performance.now();
-      }, 600);
+        const nextIdx = activeNumberLineTrialIdx + 1;
+        setActiveNumberLineTrialIdx(nextIdx);
+        numberLineStartRef.current[NUMBER_LINE_TASKS[nextIdx].id] = performance.now();
+      }, 800);
     }
   };
 
@@ -250,14 +422,14 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     const rt = Math.round(performance.now() - transcodingStartRef.current);
     setTranscodingSelections((prev) => ({
       ...prev,
-      [itemId]: { value: chosenValue, rtMs: Math.max(200, rt) },
+      [itemId]: { value: chosenValue, rtMs: Math.max(250, rt) },
     }));
 
     if (transcodingIndex < TRANSCODING_ITEMS.length - 1) {
       setTimeout(() => {
         setTranscodingIndex((prev) => prev + 1);
         transcodingStartRef.current = performance.now();
-      }, 700);
+      }, 900);
     }
   };
 
@@ -268,9 +440,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     setActiveSubitizingIdx(0);
     setNumberLineSelections({});
     setNumberLineTouched({});
-    setEstimate37Draft(50);
-    setEstimate156Draft(100);
-    setActiveNumberLineTrial(1);
+    setNumberLineDrafts({ 1: 10, 2: 10, 3: 50, 4: 50, 5: 500, 6: 500 });
+    setActiveNumberLineTrialIdx(0);
     setTranscodingSelections({});
     setTranscodingIndex(0);
     setIsSimulationData(false);
@@ -285,17 +456,28 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       2: { chosen: 2, rtMs: 1400 },
       3: { chosen: 3, rtMs: 1850 },
       4: { chosen: 3, rtMs: 2300 }, // Error on 4
+      5: { chosen: 5, rtMs: 2100 },
+      6: { chosen: 6, rtMs: 2400 },
+      7: { chosen: 6, rtMs: 2800 }, // Error on 7
+      8: { chosen: 8, rtMs: 2700 },
     });
-    setReadySubitizingIds({ 1: true, 2: true, 3: true, 4: true });
+    setReadySubitizingIds({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true });
     setNumberLineSelections({
-      1: { estimate: 24, rtMs: 3800 },
-      2: { estimate: 122, rtMs: 4400 },
+      1: { estimate: 6, rtMs: 2900 },
+      2: { estimate: 12, rtMs: 3400 },
+      3: { estimate: 24, rtMs: 3800 },
+      4: { estimate: 70, rtMs: 4100 },
+      5: { estimate: 180, rtMs: 4600 },
+      6: { estimate: 620, rtMs: 4900 },
     });
-    setNumberLineTouched({ 1: true, 2: true });
+    setNumberLineTouched({ 1: true, 2: true, 3: true, 4: true, 5: true, 6: true });
     setTranscodingSelections({
       1: { value: 74, rtMs: 2800 }, // Reversal error (47 -> 74)
       2: { value: 83, rtMs: 2100 },
       3: { value: 69, rtMs: 2600 },
+      4: { value: 25, rtMs: 2900 }, // Reversal error (52 -> 25)
+      5: { value: 27, rtMs: 2200 },
+      6: { value: 76, rtMs: 2400 },
     });
   };
 
@@ -311,14 +493,15 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     };
   });
 
-  const numberLineTrials: NumberLineTrialResult[] = [
-    ...(numberLineSelections[1]
-      ? [{ target: 37, userEstimate: numberLineSelections[1].estimate, reactionTimeMs: numberLineSelections[1].rtMs, scaleMin: 0, scaleMax: 100 }]
-      : []),
-    ...(numberLineSelections[2]
-      ? [{ target: 156, userEstimate: numberLineSelections[2].estimate, reactionTimeMs: numberLineSelections[2].rtMs, scaleMin: 0, scaleMax: 200 }]
-      : []),
-  ];
+  const numberLineTrials: NumberLineTrialResult[] = NUMBER_LINE_TASKS
+    .filter((task) => Boolean(numberLineSelections[task.id]))
+    .map((task) => ({
+      target: task.targetNumber,
+      userEstimate: numberLineSelections[task.id].estimate,
+      reactionTimeMs: numberLineSelections[task.id].rtMs,
+      scaleMin: task.min,
+      scaleMax: task.max,
+    }));
 
   const transcodingTrials: TranscodingTrialResult[] = Object.entries(
     transcodingSelections
@@ -342,28 +525,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const answeredNumberLineCount = Object.keys(numberLineSelections).length;
   const answeredTranscodingCount = Object.keys(transcodingSelections).length;
   const totalCompleted = answeredSubitizingCount + answeredNumberLineCount + answeredTranscodingCount;
-  const allTasksFinished = totalCompleted === 9;
+  const totalAvailableTasks = SUBITIZING_PATTERNS.length + NUMBER_LINE_TASKS.length + TRANSCODING_ITEMS.length;
 
-  const handleSaveToStudentProfile = () => {
-    if (isSimulationData) return;
-    onUpdateStudentMath(activeStudent.id, {
-      subitizingAccuracy: computedMetrics.subitizingAccuracy,
-      avgSubitizingMs: computedMetrics.avgSubitizingMs,
-      numberLinePAE: computedMetrics.numberLinePAE,
-      transcodingAccuracy: computedMetrics.transcodingAccuracy,
-      reversalErrorCount: computedMetrics.reversalErrorCount,
-      dyscalculiaRiskScore: null,
-      mathHeuristicIndicator: null,
-      mathRiskLevel: 'unassessed',
-      mathRiskLabelAr: computedMetrics.riskLabelAr,
-    });
-  };
-
-  const currentPattern = SUBITIZING_PATTERNS[activeSubitizingIdx];
+  const currentPattern = SUBITIZING_PATTERNS[activeSubitizingIdx] || SUBITIZING_PATTERNS[0];
   const isCurrentPatternFlashed = readySubitizingIds[currentPattern.id];
   const isCurrentPatternAnswered = Boolean(subitizingSelections[currentPattern.id]);
 
-  const currentTranscodingItem = TRANSCODING_ITEMS[transcodingIndex];
+  const currentTranscodingItem = TRANSCODING_ITEMS[transcodingIndex] || TRANSCODING_ITEMS[0];
   const isCurrentTranscodingAnswered = Boolean(transcodingSelections[currentTranscodingItem?.id]);
 
   return (
@@ -378,13 +546,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div>
               <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black tracking-wide mb-2 text-sky-100">
                 <IconNumberRuler size={14} />
-                <span>مغامرة الأرقام والحساب · الصف {activeStudent.gradeLevel}</span>
+                <span>مغامرة الأرقام والحساب · منهج متكامل للصف {activeStudent.gradeLevel}</span>
               </div>
               <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
                 مغامرة أبطال الأرقام: {activeStudent.name}
               </h1>
               <p className="font-child text-sm sm:text-base text-sky-100 font-bold mt-1">
-                التقط النجوم السريعة واقفز مع الصقر على خط الأعداد لتجمع كؤوس الرياضيات!
+                التقط النجوم السريعة، اقفز على خط الأعداد، وحل ألغاز الأرقام المعكوسة!
               </p>
             </div>
           </div>
@@ -401,7 +569,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[95px] border-b-4 border-sky-600">
               <span className="text-xl font-black text-sky-600 font-mono flex items-center justify-center gap-1">
                 <IconLightningBolt size={18} />
-                <span>{totalCompleted} / ٩</span>
+                <span>{totalCompleted} / {totalAvailableTasks}</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">مهام مكتملة</span>
             </div>
@@ -413,9 +581,24 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 overflow-x-auto py-0.5 w-full sm:w-auto">
           {[
-            { id: 1, label: '١. صيد النجوم السريعة', done: answeredSubitizingCount === 4, count: `${answeredSubitizingCount}/4` },
-            { id: 2, label: '٢. قفزة خط الأعداد', done: answeredNumberLineCount === 2, count: `${answeredNumberLineCount}/2` },
-            { id: 3, label: '٣. لغز الأرقام السحري', done: answeredTranscodingCount === 3, count: `${answeredTranscodingCount}/3` },
+            {
+              id: 1,
+              label: '١. صيد النجوم السريعة',
+              done: answeredSubitizingCount === SUBITIZING_PATTERNS.length,
+              count: `${answeredSubitizingCount}/${SUBITIZING_PATTERNS.length}`,
+            },
+            {
+              id: 2,
+              label: '٢. قفزة خط الأعداد',
+              done: answeredNumberLineCount === NUMBER_LINE_TASKS.length,
+              count: `${answeredNumberLineCount}/${NUMBER_LINE_TASKS.length}`,
+            },
+            {
+              id: 3,
+              label: '٣. لغز الأرقام السحري',
+              done: answeredTranscodingCount === TRANSCODING_ITEMS.length,
+              count: `${answeredTranscodingCount}/${TRANSCODING_ITEMS.length}`,
+            },
           ].map((st) => {
             const isActive = activeStation === st.id;
             return (
@@ -454,7 +637,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
         </button>
       </div>
 
-      {/* 3. DISCREET SPECIALIST ACCORDION DRAWER (Only when expanded) */}
+      {/* 3. DISCREET SPECIALIST ACCORDION DRAWER */}
       {showSpecialistPanel && (
         <div className="bg-slate-50 border-2 border-sky-200 rounded-3xl p-5 shadow-inner space-y-4 animate-fade-slide-up text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
@@ -509,7 +692,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-              <span className="text-slate-500 block text-[11px]">دقة تمييز الكميات</span>
+              <span className="text-slate-500 block text-[11px]">دقة تمييز الكميات السريع</span>
               <span className="text-base font-black text-slate-900 font-mono">
                 {computedMetrics.subitizingAccuracy !== null ? `${computedMetrics.subitizingAccuracy}%` : 'لم يُقَس'}
               </span>
@@ -527,9 +710,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               </span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-              <span className="text-slate-500 block text-[11px]">أخطاء عكس الآحاد والعشرات</span>
+              <span className="text-slate-500 block text-[11px]">أخطاء عكس الأرقام المكانية</span>
               <span className="text-base font-black text-slate-900 font-mono">
-                {computedMetrics.reversalErrorCount !== null ? `${computedMetrics.reversalErrorCount} من 3` : 'لم يُقَس'}
+                {computedMetrics.reversalErrorCount !== null ? `${computedMetrics.reversalErrorCount} من ${TRANSCODING_ITEMS.length}` : 'لم يُقَس'}
               </span>
             </div>
           </div>
@@ -545,7 +728,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
           <div className="space-y-6 text-center max-w-xl mx-auto">
             <div className="space-y-2">
               <span className="text-xs font-black text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200 inline-block">
-                المرحلة ١ · صيد النجوم السريعة
+                المرحلة ١ · صيد النجوم السريعة (الإدراك الفوري للكميات)
               </span>
               <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
                 النمط {activeSubitizingIdx + 1} من {SUBITIZING_PATTERNS.length}
@@ -580,8 +763,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <svg width="240" height="180" viewBox="0 0 240 180" className="animate-pulse">
                   {currentPattern.dots.map((dot, dIdx) => (
                     <g key={dIdx} className="animate-bounce-gentle">
-                      <circle cx={dot.cx} cy={dot.cy} r="22" fill="#FFC800" stroke="#FFE066" strokeWidth="4" />
-                      <circle cx={dot.cx} cy={dot.cy} r="10" fill="#FFFFFF" opacity="0.8" />
+                      <circle cx={dot.cx} cy={dot.cy} r="20" fill="#FFC800" stroke="#FFE066" strokeWidth="4" />
+                      <circle cx={dot.cx} cy={dot.cy} r="9" fill="#FFFFFF" opacity="0.85" />
                     </g>
                   ))}
                 </svg>
@@ -591,7 +774,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     <Check className="w-10 h-10 text-emerald-400 stroke-[3]" />
                   </div>
                   <p className="font-child text-base font-black text-emerald-300">
-                    أحسنت يا بطل! تم التقاط العدد {currentPattern.targetCount} بنجاح
+                    أحسنت يا بطل! تم التقاط العدد {toEasternArabicDigits(currentPattern.targetCount)} ({currentPattern.targetCount}) بنجاح
                   </p>
                 </div>
               ) : isCurrentPatternFlashed ? (
@@ -616,9 +799,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               )}
             </div>
 
-            {/* Choice Buttons (1, 2, 3, 4) with Eastern Arabic and Western Digits */}
+            {/* Dynamic Choice Buttons based on current pattern options */}
             <div className="grid grid-cols-4 gap-3 pt-2">
-              {[1, 2, 3, 4].map((num) => {
+              {currentPattern.options.map((num) => {
                 const isSelected = subitizingSelections[currentPattern.id]?.chosen === num;
                 const isTarget = currentPattern.targetCount === num;
                 return (
@@ -682,89 +865,79 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
           <div className="space-y-6 text-center max-w-xl mx-auto">
             <div className="space-y-2">
               <span className="text-xs font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 inline-block">
-                المرحلة ٢ · قفزة الكنز على خط الأعداد
+                المرحلة ٢ · قفزة الكنز على خط الأعداد (الحس المكاني والتقريب)
               </span>
               <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
-                {activeNumberLineTrial === 1 ? 'المهمة الأولى: اقفز إلى العدد ٣٧' : 'المهمة الثانية: اقفز إلى العدد ١٥٦'}
+                {currentNumberLineTask.title}
               </h2>
               <p className="font-child text-sm font-bold text-slate-600">
-                حرّك المؤشر ليقفز صقر بصيرة إلى الموقع التقريبي الصحيح، ثم ثبّت القفزة!
+                {currentNumberLineTask.hintAr}
               </p>
             </div>
 
-            {/* Trial 1: Target 37 on 0-100 scale */}
-            {activeNumberLineTrial === 1 && (
-              <div className="clay-card-amber p-6 sm:p-8 space-y-6 text-center">
-                <InteractiveNumberLine
-                  min={0}
-                  max={100}
-                  value={estimate37Draft}
-                  onChange={(val) => {
-                    setEstimate37Draft(val);
-                    setNumberLineTouched((prev) => ({ ...prev, 1: true }));
-                  }}
-                  targetNumber={37}
-                  disabled={Boolean(numberLineSelections[1])}
+            {/* Stepper Dots for 6 Number Line Tasks */}
+            <div className="flex items-center justify-center gap-2">
+              {NUMBER_LINE_TASKS.map((t, idx) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveNumberLineTrialIdx(idx)}
+                  className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
+                    activeNumberLineTrialIdx === idx
+                      ? 'bg-amber-500 scale-125 ring-4 ring-amber-200'
+                      : numberLineSelections[t.id]
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-200'
+                  }`}
+                  title={t.title}
                 />
+              ))}
+            </div>
 
-                {!numberLineSelections[1] ? (
-                  <button
-                    type="button"
-                    disabled={!numberLineTouched[1]}
-                    onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
-                    className="clay-btn-emerald w-full py-4 sm:py-5 text-xl flex items-center justify-center gap-3 cursor-pointer shadow-lg disabled:opacity-40"
-                  >
-                    <IconBaseeraFalcon size={30} />
-                    <span>ثبّت قفزة الصقر الآن</span>
-                  </button>
-                ) : (
-                  <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 space-y-3 animate-fade-slide-up shadow-sm">
-                    <p className="font-child text-base font-black text-emerald-800">
-                      قفزة رائعة يا بطل! تم تثبيت موقعك عند: {toEasternArabicDigits(numberLineSelections[1].estimate)} ({numberLineSelections[1].estimate})
-                    </p>
+            {/* Interactive Number Line Box */}
+            <div className="clay-card-amber p-6 sm:p-8 space-y-6 text-center">
+              <InteractiveNumberLine
+                min={currentNumberLineTask.min}
+                max={currentNumberLineTask.max}
+                value={numberLineDrafts[currentNumberLineTask.id] ?? currentNumberLineTask.defaultDraft}
+                onChange={(val) => {
+                  setNumberLineDrafts((prev) => ({ ...prev, [currentNumberLineTask.id]: val }));
+                  setNumberLineTouched((prev) => ({ ...prev, [currentNumberLineTask.id]: true }));
+                }}
+                targetNumber={currentNumberLineTask.targetNumber}
+                disabled={Boolean(numberLineSelections[currentNumberLineTask.id])}
+              />
+
+              {!numberLineSelections[currentNumberLineTask.id] ? (
+                <button
+                  type="button"
+                  disabled={!numberLineTouched[currentNumberLineTask.id]}
+                  onClick={() =>
+                    handleRecordNumberLineEstimate(
+                      currentNumberLineTask.id,
+                      numberLineDrafts[currentNumberLineTask.id] ?? currentNumberLineTask.defaultDraft
+                    )
+                  }
+                  className="clay-btn-emerald w-full py-4 sm:py-5 text-xl flex items-center justify-center gap-3 cursor-pointer shadow-lg disabled:opacity-40"
+                >
+                  <IconBaseeraFalcon size={30} />
+                  <span>ثبّت قفزة الصقر عند هذا الموقع</span>
+                </button>
+              ) : (
+                <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 space-y-3 animate-fade-slide-up shadow-sm">
+                  <p className="font-child text-base font-black text-emerald-800">
+                    قفزة رائعة يا بطل! تم تثبيت موقعك عند: {toEasternArabicDigits(numberLineSelections[currentNumberLineTask.id].estimate)} ({numberLineSelections[currentNumberLineTask.id].estimate})
+                  </p>
+                  {activeNumberLineTrialIdx < NUMBER_LINE_TASKS.length - 1 ? (
                     <button
                       type="button"
-                      onClick={() => setActiveNumberLineTrial(2)}
+                      onClick={() => setActiveNumberLineTrialIdx((prev) => prev + 1)}
                       className="clay-btn-sky py-3.5 px-6 text-sm font-black inline-flex items-center gap-2 cursor-pointer shadow-md"
                     >
-                      <span>المهمة التالية (العدد ١٥٦)</span>
+                      <span>المهمة التالية (العدد {toEasternArabicDigits(NUMBER_LINE_TASKS[activeNumberLineTrialIdx + 1].targetNumber)})</span>
                       <ArrowLeft className="w-4 h-4" />
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Trial 2: Target 156 on 0-200 scale */}
-            {activeNumberLineTrial === 2 && (
-              <div className="clay-card-amber p-6 sm:p-8 space-y-6 text-center">
-                <InteractiveNumberLine
-                  min={0}
-                  max={200}
-                  value={estimate156Draft}
-                  onChange={(val) => {
-                    setEstimate156Draft(val);
-                    setNumberLineTouched((prev) => ({ ...prev, 2: true }));
-                  }}
-                  targetNumber={156}
-                  disabled={Boolean(numberLineSelections[2])}
-                />
-
-                {!numberLineSelections[2] ? (
-                  <button
-                    type="button"
-                    disabled={!numberLineTouched[2]}
-                    onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
-                    className="clay-btn-emerald w-full py-4 sm:py-5 text-xl flex items-center justify-center gap-3 cursor-pointer shadow-lg disabled:opacity-40"
-                  >
-                    <IconBaseeraFalcon size={30} />
-                    <span>ثبّت قفزة الصقر الآن</span>
-                  </button>
-                ) : (
-                  <div className="p-5 rounded-2xl bg-white border-2 border-emerald-300 space-y-3 animate-fade-slide-up shadow-sm">
-                    <p className="font-child text-base font-black text-emerald-800">
-                      ما شاء الله! اكتملت مهام خط الأعداد بنجاح
-                    </p>
+                  ) : (
                     <button
                       type="button"
                       onClick={() => setActiveStation(3)}
@@ -773,43 +946,97 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                       <span>انطلق للمحطة التالية (لغز الأرقام السحري)</span>
                       <ArrowLeft className="w-4 h-4" />
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Stepper Controls */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={activeNumberLineTrialIdx === 0}
+                onClick={() => setActiveNumberLineTrialIdx((prev) => Math.max(0, prev - 1))}
+                className="child-tactile-btn text-xs font-black text-slate-600 disabled:opacity-30 bg-slate-100 px-4 py-2.5 rounded-xl cursor-pointer"
+              >
+                <span>المهمة السابقة</span>
+              </button>
+
+              <span className="text-xs font-bold text-slate-500 font-child">
+                المهمة {activeNumberLineTrialIdx + 1} من {NUMBER_LINE_TASKS.length}
+              </span>
+
+              {activeNumberLineTrialIdx < NUMBER_LINE_TASKS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveNumberLineTrialIdx((prev) => prev + 1)}
+                  className="duo-btn-blue text-xs font-black px-5 py-2.5 rounded-xl cursor-pointer"
+                >
+                  <span>المهمة التالية</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveStation(3)}
+                  className="duo-btn-green text-xs font-black px-6 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>لغز الأرقام السحري</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* ========================================================
-            STATION 3: TRANSCODING (لغز الأرقام السحري)
+            STATION 3: TRANSCODING (لغز الأرقام السحري وعلاج القلب المكاني)
         ======================================================== */}
         {activeStation === 3 && (
           <div className="space-y-6 text-center max-w-xl mx-auto">
             <div className="space-y-2">
               <span className="text-xs font-black text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 inline-block">
-                المرحلة ٣ · لغز استماع الأرقام السحري
+                المرحلة ٣ · لغز استماع الأرقام السحري (تصحيح القلب المكاني للأرقام)
               </span>
               <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
                 السؤال {transcodingIndex + 1} من {TRANSCODING_ITEMS.length}
               </h2>
               <p className="font-child text-sm font-bold text-slate-600">
-                استمع إلى نطق العدد المنطوق بالصوت، ثم اختر البطاقة المطابقة له!
+                استمع إلى نطق العدد المنطوق بصوت نقي، ثم اختر البطاقة المطابقة له بدقة!
               </p>
+            </div>
+
+            {/* Stepper Dots for Transcoding */}
+            <div className="flex items-center justify-center gap-2">
+              {TRANSCODING_ITEMS.map((item, idx) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setTranscodingIndex(idx)}
+                  className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
+                    transcodingIndex === idx
+                      ? 'bg-purple-500 scale-125 ring-4 ring-purple-200'
+                      : transcodingSelections[item.id]
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-200'
+                  }`}
+                  title={`السؤال ${idx + 1}`}
+                />
+              ))}
             </div>
 
             {/* Audio Playback Hero Box */}
             <div className="p-6 sm:p-8 rounded-3xl bg-purple-50 border-2 border-purple-200 space-y-4">
               <button
                 type="button"
-                onClick={() => handleSpeakPrompt(currentTranscodingItem.id, currentTranscodingItem.spokenText)}
-                className="duo-btn-orange py-4 px-8 text-lg font-black flex items-center justify-center gap-2.5 mx-auto cursor-pointer shadow-md"
+                onClick={() => handleSpeakPrompt(currentTranscodingItem.spokenText)}
+                className="duo-btn-orange py-4 px-8 text-lg font-black flex items-center justify-center gap-2.5 mx-auto cursor-pointer shadow-md active:scale-95 transition-all"
               >
                 <Volume2 className="w-6 h-6 animate-pulse" />
-                <span>استمع للعدد: «{currentTranscodingItem.spokenText}»</span>
+                <span>اسْتَمِعْ لِلْعَدَد: «{currentTranscodingItem.spokenText}»</span>
               </button>
 
               <p className="font-child text-xs font-bold text-purple-900">
-                المس الزر البرتقالي لسماع نطق العدد مجدداً
+                المس الزر البرتقالي للاستماع لنطق العدد بصوت فصيح وواضح
               </p>
             </div>
 
@@ -827,9 +1054,9 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     className={`p-5 rounded-3xl font-child border-b-6 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
                       isSelected
                         ? isCorrect
-                          ? 'duo-btn-green'
+                          ? 'duo-btn-green scale-105 ring-4 ring-emerald-300'
                           : 'bg-rose-500 text-white border-rose-700'
-                        : 'duo-btn-white'
+                        : 'duo-btn-white hover:border-purple-400'
                     }`}
                   >
                     <span className="text-3xl font-black font-serif">{opt.arabicDigits}</span>
@@ -838,6 +1065,14 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 );
               })}
             </div>
+
+            {/* Remedial Tip Guide */}
+            {isCurrentTranscodingAnswered && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 font-bold text-xs leading-relaxed animate-fade-slide-up text-right">
+                <span className="block text-amber-800 font-black mb-1">تلميح بصري ومكاني:</span>
+                {currentTranscodingItem.remedialTip}
+              </div>
+            )}
 
             {/* Stepper Controls */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
@@ -850,6 +1085,10 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 <span>السؤال السابق</span>
               </button>
 
+              <span className="text-xs font-bold text-slate-500 font-child">
+                السؤال {transcodingIndex + 1} من {TRANSCODING_ITEMS.length}
+              </span>
+
               {transcodingIndex < TRANSCODING_ITEMS.length - 1 ? (
                 <button
                   type="button"
@@ -858,45 +1097,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 >
                   <span>السؤال التالي</span>
                 </button>
-              ) : allTasksFinished ? (
-                <button
-                  type="button"
-                  onClick={handleSaveToStudentProfile}
-                  className="duo-btn-green text-xs font-black px-6 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-md"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>اعتماد وحفظ إنجاز البطل</span>
-                </button>
-              ) : null}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================
-            GRAND CELEBRATION CARD (When All Tasks are Finished)
-        ======================================================== */}
-        {allTasksFinished && (
-          <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-white shadow-xl text-center space-y-4 border-3 border-amber-300 animate-fade-slide-up">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-white/30 backdrop-blur border-2 border-white/50 flex items-center justify-center shadow-inner animate-bounce-gentle">
-              <IconTrophy size={48} />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-child text-2xl sm:text-3xl font-black flex items-center justify-center gap-2">
-                <span>كفو يا بطل الرياضيات {activeStudent.name}!</span>
-                <IconStar size={28} />
-              </h3>
-              <p className="font-child text-sm sm:text-base font-bold text-amber-100">
-                أكملت مهام مغامرة الأرقام الثلاث وحصلت على وسام عبقري الحساب!
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleResetTest}
-                className="child-tactile-btn px-6 py-3 rounded-2xl bg-white text-amber-900 font-child font-black text-sm shadow-md hover:bg-amber-50 cursor-pointer"
-              >
-                <span>العب المغامرة مرة أخرى</span>
-              </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                    أكملت جميع الألغاز بنجاح!
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -904,5 +1111,3 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     </div>
   );
 };
-
-export default DyscalculiaLabView;
