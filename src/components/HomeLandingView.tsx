@@ -70,9 +70,9 @@ const SAMPLE_WORDS = [
 const ACTIVITIES = [
     {
     id: 'cognitive-lab',
-    title: 'الفرز المعرفي (RAN)',
-    description: 'أنشطة لاستكشاف بعض المهارات المرتبطة بالقراءة؛ لا تقدّم تشخيصًا أو معيارًا عمريًا.',
-    action: 'ابدأ الفرز المعرفي',
+    title: 'استكشاف مهارات القراءة',
+    description: 'أنشطة قصيرة للتسمية وقراءة كلمات تدريبية والوعي بالأصوات؛ نتائجها وصفية وليست تشخيصًا.',
+    action: 'استكشف المهارات',
     tone: 'blue',
     icon: Brain,
   },
@@ -339,7 +339,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="baseera-family-panel" aria-labelledby="baseera-family-title">
         <div className="baseera-family-icon"><GraduationCap aria-hidden="true" size={30} /></div>
         <div className="baseera-family-copy">
-          <h2 id="baseera-family-title">لوحة التحليل والمتابعة الذكية</h2>
+          <h2 id="baseera-family-title">ملخص التعلّم والمتابعة</h2>
           <p>
             تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة أو عسر الحساب. يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
           </p>
