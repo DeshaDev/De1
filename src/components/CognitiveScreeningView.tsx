@@ -157,19 +157,19 @@ export interface PseudoWordItem {
 }
 
 export const ARABIC_PSEUDO_WORD_CANDIDATES: PseudoWordItem[] = [
-  // المستوى الأول: ثلاثي مجرد بحركات قصيرة (فَعَلَ) - جذور مهملة في المعاجم العربية
+  // المستوى الأول: صيغ مرشحة بحركات قصيرة؛ يلزم التحقق المعجمي واللهجي المستقل.
   { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
   { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
   { id: 'pw-3', word: 'دَخَزَ', patternAr: 'فَعَلَ', syllablesAr: 'دَ · خَ · زَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
   { id: 'pw-4', word: 'رَثَقَ', patternAr: 'فَعَلَ', syllablesAr: 'رَ · ثَ · قَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
 
-  // المستوى الثاني: أوزان بمدود طويلة (فَعِيل / فَعُول)
+  // المستوى الثاني: صيغ مرشحة بمدود طويلة؛ البنية الصرفية لا تثبت الغياب المعجمي.
   { id: 'pw-5', word: 'ظَفِيك', patternAr: 'فَعِيل', syllablesAr: 'ظَ · فِيك', linguisticLevel: 'متوسط (مدود)' },
   { id: 'pw-6', word: 'فَثِيل', patternAr: 'فَعِيل', syllablesAr: 'فَ · ثِيل', linguisticLevel: 'متوسط (مدود)' },
   { id: 'pw-7', word: 'زَخِيب', patternAr: 'فَعِيل', syllablesAr: 'زَ · خِيب', linguisticLevel: 'متوسط (مدود)' },
   { id: 'pw-8', word: 'دَخُوز', patternAr: 'فَعُول', syllablesAr: 'دَ · خُوز', linguisticLevel: 'متوسط (مدود)' },
 
-  // المستوى الثالث: مقاطع ساكنة وأوزان مشتقة (مَفْعُول / مُفْتَعِل)
+  // المستوى الثالث: صيغ مرشحة بمقاطع ساكنة وأوزان مشتقة؛ لم تخضع لتقنين مستقل.
   { id: 'pw-9', word: 'مَظْفُوك', patternAr: 'مَفْعُول', syllablesAr: 'مَظْ · فُوك', linguisticLevel: 'مركب (سكون ومشتقات)' },
   { id: 'pw-10', word: 'مَفْثُول', patternAr: 'مَفْعُول', syllablesAr: 'مَفْ · ثُول', linguisticLevel: 'مركب (سكون ومشتقات)' },
   { id: 'pw-11', word: 'مَدْخُوز', patternAr: 'مَفْعُول', syllablesAr: 'مَدْ · خُوز', linguisticLevel: 'مركب (سكون ومشتقات)' },
