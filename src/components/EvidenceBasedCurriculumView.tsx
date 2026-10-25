@@ -343,8 +343,8 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
                     <h4 id="curriculum-question-title" className="text-sm font-black text-slate-900">جرّب بنفسك</h4>
                     <span className="text-xs font-bold tabular-nums text-slate-600">السؤال {questionIndex + 1} من {roundQuestions.length}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="تقدم الجولة" aria-valuemin={0} aria-valuemax={roundQuestions.length} aria-valuenow={questionIndex}>
-                    <div className="h-full rounded-full bg-teal-700 transition-all" style={{ width: ((questionIndex / roundQuestions.length) * 100) + '%' }} />
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="تقدم الجولة" aria-valuemin={0} aria-valuemax={roundQuestions.length} aria-valuenow={questionIndex + 1}>
+                    <div className="h-full rounded-full bg-teal-700 transition-all" style={{ width: (((questionIndex + 1) / roundQuestions.length) * 100) + '%' }} />
                   </div>
 
                   {question.stimulus && !question.hideStimulus && (
