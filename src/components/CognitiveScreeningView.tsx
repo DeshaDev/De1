@@ -541,44 +541,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const latestToken = tokens[tokens.length - 1];
         setRanLastHeardWord(latestToken);
 
-        // Check if ANY token in the unconsumed speech matches the target item
-        const isMatch = tokens.some(token =>
-          validVariants.some(variant => token.includes(variant) || variant.includes(token))
-        );
-
-        if (isMatch) {
-          consumedRanResultIndexRef.current = event.results.length - 1;
-          lastRanAdvancementTimeRef.current = Date.now();
+        // Speech recognition is a noisy, non-normed hint only. It must not pass an item,
+        // add an error, or advance the sequence; the recorded observation is selected manually.
+        if (hasFinal) {
           setRanHeardStatus({
             word: latestToken,
-            isMatch: true,
-            message: `رائع ومتقن: "${target.labelAr}"`,
+            isMatch: false,
+            message: `التعرف التقريبي: "${latestToken}" — راجع النطق ثم سجّل ملاحظتك يدويًا.`,
           });
-          handleRanNext('normal');
-          return;
-        }
-
-        // If a different item was spoken, note the hesitation/error BUT DO NOT AUTO-SKIP the circle!
-        // Keeping the circle active prevents desynchronization and cascading errors.
-        if (hasFinal) {
-          const pool = ranCategoryRef.current === 'colors' ? RAN_COLORS :
-                       ranCategoryRef.current === 'digits' ? RAN_DIGITS : RAN_OBJECTS;
-
-          const wrongItem = pool.find(item =>
-            item.id !== target.id &&
-            (RAN_VOCABULARY_MAP[item.id] || []).some(v => latestToken.includes(v) || v.includes(latestToken))
-          );
-
-          if (wrongItem) {
-            consumedRanResultIndexRef.current = event.results.length - 1;
-            setRanErrors(prev => prev + 1);
-            setRanHeardStatus({
-              word: latestToken,
-              isMatch: false,
-              message: `سُمع: "${latestToken}" (المطلوب: "${target.labelAr}") - أعد النطق أو اضغط مسافة لتخطيها`,
-            });
-            playChime(320, 'triangle', 0.08);
-          }
         }
       };
 
@@ -896,10 +866,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               </div>
               <div>
                 <h1 className="text-xl md:text-2xl font-black text-slate-900">
-                  أنشطة الفرز المعرفي لمهارات القراءة
+                  أنشطة استكشافية لمهارات القراءة
                 </h1>
                 <p className="text-xs text-slate-500">
-                  مهام رصدية لقياس سرعة الاسترجاع، التفكيك الصوتي للكلمات غير الحقيقية، والوعي الفونولوجي
+                  ملاحظات عن زمن التسمية، وقراءة صيغ تدريبية مرشحة، والوعي بالأصوات
                 </p>
               </div>
             </div>
@@ -1179,7 +1149,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   <Volume2 className="w-4 h-4" />
                   <span>{ranHeardStatus.message}</span>
                 </div>
-                <span className="text-[11px] opacity-75">الانتقال التلقائي مفعل عبر الصوت</span>
+                <span className="text-[11px] opacity-75">التعرف التقريبي لا يقيّم الإجابة</span>
               </div>
             )}
 
@@ -1192,19 +1162,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 return (
                   <div
                     key={idx}
-                    onClick={() => {
-                      if (ranIsRunning && isCurrent) {
-                        handleRanNext('normal');
-                      }
-                    }}
                     className={`aspect-square rounded-2xl p-2 flex flex-col items-center justify-center border-2 transition-all select-none relative ${
                       isCurrent
-                        ? 'border-emerald-500 bg-emerald-50 shadow-xl scale-105 ring-4 ring-emerald-300 animate-pulse cursor-pointer hover:bg-emerald-100'
+                        ? 'border-emerald-500 bg-emerald-50 shadow-xl scale-105 ring-4 ring-emerald-300 animate-pulse'
                         : isPassed
                         ? 'border-slate-200 bg-white/70 opacity-40'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
+                        : 'border-slate-200 bg-white'
                     }`}
-                    title={isCurrent ? 'اضغط هنا أو انطق الكلمة أو اضغط مسافة Space' : undefined}
+                    title={isCurrent ? 'انطق العنصر؛ سيظهر التعرف التقريبي وتُسجّل الملاحظة بالأزرار' : undefined}
                   >
                     {item.type === 'color' && (
                       <div
@@ -1248,14 +1213,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
-                  <span>نطق سليم وتالٍ (مسافة Space)</span>
+                  <span>تقدير المشرف: نطق سليم — التالي</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleRanNext('hesitation')}
                   className="px-4 py-3 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <span>تردد في التسمية</span>
+                  <span>تقدير المشرف: تردد</span>
                 </button>
                 <button
                   type="button"
@@ -1263,7 +1228,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="px-4 py-3 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4 text-rose-700" />
-                  <span>خطأ في التسمية</span>
+                  <span>تقدير المشرف: اختلاف في النطق</span>
                 </button>
               </div>
             )}
