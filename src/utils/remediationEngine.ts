@@ -146,6 +146,7 @@ export function generateAdaptiveRemediationPlan(params: {
   effectiveWords: string[];
   targetsTeacherReviewed?: boolean;
   targetsAIValidated?: boolean;
+  targetsMathValidated?: boolean;
   mathTargets?: Array<{ targetNumber: number; min: number; max: number }>;
 }): RemediationSessionPlan {
   const {
@@ -153,6 +154,7 @@ export function generateAdaptiveRemediationPlan(params: {
     effectiveWords,
     targetsTeacherReviewed = false,
     targetsAIValidated = false,
+    targetsMathValidated = false,
     mathTargets = [],
   } = params;
   const band = gradeLevel <= 2 ? 'foundational' : gradeLevel <= 4 ? 'developing' : 'advanced';
@@ -382,7 +384,7 @@ export function generateAdaptiveRemediationPlan(params: {
   }
   const syllableDrills = [...uniqueSyllables.values()].slice(0, 8);
   const curatedMathDrills = mathBank[band].slice(offset, offset + 8);
-  const cleanMathTargets = targetsAIValidated
+  const cleanMathTargets = targetsMathValidated
     ? mathTargets.filter((target) =>
         Number.isInteger(target.targetNumber) &&
         Number.isInteger(target.min) &&
@@ -417,11 +419,15 @@ export function generateAdaptiveRemediationPlan(params: {
   const pacerPassage = gradeLevel % 2 === 0 ? pacerAlternateByBand[band] : pacerByBand[band];
 
   return {
-    learningRationale: targetsAIValidated && (effectiveWords.length > 0 || cleanMathTargets.length > 0)
-      ? `أنشطة تدريب للصف ${gradeLevel} اختيرت من مؤشرات تقييم آلي مكتمل للكلمات ومحاولات الحساب، مع الاقتصار على أمثلة موجودة في بنك مضبوط. هذه المؤشرات تعليمية وصفية ولا تشخّص عسر القراءة أو عسر الحساب.`
-      : targetsTeacherReviewed && effectiveWords.length > 0
-        ? `أنشطة تعليمية للصف ${gradeLevel}. الكلمات المستهدفة مطابقة لبنك تدريبي مضبوط؛ النتائج لا تثبت وجود اضطراب ولا تمثل اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
-        : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب الصف، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
+    learningRationale: targetsAIValidated && effectiveWords.length > 0 && targetsMathValidated && cleanMathTargets.length > 0
+      ? `خطة تدريب للصف ${gradeLevel} بُنيت على كلمات حسمها التقييم الصوتي الآلي ومحاولات حساب موثقة آليًا، مع الاقتصار على عناصر البنك التدريبي. المؤشرات وصفية ولا تشخّص عسر القراءة أو عسر الحساب.`
+      : targetsAIValidated && effectiveWords.length > 0
+        ? `أنشطة قراءة للصف ${gradeLevel} اختيرت من الكلمات التي حسمها محرك الصوت في تسجيل مكتمل، مع الاقتصار على كلمات موجودة في بنك مضبوط. هذه المؤشرات وصفية ولا تشخّص عسر القراءة.`
+        : targetsMathValidated && cleanMathTargets.length > 0
+          ? `أنشطة حساب للصف ${gradeLevel} اختيرت من محاولات عددية موثقة آليًا وأعداد أخطأ الطالب في تحديدها. هذه مؤشرات تعليمية وصفية ولا تشخّص عسر الحساب.`
+          : targetsTeacherReviewed && effectiveWords.length > 0
+            ? `أنشطة تعليمية للصف ${gradeLevel}. الكلمات المستهدفة بالتحليل الذكي مطابقة لبنك تدريبي مضبوط؛ النتائج لا تثبت وجود اضطراب ولا تمثل اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
+            : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب الصف، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
     phonicsDrills,
     syllableDrills,
     pacerPassage,
