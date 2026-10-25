@@ -73,6 +73,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       setActiveStation(initialStation);
     }
   }, [initialStation]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }, [activeStation]);
   const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
   // Curated grade-specific practice selected from reviewed content

@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Calculator,
-  CheckCircle2,
   RotateCcw,
-  Sliders,
-  ArrowLeftRight,
   Sparkles,
   Volume2,
-  Timer,
+  Check,
+  X,
+  Play,
   ArrowLeft,
   ArrowRight,
-  Play,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+  Award,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import {
@@ -19,6 +20,13 @@ import {
   TranscodingTrialResult,
   calculateDyscalculiaMetrics,
 } from '../utils/learningMetrics';
+import {
+  IconStar,
+  IconTrophy,
+  IconBaseeraFalcon,
+  IconNumberRuler,
+  IconLightningBolt,
+} from './ui/ChildPlayfulIcons';
 
 interface DyscalculiaLabViewProps {
   students: StudentRecord[];
@@ -67,6 +75,7 @@ const SUBITIZING_PATTERNS: {
     options: [1, 2, 3, 4],
   },
 ];
+
 const TRANSCODING_ITEMS: {
   id: number;
   spokenText: string;
@@ -122,7 +131,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   // Progressive Station Stepper (1 = Subitizing, 2 = Number Line, 3 = Transcoding)
   const [activeStation, setActiveStation] = useState<1 | 2 | 3>(1);
 
-  // 1. Subitizing state
+  // Specialist panel toggle (hidden by default for clean child playground)
+  const [showSpecialistPanel, setShowSpecialistPanel] = useState<boolean>(false);
+
+  // Subitizing active pattern index (0 to 3)
+  const [activeSubitizingIdx, setActiveSubitizingIdx] = useState<number>(0);
   const [subitizingSelections, setSubitizingSelections] = useState<
     Record<number, { chosen: number; rtMs: number }>
   >({});
@@ -131,13 +144,8 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const [readySubitizingIds, setReadySubitizingIds] = useState<Record<number, boolean>>({});
   const subitizingTimersRef = useRef<Record<number, number>>({});
 
-  useEffect(() => {
-    return () => {
-      Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
-    };
-  }, []);
-
   // 2. Spatial Number Line state
+  const [activeNumberLineTrial, setActiveNumberLineTrial] = useState<1 | 2>(1);
   const [estimate37Draft, setEstimate37Draft] = useState<number>(50);
   const [estimate156Draft, setEstimate156Draft] = useState<number>(100);
   const [numberLineSelections, setNumberLineSelections] = useState<
@@ -148,166 +156,173 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
     1: performance.now(),
     2: performance.now(),
   });
-  const [showTargetOverlay, setShowTargetOverlay] = useState<boolean>(false);
 
-  // 3. Arabic Place-Value Transcoding state
+  // 3. Transcoding state
+  const [transcodingIndex, setTranscodingIndex] = useState<number>(0);
   const [transcodingSelections, setTranscodingSelections] = useState<
     Record<number, { value: number; rtMs: number }>
   >({});
-  const [transcodingIndex, setTranscodingIndex] = useState(0);
-  const transcodingStartRef = useRef<Record<number, number>>({});
-  const currentTranscodingItem = TRANSCODING_ITEMS[transcodingIndex];
+  const transcodingStartRef = useRef<number>(performance.now());
 
-  useEffect(() => {
-    if (activeStation !== 3 || !currentTranscodingItem || transcodingSelections[currentTranscodingItem.id]) return;
-    transcodingStartRef.current[currentTranscodingItem.id] = performance.now();
-  }, [activeStation, currentTranscodingItem, transcodingSelections]);
-
-  const [saveMessage, setSaveMessage] = useState<string>('');
-  const [validationError, setValidationError] = useState<string>('');
+  // Simulation indicator
   const [isSimulationData, setIsSimulationData] = useState<boolean>(false);
 
-  const handleSelectSubitizing = (patternId: number, chosenCount: number) => {
-    if (!readySubitizingIds[patternId] || visibleSubitizingIds[patternId]) return;
-    const startTs = trialStartTimestampRef.current[patternId] || performance.now();
-    const elapsed = Math.round(performance.now() - startTs);
-    if (elapsed < 150 || elapsed > 15_000) {
-      handleRestartSubitizingTimer(patternId);
-      setValidationError(
-        elapsed < 150
-          ? 'كانت الاستجابة أسرع من حدّ القياس التقني؛ ستُعاد المحاولة بدل تسجيل زمن غير موثوق.'
-          : 'انتهت مهلة هذه المحاولة (15 ثانية)؛ أُعيد عرضها لتسجيل محاولة جديدة بدل اختصار زمنها.'
-      );
-      setSaveMessage('');
-      return;
+  // Auto-scroll to top smoothly whenever activeStation changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [activeStation]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
+
+  // Audio speech helper
+  const handleSpeakPrompt = (_id: number, text: string) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ar-SA';
+      u.rate = 0.88;
+      window.speechSynthesis.speak(u);
     }
-    setSubitizingSelections((prev) => ({
-      ...prev,
-      [patternId]: { chosen: chosenCount, rtMs: elapsed },
-    }));
-    setValidationError('');
-    setSaveMessage('');
   };
 
-  const handleRestartSubitizingTimer = (patternId: number) => {
-    const existingTimer = subitizingTimersRef.current[patternId];
-    if (existingTimer) window.clearTimeout(existingTimer);
-    setSubitizingSelections((prev) => {
-      const copy = { ...prev };
-      delete copy[patternId];
-      return copy;
-    });
-    setReadySubitizingIds((prev) => ({ ...prev, [patternId]: false }));
+  // 1. Trigger dot flash
+  const handleTriggerFlash = (patternId: number) => {
+    if (subitizingSelections[patternId]) return;
     setVisibleSubitizingIds((prev) => ({ ...prev, [patternId]: true }));
-    // Reaction time starts only after the 800 ms exposure ends.
+    setReadySubitizingIds((prev) => ({ ...prev, [patternId]: true }));
+
+    if (subitizingTimersRef.current[patternId]) {
+      window.clearTimeout(subitizingTimersRef.current[patternId]);
+    }
+
     subitizingTimersRef.current[patternId] = window.setTimeout(() => {
       setVisibleSubitizingIds((prev) => ({ ...prev, [patternId]: false }));
-      setReadySubitizingIds((prev) => ({ ...prev, [patternId]: true }));
       trialStartTimestampRef.current[patternId] = performance.now();
-      delete subitizingTimersRef.current[patternId];
     }, 800);
   };
 
-  const handleRecordNumberLineEstimate = (
-    trialId: 1 | 2,
-    newEstimate: number
-  ) => {
-    if (trialId === 1) {
-      setEstimate37Draft(newEstimate);
-    } else {
-      setEstimate156Draft(newEstimate);
+  const handleSelectSubitizingCount = (patternId: number, count: number) => {
+    if (subitizingSelections[patternId]) return;
+    const start = trialStartTimestampRef.current[patternId] || performance.now();
+    const rt = Math.round(performance.now() - start);
+    setSubitizingSelections((prev) => ({
+      ...prev,
+      [patternId]: { chosen: count, rtMs: Math.max(120, rt) },
+    }));
+
+    // Auto-advance to next pattern after 700ms if available
+    if (activeSubitizingIdx < SUBITIZING_PATTERNS.length - 1) {
+      setTimeout(() => {
+        setActiveSubitizingIdx((prev) => prev + 1);
+      }, 700);
     }
-    const startTs = numberLineStartRef.current[trialId] || performance.now();
-    const elapsed = Math.round(performance.now() - startTs);
-    if (elapsed < 150 || elapsed > 30_000) {
-      setNumberLineTouched((prev) => ({ ...prev, [trialId]: false }));
-      numberLineStartRef.current[trialId] = performance.now();
-      setValidationError(
-        elapsed < 150
-          ? 'كانت الاستجابة أسرع من حدّ القياس التقني لهذه المهمة؛ حرّك المؤشر مجددًا ثم ثبّت تحديدك للموقع.'
-          : 'استغرقت الاستجابة أكثر من 30 ثانية؛ أعد تحديد الموقع ثم ثبّت الإجابة لقياس المحاولة من جديد.'
-      );
-      setSaveMessage('');
-      return;
-    }
+  };
+
+  const handleRecordNumberLineEstimate = (trialKey: 1 | 2, estimate: number) => {
+    if (numberLineSelections[trialKey]) return;
+    const start = numberLineStartRef.current[trialKey] || performance.now();
+    const rt = Math.round(performance.now() - start);
     setNumberLineSelections((prev) => ({
       ...prev,
-      [trialId]: {
-        estimate: newEstimate,
-        rtMs: prev[trialId]?.rtMs ? prev[trialId].rtMs : elapsed,
-      },
+      [trialKey]: { estimate, rtMs: Math.max(200, rt) },
     }));
-    setNumberLineTouched((prev) => ({ ...prev, [trialId]: false }));
-    setValidationError('');
-    setSaveMessage('');
-  };
 
-  const handleSpeakPrompt = (_id: number, text: string) => {
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'ar-SA';
-        u.rate = 0.85;
-        window.speechSynthesis.speak(u);
-      } catch {}
+    if (trialKey === 1) {
+      setTimeout(() => {
+        setActiveNumberLineTrial(2);
+        numberLineStartRef.current[2] = performance.now();
+      }, 600);
     }
   };
 
-  const handleSelectTranscoding = (itemId: number, val: number) => {
+  const handleSelectTranscoding = (itemId: number, chosenValue: number) => {
     if (transcodingSelections[itemId]) return;
-    const startTs = transcodingStartRef.current[itemId];
-    if (!Number.isFinite(startTs)) return;
-    const elapsed = Math.max(150, Math.round(performance.now() - startTs));
+    const rt = Math.round(performance.now() - transcodingStartRef.current);
     setTranscodingSelections((prev) => ({
       ...prev,
-      [itemId]: { value: val, rtMs: elapsed },
+      [itemId]: { value: chosenValue, rtMs: Math.max(200, rt) },
     }));
-    setValidationError('');
-    setSaveMessage('');
+
+    if (transcodingIndex < TRANSCODING_ITEMS.length - 1) {
+      setTimeout(() => {
+        setTranscodingIndex((prev) => prev + 1);
+        transcodingStartRef.current = performance.now();
+      }, 700);
+    }
   };
 
-  // Compute live dyscalculia metrics ONLY from completed trials
-  const subitizingTrials: SubitizingTrialResult[] = SUBITIZING_PATTERNS.filter(
-    (p) => Boolean(subitizingSelections[p.id])
-  ).map((p) => {
-    const sel = subitizingSelections[p.id];
+  const handleResetTest = () => {
+    setSubitizingSelections({});
+    setVisibleSubitizingIds({});
+    setReadySubitizingIds({});
+    setActiveSubitizingIdx(0);
+    setNumberLineSelections({});
+    setNumberLineTouched({});
+    setEstimate37Draft(50);
+    setEstimate156Draft(100);
+    setActiveNumberLineTrial(1);
+    setTranscodingSelections({});
+    setTranscodingIndex(0);
+    setIsSimulationData(false);
+    setActiveStation(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLoadDyscalculiaSimulation = () => {
+    setIsSimulationData(true);
+    setSubitizingSelections({
+      1: { chosen: 1, rtMs: 950 },
+      2: { chosen: 2, rtMs: 1400 },
+      3: { chosen: 3, rtMs: 1850 },
+      4: { chosen: 3, rtMs: 2300 }, // Error on 4
+    });
+    setReadySubitizingIds({ 1: true, 2: true, 3: true, 4: true });
+    setNumberLineSelections({
+      1: { estimate: 24, rtMs: 3800 },
+      2: { estimate: 122, rtMs: 4400 },
+    });
+    setNumberLineTouched({ 1: true, 2: true });
+    setTranscodingSelections({
+      1: { value: 74, rtMs: 2800 }, // Reversal error (47 -> 74)
+      2: { value: 83, rtMs: 2100 },
+      3: { value: 69, rtMs: 2600 },
+    });
+  };
+
+  // Compile trial results
+  const subitizingTrials: SubitizingTrialResult[] = Object.entries(
+    subitizingSelections
+  ).map(([patId, res]) => {
+    const pattern = SUBITIZING_PATTERNS.find((p) => p.id === Number(patId))!;
     return {
-      dotCount: p.targetCount,
-      correct: sel.chosen === p.targetCount,
-      reactionTimeMs: sel.rtMs,
+      dotCount: pattern.targetCount,
+      correct: res.chosen === pattern.targetCount,
+      reactionTimeMs: res.rtMs,
     };
   });
 
-  const numberLineTrials: NumberLineTrialResult[] = [];
-  if (numberLineSelections[1]) {
-    numberLineTrials.push({
-      target: 37,
-      userEstimate: numberLineSelections[1].estimate,
-      reactionTimeMs: numberLineSelections[1].rtMs,
-      scaleMin: 0,
-      scaleMax: 100,
-    });
-  }
-  if (numberLineSelections[2]) {
-    numberLineTrials.push({
-      target: 156,
-      userEstimate: numberLineSelections[2].estimate,
-      reactionTimeMs: numberLineSelections[2].rtMs,
-      scaleMin: 0,
-      scaleMax: 200,
-    });
-  }
+  const numberLineTrials: NumberLineTrialResult[] = [
+    ...(numberLineSelections[1]
+      ? [{ target: 37, userEstimate: numberLineSelections[1].estimate, reactionTimeMs: numberLineSelections[1].rtMs, scaleMin: 0, scaleMax: 100 }]
+      : []),
+    ...(numberLineSelections[2]
+      ? [{ target: 156, userEstimate: numberLineSelections[2].estimate, reactionTimeMs: numberLineSelections[2].rtMs, scaleMin: 0, scaleMax: 200 }]
+      : []),
+  ];
 
-  const transcodingTrials: TranscodingTrialResult[] = TRANSCODING_ITEMS.filter(
-    (item) => Boolean(transcodingSelections[item.id])
-  ).map((item) => {
-    const sel = transcodingSelections[item.id];
+  const transcodingTrials: TranscodingTrialResult[] = Object.entries(
+    transcodingSelections
+  ).map(([itemId, res]) => {
+    const item = TRANSCODING_ITEMS.find((it) => it.id === Number(itemId))!;
     return {
       targetNumber: item.targetNumber,
-      selectedNumber: sel.value,
-      isReversalError: sel.value === item.reversalDistractor,
-      reactionTimeMs: sel.rtMs,
+      selectedNumber: res.value,
+      isReversalError: res.value === item.reversalDistractor,
+      reactionTimeMs: res.rtMs,
     };
   });
 
@@ -320,76 +335,12 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   const answeredSubitizingCount = Object.keys(subitizingSelections).length;
   const answeredNumberLineCount = Object.keys(numberLineSelections).length;
   const answeredTranscodingCount = Object.keys(transcodingSelections).length;
-
-  const handleLoadDyscalculiaSimulation = () => {
-    Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
-    subitizingTimersRef.current = {};
-    setVisibleSubitizingIds({});
-    setReadySubitizingIds({});
-    setSubitizingSelections({
-      1: { chosen: 1, rtMs: 520 },
-      2: { chosen: 3, rtMs: 690 },
-      3: { chosen: 3, rtMs: 610 },
-      4: { chosen: 2, rtMs: 740 },
-    });
-    setEstimate37Draft(61);
-    setEstimate156Draft(104);
-    setNumberLineSelections({
-      1: { estimate: 61, rtMs: 1940 },
-      2: { estimate: 104, rtMs: 2280 },
-    });
-    setShowTargetOverlay(true);
-    setTranscodingSelections({
-      1: { value: 74, rtMs: 2340 },
-      2: { value: 38, rtMs: 2610 },
-      3: { value: 69, rtMs: 1890 },
-    });
-    setIsSimulationData(true);
-    setValidationError('هذه بيانات اصطناعية للعرض فقط. امسح النموذج وابدأ المحاولات بنفسك قبل حفظ نتيجة طالب.');
-    setSaveMessage('');
-  };
-
-  const handleResetTest = () => {
-    Object.values(subitizingTimersRef.current).forEach((timer) => window.clearTimeout(timer));
-    subitizingTimersRef.current = {};
-    const now = performance.now();
-    trialStartTimestampRef.current = {};
-    setVisibleSubitizingIds({});
-    setReadySubitizingIds({});
-    setIsSimulationData(false);
-    numberLineStartRef.current = { 1: now, 2: now };
-    transcodingStartRef.current = { 1: now, 2: now, 3: now };
-    setSubitizingSelections({});
-    setEstimate37Draft(50);
-    setEstimate156Draft(100);
-    setNumberLineSelections({});
-    setShowTargetOverlay(false);
-    setTranscodingSelections({});
-    setValidationError('');
-    setSaveMessage('');
-    setActiveStation(1);
-  };
+  const totalCompleted = answeredSubitizingCount + answeredNumberLineCount + answeredTranscodingCount;
+  const allTasksFinished = totalCompleted === 9;
 
   const handleSaveToStudentProfile = () => {
-    if (isSimulationData) {
-      setValidationError('لا يمكن حفظ البيانات الاصطناعية في ملف الطالب. اضغط «إعادة ضبط المهام» ثم أجرِ المحاولات الفعلية.');
-      setSaveMessage('');
-      return;
-    }
-    if (
-      answeredSubitizingCount < SUBITIZING_PATTERNS.length ||
-      answeredNumberLineCount < 2 ||
-      answeredTranscodingCount < 3
-    ) {
-      setValidationError(
-        `يرجى إكمال المحاولات الفعلية قبل حفظ النتيجة: تمييز الكميات (${answeredSubitizingCount}/${SUBITIZING_PATTERNS.length})، خط الأعداد (${answeredNumberLineCount}/2)، وترميز الأرقام (${answeredTranscodingCount}/3).`
-      );
-      setSaveMessage('');
-      return;
-    }
-    setValidationError('');
+    if (isSimulationData) return;
     onUpdateStudentMath(activeStudent.id, {
-      dyscalculiaAssessed: true,
       subitizingAccuracy: computedMetrics.subitizingAccuracy,
       avgSubitizingMs: computedMetrics.avgSubitizingMs,
       numberLinePAE: computedMetrics.numberLinePAE,
@@ -398,48 +349,119 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       dyscalculiaRiskScore: null,
       mathHeuristicIndicator: null,
       mathRiskLevel: 'unassessed',
-      mathRiskLabelAr: 'هذه النتائج مقاييس وصفية؛ لا توجد درجة خطر معيارية معتمدة.',
-      mathTrials: {
-        subitizingTrials,
-        numberLineTrials,
-        transcodingTrials,
-      },
+      mathRiskLabelAr: computedMetrics.riskLabelAr,
     });
-    setSaveMessage(
-      `تم حفظ مقاييس أداء وصفية لمهام الحساب لدى ${activeStudent.name}؛ لا يُستنتج منها تشخيص أو مستوى خطر معياري.`
-    );
   };
 
+  const currentPattern = SUBITIZING_PATTERNS[activeSubitizingIdx];
+  const isCurrentPatternFlashed = readySubitizingIds[currentPattern.id];
+  const isCurrentPatternAnswered = Boolean(subitizingSelections[currentPattern.id]);
+
+  const currentTranscodingItem = TRANSCODING_ITEMS[transcodingIndex];
+  const isCurrentTranscodingAnswered = Boolean(transcodingSelections[currentTranscodingItem?.id]);
+
   return (
-    <div className="space-y-8">
-      {/* Executive Header & Station Stepper Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-        <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200">
-          <div>
-            <div className="text-xs text-slate-500 mb-1">
-              فحص الحس العددي والترميز المكاني للأعداد
+    <div className="space-y-6 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
+      {/* 1. PLAYFUL HERO QUEST HEADER */}
+      <div className="bg-gradient-to-r from-sky-400 via-indigo-500 to-sky-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border-2 border-sky-300">
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-right">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur border-2 border-white/40 flex items-center justify-center shadow-inner animate-bounce-gentle shrink-0">
+              <IconBaseeraFalcon size={52} />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 font-display">
-              مهام استكشافية للإدراك العددي
-            </h1>
+            <div>
+              <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black tracking-wide mb-2 text-sky-100">
+                <IconNumberRuler size={14} />
+                <span>مغامرة الأرقام والحساب · الصف {activeStudent.gradeLevel}</span>
+              </div>
+              <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
+                مغامرة أبطال الأرقام: {activeStudent.name}
+              </h1>
+              <p className="font-child text-sm sm:text-base text-sky-100 font-bold mt-1">
+                التقط النجوم السريعة واقفز مع الصقر على خط الأعداد لتجمع كؤوس الرياضيات!
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="dyscalculia-student-select"
-                className="text-xs font-medium text-slate-500 whitespace-nowrap"
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[95px] border-b-4 border-amber-500">
+              <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
+                <IconStar size={18} />
+                <span>{totalCompleted * 15 + 60} XP</span>
+              </span>
+              <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط البطل</span>
+            </div>
+
+            <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[95px] border-b-4 border-sky-600">
+              <span className="text-xl font-black text-sky-600 font-mono flex items-center justify-center gap-1">
+                <IconLightningBolt size={18} />
+                <span>{totalCompleted} / ٩</span>
+              </span>
+              <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">مهام مكتملة</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. PLAYFUL DUOLINGO STATION STEPPER BAR */}
+      <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto py-0.5 w-full sm:w-auto">
+          {[
+            { id: 1, label: '١. صيد النجوم السريعة', done: answeredSubitizingCount === 4, count: `${answeredSubitizingCount}/4` },
+            { id: 2, label: '٢. قفزة خط الأعداد', done: answeredNumberLineCount === 2, count: `${answeredNumberLineCount}/2` },
+            { id: 3, label: '٣. لغز الأرقام السحري', done: answeredTranscodingCount === 3, count: `${answeredTranscodingCount}/3` },
+          ].map((st) => {
+            const isActive = activeStation === st.id;
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setActiveStation(st.id as any)}
+                className={`child-tactile-btn px-4 py-3 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer border-b-4 active:border-b-1 active:translate-y-1 ${
+                  isActive
+                    ? 'duo-btn-green shadow-md scale-102'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
+                }`}
               >
-                الطالب:
-              </label>
+                <span>{st.label}</span>
+                <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                  isActive ? 'bg-white/30 text-white' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {st.count}
+                </span>
+                {st.done && <Check className="w-4 h-4 text-amber-300 stroke-[3]" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Specialist Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setShowSpecialistPanel((prev) => !prev)}
+          className="child-tactile-btn text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer mr-auto border border-slate-200"
+          title="عرض لوحة المعلم والأخصائي ومقاييس زمن الاستجابة"
+        >
+          <Sliders className="w-3.5 h-3.5 text-sky-600" />
+          <span>لوحة الأخصائي</span>
+          {showSpecialistPanel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+      </div>
+
+      {/* 3. DISCREET SPECIALIST ACCORDION DRAWER (Only when expanded) */}
+      {showSpecialistPanel && (
+        <div className="bg-slate-50 border-2 border-sky-200 rounded-3xl p-5 shadow-inner space-y-4 animate-fade-slide-up text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2 font-bold text-slate-800">
+              <span>🔬 مقاييس الأخصائي والتحليل الوصفي للإدراك العددي:</span>
+              <span className="text-[11px] font-normal text-slate-500">(مقاييس وصفية؛ لا تصنف الطفل ولا تُعد تشخيصًا لعسر الحساب)</span>
+            </div>
+
+            <div className="flex items-center gap-2">
               <select
-                id="dyscalculia-student-select"
                 value={activeStudent.id}
-                onChange={(e) => {
-                  onSelectStudent(e.target.value);
-                  setSaveMessage('');
-                }}
-                className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0284C7]"
+                onChange={(e) => onSelectStudent(e.target.value)}
+                className="p-1.5 rounded-lg border border-slate-300 bg-white font-bold"
               >
                 {students.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -447,740 +469,466 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                   </option>
                 ))}
               </select>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleLoadDyscalculiaSimulation}
-              className="px-3.5 py-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              تحميل بيانات توضيحية (لا تُحفظ)
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResetTest}
-              className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>إعادة الضبط</span>
-            </button>
-
-            {onOpenFinalReport && (
               <button
                 type="button"
-                onClick={onOpenFinalReport}
-                className="px-4 py-2 text-xs font-bold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-xl transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer shadow-2xs"
+                onClick={handleLoadDyscalculiaSimulation}
+                className="px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-bold hover:bg-amber-200 cursor-pointer"
               >
-                <span>الخطوة التالية: التقرير النهائي</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
+                تحميل بيانات تجريبية
               </button>
-            )}
+
+              <button
+                type="button"
+                onClick={handleResetTest}
+                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>إعادة الضبط</span>
+              </button>
+
+              {onOpenFinalReport && (
+                <button
+                  type="button"
+                  onClick={onOpenFinalReport}
+                  className="px-3 py-1.5 rounded-lg bg-sky-600 text-white font-bold hover:bg-sky-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>التقرير النهائي</span>
+                  <ArrowLeft className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-slate-500 block text-[11px]">دقة تمييز الكميات</span>
+              <span className="text-base font-black text-slate-900 font-mono">
+                {computedMetrics.subitizingAccuracy !== null ? `${computedMetrics.subitizingAccuracy}%` : 'لم يُقَس'}
+              </span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-slate-500 block text-[11px]">متوسط زمن الاستجابة</span>
+              <span className="text-base font-black text-slate-900 font-mono">
+                {computedMetrics.avgSubitizingMs !== null ? `${computedMetrics.avgSubitizingMs} ms` : 'لم يُقَس'}
+              </span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-slate-500 block text-[11px]">نسبة خطأ خط الأعداد</span>
+              <span className="text-base font-black text-slate-900 font-mono">
+                {computedMetrics.numberLinePAE !== null ? `${computedMetrics.numberLinePAE}%` : 'لم يُقَس'}
+              </span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-slate-500 block text-[11px]">أخطاء عكس الآحاد والعشرات</span>
+              <span className="text-base font-black text-slate-900 font-mono">
+                {computedMetrics.reversalErrorCount !== null ? `${computedMetrics.reversalErrorCount} من 3` : 'لم يُقَس'}
+              </span>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* 3-Step Station Navigation Strip */}
-        <div
-          role="tablist"
-          aria-label="مهام استكشافية للإدراك العددي"
-          className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-slate-200 bg-slate-50/50"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeStation === 1}
-            onClick={() => setActiveStation(1)}
-            className={`p-4 text-right transition-colors flex items-center justify-between cursor-pointer ${
-              activeStation === 1
-                ? 'bg-white text-slate-900 font-bold border-b-2 border-b-[#0284C7]'
-                : 'text-slate-600 hover:bg-white/60'
-            }`}
-          >
-            <div>
-              <div className="text-xs text-[#0284C7] font-semibold">
-                المحطة ٠١
-              </div>
-              <div className="text-sm mt-0.5">تمييز الكميات بسرعة</div>
+      {/* 4. MAIN INTERACTIVE ARENA */}
+      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-slate-200/90 animate-fade-slide-up">
+        {/* ========================================================
+            STATION 1: SUBITIZING (صيد النجوم السريعة)
+        ======================================================== */}
+        {activeStation === 1 && (
+          <div className="space-y-6 text-center max-w-xl mx-auto">
+            <div className="space-y-2">
+              <span className="text-xs font-black text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200 inline-block">
+                المرحلة ١ · صيد النجوم السريعة
+              </span>
+              <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
+                النمط {activeSubitizingIdx + 1} من {SUBITIZING_PATTERNS.length}
+              </h2>
+              <p className="font-child text-sm font-bold text-slate-600">
+                انقر على الزر لتشاهد وميض النجوم لبرهة خاطفة، ثم اختر كم نجمة شاهدت!
+              </p>
             </div>
-            <span className="text-xs font-mono tabular-nums text-slate-500">
-              {answeredSubitizingCount}/{SUBITIZING_PATTERNS.length}
-            </span>
-          </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeStation === 2}
-            onClick={() => setActiveStation(2)}
-            className={`p-4 text-right transition-colors flex items-center justify-between cursor-pointer ${
-              activeStation === 2
-                ? 'bg-white text-slate-900 font-bold border-b-2 border-b-[#0284C7]'
-                : 'text-slate-600 hover:bg-white/60'
-            }`}
-          >
-            <div>
-              <div className="text-xs text-[#0284C7] font-semibold">
-                المحطة ٠٢
-              </div>
-              <div className="text-sm mt-0.5">تحديد الموقع على خط الأعداد</div>
+            {/* Step indicator dots */}
+            <div className="flex items-center justify-center gap-2">
+              {SUBITIZING_PATTERNS.map((p, idx) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActiveSubitizingIdx(idx)}
+                  className={`w-3.5 h-3.5 rounded-full transition-all cursor-pointer ${
+                    activeSubitizingIdx === idx
+                      ? 'bg-sky-500 scale-125 ring-4 ring-sky-200'
+                      : subitizingSelections[p.id]
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-200'
+                  }`}
+                  title={`النمط ${idx + 1}`}
+                />
+              ))}
             </div>
-            <span className="text-xs font-mono tabular-nums text-slate-500">
-              {answeredNumberLineCount}/2
-            </span>
-          </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeStation === 3}
-            onClick={() => setActiveStation(3)}
-            className={`p-4 text-right transition-colors flex items-center justify-between cursor-pointer ${
-              activeStation === 3
-                ? 'bg-white text-slate-900 font-bold border-b-2 border-b-[#0284C7]'
-                : 'text-slate-600 hover:bg-white/60'
-            }`}
-          >
-            <div>
-              <div className="text-xs text-[#0284C7] font-semibold">
-                المحطة ٠٣
-              </div>
-              <div className="text-sm mt-0.5">قراءة الأرقام وترميزها</div>
-            </div>
-            <span className="text-xs font-mono tabular-nums text-slate-500">
-              {answeredTranscodingCount}/3
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Two-Zone Sandbox Layout: Left 8 Cols Active Station + Right 4 Cols Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left/Main 8 Cols: Active Station Canvas */}
-        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          {/* STATION 1: SUBITIZING */}
-          {activeStation === 1 && (
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    ٠١. اختبار تمييز الكميات بسرعة وسرعة التقاط العدد
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    انقر على العدد المطابق لعدد النقاط في كل مصفوفة بأسرع ما يمكن لحساب زمن الاستجابة بالملي ثانية
+            {/* Flash Visual Arena Box */}
+            <div className="h-52 rounded-3xl bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 border-4 border-indigo-400/40 shadow-inner flex items-center justify-center relative overflow-hidden select-none">
+              {visibleSubitizingIds[currentPattern.id] ? (
+                <svg width="240" height="180" viewBox="0 0 240 180" className="animate-pulse">
+                  {currentPattern.dots.map((dot, dIdx) => (
+                    <g key={dIdx} className="animate-bounce-gentle">
+                      <circle cx={dot.cx} cy={dot.cy} r="22" fill="#FFC800" stroke="#FFE066" strokeWidth="4" />
+                      <circle cx={dot.cx} cy={dot.cy} r="10" fill="#FFFFFF" opacity="0.8" />
+                    </g>
+                  ))}
+                </svg>
+              ) : isCurrentPatternAnswered ? (
+                <div className="space-y-2 animate-fade-slide-up">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center">
+                    <Check className="w-10 h-10 text-emerald-400 stroke-[3]" />
+                  </div>
+                  <p className="font-child text-base font-black text-emerald-300">
+                    أحسنت يا بطل! تم التقاط العدد {currentPattern.targetCount} بنجاح
                   </p>
                 </div>
-                <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7]">
-                  المكتمل: {answeredSubitizingCount}/{SUBITIZING_PATTERNS.length}
-                </span>
-              </div>
+              ) : isCurrentPatternFlashed ? (
+                <div className="space-y-2 animate-fade-slide-up text-white">
+                  <p className="font-child text-xl font-black text-amber-300">
+                    كم نجمة رأيت يا بطل؟
+                  </p>
+                  <p className="font-child text-xs font-bold text-slate-300">
+                    اختر الرقم الصحيح من الأزرار بالأسفل بأسرع ما يمكنك!
+                  </p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleTriggerFlash(currentPattern.id)}
+                  className="duo-btn-green py-4 px-8 text-lg font-black flex items-center gap-2 cursor-pointer shadow-xl animate-bounce-gentle"
+                >
+                  <Play className="w-5 h-5 fill-white" />
+                  <span>ابدأ وميض النجوم الآن ✨</span>
+                </button>
+              )}
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {SUBITIZING_PATTERNS.map((pattern) => {
-                  const sel = subitizingSelections[pattern.id];
-                  const isAnswered = Boolean(sel);
-                  const isCorrect =
-                    isAnswered && sel.chosen === pattern.targetCount;
+            {/* Choice Buttons (1, 2, 3, 4) */}
+            <div className="grid grid-cols-4 gap-3 pt-2">
+              {[1, 2, 3, 4].map((num) => {
+                const isSelected = subitizingSelections[currentPattern.id]?.chosen === num;
+                const isTarget = currentPattern.targetCount === num;
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    disabled={!isCurrentPatternFlashed || isCurrentPatternAnswered}
+                    onClick={() => handleSelectSubitizingCount(currentPattern.id, num)}
+                    className={`py-5 rounded-2xl font-child text-2xl font-black border-b-6 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isSelected
+                        ? isTarget
+                          ? 'duo-btn-green'
+                          : 'bg-rose-500 text-white border-rose-700'
+                        : 'duo-btn-white'
+                    }`}
+                  >
+                    <span>{num}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-                  return (
-                    <div
-                      key={pattern.id}
-                      className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl flex flex-col justify-between space-y-4"
-                    >
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span className="font-semibold text-slate-700">
-                          المصفوفة #{pattern.id}
-                        </span>
-                        {isAnswered ? (
-                          <span
-                            className={`font-mono tabular-nums font-semibold ${
-                              isCorrect ? 'text-[#059669]' : 'text-[#DC2626]'
-                            }`}
-                          >
-                            {isCorrect
-                              ? `● صحيح (${sel.rtMs}ms)`
-                              : `▲ خطأ (${sel.rtMs}ms)`}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleRestartSubitizingTimer(pattern.id)}
-                            disabled={visibleSubitizingIds[pattern.id]}
-                            className="min-h-11 text-[#0284C7] hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <Timer className="w-3 h-3" />
-                            <span>عرض النقاط (0.8 ثانية)</span>
-                          </button>
-                        )}
-                      </div>
+            {/* Next / Prev Stepper Controls */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={activeSubitizingIdx === 0}
+                onClick={() => setActiveSubitizingIdx((prev) => Math.max(0, prev - 1))}
+                className="child-tactile-btn text-xs font-black text-slate-600 disabled:opacity-30 bg-slate-100 px-4 py-2.5 rounded-xl cursor-pointer"
+              >
+                <span>النمط السابق</span>
+              </button>
 
-                      {/* Interactive Subitizing Presentation Card */}
-                      {!isAnswered && !visibleSubitizingIds[pattern.id] && !readySubitizingIds[pattern.id] ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRestartSubitizingTimer(pattern.id)}
-                          className="w-full h-36 bg-gradient-to-b from-sky-50/70 to-white hover:bg-sky-50 border-2 border-dashed border-sky-300 hover:border-sky-400 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all group p-4 text-center"
-                        >
-                          <span className="w-10 h-10 rounded-full bg-sky-100 text-[#0284C7] flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                            <Play className="w-5 h-5 fill-current ml-0.5" />
-                          </span>
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 block">
-                              انقر هنا لبدء وميض النقاط
-                            </span>
-                            <span className="text-[11px] text-slate-500 block mt-0.5">
-                              (تظهر النقاط لـ 0.8 ثانية ثم تختفي لاختبار التمييز السريع للكميات)
-                            </span>
-                          </div>
-                        </button>
-                      ) : (
-                        <svg
-                          viewBox="0 0 240 180"
-                          className="w-full h-36 bg-white border border-slate-200 rounded-xl"
-                          role="img"
-                          aria-label={`مصفوفة نقاط للاختبار رقم ${pattern.id}`}
-                        >
-                          {visibleSubitizingIds[pattern.id] && pattern.dots.map((d, dIdx) => (
-                            <circle
-                              key={dIdx}
-                              cx={d.cx}
-                              cy={d.cy}
-                              r={12}
-                              fill="#0F172A"
-                            />
-                          ))}
-                          {!visibleSubitizingIds[pattern.id] && readySubitizingIds[pattern.id] && !isAnswered && (
-                            <text
-                              x="120"
-                              y="95"
-                              textAnchor="middle"
-                              fill="#0284C7"
-                              fontSize="14"
-                              fontWeight="bold"
-                              fontFamily="sans-serif"
-                            >
-                              اختر إجابتك من الأرقام بالأسفل ↓
-                            </text>
-                          )}
-                          {isAnswered && (
-                            <text
-                              x="120"
-                              y="95"
-                              textAnchor="middle"
-                              fill={isCorrect ? "#059669" : "#DC2626"}
-                              fontSize="14"
-                              fontWeight="bold"
-                              fontFamily="sans-serif"
-                            >
-                              {isCorrect ? `✓ صحيح (العدد ${pattern.targetCount})` : `✗ خطأ (العدد الفعلي ${pattern.targetCount})`}
-                            </text>
-                          )}
-                        </svg>
-                      )}
-
-                      <div className="min-h-6 text-center text-xs text-slate-500" aria-live="polite">
-                        {visibleSubitizingIds[pattern.id]
-                          ? 'احفظ عدد النقاط — ستختفي الآن'
-                          : readySubitizingIds[pattern.id] && !isAnswered
-                            ? 'كم نقطة رأيت؟ اختر إجابتك.'
-                            : isAnswered
-                              ? 'أُسجلت الإجابة لهذا العرض.'
-                              : 'اضغط «عرض النقاط» لبدء المحاولة.'}
-                      </div>
-                      <div className="grid grid-cols-4 gap-2">
-                        {pattern.options.map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            disabled={!readySubitizingIds[pattern.id] || visibleSubitizingIds[pattern.id] || isAnswered}
-                            onClick={() => handleSelectSubitizing(pattern.id, opt)}
-                            aria-label={`اختيار العدد ${opt} للمصفوفة ${pattern.id}`}
-                            className={`min-h-[48px] py-3 text-base font-mono tabular-nums font-semibold rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                              isAnswered && sel.chosen === opt
-                                ? isCorrect
-                                  ? 'bg-[#059669] text-white border-[#059669]'
-                                  : 'bg-[#DC2626] text-white border-[#DC2626]'
-                                : 'bg-white text-slate-800 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end">
+              {activeSubitizingIdx < SUBITIZING_PATTERNS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveSubitizingIdx((prev) => prev + 1)}
+                  className="duo-btn-blue text-xs font-black px-5 py-2.5 rounded-xl cursor-pointer"
+                >
+                  <span>النمط التالي</span>
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={() => setActiveStation(2)}
-                  className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0F172A] hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                  className="duo-btn-green text-xs font-black px-6 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>الانتقال إلى المحطة ٠٢: خط الأعداد المكاني</span>
+                  <span>انطلق للمحطة التالية (خط الأعداد)</span>
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* STATION 2: NUMBER LINE PAE */}
-          {activeStation === 2 && (
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    ٠٢. تحديد الموقع على خط الأعداد غير المدرّج
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    حرّك المؤشر أو اضغط «تثبيت الموقع» لكل مهمة لتسجيل موقع العدد المتوقع (المكتمل: {answeredNumberLineCount}/2)
-                  </p>
+        {/* ========================================================
+            STATION 2: NUMBER LINE (قفزة الكنز على خط الأعداد)
+        ======================================================== */}
+        {activeStation === 2 && (
+          <div className="space-y-6 text-center max-w-xl mx-auto">
+            <div className="space-y-2">
+              <span className="text-xs font-black text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 inline-block">
+                المرحلة ٢ · قفزة الكنز على خط الأعداد
+              </span>
+              <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
+                {activeNumberLineTrial === 1 ? 'المهمة الأولى: اقفز إلى العدد ٣٧' : 'المهمة الثانية: اقفز إلى العدد ١٥٦'}
+              </h2>
+              <p className="font-child text-sm font-bold text-slate-600">
+                حرّك المؤشر ليقفز صقر بصيرة إلى الموقع التقريبي الصحيح، ثم ثبّت القفزة!
+              </p>
+            </div>
+
+            {/* Trial 1: Target 37 on 0-100 scale */}
+            {activeNumberLineTrial === 1 && (
+              <div className="p-6 sm:p-8 rounded-3xl bg-amber-50/70 border-2 border-amber-200 space-y-6">
+                <div className="flex items-center justify-between text-base font-black text-slate-900">
+                  <span>الهدف المطلوب: <strong className="text-2xl text-amber-600 font-mono">٣٧</strong></span>
+                  <span className="text-xs font-bold text-slate-500">المدى: ٠ إلى ١٠٠</span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowTargetOverlay(!showTargetOverlay)}
-                  className="px-3.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>
-                    {showTargetOverlay
-                      ? 'إخفاء الإجابات المرجعية'
-                      : 'مؤشر دقة تحديد الموقع'}
-                  </span>
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Trial A: Target 37 on 0-100 scale */}
-                <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="font-bold text-slate-900 text-sm">
-                      المهمة الأولى (مدى 0–100): حرّك المؤشر إلى موقع العدد 37 ثم ثبّت الإجابة مرة واحدة.
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {numberLineSelections[1] ? (
-                        <span className="font-mono tabular-nums text-slate-700">
-                          موقع الطالب المحدد:{' '}
-                          <strong>{numberLineSelections[1].estimate}</strong> ·
-                          نسبة الخطأ المطبّع (وصفية):{' '}
-                          <strong
-                            className="text-slate-700"
-                          >
-                            {(
-                              (Math.abs(numberLineSelections[1].estimate - 37) /
-                                100) *
-                              100
-                            ).toFixed(1)}
-                            %
-                          </strong>
-                        </span>
-                      ) : (
-                        <span className="text-amber-700 font-medium">
-                          ○ بانتظار تحريك المؤشر...
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        disabled={!numberLineTouched[1] || Boolean(numberLineSelections[1])}
-                        onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
-                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
-                      >
-                        تثبيت الموقع (1)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div dir="ltr" className="space-y-2">
-                    <label htmlFor="nl-slider-37" className="sr-only">
-                      تحديد موقع العدد 37 على خط الأعداد من 0 إلى 100
-                    </label>
+                {/* Slider Arena */}
+                <div dir="ltr" className="space-y-4 pt-2">
+                  <div className="relative h-12 flex items-center">
                     <input
-                      id="nl-slider-37"
                       type="range"
-                      disabled={Boolean(numberLineSelections[1])}
                       min={0}
                       max={100}
                       value={estimate37Draft}
-                      onPointerDown={() => { if (!numberLineSelections[1] && !numberLineTouched[1]) numberLineStartRef.current[1] = performance.now(); }}
-                      onKeyDown={() => { if (!numberLineSelections[1] && !numberLineTouched[1]) numberLineStartRef.current[1] = performance.now(); }}
+                      disabled={Boolean(numberLineSelections[1])}
                       onChange={(e) => {
                         setEstimate37Draft(Number(e.target.value));
                         setNumberLineTouched((prev) => ({ ...prev, 1: true }));
                       }}
-                      className="w-full accent-[#0284C7] cursor-pointer"
+                      className="w-full accent-emerald-600 h-3 bg-slate-200 rounded-lg cursor-pointer"
                     />
-                    <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
-                      <span>0</span>
-                      {showTargetOverlay && (
-                        <span
-                          style={{ left: '37%' }}
-                          className="absolute -translate-x-1/2 px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-[10px]"
-                        >
-                          الموقع الحقيقي: 37 (37%)
-                        </span>
-                      )}
-                      <span>100</span>
-                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between font-mono font-black text-sm text-slate-600">
+                    <span>٠</span>
+                    <span className="bg-white border-2 border-amber-400 px-3 py-1 rounded-full text-amber-900 text-base shadow-xs">
+                      موقع قفزتك: {estimate37Draft}
+                    </span>
+                    <span>١٠٠</span>
                   </div>
                 </div>
 
-                {/* Trial B: Target 156 on 0-200 scale */}
-                <div className="p-6 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="font-bold text-slate-900 text-sm">
-                      المهمة الثانية (مدى 0–200): حرّك المؤشر إلى موقع العدد 156 ثم ثبّت الإجابة مرة واحدة.
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {numberLineSelections[2] ? (
-                        <span className="font-mono tabular-nums text-slate-700">
-                          موقع الطالب المحدد:{' '}
-                          <strong>{numberLineSelections[2].estimate}</strong> ·
-                          نسبة الخطأ المطبّع (وصفية):{' '}
-                          <strong
-                            className="text-slate-700"
-                          >
-                            {(
-                              (Math.abs(
-                                numberLineSelections[2].estimate - 156
-                              ) /
-                                200) *
-                              100
-                            ).toFixed(1)}
-                            %
-                          </strong>
-                        </span>
-                      ) : (
-                        <span className="text-amber-700 font-medium">
-                          ○ بانتظار تحريك المؤشر...
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        disabled={!numberLineTouched[2] || Boolean(numberLineSelections[2])}
-                        onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
-                        className="px-3 py-1.5 text-xs font-semibold bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors cursor-pointer"
-                      >
-                        تثبيت الموقع (2)
-                      </button>
-                    </div>
+                {!numberLineSelections[1] ? (
+                  <button
+                    type="button"
+                    disabled={!numberLineTouched[1]}
+                    onClick={() => handleRecordNumberLineEstimate(1, estimate37Draft)}
+                    className="duo-btn-green w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-40"
+                  >
+                    <span>ثبّت قفزة الصقر الآن 🎯</span>
+                  </button>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-white border border-emerald-300 space-y-2 animate-fade-slide-up">
+                    <p className="font-child text-base font-black text-emerald-800">
+                      قفزة رائعة يا بطل! تم تثبيت موقعك عند: {numberLineSelections[1].estimate}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveNumberLineTrial(2)}
+                      className="duo-btn-blue py-3 px-6 text-sm font-black inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>المهمة التالية (العدد ١٥٦)</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                )}
+              </div>
+            )}
 
-                  <div dir="ltr" className="space-y-2">
-                    <label htmlFor="nl-slider-156" className="sr-only">
-                      تحديد موقع العدد 156 على خط الأعداد من 0 إلى 200
-                    </label>
+            {/* Trial 2: Target 156 on 0-200 scale */}
+            {activeNumberLineTrial === 2 && (
+              <div className="p-6 sm:p-8 rounded-3xl bg-amber-50/70 border-2 border-amber-200 space-y-6">
+                <div className="flex items-center justify-between text-base font-black text-slate-900">
+                  <span>الهدف المطلوب: <strong className="text-2xl text-amber-600 font-mono">١٥٦</strong></span>
+                  <span className="text-xs font-bold text-slate-500">المدى: ٠ إلى ٢٠٠</span>
+                </div>
+
+                {/* Slider Arena */}
+                <div dir="ltr" className="space-y-4 pt-2">
+                  <div className="relative h-12 flex items-center">
                     <input
-                      id="nl-slider-156"
                       type="range"
-                      disabled={Boolean(numberLineSelections[2])}
                       min={0}
                       max={200}
                       value={estimate156Draft}
-                      onPointerDown={() => { if (!numberLineSelections[2] && !numberLineTouched[2]) numberLineStartRef.current[2] = performance.now(); }}
-                      onKeyDown={() => { if (!numberLineSelections[2] && !numberLineTouched[2]) numberLineStartRef.current[2] = performance.now(); }}
+                      disabled={Boolean(numberLineSelections[2])}
                       onChange={(e) => {
                         setEstimate156Draft(Number(e.target.value));
                         setNumberLineTouched((prev) => ({ ...prev, 2: true }));
                       }}
-                      className="w-full accent-[#0284C7] cursor-pointer"
+                      className="w-full accent-emerald-600 h-3 bg-slate-200 rounded-lg cursor-pointer"
                     />
-                    <div className="relative h-6 flex items-center justify-between text-xs font-mono tabular-nums text-slate-500">
-                      <span>0</span>
-                      {showTargetOverlay && (
-                        <span
-                          style={{ left: '78%' }}
-                          className="absolute -translate-x-1/2 px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-[10px]"
-                        >
-                          الموقع الحقيقي: 156 (78%)
-                        </span>
-                      )}
-                      <span>200</span>
-                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between font-mono font-black text-sm text-slate-600">
+                    <span>٠</span>
+                    <span className="bg-white border-2 border-amber-400 px-3 py-1 rounded-full text-amber-900 text-base shadow-xs">
+                      موقع قفزتك: {estimate156Draft}
+                    </span>
+                    <span>٢٠٠</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setActiveStation(1)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>المحطة السابقة</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveStation(3)}
-                  className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0F172A] hover:bg-slate-800 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  <span>الانتقال إلى المحطة ٠٣: ترميز الأرقام</span>
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STATION 3: TRANSCODING */}
-          {activeStation === 3 && (
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    ٠٣. فحص الترميز العددي والخلط المكاني للآحاد والعشرات بالعربية
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    اضغط على زر الصوت لسماع العدد منطوقاً بالعربية، ثم اختر الرمز الرقمي الصحيح له
-                  </p>
-                </div>
-                <span className="text-xs font-mono tabular-nums font-semibold text-[#0284C7]">
-                  السؤال: {transcodingIndex + 1}/3 · المكتمل: {answeredTranscodingCount}/3
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 max-w-xl mx-auto">
-                {TRANSCODING_ITEMS.filter((item) => item.id === currentTranscodingItem?.id).map((item) => {
-                  const sel = transcodingSelections[item.id];
-                  const isAnswered = Boolean(sel);
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-5 bg-[#F8FAFC] border border-slate-200 rounded-xl space-y-4 flex flex-col justify-between"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-slate-500">
-                            الصيغة اللفظية:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSpeakPrompt(item.id, item.spokenText)
-                            }
-                            className="px-2.5 py-1 text-[11px] font-medium bg-white text-[#0284C7] border border-slate-200 rounded-lg hover:bg-sky-50 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Volume2 className="w-3 h-3" />
-                            <span>نطق صوتي</span>
-                          </button>
-                        </div>
-
-                        <div className="text-lg font-bold text-slate-900 font-display py-2 text-center bg-white border border-slate-200 rounded-xl">
-                          «{item.spokenText}»
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        {item.options.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled={isAnswered}
-                            onClick={() => handleSelectTranscoding(item.id, opt.value)}
-                            className={`py-2.5 px-2 rounded-lg border text-center transition-colors disabled:cursor-not-allowed disabled:opacity-80 cursor-pointer ${isAnswered && sel.value === opt.value ? 'bg-sky-100 text-sky-950 border-sky-500' : 'bg-white text-slate-900 border-slate-200 hover:bg-slate-100'}`}
-                          >
-                            <div className="text-base font-bold">
-                              {opt.arabicDigits}
-                            </div>
-                            <div className="text-[11px] font-mono tabular-nums opacity-80">
-                              {opt.value}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="text-xs leading-relaxed text-slate-600">
-                        {!isAnswered
-                          ? 'اختر إجابة واحدة. بعد تسجيلها لن تظهر الإجابة الصحيحة حتى تنتهي من الأسئلة الثلاثة.'
-                          : answeredTranscodingCount < TRANSCODING_ITEMS.length
-                            ? 'تم تسجيل الإجابة. انتقل إلى السؤال التالي؛ ستظهر المراجعة بعد إكمال النشاط.'
-                            : 'اكتملت الإجابات الثلاث. المقاييس وصفية لهذه الجلسة ولا تُعد تشخيصًا.'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {currentTranscodingItem && transcodingSelections[currentTranscodingItem.id] && transcodingIndex < TRANSCODING_ITEMS.length - 1 && (
-                <div className="flex justify-end">
+                {!numberLineSelections[2] ? (
                   <button
                     type="button"
-                    onClick={() => setTranscodingIndex((index) => Math.min(index + 1, TRANSCODING_ITEMS.length - 1))}
-                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold cursor-pointer"
+                    disabled={!numberLineTouched[2]}
+                    onClick={() => handleRecordNumberLineEstimate(2, estimate156Draft)}
+                    className="duo-btn-green w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-40"
                   >
-                    السؤال التالي
+                    <span>ثبّت قفزة الصقر الآن 🎯</span>
                   </button>
-                </div>
-              )}
+                ) : (
+                  <div className="p-4 rounded-2xl bg-white border border-emerald-300 space-y-2 animate-fade-slide-up">
+                    <p className="font-child text-base font-black text-emerald-800">
+                      ما شاء الله! اكتملت مهام خط الأعداد بنجاح
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStation(3)}
+                      className="duo-btn-green py-3 px-6 text-sm font-black inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>انطلق للمحطة التالية (لغز الأرقام السحري)</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-              {answeredTranscodingCount === TRANSCODING_ITEMS.length && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700" role="status">
-                  <p className="font-bold mb-2">ملخص الإجابات المسجّلة</p>
-                  <ul className="space-y-1.5">
-                    {TRANSCODING_ITEMS.map((item) => {
-                      const answer = transcodingSelections[item.id];
-                      if (!answer) return null;
-                      const accurate = answer.value === item.targetNumber;
-                      return <li key={item.id}>{item.spokenText}: اخترت {answer.value} — {accurate ? 'مطابق للعدد المرجعي' : answer.value === item.reversalDistractor ? 'عكس ترتيب الرقمين في هذه المهمة' : 'اختيار مختلف عن العدد المرجعي'}.</li>;
-                    })}
-                  </ul>
-                  <p className="mt-2 text-xs">هذا وصف للإجابات على المهام المعروضة فقط؛ لا يُستخدم وحده لتصنيف الطفل أو تشخيص عسر الحساب.</p>
-                </div>
-              )}
+        {/* ========================================================
+            STATION 3: TRANSCODING (لغز الأرقام السحري)
+        ======================================================== */}
+        {activeStation === 3 && (
+          <div className="space-y-6 text-center max-w-xl mx-auto">
+            <div className="space-y-2">
+              <span className="text-xs font-black text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 inline-block">
+                المرحلة ٣ · لغز استماع الأرقام السحري
+              </span>
+              <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
+                السؤال {transcodingIndex + 1} من {TRANSCODING_ITEMS.length}
+              </h2>
+              <p className="font-child text-sm font-bold text-slate-600">
+                استمع إلى نطق العدد المنطوق بالصوت، ثم اختر البطاقة المطابقة له!
+              </p>
+            </div>
 
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+            {/* Audio Playback Hero Box */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-purple-50 border-2 border-purple-200 space-y-4">
+              <button
+                type="button"
+                onClick={() => handleSpeakPrompt(currentTranscodingItem.id, currentTranscodingItem.spokenText)}
+                className="duo-btn-orange py-4 px-8 text-lg font-black flex items-center justify-center gap-2.5 mx-auto cursor-pointer shadow-md"
+              >
+                <Volume2 className="w-6 h-6 animate-pulse" />
+                <span>استمع للعدد: «{currentTranscodingItem.spokenText}»</span>
+              </button>
+
+              <p className="font-child text-xs font-bold text-purple-900">
+                المس الزر البرتقالي لسماع نطق العدد مجدداً
+              </p>
+            </div>
+
+            {/* 3 Large Tactile Choice Cards */}
+            <div className="grid grid-cols-3 gap-3.5 pt-2">
+              {currentTranscodingItem.options.map((opt) => {
+                const isSelected = transcodingSelections[currentTranscodingItem.id]?.value === opt.value;
+                const isCorrect = opt.value === currentTranscodingItem.targetNumber;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={isCurrentTranscodingAnswered}
+                    onClick={() => handleSelectTranscoding(currentTranscodingItem.id, opt.value)}
+                    className={`p-5 rounded-3xl font-child border-b-6 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                      isSelected
+                        ? isCorrect
+                          ? 'duo-btn-green'
+                          : 'bg-rose-500 text-white border-rose-700'
+                        : 'duo-btn-white'
+                    }`}
+                  >
+                    <span className="text-3xl font-black font-serif">{opt.arabicDigits}</span>
+                    <span className="text-xs font-mono opacity-80">{opt.value}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Stepper Controls */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={transcodingIndex === 0}
+                onClick={() => setTranscodingIndex((prev) => Math.max(0, prev - 1))}
+                className="child-tactile-btn text-xs font-black text-slate-600 disabled:opacity-30 bg-slate-100 px-4 py-2.5 rounded-xl cursor-pointer"
+              >
+                <span>السؤال السابق</span>
+              </button>
+
+              {transcodingIndex < TRANSCODING_ITEMS.length - 1 ? (
                 <button
                   type="button"
-                  onClick={() => setActiveStation(2)}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                  onClick={() => setTranscodingIndex((prev) => prev + 1)}
+                  className="duo-btn-blue text-xs font-black px-5 py-2.5 rounded-xl cursor-pointer"
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>المحطة السابقة</span>
+                  <span>السؤال التالي</span>
                 </button>
+              ) : allTasksFinished ? (
                 <button
-                   type="button"
-                   onClick={handleSaveToStudentProfile}
-                   disabled={isSimulationData || answeredTranscodingCount !== TRANSCODING_ITEMS.length}
-                   className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                  type="button"
+                  onClick={handleSaveToStudentProfile}
+                  className="duo-btn-green text-xs font-black px-6 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5 shadow-md"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>اعتماد وحفظ النتيجة في ملف الطالب</span>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>اعتماد وحفظ إنجاز البطل</span>
                 </button>
-              </div>
+              ) : null}
             </div>
-          )}
-        </div>
-
-        {/* Right 4 Cols: Clean Sticky Diagnostic Summary Deck (Hairline-Divided, No Box-in-Box) */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] sticky top-24">
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-              <Calculator className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>مقاييس الأداء الوصفية</span>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">
-              نتائج المهام الحسابية
-            </h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              تعرض هذه الصفحة أداء الطفل في مهام قصيرة فقط. لم تُعايَر حدود تصنيف لعسر الحساب على عينة عربية ممثلة؛ لذلك لا تعرض الصفحة درجة خطر أو تشخيصًا.
-            </p>
           </div>
+        )}
 
-          <div className="p-6 border-b border-slate-200 bg-slate-50/50 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>حالة استكمال المهام</span>
-              <span className="font-mono tabular-nums font-semibold text-slate-900">
-                {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
-                answeredNumberLineCount === 2 &&
-                answeredTranscodingCount === 3
-                  ? 'اكتملت 9 من 9 مهام'
-                  : (answeredSubitizingCount + answeredNumberLineCount + answeredTranscodingCount) + ' / 9 مهام'}
-              </span>
+        {/* ========================================================
+            GRAND CELEBRATION CARD (When All Tasks are Finished)
+        ======================================================== */}
+        {allTasksFinished && (
+          <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-white shadow-xl text-center space-y-4 border-3 border-amber-300 animate-fade-slide-up">
+            <div className="w-20 h-20 mx-auto rounded-3xl bg-white/30 backdrop-blur border-2 border-white/50 flex items-center justify-center shadow-inner animate-bounce-gentle">
+              <IconTrophy size={48} />
             </div>
-
-            {answeredSubitizingCount === SUBITIZING_PATTERNS.length &&
-            answeredNumberLineCount === 2 &&
-            answeredTranscodingCount === 3 ? (
-              <>
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="text-sm font-bold text-slate-800">{computedMetrics.riskLabelAr}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                    لا تعرض هذه النسخة درجة خطر أو تصنيفًا معياريًا. راجع دقة المهام وخطأ خط الأعداد وترميز الأعداد كلًّا على حدة.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div className="py-1 space-y-1">
-                <div className="text-sm font-bold text-slate-800">
-                  بانتظار استكمال المحطات الثلاث
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  أكمل تمييز الكميات ({answeredSubitizingCount}/{SUBITIZING_PATTERNS.length})، خط الأعداد (
-                  {answeredNumberLineCount}/2)، وترميز الأرقام (
-                  {answeredTranscodingCount}/3) لإصدار النتيجة.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-6 space-y-4">
-            <div className="divide-y divide-slate-100 text-xs">
-              <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">
-                  نسبة الخطأ في خط الأعداد
-                </span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredNumberLineCount > 0 && computedMetrics.numberLinePAE !== null
-                    ? String(computedMetrics.numberLinePAE) + '%'
-                    : 'لم يُقَس'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">
-                  صحة الإجابات في مهمة تمييز الكميات
-                </span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredSubitizingCount > 0 && computedMetrics.subitizingAccuracy !== null
-                    ? String(computedMetrics.subitizingAccuracy) + '%'
-                    : 'لم يُقَس'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">متوسط زمن الاستجابة في تمييز الكميات</span>
-                <span className="font-mono tabular-nums font-semibold text-slate-900">
-                  {answeredSubitizingCount > 0 && computedMetrics.avgSubitizingMs !== null
-                    ? String(computedMetrics.avgSubitizingMs) + ' مللي ثانية'
-                    : 'لم يُقَس'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2.5">
-                <span className="text-slate-600">
-                  أخطاء عكس الآحاد والعشرات
-                </span>
-                <span
-                  className={`font-mono tabular-nums font-semibold ${
-                    computedMetrics.reversalErrorCount === null
-                      ? 'text-slate-700'
-                      : computedMetrics.reversalErrorCount > 0
-                        ? 'text-[#DC2626]'
-                        : 'text-[#059669]'
-                  }`}
-                >
-                  {computedMetrics.reversalErrorCount ?? 'لم يُقَس'} من{' ' }
-                  {TRANSCODING_ITEMS.length}
-                </span>
-              </div>
+            <div className="space-y-1">
+              <h3 className="font-child text-2xl sm:text-3xl font-black">
+                كفو يا بطل الرياضيات {activeStudent.name}! 🌟
+              </h3>
+              <p className="font-child text-sm sm:text-base font-bold text-amber-100">
+                أكملت مهام مغامرة الأرقام الثلاث وحصلت على وسام عبقري الحساب!
+              </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleSaveToStudentProfile}
-              disabled={isSimulationData}
-              className="w-full py-3 px-4 bg-[#0284C7] hover:bg-[#0369A1] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>حفظ النتيجة في سجل الطالب ({activeStudent.name})</span>
-            </button>
-
-            {validationError && (
-              <div
-                role="alert"
-                className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-[#DC2626]"
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleResetTest}
+                className="child-tactile-btn px-6 py-3 rounded-2xl bg-white text-amber-900 font-child font-black text-sm shadow-md hover:bg-amber-50 cursor-pointer"
               >
-                {validationError}
-              </div>
-            )}
-
-            {saveMessage && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0 mt-0.5" />
-                <span>{saveMessage}</span>
-              </div>
-            )}
+                <span>العب المغامرة مرة أخرى</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default DyscalculiaLabView;

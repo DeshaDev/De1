@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Volume2,
   Check,
@@ -45,6 +45,11 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   const [story, setStory] = useState<DecodableStory>(CURATED_DECODABLE_STORIES[0]);
   const [revealedWord, setRevealedWord] = useState<string | null>(null);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
+
+  // Auto-scroll directly to top of story when changing wizard steps
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [wizardStep]);
 
   const interestCards = [
     {

@@ -981,7 +981,7 @@ export const ARABIC_READING_PASSAGES: ReadingPassage[] = [
     comprehensionQuestions: [
       {
         question: 'بِمَاذَا وَزَنَ الْبَائِعُ الْفَاكِهَةَ فِي السُّوقِ؟',
-        options: ['بِالْمِيزَانِ', 'بِالْمِسْطَرَةِ', 'بِسَاعَةٍ رَمْلِيَّةٍ'],
+        options: ['بِمِيزَانِهِ الدَّقِيقِ', 'بِصُنْدُوقِ الْخَشَبِ', 'بِالْعَدِّ السَّرِيعِ'],
         correctIndex: 0,
         skillType: 'literal_recall',
         skillLabelAr: 'الاسترجاع المباشر',

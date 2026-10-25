@@ -302,7 +302,7 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>خيارات القراءة</span>
+            <span>{['reading-lab', 'dyslexia-lab', 'adaptive-reader'].includes(activeTab) ? 'خيارات القراءة' : 'راحة العرض'}</span>
           </button>
 
           {/* Quick 1-Click Night / Paper Toggle */}

@@ -224,6 +224,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   }, [spokenTranscript]);
 
 
+  // When stage or introStep changes, ensure the view scrolls to top directly onto the story
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [stage, introStep]);
+
   // Reading focus mode removes navigation chrome before the browser paints the passage.
   // This keeps the child on the actual text instead of the sticky header, footer, or floating dock.
   useLayoutEffect(() => {
