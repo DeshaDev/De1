@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Sparkles,
+  Trophy,
   Flame,
   Eye,
   BarChart3,
@@ -41,6 +42,7 @@ import AdaptiveReports from './components/AdaptiveReports';
 import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
+import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
@@ -796,7 +798,7 @@ export default function App() {
               { id: 'dyslexia-lab', label: 'تحديات القراءة', icon: Brain },
               { id: 'dyscalculia-lab', label: 'مغامرة الأرقام', icon: Calculator },
               { id: 'remediation-gym', label: 'صالة الألعاب', icon: Gamepad2 },
-              { id: 'dashboard', label: 'الخطة والتقارير', icon: FileText },
+              { id: 'trophies', label: 'خزانة الجوائز', icon: Trophy },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -873,7 +875,7 @@ export default function App() {
           { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
           { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
           { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
-          { id: 'dashboard', label: 'التقارير', icon: FileText },
+          { id: 'trophies', label: 'الجوائز', icon: Trophy },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -905,6 +907,14 @@ export default function App() {
       {/* Main Content Container (Single Unified Navigation — Zero Duplicate Top Stepper Bar) */}
       <main id="main-content" className="baseera-main flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6 pb-28 md:pb-10">
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
+          {/* VIEW: CHILD TROPHIES & ACHIEVEMENTS */}
+          {activeTab === 'trophies' && (
+            <ChildTrophiesView
+              activeStudent={selectedStudent}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+            />
+          )}
+
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
           {activeTab === 'home' && (
             <HomeLandingView

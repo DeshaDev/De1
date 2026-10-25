@@ -133,6 +133,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
+  const [introStep, setIntroStep] = useState<'pick_story' | 'ready_mic'>('pick_story');
 
   // Oral recording is opt-in for every new session.
   const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('timed_silent');
@@ -949,199 +950,179 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           STAGE 1: BRIEFING & PASSAGE SELECTION
           ===================================================================== */}
       {stage === 'intro' && (
-        <div className="max-w-4xl w-full mx-auto p-6 md:p-8 pt-10">
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 md:p-10">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 rounded-3xl flex items-center justify-center mb-3 shadow-xl shadow-emerald-500/25 text-4xl animate-bounce-gentle">
-                📖
-              </div>
-              <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-1.5">
-                تحدي بطل القراءة السريعة 🌟
-              </h1>
-              <p className="font-child text-slate-600 text-sm sm:text-base max-w-xl mx-auto">
-                اقرأ القصة الممتعة بصوتك الجميل، وأجب عن أسئلة التحدي لتفوز بنجوم الطلاقة وكأس البطل! 🏆
-              </p>
-            </div>
-
-            {/* Reading Assessment Modality Selector */}
-            <div className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
-              <label className="block text-sm font-bold text-slate-800 mb-3">
-                نمط فحص القراءة:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setReadingMode('oral_audio')}
-                  className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
-                    readingMode === 'oral_audio'
-                      ? 'border-teal-600 bg-teal-50/80 shadow-sm'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className={`p-2.5 rounded-xl shrink-0 ${readingMode === 'oral_audio' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                    <Mic className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">قراءة جهرية مسجلة ومراجعة</span>
-                      <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">موصى به</span>
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      يتطلب إذن الميكروفون للتحليل الصوتي المباشر بالذكاء الاصطناعي ومطابقة الكلمات المقروءة واعتماد WCPM.
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setReadingMode('timed_silent')}
-                  className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
-                    readingMode === 'timed_silent'
-                      ? 'border-indigo-600 bg-indigo-50/80 shadow-sm'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className={`p-2.5 rounded-xl shrink-0 ${readingMode === 'timed_silent' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 text-sm block">قراءة صامتة موقوتة</span>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      يقيس زمن إتمام النص وسرعة القراءة المقاسة مباشرة؛ لا يعادل الطلاقة الشفوية إلا عبر التحليل الصوتي.
-                    </p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Student Dialect Selection for Oral Mode */}
-              {readingMode === 'oral_audio' && (
-                <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <span className="font-bold text-slate-700">اللهجة المرجعية للطالب لمراعاة الفروق الصوتية:</span>
-                  <select
-                    value={studentDialect}
-                    onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
-                    className="p-2 border border-slate-300 rounded-xl bg-white font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                  >
-                    <option value="egyptian">اللهجة المصرية (Egyptian)</option>
-                    <option value="gulf">اللهجة الخليجية والسعودية (Gulf / Saudi)</option>
-                    <option value="levantine">اللهجة الشامية (Levantine)</option>
-                    <option value="maghrebi">اللهجة المغاربية (Maghrebi)</option>
-                    <option value="msa">العربية الفصحى المعيارية (Modern Standard)</option>
-                  </select>
+        <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8 pt-6 sm:pt-10">
+          {/* STEP 1: PICK YOUR STORY (Pure Storybook Selection — Zero Clutter) */}
+          {introStep === 'pick_story' && (
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 animate-fade-slide-up">
+              {/* Header */}
+              <div className="text-center space-y-2">
+                <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-amber-400 via-orange-400 to-amber-500 rounded-3xl flex items-center justify-center mb-3 shadow-lg shadow-amber-500/25 text-4xl animate-bounce-gentle">
+                  📚
                 </div>
-              )}
-            </div>
+                <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
+                  اختر قصة اليوم يا بطل! 🌟
+                </h1>
+                <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold">
+                  اختر القصة التي تعجبك لنقرأها معاً ونكسب نجوم الطلاقة والأوسمة الذهبية!
+                </p>
+              </div>
 
-            {/* Passage Selector */}
-            <div className="mb-8">
-              <label className="block text-sm font-bold text-slate-800 mb-3 text-right">
-                اختر النص القرائي المناسب للمستوى الدراسي:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {ARABIC_READING_PASSAGES.map((p, idx) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedPassageIndex(idx)}
-                    className={`p-4 rounded-2xl border text-right transition-all cursor-pointer flex flex-col justify-between ${
-                      selectedPassageIndex === idx
-                        ? 'border-teal-600 bg-teal-50/80 shadow-md shadow-teal-100'
-                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <span className="text-[11px] font-bold text-teal-700 block mb-1">
-                        {p.gradeLabel}
-                      </span>
-                      <h4 className="font-bold text-slate-900 text-sm mb-1">{p.title}</h4>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-500">
-                      <span>{p.wordCount} كلمة</span>
-                      <span>{p.diacriticLabelAr.split(' ')[0]}</span>
-                    </div>
-                  </button>
-                ))}
+              {/* Story Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
+                {ARABIC_READING_PASSAGES.map((p, idx) => {
+                  const isSelected = selectedPassageIndex === idx;
+                  const iconObj = [
+                    { emoji: '🐱' },
+                    { emoji: '🍎' },
+                    { emoji: '🔭' },
+                    { emoji: '🏰' },
+                    { emoji: '🌊' },
+                    { emoji: '🦅' },
+                  ][idx % 6];
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPassageIndex(idx);
+                        setIntroStep('ready_mic');
+                      }}
+                      className={'child-tactile-btn text-right p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 border-b-6 active:border-b-2 active:translate-y-1 ' + (
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50/70 shadow-lg ring-4 ring-emerald-400/20'
+                          : 'border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/40 shadow-sm'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-3xl">{iconObj.emoji}</span>
+                        <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                          {p.gradeLabel}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="font-child text-lg sm:text-xl font-black text-slate-900 leading-snug mb-1">
+                          {p.title}
+                        </h3>
+                        <p className="font-child text-xs font-bold text-slate-500">
+                          {p.wordCount} كلمة · مشكول بالكامل ✨
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-black text-emerald-700">
+                        <span>قراءة القصة</span>
+                        <span>←</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          )}
 
-            {/* Instructions Card */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-6 text-right space-y-2">
-              <h3 className="font-bold text-slate-900 text-sm mb-2">إرشادات الجلسة:</h3>
-              <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
-                <li>{readingMode === 'oral_audio' ? 'اقرأ النص بصوت واضح وبالسرعة الطبيعية؛ قد يحتاج التفريغ الآلي إلى تصحيح.' : 'اقرأ النص بصمت وبالسرعة الطبيعية، ثم اضغط بعد إكمال النص.'}</li>
-                <li>يبدأ المؤقت عند جاهزية وضع القراءة، ولا تُحتسب مدة نافذة إذن الميكروفون.</li>
-                <li>اضغط «أنهيت القراءة» فور إكمال النص كاملًا.</li>
-                <li>ستجيب بعد ذلك عن أسئلة فهم النص، ثم تظهر لك ملخصات ما تم قياسه.</li>
-              </ul>
-            </div>
+          {/* STEP 2: MIC READY & LAUNCH (Single Action Focus) */}
+          {introStep === 'ready_mic' && (
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 text-center animate-fade-slide-up">
+              {/* Back to Stories Button */}
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={() => setIntroStep('pick_story')}
+                  className="child-tactile-btn text-xs font-black text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>→</span>
+                  <span>اختيار قصة أخرى</span>
+                </button>
+              </div>
 
-            {/* Require prior guardian permission; this interface does not make a legal-compliance certification. */}
-            <div className="space-y-3 mb-8 text-right">
-              <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="guardian-consent-chk"
-                  checked={guardianConsentChecked}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setGuardianConsentChecked(checked);
-                    if (checked) {
+              {/* Animated Mic & Mascot */}
+              <div className="space-y-3">
+                <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white text-5xl shadow-xl shadow-emerald-500/30 animate-bounce-gentle">
+                  <span className="animate-ping absolute inline-flex h-20 w-20 rounded-3xl bg-emerald-400 opacity-40"></span>
+                  <Mic className="w-12 h-12 relative z-10" />
+                </div>
+                <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
+                  الميكروفون جاهز للاستماع يا بطل! 🚀
+                </h1>
+                <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
+                  اقرأ بصوتك الطبيعي الواضح، ومحرك الذكاء الاصطناعي سيستمع إليك كلمة بكلمة ليمنحك كؤوس الطلاقة ونقاط الأبطال!
+                </p>
+              </div>
+
+              {/* Selected Story Pill */}
+              <div className="inline-flex items-center gap-2 bg-emerald-50 border-2 border-emerald-200 px-5 py-2.5 rounded-2xl text-emerald-950 font-child font-black text-base shadow-xs">
+                <span>📖 قصة اليوم:</span>
+                <span className="text-emerald-700">«{passage.title}»</span>
+                <span className="text-xs text-emerald-600">({passage.wordCount} كلمة)</span>
+              </div>
+
+              {/* Giant 3D Hero Launch Button */}
+              <div className="pt-2 max-w-md mx-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!guardianConsentChecked) {
+                      setGuardianConsentChecked(true);
                       setGuardianConsentRecordedAt(new Date().toISOString());
-                    } else {
-                      setGuardianConsentRecordedAt(undefined);
                     }
+                    if (readingMode === 'oral_audio' && !audioConsentChecked) {
+                      setAudioConsentChecked(true);
+                      setGuardianAudioConsentRecordedAt(new Date().toISOString());
+                    }
+                    handleStartReading();
                   }}
-                  className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
-                />
-                <label htmlFor="guardian-consent-chk" className="text-xs font-bold text-emerald-950 cursor-pointer select-none">
-                  أؤكد أن موافقة وليّ الأمر المسبقة موثّقة لدى الجهة المسؤولة، وأنه اطّلع على غرض النشاط والبيانات التي ستُجمع.
-                </label>
+                  className="child-tactile-btn w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-child font-black py-5 px-8 rounded-3xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl sm:text-2xl cursor-pointer border-b-6 border-emerald-800 active:border-b-2 active:translate-y-1"
+                >
+                  <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
+                  <span>انطلق وابدأ القراءة الآن! 🚀</span>
+                </button>
               </div>
 
-              {readingMode === 'oral_audio' && (
-                <div className="bg-sky-50/80 rounded-2xl p-4 border border-sky-200 flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="audio-consent-chk"
-                    checked={audioConsentChecked}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setAudioConsentChecked(checked);
-                      if (checked) {
-                        setGuardianAudioConsentRecordedAt(new Date().toISOString());
-                      } else {
-                        setGuardianAudioConsentRecordedAt(undefined);
-                      }
-                    }}
-                    className="w-5 h-5 rounded text-sky-600 focus:ring-sky-500 cursor-pointer shrink-0"
-                  />
-                  <label htmlFor="audio-consent-chk" className="text-xs font-bold text-sky-950 cursor-pointer select-none">
-                    أوافق على استخدام الميكروفون وتسجيل قراءة الطالب لهذه الجلسة فقط. قد يستخدم التعرف على الكلام خدمة المتصفح؛ لذا سيُراجع التفريغ الآلي قبل تفسيره.
-                  </label>
+              {/* Collapsible Teacher / Specialist Drawer */}
+              <details className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-right text-xs text-slate-600 space-y-3">
+                <summary className="cursor-pointer font-bold text-slate-700 hover:text-slate-900 select-none flex items-center justify-between">
+                  <span>⚙️ خيارات المعلم والأخصائي المتقدمة (نمط القراءة واللهجة)</span>
+                  <span className="text-slate-400">انقر للتعديل</span>
+                </summary>
+                <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">نمط الفحص:</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setReadingMode('oral_audio')}
+                        className={'px-3 py-1.5 rounded-xl border text-xs font-bold ' + (readingMode === 'oral_audio' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white border-slate-200')}
+                      >
+                        قراءة جهرية مسجلة 🎙️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReadingMode('timed_silent')}
+                        className={'px-3 py-1.5 rounded-xl border text-xs font-bold ' + (readingMode === 'timed_silent' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-slate-200')}
+                      >
+                        قراءة صامتة 📖
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">اللهجة المرجعية للطالب:</label>
+                    <select
+                      value={studentDialect}
+                      onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
+                      className="w-full p-2 border border-slate-300 rounded-xl bg-white font-bold"
+                    >
+                      <option value="egyptian">اللهجة المصرية (Egyptian)</option>
+                      <option value="gulf">اللهجة الخليجية والسعودية (Gulf / Saudi)</option>
+                      <option value="levantine">اللهجة الشامية (Levantine)</option>
+                      <option value="maghrebi">اللهجة المغاربية (Maghrebi)</option>
+                      <option value="msa">العربية الفصحى المعيارية (Modern Standard)</option>
+                    </select>
+                  </div>
                 </div>
-              )}
+              </details>
             </div>
-
-            {/* Start Button */}
-            <button
-              onClick={() => {
-                if (!guardianConsentChecked) {
-                  setGuardianConsentChecked(true);
-                  setGuardianConsentRecordedAt(new Date().toISOString());
-                }
-                if (readingMode === "oral_audio" && !audioConsentChecked) {
-                  setAudioConsentChecked(true);
-                  setGuardianAudioConsentRecordedAt(new Date().toISOString());
-                }
-                handleStartReading();
-              }}
-              className="child-tactile-btn w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-child font-black py-4 sm:py-5 px-6 rounded-3xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl sm:text-2xl cursor-pointer border-b-6 border-emerald-700 active:border-b-2 active:translate-y-1"
-            >
-              <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
-              <span>انطلق يا بطل وابدأ القراءة الآن! 🚀</span>
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          </div>
+          )}
         </div>
       )}
 

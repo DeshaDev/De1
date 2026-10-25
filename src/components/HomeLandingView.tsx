@@ -34,7 +34,8 @@ export type AppTabId =
   | 'terms'
   | 'sprint'
   | 'storygen'
-  | 'iep';
+  | 'iep'
+  | 'trophies';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];
