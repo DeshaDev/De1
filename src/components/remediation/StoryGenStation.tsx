@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Volume2,
   Check,
@@ -46,9 +46,11 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   const [revealedWord, setRevealedWord] = useState<string | null>(null);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
 
-  // Auto-scroll directly to top of story when changing wizard steps
+  const stepContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll directly to active step container, never to the global header or footer
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    stepContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [wizardStep]);
 
   const interestCards = [
@@ -170,7 +172,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   const storyWords = story.story.split(/\s+/).filter(Boolean);
 
   return (
-    <div className="max-w-2xl mx-auto py-2 px-2" dir="rtl">
+    <div ref={stepContainerRef} className="max-w-2xl mx-auto py-2 px-2" dir="rtl">
       {/* STEP 1: CHOOSE INTEREST (Pure Visual Duolingo Cards) */}
       {wizardStep === 'interest' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-slate-200/80 text-center space-y-6 animate-fade-slide-up">

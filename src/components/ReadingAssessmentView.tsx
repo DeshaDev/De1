@@ -185,6 +185,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const timerRef = useRef<any>(null);
   const readingStartTimestampRef = useRef<number>(0);
   const readingPassageRef = useRef<HTMLDivElement | null>(null);
+  const readyMicRef = useRef<HTMLDivElement | null>(null);
+  const comprehensionCardRef = useRef<HTMLDivElement | null>(null);
 
   // Accessibility comfort options
   const [fontSizePx, setFontSizePx] = useState(26);
@@ -224,9 +226,15 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   }, [spokenTranscript]);
 
 
-  // When stage or introStep changes, ensure the view scrolls to top directly onto the story
+  // When stage or introStep changes, scroll directly to the desired active content, never the header or footer
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    if (stage === 'reading') {
+      readingPassageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (stage === 'comprehension') {
+      comprehensionCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (introStep === 'ready_mic') {
+      readyMicRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }, [stage, introStep]);
 
   // Reading focus mode removes navigation chrome before the browser paints the passage.
@@ -1029,7 +1037,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
           {/* STEP 2: MIC READY & LAUNCH (Single Action Focus) */}
           {introStep === 'ready_mic' && (
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 text-center animate-fade-slide-up">
+            <div ref={readyMicRef} className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 text-center animate-fade-slide-up">
               {/* Back to Stories Button */}
               <div className="flex justify-start">
                 <button
@@ -1557,7 +1565,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           STAGE 3: COMPREHENSION QUESTIONS
           ===================================================================== */}
       {stage === 'comprehension' && (
-        <div className="max-w-3xl w-full mx-auto p-6 md:p-8 pt-10">
+        <div ref={comprehensionCardRef} className="max-w-3xl w-full mx-auto p-6 md:p-8 pt-10">
           <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 md:p-10">
             {/* Header */}
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">

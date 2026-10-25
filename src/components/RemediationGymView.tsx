@@ -74,8 +74,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     }
   }, [initialStation]);
 
+  const exerciseCardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeStation]);
   const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
@@ -393,69 +395,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const targetedWords = observedTargetWords;
 
   return (
-    <div className="space-y-3.5 max-w-4xl mx-auto pb-8 animate-fade-slide-up" dir="rtl">
-      {/* Playful Child-First Welcome Bar */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-200/80 rounded-3xl p-3.5 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center text-2xl shadow-md shadow-emerald-500/20">
-            ⭐
-          </div>
-          <div>
-            <h1 className="text-sm sm:text-base font-black text-slate-900">
-              مرحباً يا بطل: <span className="text-emerald-700">{activeStudent.name}</span>
-            </h1>
-            <p className="text-[11px] font-bold text-slate-500">
-              الصف {activeStudent.gradeLevel} · اختر نشاطك وانطلق في التحدي!
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* XP Gold Coin */}
-          <div className="flex items-center gap-1.5 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl font-mono font-black text-amber-900 text-xs shadow-2xs">
-            <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-            <span>{xpPoints} XP</span>
-          </div>
-
-          {/* Discreet Teacher Info Pill */}
-          <button
-            type="button"
-            onClick={() => setShowActivityRationale((prev) => !prev)}
-            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            title="دليل المعلم والأهداف التعليمية"
-          >
-            <Info className="w-3.5 h-3.5 text-slate-500" />
-            <span>دليل النشاط</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Optional Educational Activity Rationale */}
-      {showActivityRationale && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1.5 animate-fade-slide-up shadow-2xs">
-          <div className="flex items-center justify-between font-bold text-[#15803D]">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>أهداف الأنشطة التعليمية المقترحة:</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowActivityRationale(false)}
-              className="text-slate-400 hover:text-slate-600 p-0.5"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <p className="leading-relaxed text-slate-700">
-            {effectivePlan.learningRationale}
-          </p>
-        </div>
-      )}
-
-      {/* 2. STICKY TOP CONTROL BAR (Joyful, Child-First & Gamified) */}
-      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur border-2 border-emerald-400/50 rounded-3xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3">
-        {/* Right: Joyful Station Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+    <div className="space-y-4 max-w-3xl mx-auto pb-10 animate-fade-slide-up" dir="rtl">
+      {/* 1. SINGLE SLIM STATION NAVIGATION BAR (Zero Bloat, Zero Duplicate XP) */}
+      <div className="bg-white rounded-3xl p-2.5 sm:p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 w-full sm:w-auto">
           {[
             { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock },
             { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces },
@@ -472,421 +415,241 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 onClick={() => {
                   setActiveStation(st.id as any);
                   setActiveScaffold(null);
+                  exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }}
-                className={'child-tactile-btn px-4 py-2 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer border-b-4 active:border-b-1 active:translate-y-1 ' + (
+                className={'child-tactile-btn px-3.5 py-2 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer border-b-4 active:border-b-1 active:translate-y-1 ' + (
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-800 text-white shadow-md scale-102'
-                    : 'bg-white hover:bg-emerald-50 text-slate-700 border-slate-300 hover:border-emerald-300'
+                    ? 'duo-btn-green scale-102 shadow-sm'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
                 )}
               >
-                {st.icon && <st.icon size={18} className="shrink-0" />}<span>{st.label}</span>
+                {st.icon && <st.icon size={18} className="shrink-0" />}
+                <span>{st.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Left: Star XP Score & Settings Drawer Button */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 border-b-3 border-amber-600 px-3.5 py-1.5 rounded-2xl font-child font-black text-amber-950 text-xs sm:text-sm shadow-sm">
-            <Star className="w-4 h-4 fill-amber-900 text-amber-900" />
+        {/* Left: Star XP Score & Student Name */}
+        <div className="flex items-center gap-2 mr-auto sm:mr-0">
+          <div className="flex items-center gap-1.5 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-2xl font-child font-black text-amber-900 text-xs sm:text-sm shadow-2xs">
+            <IconStar size={16} />
             <span>{xpPoints} XP</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowTeacherSettings(prev => !prev)}
-            className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-            title="إعدادات الصوت والطالب للمعلم"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">خيارات</span>
-          </button>
+          <div className="hidden sm:inline-flex items-center gap-1 bg-slate-100 text-slate-700 font-child font-bold text-xs px-3 py-1.5 rounded-2xl border border-slate-200">
+            <span>البطل:</span>
+            <span className="text-emerald-700 font-black">{activeStudent.name}</span>
+          </div>
         </div>
       </div>
 
-      {/* Discrete Teacher/Settings Popover Drawer */}
-      {showTeacherSettings && (
-        <div className="p-4 rounded-3xl bg-white border-2 border-slate-200 shadow-xl space-y-3 animate-fade-slide-up">
-          <div className="flex items-center justify-between font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">
-            <span className="flex items-center gap-1.5"><Settings className="w-4 h-4" /> خيارات الجلسة وتحديد الصوت:</span>
-            <button
-              type="button"
-              onClick={() => setShowTeacherSettings(false)}
-              className="text-slate-400 hover:text-slate-600 p-1"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="block text-slate-600 font-bold mb-1">صوت المعلم التفاعلي:</label>
-              <select
-                value={selectedVoice}
-                onChange={(e) => {
-                  const nextVoice = e.target.value as any;
-                  setSelectedVoice(nextVoice);
-                  playNaturalArabicAudio('مَرْحَبًا بِكَ فِي بَصِيرَة', { voice: nextVoice });
-                }}
-                className="w-full p-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
-              >
-                <option value="ar-SA-ZariyahNeural">المعلمة زارية (فصيح سعودي)</option>
-                <option value="ar-EG-SalmaNeural">المعلمة سلمى (مصري فصيح)</option>
-                <option value="ar-SA-HamedNeural">الأستاذ حامد (فصيح رجالي)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-600 font-bold mb-1">ملف الطالب النشط:</label>
-              <select
-                value={activeStudent.id}
-                onChange={(e) => onSelectStudent(e.target.value)}
-                className="w-full p-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
-              >
-                {students.map((stu) => (
-                  <option key={stu.id} value={stu.id}>
-                    {stu.name} (الصف {stu.gradeLevel})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Floating Celebration Toast */}
       {celebrationMessage && (
-        <div className="p-3.5 rounded-xl bg-[#15803D] text-white font-bold text-xs sm:text-sm flex items-center justify-between gap-3 shadow-md animate-fade-slide-up">
+        <div className="p-3.5 rounded-2xl bg-emerald-600 text-white font-child font-black text-sm flex items-center justify-between gap-3 shadow-lg animate-fade-slide-up">
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-300 fill-current" />
+            <Trophy className="w-5 h-5 text-amber-300 fill-current" />
             <span>{celebrationMessage}</span>
           </div>
-          <span className="text-emerald-100 text-xs font-normal">رائع استمر!</span>
+          <span className="text-emerald-100 text-xs font-bold">كفو يا بطل!</span>
         </div>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 1: PHONICS (Clean, Focused, 100% In Viewport) */}
+      {/* STATION 1: PHONICS (Ultra-Compact, 100% On Screen, Zero Scroll) */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'phonics' && (
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
-          {/* Top Progress bar and Title Row */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                {currentPhonics.family}
-              </span>
-              <span className="text-xs font-medium text-slate-500">
-                تمييز الحرف وموضع النقاط
-              </span>
-            </div>
-
-            {/* Step Dots */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-mono font-bold text-slate-600 ml-1.5">
-                السؤال {phonicsIdx + 1} من {phonicsList.length} ⭐
-              </span>
-              {phonicsList.map((ex, i) => (
-                <span
-                  key={ex.id || i}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    i === phonicsIdx
-                      ? 'bg-[#15803D] scale-125'
-                      : i < phonicsIdx
-                        ? 'bg-emerald-300'
-                        : 'bg-slate-200'
-                  }`}
-                />
-              ))}
-            </div>
+        <div ref={exerciseCardRef} className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-xl space-y-4 max-w-xl mx-auto text-center animate-fade-slide-up">
+          {/* Minimal Step Tracker */}
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 border-b border-slate-100 pb-2">
+            <span className="font-child text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              {currentPhonics.family}
+            </span>
+            <span className="font-mono text-slate-700">
+              السؤال {phonicsIdx + 1} من {phonicsList.length}
+            </span>
           </div>
 
-          {/* Interactive Core: Question + Sound + Big Letter Tiles */}
-          <div className="rounded-2xl bg-gradient-to-br from-[#FAF6EE] via-white to-[#ECFDF5]/40 border border-[#E5DEC9] p-4 sm:p-5 space-y-4 text-center">
-            {/* The Question */}
-            <div className="space-y-2.5">
-              <h2 className="text-base sm:text-lg font-bold text-slate-800">
-                استمع إلى نطق الكلمة، ثم اختر الحرف الذي تبدأ به:
-              </h2>
+          {/* Audio Button */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => speakText(currentPhonics.spokenWord)}
+              className="duo-btn-green py-3.5 px-8 text-base font-black inline-flex items-center gap-2 cursor-pointer shadow-md mx-auto"
+            >
+              <Volume2 className="w-5 h-5 animate-pulse" />
+              <span>استمع لنطق الكلمة</span>
+            </button>
+          </div>
 
-              {/* Big Prominent Audio Button */}
-              <div className="flex items-center justify-center gap-2">
+          {/* The Word with Blank */}
+          <div className="py-2">
+            <span className="text-3xl sm:text-4xl font-serif font-black text-slate-900 bg-slate-50 border-2 border-slate-200 px-6 py-2.5 rounded-2xl inline-block shadow-inner">
+              « ...{currentPhonics.spokenWord.slice(1)} »
+            </span>
+          </div>
+
+          {/* Letter Choices: Large 3D Tiles */}
+          <div className="grid grid-cols-3 gap-3 pt-1">
+            {currentPhonics.options.map((opt) => {
+              const isSelected = selectedLetter === opt.letter;
+              const showSuccess = phonicsEvaluated && isSelected && opt.isCorrect;
+              const showError = phonicsEvaluated && isSelected && !opt.isCorrect;
+
+              return (
                 <button
+                  key={opt.letter}
                   type="button"
-                  onClick={() => speakText(currentPhonics.spokenWord)}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#15803D] hover:bg-[#166534] active:scale-95 text-white text-sm sm:text-base font-bold transition-all shadow-md hover:shadow-lg cursor-pointer"
+                  onClick={() => handleSelectPhonicsLetter(opt)}
+                  className={'py-5 sm:py-6 px-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none border-b-6 active:border-b-2 active:translate-y-1 ' + (
+                    showSuccess
+                      ? 'duo-btn-green scale-103 shadow-md'
+                      : showError
+                      ? 'bg-rose-500 text-white border-rose-700'
+                      : 'duo-btn-white'
+                  )}
                 >
-                  <Volume2 className="w-5 h-5 animate-pulse" />
-                  <span>استمع لنطق الكلمة</span>
-                </button>
-
-                {/* Optional activity hint */}
-                <button
-                  type="button"
-                  onClick={triggerPhonicsScaffold}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs sm:text-sm font-bold transition-all border border-amber-300 cursor-pointer shadow-2xs"
-                  title="عرض تلميح تعليمي"
-                >
-                  <Lightbulb className="w-4 h-4 text-amber-700" />
-                  <span>تلميح ذكي</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Optional learning hint */}
-            {activeScaffold && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
-                <div className="space-y-1">
-                  <span className="font-bold block text-amber-900 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{activeScaffold.title}</span>
+                  <span className="font-child text-5xl sm:text-6xl font-black">
+                    {opt.letter}
                   </span>
-                  <p className="text-amber-950 leading-relaxed font-medium">{activeScaffold.text}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => speakText(activeScaffold.audioText)}
-                    className="p-1.5 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-900 cursor-pointer"
-                    title="استمع للتلميح مجدداً"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveScaffold(null)}
-                    className="p-1.5 rounded-lg hover:bg-amber-200/80 text-amber-800 cursor-pointer"
-                    title="إغلاق"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
+                  <span className="text-[11px] font-bold opacity-80">
+                    حرف {opt.letterName}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* 3 Large, Clean, Touchable Letter Tiles */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-lg mx-auto pt-1">
-              {currentPhonics.options.map((opt) => {
-                const isSelected = selectedLetter === opt.letter;
-                const showSuccess = phonicsEvaluated && isSelected && opt.isCorrect;
-                const showError = phonicsEvaluated && isSelected && !opt.isCorrect;
-
-                return (
-                  <button
-                    key={opt.letter}
-                    type="button"
-                    onClick={() => handleSelectPhonicsLetter(opt)}
-                    className={`child-tactile-btn py-5 sm:py-7 px-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer select-none border-b-8 active:border-b-2 active:translate-y-2 ${
-                      showSuccess
-                        ? 'bg-[#ECFDF5] border-[#15803D] text-[#15803D] scale-105 shadow-md ring-4 ring-emerald-500/20'
-                        : showError
-                          ? 'bg-red-50 border-red-500 text-red-900 shadow-xs'
-                          : 'bg-white hover:bg-emerald-50/60 border-slate-200 text-slate-900 hover:border-emerald-400 shadow-xs hover:shadow-sm'
-                    }`}
-                  >
-                    <span className="font-child text-6xl sm:text-7xl font-black leading-tight drop-shadow-xs">
-                      {opt.letter}
-                    </span>
-                    <span className="text-xs font-bold text-slate-600">
-                      حرف ال{opt.letterName}
-                    </span>
-                    {showSuccess && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#15803D] bg-emerald-100 px-2 py-0.5 rounded-full mt-0.5">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                        <span>صحيح!</span>
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Word reveal & Pedagogical Rule Note */}
-            {phonicsEvaluated ? (
-              <div className="p-3 rounded-xl bg-white border border-emerald-200 text-center space-y-1 animate-fade-slide-up max-w-md mx-auto shadow-2xs">
-                <span className="text-xs text-slate-500">الكلمة الصحيحة:</span>
-                <span className="text-2xl font-serif font-bold text-[#15803D] mx-2">
-                  «{currentPhonics.spokenWord}»
-                </span>
-                <span className="text-xs text-slate-600 block">
-                  ({currentPhonics.wordMeaning})
-                </span>
-              </div>
-            ) : (
-              <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-900 max-w-md mx-auto text-right">
-                <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 inline ml-1" /><span className="font-semibold">قاعدة التمييز:</span> {currentPhonics.ruleTip}
-              </div>
-            )}
-
-            {/* BIG PROMINENT NEXT BUTTON CENTERED DIRECTLY AT BOTTOM */}
-            <div className="pt-2 flex flex-col items-center justify-center gap-1">
+          {/* Next Button */}
+          {phonicsEvaluated && (
+            <div className="pt-2 animate-fade-slide-up">
               <button
                 type="button"
-                onClick={handleNextPhonics}
-                className="w-full sm:w-auto min-w-[280px] px-8 py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] active:scale-95 text-white text-base font-bold transition-all flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg cursor-pointer"
+                onClick={() => {
+                  handleNextPhonics();
+                  exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }}
+                className="duo-btn-green w-full py-3.5 text-base font-black flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
-                <span>الانتقال للتمرين التالي</span>
-                <ArrowLeft className="w-5 h-5" />
+                <span>السؤال التالي</span>
+                <ArrowLeft className="w-4 h-4" />
               </button>
-              <span className="text-[11px] text-slate-500 font-medium">
-                التمرين {phonicsIdx + 1} من {phonicsList.length}
-              </span>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 2: SYLLABLES (Clean, Focused, 100% In Viewport) */}
+      {/* STATION 2: SYLLABLES (Ultra-Compact, 100% On Screen, Zero Scroll) */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'syllables' && (
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                تركيب الكلمات إلى مقاطع
-              </span>
-              <span className="text-xs font-medium text-slate-500">
-                تدريب على تقسيم الكلمة وقراءتها
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-mono font-bold text-slate-600 ml-1.5">
-                المرحلة {syllableIdx + 1} من {syllableList.length}
-              </span>
-            </div>
+        <div ref={exerciseCardRef} className="bg-white border-2 border-slate-200/90 rounded-3xl p-5 sm:p-7 shadow-xl space-y-4 max-w-xl mx-auto text-center animate-fade-slide-up">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 border-b border-slate-100 pb-2">
+            <span className="font-child text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+              تركيب المقاطع
+            </span>
+            <span className="font-mono text-slate-700">
+              الكلمة {syllableIdx + 1} من {syllableList.length}
+            </span>
           </div>
 
-          <div className="rounded-2xl bg-gradient-to-br from-[#FAF6EE] via-white to-[#ECFDF5]/40 border border-[#E5DEC9] p-4 sm:p-5 space-y-4 text-center">
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-800">
-                انقر على المقاطع بالترتيب لتكوين كلمة تعني:
-              </h2>
-              <div className="text-base font-extrabold text-[#15803D] mt-0.5">
-                «{currentSyllable.wordMeaning}»
-              </div>
-            </div>
+          <div className="space-y-1">
+            <p className="font-child text-sm font-bold text-slate-500">
+              ركّب المقاطع لتكوين كلمة تعني:
+            </p>
+            <h2 className="font-child text-xl sm:text-2xl font-black text-slate-900">
+              « {currentSyllable.wordMeaning} »
+            </h2>
+          </div>
 
-            {/* Target Assembly Box */}
-            <div className="p-3.5 rounded-2xl bg-white border-2 border-dashed border-emerald-300 min-h-[75px] flex items-center justify-center gap-2 shadow-inner max-w-md mx-auto">
-              {assembledSyllables.length === 0 ? (
-                <span className="text-xs text-slate-400 font-medium">
-                  انقر على المقاطع بالأسفل لتركيبها هنا بالترتيب...
-                </span>
-              ) : (
-                <div className="flex items-center gap-2 text-2xl sm:text-3xl font-serif font-extrabold text-[#15803D]">
-                  {assembledSyllables.map((s, i) => (
-                    <span
-                      key={i}
-                      className="px-3.5 py-1 bg-emerald-100 border border-emerald-300 rounded-xl"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Syllable Options */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-              {currentSyllable.syllables.map((syl) => {
-                const isUsed = assembledSyllables.includes(syl);
-                return (
-                  <button
-                    key={syl}
-                    type="button"
-                    disabled={isUsed}
-                    onClick={() => handleAddSyllable(syl)}
-                    className={`px-5 py-2.5 rounded-2xl text-xl sm:text-2xl font-serif font-extrabold transition-all border-2 cursor-pointer ${
-                      isUsed
-                        ? 'bg-slate-100 text-slate-300 border-slate-200 opacity-40 cursor-not-allowed'
-                        : 'bg-white hover:bg-emerald-50 text-slate-900 border-slate-300 hover:border-emerald-500 shadow-xs hover:scale-105 active:scale-95'
-                    }`}
+          {/* Target Assembly Box */}
+          <div className="p-4 rounded-2xl bg-slate-50 border-2 border-dashed border-emerald-400 min-h-[70px] flex items-center justify-center gap-2 shadow-inner">
+            {assembledSyllables.length === 0 ? (
+              <span className="text-xs text-slate-400 font-bold">
+                انقر على المقاطع بالأسفل لتركيب الكلمة...
+              </span>
+            ) : (
+              <div className="flex items-center gap-2 text-2xl sm:text-3xl font-serif font-black text-emerald-800">
+                {assembledSyllables.map((s, i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1 bg-emerald-100 border-2 border-emerald-300 rounded-xl shadow-xs"
                   >
-                    {syl}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Reset, speech and optional hints */}
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={handleResetSyllables}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>إعادة ترتيب</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={triggerSyllableScaffold}
-                className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-amber-300"
-              >
-                <Lightbulb className="w-3.5 h-3.5 text-amber-700" />
-                <span>تلميح صوتي</span>
-              </button>
-
-              {syllableComplete && (
-                <button
-                  type="button"
-                  onClick={() => speakText(currentSyllable.targetWord)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>استمع «{currentSyllable.targetWord}»</span>
-                </button>
-              )}
-            </div>
-
-            {/* Optional learning hint */}
-            {activeScaffold && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
-                <div className="space-y-1">
-                  <span className="font-bold block text-amber-900 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{activeScaffold.title}</span>
+                    {s}
                   </span>
-                  <p className="text-amber-950 leading-relaxed font-medium">{activeScaffold.text}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => speakText(activeScaffold.audioText)}
-                    className="p-1.5 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-900 cursor-pointer"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveScaffold(null)}
-                    className="p-1.5 rounded-lg hover:bg-amber-200/80 text-amber-800 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                ))}
               </div>
             )}
+          </div>
 
-            {/* CENTERED NEXT BUTTON */}
-            <div className="pt-2 flex flex-col items-center justify-center gap-1">
+          {/* Syllable Options */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+            {currentSyllable.syllables.map((syl) => {
+              const isUsed = assembledSyllables.includes(syl);
+              return (
+                <button
+                  key={syl}
+                  type="button"
+                  disabled={isUsed}
+                  onClick={() => handleAddSyllable(syl)}
+                  className={'px-6 py-3 rounded-2xl text-2xl font-serif font-black border-b-6 transition-all cursor-pointer ' + (
+                    isUsed
+                      ? 'bg-slate-100 text-slate-300 border-slate-200 opacity-30 cursor-not-allowed'
+                      : 'duo-btn-white hover:scale-105 active:scale-95'
+                  )}
+                >
+                  {syl}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Action Row */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleResetSyllables}
+              className="child-tactile-btn px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black flex items-center gap-1.5 cursor-pointer border border-slate-200"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>إعادة المحاولة</span>
+            </button>
+
+            {syllableComplete && (
               <button
                 type="button"
-                onClick={handleNextSyllable}
-                className="w-full sm:w-auto min-w-[280px] px-8 py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] active:scale-95 text-white text-base font-bold transition-all flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg cursor-pointer"
+                onClick={() => speakText(currentSyllable.targetWord)}
+                className="duo-btn-green py-2 px-4 text-xs font-black flex items-center gap-1.5 cursor-pointer"
               >
-                <span>الانتقال للكلمة التالية</span>
-                <ArrowLeft className="w-5 h-5" />
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>استمع «{currentSyllable.targetWord}»</span>
               </button>
-              <span className="text-[11px] text-slate-500 font-medium">
-                الكلمة {syllableIdx + 1} من {syllableList.length}
-              </span>
-            </div>
+            )}
           </div>
+
+          {/* Next Button */}
+          {syllableComplete && (
+            <div className="pt-2 animate-fade-slide-up">
+              <button
+                type="button"
+                onClick={() => {
+                  handleNextSyllable();
+                  exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }}
+                className="duo-btn-green w-full py-3.5 text-base font-black flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              >
+                <span>الكلمة التالية</span>
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* ------------------------------------------------------------- */}
+      {/* STATION 3: OPTIONAL PACED WORD HIGHLIGHTING
+
+{/* ------------------------------------------------------------- */}
       {/* STATION 3: OPTIONAL PACED WORD HIGHLIGHTING (Clean, Focused) */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'pacer' && (

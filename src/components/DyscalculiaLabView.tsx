@@ -167,9 +167,11 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
   // Simulation indicator
   const [isSimulationData, setIsSimulationData] = useState<boolean>(false);
 
-  // Auto-scroll to top smoothly whenever activeStation changes
+  const mathArenaRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll directly to active math arena, never to the global header or footer
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    mathArenaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeStation]);
 
   useEffect(() => {
@@ -530,7 +532,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
       )}
 
       {/* 4. MAIN INTERACTIVE ARENA */}
-      <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-slate-200/90 animate-fade-slide-up">
+      <div ref={mathArenaRef} className="bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-slate-200/90 animate-fade-slide-up">
         {/* ========================================================
             STATION 1: SUBITIZING (صيد النجوم السريعة)
         ======================================================== */}
