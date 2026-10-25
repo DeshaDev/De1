@@ -235,9 +235,8 @@ export async function generateDecodableStory(params: {
   interest: string;
   targetPhoneme: string;
   gradeLevel: number;
-  studentName: string;
 }): Promise<DecodableStory> {
-  const { interest, targetPhoneme, gradeLevel, studentName } = params;
+  const { interest, targetPhoneme, gradeLevel } = params;
 
   // Clean interest Arabic name
   const interestObj = CHILD_INTERESTS.find((i) => i.id === interest);
@@ -251,7 +250,6 @@ export async function generateDecodableStory(params: {
         interest: cleanInterestAr,
         targetPhoneme,
         gradeLevel,
-        studentName,
       }),
     });
 
@@ -287,8 +285,8 @@ export async function generateDecodableStory(params: {
   if (matched) {
     return {
       ...matched,
-      title: matched.title.replace('بَدْرٍ', studentName).replace('كَرِيمٍ', studentName).replace('دَاوُدَ', studentName),
-      story: matched.story.replace(/بَدْرٌ/g, studentName).replace(/كَرِيمٌ/g, studentName).replace(/دَاوُدُ/g, studentName),
+      title: matched.title,
+      story: matched.story,
     };
   }
 
