@@ -30,7 +30,10 @@ export type AppTabId =
   | 'adaptive-reader'
   | 'dashboard'
   | 'privacy'
-  | 'terms';
+  | 'terms'
+  | 'sprint'
+  | 'storygen'
+  | 'iep';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];

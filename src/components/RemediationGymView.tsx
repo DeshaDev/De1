@@ -49,6 +49,8 @@ interface RemediationGymViewProps {
   onOpenReport?: () => void;
   /** Only signed-in school administrators can load the curated activity bank. */
   canGeneratePlan?: boolean;
+  /** Specific station to open directly (e.g., from top navigation bar) */
+  initialStation?: 'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep';
 }
 
 export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
@@ -58,9 +60,18 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   onNavigateTab,
   onOpenReport,
   canGeneratePlan = false,
+  initialStation,
 }) => {
-  // Active Station Tab: phonics | syllables | pacer | math
-  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep'>('phonics');
+  // Active Station Tab: phonics | syllables | pacer | math | sprint | storygen | iep
+  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen' | 'iep'>(
+    initialStation || 'phonics'
+  );
+
+  useEffect(() => {
+    if (initialStation) {
+      setActiveStation(initialStation);
+    }
+  }, [initialStation]);
   const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
   // Curated grade-specific practice selected from reviewed content
@@ -455,8 +466,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
       )}
 
-      {/* 2. COMPACT TOP CONTROL BAR (Fits inside 50px height, zero clutter) */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+      {/* 2. STICKY TOP CONTROL BAR (Pinned and always visible even when scrolling) */}
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur border-2 border-emerald-500/40 rounded-2xl p-2.5 sm:p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5">
         {/* Right: Station selector tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {[

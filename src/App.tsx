@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Sparkles,
+  Flame,
   Eye,
   BarChart3,
   Home,
@@ -63,6 +64,11 @@ export default function App() {
     }
     return 'home';
   });
+
+  // Always reset scroll to top on tab change so user never lands midway down a page
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
   const [dashboardSubView, setDashboardSubView] =
     useState<DashboardSubView>('roster');
   const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
@@ -786,11 +792,13 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
+              { id: 'reading-lab', label: 'القراءة الشفوية', icon: BookOpen },
               { id: 'cognitive-lab', label: 'الفرز المعرفي (RAN)', icon: Brain },
-              { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
+              { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
+              { id: 'storygen', label: '📖 قصص الذكاء الاصطناعي', icon: Sparkles },
+              { id: 'remediation-gym', label: 'صالة التدريب', icon: Gamepad2 },
+              { id: 'iep', label: '📋 الخطة التربوية (IEP)', icon: FileText },
               { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: Type },
-              { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -820,10 +828,11 @@ export default function App() {
             <button
               type="button"
               className="baseera-primary-action baseera-header-cta"
-              onClick={() => setActiveTab(activeTab === 'home' ? 'reading-lab' : 'home')}
+              onClick={() => setActiveTab('sprint')}
+              title="ابدأ سبرنت اليوم (5 دقائق تدريب وتأسيس مكثف)"
             >
-              <span>{activeTab === 'home' ? 'ابدأ نشاطًا' : 'الرئيسية'}</span>
-              <ArrowLeft aria-hidden="true" size={17} />
+              <Flame aria-hidden="true" size={17} className="text-amber-300 animate-pulse" />
+              <span>⚡ سبرنت اليوم</span>
             </button>
           </div>
         </div>
@@ -862,10 +871,11 @@ export default function App() {
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
           { id: 'reading-lab', label: 'القراءة', icon: BookOpen },
-          { id: 'cognitive-lab', label: 'الفرز المعرفي', icon: Brain },
-          { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
-          { id: 'adaptive-reader', label: 'القارئ', icon: Type },
+          { id: 'cognitive-lab', label: 'الفرز (RAN)', icon: Brain },
+          { id: 'sprint', label: '⚡ سبرنت', icon: Flame },
+          { id: 'storygen', label: '📖 قصص AI', icon: Sparkles },
           { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
+          { id: 'iep', label: '📋 الخطة', icon: FileText },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1580,7 +1590,7 @@ export default function App() {
           />
         )}
 
-        {/* VIEW 4: SMART ADAPTIVE DYSLEXIA READER & DYSLEXICO STUDIO */}
+        {/* VIEW 4: REMEDIATION GYM & STATIONS */}
         {activeTab === 'remediation-gym' && (
           <RemediationGymView
             students={students}
@@ -1589,6 +1599,46 @@ export default function App() {
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
             canGeneratePlan={baseeraSession?.role === 'school_admin'}
+            initialStation="phonics"
+          />
+        )}
+
+        {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (VTO READING MODEL) */}
+        {activeTab === 'sprint' && (
+          <RemediationGymView
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={setSelectedStudentId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenReport={() => setActiveTab('dashboard')}
+            canGeneratePlan={baseeraSession?.role === 'school_admin'}
+            initialStation="sprint"
+          />
+        )}
+
+        {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (LUCA AI MODEL) */}
+        {activeTab === 'storygen' && (
+          <RemediationGymView
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={setSelectedStudentId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenReport={() => setActiveTab('dashboard')}
+            canGeneratePlan={baseeraSession?.role === 'school_admin'}
+            initialStation="storygen"
+          />
+        )}
+
+        {/* 📋 DIRECT ACCESS: INDIVIDUALIZED EDUCATION PLAN (IEP GENERATOR) */}
+        {activeTab === 'iep' && (
+          <RemediationGymView
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={setSelectedStudentId}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenReport={() => setActiveTab('dashboard')}
+            canGeneratePlan={baseeraSession?.role === 'school_admin'}
+            initialStation="iep"
           />
         )}
 

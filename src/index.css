@@ -604,14 +604,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 5px;
   min-height: 44px;
-  padding: 9px 13px;
+  padding: 7px 10px;
   border: 1px solid transparent;
   border-radius: 15px;
   background: transparent;
   color: var(--baseera-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 750;
   white-space: nowrap;
   cursor: pointer;
