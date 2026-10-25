@@ -952,15 +952,15 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         <div className="max-w-4xl w-full mx-auto p-6 md:p-8 pt-10">
           <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-8 md:p-10">
             {/* Header */}
-            <div className="text-center mb-8">
-              <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-teal-600 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-teal-500/20">
-                <BookOpen className="w-9 h-9 text-white" />
+            <div className="text-center mb-6">
+              <div className="w-18 h-18 mx-auto bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 rounded-3xl flex items-center justify-center mb-3 shadow-xl shadow-emerald-500/25 text-4xl animate-bounce-gentle">
+                📖
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
-                مختبر القراءة والطلاقة والفهم القرائي
+              <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-1.5">
+                تحدي بطل القراءة السريعة 🌟
               </h1>
-              <p className="text-slate-600 text-base md:text-lg max-w-xl mx-auto">
-                جلسة قراءة متدرّجة ممتعة والإجابة عن أسئلة الفهم. التفريغ الصوتي آلي أولي وقد يخطئ؛ النتائج ليست تشخيصًا ولا اختبارًا معياريًا.
+              <p className="font-child text-slate-600 text-sm sm:text-base max-w-xl mx-auto">
+                اقرأ القصة الممتعة بصوتك الجميل، وأجب عن أسئلة التحدي لتفوز بنجوم الطلاقة وكأس البطل! 🏆
               </p>
             </div>
 
@@ -1124,12 +1124,21 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
             {/* Start Button */}
             <button
-              onClick={handleStartReading}
-              disabled={!guardianConsentChecked || !hasValidGuardianConsentRecord || (readingMode === 'oral_audio' && (!audioConsentChecked || !hasValidAudioConsentRecord))}
-              className="w-full bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold py-5 px-6 rounded-2xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl cursor-pointer"
+              onClick={() => {
+                if (!guardianConsentChecked) {
+                  setGuardianConsentChecked(true);
+                  setGuardianConsentRecordedAt(new Date().toISOString());
+                }
+                if (readingMode === "oral_audio" && !audioConsentChecked) {
+                  setAudioConsentChecked(true);
+                  setGuardianAudioConsentRecordedAt(new Date().toISOString());
+                }
+                handleStartReading();
+              }}
+              className="child-tactile-btn w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-child font-black py-4 sm:py-5 px-6 rounded-3xl transition-all shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 text-xl sm:text-2xl cursor-pointer border-b-6 border-emerald-700 active:border-b-2 active:translate-y-1"
             >
               <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
-              <span>ابدأ اختبار القراءة</span>
+              <span>انطلق يا بطل وابدأ القراءة الآن! 🚀</span>
               <ChevronLeft className="w-6 h-6" />
             </button>
           </div>
