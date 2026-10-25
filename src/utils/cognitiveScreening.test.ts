@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARABIC_PSEUDO_WORD_CANDIDATES, ARABIC_PHONEMIC_TASK_CANDIDATES } from '../components/CognitiveScreeningView';
+import { getFluencyLevelInfo } from '../components/ReadingAssessmentView';
 
 test('Cognitive Screening & Observational Profile Battery', async (t) => {
   await t.test('RAN timing is an observation and does not define an age-based slow/normal category', () => {
@@ -41,6 +42,17 @@ test('Cognitive Screening & Observational Profile Battery', async (t) => {
       assert.equal(task.optionsAr[task.correctIndex], expected[task.id], `Answer key for ${task.id}`);
     }
     assert.ok(!/dialect-neutral|مضمون|معتمد/.test(ARABIC_PHONEMIC_TASK_CANDIDATES.map(task => task.explanationAr).join(' ')));
+  });
+
+  await t.test('oral reading rate is never classified with unvalidated grade-level Arabic cut-offs', () => {
+    for (const gradeLevel of [1, 2, 3, 4, 5, 6]) {
+      for (const wcpm of [0, 20, 75, 200]) {
+        const result = getFluencyLevelInfo(wcpm, gradeLevel);
+        assert.equal(result.level, 'observed');
+        assert.match(result.label, /بلا تصنيف معياري/);
+        assert.doesNotMatch(result.description, /طلاقة ممتازة|قراءة طبيعية|المعدل المتوقع|المعدل المستهدف/);
+      }
+    }
   });
 
   await t.test('different observed measures remain in their native units rather than an invented shared score', () => {
