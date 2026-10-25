@@ -1930,8 +1930,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   finalTranscriptsRef.current = [];
                   currentInterimRef.current = '';
                   setVerifiedWords([]);
-                  setTeacherVerified(false);
-                  setHumanReviewConfirmed(false);
+                  setAiAssessmentReceipt(null);
                   setMeasuredWpm(undefined);
                   setMeasuredWcpm(undefined);
                   setMeasuredAccuracyPercent(undefined);
