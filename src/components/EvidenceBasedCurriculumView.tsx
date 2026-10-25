@@ -45,7 +45,7 @@ function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
               </div>
             ))}
           </div>
-          <div className="mt-2 flex justify-end text-sky-800" aria-hidden="true">←</div>
+          <div className="mt-2 flex justify-end text-sky-800" aria-hidden="true">→</div>
         </div>
         <p className="mt-2 text-center text-xs leading-5 text-slate-600">ابدأ من الصفر، وحدد المنتصف، ثم قارن المسافة بين الأعداد.</p>
       </div>
@@ -60,7 +60,7 @@ function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-end gap-1">
               {Array.from({ length: 3 }, (_, rod) => (
-                <div key={rod} className="grid grid-rows-10 gap-0.5 rounded-md border border-sky-400 bg-sky-100 p-1" aria-hidden="true">
+                <div key={rod} className="flex flex-col gap-0.5 rounded-md border border-sky-400 bg-sky-100 p-1" aria-hidden="true">
                   {Array.from({ length: 10 }, (_, unit) => (
                     <span key={unit} className="h-2.5 w-4 rounded-sm border border-sky-500 bg-sky-300" />
                   ))}
