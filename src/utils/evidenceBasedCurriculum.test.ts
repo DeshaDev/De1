@@ -169,6 +169,8 @@ test('reading recommendations use recorded instructional evidence and clearly av
     cognitiveResults: { phonemicAwarenessScorePercent: 90, pseudoWordScorePercent: 65 },
   }, 'reading');
   assert.equal(decode.skillId, 'short-vowel-decoding');
+  assert.equal(decode.isBaseline, true, 'Unreviewed pseudo-word content must not trigger targeted adaptive routing');
+  assert.match(decode.evidenceAr, /لا توجد بيانات سابقة كافية/);
 
   const audioOnlyFromServer = recommendCurriculumSkill({
     gradeLevel: 4,
