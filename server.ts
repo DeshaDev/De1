@@ -2411,7 +2411,7 @@ async function startServer() {
           word.errorType !== 'Unconfirmed' &&
           word.errorType !== 'Insertion'
         );
-      if (!completeAndResolved || result.wordAccuracyPercent === null) {
+      if (!completeAndResolved || !Number.isFinite(result.wordAccuracyPercent)) {
         res.json({ ...result, assessmentReceipt: null, receiptExpiresAt: null });
         return;
       }
