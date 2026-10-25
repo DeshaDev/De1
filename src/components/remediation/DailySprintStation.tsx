@@ -27,6 +27,52 @@ interface DailySprintStationProps {
   triggerCelebration: (msg: string, earnedXp?: number) => void;
 }
 
+interface DailySprintProgressRecord {
+  streakDays: number;
+  lastCompletedDate: string;
+}
+
+function localDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function readStoredDailySprint(studentId: string): DailySprintProgressRecord | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(`baseera_daily_sprint_v1:${studentId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DailySprintProgressRecord>;
+    if (
+      Number.isInteger(parsed.streakDays) &&
+      (parsed.streakDays as number) >= 1 &&
+      typeof parsed.lastCompletedDate === 'string' &&
+      /^\\d{4}-\\d{2}-\\d{2}$/.test(parsed.lastCompletedDate)
+    ) {
+      return { streakDays: parsed.streakDays as number, lastCompletedDate: parsed.lastCompletedDate };
+    }
+  } catch {
+    // Storage can be unavailable in private or restricted browsing contexts.
+  }
+  return null;
+}
+
+function getDailySprintProgress(studentId: string): { streakDays: number; isCompletedToday: boolean } {
+  const stored = readStoredDailySprint(studentId);
+  if (!stored) return { streakDays: 0, isCompletedToday: false };
+  const today = localDateKey();
+  const yesterday = localDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  if (stored.lastCompletedDate === today) {
+    return { streakDays: stored.streakDays, isCompletedToday: true };
+  }
+  if (stored.lastCompletedDate === yesterday) {
+    return { streakDays: stored.streakDays, isCompletedToday: false };
+  }
+  return { streakDays: 0, isCompletedToday: false };
+}
+
 interface WarmupPhonemeExercise {
   id: number;
   targetSoundLabel: string;
@@ -58,8 +104,14 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
   const [sprintStep, setSprintStep] = useState<1 | 2 | 3>(1);
   const [timerSeconds, setTimerSeconds] = useState<number>(300); // 5 minutes
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [streakDays, setStreakDays] = useState<number>(4);
-  const [isCompletedToday, setIsCompletedToday] = useState<boolean>(false);
+  const [streakDays, setStreakDays] = useState<number>(() => getDailySprintProgress(activeStudent.id).streakDays);
+  const [isCompletedToday, setIsCompletedToday] = useState<boolean>(() => getDailySprintProgress(activeStudent.id).isCompletedToday);
+
+  useEffect(() => {
+    const progress = getDailySprintProgress(activeStudent.id);
+    setStreakDays(progress.streakDays);
+    setIsCompletedToday(progress.isCompletedToday);
+  }, [activeStudent.id]);
 
   // Step 1: Warmup discrimination state
   const [warmupIdx, setWarmupIdx] = useState<number>(0);
@@ -315,9 +367,27 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
   };
 
   const handleFinishSprint = () => {
-    setIsCompletedToday(true);
-    setStreakDays((prev) => prev + 1);
-    triggerCelebration(`مبارك يا ${activeStudent.name}! أتممت تحدي اليوم وحافظت على سلسلة ${streakDays + 1} أيام متتالية (+50 نقطة)`, 50);
+    if (isCompletedToday || sprintStep !== 3 || selectedAnswer === null) return;
+
+    const today = localDateKey();
+    const yesterday = localDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const previous = readStoredDailySprint(activeStudent.id);
+    const nextStreak = previous?.lastCompletedDate === yesterday ? previous.streakDays + 1 : 1;
+
+    try {
+      if (typeof window === 'undefined') throw new Error('Browser storage unavailable');
+      window.localStorage.setItem(
+        `baseera_daily_sprint_v1:${activeStudent.id}`,
+        JSON.stringify({ streakDays: nextStreak, lastCompletedDate: today } satisfies DailySprintProgressRecord)
+      );
+      setStreakDays(nextStreak);
+      setIsCompletedToday(true);
+      triggerCelebration(`أحسنت يا بطل! اكتملت جلسة اليوم وسُجّلت على هذا الجهاز. سلسلة الالتزام: ${nextStreak} يومًا (+50 نقطة)`, 50);
+    } catch {
+      setStreakDays(0);
+      setIsCompletedToday(true);
+      triggerCelebration('اكتملت الجلسة، لكن تعذّر حفظ سلسلة الأيام في هذا المتصفح.', 0);
+    }
   };
 
   return (
@@ -666,10 +736,11 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             <button
               type="button"
               onClick={handleFinishSprint}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+              disabled={selectedAnswer === null}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trophy className="w-5 h-5 text-amber-300 fill-current" />
-              <span>إتمام سبرنت اليوم وحفظ السلسلة (+50 XP)</span>
+              <span>إتمام سبرنت اليوم وتسجيله على هذا الجهاز (+50 XP)</span>
             </button>
           ) : (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
