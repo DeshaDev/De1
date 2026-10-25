@@ -43,10 +43,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
   // Check if ANY verified assessment data has been gathered
   const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
-  const hasMathData = Boolean(student?.dyscalculiaAssessed === true && student.mathTrials);
+  const hasMathData = Boolean(!student?.isDemoRecord && student?.dyscalculiaAssessed === true && student.mathTrials);
   const hasReadingData = Boolean(
     currentAssessment?.readingResults ||
-    (student && student.sessionStatus === 'completed' && student.wpm > 0)
+    (student && !student.isDemoRecord && student.sessionStatus === 'completed' && student.wpm > 0)
   );
 
   const hasAnyAssessmentData = hasSpeechData || hasMathData || hasReadingData;
@@ -103,7 +103,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         comprehensionScore: currentAssessment.readingResults.comprehensionScore,
         passageTitle: currentAssessment.readingResults.passageTitle,
       };
-    } else if (student && student.sessionStatus === 'completed' && student.wpm > 0) {
+    } else if (student && !student.isDemoRecord && student.sessionStatus === 'completed' && student.wpm > 0) {
       readingSummary = {
         wpm: student.wpm,
         wcpm: student.wcpm ?? student.oralWcpm ?? null,
@@ -151,9 +151,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   // Display only measures that were actually recorded, in their native units.
   // Never fill missing observations with invented defaults or normalize unlike measures.
   const observedMetrics: LearningMetric[] = useMemo(() => {
-    const cog = student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults;
+    const cog = student?.isDemoRecord ? null : (student?.cognitiveResults || (currentAssessment as any)?.cognitiveResults);
     const reading = studentData.reading;
-    const math = studentData.math;
+    const math = student?.isDemoRecord ? null : studentData.math;
     const validValue = (value: unknown): number | null =>
       typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
     const oralWcpm = hasOralReadingEvidence ? validValue(verifiedOralWcpm) : null;
