@@ -1331,13 +1331,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 mb-2">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>التحليل الصوتي الذكي المعتمد 100%</span>
+                <span>نتائج التقييم الصوتي الأولية</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
                 نتائج التقييم الصوتي والطلاقة القرائية
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                {azureAssessmentMode || 'تقييم معتمد بمحرك الذكاء الاصطناعي الصوتي لمنصة بصيرة. تم تحليل نطق كل كلمة بدقة فائقة وحساب مؤشرات الطلاقة دون الحاجة لأي تقدير يدوي.'}
+                {azureAssessmentMode || 'هذه مخرجات آلية لمقارنة التسجيل بالنص المرجعي، وقد يخطئ التعرف الصوتي في الكلمات أو اللهجة. راجع الكلمات غير المحسومة قبل اعتماد النتائج؛ ولا تمثل هذه المخرجات تشخيصًا.'}
               </p>
               {pronunciationAssessmentError && (
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-right text-sm text-amber-950">
