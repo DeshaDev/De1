@@ -49,7 +49,7 @@ function readStoredDailySprint(studentId: string): DailySprintProgressRecord | n
       Number.isInteger(parsed.streakDays) &&
       (parsed.streakDays as number) >= 1 &&
       typeof parsed.lastCompletedDate === 'string' &&
-      /^\\d{4}-\\d{2}-\\d{2}$/.test(parsed.lastCompletedDate)
+      /^\d{4}-\d{2}-\d{2}$/.test(parsed.lastCompletedDate)
     ) {
       return { streakDays: parsed.streakDays as number, lastCompletedDate: parsed.lastCompletedDate };
     }
