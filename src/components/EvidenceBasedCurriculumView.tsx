@@ -390,7 +390,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
                           key={question.id + '-' + originalIndex}
                           data-testid="curriculum-answer-option"
                           type="button"
-                          onClick={() => chooseAnswer(originalIndex)
+                          onClick={() => chooseAnswer(originalIndex)}
                           disabled={answered || answerRevealed}
                           aria-pressed={isChosen}
                           className={'min-h-12 rounded-xl border-2 px-3 py-3 text-sm font-bold leading-6 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ' + (
