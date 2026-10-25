@@ -158,22 +158,22 @@ export interface PseudoWordItem {
 
 export const ARABIC_PSEUDO_WORD_CANDIDATES: PseudoWordItem[] = [
   // المستوى الأول: ثلاثي مجرد بحركات قصيرة (فَعَلَ) - جذور مهملة في المعاجم العربية
-  { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ظ-ف-ك) مهمل معجمياً' },
-  { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ف-ث-ل) مهمل معجمياً' },
-  { id: 'pw-3', word: 'دَخَزَ', patternAr: 'فَعَلَ', syllablesAr: 'دَ · خَ · زَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (د-خ-ز) مهمل معجمياً' },
-  { id: 'pw-4', word: 'رَثَقَ', patternAr: 'فَعَلَ', syllablesAr: 'رَ · ثَ · قَ', linguisticLevel: 'بسيط (حركات قصيرة)', nonLexicalRootAr: 'جذر (ر-ث-ق) غير مستعمل كفعل' },
+  { id: 'pw-1', word: 'ظَفَكَ', patternAr: 'فَعَلَ', syllablesAr: 'ظَ · فَ · كَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
+  { id: 'pw-2', word: 'فَثَلَ', patternAr: 'فَعَلَ', syllablesAr: 'فَ · ثَ · لَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
+  { id: 'pw-3', word: 'دَخَزَ', patternAr: 'فَعَلَ', syllablesAr: 'دَ · خَ · زَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
+  { id: 'pw-4', word: 'رَثَقَ', patternAr: 'فَعَلَ', syllablesAr: 'رَ · ثَ · قَ', linguisticLevel: 'بسيط (حركات قصيرة)' },
 
   // المستوى الثاني: أوزان بمدود طويلة (فَعِيل / فَعُول)
-  { id: 'pw-5', word: 'ظَفِيك', patternAr: 'فَعِيل', syllablesAr: 'ظَ · فِيك', linguisticLevel: 'متوسط (مدود)', nonLexicalRootAr: 'صيغة صفة من جذر مهمل (ظ-ف-ك)' },
-  { id: 'pw-6', word: 'فَثِيل', patternAr: 'فَعِيل', syllablesAr: 'فَ · ثِيل', linguisticLevel: 'متوسط (مدود)', nonLexicalRootAr: 'مد بالياء من جذر مهمل (ف-ث-ل)' },
-  { id: 'pw-7', word: 'زَخِيب', patternAr: 'فَعِيل', syllablesAr: 'زَ · خِيب', linguisticLevel: 'متوسط (مدود)', nonLexicalRootAr: 'صيغة فعيل من جذر مهمل (ز-خ-ب)' },
-  { id: 'pw-8', word: 'دَخُوز', patternAr: 'فَعُول', syllablesAr: 'دَ · خُوز', linguisticLevel: 'متوسط (مدود)', nonLexicalRootAr: 'مد بالواو من جذر مهمل (د-خ-ز)' },
+  { id: 'pw-5', word: 'ظَفِيك', patternAr: 'فَعِيل', syllablesAr: 'ظَ · فِيك', linguisticLevel: 'متوسط (مدود)' },
+  { id: 'pw-6', word: 'فَثِيل', patternAr: 'فَعِيل', syllablesAr: 'فَ · ثِيل', linguisticLevel: 'متوسط (مدود)' },
+  { id: 'pw-7', word: 'زَخِيب', patternAr: 'فَعِيل', syllablesAr: 'زَ · خِيب', linguisticLevel: 'متوسط (مدود)' },
+  { id: 'pw-8', word: 'دَخُوز', patternAr: 'فَعُول', syllablesAr: 'دَ · خُوز', linguisticLevel: 'متوسط (مدود)' },
 
   // المستوى الثالث: مقاطع ساكنة وأوزان مشتقة (مَفْعُول / مُفْتَعِل)
-  { id: 'pw-9', word: 'مَظْفُوك', patternAr: 'مَفْعُول', syllablesAr: 'مَظْ · فُوك', linguisticLevel: 'مركب (سكون ومشتقات)', nonLexicalRootAr: 'اسم مفعول من جذر مهمل (ظ-ف-ك)' },
-  { id: 'pw-10', word: 'مَفْثُول', patternAr: 'مَفْعُول', syllablesAr: 'مَفْ · ثُول', linguisticLevel: 'مركب (سكون ومشتقات)', nonLexicalRootAr: 'اسم مفعول من جذر مهمل (ف-ث-ل)' },
-  { id: 'pw-11', word: 'مَدْخُوز', patternAr: 'مَفْعُول', syllablesAr: 'مَدْ · خُوز', linguisticLevel: 'مركب (سكون ومشتقات)', nonLexicalRootAr: 'اسم مفعول من جذر مهمل (د-خ-ز)' },
-  { id: 'pw-12', word: 'مُزْتَخِب', patternAr: 'مُفْتَعِل', syllablesAr: 'مُزْ · تَ · خِب', linguisticLevel: 'مركب (سكون ومشتقات)', nonLexicalRootAr: 'صيغة افتعال خماسية من جذر مهمل (ز-خ-ب)' },
+  { id: 'pw-9', word: 'مَظْفُوك', patternAr: 'مَفْعُول', syllablesAr: 'مَظْ · فُوك', linguisticLevel: 'مركب (سكون ومشتقات)' },
+  { id: 'pw-10', word: 'مَفْثُول', patternAr: 'مَفْعُول', syllablesAr: 'مَفْ · ثُول', linguisticLevel: 'مركب (سكون ومشتقات)' },
+  { id: 'pw-11', word: 'مَدْخُوز', patternAr: 'مَفْعُول', syllablesAr: 'مَدْ · خُوز', linguisticLevel: 'مركب (سكون ومشتقات)' },
+  { id: 'pw-12', word: 'مُزْتَخِب', patternAr: 'مُفْتَعِل', syllablesAr: 'مُزْ · تَ · خِب', linguisticLevel: 'مركب (سكون ومشتقات)' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1343,7 +1343,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               <div className="max-w-xl mx-auto text-center">
                 {/* Visual flashcard: viewing or tapping must not mark a response correct */}
                 <div
-                  className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden cursor-pointer hover:border-teal-400 transition-all select-none"
+                  className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-700 mb-6 relative overflow-hidden transition-all select-none"
                   title="اقرأ الكلمة أو استمع إلى التسجيل ثم اختر الملاحظة المناسبة بالأزرار أدناه"
                 >
                   <div className="flex items-center justify-between mb-4 text-xs">
