@@ -30,6 +30,7 @@ import {
   validateAndDeriveMathTrials,
   validateAndDeriveSessionFromEvidence,
   buildDeterministicLearningReport,
+  VerifiedAutomatedAudioAssessment,
 } from './src/utils/studentDataSecurity';
 
 dotenv.config();
@@ -712,6 +713,58 @@ async function startServer() {
   app.use(express.json({ limit: '5mb' }));
 
   let studentsDb: StudentRecord[] = loadPersistedStudents();
+  // Short-lived, one-use receipts bind an audio result to the same authenticated
+  // session, tenant, student, and reading passage. Audio bytes are never retained here.
+  const audioAssessmentReceipts = new Map<string, {
+    sessionId: string;
+    tenantId: string;
+    studentId: string;
+    passageId: string;
+    expiresAt: number;
+    assessment: VerifiedAutomatedAudioAssessment;
+  }>();
+  const audioAssessmentReceiptTtlMs = 10 * 60 * 1000;
+
+  const pruneAudioAssessmentReceipts = () => {
+    const now = Date.now();
+    for (const [key, value] of audioAssessmentReceipts) {
+      if (value.expiresAt <= now) audioAssessmentReceipts.delete(key);
+    }
+    while (audioAssessmentReceipts.size > 500) {
+      const oldestKey = audioAssessmentReceipts.keys().next().value;
+      if (!oldestKey) break;
+      audioAssessmentReceipts.delete(oldestKey);
+    }
+  };
+
+  const resolveAudioAssessmentReceipt = (
+    incoming: Record<string, unknown>,
+    session: VerifiedBaseeraSession,
+    studentId: string,
+    fallbackPassageId?: string
+  ): { valid: boolean; assessment?: VerifiedAutomatedAudioAssessment; receiptKey?: string } => {
+    const evidence = incoming.evidence && typeof incoming.evidence === 'object' && !Array.isArray(incoming.evidence)
+      ? incoming.evidence as Record<string, unknown>
+      : incoming;
+    const hasReceipt = Object.prototype.hasOwnProperty.call(incoming, 'aiAssessmentReceipt') ||
+      Object.prototype.hasOwnProperty.call(evidence, 'aiAssessmentReceipt');
+    if (!hasReceipt) return { valid: true };
+
+    const key = incoming.aiAssessmentReceipt ?? evidence.aiAssessmentReceipt;
+    if (typeof key !== 'string' || !/^[a-f0-9]{64}$/.test(key)) return { valid: false };
+    const stored = audioAssessmentReceipts.get(key);
+    const passageId = String(evidence.passageId ?? incoming.passageId ?? fallbackPassageId ?? '');
+    if (
+      !stored ||
+      stored.expiresAt <= Date.now() ||
+      stored.sessionId !== session.sessionId ||
+      stored.tenantId !== session.tenantId ||
+      stored.studentId !== studentId ||
+      stored.passageId !== passageId
+    ) return { valid: false };
+    return { valid: true, assessment: stored.assessment, receiptKey: key };
+  };
+
   loadSecurityState();
 
   // School administrator / educator authentication & RBAC Session Issuing Endpoint.
