@@ -1221,7 +1221,7 @@ export function validateAndDeriveSessionFromEvidence(
       return {
         valid: false,
         statusCode: 400,
-        errorAr: `مصفوفة تدقيق القراءة غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة للنص المرجعي.`,
+        errorAr: `مصفوفة تدقيق الكلمات غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة للنص المرجعي.`,
       };
     }
 
