@@ -14,6 +14,9 @@ import {
   Award,
   Trophy,
   X,
+  Smile,
+  Eye,
+  HelpCircle,
 } from 'lucide-react';
 import { StudentRecord } from '../../data/seedData';
 import { CURATED_DECODABLE_STORIES, DecodableStory } from '../../utils/adaptiveStoryGen';
@@ -22,6 +25,28 @@ interface DailySprintStationProps {
   activeStudent: StudentRecord;
   speakText: (text: string) => void;
   triggerCelebration: (msg: string, earnedXp?: number) => void;
+}
+
+interface WarmupPhonemeExercise {
+  id: number;
+  targetSoundLabel: string;
+  targetSoundSymbol: string;
+  targetSoundAudio: string;
+  contrastSoundLabel: string;
+  contrastSoundSymbol: string;
+  questionText: string;
+  targetWord: string;
+  targetAudio: string;
+  targetPhoneticTag: string;
+  distractorWord: string;
+  distractorAudio: string;
+  distractorPhoneticTag: string;
+  mirrorTip: {
+    target: string;
+    distractor: string;
+  };
+  feedbackSuccess: string;
+  feedbackRetry: string;
 }
 
 export const DailySprintStation: React.FC<DailySprintStationProps> = ({
@@ -38,14 +63,192 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
 
   // Step 1: Warmup discrimination state
   const [warmupIdx, setWarmupIdx] = useState<number>(0);
-  const [warmupSelected, setWarmupSelected] = useState<string | null>(null);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
-  const warmupPairs = [
-    { targetWord: 'سَيْف', distractor: 'صَيْف', sound: 'سَـ', meaning: 'سلاح قاطع مرقق' },
-    { targetWord: 'صَابُون', distractor: 'سَابُون', sound: 'صَـ', meaning: 'مادة تنظيف مفخمة' },
-    { targetWord: 'دَلَّ', distractor: 'ضَلَّ', sound: 'دَ', meaning: 'أرشد بترقيق' },
-    { targetWord: 'ضَوْء', distractor: 'دَوْء', sound: 'ضَـ', meaning: 'نور باستطالة' },
+  // Clinically curated minimal-pairs discrimination bank
+  const warmupPairs: WarmupPhonemeExercise[] = [
+    {
+      id: 1,
+      targetSoundLabel: 'حَرْفُ السِّينِ المُرَقَّق',
+      targetSoundSymbol: '« س »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ السِّين: سَ',
+      contrastSoundLabel: 'حَرْفُ الصَّادِ المُفَخَّم',
+      contrastSoundSymbol: '« ص »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ السِّينِ المُرَقَّق (سَـ)؟',
+      targetWord: 'سَيْفٌ',
+      targetAudio: 'سَيْفٌ',
+      targetPhoneticTag: 'سينٌ مُرَقَّقَة',
+      distractorWord: 'صَيْفٌ',
+      distractorAudio: 'صَيْفٌ',
+      distractorPhoneticTag: 'صادٌ مُفَخَّمَة',
+      mirrorTip: {
+        target: 'السين: ينبسط الفم في ابتسامة خفيفة ويهمس الهواء برقة من بين الأسنان.',
+        distractor: 'الصاد: يرتفع أقصى اللسان ويستعلي، فيمتلئ الفم بالصدى والتفخيم.',
+      },
+      feedbackSuccess: 'أَحْسَنْتَ! كَلِمَةُ «سَيْفٌ» تَبْدَأُ بِالسِّينِ المُرَقَّقَة المُنْبَسِطَة.',
+      feedbackRetry: 'اسْتَمِعْ جَيِّداً: «صَيْفٌ» تَبْدَأُ بِالصَّادِ المُفَخَّمَة، وَالمَطْلُوبُ السِّينُ المُرَقَّقَة!',
+    },
+    {
+      id: 2,
+      targetSoundLabel: 'حَرْفُ الصَّادِ المُفَخَّم',
+      targetSoundSymbol: '« ص »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الصَّاد: صَ',
+      contrastSoundLabel: 'حَرْفُ السِّينِ المُرَقَّق',
+      contrastSoundSymbol: '« س »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الصَّادِ المُفَخَّم (صَـ)؟',
+      targetWord: 'صَابُونٌ',
+      targetAudio: 'صَابُونٌ',
+      targetPhoneticTag: 'صادٌ مُفَخَّمَة',
+      distractorWord: 'سَابِقٌ',
+      distractorAudio: 'سَابِقٌ',
+      distractorPhoneticTag: 'سينٌ مُرَقَّقَة',
+      mirrorTip: {
+        target: 'الصاد: يستعلي أقصى اللسان ليملأ تجويف الفم صدى وضخامة.',
+        distractor: 'السين: يستفل اللسان وينبسط الفم برقة.',
+      },
+      feedbackSuccess: 'رَائِع ومُبْدِع! «صَابُونٌ» تَبْدَأُ بِالصَّادِ المُفَخَّمَة القَوِيَّة.',
+      feedbackRetry: '«سَابِقٌ» تَبْدَأُ بِالسِّينِ المُرَقَّقَة، وَالمَطْلُوبُ الصَّادُ المُفَخَّمَة!',
+    },
+    {
+      id: 3,
+      targetSoundLabel: 'حَرْفُ التَّاءِ المُرَقَّق',
+      targetSoundSymbol: '« ت »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ التَّاء: تِ',
+      contrastSoundLabel: 'حَرْفُ الطَّاءِ المُفَخَّم',
+      contrastSoundSymbol: '« ط »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ التَّاءِ المُرَقَّق (تِـ)؟',
+      targetWord: 'تِينٌ',
+      targetAudio: 'تِينٌ',
+      targetPhoneticTag: 'تاءٌ مُرَقَّقَة',
+      distractorWord: 'طِينٌ',
+      distractorAudio: 'طِينٌ',
+      distractorPhoneticTag: 'طاءٌ مُفَخَّمَة',
+      mirrorTip: {
+        target: 'التاء: تخرج برقة من طرف اللسان مع أصول الثنايا العلوية بنعومة وخفة.',
+        distractor: 'الطاء: حرف إطباق قوي ينطبق معه طائفة من اللسان على الحنك الأعلى.',
+      },
+      feedbackSuccess: 'مُمْتَاز! «تِينٌ» تَبْدَأُ بِالتَّاءِ المُرَقَّقَة النَّاعِمَة.',
+      feedbackRetry: '«طِينٌ» تَبْدَأُ بِالطَّاءِ المُفَخَّمَة، وَالمَطْلُوبُ التَّاءُ المُرَقَّقَة!',
+    },
+    {
+      id: 4,
+      targetSoundLabel: 'حَرْفُ الطَّاءِ المُفَخَّم',
+      targetSoundSymbol: '« ط »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الطَّاء: طَ',
+      contrastSoundLabel: 'حَرْفُ التَّاءِ المُرَقَّق',
+      contrastSoundSymbol: '« ت »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الطَّاءِ المُفَخَّم (طَـ)؟',
+      targetWord: 'طَبِيبٌ',
+      targetAudio: 'طَبِيبٌ',
+      targetPhoneticTag: 'طاءٌ مُفَخَّمَة',
+      distractorWord: 'تَمْرٌ',
+      distractorAudio: 'تَمْرٌ',
+      distractorPhoneticTag: 'تاءٌ مُرَقَّقَة',
+      mirrorTip: {
+        target: 'الطاء: صوت مفخم مطبق يملأ الفم قوة واستعلاء.',
+        distractor: 'التاء: صوت رقيق مهموس ينبسط معه طرف اللسان.',
+      },
+      feedbackSuccess: 'بَطَل! «طَبِيبٌ» تَبْدَأُ بِالطَّاءِ المُفَخَّمَة القَوِيَّة.',
+      feedbackRetry: '«تَمْرٌ» تَبْدَأُ بِتَاءٍ مُرَقَّقَة، وَالمَطْلُوبُ الطَّاءُ المُفَخَّمَة!',
+    },
+    {
+      id: 5,
+      targetSoundLabel: 'حَرْفُ الدَّالِ المُرَقَّق',
+      targetSoundSymbol: '« د »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الدَّال: دَ',
+      contrastSoundLabel: 'حَرْفُ الضَّادِ المُفَخَّم',
+      contrastSoundSymbol: '« ض »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الدَّالِ المُرَقَّق (دَ)؟',
+      targetWord: 'دَلَّ',
+      targetAudio: 'دَلَّ',
+      targetPhoneticTag: 'دالٌ مُرَقَّقَة',
+      distractorWord: 'ضَلَّ',
+      distractorAudio: 'ضَلَّ',
+      distractorPhoneticTag: 'ضادٌ مُفَخَّمَة',
+      mirrorTip: {
+        target: 'الدال: صوت مرقق خفيف يقرع فيه طرف اللسان مقدمة الحنك برقة.',
+        distractor: 'الضاد: صوت مفخم مستطيل يخرج من إحدى حافتي اللسان.',
+      },
+      feedbackSuccess: 'أَحْسَنْتَ! «دَلَّ» تَبْدَأُ بِالدَّالِ المُرَقَّقَة الخَفِيفَة.',
+      feedbackRetry: '«ضَلَّ» تَبْدَأُ بِالضَّادِ المُفَخَّمَة، وَالمَطْلُوبُ الدَّالُ المُرَقَّقَة!',
+    },
+    {
+      id: 6,
+      targetSoundLabel: 'حَرْفُ الكَافِ المَهْمُوس',
+      targetSoundSymbol: '« ك »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الكَاف: كَ',
+      contrastSoundLabel: 'حَرْفُ القَافِ اللَّهَوِيّ',
+      contrastSoundSymbol: '« ق »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الكَافِ المَهْمُوس (كَـ)؟',
+      targetWord: 'كَلْبٌ',
+      targetAudio: 'كَلْبٌ',
+      targetPhoneticTag: 'كافٌ مَهْمُوسَة',
+      distractorWord: 'قَلْبٌ',
+      distractorAudio: 'قَلْبٌ',
+      distractorPhoneticTag: 'قافٌ لَهَوِيَّة',
+      mirrorTip: {
+        target: 'الكاف: تخرج من أدنى اللسان باتجاه الأمام بهواء خفيف مهموس.',
+        distractor: 'القاف: تخرج من أقصى اللسان مع الحنك الرخو عند اللهاة.',
+      },
+      feedbackSuccess: 'ذَكِيٌّ جِدّاً! «كَلْبٌ» تَبْدَأُ بِالكَافِ المَهْمُوسَة الخَفِيفَة.',
+      feedbackRetry: '«قَلْبٌ» تَبْدَأُ بِالقَافِ اللَّهَوِيَّة، وَالمَطْلُوبُ الكَافُ المَهْمُوسَة!',
+    },
+    {
+      id: 7,
+      targetSoundLabel: 'حَرْفُ الحَاءِ الحَلْقِيّ',
+      targetSoundSymbol: '« ح »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الحَاء: حَ',
+      contrastSoundLabel: 'حَرْفُ الهَاءِ الهَوَائِيّ',
+      contrastSoundSymbol: '« هـ »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الحَاءِ الحَلْقِيّ (حَـ)؟',
+      targetWord: 'حَمَلَ',
+      targetAudio: 'حَمَلَ',
+      targetPhoneticTag: 'حاءٌ حَلْقِيَّة',
+      distractorWord: 'هَمَلَ',
+      distractorAudio: 'هَمَلَ',
+      distractorPhoneticTag: 'هاءٌ هَوَائِيَّة',
+      mirrorTip: {
+        target: 'الحاء: تخرج من وسط الحلق بنقاء وصفاء واضح.',
+        distractor: 'الهاء: تخرج من أقصى الحلق مع اندفاع هوائي ناعم.',
+      },
+      feedbackSuccess: 'إِجَابَةٌ رَائِعَة! «حَمَلَ» تَبْدَأُ بِالحَاءِ الحَلْقِيَّة الصَّافِيَة.',
+      feedbackRetry: '«هَمَلَ» تَبْدَأُ بِالهَاءِ، وَالمَطْلُوبُ الحَاءُ الحَلْقِيَّة الصَّافِيَة!',
+    },
+    {
+      id: 8,
+      targetSoundLabel: 'حَرْفُ الذَّالِ المُرَقَّق',
+      targetSoundSymbol: '« ذ »',
+      targetSoundAudio: 'صَوْتُ حَرْفِ الذَّال: ذَ',
+      contrastSoundLabel: 'حَرْفُ الظَّاءِ المُفَخَّم',
+      contrastSoundSymbol: '« ظ »',
+      questionText: 'أيُّ الكَلِمَتَيْنِ تَبْدَأُ بِصَوْتِ الذَّالِ المُرَقَّق (ذَ)؟',
+      targetWord: 'ذَلَّ',
+      targetAudio: 'ذَلَّ',
+      targetPhoneticTag: 'ذالٌ مُرَقَّقَة',
+      distractorWord: 'ظَلَّ',
+      distractorAudio: 'ظَلَّ',
+      distractorPhoneticTag: 'ظاءٌ مُفَخَّمَة',
+      mirrorTip: {
+        target: 'الذال: يخرج طرف اللسان قليلاً بين الأسنان برقة واستفال.',
+        distractor: 'الظاء: يخرج طرف اللسان مع استعلاء أقصى اللسان وتفخيمه.',
+      },
+      feedbackSuccess: 'عَبْقَرِيّ! «ذَلَّ» تَبْدَأُ بِالذَّالِ المُرَقَّقَة الرَّقِيقَة.',
+      feedbackRetry: '«ظَلَّ» تَبْدَأُ بِالظَّاءِ المُفَخَّمَة، وَالمَطْلُوبُ الذَّالُ المُرَقَّقَة!',
+    },
   ];
+
+  const currentExercise = warmupPairs[warmupIdx];
+
+  // Alternating display positions so the target word isn't always on the same side
+  const isTargetFirst = warmupIdx % 2 === 0;
+  const optionA = isTargetFirst
+    ? { word: currentExercise.targetWord, audio: currentExercise.targetAudio, tag: currentExercise.targetPhoneticTag, isTarget: true }
+    : { word: currentExercise.distractorWord, audio: currentExercise.distractorAudio, tag: currentExercise.distractorPhoneticTag, isTarget: false };
+
+  const optionB = isTargetFirst
+    ? { word: currentExercise.distractorWord, audio: currentExercise.distractorAudio, tag: currentExercise.distractorPhoneticTag, isTarget: false }
+    : { word: currentExercise.targetWord, audio: currentExercise.targetAudio, tag: currentExercise.targetPhoneticTag, isTarget: true };
 
   // Step 2: Decodable reading
   const currentStory: DecodableStory = CURATED_DECODABLE_STORIES[0];
@@ -64,7 +267,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       }, 1000);
     } else if (timerSeconds === 0 && isTimerRunning) {
       setIsTimerRunning(false);
-      triggerCelebration('⏰ انتهى وقت السبرنت اليومي بنجاح! أحسنت الالتزام (+50 نقطة)', 50);
+      triggerCelebration('انتهى وقت السبرنت اليومي بنجاح! أحسنت الالتزام (+50 نقطة)', 50);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerSeconds]);
@@ -76,19 +279,27 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
   };
 
   const handleWarmupSelect = (word: string, isCorrect: boolean) => {
-    setWarmupSelected(word);
+    setSelectedWord(word);
     speakText(word);
+
     if (isCorrect) {
+      setFeedbackMsg({ text: currentExercise.feedbackSuccess, isError: false });
+      speakText(currentExercise.feedbackSuccess);
       triggerCelebration('صوت سليم ومطابق! (+15 نقطة)', 15);
+
       setTimeout(() => {
         if (warmupIdx < warmupPairs.length - 1) {
           setWarmupIdx((prev) => prev + 1);
-          setWarmupSelected(null);
+          setSelectedWord(null);
+          setFeedbackMsg(null);
         } else {
           setSprintStep(2);
-          triggerCelebration('رائع! اكتمل إحماء الدقيقة الأولى. الآن وقت قراءة القصة (+20 نقطة)', 20);
+          triggerCelebration('رائع! اكتمل إحماء الدقيقة الأولى بنجاح. الآن وقت قراءة القصة (+20 نقطة)', 20);
         }
-      }, 800);
+      }, 1400);
+    } else {
+      setFeedbackMsg({ text: currentExercise.feedbackRetry, isError: true });
+      speakText(currentExercise.feedbackRetry);
     }
   };
 
@@ -153,7 +364,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       {/* Progress Step Bar */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { num: 1, title: 'الدقيقة ١: إحماء الفونيمات', active: sprintStep === 1, done: sprintStep > 1 },
+          { num: 1, title: 'الدقيقة ١: إحماء التمييز السمعي للأصوات', active: sprintStep === 1, done: sprintStep > 1 },
           { num: 2, title: 'الدقائق ٢-٤: قراءة القصة الموجهة', active: sprintStep === 2, done: sprintStep > 2 },
           { num: 3, title: 'الدقيقة ٥: مخرج الحرف والفهم', active: sprintStep === 3, done: isCompletedToday },
         ].map((st) => (
@@ -172,39 +383,170 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         ))}
       </div>
 
-      {/* STEP 1: WARMUP PHONEMES (1 MINUTE) */}
+      {/* STEP 1: WARMUP AUDITORY PHONEMIC DISCRIMINATION (1 MINUTE) */}
       {sprintStep === 1 && (
-        <div className="max-w-xl mx-auto space-y-6 text-center py-4">
-          <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>تمييز الصوت المستهدف: {warmupPairs[warmupIdx].sound}</span>
+        <div className="max-w-2xl mx-auto space-y-6 text-center py-4">
+          {/* Target Phoneme Master Card */}
+          <div className="p-5 rounded-3xl bg-gradient-to-b from-emerald-50 to-teal-50/50 border-2 border-emerald-300 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-black text-emerald-800 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-200 shadow-xs flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>الهدف: تمييز {currentExercise.targetSoundLabel}</span>
+              </span>
+
+              <span className="text-xs font-bold text-slate-600 bg-white/80 px-3 py-1 rounded-xl border border-slate-200">
+                تمرين {warmupIdx + 1} من {warmupPairs.length}
+              </span>
+            </div>
+
+            {/* Target Phoneme Listen Button */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => speakText(currentExercise.targetSoundAudio)}
+                className="clay-btn-emerald px-6 py-2.5 rounded-2xl text-white font-extrabold text-sm flex items-center gap-2 shadow-md cursor-pointer active:scale-95"
+              >
+                <Volume2 className="w-4 h-4" />
+                <span>اسْتَمِعْ لِصَوْتِ الحَرْف: {currentExercise.targetSoundSymbol}</span>
+              </button>
+
+              <div className="text-xs font-bold text-teal-900 bg-teal-100/70 px-3 py-1.5 rounded-xl border border-teal-200">
+                مُقَابِل: {currentExercise.contrastSoundLabel} {currentExercise.contrastSoundSymbol}
+              </div>
+            </div>
           </div>
 
-          <h3 className="text-xl font-black text-slate-900">
-            أي الكلمتين تحتوي على الصوت الصحيح؟
-          </h3>
-          <p className="text-xs text-slate-500">{warmupPairs[warmupIdx].meaning}</p>
-
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-            <button
-              type="button"
-              onClick={() => handleWarmupSelect(warmupPairs[warmupIdx].targetWord, true)}
-              className="p-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 hover:bg-emerald-100 hover:border-emerald-500 text-2xl font-black font-serif text-slate-900 transition-all cursor-pointer shadow-xs active:scale-95"
-            >
-              {warmupPairs[warmupIdx].targetWord}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleWarmupSelect(warmupPairs[warmupIdx].distractor, false)}
-              className="p-6 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-rose-300 text-2xl font-black font-serif text-slate-900 transition-all cursor-pointer shadow-xs active:scale-95"
-            >
-              {warmupPairs[warmupIdx].distractor}
-            </button>
+          {/* Direct, Unambiguous Pedagogical Instruction */}
+          <div className="space-y-1">
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 font-serif">
+              {currentExercise.questionText}
+            </h3>
+            <p className="text-xs text-slate-500 font-bold">
+              استمع لنطق الكلمتين باهتمام، ثم انقر على الكلمة التي تبدأ بالصوت المستهدف
+            </p>
           </div>
 
-          <div className="text-xs text-slate-400 font-medium">
-            تمرين {warmupIdx + 1} من {warmupPairs.length} · استمع للمخرج الصوتي الفصيح فور النقر
+          {/* 3D Interactive Word Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            {/* Card A */}
+            <div
+              className={`p-5 rounded-3xl border-2 transition-all flex flex-col items-center justify-between gap-4 shadow-sm ${
+                selectedWord === optionA.word
+                  ? optionA.isTarget
+                    ? 'border-emerald-500 bg-emerald-50/80 ring-4 ring-emerald-500/20'
+                    : 'border-rose-400 bg-rose-50/70'
+                  : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md'
+              }`}
+            >
+              <div className="text-3xl md:text-4xl font-black font-serif text-slate-900 tracking-wide pt-2">
+                {optionA.word}
+              </div>
+
+              {/* Dedicated Word Audio Listen Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speakText(optionA.audio);
+                }}
+                className="text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 px-3.5 py-1.5 rounded-xl border border-teal-200 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+              >
+                <Volume2 className="w-3.5 h-3.5 text-teal-600" />
+                <span>اسْتَمِعْ لِلْكَلِمَة</span>
+              </button>
+
+              {/* Selection Button */}
+              <button
+                type="button"
+                onClick={() => handleWarmupSelect(optionA.word, optionA.isTarget)}
+                className={`w-full py-3 rounded-2xl font-black text-sm transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  selectedWord === optionA.word && optionA.isTarget
+                    ? 'bg-emerald-600 text-white'
+                    : 'clay-btn-sky text-white'
+                }`}
+              >
+                {selectedWord === optionA.word && optionA.isTarget ? 'إجابة صحيحة ✓' : 'اخْتَرْ هَذِهِ الكَلِمَة'}
+              </button>
+            </div>
+
+            {/* Card B */}
+            <div
+              className={`p-5 rounded-3xl border-2 transition-all flex flex-col items-center justify-between gap-4 shadow-sm ${
+                selectedWord === optionB.word
+                  ? optionB.isTarget
+                    ? 'border-emerald-500 bg-emerald-50/80 ring-4 ring-emerald-500/20'
+                    : 'border-rose-400 bg-rose-50/70'
+                  : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-md'
+              }`}
+            >
+              <div className="text-3xl md:text-4xl font-black font-serif text-slate-900 tracking-wide pt-2">
+                {optionB.word}
+              </div>
+
+              {/* Dedicated Word Audio Listen Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speakText(optionB.audio);
+                }}
+                className="text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 px-3.5 py-1.5 rounded-xl border border-teal-200 flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+              >
+                <Volume2 className="w-3.5 h-3.5 text-teal-600" />
+                <span>اسْتَمِعْ لِلْكَلِمَة</span>
+              </button>
+
+              {/* Selection Button */}
+              <button
+                type="button"
+                onClick={() => handleWarmupSelect(optionB.word, optionB.isTarget)}
+                className={`w-full py-3 rounded-2xl font-black text-sm transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  selectedWord === optionB.word && optionB.isTarget
+                    ? 'bg-emerald-600 text-white'
+                    : 'clay-btn-sky text-white'
+                }`}
+              >
+                {selectedWord === optionB.word && optionB.isTarget ? 'إجابة صحيحة ✓' : 'اخْتَرْ هَذِهِ الكَلِمَة'}
+              </button>
+            </div>
+          </div>
+
+          {/* Feedback Message Banner */}
+          {feedbackMsg && (
+            <div
+              className={`p-4 rounded-2xl border text-sm font-bold max-w-lg mx-auto transition-all animate-fadeIn ${
+                feedbackMsg.isError
+                  ? 'bg-rose-50 border-rose-300 text-rose-900'
+                  : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                {feedbackMsg.isError ? (
+                  <HelpCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                )}
+                <span>{feedbackMsg.text}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Visual Articulation Mirror Guide (مرآة النطق البصرية) */}
+          <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-right max-w-lg mx-auto space-y-2">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-amber-900">
+              <Eye className="w-4 h-4 text-amber-700" />
+              <span>مرآة النطق ومخرج الحرفين:</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] leading-relaxed text-amber-950 font-medium">
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200/80">
+                <span className="font-bold text-amber-800 block mb-0.5">الصوت المستهدف:</span>
+                {currentExercise.mirrorTip.target}
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200/80">
+                <span className="font-bold text-slate-700 block mb-0.5">الصوت المقابل:</span>
+                {currentExercise.mirrorTip.distractor}
+              </div>
+            </div>
           </div>
         </div>
       )}

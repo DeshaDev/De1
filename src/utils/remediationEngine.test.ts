@@ -44,7 +44,7 @@ test('generic practice does not claim eye-tracking observations or individualize
   const plan = generateAdaptiveRemediationPlan({
     studentName: 'طفل تجريبي',
     gradeLevel: 3,
-    effectiveWords: ['الساقية', 'البستان'],
+    effectiveWords: ['الحديقة', 'المكتبة'],
     targetsTeacherReviewed: false,
   });
 
@@ -117,12 +117,11 @@ test('activity content changes across grade bands and number-line ranges match t
 });
 
 test('only a teacher-reviewed word present in the curated bank can influence the selected syllable practice', () => {
-  const plan = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَاقِيَة'], targetsTeacherReviewed: true });
-  assert.equal(normalizeArabic(plan.syllableDrills[0].targetWord), normalizeArabic('سَاقِيَة'));
+  const plan = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَمَكَةٌ'], targetsTeacherReviewed: true });
+  assert.equal(normalizeArabic(plan.syllableDrills[0].targetWord), normalizeArabic('سَمَكَةٌ'));
   const unmatched = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['كلمة غير مدرجة'], targetsTeacherReviewed: true });
   assert.notEqual(normalizeArabic(unmatched.syllableDrills[0].targetWord), normalizeArabic('كلمة غير مدرجة'));
 });
-
 
 test('every grade band produces a structurally valid curated plan', () => {
   for (let gradeLevel = 1; gradeLevel <= 6; gradeLevel += 1) {
@@ -139,7 +138,6 @@ test('every grade band produces a structurally valid curated plan', () => {
     );
   }
 });
-
 
 test('each exact grade receives eight curated tasks per station and a different text from its adjacent grade', () => {
   for (let gradeLevel = 1; gradeLevel <= 6; gradeLevel += 1) {
@@ -161,8 +159,8 @@ test('each exact grade receives eight curated tasks per station and a different 
 });
 
 test('teacher-reviewed words can select matching practice from the expanded bank', () => {
-  const oddGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَاقِيَة'], targetsTeacherReviewed: true });
-  assert.equal(normalizeArabic(oddGrade.syllableDrills[0].targetWord), normalizeArabic('سَاقِيَة'));
+  const oddGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 3, effectiveWords: ['سَمَكَةٌ'], targetsTeacherReviewed: true });
+  assert.equal(normalizeArabic(oddGrade.syllableDrills[0].targetWord), normalizeArabic('سَمَكَةٌ'));
   const evenGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 4, effectiveWords: ['مَدِينَة'], targetsTeacherReviewed: true });
   assert.equal(normalizeArabic(evenGrade.syllableDrills[0].targetWord), normalizeArabic('مَدِينَة'));
 });

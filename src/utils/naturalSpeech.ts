@@ -15,18 +15,40 @@ export interface NaturalSpeechOptions {
 }
 
 /**
+ * Prepares Arabic text for high-fidelity neural TTS articulation.
+ * 1. Resolves Taa Marbutah truncation: Words ending with 'ة' without explicit diacritics
+ *    are vocalized with tanween dammah ('ٌ') so Azure Speech articulates the full feminine ending (-tun)
+ *    rather than dropping the syllable or truncating words like 'ساقية' into 'ساقي'.
+ * 2. Removes tatweel (kashida 'ـ') which can distort phoneme acoustic models.
+ * 3. Cleans whitespace and maintains phonological integrity.
+ */
+export function prepareArabicTtsText(text: string): string {
+  if (!text) return '';
+  let cleaned = text.trim();
+
+  // Strip tatweel/kashida which causes acoustic anomalies in phoneme models
+  cleaned = cleaned.replace(/ـ+/g, '');
+
+  // Add tanween dammah to any unvocalized taa marbutah at word boundaries or ends of string
+  // so the neural voice articulates the taa/feminine marker (-tun) cleanly without silent truncation.
+  cleaned = cleaned.replace(/(\u0629)(?![\u064B-\u0652])/g, (m) => m + '\u064C');
+
+  return cleaned;
+}
+
+/**
  * Play crystal-clear natural Arabic speech with 100% accurate makharij al-huruf.
  */
 export async function playNaturalArabicAudio(
   text: string,
   options: NaturalSpeechOptions = {}
 ): Promise<void> {
-  const cleanText = text.trim();
-  if (!cleanText) return;
+  const preparedText = prepareArabicTtsText(text);
+  if (!preparedText) return;
 
   const voice = options.voice || 'ar-SA-ZariyahNeural';
   const rate = options.rate || '-5%';
-  const cacheKey = `${voice}_${rate}_${cleanText}`;
+  const cacheKey = `${voice}_${rate}_${preparedText}`;
 
   // Stop previous audio playback smoothly
   if (currentActiveAudio) {
@@ -56,7 +78,7 @@ export async function playNaturalArabicAudio(
     const res = await fetch('/api/ai/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: cleanText, voice, rate }),
+      body: JSON.stringify({ text: preparedText, voice, rate }),
     });
 
     if (res.ok) {
@@ -81,7 +103,7 @@ export async function playNaturalArabicAudio(
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(cleanText);
+      const utter = new SpeechSynthesisUtterance(preparedText);
       utter.lang = voice.startsWith('ar-EG') ? 'ar-EG' : 'ar-SA';
       utter.rate = 0.85;
       if (options.onEnd) utter.onend = () => options.onEnd?.();

@@ -2151,7 +2151,9 @@ async function startServer() {
       return;
     }
 
-    const cleanText = text.trim();
+    let cleanText = text.trim();
+    cleanText = cleanText.replace(/ـ+/g, '');
+    cleanText = cleanText.replace(/(\u0629)(?![\u064B-\u0652])/g, (m) => m + '\u064C');
     const selectedVoice = voice === 'ar-EG-SalmaNeural' ? 'ar-EG-SalmaNeural' :
                          voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
                          'ar-SA-ZariyahNeural';
