@@ -1045,6 +1045,19 @@ async function startServer() {
         return;
       }
 
+      // A voice result is accepted only by consuming a short-lived receipt that the server
+      // issued after it evaluated the actual WAV audio for this same student and passage.
+      const audioReceipt = resolveAudioAssessmentReceipt(
+        incoming, session, id, String(incoming.passageId ?? '')
+      );
+      if (!audioReceipt.valid) {
+        res.status(409).json({
+          code: 'AUDIO_ASSESSMENT_RECEIPT_INVALID',
+          error: 'انتهت صلاحية نتيجة الصوت أو لا تخص هذه الجلسة؛ أعد تسجيل القراءة وتقييمها.',
+        });
+        return;
+      }
+
       // Server-side derivation and plausibility validation of reading & math evidence
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: cleanName,
@@ -1053,7 +1066,7 @@ async function startServer() {
         sessionId: session.sessionId,
         role: session.role,
         accountName: session.accountName,
-      });
+      }, audioReceipt.assessment);
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
           error: derived.errorAr,
@@ -1062,6 +1075,7 @@ async function startServer() {
         return;
       }
 
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       const nowIso = new Date().toISOString();
       const newRecord: StudentRecord = {
         id,
@@ -1195,6 +1209,16 @@ async function startServer() {
       }
 
       const current = studentsDb[idx];
+      const audioReceipt = resolveAudioAssessmentReceipt(
+        incoming, session, id, String(incoming.passageId ?? '')
+      );
+      if (!audioReceipt.valid) {
+        res.status(409).json({
+          code: 'AUDIO_ASSESSMENT_RECEIPT_INVALID',
+          error: 'انتهت صلاحية نتيجة الصوت أو لا تخص هذه الجلسة؛ أعد تسجيل القراءة وتقييمها.',
+        });
+        return;
+      }
       const derived = validateAndDeriveSessionFromEvidence(incoming, {
         name: current.name,
         gradeLevel: current.gradeLevel,
@@ -1202,7 +1226,7 @@ async function startServer() {
         sessionId: session.sessionId,
         role: session.role,
         accountName: session.accountName,
-      });
+      }, audioReceipt.assessment);
       if (!derived.valid || !derived.derivedFields) {
         res.status(derived.statusCode || 400).json({
           error: derived.errorAr,
@@ -1211,6 +1235,7 @@ async function startServer() {
         return;
       }
 
+      if (audioReceipt.receiptKey) audioAssessmentReceipts.delete(audioReceipt.receiptKey);
       const nowIso = new Date().toISOString();
       const previousSnapshot =
         current.sessionStatus === 'completed'
@@ -2225,6 +2250,15 @@ async function startServer() {
       guardianConsentRecordedAt,
       guardianAudioConsentRecordedAt,
     } = body;
+    const assessmentSession = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
+    if (!/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId)) {
+      res.status(400).json({
+        code: 'STUDENT_ID_REQUIRED',
+        error: 'تعذر ربط تقييم الصوت بسجل الطالب؛ أعد اختيار الطالب ثم أعد المحاولة.',
+      });
+      return;
+    }
 
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;
@@ -2312,7 +2346,56 @@ async function startServer() {
         dialectLabel: language === 'ar-EG' ? 'المصرية' : 'الفصحى المعيارية / الخليجية',
       });
       console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
-      res.json(result);
+
+      // A receipt is created only when every target word has a resolved Azure word-level result.
+      // It holds derived scores only; raw child audio is neither cached nor persisted.
+      const completeAndResolved =
+        result.sourceModel === 'azure_pronunciation_assessment' &&
+        result.assessmentComplete === true &&
+        result.transcript.trim().length > 0 &&
+        result.words.length === trustedPassage.words.length &&
+        result.words.every((word, index) =>
+          word.word === trustedPassage.words[index] &&
+          word.errorType !== 'Unconfirmed' &&
+          word.errorType !== 'Insertion'
+        );
+      if (!completeAndResolved || result.wordAccuracyPercent === null) {
+        res.json({ ...result, assessmentReceipt: null, receiptExpiresAt: null });
+        return;
+      }
+
+      pruneAudioAssessmentReceipts();
+      const receipt = crypto.randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + audioAssessmentReceiptTtlMs;
+      const verifiedAssessment: VerifiedAutomatedAudioAssessment = {
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        passageId: trustedPassage.id,
+        transcript: result.transcript,
+        durationSeconds: Number(durationSeconds),
+        wordAccuracyPercent: result.wordAccuracyPercent,
+        wordsCorrectPerMinute: result.wordsCorrectPerMinute,
+        wordsPerMinute: result.wordsPerMinute,
+        words: result.words.map((word) => ({
+          word: word.word,
+          errorType: word.errorType as VerifiedAutomatedAudioAssessment['words'][number]['errorType'],
+          accuracyScore: word.accuracyScore,
+          spokenWord: word.spokenWord,
+        })),
+      };
+      audioAssessmentReceipts.set(receipt, {
+        sessionId: assessmentSession.sessionId,
+        tenantId: assessmentSession.tenantId,
+        studentId,
+        passageId: trustedPassage.id,
+        expiresAt,
+        assessment: verifiedAssessment,
+      });
+      res.json({
+        ...result,
+        assessmentReceipt: receipt,
+        receiptExpiresAt: new Date(expiresAt).toISOString(),
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
       console.warn(`[Azure Assessment] Azure service call unfulfilled: ${message}. Falling back cleanly to Tier 2 Baseera Voice AI Aligner.`);
