@@ -20,11 +20,11 @@ test('math, accessible-reader, and training views open from primary navigation',
   await expect(page.getByRole('heading', { name: /مغامرة أبطال الأرقام/ })).toBeVisible();
 
   await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
-  await page.getByRole('button', { name: /القارئ الميسّر/ }).click();
+  await page.getByRole('button', { name: /القارئ الميسّر/ }).last().click();
   await expect(page.getByRole('heading', { name: /القارئ العربي الميسّر/ })).toBeVisible();
 
   await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
-  await page.getByRole('button', { name: /صالة التدريب/ }).click();
+  await page.getByRole('button', { name: /صالة التدريب/ }).last().click();
   await expect(page.getByRole('heading', { name: 'صالة تدريب وبطولات الأبطال' })).toBeVisible();
 });
 
