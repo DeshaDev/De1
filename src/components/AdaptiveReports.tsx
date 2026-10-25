@@ -138,10 +138,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         ? 'legacy-human-reviewed'
         : null;
   const hasOralReadingEvidence = oralEvidenceSource !== null;
-  const verifiedOralWcpm = hasOralReadingEvidence && typeof (student?.wcpm ?? student?.oralWcpm) === 'number' &&
-    Number.isFinite(student?.wcpm ?? student?.oralWcpm)
-      ? (student?.wcpm ?? student?.oralWcpm) as number
-      : null;
+  const rawOralWcpm = student?.wcpm ?? student?.oralWcpm;
+  const verifiedOralWcpm = hasOralReadingEvidence && typeof rawOralWcpm === 'number' && Number.isFinite(rawOralWcpm)
+    ? rawOralWcpm
+    : null;
   const oralEvidenceSourceLabel = oralEvidenceSource === 'server-verified-audio'
     ? 'نتيجة تقييم صوتي آلي موثقة من الخادم'
     : oralEvidenceSource === 'legacy-human-reviewed'
@@ -336,7 +336,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       const oralRate = verifiedOralWcpm;
       const readingRateText = oralSession
         ? hasOralEvidence && typeof oralRate === 'number'
-          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، ووهي ${oralEvidenceSourceLabel}`
+          ? `معدل الكلمات الصحيحة في القراءة الجهرية ${oralRate} كلمة بالدقيقة، وهي ${oralEvidenceSourceLabel}`
           : 'لم تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية'
         : studentData.reading.wpm > 0
           ? `سرعة القراءة الموقوتة ${studentData.reading.wpm} كلمة بالدقيقة`
@@ -813,7 +813,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Fluency WCPM (Oral Correct Words Per Minute) */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {isOralReading ? 'الطلاقة الشفوية المعتمدة بالذكاء الاصطناعي' : 'الطلاقة الشفوية (غير منطبقة)'}
+                      {isOralReading ? 'القراءة الجهرية الموثقة المصدر' : 'الطلاقة الشفوية (غير منطبقة)'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
