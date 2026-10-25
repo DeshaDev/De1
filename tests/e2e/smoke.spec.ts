@@ -10,7 +10,7 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
 test('reading view opens from primary navigation', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
-  await expect(page.getByRole('heading', { name: 'اختر قصة اليوم يا بطل' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'تحديات بطل القراءة الذكي' })).toBeVisible();
 });
 
 test('math, accessible-reader, and training views open from primary navigation', async ({ page }) => {
