@@ -845,13 +845,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي (WPM)</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading
-                        ? studentData.reading.assessmentModality === 'voice_only' && !(studentData.reading.spokenTranscript || '').trim() && studentData.reading.teacherVerified !== true
-                          ? 'غير متاحة (غياب التفريغ الصوتي)'
+                        ? isOralReading
+                          ? verifiedOralWcpm !== null
+                            ? 'غير منطبق هنا؛ راجع WCPM الموثّق في صف القراءة الجهرية.'
+                            : 'غير متاح — لا توجد قراءة جهرية موثقة المصدر.'
                           : `${studentData.reading.wpm} كلمة/دقيقة`
                         : 'لم تُقَس'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
-                      {isOralReading ? 'معدل نطق/تفريغ خلال هذه الجلسة؛ يُراجع مستقلًا عن WCPM.' : 'معدل إتمام نص واحد فقط؛ لا يقيس دقة الكلمات.'}
+                      {isOralReading ? 'لا يُستنتج WPM من التفريغ وحده؛ استخدم WCPM فقط عند توفر نتيجة موثقة المصدر.' : 'معدل إتمام نص واحد فقط؛ لا يقيس دقة الكلمات.'}
                     </td>
                     <td className="py-3.5 px-4">
                       {studentData.reading ? (
