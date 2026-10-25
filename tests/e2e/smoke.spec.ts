@@ -9,15 +9,15 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
 
 test('reading view opens from primary navigation', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /رحلة القراءة/ }).click();
-  await expect(page.getByText('مختبر القراءة والطلاقة والفهم القرائي')).toBeVisible();
+  await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
+  await expect(page.getByRole('heading', { name: 'اختر قصة اليوم يا بطل' })).toBeVisible();
 });
 
 test('math, accessible-reader, and training views open from primary navigation', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: /مغامرة الأعداد/ }).click();
-  await expect(page.getByRole('heading', { name: 'مهام استكشافية للإدراك العددي' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /مغامرة أبطال الأرقام/ })).toBeVisible();
 
   await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
   await page.getByRole('button', { name: /القارئ الميسّر/ }).click();
