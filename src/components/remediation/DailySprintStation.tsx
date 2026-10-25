@@ -39,6 +39,12 @@ function localDateKey(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+function previousLocalDateKey(date = new Date()): string {
+  const previous = new Date(date);
+  previous.setDate(previous.getDate() - 1);
+  return localDateKey(previous);
+}
+
 function readStoredDailySprint(studentId: string): DailySprintProgressRecord | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -63,7 +69,7 @@ function getDailySprintProgress(studentId: string): { streakDays: number; isComp
   const stored = readStoredDailySprint(studentId);
   if (!stored) return { streakDays: 0, isCompletedToday: false };
   const today = localDateKey();
-  const yesterday = localDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const yesterday = previousLocalDateKey();
   if (stored.lastCompletedDate === today) {
     return { streakDays: stored.streakDays, isCompletedToday: true };
   }
@@ -374,7 +380,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
     ) return;
 
     const today = localDateKey();
-    const yesterday = localDateKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const yesterday = previousLocalDateKey();
     const previous = readStoredDailySprint(activeStudent.id);
     const nextStreak = previous?.lastCompletedDate === yesterday ? previous.streakDays + 1 : 1;
 
