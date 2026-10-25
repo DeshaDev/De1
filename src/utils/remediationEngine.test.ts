@@ -164,3 +164,32 @@ test('teacher-reviewed words can select matching practice from the expanded bank
   const evenGrade = generateAdaptiveRemediationPlan({ studentName: 'test', gradeLevel: 4, effectiveWords: ['مَدِينَة'], targetsTeacherReviewed: true });
   assert.equal(normalizeArabic(evenGrade.syllableDrills[0].targetWord), normalizeArabic('مَدِينَة'));
 });
+
+
+test('server-verified AI speech targets personalize reading practice without teacher approval', () => {
+  const plan = generateAdaptiveRemediationPlan({
+    studentName: 'test',
+    gradeLevel: 3,
+    effectiveWords: ['سَمَكَةٌ'],
+    targetsAIValidated: true,
+  });
+  assert.equal(normalizeArabic(plan.syllableDrills[0].targetWord), normalizeArabic('سَمَكَةٌ'));
+  assert.match(plan.learningRationale, /التقييم الصوتي الآلي/);
+  assert.doesNotMatch(plan.learningRationale, /مراجعة بشرية/);
+  assert.equal(isStructurallyValidRemediationSessionPlan(plan), true);
+});
+
+test('validated wrong numeracy trials personalize the number-line station only from trusted inputs', () => {
+  const plan = generateAdaptiveRemediationPlan({
+    studentName: 'test',
+    gradeLevel: 3,
+    effectiveWords: [],
+    targetsMathValidated: true,
+    mathTargets: [{ targetNumber: 37, min: 0, max: 100 }],
+  });
+  assert.equal(plan.mathDrills[0].targetNumber, 37);
+  assert.equal(plan.mathDrills[0].min, 0);
+  assert.equal(plan.mathDrills[0].max, 100);
+  assert.match(plan.learningRationale, /محاولات عددية موثقة آليًا/);
+  assert.equal(isStructurallyValidRemediationSessionPlan(plan), true);
+});
