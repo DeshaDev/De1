@@ -70,9 +70,9 @@ const SAMPLE_WORDS = [
 const ACTIVITIES = [
     {
     id: 'cognitive-lab',
-    title: 'الفرز المعرفي (RAN)',
-    description: 'اختبارات التسمية الآلية السريعة، وفك الترميز، والوعي الفونولوجي المعتمدة.',
-    action: 'ابدأ الفرز المعرفي',
+    title: 'استكشاف مهارات القراءة',
+    description: 'أنشطة قصيرة للتسمية وقراءة كلمات تدريبية والوعي بالأصوات؛ نتائجها وصفية وليست تشخيصًا.',
+    action: 'استكشف المهارات',
     tone: 'blue',
     icon: Brain,
   },
@@ -170,7 +170,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span> ومتابعة التعلّم خطوة بخطوة.</span>
           </h1>
           <p className="baseera-hero-intro">
-            تجمع بصيرة أنشطة القراءة والفهم والحساب المدعومة بالذكاء الاصطناعي وملخصات أداء دقيقة لتحديد الخطوة التالية تلقائياً ودعم التعلم الذاتي.
+            تساعد بصيرة الأسر والمعلمين على تقديم أنشطة عربية للقراءة والفهم والحساب، مع متابعة أداء الطفل في كل مهمة واقتراح تدريب تالٍ يمكن مراجعته.
           </p>
           <div className="baseera-hero-actions">
             <button
@@ -191,8 +191,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             </button>
           </div>
           <div className="baseera-promise-row" aria-label="مميزات بصيرة">
-            <span><ShieldCheck aria-hidden="true" size={18} /> بيئة تعليمية آمنة للطفل</span>
-            <span><Heart aria-hidden="true" size={18} /> تقييم معرفي وخطط دعم فردية</span>
+            <span><ShieldCheck aria-hidden="true" size={18} /> أنشطة عربية للقراءة والحساب</span>
+            <span><Heart aria-hidden="true" size={18} /> شرح واضح لسبب اقتراح التدريب</span>
           </div>
         </div>
 
@@ -281,7 +281,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div>
             <span className="baseera-section-kicker">اختر ما تحب</span>
             <h2 id="baseera-activities-title">ماذا نجرّب اليوم؟</h2>
-            <p>أربع مساحات، وكل واحدة تساعدك على تعلّم شيء جديد.</p>
+            <p>خمس مساحات للممارسة والتعلّم، اختر منها ما يناسب هدفك.</p>
           </div>
         </div>
         <div className="baseera-activity-grid">
@@ -331,7 +331,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span className="baseera-step-number">٣</span>
             <div className="baseera-step-icon"><Trophy aria-hidden="true" size={25} /></div>
             <h3>احتفل بتقدّمك</h3>
-            <p>تابع ما أنجزته من أنشطة واختر التدريب التالي في مسار التعلم الذكي.</p>
+            <p>استعرض ما أنجزته في الأنشطة، ثم اختر خطوة تدريب تالية.</p>
           </article>
         </div>
       </section>
@@ -339,7 +339,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="baseera-family-panel" aria-labelledby="baseera-family-title">
         <div className="baseera-family-icon"><GraduationCap aria-hidden="true" size={30} /></div>
         <div className="baseera-family-copy">
-          <h2 id="baseera-family-title">لوحة التحليل والمتابعة الذكية</h2>
+          <h2 id="baseera-family-title">ملخص التعلّم والمتابعة</h2>
           <p>
             تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة أو عسر الحساب. يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
           </p>

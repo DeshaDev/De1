@@ -54,8 +54,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   // Synthesize student data strictly from genuine assessments
   const studentData = useMemo(() => {
     const studentName = student?.name || currentAssessment?.studentName || 'الطالب المستهدف';
-    const age = student?.ageYears || currentAssessment?.age || 9;
-    const grade = student?.gradeLevel || 3;
+    const grade = typeof student?.gradeLevel === 'number' && Number.isFinite(student.gradeLevel) && student.gradeLevel > 0
+      ? student.gradeLevel
+      : null;
     const date = new Date().toLocaleDateString('ar-SA');
 
     // Speech data (only present if actually assessed)
@@ -119,7 +120,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
     return {
       studentName,
-      age,
       grade,
       date,
       speech: speechSummary,
@@ -527,7 +527,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <p className="text-sm text-slate-600 mt-1">
             مؤشرات أداء مقاسة للطالب:{' '}
             <span className="font-bold text-teal-700">{studentData.studentName}</span> (الصف{' '}
-            {studentData.grade} الابتدائي - {studentData.date})
+            {studentData.grade !== null ? `الصف ${studentData.grade} الابتدائي` : 'الصف غير مسجّل'} - {studentData.date})
           </p>
         </div>
 
@@ -637,7 +637,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   ملخص مؤشرات الطالب: {studentData.studentName}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  تاريخ الفحص: {studentData.date} · المرحلة: الصف {studentData.grade} الابتدائي
+                  تاريخ الفحص: {studentData.date} · المرحلة: {studentData.grade !== null ? `الصف ${studentData.grade} الابتدائي` : 'الصف غير مسجّل'}
                 </p>
               </div>
 

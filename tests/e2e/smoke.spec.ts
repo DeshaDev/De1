@@ -59,3 +59,29 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await expect(page.getByRole('button', { name: /إتمام سبرنت اليوم/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test('curriculum provides interactive feedback and fits a narrow mobile viewport', async ({ page }) => {
+  test.setTimeout(35_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /صالة التدريب/ }).last().click();
+  await expect(page.getByRole('heading', { name: 'نتعلّم المهارة خطوةً خطوة' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'مسار القراءة' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('curriculum-answer-option')).toHaveCount(3);
+  await page.getByTestId('curriculum-answer-option').first().click();
+  await expect(page.getByRole('status').last()).toBeVisible();
+
+  await page.getByRole('button', { name: 'مسار الحساب' }).click();
+  await expect(page.getByRole('button', { name: 'مسار الحساب' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { name: /نشاط التدريب|أفهم الكمية قبل اسم العدد|أقارن الأعداد وأحدد موقعها/ })).toBeVisible();
+
+  const horizontalOverflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth > document.documentElement.clientWidth
+  );
+  expect(horizontalOverflow).toBe(false);
+  expect(pageErrors).toEqual([]);
+});
