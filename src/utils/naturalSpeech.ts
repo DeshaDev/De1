@@ -4,8 +4,24 @@
  * Provides 100% human-grade, authentic phoneme articulation with 0ms client-side caching.
  */
 
+import { authenticatedFetch } from './apiAuth';
+
 const audioMemoryCache = new Map<string, string>();
+const MAX_AUDIO_CACHE_ENTRIES = 12;
+const MAX_CACHED_AUDIO_URL_CHARS = 500_000;
 let currentActiveAudio: HTMLAudioElement | null = null;
+
+function cacheAudio(key: string, dataUrl: string): void {
+  // A single long story must not permanently consume unbounded browser memory.
+  if (dataUrl.length > MAX_CACHED_AUDIO_URL_CHARS) return;
+  audioMemoryCache.delete(key);
+  while (audioMemoryCache.size >= MAX_AUDIO_CACHE_ENTRIES) {
+    const oldestKey = audioMemoryCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    audioMemoryCache.delete(oldestKey);
+  }
+  audioMemoryCache.set(key, dataUrl);
+}
 
 export interface NaturalSpeechOptions {
   voice?: 'ar-SA-ZariyahNeural' | 'ar-SA-HamedNeural' | 'ar-EG-SalmaNeural';
@@ -75,7 +91,7 @@ export async function playNaturalArabicAudio(
 
   // 2. Fetch studio-quality neural Arabic audio from Baseera server
   try {
-    const res = await fetch('/api/ai/tts', {
+    const res = await authenticatedFetch('/api/ai/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: preparedText, voice, rate }),
@@ -86,7 +102,7 @@ export async function playNaturalArabicAudio(
       if (data?.audioBase64) {
         const mimeType = data.mimeType || 'audio/mp3';
         const dataUrl = `data:${mimeType};base64,${data.audioBase64}`;
-        audioMemoryCache.set(cacheKey, dataUrl);
+        cacheAudio(cacheKey, dataUrl);
 
         const audio = new Audio(dataUrl);
         currentActiveAudio = audio;

@@ -1947,9 +1947,12 @@ export function evaluateOralReadingAlignment(
       };
     }
 
+    // Prefer pairing a clearly different ASR token as a substitution candidate (1.35)
+    // over a deletion plus insertion (1.0 + 0.4). Downstream status remains unconfirmed
+    // until a human or acoustic assessment verifies the child's actual pronunciation.
     return {
       status: 'mismatch',
-      cost: 1.8,
+      cost: 1.35,
       weightedDistance,
     };
   }
@@ -1992,20 +1995,23 @@ export function evaluateOralReadingAlignment(
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0) {
       const c = memo[i - 1][j - 1];
-      if (Math.abs(dp[i][j] - (dp[i - 1][j - 1] + c.cost)) < 1e-5 && c.status !== 'mismatch') {
+      if (Math.abs(dp[i][j] - (dp[i - 1][j - 1] + c.cost)) < 1e-5) {
+        // A high-distance match is only a substitution candidate: the transcript may
+        // contain an ASR recognition error, so report it for review rather than diagnosis.
+        const alignmentStatus = c.status === 'mismatch' ? 'phonetic_substitution' : c.status;
         reversedAlignment.push({
           targetWord: referenceWords[i - 1],
           spokenWord: spokenTokens[j - 1],
-          status: c.status,
+          status: alignmentStatus,
           weightedDistance: c.weightedDistance,
           dialectNoteAr: c.dialectNoteAr,
         });
-        if (c.status === 'correct') {
+        if (alignmentStatus === 'correct') {
           correctWordsCount++;
-        } else if (c.status === 'dialect_variant') {
+        } else if (alignmentStatus === 'dialect_variant') {
           dialectVariantCount++;
           correctWordsCount++;
-        } else if (c.status === 'phonetic_substitution') {
+        } else if (alignmentStatus === 'phonetic_substitution') {
           phoneticSubstitutionCount++;
         }
         i--;

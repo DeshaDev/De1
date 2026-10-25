@@ -1630,19 +1630,6 @@ export default function App() {
           />
         )}
 
-        {/* 📋 DIRECT ACCESS: INDIVIDUALIZED EDUCATION PLAN (IEP GENERATOR) */}
-        {activeTab === 'iep' && (
-          <RemediationGymView
-            students={students}
-            activeStudent={selectedStudent}
-            onSelectStudent={setSelectedStudentId}
-            onNavigateTab={(tab) => setActiveTab(tab)}
-            onOpenReport={() => setActiveTab('dashboard')}
-            canGeneratePlan={baseeraSession?.role === 'school_admin'}
-            initialStation="iep"
-          />
-        )}
-
         {activeTab === 'adaptive-reader' && (
           <AdaptiveReaderView
             problematicWords={selectedStudent.sessionStatus === 'completed' && selectedStudent.teacherVerified === true && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}

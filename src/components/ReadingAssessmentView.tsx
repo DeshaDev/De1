@@ -595,8 +595,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 });
 
                 setVerifiedWords(mappedWords);
-                setTeacherVerified(true);
-                setHumanReviewConfirmed(true);
+                // An automated provider score is not a human school review.
+                setTeacherVerified(false);
+                setHumanReviewConfirmed(false);
                 setSpokenTranscript(result.transcript.trim());
                 spokenTranscriptRef.current = result.transcript.trim();
                 setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
@@ -657,12 +658,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           });
 
           setVerifiedWords(mappedWords);
-          setTeacherVerified(true);
-          setHumanReviewConfirmed(true);
+          // Local transcript alignment is a candidate review aid, not confirmed acoustic
+          // evidence or a school review. A reviewer must explicitly certify the words.
+          setTeacherVerified(false);
+          setHumanReviewConfirmed(false);
           setSpokenTranscript(browserPreviewTranscript);
           spokenTranscriptRef.current = browserPreviewTranscript;
-          setAzureAssessmentMode('تقييم الذكاء الاصطناعي الصوتي المباشر (محرك بصيرة الذكي للمطابقة الصوتية)');
-          setAzureAssessmentComplete(true);
+          setAzureAssessmentMode('مطابقة أولية للتفريغ الآلي في المتصفح؛ قد يخطئ التعرف الصوتي وتحتاج الكلمات إلى مراجعة بشرية.');
+          setAzureAssessmentComplete(false);
           setMeasuredWcpm(localAssessment.wordsCorrectPerMinute);
           setMeasuredAccuracyPercent(localAssessment.accuracyScore);
           setMeasuredWpm(localAssessment.wordsPerMinute);
@@ -1331,13 +1334,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 mb-2">
                 <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>التحليل الصوتي الذكي المعتمد 100%</span>
+                <span>نتائج التقييم الصوتي الأولية</span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black text-slate-900">
                 نتائج التقييم الصوتي والطلاقة القرائية
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                {azureAssessmentMode || 'تقييم معتمد بمحرك الذكاء الاصطناعي الصوتي لمنصة بصيرة. تم تحليل نطق كل كلمة بدقة فائقة وحساب مؤشرات الطلاقة دون الحاجة لأي تقدير يدوي.'}
+                {azureAssessmentMode || 'هذه مخرجات آلية لمقارنة التسجيل بالنص المرجعي، وقد يخطئ التعرف الصوتي في الكلمات أو اللهجة. راجع الكلمات غير المحسومة قبل اعتماد النتائج؛ ولا تمثل هذه المخرجات تشخيصًا.'}
               </p>
               {pronunciationAssessmentError && (
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-right text-sm text-amber-950">
@@ -1494,13 +1497,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'بديل لهجي مقبول';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200 font-bold ring-2 ring-amber-300';
-                    statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
+                    statusTitle = item.spokenWord ? `اختلاف في التفريغ (تعرّف النظام على: "${item.spokenWord}")؛ راجع الصوت` : 'اختلاف في التفريغ يحتاج مراجعة';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
                     statusTitle = 'غير محسومة آلياً';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
-                    statusTitle = 'تخطي / لم تُنطق';
+                    statusTitle = 'تخطي محتمل في التفريغ؛ راجع التسجيل للتأكد';
                   }
 
                   return (
@@ -1526,26 +1529,38 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Autonomous AI Assessment Certification Badge */}
-            <div className="mt-5 p-4 rounded-2xl bg-teal-50 border border-teal-200 text-right flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+            {/* Preliminary automated comparison — not a certification badge */}
+            <div className="mt-5 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right flex items-start gap-3">
+              <FileCheck2 className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="block text-teal-950 text-sm font-black mb-1">
-                  التقييم الصوتي بالذكاء الاصطناعي (دقة القراءة الفعلية: {measuredAccuracyPercent ?? Math.round(((verifiedWords.filter(w => w.status === 'correct' || w.status === 'dialect_variant').length) / (passage.words.length || 1)) * 100)}%)
+                <strong className="block text-slate-950 text-sm font-black mb-1">
+                  مؤشر مطابقة آلي أولي: {measuredAccuracyPercent ?? summaryStats.accuracyPercent ?? 'غير محسوم'}{(measuredAccuracyPercent ?? summaryStats.accuracyPercent) === null || (measuredAccuracyPercent ?? summaryStats.accuracyPercent) === undefined ? '' : '%'}
                 </strong>
-                <p className="text-xs text-teal-800 leading-relaxed">
-                  {azureAssessmentMode
-                    ? `${azureAssessmentMode}. تم فحص كل كلمة بمقارنتها بالتسجيل الفعلي: الكلمات الخضراء طابقت النطق، والكلمات الملونة الأخرى أظهرت حذفاً أو إبدالاً صوتياً.`
-                    : 'تم فحص الكلمات صوتياً ومطابقتها بالتسجيل الفعلي دون تزييف أي نتيجة.'}
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {azureAssessmentMode || 'تمت مقارنة التفريغ الصوتي الآلي بالنص المرجعي.'}
+                  {' '}قد يخطئ التعرف الصوتي أو يلتبس عليه النطق اللهجي؛ هذا المؤشر ليس إثباتًا لدقة نطق الطفل ولا تشخيصًا. يجب مراجعة الكلمات غير المحسومة قبل اعتماد أي نتيجة.
                 </p>
               </div>
             </div>
 
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-xs text-slate-600 text-right flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-teal-700 shrink-0" />
-                <span>النتائج معتمدة وجاهزة للاختبار القرائي التالي مباشرة.</span>
+              <div className="flex-1 space-y-3 text-xs text-slate-700 text-right">
+                {canVerifyAsTeacher && (
+                  <label className="flex items-start gap-2 leading-relaxed rounded-xl border border-amber-200 bg-amber-50 p-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={humanReviewConfirmed}
+                      onChange={(event) => setHumanReviewConfirmed(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>أؤكد أنني راجعت التسجيل والكلمات المعروضة يدويًا مقابل الصوت، وصححت الحالات غير المحسومة. هذا إقرار بالمراجعة البشرية وليس اعتمادًا سريريًا.</span>
+                  </label>
+                )}
+                <div className="flex items-center gap-2">
+                  <FileCheck2 className="w-5 h-5 text-slate-500 shrink-0" />
+                  <span>{teacherVerified ? 'تم توثيق مراجعة بشرية مخوّلة لهذه النتيجة.' : 'لم تُعتمد النتيجة بمراجعة بشرية؛ المتابعة إلى أسئلة الفهم لا تعني اعتماد مؤشرات النطق.'}</span>
+                </div>
               </div>
 
               <button
@@ -1836,23 +1851,23 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-teal-600" />
-                    <span>تحليل قراءة الكلمات في النص: أين أخطأ أو تعثر الطالب؟</span>
+                    <span>مراجعة مطابقة كلمات النص والتفريغ الصوتي</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    فحص تفصيلي لكل كلمة في القصة. اضغط على أي كلمة للاستماع لنطقها السليم، أو لمراجعة الكلمة التي تم نطقها.
+                    مقارنة آلية أولية لكل كلمة. قد يكون الاختلاف ناتجًا عن التعرف الصوتي أو اللهجة؛ استمع إلى التسجيل قبل اعتماد أي تصنيف.
                   </p>
                 </div>
 
                 {/* Status Badges Legend */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 font-bold border border-emerald-300">
-                    🟢 صحيحة: {summaryStats.correct}
+                    🟢 مطابقة آليًا: {summaryStats.correct}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-950 font-bold border border-amber-300">
-                    🟠 إبدال / تعثر: {summaryStats.errors}
+                    🟠 اختلاف محتمل: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> حذف مؤكد بعد المراجعة: {summaryStats.omitted}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل يحتاج مراجعة: {summaryStats.omitted}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آلياً: {summaryStats.unconfirmed}
@@ -1865,20 +1880,23 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="text-xs text-slate-700 leading-relaxed">
                   <span className="font-bold text-slate-900">ملاحظة القراءة والميكروفون:</span> إذا قرأ الطالب النص كاملاً بصوته ولكن أسقط ميكروفون المتصفح بعض الكلمات، يمكنك اعتماد قراءتها كاملة بنقرة واحدة:
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeacherOverridesCount(prev => prev + 1);
-                      setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
-                    }}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
-                    title="اعتماد قراءة جميع كلمات النص كصحيحة"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>✓ تأكيد قراءة جميع الكلمات بطلاقة</span>
-                  </button>
-                </div>
+                {canVerifyAsTeacher && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHumanReviewConfirmed(false);
+                        setTeacherOverridesCount(prev => prev + 1);
+                        setVerifiedWords(prev => prev.map(w => ({ ...w, status: 'correct' })));
+                      }}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                      title="تعديل يدوي للمراجع المخوّل بعد مراجعة التسجيل"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>تعديل يدوي: جميع الكلمات صحيحة</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Full Passage Words with Visual Status Highlighting */}
@@ -1895,7 +1913,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = 'مطابقة نصية آلية';
                   } else if (item.status === 'dialect_variant') {
                     badgeClass = 'bg-sky-100 text-sky-950 border-sky-300 hover:bg-sky-200';
-                    statusTitle = 'بديل لهجي فصيح';
+                    statusTitle = 'بديل لهجي محتمل؛ يحتاج إلى مراجعة';
                   } else if (item.status === 'phonetic_substitution') {
                     badgeClass = 'bg-amber-100 text-amber-950 border-amber-400 font-black ring-2 ring-amber-300 hover:bg-amber-200';
                     statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';

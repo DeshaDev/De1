@@ -27,7 +27,6 @@ import {
 import { useAssessment } from '../contexts/AssessmentContext';
 import { StudentRecord } from '../data/seedData';
 import { MultiDimensionalRadar, CognitiveRadarScores } from './MultiDimensionalRadar';
-import { IndividualizedEducationPlan } from './IndividualizedEducationPlan';
 
 export interface AdaptiveReportsProps {
   student?: StudentRecord;
@@ -902,13 +901,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               لا يدّعي هذا النموذج اعتمادًا سريريًا أو امتثالًا قانونيًا. قبل استخدامه مع بيانات أطفال حقيقية، يلزم التحقق المستقل من القياس ومراجعة الخصوصية والموافقة والمتطلبات القانونية المختصة.
             </div>
           </section>
-
-          {/* Actionable Individualized Education Plan (Smart IEP) */}
-          <IndividualizedEducationPlan
-            studentName={studentData.studentName}
-            gradeLevel={studentData.grade}
-            scores={radarScores}
-          />
 
           {/* Classroom Accommodations (التسهيلات والتعديلات الصفية) */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm">
