@@ -388,8 +388,9 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
                       return (
                         <button
                           key={question.id + '-' + originalIndex}
+                          data-testid="curriculum-answer-option"
                           type="button"
-                          onClick={() => chooseAnswer(originalIndex)}
+                          onClick={() => chooseAnswer(originalIndex)
                           disabled={answered || answerRevealed}
                           aria-pressed={isChosen}
                           className={'min-h-12 rounded-xl border-2 px-3 py-3 text-sm font-bold leading-6 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ' + (
@@ -536,7 +537,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
               <li><span className="font-black">الحساب:</span> الكمية ← رمز العدد ← المقارنة وخط الأعداد ← القيمة المكانية ← العمليات والمسائل.</li>
             </ol>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              ثلاث إجابات تقيس أداء جولة قصيرة فقط. يعتمد التحقق من التعلّم على العودة إلى المهارة عبر محاولات لاحقة، لا على هذه الجولة وحدها.
+              الأمثلة مكتوبة بالفصحى، وقد تختلف بعض الكلمات عن لهجة الطفل المألوفة. يساعد المعلم أو ولي الأمر في وصل الكلمة المنطوقة المألوفة بالفصحى؛ ولا ينبغي اعتبار اختلاف اللهجة وحده خطأ. النسخة الحالية لا تضبط المحتوى تلقائيًا حسب اللهجة. ثلاث إجابات تقيس الجولة الحالية فقط، ويحتاج التحقق من التعلم إلى العودة للمهارة عبر جولات لاحقة.
             </p>
           </div>
         </aside>
