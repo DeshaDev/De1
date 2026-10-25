@@ -232,15 +232,15 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   },
   {
     id: 'ph-rhyme-1',
-    categoryAr: 'اكتشاف السجع',
-    titleAr: 'اكْتِشَافُ السَّجْعِ وَالْقَافِيَةِ (Rhyme Detection)',
-    promptAr: 'أَيُّ كَلِمَةٍ لَهَا نَفْسُ نَغْمَةِ وَسَجْعِ كَلِمَةِ "قَلَم"؟',
-    audioSpeechPrompt: 'أي كلمة تشبه كلمة قَلَم في النغمة؟',
+    categoryAr: 'القافية',
+    titleAr: 'اكتشاف القافية بين الكلمات (Rhyme Detection)',
+    promptAr: 'أي كلمة تنتهي بمقطع يشبه نهاية كلمة «قَلَم»؟',
+    audioSpeechPrompt: 'أي كلمة تنتهي بمقطع يشبه نهاية كلمة قَلَم؟',
     targetWordAr: 'قَلَم',
     optionsAr: ['عَلَم', 'شَجَرَة', 'كِتَاب'],
     correctIndex: 0,
     difficultyAr: 'أولي',
-    explanationAr: 'كَلِمَة "عَلَم" تَتَّفِقُ مَع "قَلَم" فِي المَقْطَعِ الأَخِيرِ وَالوَزْنِ (فَعَل)',
+    explanationAr: '«عَلَم» و«قَلَم» تتفقان في الصوت الأخير والمقطع النهائي «لَم».',
   },
   {
     id: 'ph-elision-final-1',
@@ -784,16 +784,16 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     startPseudoSpeechRecognition();
   };
 
-  // Compute Pseudo-word Score
+  // Record observer-selected categories without inventing fractional correctness.
+  // A hesitation is reported separately; it is not counted as a fully correct response.
   const pseudoMetrics = useMemo(() => {
-    const total = ARABIC_PSEUDO_WORD_CANDIDATES.length;
-    let correct = 0;
-    Object.values(pseudoRatings).forEach(r => {
-      if (r === 'correct') correct += 1;
-      else if (r === 'hesitant') correct += 0.5;
-    });
-    const percent = Math.round((correct / total) * 100);
-    return { correctCount: Math.round(correct), totalCount: total, percent };
+    const totalCount = ARABIC_PSEUDO_WORD_CANDIDATES.length;
+    const ratings = Object.values(pseudoRatings);
+    const correctCount = ratings.filter((rating) => rating === 'correct').length;
+    const hesitantCount = ratings.filter((rating) => rating === 'hesitant').length;
+    const misreadCount = ratings.filter((rating) => rating === 'misread').length;
+    const percent = Math.round((correctCount / totalCount) * 100);
+    return { correctCount, hesitantCount, misreadCount, totalCount, percent };
   }, [pseudoRatings]);
 
   // Phonemic choice answer
@@ -1390,8 +1390,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <div className="text-3xl font-black text-teal-700 font-mono my-2">
                   {pseudoMetrics.percent}%
                 </div>
-                <p className="text-xs text-slate-600 mb-4">
-                  تم فك ترميز {pseudoMetrics.correctCount} من إجمالي {pseudoMetrics.totalCount} كلمات موزونة بنجاح.
+                <p className="text-xs text-slate-600 mb-4 leading-6">
+                  سجّل المشرف قراءة مطابقة كما كُتبت في {pseudoMetrics.correctCount} من {pseudoMetrics.totalCount} صيغ تدريبية؛
+                  التردد: {pseudoMetrics.hesitantCount}، والاختلاف المسجّل: {pseudoMetrics.misreadCount}.
+                  هذه ملاحظات على الصيغ المعروضة، وليست معيارًا عمريًا أو حكمًا على قدرة القراءة.
                 </p>
 
                 {pseudoAudioUrl && (
