@@ -205,7 +205,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak 
                     <div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: (((questionIndex + 1) / lesson.questions.length) * 100) + '%' }} />
                   </div>
 
-                  {question.stimulus && (
+                  {question.stimulus && !question.hideStimulus && (
                     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
                       <p className="text-xs font-bold text-slate-500">انظر إلى المثال</p>
                       <p className="mt-1 text-2xl font-black tracking-wide text-slate-900">{question.stimulus}</p>
