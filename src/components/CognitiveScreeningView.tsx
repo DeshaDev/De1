@@ -659,7 +659,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     startRanSpeechRecognition();
   };
 
-  // Compute RAN Speed & Benchmarks transparently
+  // Record the task's raw RAN measures; this prototype has no validated Arabic age norms.
   const ranMetrics = useMemo(() => {
     const durSec = ranFinalDurationSec || Math.max(1, Math.round(ranElapsedMs / 1000));
     const itemsCount = ranMatrix.length;
@@ -668,12 +668,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       ? Math.round(ranItemLatenciesMs.reduce((a, b) => a + b, 0) / ranItemLatenciesMs.length)
       : Math.round((durSec * 1000) / itemsCount);
 
-    let statusLabelAr = 'معدل تسمية طبيعي ضمن المتوسط المعتاد';
-    if (durSec <= 22) {
-      statusLabelAr = 'سرعة استرجاع لفظي نشطة في هذه الجلسة';
-    } else if (durSec >= 35) {
-      statusLabelAr = 'ملاحظة بطء في الاسترجاع أو ترددات متكررة تحتاج متابعة صفية';
-    }
+    const statusLabelAr = 'الزمن ومعدل التسمية وصفان لهذه المهمة فقط؛ لا توجد حدود معيارية عربية معتمدة داخل بصيرة، ولا يحددان وجود صعوبة تعلم.'
 
     return {
       durSec,
@@ -887,7 +882,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
       ranDurationSeconds: ranMetrics.durSec,
       ranHesitationCount: ranMetrics.hesitationCount,
       ranCategory,
-      ranStatus: ranMetrics.durSec <= 22 ? 'fast' : ranMetrics.durSec >= 35 ? 'slow_at_risk' : 'average',
+      ranStatus: 'unassessed',
       ranStatusLabelAr: ranMetrics.statusLabelAr,
       pseudoWordScorePercent: pseudoMetrics.percent,
       pseudoWordWordsRead: pseudoMetrics.correctCount,
@@ -1293,7 +1288,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <span className="text-xs font-bold text-teal-900 block mb-1">
-                      المؤشرات المرصودة لنشاط التسمية السريعة (RAN) المعتمدة بالذكاء الاصطناعي:
+                      المؤشرات المرصودة في مهمة التسمية السريعة (RAN):
                     </span>
                     <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-slate-900">
                       <span>
