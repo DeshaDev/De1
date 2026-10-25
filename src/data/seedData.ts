@@ -100,8 +100,8 @@ export interface StudentRecord {
   assessmentHistory?: StudentAssessmentSnapshot[];
   cognitiveResults?: CognitiveScreeningData | null;
   assessmentModality?: 'voice_only' | 'reading_only';
-  /** Explicit provenance tag distinguishing client-reported session evidence from synthetic demos. */
-  evidenceProvenance?: 'client-reported' | 'demo-synthetic';
+  /** Explicit provenance tag distinguishing client-reported evidence from server-verified audio or synthetic demos. */
+  evidenceProvenance?: 'client-reported' | 'server-verified-audio' | 'demo-synthetic';
   evidenceProvenanceLabelAr?: string;
   gradeLevel: number;
   ageYears: number;
@@ -122,6 +122,11 @@ export interface StudentRecord {
   guardianRelationship?: string;
   guardianConsentPeriod?: string;
   teacherVerified?: boolean;
+  /** True only when the server validated a short-lived receipt for a completed Azure audio assessment. */
+  aiAssessmentVerified?: boolean;
+  aiAssessmentSource?: 'azure_pronunciation_assessment';
+  /** Transient receipt passed back once to the session-save endpoint; never persisted in the student record. */
+  aiAssessmentReceipt?: string;
   teacherVerifierId?: string;
   teacherVerifierName?: string;
   teacherVerifierRole?: string;
