@@ -448,7 +448,7 @@ it('does not trust client-submitted AI flags or browser transcript as an audio a
   assert.ok(result.derivedFields);
   assert.equal(result.derivedFields.aiAssessmentVerified, false);
   assert.equal(result.derivedFields.oralReadingAssessed, false);
-  assert.equal(result.derivedFields.wcpm, 0);
+  assert.equal(result.derivedFields.wcpm, null);
   assert.equal(result.derivedFields.oralWcpm, null);
   assert.equal(result.derivedFields.oralAccuracyPercent, null);
   assert.equal(result.derivedFields.evidenceProvenance, 'client-reported');
