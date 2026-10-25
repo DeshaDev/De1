@@ -34,7 +34,6 @@ export type AppTabId =
   | 'terms'
   | 'sprint'
   | 'storygen'
-  | 'iep'
   | 'trophies';
 
 interface HomeLandingViewProps {
