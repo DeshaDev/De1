@@ -1700,10 +1700,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-amber-600" />
-                    <span>سجل الكلمات التي أخطأ بها أو بدلها الطفل (تحليل الذكاء الاصطناعي الدقيق)</span>
+                    <span>سجل الكلمات التي أشار التقييم الصوتي إلى مراجعتها</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    فحص تفصيلي للكلمات التي رصد فيها الذكاء الاصطناعي إبدالاً صوتياً أو تخطياً؛ اضغط على أيقونة الصوت للاستماع للنطق السليم.
+                    يعرض هذا الجزء اختلافات أشار إليها التقييم الصوتي المكتمل. قد تتأثر المطابقة بالنطق واللهجة، لذا تُستخدم اقتراحًا للممارسة لا حكمًا تشخيصيًا.
                   </p>
                 </div>
               </div>
