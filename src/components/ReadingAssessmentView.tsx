@@ -593,7 +593,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 const assessmentComplete =
                   Boolean(receipt) &&
                   result.assessmentComplete === true &&
-                  result.wordAccuracyPercent !== null &&
+                  Number.isFinite(result.wordAccuracyPercent) &&
                   mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
 
                 setVerifiedWords(mappedWords);
