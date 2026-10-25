@@ -1529,26 +1529,38 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Autonomous AI Assessment Certification Badge */}
-            <div className="mt-5 p-4 rounded-2xl bg-teal-50 border border-teal-200 text-right flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+            {/* Preliminary automated comparison — not a certification badge */}
+            <div className="mt-5 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right flex items-start gap-3">
+              <FileCheck2 className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="block text-teal-950 text-sm font-black mb-1">
-                  التقييم الصوتي بالذكاء الاصطناعي (دقة القراءة الفعلية: {measuredAccuracyPercent ?? Math.round(((verifiedWords.filter(w => w.status === 'correct' || w.status === 'dialect_variant').length) / (passage.words.length || 1)) * 100)}%)
+                <strong className="block text-slate-950 text-sm font-black mb-1">
+                  مؤشر مطابقة آلي أولي: {measuredAccuracyPercent ?? summaryStats.accuracyPercent ?? 'غير محسوم'}{(measuredAccuracyPercent ?? summaryStats.accuracyPercent) === null || (measuredAccuracyPercent ?? summaryStats.accuracyPercent) === undefined ? '' : '%'}
                 </strong>
-                <p className="text-xs text-teal-800 leading-relaxed">
-                  {azureAssessmentMode
-                    ? `${azureAssessmentMode}. تم فحص كل كلمة بمقارنتها بالتسجيل الفعلي: الكلمات الخضراء طابقت النطق، والكلمات الملونة الأخرى أظهرت حذفاً أو إبدالاً صوتياً.`
-                    : 'تم فحص الكلمات صوتياً ومطابقتها بالتسجيل الفعلي دون تزييف أي نتيجة.'}
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {azureAssessmentMode || 'تمت مقارنة التفريغ الصوتي الآلي بالنص المرجعي.'}
+                  {' '}قد يخطئ التعرف الصوتي أو يلتبس عليه النطق اللهجي؛ هذا المؤشر ليس إثباتًا لدقة نطق الطفل ولا تشخيصًا. يجب مراجعة الكلمات غير المحسومة قبل اعتماد أي نتيجة.
                 </p>
               </div>
             </div>
 
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-xs text-slate-600 text-right flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-teal-700 shrink-0" />
-                <span>النتائج معتمدة وجاهزة للاختبار القرائي التالي مباشرة.</span>
+              <div className="flex-1 space-y-3 text-xs text-slate-700 text-right">
+                {canVerifyAsTeacher && (
+                  <label className="flex items-start gap-2 leading-relaxed rounded-xl border border-amber-200 bg-amber-50 p-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={humanReviewConfirmed}
+                      onChange={(event) => setHumanReviewConfirmed(event.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>أؤكد أنني راجعت التسجيل والكلمات المعروضة يدويًا مقابل الصوت، وصححت الحالات غير المحسومة. هذا إقرار بالمراجعة البشرية وليس اعتمادًا سريريًا.</span>
+                  </label>
+                )}
+                <div className="flex items-center gap-2">
+                  <FileCheck2 className="w-5 h-5 text-slate-500 shrink-0" />
+                  <span>{teacherVerified ? 'تم توثيق مراجعة بشرية مخوّلة لهذه النتيجة.' : 'لم تُعتمد النتيجة بمراجعة بشرية؛ المتابعة إلى أسئلة الفهم لا تعني اعتماد مؤشرات النطق.'}</span>
+                </div>
               </div>
 
               <button
