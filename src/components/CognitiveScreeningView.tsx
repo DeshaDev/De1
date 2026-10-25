@@ -106,29 +106,7 @@ function normalizeArabicForRan(str: string): string {
     .trim();
 }
 
-// Synonyms and spoken variants for instant speech classification
-const RAN_VOCABULARY_MAP: Record<string, string[]> = {
-  // Colors
-  'c-red': ['احمر', 'حمراء', 'حمرا', 'حمر'],
-  'c-blue': ['ازرق', 'زرقاء', 'زرقا', 'كحلي'],
-  'c-green': ['اخضر', 'خضراء', 'خضرا'],
-  'c-yellow': ['اصفر', 'صفراء', 'صفرا'],
-  'c-black': ['اسود', 'سوداء', 'سودا'],
-
-  // Digits
-  'd-2': ['اثنان', 'اثنين', 'اتنين', 'تنين', 'اثنتان', 'ثنتين', '2', '٢'],
-  'd-4': ['اربعة', 'اربع', 'اربعه', '4', '٤'],
-  'd-6': ['ستة', 'سته', 'ست', '6', '٦'],
-  'd-7': ['سبعة', 'سبعه', 'سبع', '7', '٧'],
-  'd-9': ['تسعة', 'تسعه', 'تسع', '9', '٩'],
-
-  // Objects
-  'o-tree': ['شجرة', 'شجره', 'شجر'],
-  'o-hand': ['يد', 'كف', 'ايد'],
-  'o-door': ['باب'],
-  'o-star': ['نجمة', 'نجمه', 'نجم'],
-  'o-book': ['كتاب', 'دفتر'],
-};
+// Browser speech recognition is displayed as an unverified transcript only; it does not score or advance items.
 
 // Generate standard 20-item pseudo-random matrix (4 rows x 5 cols)
 function generateRanMatrix(items: RanItem[], count = 20): RanItem[] {
@@ -886,7 +864,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   activeStage === 'ran' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                1. التسمية السريعة (RAN)
+                1. نشاط التسمية
               </button>
               <button
                 onClick={() => setActiveStage('pseudo')}
@@ -1233,17 +1211,17 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <span className="text-xs font-bold text-teal-900 block mb-1">
-                      المقاييس المرصودة في مهمة التسمية السريعة (RAN):
+                      ملاحظات زمنية وصفية في نشاط التسمية:
                     </span>
                     <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-slate-900">
                       <span>
                         الزمن الكلي: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.durSec} ث</strong>
                       </span>
                       <span>
-                        المعدل: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.speedItemsPerSec}</strong> عنصر/ثانية
+                        معدل إكمال النشاط: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.speedItemsPerSec}</strong> عنصر/ثانية
                       </span>
                       <span>
-                        متوسط زمن العنصر: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.meanLatencyMs} ms</strong>
+                        متوسط زمن الانتقال/الاستجابة: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.meanLatencyMs} ms</strong>
                       </span>
                       <span>
                         الترددات: <strong className="font-mono text-amber-800 font-bold">{ranMetrics.hesitationCount}</strong>
@@ -1261,7 +1239,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     onClick={() => setActiveStage('pseudo')}
                     className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <span>الانتقال للمحور 2: الكلمات غير المعجمية</span>
+                    <span>الانتقال للمحور 2: صيغ تدريبية مرشحة</span>
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                 </div>
