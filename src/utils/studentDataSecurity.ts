@@ -29,6 +29,24 @@ interface OralReadingIntegrationInput {
   misreadWords?: string[];
 }
 
+/** Server-verified output from the captured audio engine; never accepted from browser fields directly. */
+export interface VerifiedAutomatedAudioAssessment {
+  sourceModel: 'azure_pronunciation_assessment';
+  assessmentComplete: true;
+  passageId: string;
+  transcript: string;
+  durationSeconds: number;
+  wordAccuracyPercent: number | null;
+  wordsCorrectPerMinute: number | null;
+  wordsPerMinute: number | null;
+  words: Array<{
+    word: string;
+    errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' | 'Unconfirmed' | 'Insertion';
+    accuracyScore: number | null;
+    spokenWord: string | null;
+  }>;
+}
+
 export type BaseeraRole = 'school_admin' | 'educator_readonly';
 
 export type BaseeraScope =
@@ -1034,7 +1052,8 @@ export interface SessionReviewerContext {
 export function validateAndDeriveSessionFromEvidence(
   rawBody: Record<string, unknown>,
   studentMeta: { name: string; gradeLevel: number },
-  reviewer?: SessionReviewerContext
+  reviewer?: SessionReviewerContext,
+  automatedAudioAssessment?: VerifiedAutomatedAudioAssessment
 ): DerivedSessionEvidenceResult {
   // 1. Reject any attempt by the client to supply derived risk scores, levels, or tenantId
   const forbiddenPresent = Object.keys(rawBody).filter((k) =>
@@ -1171,15 +1190,14 @@ export function validateAndDeriveSessionFromEvidence(
 
   const dialectRegionAr = dialectProfile.labelAr;
 
+  const transcriptInput = automatedAudioAssessment?.transcript ??
+    (evidenceObj.spokenTranscript ?? rawBody.spokenTranscript);
   const spokenTranscript =
-    typeof (evidenceObj.spokenTranscript ?? rawBody.spokenTranscript) ===
-    'string'
-      ? String(evidenceObj.spokenTranscript ?? rawBody.spokenTranscript)
-          .trim()
-          .slice(0, 4000)
+    typeof transcriptInput === 'string'
+      ? transcriptInput.trim().slice(0, 4000)
       : '';
 
-  // Teacher Human-in-the-Loop review validation
+  // Legacy human attestations remain distinct from automated assessment provenance.
   const requestedTeacherVerification = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
   const isTeacherVerified = requestedTeacherVerification && reviewer?.role === 'school_admin';
   const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
@@ -1201,7 +1219,7 @@ export function validateAndDeriveSessionFromEvidence(
       return {
         valid: false,
         statusCode: 400,
-        errorAr: `مصفوفة تدقيق الكلمات غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة تماماً للنص المرجعي.`,
+        errorAr: `مصفوفة تدقيق القراءة غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة للنص المرجعي.`,
       };
     }
 
@@ -1212,7 +1230,7 @@ export function validateAndDeriveSessionFromEvidence(
         return {
           valid: false,
           statusCode: 400,
-          errorAr: `كلمة تدقيق القراءة عند الفهرس ${i} (${String(item?.word)}) غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
+          errorAr: `كلمة القراءة عند الفهرس ${i} غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
         };
       }
       if (item.status === 'correct') teacherCorrectWordsCount++;
@@ -1232,11 +1250,65 @@ export function validateAndDeriveSessionFromEvidence(
     teacherAccuracyPercent = Math.min(100, Math.max(0, Math.round((effectiveTeacherWords / passage.words.length) * 100)));
   }
 
-  // Browser ASR output alone is not validated evidence of the child's oral reading.
-  const oralReadingAssessed = isTeacherVerified;
+  // A receipt is validated by the server route and its contents are checked again here.
+  // Browser-submitted scores/transcripts alone never qualify as an automated assessment.
+  let validatedAiAlignment: Array<{
+    word: string;
+    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
+    spokenWord?: string | null;
+  }> | undefined;
+  let isAiAssessmentVerified = false;
+  if (automatedAudioAssessment) {
+    const assessment = automatedAudioAssessment;
+    const validAiStatuses = new Set(['None', 'Omission', 'Mispronunciation', 'Substitution', 'DialectVariant']);
+    const validMetrics = (value: number | null) =>
+      value === null || (Number.isFinite(value) && value >= 0 && value <= 300);
+    const structureValid =
+      assessment.sourceModel === 'azure_pronunciation_assessment' &&
+      assessment.assessmentComplete === true &&
+      assessment.passageId === passage.id &&
+      typeof assessment.transcript === 'string' &&
+      assessment.transcript.trim().length > 0 &&
+      assessment.transcript.length <= 4000 &&
+      Number.isFinite(assessment.durationSeconds) &&
+      assessment.durationSeconds >= 1 &&
+      assessment.durationSeconds <= 600 &&
+      Math.abs(assessment.durationSeconds - readingDurationSeconds) <= 3 &&
+      Array.isArray(assessment.words) &&
+      assessment.words.length === passage.words.length &&
+      assessment.words.every((item, index) =>
+        item && typeof item === 'object' &&
+        item.word === passage.words[index] &&
+        validAiStatuses.has(item.errorType) &&
+        (item.accuracyScore === null || (Number.isFinite(item.accuracyScore) && item.accuracyScore >= 0 && item.accuracyScore <= 100)) &&
+        (item.spokenWord === null || typeof item.spokenWord === 'string')
+      ) &&
+      validMetrics(assessment.wordsCorrectPerMinute) &&
+      validMetrics(assessment.wordsPerMinute) &&
+      (assessment.wordAccuracyPercent === null ||
+        (Number.isFinite(assessment.wordAccuracyPercent) && assessment.wordAccuracyPercent >= 0 && assessment.wordAccuracyPercent <= 100));
+    if (!structureValid) {
+      return {
+        valid: false,
+        statusCode: 400,
+        errorAr: 'نتيجة التقييم الصوتي الآلي غير متطابقة مع النص أو مدة الجلسة؛ لم تُحفظ مؤشرات النطق.',
+      };
+    }
+    isAiAssessmentVerified = true;
+    validatedAiAlignment = assessment.words.map((item) => ({
+      word: item.word,
+      status: item.errorType === 'None' ? 'correct' as const
+        : item.errorType === 'DialectVariant' ? 'dialect_variant' as const
+          : item.errorType === 'Omission' ? 'omitted' as const
+            : 'phonetic_substitution' as const,
+      spokenWord: item.spokenWord,
+    }));
+  }
 
-  // Always evaluate oral reading alignment against the FULL reference passage words
-  // to avoid artificially inflating accuracy if the child read only a fraction of the text.
+  const oralReadingAssessed = isTeacherVerified || isAiAssessmentVerified;
+
+  // Only server-returned, word-level acoustic assessment or a separate explicit reviewer
+  // alignment can create oral metrics. The browser ASR preview is never scored here.
   const oralMetrics =
     isTeacherVerified && spokenTranscript.length > 0
       ? evaluateOralReadingAlignment(
@@ -1248,8 +1320,16 @@ export function validateAndDeriveSessionFromEvidence(
         )
       : null;
 
-  const rawOralWcpm = isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null);
-  const rawOralAccuracy = isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null);
+  const aiAssessment = isAiAssessmentVerified ? automatedAudioAssessment : undefined;
+  const aiDialectCount = validatedAiAlignment?.filter(item => item.status === 'dialect_variant').length ?? 0;
+  const aiSubstitutionCount = validatedAiAlignment?.filter(item => item.status === 'phonetic_substitution').length ?? 0;
+  const aiOmissionCount = validatedAiAlignment?.filter(item => item.status === 'omitted').length ?? 0;
+  const rawOralWcpm = isAiAssessmentVerified
+    ? aiAssessment?.wordsCorrectPerMinute
+    : isTeacherVerified ? teacherWcpm : (oralMetrics?.wcpm ?? null);
+  const rawOralAccuracy = isAiAssessmentVerified
+    ? aiAssessment?.wordAccuracyPercent
+    : isTeacherVerified ? teacherAccuracyPercent : (oralMetrics?.accuracyPercent ?? null);
   const rawOralWer = oralMetrics ? oralMetrics.werPercent : null;
 
   const oralIntegration: OralReadingIntegrationInput | null =
@@ -1259,23 +1339,26 @@ export function validateAndDeriveSessionFromEvidence(
           wcpm: typeof rawOralWcpm === 'number' ? rawOralWcpm : undefined,
           accuracyPercent: typeof rawOralAccuracy === 'number' ? rawOralAccuracy : null,
           werPercent: rawOralWer,
-          phoneticSubstitutionCount: isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
-          dialectVariantCount: isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
-          omissionCount: isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
-          misreadWords: isTeacherVerified && validatedTeacherAlignment
-            ? validatedTeacherAlignment
+          phoneticSubstitutionCount: isAiAssessmentVerified
+            ? aiSubstitutionCount
+            : isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
+          dialectVariantCount: isAiAssessmentVerified
+            ? aiDialectCount
+            : isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
+          omissionCount: isAiAssessmentVerified
+            ? aiOmissionCount
+            : isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
+          misreadWords: isAiAssessmentVerified && validatedAiAlignment
+            ? validatedAiAlignment
                 .filter(a => a.status === 'phonetic_substitution' || a.status === 'omitted')
-                .map(a => a.word)
-            : (oralMetrics?.alignment
-                .filter(
-                  (a) =>
-                    a.status === 'phonetic_substitution' || a.status === 'omitted'
-                )
-                .map((a) =>
-                  a.spokenWord
-                    ? `${a.targetWord} (نُطقت: ${a.spokenWord})`
-                    : a.targetWord
-                ) || []),
+                .map(a => a.spokenWord ? `${a.word} (نُطقت: ${a.spokenWord})` : a.word)
+            : isTeacherVerified && validatedTeacherAlignment
+              ? validatedTeacherAlignment
+                  .filter(a => a.status === 'phonetic_substitution' || a.status === 'omitted')
+                  .map(a => a.word)
+              : (oralMetrics?.alignment
+                  .filter((a) => a.status === 'phonetic_substitution' || a.status === 'omitted')
+                  .map((a) => a.spokenWord ? `${a.targetWord} (نُطقت: ${a.spokenWord})` : a.targetWord) || []),
         }
       : null;
 
@@ -1320,7 +1403,9 @@ export function validateAndDeriveSessionFromEvidence(
   // For oral reading: rate of words actually attempted/spoken by the child
   // For silent reading: rate of completing the reference passage
   let derivedWpm = 0;
-  if (isTeacherVerified && validatedTeacherAlignment) {
+  if (isAiAssessmentVerified && automatedAudioAssessment?.wordsPerMinute !== null && automatedAudioAssessment?.wordsPerMinute !== undefined) {
+    derivedWpm = Math.min(300, Math.max(0, Math.round(automatedAudioAssessment.wordsPerMinute)));
+  } else if (isTeacherVerified && validatedTeacherAlignment) {
     const durationMin = Math.max(0.05, readingDurationSeconds / 60);
     const attemptedWords = teacherCorrectWordsCount + teacherDialectVariantCount + teacherSubstitutionCount;
     derivedWpm = Math.round((attemptedWords / durationMin));
@@ -1336,9 +1421,11 @@ export function validateAndDeriveSessionFromEvidence(
   const derivedDyslexiaRiskScore: number | null = null;
   const derivedReadingHeuristic: number | null = null;
   const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
-  const derivedReadingRiskLabelAr = isTeacherVerified
-    ? 'الطلاقة الشفوية راجعها مراجع مخوّل؛ لا توجد درجة خطر معيارية.'
-    : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
+  const derivedReadingRiskLabelAr = isAiAssessmentVerified
+    ? 'قُيّمت القراءة الجهرية آليًا من التسجيل الصوتي؛ المؤشرات وصفية ولا تشخّص عسر القراءة.'
+    : isTeacherVerified
+      ? 'الطلاقة الشفوية راجعها مراجع مخوّل؛ لا توجد درجة خطر معيارية.'
+      : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
   const learningReport = buildDeterministicLearningReport({
     studentName: studentMeta.name,
@@ -1385,7 +1472,9 @@ export function validateAndDeriveSessionFromEvidence(
         typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
           ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)
           : (isTeacherVerified ? 0 : undefined),
-      verifiedWordsAlignment: validatedTeacherAlignment,
+      aiAssessmentVerified: isAiAssessmentVerified,
+      aiAssessmentSource: isAiAssessmentVerified ? 'azure_pronunciation_assessment' : undefined,
+      verifiedWordsAlignment: validatedTeacherAlignment ?? validatedAiAlignment,
       phoneticSubstitutionCount:
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
@@ -1406,9 +1495,10 @@ export function validateAndDeriveSessionFromEvidence(
       mathHeuristicIndicator,
       mathRiskLevel,
       mathRiskLabelAr,
-      evidenceProvenance: 'client-reported',
-      evidenceProvenanceLabelAr:
-        'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)',
+      evidenceProvenance: isAiAssessmentVerified ? 'server-verified-audio' : 'client-reported',
+      evidenceProvenanceLabelAr: isAiAssessmentVerified
+        ? 'نتيجة نطق مشتقة على الخادم من التسجيل الصوتي ومحرك Azure؛ لا تمثل تشخيصًا.'
+        : 'أدلة مُبلَّغ بها من العميل (اجتازت فحوص المعقولية الحسابية)',
       learningReport,
     },
   };
