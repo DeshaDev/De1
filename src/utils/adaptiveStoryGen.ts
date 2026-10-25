@@ -3,6 +3,8 @@
  * Accurately maps EVERY Arabic phonemic confusion pair with 100% diacritized text.
  */
 
+import { authenticatedFetch } from './apiAuth';
+
 export interface ArticulatoryTip {
   sound: string;
   description: string;
@@ -243,7 +245,7 @@ export async function generateDecodableStory(params: {
   const cleanInterestAr = interestObj ? interestObj.arName : 'الْمُغَامَرَةِ';
 
   try {
-    const res = await fetch('/api/ai/generate-story', {
+    const res = await authenticatedFetch('/api/ai/generate-story', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
