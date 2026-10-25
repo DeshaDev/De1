@@ -1948,7 +1948,8 @@ async function startServer() {
       gradeLevel,
       effectiveWords: cleanWords,
       targetsTeacherReviewed: hasTeacherReviewedTargets,
-      targetsAIValidated: hasAIValidatedTargets || hasAIValidatedMathTargets,
+      targetsAIValidated: hasAIValidatedTargets,
+      targetsMathValidated: hasAIValidatedMathTargets,
       mathTargets: uniqueMathTargets,
     });
     if (!isStructurallyValidRemediationSessionPlan(sessionPlan)) {
