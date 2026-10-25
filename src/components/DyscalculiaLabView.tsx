@@ -552,7 +552,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                 مغامرة أبطال الأرقام: {activeStudent.name}
               </h1>
               <p className="font-child text-sm sm:text-base text-sky-100 font-bold mt-1">
-                التقط النجوم السريعة، اقفز على خط الأعداد، وحل ألغاز الأرقام المعكوسة!
+                تعرّف إلى الكميات، اقفز على خط الأعداد، وتدرّب على قراءة رموز الأعداد وكتابتها!
               </p>
             </div>
           </div>
@@ -710,7 +710,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
               </span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-              <span className="text-slate-500 block text-[11px]">أخطاء عكس الأرقام المكانية</span>
+              <span className="text-slate-500 block text-[11px]">أخطاء ترتيب الرموز في هذه المهمة</span>
               <span className="text-base font-black text-slate-900 font-mono">
                 {computedMetrics.reversalErrorCount !== null ? `${computedMetrics.reversalErrorCount} من ${TRANSCODING_ITEMS.length}` : 'لم يُقَس'}
               </span>
@@ -783,7 +783,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
                     كم نجمة رأيت يا بطل؟
                   </p>
                   <p className="font-child text-xs font-bold text-slate-300">
-                    اختر الرقم الصحيح من الأزرار بالأسفل بأسرع ما يمكنك!
+                    اختر العدد الذي شاهدته؛ الدقة أولًا ولا داعي للعجلة.
                   </p>
                 </div>
               ) : (
