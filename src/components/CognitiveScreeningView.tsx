@@ -316,7 +316,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   const [ranIsListening, setRanIsListening] = useState(false);
   const [ranAudioUrl, setRanAudioUrl] = useState<string | null>(null);
   const [ranLastHeardWord, setRanLastHeardWord] = useState('');
-  const [ranHeardStatus, setRanHeardStatus] = useState<{ word: string; isMatch: boolean; message: string } | null>(null);
+  const [ranHeardStatus, setRanHeardStatus] = useState<{ word: string; message: string } | null>(null);
   const ranMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const ranAudioChunksRef = useRef<Blob[]>([]);
   const ranRecognitionRef = useRef<any>(null);
@@ -543,7 +543,6 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         if (hasFinal) {
           setRanHeardStatus({
             word: latestToken,
-            isMatch: false,
             message: `التعرف التقريبي: "${latestToken}" — راجع النطق ثم سجّل ملاحظتك يدويًا.`,
           });
         }
@@ -1138,9 +1137,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             {/* Live AI Speech Recognition Readout Chip */}
             {ranIsRunning && ranHeardStatus && (
               <div className={`p-3 rounded-2xl mb-4 text-xs font-bold flex items-center justify-between border transition-all ${
-                ranHeardStatus.isMatch
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                  : 'bg-rose-50 border-rose-300 text-rose-900'
+'bg-sky-50 border-sky-300 text-sky-950'
               }`}>
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-4 h-4" />
