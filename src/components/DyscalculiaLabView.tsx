@@ -546,7 +546,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div>
               <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black tracking-wide mb-2 text-sky-100">
                 <IconNumberRuler size={14} />
-                <span>مغامرة الأرقام والحساب · منهج متكامل للصف {activeStudent.gradeLevel}</span>
+                <span>مغامرة الأرقام والحساب · أنشطة تعليمية للصف {activeStudent.gradeLevel}</span>
               </div>
               <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
                 مغامرة أبطال الأرقام: {activeStudent.name}
@@ -989,13 +989,13 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
         )}
 
         {/* ========================================================
-            STATION 3: TRANSCODING (لغز الأرقام السحري وعلاج القلب المكاني)
+            STATION 3: TRANSCODING (تدريب قراءة وكتابة رموز الأعداد)
         ======================================================== */}
         {activeStation === 3 && (
           <div className="space-y-6 text-center max-w-xl mx-auto">
             <div className="space-y-2">
               <span className="text-xs font-black text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200 inline-block">
-                المرحلة ٣ · لغز استماع الأرقام السحري (تصحيح القلب المكاني للأرقام)
+                المرحلة ٣ · تدريب الاستماع إلى الأعداد وقراءة رموزها
               </span>
               <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
                 السؤال {transcodingIndex + 1} من {TRANSCODING_ITEMS.length}
