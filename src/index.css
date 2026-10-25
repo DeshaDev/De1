@@ -1034,3 +1034,35 @@ body.baseera-reading-focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Child-First Playful Gamification & 3D Tactile Design Studio */
+.font-child {
+  font-family: 'Baloo Bhaijaan 2', 'Noto Sans Arabic', sans-serif !important;
+}
+
+.child-tactile-btn {
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+.child-tactile-btn:active {
+  transform: translateY(3px);
+}
+
+.child-card-bouncy {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.child-card-bouncy:hover {
+  transform: translateY(-3px) scale(1.015);
+}
+.child-card-bouncy:active {
+  transform: translateY(2px) scale(0.99);
+}
+
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}

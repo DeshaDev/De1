@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Brain, Sparkles, Award } from 'lucide-react';
+import { BookOpen, Brain, Sparkles, Award, ShieldCheck, Flame, Star, Trophy } from 'lucide-react';
 import { StudentRecord, StudentAssessmentSnapshot } from '../data/seedData';
 import ReadingAssessmentView from './ReadingAssessmentView';
 import CognitiveScreeningView, { CognitiveScreeningData } from './CognitiveScreeningView';
@@ -25,59 +25,83 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
   initialSubTab = 'oral-reading',
 }) => {
   const [subTab, setSubTab] = useState<'oral-reading' | 'cognitive-screening'>(initialSubTab);
+  const [showClinicalDetails, setShowClinicalDetails] = useState<boolean>(false);
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Unified Hub Header & Creative Tab Switcher */}
-      <div className="bg-white border-2 border-indigo-100 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Playful Hero Quest Header */}
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-2 border-emerald-200/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5 text-right w-full md:w-auto">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white flex items-center justify-center text-2xl shadow-md shadow-indigo-500/20 shrink-0">
-            🔬
+          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20 shrink-0 animate-bounce-gentle">
+            🏆
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 font-serif">
-                مركز فحص وتشخيص عسر القراءة (Dyslexia Lab)
+              <h1 className="font-child text-lg sm:text-2xl font-black text-slate-900">
+                تحديات بطل القراءة الذكي 🌟
               </h1>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                بطارية اختبارات شاملة
+              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                مستوى الأبطال
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-bold mt-0.5">
-              قياس الطلاقة الشفوية الفونيمية، التسمية السريعة (RAN)، والكلمات غير المعجمية للطالب: <strong className="text-indigo-700">{activeStudent.name}</strong>
+            <p className="font-child text-xs sm:text-sm text-slate-600 font-bold mt-0.5">
+              مرحباً بالبطل <strong className="text-emerald-700 font-black">{activeStudent.name}</strong>! انطلق في تحدي القراءة وسَمِّ الأشكال لتكسب وسام الطلاقة الذهبي.
             </p>
           </div>
         </div>
 
-        {/* The Two Unified Diagnostic Tracks */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold w-full md:w-auto justify-center">
+        {/* The Two Child-Friendly Action Tracks */}
+        <div className="flex items-center gap-2 bg-white/90 backdrop-blur p-1.5 rounded-2xl text-xs font-black w-full md:w-auto justify-center border border-emerald-200 shadow-xs">
           <button
             type="button"
             onClick={() => setSubTab('oral-reading')}
-            className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+            className={`child-tactile-btn px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               subTab === 'oral-reading'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-emerald-700'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>١. القراءة الشفوية والطلاقة (WCPM)</span>
+            <span className="font-child font-black">📖 ١. تحدي قراءة القصة والطلاقة</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSubTab('cognitive-screening')}
-            className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+            className={`child-tactile-btn px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               subTab === 'cognitive-screening'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-emerald-700'
             }`}
           >
             <Brain className="w-4 h-4" />
-            <span>٢. الفرز المعرفي (RAN + الكلمات غير المعجمية + الفونيمات)</span>
+            <span className="font-child font-black">⚡ ٢. سباق سرعة الأشكال والكلمات العجيبة</span>
           </button>
         </div>
       </div>
+
+      {/* Discreet Specialist Info Toggle (For Teachers/Clinicians Only) */}
+      <div className="flex items-center justify-end px-2">
+        <button
+          type="button"
+          onClick={() => setShowClinicalDetails(prev => !prev)}
+          className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>{showClinicalDetails ? 'إخفاء المعايير الإكلينيكية' : 'عرض المعايير والمؤشرات الإكلينيكية للأخصائي'}</span>
+        </button>
+      </div>
+
+      {showClinicalDetails && (
+        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5 animate-fade-slide-up">
+          <div className="font-bold text-slate-900 flex items-center gap-2">
+            <span>🔬 بطارية التشخيص المعرفي الشامل (Dyslexia Screening Battery):</span>
+          </div>
+          <p className="leading-relaxed text-slate-600">
+            تدمج هذه المحطة قياس الطلاقة الشفوية المباشرة (WCPM) بدقة المقاطع ومعدل الاستبدال والحذف، واختبار التسمية الآلية السريعة (RAN) لزمن الرجع والمعالجة الفونولوجية السريعة، بالإضافة إلى الكلمات غير المعجمية (Pseudowords) لفك التشفير الإملائي المستقل.
+          </p>
+        </div>
+      )}
 
       {/* Track 1: Oral Reading & Fluency Assessment */}
       {subTab === 'oral-reading' && (

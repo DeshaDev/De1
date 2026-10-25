@@ -793,9 +793,9 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'dyslexia-lab', label: 'فحص عسر القراءة', icon: Brain },
-              { id: 'dyscalculia-lab', label: 'عسر الحساب', icon: Calculator },
-              { id: 'remediation-gym', label: 'صالة التدريب', icon: Gamepad2 },
+              { id: 'dyslexia-lab', label: 'تحديات القراءة', icon: Brain },
+              { id: 'dyscalculia-lab', label: 'مغامرة الأرقام', icon: Calculator },
+              { id: 'remediation-gym', label: 'صالة الألعاب', icon: Gamepad2 },
               { id: 'dashboard', label: 'الخطة والتقارير', icon: FileText },
             ] as const).map((item) => {
               const Icon = item.icon;
@@ -836,7 +836,7 @@ export default function App() {
         </div>
       </header>
 
-      {!['sprint', 'storygen', 'remediation-gym'].includes(activeTab) && (
+      {!['sprint', 'storygen', 'remediation-gym', 'dyslexia-lab', 'dyscalculia-lab', 'home'].includes(activeTab) && baseeraSession && (
         <div className="baseera-session-strip" role="status">
           <span className="baseera-session-copy">
             <ShieldCheck aria-hidden="true" size={17} />

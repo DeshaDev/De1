@@ -85,6 +85,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Gamification State
   const [xpPoints, setXpPoints] = useState<number>(0);
   const [celebrationMessage, setCelebrationMessage] = useState<string>('');
+  const [showTeacherSettings, setShowTeacherSettings] = useState<boolean>(false);
 
   // Station 1: Phonics state
   const [phonicsIdx, setPhonicsIdx] = useState<number>(0);
@@ -446,21 +447,18 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
       )}
 
-      {/* 2. STICKY TOP CONTROL BAR (Pinned and always visible even when scrolling) */}
-      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur border-2 border-emerald-500/40 rounded-2xl p-2.5 sm:p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5">
-        {/* Right: Station selector tabs with clear Reading vs Math division */}
-        <div className="flex items-center gap-1.5 overflow-x-auto flex-wrap">
-          <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-lg">
-            📖 تدريبات القراءة:
-          </span>
+      {/* 2. STICKY TOP CONTROL BAR (Joyful, Child-First & Gamified) */}
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur border-2 border-emerald-400/50 rounded-3xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3">
+        {/* Right: Joyful Station Buttons */}
+        <div className="flex items-center gap-2 overflow-x-auto py-0.5">
           {[
-            { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
-            { id: 'storygen', label: '📖 قصص الأبطال', icon: Sparkles },
-            { id: 'phonics', label: '🔤 صائد الحروف', icon: Zap },
-            { id: 'syllables', label: '🧩 تركيب المقاطع', icon: BookOpen },
-            { id: 'pacer', label: '👁️ طلاقة القراءة', icon: Eye },
+            { id: 'phonics', label: '🔤 صائد الحروف' },
+            { id: 'syllables', label: '🧩 تركيب المقاطع' },
+            { id: 'storygen', label: '📖 قصص الأبطال' },
+            { id: 'sprint', label: '⚡ سبرنت ٥ دقائق' },
+            { id: 'math', label: '🔢 خط الأعداد' },
+            { id: 'pacer', label: '👁️ طلاقة القراءة' },
           ].map((st) => {
-            const Icon = st.icon;
             const isActive = activeStation === st.id;
             return (
               <button
@@ -470,87 +468,84 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   setActiveStation(st.id as any);
                   setActiveScaffold(null);
                 }}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                className={'child-tactile-btn px-4 py-2 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer border-b-4 active:border-b-1 active:translate-y-1 ' + (
                   isActive
-                    ? 'bg-[#15803D] text-white shadow-xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-800 text-white shadow-md scale-102'
+                    : 'bg-white hover:bg-emerald-50 text-slate-700 border-slate-300 hover:border-emerald-300'
+                )}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{st.label}</span>
-              </button>
-            );
-          })}
-
-          <div className="h-5 w-px bg-slate-300 mx-1 hidden sm:block" />
-
-          <span className="text-[11px] font-black text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-lg">
-            🔢 تدريبات الحساب:
-          </span>
-          {[
-            { id: 'math', label: '🔢 خط الأعداد', icon: Calculator },
-          ].map((st) => {
-            const Icon = st.icon;
-            const isActive = activeStation === st.id;
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => {
-                  setActiveStation(st.id as any);
-                  setActiveScaffold(null);
-                }}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
                 <span>{st.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Left: Quick student & Gamification Pills */}
-        <div className="flex items-center gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg font-mono font-bold text-amber-900">
-            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+        {/* Left: Star XP Score & Settings Drawer Button */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 border-b-3 border-amber-600 px-3.5 py-1.5 rounded-2xl font-child font-black text-amber-950 text-xs sm:text-sm shadow-sm">
+            <Star className="w-4 h-4 fill-amber-900 text-amber-900" />
             <span>{xpPoints} XP</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg text-emerald-900 font-medium">
-            <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-            <select
-              value={selectedVoice}
-              onChange={(e) => {
-                const nextVoice = e.target.value as 'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural';
-                setSelectedVoice(nextVoice);
-                playNaturalArabicAudio('مَرْحَبًا بِكَ، أَنَا مُعَلِّمُكَ فِي بَصِيرَة', { voice: nextVoice });
-              }}
-              className="bg-transparent border-none text-[11px] font-bold text-emerald-950 focus:outline-none cursor-pointer"
-              title="الصوت البشري الطبيعي للتدريب (Azure Neural Arabic)"
-            >
-              <option value="ar-SA-ZariyahNeural">🎙️ المعلمة زارية (فصيح سعودي)</option>
-              <option value="ar-EG-SalmaNeural">🎙️ المعلمة سلمى (مصري فصيح)</option>
-              <option value="ar-SA-HamedNeural">🎙️ الأستاذ حامد (فصيح رجالي)</option>
-            </select>
-          </div>
-
-          <select
-            value={activeStudent.id}
-            onChange={(e) => onSelectStudent(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 cursor-pointer"
+          <button
+            type="button"
+            onClick={() => setShowTeacherSettings(prev => !prev)}
+            className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="إعدادات الصوت والطالب للمعلم"
           >
-            {students.map((stu) => (
-              <option key={stu.id} value={stu.id}>
-                {stu.name} (الصف {stu.gradeLevel})
-              </option>
-            ))}
-          </select>
+            <span>⚙️</span>
+            <span className="hidden sm:inline">خيارات</span>
+          </button>
         </div>
       </div>
+
+      {/* Discrete Teacher/Settings Popover Drawer */}
+      {showTeacherSettings && (
+        <div className="p-4 rounded-3xl bg-white border-2 border-slate-200 shadow-xl space-y-3 animate-fade-slide-up">
+          <div className="flex items-center justify-between font-bold text-slate-900 text-xs border-b border-slate-100 pb-2">
+            <span>⚙️ خيارات الجلسة وتحديد الصوت:</span>
+            <button
+              type="button"
+              onClick={() => setShowTeacherSettings(false)}
+              className="text-slate-400 hover:text-slate-600 p-1"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="block text-slate-600 font-bold mb-1">صوت المعلم التفاعلي:</label>
+              <select
+                value={selectedVoice}
+                onChange={(e) => {
+                  const nextVoice = e.target.value as any;
+                  setSelectedVoice(nextVoice);
+                  playNaturalArabicAudio('مَرْحَبًا بِكَ فِي بَصِيرَة', { voice: nextVoice });
+                }}
+                className="w-full p-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
+              >
+                <option value="ar-SA-ZariyahNeural">🎙️ المعلمة زارية (فصيح سعودي)</option>
+                <option value="ar-EG-SalmaNeural">🎙️ المعلمة سلمى (مصري فصيح)</option>
+                <option value="ar-SA-HamedNeural">🎙️ الأستاذ حامد (فصيح رجالي)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-slate-600 font-bold mb-1">ملف الطالب النشط:</label>
+              <select
+                value={activeStudent.id}
+                onChange={(e) => onSelectStudent(e.target.value)}
+                className="w-full p-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
+              >
+                {students.map((stu) => (
+                  <option key={stu.id} value={stu.id}>
+                    {stu.name} (الصف {stu.gradeLevel})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Celebration Toast */}
       {celebrationMessage && (
@@ -582,7 +577,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             {/* Step Dots */}
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-mono font-bold text-slate-600 ml-1.5">
-                {phonicsIdx + 1} / {phonicsList.length}
+                السؤال {phonicsIdx + 1} من {phonicsList.length} ⭐
               </span>
               {phonicsList.map((ex, i) => (
                 <span
@@ -674,7 +669,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                     key={opt.letter}
                     type="button"
                     onClick={() => handleSelectPhonicsLetter(opt)}
-                    className={`py-4 sm:py-5 px-3 rounded-2xl border-2 transition-all duration-150 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none ${
+                    className={`child-tactile-btn py-5 sm:py-7 px-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer select-none border-b-8 active:border-b-2 active:translate-y-2 ${
                       showSuccess
                         ? 'bg-[#ECFDF5] border-[#15803D] text-[#15803D] scale-105 shadow-md ring-4 ring-emerald-500/20'
                         : showError
@@ -682,7 +677,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                           : 'bg-white hover:bg-emerald-50/60 border-slate-200 text-slate-900 hover:border-emerald-400 shadow-xs hover:shadow-sm'
                     }`}
                   >
-                    <span className="text-5xl sm:text-6xl font-serif font-extrabold leading-tight">
+                    <span className="font-child text-6xl sm:text-7xl font-black leading-tight drop-shadow-xs">
                       {opt.letter}
                     </span>
                     <span className="text-xs font-bold text-slate-600">
@@ -750,7 +745,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-mono font-bold text-slate-600 ml-1.5">
-                {syllableIdx + 1} / {syllableList.length}
+                المرحلة {syllableIdx + 1} من {syllableList.length} 🧩
               </span>
             </div>
           </div>
