@@ -396,7 +396,7 @@ export function computeDyslexicoWeightedLevenshtein(
         subCost = 0;
       } else if (VISUAL_REVERSAL_PAIRS.has(pairKey)) {
         subCost = 0.14; // Heuristic similarity weight; not an estimate of the child's underlying skill.
-        const isArabicGraphemePair = /[\\u0600-\\u06FF]/u.test(c1 + c2);
+        const isArabicGraphemePair = /[\u0600-\u06FF]/u.test(c1 + c2);
         const patternType: DyslexicPatternType = isArabicGraphemePair
           ? 'grapheme_confusion'
           : 'visual_mirror_reversal';
