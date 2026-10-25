@@ -636,7 +636,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         <div className="max-w-2xl mx-auto space-y-6 text-center py-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-              قراءة موجهة مشكولة 100%: «{currentStory.title}»
+              قراءة موجهة: «{currentStory.title}»
             </span>
             <button
               type="button"
@@ -644,7 +644,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
               className="text-xs font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-teal-200 shadow-xs cursor-pointer"
             >
               <Volume2 className="w-4 h-4" />
-              <span>استمع للقصة كاملة بصوت طبيعي</span>
+              <span>استمع إلى القصة كاملة</span>
             </button>
           </div>
 
