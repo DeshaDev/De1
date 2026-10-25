@@ -1,11 +1,11 @@
 /**
  * Arabic Reading & Comprehension Assessment Lab (مختبر القراءة والطلاقة والفهم القرائي)
- * Pure, accessible, evidence-based Arabic oral and silent reading assessment.
- * ZERO CAMERA / ZERO CALIBRATION / ZERO UNVALIDATED EYE GAZE MEASURES.
- * Accurately measures:
- *  1. Reading Duration (Elapsed seconds)
- *  2. Reading Fluency (WPM = words / seconds * 60)
- *  3. Reading Comprehension (Comprehension questions score %)
+ * Arabic reading and comprehension activities with explicit, source-aware measures.
+ * ZERO CAMERA / ZERO CALIBRATION / ZERO EYE-GAZE MEASURES.
+ * Records only available session observations:
+ *  1. Elapsed reading time
+ *  2. Words per minute from text completion, which does not establish word accuracy
+ *  3. Comprehension-question performance for the selected passage
  */
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
@@ -43,47 +43,29 @@ import { IconStoryBook, IconMicGlow, IconStar, StoryIcons } from './ui/ChildPlay
 
 
 export interface FluencyLevelInfo {
-  level: 'excellent' | 'good' | 'developing';
+  level: 'observed';
   label: string;
   color: string;
   badgeClass: string;
   description: string;
 }
 
+/**
+ * Returns a descriptive label only. This prototype does not have a validated Arabic
+ * grade-norm table, so WCPM must not be classified as excellent/normal/low from fixed cut-offs.
+ * The grade argument is retained for call compatibility; it is not used to classify the child.
+ */
 export const getFluencyLevelInfo = (wcpm: number, gradeLevel: number = 3): FluencyLevelInfo => {
-  const thresholds = {
-    1: { low: 25, expected: 40 },
-    2: { low: 35, expected: 55 },
-    3: { low: 50, expected: 75 },
-    4: { low: 65, expected: 90 },
-    5: { low: 75, expected: 105 },
-    6: { low: 85, expected: 115 },
-  }[gradeLevel] || { low: 50, expected: 75 };
-
-  if (wcpm >= thresholds.expected) {
-    return {
-      level: 'excellent',
-      label: 'طلاقة ممتازة ومتقدمة',
-      color: 'emerald',
-      badgeClass: 'bg-emerald-100 text-emerald-950 border-emerald-300',
-      description: `قراءة ممتازة وسريعة تتجاوز المعدل المستهدف لصفه (${thresholds.expected} كلمة صحيحة/دقيقة).`,
-    };
-  }
-  if (wcpm >= thresholds.low) {
-    return {
-      level: 'good',
-      label: 'طلاقة طبيعية ومناسبة لصفه',
-      color: 'teal',
-      badgeClass: 'bg-teal-100 text-teal-950 border-teal-300',
-      description: `قراءة طبيعية ضمن المعدل المألوف لطلاب الصف (${thresholds.low} - ${thresholds.expected} كلمة صحيحة/دقيقة).`,
-    };
-  }
+  void gradeLevel;
+  const rate = Number.isFinite(wcpm) && wcpm >= 0
+    ? wcpm.toLocaleString('ar-EG', { maximumFractionDigits: 1 }) + ' كلمة صحيحة/دقيقة'
+    : 'المعدل غير متاح';
   return {
-    level: 'developing',
-    label: 'قراءة متأنية تحتاج إلى تدريب',
-    color: 'amber',
-    badgeClass: 'bg-amber-100 text-amber-950 border-amber-300',
-    description: `قراءة أبطأ من المعدل المتوقع لصفه (${thresholds.low} كلمة/دقيقة)، يُنصح بالتدريب على القراءة المتكررة لتنمية الطلاقة.`,
+    level: 'observed',
+    label: 'مؤشر وصفي — بلا تصنيف معياري',
+    color: 'sky',
+    badgeClass: 'bg-sky-100 text-sky-950 border-sky-300',
+    description: `${rate}. لا تصنّف هذه القيمة مستوى الطفل بمفردها؛ لا تستخدم بصيرة هنا معيارًا عربيًا مقننًا بحسب الصف.`,
   };
 };
 
@@ -991,7 +973,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   الميكروفون جاهز للاستماع يا بطل
                 </h1>
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
-                  اقرأ بصوتك الطبيعي الواضح، ومحرك الذكاء الاصطناعي سيستمع إليك كلمة بكلمة ليمنحك كؤوس الطلاقة ونقاط الأبطال!
+                  اقرأ بصوتك الطبيعي. إذا اخترت القراءة الجهرية، سيحاول النظام مطابقة التسجيل مع النص لاقتراح كلمات للمراجعة؛ قد يخطئ في التعرف أو يتأثر باللهجة. لا تُفسّر النتيجة الآلية وحدها بوصفها حكمًا على قدرة الطفل.
                 </p>
               </div>
 
@@ -1269,7 +1251,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 نتائج التقييم الصوتي والطلاقة القرائية
               </h2>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                {azureAssessmentMode || 'هذه نتائج آلية وصفية وقد يخطئ التعرف الصوتي في الكلمات أو اللهجة. لا تُعرض درجة النطق إلا عند اكتمال التقييم والتحقق من مصدره؛ وإذا لم تتوفر الدرجة فأعد التسجيل بدل اعتماد تقدير غير مكتمل. هذه النتائج ليست تشخيصًا.'}
+                {azureAssessmentMode || 'هذه نتائج آلية وصفية. قد يخطئ التعرف الصوتي في الكلمات أو اللهجة. لا تُعرض الدرجة إلا عند اكتمال التقييم والتحقق من مصدره؛ وإذا لم تتوفر فأعد التسجيل أو تابع أسئلة الفهم دون درجة صوتية. هذه النتائج ليست تشخيصًا.'}
               </p>
               {pronunciationAssessmentError && (
                 <div role="alert" className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-right text-sm text-amber-950">
@@ -1466,7 +1448,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </strong>
                 <p className="text-xs text-slate-700 leading-relaxed">
                   {azureAssessmentMode || 'يقيّم الخادم التسجيل الصوتي الحقيقي، ولا يحوّل تفريغ المتصفح إلى درجة نطق.'}
-                  {' '}النتائج وصفية وليست تشخيصًا. إذا بقيت كلمات غير محسومة، أعد التسجيل؛ لا يلزم اعتماد معلّم.
+                  {' '}النتائج وصفية وليست تشخيصًا. قد تحتاج الكلمات غير المحسومة إلى مراجعة معلّم أو أخصائي قبل اتخاذ قرار تعليمي مهم.
                 </p>
               </div>
             </div>
@@ -1477,7 +1459,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="flex items-center gap-2">
                   <span className={`inline-block w-2.5 h-2.5 rounded-full ${azureAssessmentComplete && aiAssessmentReceipt ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                   <span>{azureAssessmentComplete && aiAssessmentReceipt
-                    ? 'اكتمل تقييم الصوت آليًا على الخادم؛ ستُستخدم النتيجة في التدريب التكيفي.'
+                    ? 'اكتملت العملية التقنية على الخادم؛ قد تقترح النتيجة نشاطًا للممارسة، لكنها تظل قابلة للخطأ ولا تثبت وجود صعوبة تعلم.'
                     : 'لم تكتمل درجة النطق آليًا؛ يمكنك إعادة القراءة أو متابعة الفهم دون درجة صوتية.'}</span>
                 </div>
               </div>
@@ -1652,13 +1634,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               {/* 3. Word Accuracy Percent */}
               <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5">
                 <span className="text-xs font-black text-emerald-950 block mb-1">
-                  دقة نطق الكلمات
+                  مطابقة الكلمات (تقدير آلي)
                 </span>
                 <div className="text-3xl font-black text-emerald-700 font-mono">
                   {summaryStats.accuracyPercent === null ? 'غير متاح' : summaryStats.accuracyPercent + '%'}
                 </div>
                 <p className="text-[11px] text-emerald-800 mt-2">
-                  {summaryStats.correct} مطابقة نصية · {summaryStats.errors} اختلاف محتمل · {summaryStats.omitted} حذف مؤكد · {summaryStats.unconfirmed} غير محسومة
+                  {summaryStats.correct} مطابقة نصية · {summaryStats.errors} اختلاف محتمل · {summaryStats.omitted} حذف محتمل · {summaryStats.unconfirmed} غير محسومة
                 </p>
               </div>
 
@@ -1685,11 +1667,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
                 <div className="bg-white/95 p-3.5 rounded-xl border border-indigo-100 shadow-2xs">
                   <strong className="text-indigo-900 block mb-1">ماذا يعني WCPM؟ (الكلمات الصحيحة في الدقيقة)</strong>
-                  هو المعيار العلمي الدقيق لقياس طلاقة القراءة (Words Correct Per Minute)، ويحسب عدد الكلمات التي نطقها طفلك بدقة وسلاسة في الدقيقة، دون احتساب الكلمات المحذوفة أو المستبدلة.
+                  هو مؤشر شائع في قياس القراءة الجهرية، ويُحسب عادة بعدد الكلمات المقروءة بصورة صحيحة خلال دقيقة وفق قواعد تصحيح واضحة. لا يقيس الفهم وحده ولا يشخّص اضطرابًا؛ وتتطلب المقارنة معيارًا مناسبًا للغة والعمر والنص وطريقة التصحيح.
                 </div>
                 <div className="bg-white/95 p-3.5 rounded-xl border border-teal-100 shadow-2xs">
-                  <strong className="text-teal-900 block mb-1">المعدل المألوف للصف {passage.gradeLevel || 3}:</strong>
-                  المعدل الطبيعي لطلاب الصف {passage.gradeLevel || 3} يتراوح عادة بين {passage.gradeLevel === 1 ? '30 إلى 50' : passage.gradeLevel === 2 ? '45 إلى 65' : passage.gradeLevel === 3 ? '60 إلى 85' : '75 إلى 110'} كلمة صحيحة في الدقيقة مع الفهم القرائي.
+                  <strong className="text-teal-900 block mb-1">كيف نتابع التغير؟</strong>
+                  قارن جلسات متشابهة عند استخدام النص نفسه وظروف قراءة قريبة، وراجع دقة مطابقة الكلمات بشريًا عند الحاجة. لا تعرض بصيرة حاليًا نطاقًا معياريًا عربيًا مقننًا بحسب الصف.
                 </div>
               </div>
             </div>
