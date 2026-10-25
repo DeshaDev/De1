@@ -944,7 +944,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   activeStage === 'summary' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                الملف الشامل
+                ملخص الأنشطة
               </button>
             </div>
           </div>
@@ -1060,10 +1060,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   المحور 1: التسمية الآلية السريعة (RAN)
                 </span>
                 <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
-                  رصد زمن تسمية مصفوفة العناصر (20 عنصراً) بالذكاء الاصطناعي
+                  رصد الزمن في نشاط تسمية 20 عنصرًا
                 </h2>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  يسمي الطالب العناصر بصوته سطراً بسطر من اليمين لليسار. يستمع الذكاء الاصطناعي مباشرة ويسجل الصوت وينقل المؤشر تلقائياً عند نطق العنصر دون الحاجة للمس الشاشة.
+                  يسمي الطالب العناصر بصوته سطرًا بسطر. قد يلتقط التعرف الآلي بعض الكلمات وينقل المؤشر، لكنه قد يخطئ في اللهجة أو الكلمة؛ لا تفسّر النتيجة وحدها كمعيار عمري.
                 </p>
               </div>
 
@@ -1132,7 +1132,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-3 rounded-xl text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
                     <Mic className="w-5 h-5 fill-current" />
-                    <span>بدء التسمية بالذكاء الاصطناعي (تسجيل صوتي)</span>
+                    <span>بدء التسجيل لنشاط التسمية</span>
                   </button>
                 )}
 
@@ -1141,7 +1141,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     {/* Live Voice Indicator HUD */}
                     <div className="flex items-center gap-2 bg-emerald-900/80 border border-emerald-500/60 text-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold animate-pulse">
                       <Radio className="w-4 h-4 text-emerald-400 animate-ping" />
-                      <span>الذكاء الاصطناعي يسجل ويستمع لصوتك الآن</span>
+                      <span>التسجيل نشط؛ قد يتأثر التعرف الآلي بالنطق واللهجة</span>
                     </div>
 
                     {/* Hands-Free Skip Fallback if child is completely silent */}
@@ -1550,7 +1550,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   className="bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white font-extrabold text-sm py-3.5 px-8 rounded-xl flex items-center gap-2 mx-auto shadow-md transition-all cursor-pointer"
                 >
                   <Award className="w-5 h-5 text-amber-300" />
-                  <span>اعتماد الملاحظات وعرض ملخص نتائج الأنشطة</span>
+                  <span>حفظ الملاحظات وعرض ملخص النتائج</span>
                 </button>
               </div>
             )}
@@ -1644,7 +1644,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   تم حفظ الملاحظات في سجل جلسة الطالب
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  يمكنك الآن الانتقال إلى لوحة التحليل الذكي لمراجعة ملف المهارات الشامل وخطة التدخل المقترحة.
+                  يمكنك الآن مراجعة ملخص المهارات ومقترحات التدريب؛ النتائج الحالية تصف الأنشطة المنفذة فقط.
                 </p>
               </div>
 
@@ -1694,7 +1694,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               {activeStage === 'intro' ? 'المقدمة والتعليمات' :
                activeStage === 'ran' ? '1. التسمية السريعة (RAN)' :
                activeStage === 'pseudo' ? '2. الكلمات غير المعجمية' :
-               activeStage === 'phonemic' ? '3. الوعي الصوتي والفونولوجي' : 'الملف المعرفي الشامل'}
+               activeStage === 'phonemic' ? '3. الوعي الصوتي والفونولوجي' : 'ملخص الأنشطة'}
             </span>
           </div>
 
