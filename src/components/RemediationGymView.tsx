@@ -388,61 +388,41 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   return (
     <div className="space-y-3.5 max-w-4xl mx-auto pb-8 animate-fade-slide-up" dir="rtl">
-      {/* Educational activity ribbon */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-3 sm:p-3.5 shadow-sm border border-emerald-700/40 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-emerald-300" />
+      {/* Playful Child-First Welcome Bar */}
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-200/80 rounded-3xl p-3.5 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center text-2xl shadow-md shadow-emerald-500/20">
+            🌟
           </div>
-          <div className="space-y-0.5 text-right flex-1 sm:flex-initial">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-xs sm:text-sm text-emerald-100">
-                التدريب المتدرّج للقراءة والحساب
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                {curatedSession && curatedSource === 'curated-grade-banded' ? 'بنك أنشطة متدرج حسب الصف' : 'أنشطة تدريبية عامة'}
-              </span>
-            </div>
-            <p className="text-[11px] text-emerald-200/90 flex items-center gap-1.5 flex-wrap">
-              <span>{targetedWords.length > 0 ? <>أهداف تدريب معتمدة بالذكاء الاصطناعي لـ <strong className="text-white underline">{activeStudent.name}</strong>:</> : <>أنشطة عامة للصف {activeStudent.gradeLevel}؛ مولدة ومحدثة بالذكاء الاصطناعي.</>}</span>
-              {targetedWords.length > 0 ? (
-                <span className="inline-flex gap-1 font-serif font-bold text-amber-300">
-                  {targetedWords.slice(0, 3).map((w, idx) => (
-                    <span key={idx} className="bg-emerald-800/90 px-1.5 py-0.2 rounded border border-emerald-600/40 text-[10.5px]">«{w}»</span>
-                  ))}
-                </span>
-              ) : null}
+          <div>
+            <h1 className="text-sm sm:text-base font-black text-slate-900">
+              مرحباً يا بطل: <span className="text-emerald-700">{activeStudent.name}</span>
+            </h1>
+            <p className="text-[11px] font-bold text-slate-500">
+              الصف {activeStudent.gradeLevel} · اختر نشاطك وانطلق في التحدي!
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+        <div className="flex items-center gap-2">
+          {/* XP Gold Coin */}
+          <div className="flex items-center gap-1.5 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl font-mono font-black text-amber-900 text-xs shadow-2xs">
+            <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+            <span>{xpPoints} XP</span>
+          </div>
+
+          {/* Discreet Teacher Info Pill */}
           <button
             type="button"
             onClick={() => setShowActivityRationale((prev) => !prev)}
-            className="px-2.5 py-1.5 rounded-lg bg-emerald-800/80 hover:bg-emerald-700/80 text-emerald-100 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
-            title="عرض هدف الأنشطة التعليمية"
+            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="دليل المعلم والأهداف التعليمية"
           >
-            <Info className="w-3.5 h-3.5 text-emerald-300" />
-            <span>لماذا هذا النشاط؟</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => fetchCuratedSession(activeStudent, true)}
-            disabled={isLoadingCurated}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingCurated ? 'animate-spin' : ''}`} />
-            <span>{isLoadingCurated ? 'جارٍ التحميل...' : 'تحديث أنشطة الصف'}</span>
+            <Info className="w-3.5 h-3.5 text-slate-500" />
+            <span>دليل النشاط</span>
           </button>
         </div>
       </div>
-
-      <p className="text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-        يعتمد تحديث الأنشطة على بنك ذكي متدرج حسب الصف. لا تُعرض أنشطة للأطفال قبل تدقيق لغوي وخوارزمي متخصص. وتُحدد الكلمات المستهدفة آلياً عبر محرك التحليل الصوتي الذكي.
-      </p>
-      {activityStatusMessage && <p role="status" className="text-xs leading-relaxed rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">{activityStatusMessage}</p>}
 
       {/* Optional Educational Activity Rationale */}
       {showActivityRationale && (
@@ -471,13 +451,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         {/* Right: Station selector tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {[
-            { id: 'phonics', label: '١. تمييز الحروف', icon: Zap },
-            { id: 'syllables', label: '٢. تركيب المقاطع', icon: BookOpen },
-            { id: 'pacer', label: '٣. إبراز الكلمات', icon: Eye },
-            { id: 'math', label: '٤. خط الأعداد', icon: Calculator },
             { id: 'sprint', label: '⚡ سبرنت ٥ دقائق', icon: Flame },
-            { id: 'storygen', label: '📖 قصص الذكاء الاصطناعي', icon: Sparkles },
-            { id: 'iep', label: '📋 الخطة التربوية (IEP)', icon: FileText },
+            { id: 'storygen', label: '📖 قصص الأبطال', icon: Sparkles },
+            { id: 'phonics', label: '🔤 صائد الحروف', icon: Zap },
+            { id: 'syllables', label: '🧩 تركيب الكلمات', icon: BookOpen },
+            { id: 'pacer', label: '👁️ طلاقة القراءة', icon: Eye },
+            { id: 'math', label: '🔢 لعبة الأرقام', icon: Calculator },
           ].map((st) => {
             const Icon = st.icon;
             const isActive = activeStation === st.id;

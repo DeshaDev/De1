@@ -838,34 +838,36 @@ export default function App() {
         </div>
       </header>
 
-      <div className="baseera-session-strip" role="status">
-        <span className="baseera-session-copy">
-          <ShieldCheck aria-hidden="true" size={17} />
-          {baseeraSession
-            ? 'جلسة المدرسة متصلة: ' + baseeraSession.accountName + ' · ' + getTenantDisplayLabelAr(baseeraSession)
-            : 'وضع التجربة — لا توجد جلسة مدرسة متصلة.'}
-        </span>
-        {baseeraSession ? (
-          <button
-            type="button"
-            className="baseera-session-action"
-            onClick={() => {
-              void (async () => {
-                await logoutBaseeraSession();
-                setBaseeraSession(null);
-                setIsPersistedStoreLoaded(false);
-                setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
-              })();
-            }}
-          >
-            تسجيل الخروج
-          </button>
-        ) : (
-          <button type="button" className="baseera-session-action" onClick={() => setShowBaseeraLogin(true)}>
-            دخول لوحة التحليل الذكي
-          </button>
-        )}
-      </div>
+      {!['sprint', 'storygen', 'remediation-gym'].includes(activeTab) && (
+        <div className="baseera-session-strip" role="status">
+          <span className="baseera-session-copy">
+            <ShieldCheck aria-hidden="true" size={17} />
+            {baseeraSession
+              ? 'جلسة المدرسة متصلة: ' + baseeraSession.accountName + ' · ' + getTenantDisplayLabelAr(baseeraSession)
+              : 'وضع التجربة — لا توجد جلسة مدرسة متصلة.'}
+          </span>
+          {baseeraSession ? (
+            <button
+              type="button"
+              className="baseera-session-action"
+              onClick={() => {
+                void (async () => {
+                  await logoutBaseeraSession();
+                  setBaseeraSession(null);
+                  setIsPersistedStoreLoaded(false);
+                  setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
+                })();
+              }}
+            >
+              تسجيل الخروج
+            </button>
+          ) : (
+            <button type="button" className="baseera-session-action" onClick={() => setShowBaseeraLogin(true)}>
+              دخول لوحة التحليل الذكي
+            </button>
+          )}
+        </div>
+      )}
 
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([

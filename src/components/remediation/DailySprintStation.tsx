@@ -117,15 +117,12 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900">
-                سبرنت التدريب الخاطف (5 دقائق يومياً)
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 font-serif">
+                تحدي الدقائق الخمس اليومي ⚡
               </h2>
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                مبني على نموذج VTO العالمي
-              </span>
             </div>
-            <p className="text-xs text-slate-600 mt-1">
-              ممارسة شفوية مركزة يومياً لإرساء التلقائية ومنع الانتكاس القرائي دون إجهاد.
+            <p className="text-xs text-amber-800 font-bold mt-0.5">
+              ٥ دقائق من التحدي والطلاقة لجمع النجوم وكسب شارة البطل!
             </p>
           </div>
         </div>
