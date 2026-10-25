@@ -521,9 +521,6 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         const matrix = ranMatrixRef.current;
         if (curIdx >= matrix.length) return;
 
-        const target = matrix[curIdx];
-        const validVariants = RAN_VOCABULARY_MAP[target.id] || [target.labelAr];
-
         // Process only unconsumed results to prevent the previous word from being re-evaluated
         const startIdx = Math.max(event.resultIndex, consumedRanResultIndexRef.current + 1);
         let transcript = '';
@@ -1365,14 +1362,14 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-extrabold flex items-center gap-2 shadow-md transition-all cursor-pointer"
                       >
                         <Check className="w-4 h-4" />
-                        <span>قراءة صحيحة وتالٍ (مسافة Space)</span>
+                        <span>ملاحظة المشرف: قراءة مطابقة — التالي</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleRatePseudo(ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].id, 'hesitant')}
                         className="px-4 py-3.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <span>تردد أو تهجّى ببطء</span>
+                        <span>ملاحظة المشرف: تردد أو تهجٍّ بطيء</span>
                       </button>
                       <button
                         type="button"
@@ -1380,7 +1377,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         className="px-4 py-3.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <X className="w-4 h-4 text-rose-700" />
-                        <span>اختلاف محتمل عن صيغة التدريب</span>
+                        <span>ملاحظة المشرف: اختلاف محتمل عن صيغة التدريب</span>
                       </button>
                     </div>
                   </div>
