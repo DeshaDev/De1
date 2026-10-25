@@ -427,15 +427,8 @@ export function recommendCurriculumSkill(
         isBaseline: false,
       };
     }
-    if (isPercent(cognition?.pseudoWordScorePercent) &&
-        cognition.pseudoWordScorePercent < CURRICULUM_ROUTING_RULES.decodingReviewPercent) {
-      return {
-        domain, skillId: 'short-vowel-decoding',
-        reasonAr: 'نبدأ بمراجعة فك الكلمات وربط الحركات بأصوات الحروف.',
-        evidenceAr: `نتيجة مهمة الكلمات غير المعجمية: ${cognition.pseudoWordScorePercent}%؛ هذه نتيجة المهمة وحدها.`,
-        isBaseline: false,
-      };
-    }
+    // Candidate pseudo-word items are not independently lexicon/dialect-reviewed yet.
+    // Do not use their score to route a learner until that content has been reviewed and validated.
     if (
       !student.isDemoRecord &&
       student.evidenceProvenance === 'server-verified-audio' &&
