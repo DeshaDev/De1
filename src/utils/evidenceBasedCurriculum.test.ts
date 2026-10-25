@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   CURRICULUM_ROUTING_RULES,
   getCurriculumLesson,
+  getCurriculumOptionOrder,
+  getCurriculumRoundQuestions,
   getNextCurriculumSkill,
   isFormativeMastery,
   MATH_CURRICULUM_SEQUENCE,
@@ -19,8 +21,9 @@ test('reading pathway teaches phonological awareness, letter-sound mapping, deco
   for (const lesson of READING_CURRICULUM_SEQUENCE) {
     const data = getCurriculumLesson('reading', lesson.id);
     assert.ok(data);
-    assert.equal(data.questions.length, 3);
+    assert.ok(data.questions.length >= 5, `${lesson.id} needs a larger practice bank`);
     assert.ok(data.questions.every((item) => item.correctIndex >= 0 && item.correctIndex < item.options.length));
+    assert.ok(data.questions.every((item) => item.options.length === 3 && new Set(item.options).size === 3));
     assert.ok(data.questions.every((item) => item.options.length === 3 && new Set(item.options).size === item.options.length));
     assert.ok(data.questions.every((item) => item.prompt.trim() && item.scaffold.trim() && item.feedbackCorrect.trim()));
   }
@@ -38,6 +41,46 @@ test('math pathway moves from quantity to symbols, magnitude, place value, opera
     assert.ok(data);
     assert.equal(data.questions.length, 3);
     assert.ok(data.questions.every((item) => item.correctIndex >= 0 && item.correctIndex < item.options.length));
+  }
+});
+
+test('each skill has a wider bank and serves different three-question rounds on retry', () => {
+  const lessons = [
+    ...READING_CURRICULUM_SEQUENCE.map((item) => getCurriculumLesson('reading', item.id)!),
+    ...MATH_CURRICULUM_SEQUENCE.map((item) => getCurriculumLesson('math', item.id)!),
+  ];
+  for (const lesson of lessons) {
+    const first = getCurriculumRoundQuestions(lesson, 0);
+    const second = getCurriculumRoundQuestions(lesson, 1);
+    assert.equal(first.length, CURRICULUM_ROUTING_RULES.formativeItemsPerRound);
+    assert.equal(second.length, CURRICULUM_ROUTING_RULES.formativeItemsPerRound);
+    assert.equal(new Set(first.map((item) => item.id)).size, first.length);
+    assert.ok(first.some((item) => !second.some((next) => next.id === item.id)), lesson.id + ' should rotate at least one question');
+  }
+});
+
+test('answer choices rotate positions between retries so correct answers are not fixed by screen position', () => {
+  for (const lesson of [...READING_CURRICULUM_SEQUENCE, ...MATH_CURRICULUM_SEQUENCE]) {
+    const data = getCurriculumLesson(lesson.id === 'quantity-cardinality' ||
+      lesson.id === 'number-symbol-mapping' ||
+      lesson.id === 'magnitude-number-line' ||
+      lesson.id === 'place-value' ||
+      lesson.id === 'addition-subtraction' ||
+      lesson.id === 'multiplication-division' ||
+      lesson.id === 'math-word-problems' ||
+      lesson.id === 'fractions' ? 'math' : 'reading', lesson.id)!;
+    for (const question of data.questions) {
+      const positions = [0, 1, 2].map((round) =>
+        getCurriculumOptionOrder(question, round).indexOf(question.correctIndex)
+      );
+      assert.equal(new Set(positions).size, 3, question.id + ' should rotate its correct answer position');
+    }
+  }
+});
+
+test('visual teaching models exist for key numeracy representations', () => {
+  for (const id of ['magnitude-number-line', 'place-value', 'addition-subtraction', 'multiplication-division', 'fractions'] as const) {
+    assert.ok(getCurriculumLesson('math', id));
   }
 });
 
