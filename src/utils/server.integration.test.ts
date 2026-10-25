@@ -227,6 +227,38 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.match(payload.session.learningRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
   });
 
+  it('protects all cloud AI endpoints and retires the fabricated IEP generator', async () => {
+    const cloudRoutes = [
+      '/api/ai/generate-story',
+      '/api/ai/generate-iep',
+      '/api/ai/tts',
+      '/api/ai/pronunciation-assessment',
+    ];
+
+    for (const route of cloudRoutes) {
+      const response = await fetch(`${baseUrl}${route}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'اختبار بلا بيانات طفل' }),
+      });
+      assert.equal(response.status, 401, `${route} must require an authenticated session`);
+    }
+
+    const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const retiredIep = await fetch(`${baseUrl}/api/ai/generate-iep`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.token}`,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(retiredIep.status, 410);
+    const retiredPayload = (await retiredIep.json()) as { code: string; baselineSummary?: string };
+    assert.equal(retiredPayload.code, 'IEP_GENERATOR_RETIRED');
+    assert.equal(retiredPayload.baselineSummary, undefined);
+  });
+
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
     const schoolAAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const schoolBAdmin = await loginWithCode(SCHOOL_B_ADMIN_CODE);
