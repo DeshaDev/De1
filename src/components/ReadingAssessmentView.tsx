@@ -93,6 +93,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     return foundIndex >= 0 ? foundIndex : 0;
   }, [activeStudent]);
 
+  const sortedPassagesWithIndex = useMemo(() => {
+    return ARABIC_READING_PASSAGES.map((p, originalIndex) => ({ p, originalIndex })).sort(
+      (a, b) => a.p.gradeLevel - b.p.gradeLevel
+    );
+  }, []);
+
   const [selectedPassageIndex, setSelectedPassageIndex] = useState(defaultPassageIndex);
   const [guardianConsentChecked, setGuardianConsentChecked] = useState(
     Boolean(activeStudent?.guardianConsentGiven)
@@ -897,8 +903,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Story Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
-                {ARABIC_READING_PASSAGES.map((p, idx) => {
-                  const isSelected = selectedPassageIndex === idx;
+                {sortedPassagesWithIndex.map(({ p, originalIndex }, idx) => {
+                  const isSelected = selectedPassageIndex === originalIndex;
                   const StoryIconComponent = [
                     StoryIcons.cat,
                     StoryIcons.fruit,
@@ -913,7 +919,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setSelectedPassageIndex(idx);
+                        setSelectedPassageIndex(originalIndex);
                         setIntroStep('ready_mic');
                       }}
                       className={'child-tactile-btn text-right p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 border-b-6 active:border-b-2 active:translate-y-1 ' + (
@@ -934,7 +940,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           {p.title}
                         </h3>
                         <p className="font-child text-xs font-bold text-slate-500">
-                          {p.wordCount} كلمة · مشكول بالكامل ✨
+                          {p.wordCount} كلمة · {p.diacriticLevel === 'full' ? 'مشكّل بالكامل ✨' : p.diacriticLevel === 'partial' ? 'تشكيل جزئي وظيفي 🌿' : 'بدون تشكيل 📖'}
                         </p>
                       </div>
 

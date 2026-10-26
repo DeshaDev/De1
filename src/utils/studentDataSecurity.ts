@@ -575,25 +575,33 @@ export const LearningReportUpdateEnvelopeSchema = z
   })
   .strict();
 
-// Fixed Math Trial Specifications (4 Subitizing + 2 Number Line + 3 Transcoding)
-const ALLOWED_SUBITIZING_TARGETS = [1, 2, 3, 4] as const;
-const ALLOWED_SUBITIZING_OPTIONS = new Set([1, 2, 3, 4]);
+// Approved Math Trial Specifications (Supporting both expanded 20-task battery & legacy 9-task baseline)
+const ALLOWED_SUBITIZING_TARGETS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const ALLOWED_SUBITIZING_OPTIONS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 const ALLOWED_NUMBER_LINE_SPEC: Record<
   number,
   { scaleMin: number; scaleMax: number }
 > = {
+  8: { scaleMin: 0, scaleMax: 20 },
+  15: { scaleMin: 0, scaleMax: 20 },
   37: { scaleMin: 0, scaleMax: 100 },
+  82: { scaleMin: 0, scaleMax: 100 },
   156: { scaleMin: 0, scaleMax: 200 },
+  250: { scaleMin: 0, scaleMax: 1000 },
+  750: { scaleMin: 0, scaleMax: 1000 },
 };
 
 const ALLOWED_TRANSCODING_SPEC: Record<
   number,
-  { options: Set<number>; reversalDistractor: number }
+  { options: Set<number>; reversalDistractor: number; alternateReversal?: number }
 > = {
   47: { options: new Set([47, 74, 49]), reversalDistractor: 74 },
   83: { options: new Set([38, 83, 63]), reversalDistractor: 38 },
   69: { options: new Set([69, 96, 66]), reversalDistractor: 96 },
+  52: { options: new Set([25, 52, 56]), reversalDistractor: 25 },
+  27: { options: new Set([28, 27, 72]), reversalDistractor: 28, alternateReversal: 72 },
+  76: { options: new Set([76, 67, 72]), reversalDistractor: 67 },
 };
 
 export function validateAndDeriveMathTrials(rawMath: unknown): {
@@ -618,25 +626,25 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
   const nlRaw = obj.numberLineTrials;
   const trRaw = obj.transcodingTrials;
 
-  if (!Array.isArray(subRaw) || subRaw.length !== 4) {
+  if (!Array.isArray(subRaw) || subRaw.length < 1 || subRaw.length > 8) {
     return {
       valid: false,
       errorAr:
-        'يجب إرسال 4 محاولات ثابتة بالضبط لاختبار تمييز الكميات الفوري (الأهداف 1، 2، 3، 4).',
+        'يجب إرسال بين 1 و8 محاولات معتمدة لاختبار تمييز الكميات الفوري (الأهداف 1 إلى 8).',
     };
   }
-  if (!Array.isArray(nlRaw) || nlRaw.length !== 2) {
+  if (!Array.isArray(nlRaw) || nlRaw.length < 1 || nlRaw.length > 6) {
     return {
       valid: false,
       errorAr:
-        'يجب إرسال محاولتين ثابتتين بالضبط لاختبار خط الأعداد (الهدف 37 على 0-100 والهدف 156 على 0-200).',
+        'يجب إرسال بين 1 و6 محاولات معتمدة لاختبار خط الأعداد.',
     };
   }
-  if (!Array.isArray(trRaw) || trRaw.length !== 3) {
+  if (!Array.isArray(trRaw) || trRaw.length < 1 || trRaw.length > 6) {
     return {
       valid: false,
       errorAr:
-        'يجب إرسال 3 محاولات ثابتة بالضبط لاختبار ترميز الأرقام العربية (الأهداف 47، 83، 69).',
+        'يجب إرسال بين 1 و6 محاولات معتمدة لاختبار ترميز الأرقام العربية.',
     };
   }
 
@@ -662,12 +670,12 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
 
     if (
       !Number.isInteger(dotCount) ||
-      !ALLOWED_SUBITIZING_TARGETS.includes(dotCount as 1 | 2 | 3 | 4) ||
+      !ALLOWED_SUBITIZING_TARGETS.includes(dotCount as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8) ||
       seenSubTargets.has(dotCount)
     ) {
       return {
         valid: false,
-        errorAr: `هدف تمييز الكميات (${String(rec.dotCount)}) غير مسموح أو مكرر؛ الأهداف المعتمدة هي 1 و2 و3 و4 فقط.`,
+        errorAr: `هدف تمييز الكميات (${String(rec.dotCount)}) غير مسموح أو مكرر؛ الأهداف المعتمدة هي 1 إلى 8 فقط.`,
       };
     }
     if (
@@ -676,7 +684,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
     ) {
       return {
         valid: false,
-        errorAr: `الخيار المختار في تمييز الكميات (${String(chosen)}) غير معروض ضمن الخيارات المسموحة (1-4).`,
+        errorAr: `الخيار المختار في تمييز الكميات (${String(chosen)}) غير معروض ضمن الخيارات المسموحة (1-9).`,
       };
     }
     if (chosen === undefined && typeof rec.correct !== 'boolean') {
@@ -731,7 +739,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
     if (!spec || seenNlTargets.has(target)) {
       return {
         valid: false,
-        errorAr: `هدف خط الأعداد (${String(rec.target)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 37 و156 فقط.`,
+        errorAr: `هدف خط الأعداد (${String(rec.target)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 8، 15، 37، 82، 156، 250، 750 فقط.`,
       };
     }
     const scaleMin =
@@ -795,7 +803,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
     if (!spec || seenTrTargets.has(targetNumber)) {
       return {
         valid: false,
-        errorAr: `هدف ترميز الأرقام (${String(rec.targetNumber)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 47 و83 و69 فقط.`,
+        errorAr: `هدف ترميز الأرقام (${String(rec.targetNumber)}) مخترَع أو مكرر؛ الأهداف المعتمدة هي 47، 83، 69، 52، 27، 76 فقط.`,
       };
     }
     if (
@@ -814,7 +822,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
           'زمن الاستجابة في ترميز الأرقام خارج النطاق المعقول (150ms–20000ms).',
       };
     }
-    const derivedReversal = selectedNumber === spec.reversalDistractor;
+    const derivedReversal = selectedNumber === spec.reversalDistractor || (spec.alternateReversal !== undefined && selectedNumber === spec.alternateReversal);
     if (
       typeof rec.isReversalError === 'boolean' &&
       rec.isReversalError !== derivedReversal

@@ -163,36 +163,36 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="baseera-hero-copy">
           <div className="baseera-eyebrow">
             <Sparkles aria-hidden="true" size={18} />
-            <span>مساحة عربية للقراءة والتعلّم</span>
+            <span>تدريب يومي مخصص لتعثّر القراءة والحساب</span>
           </div>
           <h1 id="baseera-welcome-title">
-            منصة عربية لمهارات القراءة والحساب،
-            <span> ومتابعة التعلّم خطوة بخطوة.</span>
+            تدريب يومي قصير بالعربية
+            <span> لأطفال الصفوف 1–4 المتعثرين في القراءة والحساب.</span>
           </h1>
           <p className="baseera-hero-intro">
-            تساعد بصيرة الأسر والمعلمين على تقديم أنشطة عربية للقراءة والفهم والحساب، مع متابعة أداء الطفل في كل مهمة واقتراح تدريب تالٍ يمكن مراجعته.
+            بصيرة: تدريب يومي قصير بالعربية لأطفال الصفوف 1–4 المتعثرين في القراءة والحساب، يحدد أين الفجوة، ثم يدرّبهم عليها ويُري الأهل التقدم. لا نشخّص، ونوجّه للمختص عند الحاجة.
           </p>
           <div className="baseera-hero-actions">
             <button
               type="button"
               className="baseera-primary-action"
-              onClick={() => onNavigateTab('reading-lab')}
+              onClick={() => onNavigateTab('sprint')}
             >
-              جرّب رحلة القراءة
+              ابدأ تدريب اليوم (٥ دقائق)
               <ArrowLeft aria-hidden="true" size={19} />
             </button>
             <button
               type="button"
               className="baseera-secondary-action"
-              onClick={() => onNavigateTab('adaptive-reader')}
+              onClick={() => onNavigateTab('dyslexia-lab')}
             >
-              اكتشف القارئ الميسّر
+              فحص الفجوة السريع
               <BookOpen aria-hidden="true" size={18} />
             </button>
           </div>
           <div className="baseera-promise-row" aria-label="مميزات بصيرة">
-            <span><ShieldCheck aria-hidden="true" size={18} /> أنشطة عربية للقراءة والحساب</span>
-            <span><Heart aria-hidden="true" size={18} /> شرح واضح لسبب اقتراح التدريب</span>
+            <span><ShieldCheck aria-hidden="true" size={18} /> مسار مهارات متدرج مبني على الأدلة</span>
+            <span><Heart aria-hidden="true" size={18} /> توجيه صريح للمختص المعتمد دون ادعاء تشخيص</span>
           </div>
         </div>
 
@@ -310,28 +310,34 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="baseera-steps-section" aria-labelledby="baseera-steps-title">
         <div className="baseera-section-heading">
           <div>
-            <span className="baseera-section-kicker">بكل بساطة</span>
-            <h2 id="baseera-steps-title">رحلتك في ثلاث خطوات</h2>
+            <span className="baseera-section-kicker">رحلة الدعم المتدرج</span>
+            <h2 id="baseera-steps-title">رحلتك في أربع خطوات واضحة</h2>
           </div>
         </div>
         <div className="baseera-steps-grid">
           <article className="baseera-step-card">
             <span className="baseera-step-number">١</span>
             <div className="baseera-step-icon"><Lightbulb aria-hidden="true" size={25} /></div>
-            <h3>اختر نشاطًا</h3>
-            <p>ابدأ بالقراءة أو الحساب أو جرّب أداة تساعدك على القراءة براحة.</p>
+            <h3>فحص سريع (١٠ دقائق)</h3>
+            <p>تحديد دقيق لأين تقع فجوة القراءة أو الإدراك العددي دون إرهاق الطفل.</p>
           </article>
           <article className="baseera-step-card">
             <span className="baseera-step-number">٢</span>
-            <div className="baseera-step-icon"><Star aria-hidden="true" size={25} /></div>
-            <h3>جرّب وتعلّم</h3>
-            <p>خذ وقتك. يمكنك إعادة المحاولة والاستماع إلى الكلمات عند الحاجة.</p>
+            <div className="baseera-step-icon"><Brain aria-hidden="true" size={25} /></div>
+            <h3>خطتك (٣ مهارات)</h3>
+            <p>تحديد ثلاث مهارات محددة تحتاج تقوية وفق منهج علاجي منظم خطوة بخطوة.</p>
           </article>
           <article className="baseera-step-card">
             <span className="baseera-step-number">٣</span>
+            <div className="baseera-step-icon"><Star aria-hidden="true" size={25} /></div>
+            <h3>تدريب اليوم</h3>
+            <p>ممارسة تفاعلية قصيرة (٥ إلى ١٠ دقائق) لتثبيت أصوات الحروف أو حقائق الأعداد.</p>
+          </article>
+          <article className="baseera-step-card">
+            <span className="baseera-step-number">٤</span>
             <div className="baseera-step-icon"><Trophy aria-hidden="true" size={25} /></div>
-            <h3>احتفل بتقدّمك</h3>
-            <p>استعرض ما أنجزته في الأنشطة، ثم اختر خطوة تدريب تالية.</p>
+            <h3>تقدّمك (للأهل)</h3>
+            <p>متابعة واضحة لمعدل التقدم والتيسيرات الصفية، والتوجيه للمختص عند الحاجة.</p>
           </article>
         </div>
       </section>

@@ -85,10 +85,10 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
                 <span>المستوى ٣ · بطل القراءة الصاعد</span>
               </div>
               <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
-                خزانة كؤوس وأوسمة: {activeStudent.name}
+                خزانة كؤوس وأوسمة: {activeStudent.name}{activeStudent.isDemoRecord ? ' (نموذج توضيحي)' : ''}
               </h1>
               <p className="font-child text-sm sm:text-base text-amber-100 font-bold mt-1">
-                ما شاء الله عليك يا بطل! واصل القراءة والتدريب لتجمع كل أوسمة المملكة.
+                ما شاء الله عليك يا بطل! واصل القراءة والتدريب لتجمع كل أوسمة بصيرة للأبطال.
               </p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-amber-600">
               <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
-                <span className="flex items-center gap-1"><IconStar size={18} /> {activeStudent.comprehensionScore > 0 ? activeStudent.comprehensionScore + 80 : 120}</span>
+                <span className="flex items-center gap-1"><IconStar size={18} /> {(activeStudent.wpm ? 40 : 0) + (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent ? 30 : 0) + (activeStudent.dyscalculiaAssessed ? 40 : 0) + (activeStudent.comprehensionScore || 0)}</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط الخبرة XP</span>
             </div>

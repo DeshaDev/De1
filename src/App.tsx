@@ -795,11 +795,11 @@ export default function App() {
 
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
-              { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'dyslexia-lab', label: 'تحديات القراءة', icon: Brain },
-              { id: 'dyscalculia-lab', label: 'مغامرة الأرقام', icon: Calculator },
-              { id: 'remediation-gym', label: 'صالة الألعاب', icon: Gamepad2 },
-              { id: 'trophies', label: 'خزانة الجوائز', icon: Trophy },
+              { id: 'home', label: 'ابدأ', icon: Home },
+              { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
+              { id: 'trophies', label: 'تقدّمي', icon: Trophy },
+              { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
+              { id: 'dyscalculia-lab', label: 'فحص الحساب', icon: Calculator },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -824,7 +824,7 @@ export default function App() {
               onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
             >
               <GraduationCap aria-hidden="true" size={19} />
-              <span>{baseeraSession ? 'لوحة التحليل الذكي' : 'دخول لوحة التحليل'}</span>
+              <span>{baseeraSession ? 'للأهل والمعلم' : 'دخول الأهل والمعلم'}</span>
             </button>
             <button
               type="button"
@@ -872,11 +872,11 @@ export default function App() {
 
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([
-          { id: 'home', label: 'الرئيسية', icon: Home },
+          { id: 'home', label: 'ابدأ', icon: Home },
+          { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
+          { id: 'trophies', label: 'تقدّمي', icon: Trophy },
           { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
-          { id: 'dyscalculia-lab', label: 'الحساب', icon: Calculator },
-          { id: 'remediation-gym', label: 'التدريب', icon: Gamepad2 },
-          { id: 'trophies', label: 'الجوائز', icon: Trophy },
+          { id: 'dyscalculia-lab', label: 'فحص الحساب', icon: Calculator },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (

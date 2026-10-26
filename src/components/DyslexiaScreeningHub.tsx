@@ -89,14 +89,14 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
         >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>{showClinicalDetails ? 'إخفاء المعايير الإكلينيكية' : 'عرض المعايير والمؤشرات الإكلينيكية للأخصائي'}</span>
+          <span>{showClinicalDetails ? 'إخفاء مؤشرات الفحص التربوي' : 'عرض مؤشرات الفحص التربوي والمعرفي للمعلم'}</span>
         </button>
       </div>
 
       {showClinicalDetails && (
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5 animate-fade-slide-up">
           <div className="font-bold text-slate-900 flex items-center gap-2">
-            <span>🔬 بطارية التشخيص المعرفي الشامل (Dyslexia Screening Battery):</span>
+            <span>🔬 مؤشرات الفحص المعرفي والطلاقة (Screening Indicators):</span>
           </div>
           <p className="leading-relaxed text-slate-600">
             تدمج هذه المحطة قياس الطلاقة الشفوية المباشرة (WCPM) بدقة المقاطع ومعدل الاستبدال والحذف، واختبار التسمية الآلية السريعة (RAN) لزمن الرجع والمعالجة الفونولوجية السريعة، بالإضافة إلى الكلمات غير المعجمية (Pseudowords) لفك التشفير الإملائي المستقل.

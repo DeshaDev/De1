@@ -346,6 +346,41 @@ describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate 
     assert.equal(unofferedOption.valid, false);
   });
 
+  it('validates expanded 20-task battery (8 subitizing, 6 number line, 6 transcoding) from DyscalculiaLabView', () => {
+    const expandedMath = validateAndDeriveMathTrials({
+      subitizingTrials: [
+        { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 600 },
+        { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 650 },
+        { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 700 },
+        { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 750 },
+        { dotCount: 5, chosen: 5, correct: true, reactionTimeMs: 900 },
+        { dotCount: 6, chosen: 6, correct: true, reactionTimeMs: 1100 },
+        { dotCount: 7, chosen: 7, correct: true, reactionTimeMs: 1200 },
+        { dotCount: 8, chosen: 8, correct: true, reactionTimeMs: 1300 },
+      ],
+      numberLineTrials: [
+        { target: 8, userEstimate: 8, scaleMin: 0, scaleMax: 20, reactionTimeMs: 1800 },
+        { target: 15, userEstimate: 14, scaleMin: 0, scaleMax: 20, reactionTimeMs: 1900 },
+        { target: 37, userEstimate: 40, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+        { target: 82, userEstimate: 80, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2200 },
+        { target: 250, userEstimate: 245, scaleMin: 0, scaleMax: 1000, reactionTimeMs: 2500 },
+        { target: 750, userEstimate: 760, scaleMin: 0, scaleMax: 1000, reactionTimeMs: 2600 },
+      ],
+      transcodingTrials: [
+        { targetNumber: 47, selectedNumber: 74, isReversalError: true, reactionTimeMs: 1800 },
+        { targetNumber: 83, selectedNumber: 83, isReversalError: false, reactionTimeMs: 1900 },
+        { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2000 },
+        { targetNumber: 52, selectedNumber: 25, isReversalError: true, reactionTimeMs: 2100 },
+        { targetNumber: 27, selectedNumber: 27, isReversalError: false, reactionTimeMs: 1700 },
+        { targetNumber: 76, selectedNumber: 76, isReversalError: false, reactionTimeMs: 1950 },
+      ],
+    });
+    assert.equal(expandedMath.valid, true);
+    assert.ok(expandedMath.metrics);
+    assert.equal(expandedMath.metrics.reversalErrorCount, 2);
+    assert.equal(expandedMath.metrics.subitizingAccuracy, 100);
+  });
+
   it('enforces strict StudentProfilePatchSchema and LearningReportUpdateEnvelopeSchema', () => {
     assert.equal(
       StudentProfilePatchSchema.safeParse({ name: 'طالب محدث', gradeLevel: 4 }).success,
