@@ -65,6 +65,11 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   canGeneratePlan = false,
   initialStation,
 }) => {
+  // Gym Mode: 'curriculum' (daily 3-question lesson) | 'stations' (6 interactive game stations)
+  const [gymMode, setGymMode] = useState<'curriculum' | 'stations'>(
+    initialStation && initialStation !== 'phonics' ? 'stations' : 'curriculum'
+  );
+
   // Active Station Tab: phonics | syllables | pacer | math | sprint | storygen
   const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen'>(
     initialStation || 'phonics'
@@ -73,6 +78,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   useEffect(() => {
     if (initialStation) {
       setActiveStation(initialStation);
+      if (initialStation === 'sprint' || initialStation === 'storygen') {
+        setGymMode('stations');
+      }
     }
   }, [initialStation]);
 
@@ -429,10 +437,56 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
       </div>
 
-      {/* Evidence-informed instructional pathway; game stations remain supplementary practice. */}
-      <EvidenceBasedCurriculumView student={activeStudent} onSpeak={speakText} />
+      {/* 2. TACTILE MODE SELECTOR: Daily Lesson vs Skill Games */}
+      <div className="flex items-center justify-center p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 shadow-inner max-w-md mx-auto">
+        <button
+          type="button"
+          onClick={() => {
+            setGymMode('curriculum');
+            setActiveScaffold(null);
+          }}
+          className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
+            gymMode === 'curriculum'
+              ? 'bg-teal-700 text-white shadow-md'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+          )}
+        >
+          <Target size={17} />
+          <span>🎯 تدريب اليوم (٣ أسئلة)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setGymMode('stations');
+            setActiveScaffold(null);
+          }}
+          className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
+            gymMode === 'stations'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+          )}
+        >
+          <Sparkles size={17} />
+          <span>🎮 ألعاب المهارات (٦ ألعاب)</span>
+        </button>
+      </div>
 
-      {/* 2. CHUNKY 3D CLAYMORPHIC STATION NAVIGATION BAR */}
+      {/* MODE 1: DAILY STRUCTURED CURRICULUM (Focused, clean, zero extra drills on screen) */}
+      {gymMode === 'curriculum' && (
+        <EvidenceBasedCurriculumView
+          student={activeStudent}
+          onSpeak={speakText}
+          onExploreGames={() => {
+            setGymMode('stations');
+            setActiveStation('phonics');
+          }}
+        />
+      )}
+
+      {/* MODE 2: 6 SKILL STATIONS (Playful gym games, no curriculum stacked on top) */}
+      {gymMode === 'stations' && (
+        <>
+          {/* 2. CHUNKY 3D CLAYMORPHIC STATION NAVIGATION BAR */}
       <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2 overflow-x-auto py-1 w-full sm:w-auto">
           {[
@@ -999,6 +1053,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         />
       )}
 
+        </>
+      )}
 
     </div>
   );
