@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  BookOpen, Calculator, CheckCircle2, CircleHelp, Lightbulb, RotateCcw, Volume2, Sparkles, ChevronDown, Info,
+  BookOpen, CheckCircle2, CircleHelp, Lightbulb, RotateCcw, Volume2, Sparkles, ChevronDown, Info,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import {
@@ -23,8 +23,8 @@ interface Props {
 }
 
 const DOMAIN_LABELS: Record<CurriculumDomain, string> = {
-  reading: 'مسار القراءة',
-  math: 'مسار الحساب',
+  reading: 'مسار القراءة والوعي الصوتي',
+  math: 'مسار القراءة المتقدمة',
 };
 
 const normalizeGrade = (gradeLevel: number) => Math.min(6, Math.max(1, Math.round(gradeLevel || 1)));
@@ -32,114 +32,75 @@ const normalizeGrade = (gradeLevel: number) => Math.min(6, Math.max(1, Math.roun
 const INITIAL_ATTEMPT_HELP = 'اقرأ السؤال مرة أخرى، ثم استخدم التلميح. يمكنك إعادة المحاولة قبل إظهار الحل.';
 
 function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
-  if (lesson.id === 'magnitude-number-line') {
+  if (lesson.id === 'phonological-awareness') {
     return (
-      <div className="mt-4 rounded-2xl border border-sky-100 bg-sky-50 p-4" aria-label="تمثيل بصري لخط الأعداد من صفر إلى عشرة">
-        <p className="mb-3 text-center text-xs font-black text-sky-950">خط الأعداد: تزداد القيم في اتجاه السهم</p>
-        <div dir="ltr" className="relative px-1 pt-1">
-          <div className="absolute left-2 right-2 top-[17px] h-1 rounded-full bg-sky-400" />
-          <div className="relative grid grid-cols-11 gap-0">
-            {Array.from({ length: 11 }, (_, index) => (
-              <div key={index} className="flex min-w-0 flex-col items-center gap-2">
-                <span className="z-10 h-3.5 w-1 rounded-full bg-sky-700" aria-hidden="true" />
-                <span className="text-xs font-bold tabular-nums text-slate-800">{index.toLocaleString('ar-EG')}</span>
-              </div>
-            ))}
+      <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50 p-4 text-center space-y-3" aria-label="نموذج الوعي الصوتي وتقسيم الأصوات">
+        <p className="text-xs font-black text-teal-950">تقسيم الكلمة إلى أصواتها الفونيمية المستقلة:</p>
+        <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
+            <span className="text-xl font-black text-teal-800">كَـ</span>
+            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ١</span>
           </div>
-          <div className="mt-2 flex justify-end text-sky-800" aria-hidden="true">→</div>
+          <span className="text-slate-400 font-black">+</span>
+          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
+            <span className="text-xl font-black text-teal-800">تَـ</span>
+            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ٢</span>
+          </div>
+          <span className="text-slate-400 font-black">+</span>
+          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
+            <span className="text-xl font-black text-teal-800">بَ</span>
+            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ٣</span>
+          </div>
+          <span className="text-teal-700 font-black text-lg">←</span>
+          <div className="flex flex-col items-center p-2.5 rounded-xl bg-teal-600 text-white shadow-xs min-w-[65px]">
+            <span className="text-xl font-black">كَتَبَ</span>
+            <span className="text-[10px] text-teal-100 font-bold mt-1">كلمة تامة</span>
+          </div>
         </div>
-        <p className="mt-2 text-center text-xs leading-5 text-slate-600">ابدأ من الصفر، وحدد المنتصف، ثم قارن المسافة بين الأعداد.</p>
+        <p className="text-xs text-slate-600">استمع إلى كل صوت على حدة، ثم اجمع الأصوات معاً بسلاسة.</p>
       </div>
     );
   }
 
-  if (lesson.id === 'place-value') {
+  if (lesson.id === 'short-vowel-decoding') {
     return (
-      <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
-        <p className="mb-3 text-center text-sm font-black text-amber-950">٣٦ = ٣ عشرات + ٦ آحاد</p>
-        <div className="flex flex-wrap items-end justify-center gap-5" aria-label="تمثيل العدد ستة وثلاثين بثلاث عشرات وستة آحاد">
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-end gap-1">
-              {Array.from({ length: 3 }, (_, rod) => (
-                <div key={rod} className="flex flex-col gap-0.5 rounded-md border border-sky-400 bg-sky-100 p-1" aria-hidden="true">
-                  {Array.from({ length: 10 }, (_, unit) => (
-                    <span key={unit} className="h-2.5 w-4 rounded-sm border border-sky-500 bg-sky-300" />
-                  ))}
-                </div>
-              ))}
-            </div>
-            <span className="text-xs font-bold text-sky-950">٣ عشرات = ٣٠</span>
+      <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center space-y-3" aria-label="نموذج الحركات القصيرة الثلاث">
+        <p className="text-xs font-black text-amber-950">الحركات القصيرة الثلاث ومخارجها الصوتية:</p>
+        <div className="grid grid-cols-3 gap-2.5 max-w-sm mx-auto">
+          <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+            <span className="text-2xl font-black text-amber-800">فَـ</span>
+            <strong className="block text-xs text-slate-800 mt-1">الفَتْحَة</strong>
+            <span className="text-[10px] text-slate-500">افتح الفم لأعلى</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="grid grid-cols-3 gap-1.5 rounded-md bg-white p-1.5">
-              {Array.from({ length: 6 }, (_, unit) => (
-                <span key={unit} className="h-4 w-4 rounded-sm border border-amber-500 bg-amber-300" aria-hidden="true" />
-              ))}
-            </div>
-            <span className="text-xs font-bold text-amber-950">٦ آحاد = ٦</span>
+          <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+            <span className="text-2xl font-black text-amber-800">فُـ</span>
+            <strong className="block text-xs text-slate-800 mt-1">الضَّمَّة</strong>
+            <span className="text-[10px] text-slate-500">ضم الشفتين</span>
+          </div>
+          <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+            <span className="text-2xl font-black text-amber-800">فِـ</span>
+            <strong className="block text-xs text-slate-800 mt-1">الكَسْرَة</strong>
+            <span className="text-[10px] text-slate-500">اخفض الفك لأسفل</span>
           </div>
         </div>
       </div>
     );
   }
 
-  if (lesson.id === 'addition-subtraction') {
+  if (lesson.id === 'syllable-blending') {
     return (
-      <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-        <p className="text-center text-sm font-black text-emerald-950">نُكمل العشرة ثم نضيف الباقي</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm font-black text-slate-800">
-          <span className="rounded-lg bg-white px-3 py-2">٩ + ١ = ١٠</span>
-          <span aria-hidden="true">←</span>
-          <span className="rounded-lg bg-white px-3 py-2">١٠ + ١ = ١١</span>
+      <div className="mt-4 rounded-2xl border border-purple-100 bg-purple-50 p-4 text-center space-y-3" aria-label="نموذج تركيب المقاطع الصوتية">
+        <p className="text-xs font-black text-purple-950">دمج المقاطع لتكوين الكلمة التامة:</p>
+        <div className="flex items-center justify-center gap-2">
+          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">مَسْـ</span>
+          <span className="text-purple-400 font-bold">+</span>
+          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">جِـ</span>
+          <span className="text-purple-400 font-bold">+</span>
+          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">دٌ</span>
+          <span className="text-purple-600 font-bold text-lg">←</span>
+          <span className="px-4 py-2 bg-purple-600 text-white rounded-xl font-black text-lg shadow-sm">مَسْجِدٌ</span>
         </div>
-        <p className="mt-2 text-center text-xs leading-5 text-slate-600">قسّم العدد لتصل إلى عشرة، ثم أضف ما تبقّى. يمكن استخدام الطريقة نفسها في الطرح بالعودة إلى عشرة.</p>
-      </div>
-    );
-  }
-
-  if (lesson.id === 'multiplication-division') {
-    return (
-      <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-4">
-        <p className="text-center text-sm font-black text-violet-950">مجموعتان متساويتان: ٢ × ٤ = ٨</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
-          {[0, 1].map((group) => (
-            <div key={group} className="flex min-w-24 flex-col items-center rounded-xl border border-violet-200 bg-white p-3">
-              <span className="mb-2 text-xs font-bold text-violet-900">المجموعة {group + 1}</span>
-              <div className="grid grid-cols-2 gap-2" aria-hidden="true">
-                {Array.from({ length: 4 }, (_, dot) => (
-                  <span key={dot} className="h-4 w-4 rounded-full border border-violet-500 bg-violet-300" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-center text-xs leading-5 text-slate-600">الضرب يجمع مجموعات متساوية؛ والقسمة توزّع كمية إلى مجموعات أو حصص متساوية.</p>
-      </div>
-    );
-  }
-
-  if (lesson.id === 'fractions') {
-    return (
-      <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 p-4">
-        <p className="text-center text-sm font-black text-rose-950">الكل نفسه، مقسّم إلى أجزاء متساوية</p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: '١/٢', cells: 2, filled: 1 },
-            { label: '١/٤', cells: 4, filled: 1 },
-          ].map((bar) => (
-            <div key={bar.label} className="rounded-xl border border-rose-200 bg-white p-2">
-              <div className="flex gap-1" aria-label={bar.label}>
-                {Array.from({ length: bar.cells }, (_, index) => (
-                  <span key={index} className={'h-8 min-w-0 flex-1 rounded-sm border ' + (index < bar.filled ? 'border-rose-500 bg-rose-300' : 'border-slate-300 bg-slate-100')} aria-hidden="true" />
-                ))}
-              </div>
-              <p className="mt-1 text-center text-xs font-black text-slate-800">{bar.label}</p>
-            </div>
-          ))}
-          <div className="col-span-2 flex items-center justify-center rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-rose-950 sm:col-span-2">
-            يجب أن تكون الأجزاء متساوية حتى نمثل الكل بكسر صحيح.
-          </div>
-        </div>
+        <p className="text-xs text-slate-600">المقطع الساكن يُقرأ دفعة واحدة مع الحرف الذي قبله.</p>
       </div>
     );
   }

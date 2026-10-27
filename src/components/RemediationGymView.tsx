@@ -1,3 +1,8 @@
+function toEasternArabicDigits(value: number | string): string {
+  const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return String(value).replace(/[0-9]/g, (match) => digits[Number(match)] || match);
+}
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { authenticatedFetch } from '../utils/apiAuth';
 import EvidenceBasedCurriculumView from './EvidenceBasedCurriculumView';
@@ -31,7 +36,6 @@ import {
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
 import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
-import { InteractiveNumberLine, toEasternArabicDigits } from './ui/InteractiveNumberLine';
 import { StudentRecord } from '../data/seedData';
 import { AppTabId } from './HomeLandingView';
 import {
@@ -120,11 +124,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [pacerWordIdx, setPacerWordIdx] = useState<number>(0);
   const pacerTimerRef = useRef<number | null>(null);
 
-  // Station 4: Number Line Math Drill state
-  const [mathIdx, setMathIdx] = useState<number>(0);
-  const [sliderVal, setSliderVal] = useState<number>(50);
-  const [mathAnswered, setMathAnswered] = useState<boolean>(false);
-  const [mathErrorAbs, setMathErrorAbs] = useState<number | null>(null);
+
 
   // Only teacher-reviewed or server-verified audio words from a completed, non-demo session can be presented as observed targets.
   const observedTargetWords = useMemo(() => {
@@ -173,7 +173,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   const currentPhonics = phonicsList[phonicsIdx] || phonicsList[0];
   const currentSyllable = syllableList[syllableIdx] || syllableList[0];
-  const currentMath = mathList[mathIdx] || mathList[0];
 
   // 100% Natural Arabic Neural Speech Player (Authentic human pronunciation with studio-grade phoneme makharij)
   const speakText = (text: string) => {
@@ -228,12 +227,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       setSyllableIdx(0);
       setPacerWordIdx(0);
       setPacerPlaying(false);
-      setMathIdx(0);
       setSelectedLetter(null);
       setPhonicsEvaluated(false);
       setAssembledSyllables([]);
       setSyllableComplete(false);
-      setMathAnswered(false);
 
       if (announce) {
         triggerCelebration(
@@ -339,26 +336,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     setActiveScaffold(null);
   };
 
-  // Station 4: Math Check
-  const handleCheckMath = () => {
-    const diff = Math.abs(sliderVal - currentMath.targetNumber);
-    setMathErrorAbs(diff);
-    setMathAnswered(true);
-    if (diff <= 5) {
-      triggerCelebration(`أحسنت! اقتربت من الموقع المطلوب. العدد المرجعي هو ${currentMath.targetNumber} (+35 نقطة)`, 35);
-      speakText('أحسنت! تحديد دقيق لموقع العدد');
-    } else {
-      speakText(`العدد هو ${currentMath.targetNumber}`);
-    }
-  };
 
-  const handleNextMath = () => {
-    setMathIdx((prev) => (prev + 1) % mathList.length);
-    setMathAnswered(false);
-    setMathErrorAbs(null);
-    setSliderVal(50);
-    setActiveScaffold(null);
-  };
 
   // Amira Micro-Scaffolding Handlers (Adaptive Real-Time Audio + Visual Cues)
   const triggerPhonicsScaffold = () => {
@@ -395,17 +373,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     speakText(hint);
   };
 
-  const triggerMathScaffold = () => {
-    const tens = Math.floor(currentMath.targetNumber / 10);
-    const ones = currentMath.targetNumber % 10;
-    const hint = `العدد ${currentMath.targetNumber} يتكون من ${tens} عشرات (${tens * 10}) و ${ones} آحاد. انتبه لموقعه بالنسبة لنصف الخط.`;
-    setActiveScaffold({
-      title: 'تفكيك القيمة المكانية',
-      text: hint,
-      audioText: hint,
-    });
-    speakText(hint);
-  };
+
 
   const targetedWords = observedTargetWords;
 

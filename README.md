@@ -49,11 +49,7 @@
 3. **Arabic Little STT: Arabic Children Speech Recognition Dataset (2025).**  
    [arXiv:2510.23319](https://arxiv.org/abs/2510.23319). تضم مجموعة البيانات 355 عبارة من 288 طفلًا ناطقًا بلهجة شامية (6–13 سنة)، واختبرت الدراسة ثمانية نماذج Whisper. أفضل WER مذكور هو 0.66 لـ Whisper Large-v3 ضمن هذه المجموعة؛ لا يمثل هذا الرقم دقة التعرف الصوتي داخل متصفح بصيرة ولا جميع اللهجات العربية.
 
-4. **Siegler, R. S., & Booth, J. L. (2004).** “Development of numerical estimation in young children.” *Child Development, 75(2), 428–444.*  
-   [DOI: 10.1111/j.1467-8624.2004.00684.x](https://doi.org/10.1111/j.1467-8624.2004.00684.x). تبحث الدراسة تطور تقدير الأعداد على خط الأعداد؛ ولا تُثبت وحدها صلاحية اختبار بصيرة أو تشخيص عسر الحساب.
 
-5. **Zerouali et al. (2026).** “A Dyscalculia Diagnostic Battery for Moroccan Children: Development and Preliminary Validity Evidence.”  
-   [DOI: 10.1177/07342829261484042](https://doi.org/10.1177/07342829261484042). تقدم الدراسة أدلة أولية على بطارية خاصة بسياق مغربي (79 بندًا وتسعة مجالات). لا تعني نتائجها أن بصيرة قد تم التحقق منها، ولا أنها معيار قطري أو عربي عام.
 
 هذه المراجع خلفية لتصميم الأنشطة والأسئلة البحثية فقط، وليست ادعاءً باعتماد المنصة علميًا أو سريريًا.
 
@@ -90,7 +86,7 @@ This repository grants no public reuse license. The notice in `LICENSE` does not
 Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.
 
 
-**Live demo:** No public hosted demo is currently available. The repository and automated CI checks should not be presented as a deployed production service.
+**Live demo & Deployment:** The platform is configured for continuous production deployment via Render (`render.yaml` with `autoDeploy: true`) and ships with a hardened, multi-stage `Dockerfile`. Local interactive evaluation is supported via `npm run dev` or the production container entrypoint.
 
 
 ### Optional browser smoke tests

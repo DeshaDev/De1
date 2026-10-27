@@ -839,7 +839,7 @@ export default function App() {
         </div>
       </header>
 
-      {!['sprint', 'storygen', 'remediation-gym', 'dyslexia-lab', 'dyscalculia-lab', 'home'].includes(activeTab) && baseeraSession && (
+      {!['sprint', 'storygen', 'remediation-gym', 'dyslexia-lab', 'home'].includes(activeTab) && baseeraSession && (
         <div className="baseera-session-strip" role="status">
           <span className="baseera-session-copy">
             <ShieldCheck aria-hidden="true" size={17} />
@@ -1314,10 +1314,10 @@ export default function App() {
                     </div>
                   </div>
                   <div className="baseera-support-item">
-                    <span className="baseera-support-icon yellow"><Calculator aria-hidden="true" size={21} /></span>
+                    <span className="baseera-support-icon yellow"><Sparkles aria-hidden="true" size={21} /></span>
                     <div>
-                      <strong>تمارين الأعداد</strong>
-                      <p>أنجز مهمة قصيرة للحس العددي لمتابعة دقة التحديد وسرعة الإجابة.</p>
+                      <strong>سبرنت الطلاقة اليومي</strong>
+                      <p>تحدي الدقائق الخمس لتثبيت مخارج الحروف وقراءة الكلمات بالتشكيل التام.</p>
                     </div>
                   </div>
                   <div className="baseera-support-actions">
@@ -1418,7 +1418,7 @@ export default function App() {
                           <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
                             <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only' ? (snapshot.wcpm ?? 'غير متاح') : snapshot.wpm} كلمة/دقيقة</strong></span>
                             <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
-                            <span>خطأ خط الأعداد: <strong>{snapshot.numberLinePAE === null ? 'لم يُقَس' : snapshot.numberLinePAE + '%'}</strong></span>
+                            <span>الوعي الصوتي: <strong>{snapshot.cognitiveResults?.phonemicAwarenessScorePercent ? `${snapshot.cognitiveResults.phonemicAwarenessScorePercent}%` : 'مكتمل'}</strong></span>
                           </div>
                           {(snapshot.problematicWords || []).length > 0 && (
                             <p className='mt-2 text-xs leading-relaxed text-slate-600'>
