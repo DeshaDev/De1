@@ -475,6 +475,51 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const mathBody = (await putMathRes.json()) as { student: Record<string, any> };
     assert.equal(mathBody.student.dyscalculiaAssessed, true);
     assert.equal(mathBody.student.reversalErrorCount, 1);
+
+    // Also test full 20-task battery with target 27 selected as 72 (reversal) over real HTTP PUT
+    const full20Res = await fetch(
+      `${baseUrl}/api/students/stu-http-school-a-1/math`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${schoolAdmin.token}`,
+        },
+        body: JSON.stringify({
+          mathTrials: {
+            subitizingTrials: [
+              { dotCount: 1, chosen: 1, correct: true, reactionTimeMs: 600 },
+              { dotCount: 2, chosen: 2, correct: true, reactionTimeMs: 650 },
+              { dotCount: 3, chosen: 3, correct: true, reactionTimeMs: 700 },
+              { dotCount: 4, chosen: 4, correct: true, reactionTimeMs: 750 },
+              { dotCount: 5, chosen: 5, correct: true, reactionTimeMs: 900 },
+              { dotCount: 6, chosen: 6, correct: true, reactionTimeMs: 1100 },
+              { dotCount: 7, chosen: 7, correct: true, reactionTimeMs: 1200 },
+              { dotCount: 8, chosen: 8, correct: true, reactionTimeMs: 1300 },
+            ],
+            numberLineTrials: [
+              { target: 8, userEstimate: 8, scaleMin: 0, scaleMax: 20, reactionTimeMs: 1800 },
+              { target: 15, userEstimate: 14, scaleMin: 0, scaleMax: 20, reactionTimeMs: 1900 },
+              { target: 37, userEstimate: 40, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2100 },
+              { target: 82, userEstimate: 80, scaleMin: 0, scaleMax: 100, reactionTimeMs: 2200 },
+              { target: 250, userEstimate: 245, scaleMin: 0, scaleMax: 1000, reactionTimeMs: 2500 },
+              { target: 750, userEstimate: 760, scaleMin: 0, scaleMax: 1000, reactionTimeMs: 2600 },
+            ],
+            transcodingTrials: [
+              { targetNumber: 47, selectedNumber: 74, isReversalError: true, reactionTimeMs: 1800 },
+              { targetNumber: 83, selectedNumber: 83, isReversalError: false, reactionTimeMs: 1900 },
+              { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2000 },
+              { targetNumber: 52, selectedNumber: 25, isReversalError: true, reactionTimeMs: 2100 },
+              { targetNumber: 27, selectedNumber: 72, isReversalError: true, reactionTimeMs: 1700 },
+              { targetNumber: 76, selectedNumber: 76, isReversalError: false, reactionTimeMs: 1950 },
+            ],
+          },
+        }),
+      }
+    );
+    assert.equal(full20Res.status, 200);
+    const full20Body = (await full20Res.json()) as { student: Record<string, any> };
+    assert.equal(full20Body.student.reversalErrorCount, 3);
     const forgedEnvelopeRes = await fetch(`${baseUrl}/api/students/stu-http-school-a-1/math`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${schoolAdmin.token}` },

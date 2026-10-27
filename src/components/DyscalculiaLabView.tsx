@@ -265,13 +265,13 @@ const TRANSCODING_ITEMS: {
     id: 5,
     spokenText: 'سَبْعَةٌ وَعِشْرُونَ',
     targetNumber: 27,
-    reversalDistractor: 28,
+    reversalDistractor: 72,
     options: [
       { value: 28, arabicDigits: '٢٨' },
       { value: 27, arabicDigits: '٢٧' },
       { value: 72, arabicDigits: '٧٢' },
     ],
-    remedialTip: 'الرقم سبعة (٧) مفتوح لأعلى كأنه يدعو، وثمانية (٨) تنظر لأسفل: ٢٧.',
+    remedialTip: 'في العربية ننطق الآحاد سَبْعَة (٧) أولاً على اليمين ثم العشرات عِشْرُونَ (٢) على اليسار: ٢٧ وليس ٧٢.',
   },
   {
     id: 6,

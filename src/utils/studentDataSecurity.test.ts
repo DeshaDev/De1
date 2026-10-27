@@ -371,14 +371,193 @@ describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate 
         { targetNumber: 83, selectedNumber: 83, isReversalError: false, reactionTimeMs: 1900 },
         { targetNumber: 69, selectedNumber: 69, isReversalError: false, reactionTimeMs: 2000 },
         { targetNumber: 52, selectedNumber: 25, isReversalError: true, reactionTimeMs: 2100 },
-        { targetNumber: 27, selectedNumber: 27, isReversalError: false, reactionTimeMs: 1700 },
+        { targetNumber: 27, selectedNumber: 72, isReversalError: true, reactionTimeMs: 1700 },
         { targetNumber: 76, selectedNumber: 76, isReversalError: false, reactionTimeMs: 1950 },
       ],
     });
     assert.equal(expandedMath.valid, true);
     assert.ok(expandedMath.metrics);
-    assert.equal(expandedMath.metrics.reversalErrorCount, 2);
+    assert.equal(expandedMath.metrics.reversalErrorCount, 3);
     assert.equal(expandedMath.metrics.subitizingAccuracy, 100);
+  });
+
+  it('exhaustively validates every offered choice across all 8 subitizing, 6 number line, and 6 transcoding items', () => {
+    const SUBITIZING_SPECS = [
+      { id: 1, targetCount: 1, options: [1, 2, 3, 4] },
+      { id: 2, targetCount: 2, options: [1, 2, 3, 4] },
+      { id: 3, targetCount: 3, options: [1, 2, 3, 4] },
+      { id: 4, targetCount: 4, options: [1, 2, 3, 4] },
+      { id: 5, targetCount: 5, options: [3, 4, 5, 6] },
+      { id: 6, targetCount: 6, options: [4, 5, 6, 7] },
+      { id: 7, targetCount: 7, options: [5, 6, 7, 8] },
+      { id: 8, targetCount: 8, options: [6, 7, 8, 9] },
+    ];
+
+    const NUMBER_LINE_SPECS = [
+      { target: 8, min: 0, max: 20 },
+      { target: 15, min: 0, max: 20 },
+      { target: 37, min: 0, max: 100 },
+      { target: 82, min: 0, max: 100 },
+      { target: 250, min: 0, max: 1000 },
+      { target: 750, min: 0, max: 1000 },
+    ];
+
+    const TRANSCODING_SPECS = [
+      { targetNumber: 47, options: [47, 74, 49], reversalDistractor: 74 },
+      { targetNumber: 83, options: [38, 83, 63], reversalDistractor: 38 },
+      { targetNumber: 69, options: [69, 96, 66], reversalDistractor: 96 },
+      { targetNumber: 52, options: [25, 52, 56], reversalDistractor: 25 },
+      { targetNumber: 27, options: [28, 27, 72], reversalDistractor: 72 },
+      { targetNumber: 76, options: [76, 67, 72], reversalDistractor: 67 },
+    ];
+
+    const baselineSub = SUBITIZING_SPECS.map((p) => ({
+      dotCount: p.targetCount,
+      chosen: p.targetCount,
+      correct: true,
+      reactionTimeMs: 700,
+    }));
+
+    const baselineNl = NUMBER_LINE_SPECS.map((t) => ({
+      target: t.target,
+      userEstimate: t.target,
+      scaleMin: t.min,
+      scaleMax: t.max,
+      reactionTimeMs: 2000,
+    }));
+
+    const baselineTr = TRANSCODING_SPECS.map((it) => ({
+      targetNumber: it.targetNumber,
+      selectedNumber: it.targetNumber,
+      isReversalError: false,
+      reactionTimeMs: 1800,
+    }));
+
+    // 1. Subitizing: test all 8 items with every offered option
+    for (const pattern of SUBITIZING_SPECS) {
+      for (const opt of pattern.options) {
+        const subTrials = SUBITIZING_SPECS.map((p) => {
+          const chosen = p.id === pattern.id ? opt : p.targetCount;
+          return {
+            dotCount: p.targetCount,
+            chosen,
+            correct: chosen === p.targetCount,
+            reactionTimeMs: 700,
+          };
+        });
+        const res = validateAndDeriveMathTrials({
+          subitizingTrials: subTrials,
+          numberLineTrials: baselineNl,
+          transcodingTrials: baselineTr,
+        });
+        assert.equal(res.valid, true, `Subitizing pattern ${pattern.id} with option ${opt} failed validation: ${res.errorAr}`);
+      }
+    }
+
+    // 2. Number line: test all 6 tasks with multiple valid positions across each scale
+    for (const nlTask of NUMBER_LINE_SPECS) {
+      const sampleEstimates = [
+        nlTask.min,
+        nlTask.min + 1,
+        nlTask.target,
+        Math.round((nlTask.min + nlTask.max) / 2),
+        nlTask.max - 1,
+        nlTask.max,
+      ];
+      for (const estimate of sampleEstimates) {
+        const nlTrials = NUMBER_LINE_SPECS.map((t) => ({
+          target: t.target,
+          userEstimate: t.target === nlTask.target ? estimate : t.target,
+          scaleMin: t.min,
+          scaleMax: t.max,
+          reactionTimeMs: 2000,
+        }));
+        const res = validateAndDeriveMathTrials({
+          subitizingTrials: baselineSub,
+          numberLineTrials: nlTrials,
+          transcodingTrials: baselineTr,
+        });
+        assert.equal(res.valid, true, `Number line target ${nlTask.target} with estimate ${estimate} failed validation: ${res.errorAr}`);
+      }
+    }
+
+    // 3. Transcoding: test EVERY option of all 6 items as constructed by DyscalculiaLabView
+    for (const item of TRANSCODING_SPECS) {
+      for (const opt of item.options) {
+        const trTrials = TRANSCODING_SPECS.map((it) => {
+          const selected = it.targetNumber === item.targetNumber ? opt : it.targetNumber;
+          return {
+            targetNumber: it.targetNumber,
+            selectedNumber: selected,
+            isReversalError: selected === it.reversalDistractor,
+            reactionTimeMs: 1800,
+          };
+        });
+        const res = validateAndDeriveMathTrials({
+          subitizingTrials: baselineSub,
+          numberLineTrials: baselineNl,
+          transcodingTrials: trTrials,
+        });
+        assert.equal(res.valid, true, `Transcoding target ${item.targetNumber} with choice ${opt} failed validation: ${res.errorAr}`);
+      }
+    }
+
+    // Explicit check for target 27 specifically (28, 27, 72)
+    const spec27 = TRANSCODING_SPECS.find((s) => s.targetNumber === 27)!;
+    assert.equal(spec27.reversalDistractor, 72);
+
+    // Choosing 72 must set isReversalError: true and pass
+    const trial72 = validateAndDeriveMathTrials({
+      subitizingTrials: baselineSub,
+      numberLineTrials: baselineNl,
+      transcodingTrials: [
+        { targetNumber: 27, selectedNumber: 72, isReversalError: true, reactionTimeMs: 1500 },
+      ],
+    });
+    assert.equal(trial72.valid, true);
+    assert.equal(trial72.metrics?.reversalErrorCount, 1);
+
+    // Choosing 28 must set isReversalError: false and pass
+    const trial28 = validateAndDeriveMathTrials({
+      subitizingTrials: baselineSub,
+      numberLineTrials: baselineNl,
+      transcodingTrials: [
+        { targetNumber: 27, selectedNumber: 28, isReversalError: false, reactionTimeMs: 1500 },
+      ],
+    });
+    assert.equal(trial28.valid, true);
+    assert.equal(trial28.metrics?.reversalErrorCount, 0);
+
+    // Choosing 27 must set isReversalError: false and pass
+    const trial27 = validateAndDeriveMathTrials({
+      subitizingTrials: baselineSub,
+      numberLineTrials: baselineNl,
+      transcodingTrials: [
+        { targetNumber: 27, selectedNumber: 27, isReversalError: false, reactionTimeMs: 1500 },
+      ],
+    });
+    assert.equal(trial27.valid, true);
+    assert.equal(trial27.metrics?.reversalErrorCount, 0);
+
+    // Reject unoffered option e.g. 99 for target 27
+    const trial99 = validateAndDeriveMathTrials({
+      subitizingTrials: baselineSub,
+      numberLineTrials: baselineNl,
+      transcodingTrials: [
+        { targetNumber: 27, selectedNumber: 99, isReversalError: false, reactionTimeMs: 1500 },
+      ],
+    });
+    assert.equal(trial99.valid, false);
+
+    // Reject contradictory reversal flag (chosen 72 but sent isReversalError: false)
+    const trialConflict = validateAndDeriveMathTrials({
+      subitizingTrials: baselineSub,
+      numberLineTrials: baselineNl,
+      transcodingTrials: [
+        { targetNumber: 27, selectedNumber: 72, isReversalError: false, reactionTimeMs: 1500 },
+      ],
+    });
+    assert.equal(trialConflict.valid, false);
   });
 
   it('enforces strict StudentProfilePatchSchema and LearningReportUpdateEnvelopeSchema', () => {

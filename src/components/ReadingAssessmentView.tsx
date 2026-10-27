@@ -899,6 +899,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold">
                   اختر القصة التي تعجبك لنقرأها معاً ونكسب نجوم الطلاقة والأوسمة الذهبية!
                 </p>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-0.5 rounded-full">
+                    صفوف التأسيس (1–4)
+                  </span>
+                  <span className="text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-3 py-0.5 rounded-full">
+                    استدراك متدرج (5–6)
+                  </span>
+                </div>
               </div>
 
               {/* Story Cards Grid */}

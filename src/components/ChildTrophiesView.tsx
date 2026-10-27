@@ -13,50 +13,70 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
   activeStudent,
   onNavigateTab,
 }) => {
+  const isDemo = Boolean(activeStudent.isDemoRecord);
+  const hasReading = Boolean(activeStudent.wpm && activeStudent.wpm > 0);
+  const hasCognitive = Boolean(activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent > 0);
+  const hasMath = Boolean(activeStudent.dyscalculiaAssessed);
+
+  const streakDays = isDemo ? 3 : ((hasReading || hasMath) ? 1 : 0);
+  const xpPoints = isDemo
+    ? 160
+    : ((hasReading ? 40 : 0) + (hasCognitive ? 30 : 0) + (hasMath ? 40 : 0) + (activeStudent.comprehensionScore || 0));
+
   const BADGES = [
     {
       id: 'sprint',
       title: 'وسام البرق السريع',
-      description: 'أكملت تدريب سبرنت الـ ٥ دقائق المكثف بنجاح!',
+      description: isDemo || (hasReading && hasMath)
+        ? 'أكملت تدريب سبرنت الـ ٥ دقائق المكثف بنجاح!'
+        : 'أكمل تدريب سبرنت اليوم (٥ دقائق) لفتح هذا الوسام!',
       icon: 'lightning',
       color: 'from-amber-400 to-orange-500',
-      earned: true,
+      earned: isDemo || (hasReading && hasMath),
       category: 'طلاقة وسرعة',
     },
     {
       id: 'story',
       title: 'وسام حكواتي بصيرة',
-      description: 'قرأت قصة مشكولة كاملة وسجلت صوتك الرائع بالذكاء الاصطناعي!',
+      description: isDemo || hasReading
+        ? 'قرأت قصة مشكولة كاملة وسجلت صوتك الرائع!'
+        : 'اقرأ قصة كاملة بصوتك في فحص القراءة لفتح هذا الوسام!',
       icon: 'book',
       color: 'from-emerald-400 to-teal-500',
-      earned: true,
+      earned: isDemo || hasReading,
       category: 'قراءة وفهم',
     },
     {
       id: 'letters',
       title: 'صائد الحروف الذهبي',
-      description: 'أتقنت التمييز بين الحروف المتشابهة ومخارج الأصوات بدقة.',
+      description: isDemo || (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent >= 70)
+        ? 'أتقنت التمييز بين الحروف المتشابهة ومخارج الأصوات بدقة.'
+        : 'أكمل تحدي الوعي الصوتي بدقة ٧٠٪ فأكثر لفتح هذا الوسام!',
       icon: 'letters',
       color: 'from-blue-400 to-indigo-500',
-      earned: true,
+      earned: Boolean(isDemo || (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent >= 70)),
       category: 'وعي صوتي',
     },
     {
       id: 'syllables',
       title: 'مهندس المقاطع والكلمات',
-      description: 'ركّبت المقاطع الصوتية لتكوين الكلمات العربية بنجاح.',
+      description: isDemo || (activeStudent.cognitiveResults?.pseudoWordScorePercent && activeStudent.cognitiveResults.pseudoWordScorePercent >= 60)
+        ? 'ركّبت المقاطع الصوتية لتكوين الكلمات العربية بنجاح.'
+        : 'ركّب الكلمات في تدريب المقاطع بنجاح لفتح هذا الوسام!',
       icon: 'puzzle',
       color: 'from-purple-400 to-pink-500',
-      earned: true,
+      earned: Boolean(isDemo || (activeStudent.cognitiveResults?.pseudoWordScorePercent && activeStudent.cognitiveResults.pseudoWordScorePercent >= 60)),
       category: 'تركيب لغوي',
     },
     {
       id: 'math',
       title: 'بطل قفزات الأرقام',
-      description: 'حدّدت مواقع الأعداد بدقة على خط الأعداد التفاعلي!',
+      description: isDemo || hasMath
+        ? 'حدّدت مواقع الأعداد بدقة على خط الأعداد التفاعلي!'
+        : 'أكمل مهام مختبر الأرقام والحساب لفتح هذا الوسام!',
       icon: 'numbers',
       color: 'from-sky-400 to-cyan-500',
-      earned: true,
+      earned: isDemo || hasMath,
       category: 'إدراك عددي',
     },
     {
@@ -82,13 +102,15 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
             <div>
               <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black tracking-wide mb-2 text-amber-100">
                 <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                <span>المستوى ٣ · بطل القراءة الصاعد</span>
+                <span>{xpPoints > 0 ? 'المستوى ٣ · بطل صاعد' : 'بداية الرحلة · بطل جديد'}</span>
               </div>
               <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black">
                 خزانة كؤوس وأوسمة: {activeStudent.name}{activeStudent.isDemoRecord ? ' (نموذج توضيحي)' : ''}
               </h1>
               <p className="font-child text-sm sm:text-base text-amber-100 font-bold mt-1">
-                ما شاء الله عليك يا بطل! واصل القراءة والتدريب لتجمع كل أوسمة بصيرة للأبطال.
+                {xpPoints > 0
+                  ? 'ما شاء الله عليك يا بطل! واصل القراءة والتدريب لتجمع كل أوسمة بصيرة للأبطال.'
+                  : 'أهلاً بك في بصيرة! ابدأ تدريبك وقراءتك اليوم لتكسب أول نقاطك وأوسمتك الذهبية.'}
               </p>
             </div>
           </div>
@@ -97,14 +119,14 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-amber-600">
               <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
-                <span className="flex items-center gap-1"><IconStar size={18} /> {(activeStudent.wpm ? 40 : 0) + (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent ? 30 : 0) + (activeStudent.dyscalculiaAssessed ? 40 : 0) + (activeStudent.comprehensionScore || 0)}</span>
+                <span className="flex items-center gap-1"><IconStar size={18} /> {xpPoints}</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط الخبرة XP</span>
             </div>
 
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-orange-600">
               <span className="text-xl font-black text-orange-600 font-mono flex items-center justify-center gap-1">
-                <span className="flex items-center gap-1"><IconFlame size={18} /> ٣</span>
+                <span className="flex items-center gap-1"><IconFlame size={18} /> {streakDays}</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">أيام حماس</span>
             </div>

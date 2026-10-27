@@ -600,7 +600,7 @@ const ALLOWED_TRANSCODING_SPEC: Record<
   83: { options: new Set([38, 83, 63]), reversalDistractor: 38 },
   69: { options: new Set([69, 96, 66]), reversalDistractor: 96 },
   52: { options: new Set([25, 52, 56]), reversalDistractor: 25 },
-  27: { options: new Set([28, 27, 72]), reversalDistractor: 28, alternateReversal: 72 },
+  27: { options: new Set([28, 27, 72]), reversalDistractor: 72 },
   76: { options: new Set([76, 67, 72]), reversalDistractor: 67 },
 };
 
@@ -822,7 +822,7 @@ export function validateAndDeriveMathTrials(rawMath: unknown): {
           'زمن الاستجابة في ترميز الأرقام خارج النطاق المعقول (150ms–20000ms).',
       };
     }
-    const derivedReversal = selectedNumber === spec.reversalDistractor || (spec.alternateReversal !== undefined && selectedNumber === spec.alternateReversal);
+    const derivedReversal = selectedNumber === spec.reversalDistractor;
     if (
       typeof rec.isReversalError === 'boolean' &&
       rec.isReversalError !== derivedReversal
