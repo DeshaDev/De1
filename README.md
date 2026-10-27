@@ -86,7 +86,7 @@ This repository grants no public reuse license. The notice in `LICENSE` does not
 Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.
 
 
-**Live demo & Deployment:** The platform is configured for continuous production deployment via Render (`render.yaml` with `autoDeploy: true`) and ships with a hardened, multi-stage `Dockerfile`. Local interactive evaluation is supported via `npm run dev` or the production container entrypoint.
+**Live demo & Deployment:** The repository contains a Render Blueprint configuration (`render.yaml` with `autoDeploy: true`), but this does not prove that the Blueprint has been activated or that a public production URL exists. No live URL is confirmed here. Follow [`docs/DEPLOY_RENDER_AR.md`](docs/DEPLOY_RENDER_AR.md) to provision and verify the hosted service before sharing it.
 
 
 ### Optional browser smoke tests
@@ -103,15 +103,15 @@ npm run e2e
 
 - **حفظ مشفر وإلزامي:** تُحفظ طلبات التجربة المدرسية مشفرة بصورة حتمية بـ `AES-256-GCM`، مع سياسة إغلاق تلقائي (`fail-closed`) تمنع كتابة أي بيانات على القرص دون مفتاح تشفير صالح.
 - **عزل الصلاحيات وحماية الخصوصية المؤسسية (RBAC Scope Isolation):** مسار مراجعة طلبات المدارس (`/api/admin/school-demo-requests`) محصور حصرياً بمسؤولي المنصة (`platform_admin` بصلاحية `leads:manage`)؛ ويُحظر تماماً على مسؤولي المدارس والتربويين الوصول إلى بيانات أو طلبات المدارس الأخرى منعاً لأي تسريب بين المؤسسات.
-- **إجراءات المتابعة التشغيلية (SLA 24-48h):** يُطلق الخادم إشعاراً فورياً (`[BASEERA OPS ALERT]`) ويدعم التوجيه عبر Webhook تشغيلي مؤتمت عند استلام أي طلب، وتتضمن لوحة مسؤولي المنصة أدوات لتحديث حالة الطلب (`contacted` / `archived`) أو إتلافه تشفيرياً (`lead.delete`) بناءً على طلب المؤسسة.
+- **متابعة طلبات المدارس:** تُحفظ الطلبات مشفرة، وتظهر في لوحة مسؤول المنصة لتحديث حالة المتابعة أو حذف الطلب من مخزن التطبيق النشط. لا يضمن النموذج موعد اتصال محدداً. يمكن ضبط `ADMIN_ALERT_WEBHOOK_URL` لإرسال إشعار إلى نقطة HTTPS موثوقة؛ إذا لم تُضبط، فعلى مسؤول المنصة مراجعة اللوحة يدوياً. لا تتضمن سجلات التطبيق أسماء أو بيانات اتصال مقدمي الطلبات.
 
 ## دورة الحذف وحوكمة الخصوصية (Privacy & Deletion SLA)
 
 تلتزم المنصة بدورة تطهير واضحة المعالم:
-1. **الذاكرة المحلية المؤقتة (Session Storage):** تُمسح فوراً عند إنهاء الجلسة أو إغلاق التبويب دون بقاء أثر على جهاز المستخدم.
-2. **سجلات الطلاب على الخادم:** يملك مسؤول المدرسة صلاحية الحذف الفوري لأي سجل طالب (`DELETE /api/students/:id`) مع تسجيل العملية في سجل التدقيق الأمني.
-3. **طلبات المدارس:** تُحفظ لمدة أقصاها 90 يوماً للمتابعة، مع إمكانية التطهير التشفيري الفوري عبر مسار الحذف المخصص لمسؤول المنصة.
-4. **طلبات المحو الرسمية بموجب القانون القطري (13/2016):** يتم فوراً تجميد البيانات ووقف معالجتها، واستكمال التطهير التشفيري النهائي من قواعد البيانات والنسخ الاحتياطية الدورية خلال مدة أقصاها ١٤ يوم عمل مع إشعار رسمي خطي.
+1. **بيانات الجلسة المحلية:** ينهي التطبيق البيانات المحلية التي يتولى حذفها؛ ولا يزيل ذلك سجلات سبق حفظها على الخادم أو جميع آثار المتصفح.
+2. **سجلات الطلاب:** يمكن للمسؤول المخوّل حذف السجل من مخزن التطبيق النشط مع تسجيل العملية في سجل التدقيق. لا نَدّعي محواً مادياً فورياً من النسخ الاحتياطية.
+3. **طلبات التواصل المؤسسية:** تُزال الطلبات التي تجاوز عمرها 90 يوماً من مخزن التطبيق النشط عند بدء الخادم والفحص الدوري أثناء تشغيله، ويمكن حذفها قبل ذلك من لوحة مسؤول المنصة.
+4. **طلبات الحذف والنسخ الاحتياطية:** يمكن إرسال طلب عبر قناة الخصوصية الرسمية. لا توجد في النسخة الحالية آلية مثبتة لمسح جميع نسخ الاستضافة الاحتياطية خلال 14 يوم عمل؛ لذلك لا نعلن اتفاقية زمنية ثابتة لذلك الجزء.
 
 ## نشر المنصة والنسخ التجريبية
 
