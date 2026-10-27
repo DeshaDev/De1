@@ -25,3 +25,7 @@ services:
         sync: false
       - key: BASEERA_STORE_ENCRYPTION_KEY
         sync: false
+      - key: BASEERA_PLATFORM_ADMIN_CODE
+        sync: false
+      - key: ADMIN_ALERT_WEBHOOK_URL
+        sync: false
