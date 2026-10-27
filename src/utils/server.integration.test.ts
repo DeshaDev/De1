@@ -22,11 +22,8 @@ const TEST_ENV = {
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   BASEERA_SESSION_SECRET:
     'test-hmac-signing-secret-32chars-minimum-distinct-2026!',
+  BASEERA_PLATFORM_ADMIN_CODE: PLATFORM_ADMIN_CODE,
   BASEERA_TENANT_CREDENTIALS: JSON.stringify({
-    platform: {
-      platform_admin: PLATFORM_ADMIN_CODE,
-      displayNameAr: 'إدارة منصة بصيرة المركزية',
-    },
     school_a: {
       school_admin: SCHOOL_A_ADMIN_CODE,
       educator_readonly: SCHOOL_A_EDUCATOR_CODE,
