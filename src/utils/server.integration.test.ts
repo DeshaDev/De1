@@ -689,6 +689,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const goodJson = await goodRes.json() as { ok?: boolean; message?: string };
     assert.equal(goodJson.ok, true);
     assert.ok(goodJson.message && goodJson.message.includes('تم استلام طلبكم بنجاح'));
+    assert.equal(goodJson.message?.includes('٢٤ إلى ٤٨'), false, 'lead receipt must not promise an unconfigured outreach SLA');
 
     // 3. Admin review endpoint RBAC verification
     // 3a. Unauthorized request -> 401
