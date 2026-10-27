@@ -1,0 +1,2874 @@
+{
+  "questions": [
+    {
+      "domain": "reading",
+      "skillId": "phonological-awareness",
+      "skillTitle": "أستمع إلى الأصوات داخل الكلمة",
+      "skillObjective": "تمييز الصوت الأول في كلمة مسموعة قبل التركيز على اسم الحرف.",
+      "questionId": "pa-1",
+      "prompt": "ما الصوت الأول في الكلمة التي تسمعها؟",
+      "stimulus": "مَوْزٌ",
+      "options": [
+        "/م/",
+        "/ز/",
+        "/و/"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "/م/",
+      "feedbackCorrect": "صحيح؛ يبدأ لفظ «موز» بالصوت /م/.",
+      "scaffold": "استمع مرة أخرى إلى الكلمة؛ ركّز على الصوت الأول فقط.",
+      "hideStimulus": true
+    },
+    {
+      "domain": "reading",
+      "skillId": "phonological-awareness",
+      "skillTitle": "أستمع إلى الأصوات داخل الكلمة",
+      "skillObjective": "تمييز الصوت الأول في كلمة مسموعة قبل التركيز على اسم الحرف.",
+      "questionId": "pa-2",
+      "prompt": "ما الصوت الأول في الكلمة التي تسمعها؟",
+      "stimulus": "سَمَكٌ",
+      "options": [
+        "/ك/",
+        "/س/",
+        "/م/"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "/س/",
+      "feedbackCorrect": "صحيح؛ يبدأ لفظ «سمك» بالصوت /س/.",
+      "scaffold": "استمع إلى الكلمة من بدايتها، ولا تبدأ من آخرها.",
+      "hideStimulus": true
+    },
+    {
+      "domain": "reading",
+      "skillId": "phonological-awareness",
+      "skillTitle": "أستمع إلى الأصوات داخل الكلمة",
+      "skillObjective": "تمييز الصوت الأول في كلمة مسموعة قبل التركيز على اسم الحرف.",
+      "questionId": "pa-3",
+      "prompt": "ما الصوت الأول في الكلمة التي تسمعها؟",
+      "stimulus": "نُورٌ",
+      "options": [
+        "/و/",
+        "/ر/",
+        "/ن/"
+      ],
+      "correctIndex": 2,
+      "correctAnswer": "/ن/",
+      "feedbackCorrect": "صحيح؛ يبدأ لفظ «نور» بالصوت /ن/.",
+      "scaffold": "استمع إلى المقطع الأول ثم اختر الصوت الذي تسمعه أولًا.",
+      "hideStimulus": true
+    },
+    {
+      "domain": "reading",
+      "skillId": "phonological-awareness",
+      "skillTitle": "أستمع إلى الأصوات داخل الكلمة",
+      "skillObjective": "تمييز الصوت الأول في كلمة مسموعة قبل التركيز على اسم الحرف.",
+      "questionId": "pa-4",
+      "prompt": "ما الصوت الأول في الكلمة التي تسمعها؟",
+      "stimulus": "شَمْسٌ",
+      "options": [
+        "/ش/",
+        "/ن/",
+        "/م/"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "/ش/",
+      "feedbackCorrect": "صحيح؛ يبدأ لفظ «شمس» بالصوت /ش/.",
+      "scaffold": "اسمع الكلمة ببطء وركّز على أول صوت.",
+      "hideStimulus": true
+    },
+    {
+      "domain": "reading",
+      "skillId": "phonological-awareness",
+      "skillTitle": "أستمع إلى الأصوات داخل الكلمة",
+      "skillObjective": "تمييز الصوت الأول في كلمة مسموعة قبل التركيز على اسم الحرف.",
+      "questionId": "pa-5",
+      "prompt": "ما الصوت الأول في الكلمة التي تسمعها؟",
+      "stimulus": "قَلَمٌ",
+      "options": [
+        "/م/",
+        "/ق/",
+        "/ل/"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "/ق/",
+      "feedbackCorrect": "صحيح؛ يبدأ لفظ «قلم» بالصوت /ق/.",
+      "scaffold": "استمع إلى بداية الكلمة لا إلى اسم آخر حرف.",
+      "hideStimulus": true
+    },
+    {
+      "domain": "reading",
+      "skillId": "letter-sound-mapping",
+      "skillTitle": "أربط صوت الحرف بشكله",
+      "skillObjective": "ربط الصوت بالحرف مع ملاحظة النقاط وشكل الحرف داخل الكلمة.",
+      "questionId": "ls-1",
+      "prompt": "أي حرف يبدأ به صوت «بَابٌ»؟",
+      "stimulus": "بَابٌ",
+      "options": [
+        "ت",
+        "ب",
+        "ث"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "ب",
+      "feedbackCorrect": "صحيح؛ الكلمة تبدأ بحرف الباء.",
+      "scaffold": "قارن شكل الحروف الثلاثة وموضع نقاطها، ثم أعد قراءة الكلمة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "letter-sound-mapping",
+      "skillTitle": "أربط صوت الحرف بشكله",
+      "skillObjective": "ربط الصوت بالحرف مع ملاحظة النقاط وشكل الحرف داخل الكلمة.",
+      "questionId": "ls-2",
+      "prompt": "أي حرف تسمعه في وسط «كَتَبَ»؟",
+      "stimulus": "كَتَبَ",
+      "options": [
+        "ت",
+        "ك",
+        "ب"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "ت",
+      "feedbackCorrect": "صحيح؛ الحرف الأوسط في «كَتَبَ» هو التاء.",
+      "scaffold": "انطق الكلمة على ثلاثة مقاطع صوتية: كَ ـ تَ ـ بَ.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "letter-sound-mapping",
+      "skillTitle": "أربط صوت الحرف بشكله",
+      "skillObjective": "ربط الصوت بالحرف مع ملاحظة النقاط وشكل الحرف داخل الكلمة.",
+      "questionId": "ls-3",
+      "prompt": "أي حرف يبدأ به «ثَوْبٌ»؟",
+      "stimulus": "ثَوْبٌ",
+      "options": [
+        "ب",
+        "ت",
+        "ث"
+      ],
+      "correctIndex": 2,
+      "correctAnswer": "ث",
+      "feedbackCorrect": "صحيح؛ «ثوب» تبدأ بالثاء ذات النقاط الثلاث.",
+      "scaffold": "تذكّر الفرق بين باء وتاء وثاء، ثم استمع إلى الكلمة كاملة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "letter-sound-mapping",
+      "skillTitle": "أربط صوت الحرف بشكله",
+      "skillObjective": "ربط الصوت بالحرف مع ملاحظة النقاط وشكل الحرف داخل الكلمة.",
+      "questionId": "ls-4",
+      "prompt": "ما الحرف الذي تسمعه في وسط «قَمَرٌ»؟",
+      "stimulus": "قَمَرٌ",
+      "options": [
+        "ق",
+        "م",
+        "ر"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "م",
+      "feedbackCorrect": "صحيح؛ الحرف الأوسط في «قمر» هو الميم.",
+      "scaffold": "انطق الكلمة بهدوء: قَ ـ مَ ـ رٌ.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "letter-sound-mapping",
+      "skillTitle": "أربط صوت الحرف بشكله",
+      "skillObjective": "ربط الصوت بالحرف مع ملاحظة النقاط وشكل الحرف داخل الكلمة.",
+      "questionId": "ls-5",
+      "prompt": "أي حرف يمثّل الصوت الأول في «دَرَجٌ»؟",
+      "stimulus": "دَرَجٌ",
+      "options": [
+        "ذ",
+        "ر",
+        "د"
+      ],
+      "correctIndex": 2,
+      "correctAnswer": "د",
+      "feedbackCorrect": "صحيح؛ تبدأ «دَرَج» بالدال.",
+      "scaffold": "قارن موضع النقطة في ذال وشكل الدال قبل الإجابة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "short-vowel-decoding",
+      "skillTitle": "أقرأ الحركات القصيرة",
+      "skillObjective": "التمييز بين الفتحة والضمة والكسرة ودمجها مع أصوات الحروف.",
+      "questionId": "sv-1",
+      "prompt": "أي كلمة تبدأ بالمقطع «كَ»؟",
+      "options": [
+        "كِتَابٌ",
+        "كُرَةٌ",
+        "كَتَبَ"
+      ],
+      "correctIndex": 2,
+      "correctAnswer": "كَتَبَ",
+      "feedbackCorrect": "صحيح؛ «كَتَبَ» تبدأ بفتح الكاف.",
+      "scaffold": "لاحظ الحركة فوق الكاف في «كَتَبَ»، وتحت الكاف في «كِتاب».",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "short-vowel-decoding",
+      "skillTitle": "أقرأ الحركات القصيرة",
+      "skillObjective": "التمييز بين الفتحة والضمة والكسرة ودمجها مع أصوات الحروف.",
+      "questionId": "sv-2",
+      "prompt": "أي كلمة تبدأ بصوت «بِ»؟",
+      "options": [
+        "بَابٌ",
+        "بِئْرٌ",
+        "بُرْتُقَالٌ"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "بِئْرٌ",
+      "feedbackCorrect": "صحيح؛ الكسرة تحت الباء في «بِئْر».",
+      "scaffold": "قارن حركة الباء في الكلمات الثلاث: فتحة، كسرة، ضمة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "short-vowel-decoding",
+      "skillTitle": "أقرأ الحركات القصيرة",
+      "skillObjective": "التمييز بين الفتحة والضمة والكسرة ودمجها مع أصوات الحروف.",
+      "questionId": "sv-3",
+      "prompt": "أي كلمة تبدأ بالمقطع «عِ» ويليه حرف ساكن؟",
+      "options": [
+        "عَلَمٌ",
+        "عِلْمٌ",
+        "عَالَمٌ"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "عِلْمٌ",
+      "feedbackCorrect": "صحيح؛ «عِلْمٌ» تبدأ بالعين المكسورة يليها اللام الساكنة.",
+      "scaffold": "اقرأ حركة العين ثم انتبه إلى السكون على اللام.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "short-vowel-decoding",
+      "skillTitle": "أقرأ الحركات القصيرة",
+      "skillObjective": "التمييز بين الفتحة والضمة والكسرة ودمجها مع أصوات الحروف.",
+      "questionId": "sv-4",
+      "prompt": "أي كلمة تبدأ بالمقطع «تُ»؟",
+      "options": [
+        "تُفَّاحٌ",
+        "تِمْسَاحٌ",
+        "تَمْرٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "تُفَّاحٌ",
+      "feedbackCorrect": "صحيح؛ الضمة على التاء في «تُفّاح».",
+      "scaffold": "قارن حركة التاء في أول الكلمات الثلاث.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "short-vowel-decoding",
+      "skillTitle": "أقرأ الحركات القصيرة",
+      "skillObjective": "التمييز بين الفتحة والضمة والكسرة ودمجها مع أصوات الحروف.",
+      "questionId": "sv-5",
+      "prompt": "ما الحركة على التاء في «كِتَابٌ»؟",
+      "stimulus": "كِتَابٌ",
+      "options": [
+        "فتحة",
+        "ضمة",
+        "كسرة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "فتحة",
+      "feedbackCorrect": "صحيح؛ التاء في «كِتَابٌ» مفتوحة: تَ.",
+      "scaffold": "اتبع الكلمة حرفًا حرفًا، ولا تخلط بين حركة الكاف وحركة التاء.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "syllable-blending",
+      "skillTitle": "أدمج المقاطع لتكوين كلمة",
+      "skillObjective": "دمج مقاطع مشكولة بالترتيب من اليمين إلى اليسار لتكوين كلمة مقروءة.",
+      "questionId": "sb-1",
+      "prompt": "رَ + سَ + مَ تساوي:",
+      "options": [
+        "رَسَمَ",
+        "رَسْمٌ",
+        "سَمَرَ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "رَسَمَ",
+      "feedbackCorrect": "صحيح؛ جمع المقاطع الثلاثة بالترتيب ينتج «رَسَمَ».",
+      "scaffold": "ابدأ برَ، ثم سَ، ثم مَ؛ حافظ على الحركة وترتيب المقاطع.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "syllable-blending",
+      "skillTitle": "أدمج المقاطع لتكوين كلمة",
+      "skillObjective": "دمج مقاطع مشكولة بالترتيب من اليمين إلى اليسار لتكوين كلمة مقروءة.",
+      "questionId": "sb-2",
+      "prompt": "سَ + مَ + كٌ تساوي:",
+      "options": [
+        "سَمَكٌ",
+        "مَسَكٌ",
+        "سَمَاءٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "سَمَكٌ",
+      "feedbackCorrect": "صحيح؛ جمعت المقاطع بالترتيب دون حذف أو تبديل.",
+      "scaffold": "ابدأ بالمقطع سَ، ثم مَ، ثم كٌ.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "syllable-blending",
+      "skillTitle": "أدمج المقاطع لتكوين كلمة",
+      "skillObjective": "دمج مقاطع مشكولة بالترتيب من اليمين إلى اليسار لتكوين كلمة مقروءة.",
+      "questionId": "sb-3",
+      "prompt": "لَ + عِ + بَ تساوي:",
+      "options": [
+        "لَعِبَ",
+        "لَعَبَ",
+        "عَلِبَ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "لَعِبَ",
+      "feedbackCorrect": "صحيح؛ الكسرة على العين باقية عند دمج المقاطع.",
+      "scaffold": "انتبه إلى حركة العين: عِ وليست عَ.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "syllable-blending",
+      "skillTitle": "أدمج المقاطع لتكوين كلمة",
+      "skillObjective": "دمج مقاطع مشكولة بالترتيب من اليمين إلى اليسار لتكوين كلمة مقروءة.",
+      "questionId": "sb-4",
+      "prompt": "قَ + لَ + مٌ تساوي:",
+      "options": [
+        "قَمَرٌ",
+        "قَلَمٌ",
+        "مَقْلَمَةٌ"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "قَلَمٌ",
+      "feedbackCorrect": "صحيح؛ جمع المقاطع بالترتيب ينتج «قَلَمٌ».",
+      "scaffold": "رتّب المقاطع: قَ، ثم لَ، ثم مٌ.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "syllable-blending",
+      "skillTitle": "أدمج المقاطع لتكوين كلمة",
+      "skillObjective": "دمج مقاطع مشكولة بالترتيب من اليمين إلى اليسار لتكوين كلمة مقروءة.",
+      "questionId": "sb-5",
+      "prompt": "شَ + جَ + رَ + ةٌ تساوي:",
+      "options": [
+        "شَجَرَةٌ",
+        "شُجْرَةٌ",
+        "جَرَشَةٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "شَجَرَةٌ",
+      "feedbackCorrect": "صحيح؛ دمج الأجزاء بالترتيب ينتج «شَجَرَةٌ».",
+      "scaffold": "حافظ على ترتيب المقاطع وحركاتها قبل دمجها.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "long-vowels-and-morphemes",
+      "skillTitle": "ألاحظ المدّ وأجزاء الكلمة",
+      "skillObjective": "تمييز بعض أنماط المدّ والحركات والتعرّف إلى أجزاء مشتركة في الكلمات.",
+      "questionId": "lm-1",
+      "prompt": "أي كلمة فيها مدّ بالألف؟",
+      "options": [
+        "بِنْتٌ",
+        "بَابٌ",
+        "قَلَمٌ"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "بَابٌ",
+      "feedbackCorrect": "صحيح؛ الألف بعد الباء تمدّ الصوت في «باب».",
+      "scaffold": "انظر إلى الألف بعد الفتحة في الكلمة، ولا تخلط بينها وبين الحركة القصيرة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "long-vowels-and-morphemes",
+      "skillTitle": "ألاحظ المدّ وأجزاء الكلمة",
+      "skillObjective": "تمييز بعض أنماط المدّ والحركات والتعرّف إلى أجزاء مشتركة في الكلمات.",
+      "questionId": "lm-2",
+      "prompt": "أي كلمة تشترك في الجذر «ك ت ب»؟",
+      "options": [
+        "مَكْتُوبٌ",
+        "مَاءٌ",
+        "كَبِيرٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "مَكْتُوبٌ",
+      "feedbackCorrect": "صحيح؛ «مكتوب» من عائلة كتب.",
+      "scaffold": "قارن الحروف الأصلية بالترتيب، ولا تعتمد على تشابه أول حرف فقط.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "long-vowels-and-morphemes",
+      "skillTitle": "ألاحظ المدّ وأجزاء الكلمة",
+      "skillObjective": "تمييز بعض أنماط المدّ والحركات والتعرّف إلى أجزاء مشتركة في الكلمات.",
+      "questionId": "lm-3",
+      "prompt": "أي كلمة تبدأ بمقطع طويل «نُو»؟",
+      "options": [
+        "نُورٌ",
+        "نَهْرٌ",
+        "نَمْلٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "نُورٌ",
+      "feedbackCorrect": "صحيح؛ الواو تمدّ الضمة في «نور».",
+      "scaffold": "انطق المقطع الأول في كل كلمة ثم قارن مدة الصوت.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "long-vowels-and-morphemes",
+      "skillTitle": "ألاحظ المدّ وأجزاء الكلمة",
+      "skillObjective": "تمييز بعض أنماط المدّ والحركات والتعرّف إلى أجزاء مشتركة في الكلمات.",
+      "questionId": "lm-4",
+      "prompt": "أي كلمة فيها مدّ بالياء؟",
+      "options": [
+        "تِينٌ",
+        "تَمْرٌ",
+        "تُرَابٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "تِينٌ",
+      "feedbackCorrect": "صحيح؛ الياء في «تِين» حرف مدّ بعد الكسرة.",
+      "scaffold": "لاحظ حركة التاء المكسورة وطول صوت الياء بعدها.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "long-vowels-and-morphemes",
+      "skillTitle": "ألاحظ المدّ وأجزاء الكلمة",
+      "skillObjective": "تمييز بعض أنماط المدّ والحركات والتعرّف إلى أجزاء مشتركة في الكلمات.",
+      "questionId": "lm-5",
+      "prompt": "أي كلمة تنتمي إلى عائلة «د ر س»؟",
+      "options": [
+        "مَدْرَسَةٌ",
+        "مَكْتَبَةٌ",
+        "مَلْعَبٌ"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "مَدْرَسَةٌ",
+      "feedbackCorrect": "صحيح؛ «مدرسة» تشترك في الجذر د-ر-س.",
+      "scaffold": "قارن الحروف الأصلية وترتيبها: دال ثم راء ثم سين.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "connected-text",
+      "skillTitle": "أقرأ نصًا قصيرًا بدقة ثم بطلاقة",
+      "skillObjective": "قراءة نص مناسب للمهارات المتعلمة، وإعادة قراءته مع إعطاء الأولوية للدقة والفهم.",
+      "questionId": "ct-1",
+      "prompt": "إلى أين ذهبت ليلى؟",
+      "stimulus": "زَارَتْ لَيْلَى الْمَكْتَبَةَ، فَاخْتَارَتْ كِتَابًا عَنِ الْبَحْرِ. قَرَأَتْ صَفَحَتَيْنِ، ثُمَّ حَكَتْ لِأُسْرَتِهَا مَا تَعَلَّمَتْهُ.",
+      "options": [
+        "إلى المكتبة",
+        "إلى السوق",
+        "إلى الحديقة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "إلى المكتبة",
+      "feedbackCorrect": "صحيح؛ ورد في النص أنها زارت المكتبة.",
+      "scaffold": "ارجع إلى الجملة الأولى وابحث عن المكان الذي زارته ليلى.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "connected-text",
+      "skillTitle": "أقرأ نصًا قصيرًا بدقة ثم بطلاقة",
+      "skillObjective": "قراءة نص مناسب للمهارات المتعلمة، وإعادة قراءته مع إعطاء الأولوية للدقة والفهم.",
+      "questionId": "ct-2",
+      "prompt": "عمّ كان الكتاب؟",
+      "stimulus": "زَارَتْ لَيْلَى الْمَكْتَبَةَ، فَاخْتَارَتْ كِتَابًا عَنِ الْبَحْرِ. قَرَأَتْ صَفَحَتَيْنِ، ثُمَّ حَكَتْ لِأُسْرَتِهَا مَا تَعَلَّمَتْهُ.",
+      "options": [
+        "عن الجبال",
+        "عن البحر",
+        "عن الفضاء"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "عن البحر",
+      "feedbackCorrect": "صحيح؛ اختارت كتابًا عن البحر.",
+      "scaffold": "أعد قراءة الجزء «كتابًا عن…»",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "connected-text",
+      "skillTitle": "أقرأ نصًا قصيرًا بدقة ثم بطلاقة",
+      "skillObjective": "قراءة نص مناسب للمهارات المتعلمة، وإعادة قراءته مع إعطاء الأولوية للدقة والفهم.",
+      "questionId": "ct-3",
+      "prompt": "ماذا فعلت ليلى بعد القراءة؟",
+      "stimulus": "زَارَتْ لَيْلَى الْمَكْتَبَةَ، فَاخْتَارَتْ كِتَابًا عَنِ الْبَحْرِ. قَرَأَتْ صَفَحَتَيْنِ، ثُمَّ حَكَتْ لِأُسْرَتِهَا مَا تَعَلَّمَتْهُ.",
+      "options": [
+        "نامت",
+        "ذهبت إلى السوق",
+        "حكت لأسرتها ما تعلمته"
+      ],
+      "correctIndex": 2,
+      "correctAnswer": "حكت لأسرتها ما تعلمته",
+      "feedbackCorrect": "صحيح؛ شرحت لأسرتها ما تعلمته.",
+      "scaffold": "ابحث عن الفعل الذي جاء بعد «ثمّ».",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "connected-text",
+      "skillTitle": "أقرأ نصًا قصيرًا بدقة ثم بطلاقة",
+      "skillObjective": "قراءة نص مناسب للمهارات المتعلمة، وإعادة قراءته مع إعطاء الأولوية للدقة والفهم.",
+      "questionId": "ct-4",
+      "prompt": "كم صفحة قرأت ليلى؟",
+      "stimulus": "زَارَتْ لَيْلَى الْمَكْتَبَةَ، فَاخْتَارَتْ كِتَابًا عَنِ الْبَحْرِ. قَرَأَتْ صَفَحَتَيْنِ، ثُمَّ حَكَتْ لِأُسْرَتِهَا مَا تَعَلَّمَتْهُ.",
+      "options": [
+        "صفحتين",
+        "عشر صفحات",
+        "صفحة واحدة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "صفحتين",
+      "feedbackCorrect": "صحيح؛ قرأت صفحتين.",
+      "scaffold": "ابحث في الجملة الثانية عن عدد الصفحات.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "connected-text",
+      "skillTitle": "أقرأ نصًا قصيرًا بدقة ثم بطلاقة",
+      "skillObjective": "قراءة نص مناسب للمهارات المتعلمة، وإعادة قراءته مع إعطاء الأولوية للدقة والفهم.",
+      "questionId": "ct-5",
+      "prompt": "ما الفائدة التي حققتها ليلى عندما حكت لأسرتها؟",
+      "stimulus": "زَارَتْ لَيْلَى الْمَكْتَبَةَ، فَاخْتَارَتْ كِتَابًا عَنِ الْبَحْرِ. قَرَأَتْ صَفَحَتَيْنِ، ثُمَّ حَكَتْ لِأُسْرَتِهَا مَا تَعَلَّمَتْهُ.",
+      "options": [
+        "شاركت ما تعلمته",
+        "أعادت الكتاب إلى المتجر",
+        "غيّرت موضوع الكتاب"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "شاركت ما تعلمته",
+      "feedbackCorrect": "صحيح؛ شاركت أسرتها ما تعلمته من القراءة.",
+      "scaffold": "اجمع بين فعل «حكت» وما جاء بعده في النص.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "reading-comprehension",
+      "skillTitle": "أفهم ما أقرأ وأشرح دليلي",
+      "skillObjective": "التدرب على استرجاع معلومة صريحة، وفهم كلمة في السياق، واستنتاج بسيط.",
+      "questionId": "rc-1",
+      "prompt": "أين وضع سامر الأصيص؟",
+      "stimulus": "زَرَعَ سَامِرٌ بَذْرَةً فِي أُصَيْصٍ، وَوَضَعَهُ قُرْبَ النَّافِذَةِ. كَانَ يَسْقِيهَا كُلَّ صَبَاحٍ. بَعْدَ أَيَّامٍ ظَهَرَتْ وَرَقَتَانِ خَضْرَاوَانِ.",
+      "options": [
+        "قرب النافذة",
+        "تحت السرير",
+        "في الحقيبة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "قرب النافذة",
+      "feedbackCorrect": "صحيح؛ النص يقول إنه وضعه قرب النافذة.",
+      "scaffold": "ابحث في الجملة الأولى عن المكان.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "reading-comprehension",
+      "skillTitle": "أفهم ما أقرأ وأشرح دليلي",
+      "skillObjective": "التدرب على استرجاع معلومة صريحة، وفهم كلمة في السياق، واستنتاج بسيط.",
+      "questionId": "rc-2",
+      "prompt": "ما معنى «ظهرت» في النص؟",
+      "stimulus": "زَرَعَ سَامِرٌ بَذْرَةً فِي أُصَيْصٍ، وَوَضَعَهُ قُرْبَ النَّافِذَةِ. كَانَ يَسْقِيهَا كُلَّ صَبَاحٍ. بَعْدَ أَيَّامٍ ظَهَرَتْ وَرَقَتَانِ خَضْرَاوَانِ.",
+      "options": [
+        "اختفت",
+        "بدت ووضحت للعيان",
+        "جفّت"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "بدت ووضحت للعيان",
+      "feedbackCorrect": "صحيح؛ ظهرت أي أصبحت مرئية وواضحة.",
+      "scaffold": "استخدم ما حدث للبذرة لفهم الكلمة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "reading-comprehension",
+      "skillTitle": "أفهم ما أقرأ وأشرح دليلي",
+      "skillObjective": "التدرب على استرجاع معلومة صريحة، وفهم كلمة في السياق، واستنتاج بسيط.",
+      "questionId": "rc-3",
+      "prompt": "ما سبب نموِّ النبتةِ في النص؟",
+      "stimulus": "زَرَعَ سَامِرٌ بَذْرَةً فِي أُصَيْصٍ، وَوَضَعَهُ قُرْبَ النَّافِذَةِ. كَانَ يَسْقِيهَا كُلَّ صَبَاحٍ. بَعْدَ أَيَّامٍ ظَهَرَتْ وَرَقَتَانِ خَضْرَاوَانِ.",
+      "options": [
+        "لأنّ سامراً سقاها ووضعها قرب النافذة",
+        "لأنها كانت داخل الحقيبة",
+        "لأنّ سامراً لم يعتنِ بها"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "لأنّ سامراً سقاها ووضعها قرب النافذة",
+      "feedbackCorrect": "صحيح؛ هذا استنتاج تدعمه العناية المذكورة في النص.",
+      "scaffold": "اربط بين السقي ومكان الأصيص وظهور الأوراق.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "reading-comprehension",
+      "skillTitle": "أفهم ما أقرأ وأشرح دليلي",
+      "skillObjective": "التدرب على استرجاع معلومة صريحة، وفهم كلمة في السياق، واستنتاج بسيط.",
+      "questionId": "rc-4",
+      "prompt": "متى كان سامر يسقي البذرة؟",
+      "stimulus": "زَرَعَ سَامِرٌ بَذْرَةً فِي أُصَيْصٍ، وَوَضَعَهُ قُرْبَ النَّافِذَةِ. كَانَ يَسْقِيهَا كُلَّ صَبَاحٍ. بَعْدَ أَيَّامٍ ظَهَرَتْ وَرَقَتَانِ خَضْرَاوَانِ.",
+      "options": [
+        "كل صباح",
+        "كل أسبوع",
+        "في منتصف الليل"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "كل صباح",
+      "feedbackCorrect": "صحيح؛ كان يسقيها كل صباح.",
+      "scaffold": "ارجع إلى الجملة التي تصف روتين سامر.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "reading",
+      "skillId": "reading-comprehension",
+      "skillTitle": "أفهم ما أقرأ وأشرح دليلي",
+      "skillObjective": "التدرب على استرجاع معلومة صريحة، وفهم كلمة في السياق، واستنتاج بسيط.",
+      "questionId": "rc-5",
+      "prompt": "أي دليل في النص يدل على أن البذرة بدأت تنمو؟",
+      "stimulus": "زَرَعَ سَامِرٌ بَذْرَةً فِي أُصَيْصٍ، وَوَضَعَهُ قُرْبَ النَّافِذَةِ. كَانَ يَسْقِيهَا كُلَّ صَبَاحٍ. بَعْدَ أَيَّامٍ ظَهَرَتْ وَرَقَتَانِ خَضْرَاوَانِ.",
+      "options": [
+        "ظهور ورقتين خضراوين",
+        "وضع الأصيص قرب النافذة فقط",
+        "شراء سامر أصيصًا جديدًا"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "ظهور ورقتين خضراوين",
+      "feedbackCorrect": "صحيح؛ ظهور الورقتين هو علامة النمو المذكورة.",
+      "scaffold": "ميّز بين ما فعله سامر وما حدث للبذرة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "quantity-cardinality",
+      "skillTitle": "أفهم الكمية قبل اسم العدد",
+      "skillObjective": "ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.",
+      "questionId": "qc-1",
+      "prompt": "كم نقطة ترى؟",
+      "options": [
+        "٣",
+        "٤",
+        "٥"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٤",
+      "feedbackCorrect": "صحيح؛ توجد أربع نقاط.",
+      "scaffold": "أشر إلى كل نقطة مرة واحدة وعدّها.",
+      "hideStimulus": false,
+      "dotCount": 4
+    },
+    {
+      "domain": "math",
+      "skillId": "quantity-cardinality",
+      "skillTitle": "أفهم الكمية قبل اسم العدد",
+      "skillObjective": "ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.",
+      "questionId": "qc-2",
+      "prompt": "كم نقطة ترى؟",
+      "options": [
+        "٢",
+        "٥",
+        "٦"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٥",
+      "feedbackCorrect": "صحيح؛ توجد خمس نقاط.",
+      "scaffold": "تتبّع النقاط واحدة واحدة، وتجنب عدّ النقطة مرتين.",
+      "hideStimulus": false,
+      "dotCount": 5
+    },
+    {
+      "domain": "math",
+      "skillId": "quantity-cardinality",
+      "skillTitle": "أفهم الكمية قبل اسم العدد",
+      "skillObjective": "ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.",
+      "questionId": "qc-3",
+      "prompt": "كم نقطة ترى؟",
+      "options": [
+        "٦",
+        "٧",
+        "٨"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٦",
+      "feedbackCorrect": "صحيح؛ توجد ست نقاط.",
+      "scaffold": "قسّم المجموعة بصريًا إلى مجموعتين أصغر ثم اجمع الكميتين.",
+      "hideStimulus": false,
+      "dotCount": 6
+    },
+    {
+      "domain": "math",
+      "skillId": "quantity-cardinality",
+      "skillTitle": "أفهم الكمية قبل اسم العدد",
+      "skillObjective": "ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.",
+      "questionId": "qc-4",
+      "prompt": "كم نقطة ترى؟",
+      "options": [
+        "٦",
+        "٧",
+        "٨"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٧",
+      "feedbackCorrect": "صحيح؛ توجد سبع نقاط.",
+      "scaffold": "عدّ كل نقطة مرة واحدة قبل اختيار الرمز.",
+      "hideStimulus": false,
+      "dotCount": 7
+    },
+    {
+      "domain": "math",
+      "skillId": "quantity-cardinality",
+      "skillTitle": "أفهم الكمية قبل اسم العدد",
+      "skillObjective": "ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.",
+      "questionId": "qc-5",
+      "prompt": "كم نقطة ترى؟",
+      "options": [
+        "٧",
+        "٨",
+        "٩"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ توجد ثماني نقاط.",
+      "scaffold": "قسّم النقاط إلى مجموعتين صغيرتين وعدّ كل مجموعة ثم اجمعهما.",
+      "hideStimulus": false,
+      "dotCount": 8
+    },
+    {
+      "domain": "math",
+      "skillId": "number-symbol-mapping",
+      "skillTitle": "أربط الكمية برمز العدد",
+      "skillObjective": "الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.",
+      "questionId": "ns-1",
+      "prompt": "أي رمز يمثل «سبعة»؟",
+      "stimulus": "سبعة",
+      "options": [
+        "٧",
+        "٣",
+        "٩"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٧",
+      "feedbackCorrect": "صحيح؛ الرمز ٧ يمثل سبعة.",
+      "scaffold": "ردد اسم العدد، ثم قارن الرموز قبل الاختيار.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "number-symbol-mapping",
+      "skillTitle": "أربط الكمية برمز العدد",
+      "skillObjective": "الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.",
+      "questionId": "ns-2",
+      "prompt": "أي رمز يمثل «اثنا عشر»؟",
+      "stimulus": "اثنا عشر",
+      "options": [
+        "٢١",
+        "١٢",
+        "٢٠"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٢",
+      "feedbackCorrect": "صحيح؛ ١٢ يتكون من عشرة واثنين.",
+      "scaffold": "اقرأ الرمز ١٢ «اثنا عشر» لا «واحد وعشرون»، وانتبه إلى منزلة العشرات والآحاد.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "number-symbol-mapping",
+      "skillTitle": "أربط الكمية برمز العدد",
+      "skillObjective": "الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.",
+      "questionId": "ns-3",
+      "prompt": "أي مجموعة تمثل العدد «أربعة»؟",
+      "options": [
+        "٣ أشياء",
+        "٤ أشياء",
+        "٥ أشياء"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٤ أشياء",
+      "feedbackCorrect": "صحيح؛ العدد والكمية متطابقان.",
+      "scaffold": "عدّ العناصر مرة واحدة وقارن المجموع بالرمز.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "number-symbol-mapping",
+      "skillTitle": "أربط الكمية برمز العدد",
+      "skillObjective": "الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.",
+      "questionId": "ns-4",
+      "prompt": "أي رمز يمثل «تسعة»؟",
+      "stimulus": "تسعة",
+      "options": [
+        "٦",
+        "٩",
+        "٧"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٩",
+      "feedbackCorrect": "صحيح؛ الرمز ٩ يمثل تسعة.",
+      "scaffold": "قل اسم العدد، ثم قارن شكل الرموز بهدوء.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "number-symbol-mapping",
+      "skillTitle": "أربط الكمية برمز العدد",
+      "skillObjective": "الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.",
+      "questionId": "ns-5",
+      "prompt": "ما الاسم الصحيح للعدد ١٥؟",
+      "stimulus": "١٥",
+      "options": [
+        "خمسة عشر",
+        "واحد وخمسون",
+        "خمسة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "خمسة عشر",
+      "feedbackCorrect": "صحيح؛ ١٥ يعني عشرة وخمسة آحاد.",
+      "scaffold": "انتبه إلى ترتيب العشرات والآحاد في العدد المكتوب.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "magnitude-number-line",
+      "skillTitle": "أقارن الأعداد وأحدد موقعها",
+      "skillObjective": "فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.",
+      "questionId": "mn-1",
+      "prompt": "أيهما أكبر؟",
+      "stimulus": "٨ أم ٥",
+      "options": [
+        "٨",
+        "٥",
+        "متساويان"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ ٨ أكبر من ٥.",
+      "scaffold": "ضع العددين على خط يبدأ من الصفر، وانظر أيهما يقع إلى اليمين.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "magnitude-number-line",
+      "skillTitle": "أقارن الأعداد وأحدد موقعها",
+      "skillObjective": "فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.",
+      "questionId": "mn-2",
+      "prompt": "أي عدد أقرب إلى ١٠؟",
+      "stimulus": "٣، ٨، ٤",
+      "options": [
+        "٣",
+        "٨",
+        "٤"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ ٨ يبعد خطوتين عن ١٠.",
+      "scaffold": "قارن المسافة إلى ١٠، لا حجم الرقم المكتوب فقط.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "magnitude-number-line",
+      "skillTitle": "أقارن الأعداد وأحدد موقعها",
+      "skillObjective": "فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.",
+      "questionId": "mn-3",
+      "prompt": "ما العدد الذي يأتي بعد ٢٩ مباشرة؟",
+      "stimulus": "٢٩ → ؟",
+      "options": [
+        "٢٨",
+        "٣٠",
+        "٣٩"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٣٠",
+      "feedbackCorrect": "صحيح؛ بعد ٢٩ يأتي ٣٠.",
+      "scaffold": "عدّ خطوة واحدة للأمام، وانتبه إلى انتقال الآحاد إلى العشرات.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "magnitude-number-line",
+      "skillTitle": "أقارن الأعداد وأحدد موقعها",
+      "skillObjective": "فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.",
+      "questionId": "mn-4",
+      "prompt": "ما العدد الواقع بين ٤ و٦؟",
+      "stimulus": "٤ — ؟ — ٦",
+      "options": [
+        "٣",
+        "٥",
+        "٧"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٥",
+      "feedbackCorrect": "صحيح؛ ٥ يقع بين ٤ و٦.",
+      "scaffold": "ابدأ من ٤ وتقدم خطوة واحدة على خط الأعداد.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "magnitude-number-line",
+      "skillTitle": "أقارن الأعداد وأحدد موقعها",
+      "skillObjective": "فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.",
+      "questionId": "mn-5",
+      "prompt": "إذا تحركت خطوتين إلى اليسار من ٧ على خط الأعداد، فأين تصل؟",
+      "stimulus": "٧ ← ← ؟",
+      "options": [
+        "٥",
+        "٦",
+        "٩"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٥",
+      "feedbackCorrect": "صحيح؛ ٧ ثم ٦ ثم ٥.",
+      "scaffold": "التحرك يسارًا يعني الانتقال إلى أعداد أصغر في خط الأعداد المعتاد.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "place-value",
+      "skillTitle": "أفهم العشرات والآحاد",
+      "skillObjective": "فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.",
+      "questionId": "pv-1",
+      "prompt": "في العدد ٤٣، كم عشرة كاملة؟",
+      "stimulus": "٤٣",
+      "options": [
+        "٣",
+        "٤",
+        "٤٣"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٤",
+      "feedbackCorrect": "صحيح؛ فيه أربع عشرات.",
+      "scaffold": "الرقم الأول من اليسار في هذا العدد يمثل العشرات.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "place-value",
+      "skillTitle": "أفهم العشرات والآحاد",
+      "skillObjective": "فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.",
+      "questionId": "pv-2",
+      "prompt": "أي تفكيك يمثّل العدد ٢٧؟",
+      "stimulus": "٢٧",
+      "options": [
+        "٢٠ + ٧",
+        "٢ + ٧٠",
+        "٢٠ + ٧٠"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٢٠ + ٧",
+      "feedbackCorrect": "صحيح؛ ٢٧ تساوي عشرَتين وسبعة آحاد.",
+      "scaffold": "افصل العشرات عن الآحاد ثم أعد جمعهما.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "place-value",
+      "skillTitle": "أفهم العشرات والآحاد",
+      "skillObjective": "فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.",
+      "questionId": "pv-3",
+      "prompt": "ما قيمة الرقم ٥ في العدد ٥٢؟",
+      "stimulus": "٥٢",
+      "options": [
+        "٥",
+        "٥٠",
+        "٢"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٥٠",
+      "feedbackCorrect": "صحيح؛ الرقم ٥ في منزلة العشرات وقيمته ٥٠.",
+      "scaffold": "تعرّف إلى المنزلة قبل اختيار القيمة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "place-value",
+      "skillTitle": "أفهم العشرات والآحاد",
+      "skillObjective": "فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.",
+      "questionId": "pv-4",
+      "prompt": "ما قيمة الرقم ٨ في العدد ٥٨؟",
+      "stimulus": "٥٨",
+      "options": [
+        "٨",
+        "٨٠",
+        "٥"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ الرقم ٨ في منزلة الآحاد وقيمته ٨.",
+      "scaffold": "ميّز بين منزلة العشرات ومنزلة الآحاد.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "place-value",
+      "skillTitle": "أفهم العشرات والآحاد",
+      "skillObjective": "فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.",
+      "questionId": "pv-5",
+      "prompt": "أي تفكيك يمثّل العدد ٦٤؟",
+      "stimulus": "٦٤",
+      "options": [
+        "٦ + ٤",
+        "٦٠ + ٤",
+        "٦٠ + ٤٠"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٦٠ + ٤",
+      "feedbackCorrect": "صحيح؛ ٦٤ تساوي ستّ عشرات وأربعة آحاد.",
+      "scaffold": "اكتب قيمة العشرات ثم أضف قيمة الآحاد.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "addition-subtraction",
+      "skillTitle": "أفكّر في الجمع والطرح",
+      "skillObjective": "استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.",
+      "questionId": "as-1",
+      "prompt": "ما ناتج ٨ + ٥؟",
+      "stimulus": "٨ + ٥",
+      "options": [
+        "١٢",
+        "١٣",
+        "١٤"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٣",
+      "feedbackCorrect": "صحيح؛ نكمل ١٠ بأخذ ٢ من الخمسة، ويتبقى ٣.",
+      "scaffold": "قسّم ٥ إلى ٢ و٣، ثم احسب ٨ + ٢ + ٣.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "addition-subtraction",
+      "skillTitle": "أفكّر في الجمع والطرح",
+      "skillObjective": "استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.",
+      "questionId": "as-2",
+      "prompt": "ما ناتج ١٤ − ٦؟",
+      "stimulus": "١٤ − ٦",
+      "options": [
+        "٨",
+        "٩",
+        "٧"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ الناتج ٨.",
+      "scaffold": "اطرح ٤ لتصل إلى ١٠، ثم اطرح ٢ أخرى.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "addition-subtraction",
+      "skillTitle": "أفكّر في الجمع والطرح",
+      "skillObjective": "استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.",
+      "questionId": "as-3",
+      "prompt": "أي جملة عددية تساوي ١٠؟",
+      "stimulus": "؟ + ٣ = ١٠",
+      "options": [
+        "٦ + ٣",
+        "٧ + ٣",
+        "٨ + ٣"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٧ + ٣",
+      "feedbackCorrect": "صحيح؛ ٧ + ٣ = ١٠.",
+      "scaffold": "ابحث عن العدد الذي يكمل ٧ إلى ١٠.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "addition-subtraction",
+      "skillTitle": "أفكّر في الجمع والطرح",
+      "skillObjective": "استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.",
+      "questionId": "as-4",
+      "prompt": "ما ناتج ٧ + ٦؟",
+      "stimulus": "٧ + ٦",
+      "options": [
+        "١٢",
+        "١٣",
+        "١٤"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٣",
+      "feedbackCorrect": "صحيح؛ ٧ + ٦ = ١٣.",
+      "scaffold": "أكمل إلى عشرة: خذ ٣ من الستة، ثم أضف ما تبقّى.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "addition-subtraction",
+      "skillTitle": "أفكّر في الجمع والطرح",
+      "skillObjective": "استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.",
+      "questionId": "as-5",
+      "prompt": "ما ناتج ١٥ − ٧؟",
+      "stimulus": "١٥ − ٧",
+      "options": [
+        "٧",
+        "٨",
+        "٩"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٨",
+      "feedbackCorrect": "صحيح؛ ١٥ − ٧ = ٨.",
+      "scaffold": "اطرح ٥ لتصل إلى ١٠، ثم اطرح ٢ أخرى.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "multiplication-division",
+      "skillTitle": "أفهم المجموعات المتساوية",
+      "skillObjective": "ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.",
+      "questionId": "md-1",
+      "prompt": "٣ مجموعات، في كل مجموعة عنصران. كم عنصرًا؟",
+      "options": [
+        "٥",
+        "٦",
+        "٨"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٦",
+      "feedbackCorrect": "صحيح؛ ٢ + ٢ + ٢ = ٦.",
+      "scaffold": "ارسم ثلاث مجموعات وضع عنصرين في كل مجموعة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "multiplication-division",
+      "skillTitle": "أفهم المجموعات المتساوية",
+      "skillObjective": "ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.",
+      "questionId": "md-2",
+      "prompt": "ما ناتج ٤ × ٥؟",
+      "stimulus": "٤ × ٥",
+      "options": [
+        "٩",
+        "٢٠",
+        "١٥"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٢٠",
+      "feedbackCorrect": "صحيح؛ أربع مجموعات من خمسة تساوي ٢٠.",
+      "scaffold": "حوّل الضرب إلى جمع متكرر: ٥ + ٥ + ٥ + ٥.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "multiplication-division",
+      "skillTitle": "أفهم المجموعات المتساوية",
+      "skillObjective": "ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.",
+      "questionId": "md-3",
+      "prompt": "١٢ قطعة تقسم بالتساوي على ٣ أطفال. كم قطعة لكل طفل؟",
+      "options": [
+        "٣",
+        "٤",
+        "٥"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٤",
+      "feedbackCorrect": "صحيح؛ ١٢ ÷ ٣ = ٤.",
+      "scaffold": "وزّع القطع واحدة تلو الأخرى على ثلاثة أطفال حتى تنتهي.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "multiplication-division",
+      "skillTitle": "أفهم المجموعات المتساوية",
+      "skillObjective": "ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.",
+      "questionId": "md-4",
+      "prompt": "أربع مجموعات، في كل مجموعة ثلاثة عناصر. كم عنصرًا؟",
+      "options": [
+        "٧",
+        "١٢",
+        "٩"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٢",
+      "feedbackCorrect": "صحيح؛ ٤ × ٣ = ١٢.",
+      "scaffold": "ارسم أربع مجموعات وضع ثلاثة عناصر في كل مجموعة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "multiplication-division",
+      "skillTitle": "أفهم المجموعات المتساوية",
+      "skillObjective": "ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.",
+      "questionId": "md-5",
+      "prompt": "وُزّعت ١٥ قطعة بالتساوي على خمسة أطفال. كم قطعة لكل طفل؟",
+      "options": [
+        "٥",
+        "٣",
+        "٤"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٣",
+      "feedbackCorrect": "صحيح؛ ١٥ ÷ ٥ = ٣.",
+      "scaffold": "وزّع القطع على الأطفال واحدًا واحدًا حتى تنتهي.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "math-word-problems",
+      "skillTitle": "أحوّل المسألة إلى خطة حل",
+      "skillObjective": "فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.",
+      "questionId": "wp-1",
+      "prompt": "مع مريم ٤ أقلام وأعطاها أخوها ٣ أخرى. كم أصبح معها؟",
+      "options": [
+        "١",
+        "٧",
+        "١٢"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٧",
+      "feedbackCorrect": "صحيح؛ نضيف ٣ إلى ٤ فيصبح المجموع ٧.",
+      "scaffold": "ارسم ٤ أقلام ثم أضف ٣، وبعدها عدّ المجموع.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "math-word-problems",
+      "skillTitle": "أحوّل المسألة إلى خطة حل",
+      "skillObjective": "فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.",
+      "questionId": "wp-2",
+      "prompt": "كان مع عمر ٩ كرات، وأعطى صديقه ٢. كم بقي معه؟",
+      "options": [
+        "٧",
+        "١١",
+        "٦"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٧",
+      "feedbackCorrect": "صحيح؛ عندما نعطي جزءًا من الكمية يقل ما بقي.",
+      "scaffold": "ابدأ بـ٩ ثم احذف كرتين أو تحرك خطوتين للخلف.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "math-word-problems",
+      "skillTitle": "أحوّل المسألة إلى خطة حل",
+      "skillObjective": "فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.",
+      "questionId": "wp-3",
+      "prompt": "في كل صندوق ٥ كتب، ولدينا صندوقان. كم كتابًا؟",
+      "options": [
+        "٧",
+        "١٠",
+        "٥"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٠",
+      "feedbackCorrect": "صحيح؛ مجموعتان من خمسة تساويان ١٠.",
+      "scaffold": "ارسم صندوقين وضع ٥ علامات في كل صندوق، ثم اجمع.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "math-word-problems",
+      "skillTitle": "أحوّل المسألة إلى خطة حل",
+      "skillObjective": "فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.",
+      "questionId": "wp-4",
+      "prompt": "مع هدى ٨ تفاحات، وأكلت ٣. كم تفاحة بقيت؟",
+      "options": [
+        "٥",
+        "١١",
+        "٦"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٥",
+      "feedbackCorrect": "صحيح؛ نطرح ما أكلته من العدد الكلي: ٨ − ٣ = ٥.",
+      "scaffold": "ابدأ بثماني تفاحات ثم احذف ثلاثًا وعدّ الباقي.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "math-word-problems",
+      "skillTitle": "أحوّل المسألة إلى خطة حل",
+      "skillObjective": "فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.",
+      "questionId": "wp-5",
+      "prompt": "ثلاثة أكياس، في كلِّ كيسٍ منها أربعةُ أقلامٍ. ما مجموعُ الأقلامِ؟",
+      "options": [
+        "٧",
+        "١٢",
+        "٩"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "١٢",
+      "feedbackCorrect": "صحيح؛ ٣ مجموعات من أربعة تساوي ١٢.",
+      "scaffold": "مثّل كل كيس كمجموعة مستقلة ثم اجمع الأقلام.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "fractions",
+      "skillTitle": "أفهم الجزء من الكل",
+      "skillObjective": "تمييز الكسور بوصفها أجزاء متساوية من كل واحد.",
+      "questionId": "fr-1",
+      "prompt": "ماذا يعني ١/٢؟",
+      "stimulus": "١/٢",
+      "options": [
+        "جزء واحد من جزأين متساويين",
+        "جزآن من ثلاثة",
+        "ثلاثة أجزاء من أربعة"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "جزء واحد من جزأين متساويين",
+      "feedbackCorrect": "صحيح؛ البسط ١ والمقام ٢.",
+      "scaffold": "اقرأ المقام بوصفه عدد الأجزاء المتساوية والبسط بوصفه الأجزاء المختارة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "fractions",
+      "skillTitle": "أفهم الجزء من الكل",
+      "skillObjective": "تمييز الكسور بوصفها أجزاء متساوية من كل واحد.",
+      "questionId": "fr-2",
+      "prompt": "أي مجموعة تمثل ربعًا؟",
+      "stimulus": "١/٤",
+      "options": [
+        "جزء واحد من ٤ أجزاء متساوية",
+        "جزآن من ٤",
+        "٣ أجزاء من ٤"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "جزء واحد من ٤ أجزاء متساوية",
+      "feedbackCorrect": "صحيح؛ الربع جزء واحد من أربعة أجزاء متساوية.",
+      "scaffold": "تخيّل الكل مقسّمًا إلى أربعة أجزاء متساوية واختر جزءًا واحدًا.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "fractions",
+      "skillTitle": "أفهم الجزء من الكل",
+      "skillObjective": "تمييز الكسور بوصفها أجزاء متساوية من كل واحد.",
+      "questionId": "fr-3",
+      "prompt": "أي كسر أكبر؟",
+      "options": [
+        "١/٢",
+        "١/٤",
+        "متساويان"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "١/٢",
+      "feedbackCorrect": "صحيح؛ نصف الكل أكبر من ربعه عند تساوي الكل.",
+      "scaffold": "قارن مقدار الجزء عندما يكون الكل نفسه.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "fractions",
+      "skillTitle": "أفهم الجزء من الكل",
+      "skillObjective": "تمييز الكسور بوصفها أجزاء متساوية من كل واحد.",
+      "questionId": "fr-4",
+      "prompt": "قُسم شكل إلى أربعة أجزاء متساوية وأُخذت ثلاثة. ما الكسر؟",
+      "options": [
+        "١/٤",
+        "٣/٤",
+        "٢/٤"
+      ],
+      "correctIndex": 1,
+      "correctAnswer": "٣/٤",
+      "feedbackCorrect": "صحيح؛ ثلاثة من أربعة أجزاء متساوية تكتب ٣/٤.",
+      "scaffold": "المقام عدد الأجزاء كلها، والبسط عدد الأجزاء المختارة.",
+      "hideStimulus": false
+    },
+    {
+      "domain": "math",
+      "skillId": "fractions",
+      "skillTitle": "أفهم الجزء من الكل",
+      "skillObjective": "تمييز الكسور بوصفها أجزاء متساوية من كل واحد.",
+      "questionId": "fr-5",
+      "prompt": "أي كسر يمثل الشكل كاملاً دون نقص؟",
+      "options": [
+        "٤/٤",
+        "١/٤",
+        "٢/٤"
+      ],
+      "correctIndex": 0,
+      "correctAnswer": "٤/٤",
+      "feedbackCorrect": "صحيح؛ عندما يتساوى البسط والمقام (٤/٤) فإن الكسر يمثل الكل كاملاً.",
+      "scaffold": "تذكّر أن الكسر الذي يتساوى فيه البسط مع المقام يمثّل الشكل كاملًا.",
+      "hideStimulus": false
+    }
+  ],
+  "passages": [
+    {
+      "id": "passage-g2-garden",
+      "title": "الْقِطَّةُ الْبَيْضَاءُ فِي الْحَدِيقَةِ",
+      "gradeLevel": 2,
+      "gradeLabel": "الصف الثاني الابتدائي",
+      "category": "مفردات الحياة اليومية · الصف الثاني الابتدائي (تشكيل كامل)",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل (تأسيسي للصف الثاني)",
+      "wordCount": 52,
+      "words": [
+        "خَرَجَتْ",
+        "سَلْمَى",
+        "صَبَاحاً",
+        "إِلَى",
+        "حَدِيقَةِ",
+        "الْبَيْتِ",
+        "الصَّغِيرَةِ.",
+        "شَاهَدَتْ",
+        "قِطَّةً",
+        "بَيْضَاءَ",
+        "تَجْلِسُ",
+        "تَحْتَ",
+        "شَجَرَةِ",
+        "التُّفَّاحِ.",
+        "كَانَتِ",
+        "الْقِطَّةُ",
+        "تَبْدُو",
+        "جَائِعَةً",
+        "وَتَنْظُرُ",
+        "بِهُدُوءٍ",
+        "إِلَى",
+        "الْبَابِ.",
+        "أَحْضَرَتْ",
+        "سَلْمَى",
+        "إِنَاءً",
+        "نَظِيفاً",
+        "فِيهِ",
+        "مَاءٌ",
+        "عَذْبٌ",
+        "وَطَعَامٌ",
+        "مُنَاسِبٌ.",
+        "شَرِبَتِ",
+        "الْقِطَّةُ",
+        "الْمَاءَ",
+        "وَأَكَلَتْ",
+        "ثُمَّ",
+        "لَعِبَتْ",
+        "بِالْكُرَةِ",
+        "الْحَمْرَاءِ",
+        "فَرِحَةً",
+        "بَيْنَ",
+        "الزُّهُورِ",
+        "الْمُلَوَّنَةِ.",
+        "ابْتَسَمَتِ",
+        "الْأُمُّ",
+        "وَقَالَتْ:",
+        "الرِّفْقُ",
+        "بِالْحَيَوَانِ",
+        "عَمَلٌ",
+        "جَمِيلٌ",
+        "يَا",
+        "سَلْمَى."
+      ],
+      "fullText": "خَرَجَتْ سَلْمَى صَبَاحاً إِلَى حَدِيقَةِ الْبَيْتِ الصَّغِيرَةِ. شَاهَدَتْ قِطَّةً بَيْضَاءَ تَجْلِسُ تَحْتَ شَجَرَةِ التُّفَّاحِ. كَانَتِ الْقِطَّةُ تَبْدُو جَائِعَةً وَتَنْظُرُ بِهُدُوءٍ إِلَى الْبَابِ. أَحْضَرَتْ سَلْمَى إِنَاءً نَظِيفاً فِيهِ مَاءٌ عَذْبٌ وَطَعَامٌ مُنَاسِبٌ. شَرِبَتِ الْقِطَّةُ الْمَاءَ وَأَكَلَتْ ثُمَّ لَعِبَتْ بِالْكُرَةِ الْحَمْرَاءِ فَرِحَةً بَيْنَ الزُّهُورِ الْمُلَوَّنَةِ. ابْتَسَمَتِ الْأُمُّ وَقَالَتْ: الرِّفْقُ بِالْحَيَوَانِ عَمَلٌ جَمِيلٌ يَا سَلْمَى.",
+      "targetSkillsAr": [
+        "التمييز بين الحروف المتشابهة نقطياً (ب / ت / ث، ج / ح / خ)",
+        "قراءة المدود الثلاثة (الألف والواو والياء) مع الحركات القصيرة",
+        "المفردات المألوفة في الحياة اليومية للطفل العربي"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "أَيْنَ كَانَتْ تَجْلِسُ الْقِطَّةُ الْبَيْضَاءُ عِنْدَمَا شَاهَدَتْهَا سَلْمَى؟",
+          "options": [
+            "فَوْقَ سَطْحِ الْبَيْتِ",
+            "تَحْتَ شَجَرَةِ التُّفَّاحِ",
+            "دَاخِلَ غُرْفَةِ الضُّيُوفِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "أَيُّ تَصَرُّفٍ يُظْهِرُ عَطْفَ سَلْمَى عَلَى الْقِطَّةِ؟",
+          "options": [
+            "تَرَكَتْهَا وَحْدَهَا فِي الْحَدِيقَةِ",
+            "أَبْعَدَتِ الْكُرَةَ عَنِ الزُّهُورِ",
+            "قَدَّمَتْ لَهَا الْمَاءَ وَالطَّعَامَ"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "مَا مَعْنَى كَلِمَةِ «عَذْبٌ» فِي جُمْلَةِ «فِيهِ مَاءٌ عَذْبٌ»؟",
+          "options": [
+            "صَافٍ وَصَالِحٌ لِلشُّرْبِ",
+            "مَالِحٌ مِثْلَ الْبَحْرِ",
+            "مُتَجَمِّدٌ مِثْلَ الثَّلْجِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "مَا الْفِكْرَةُ الرَّئِيسَةُ الَّتِي تَدُورُ حَوْلَهَا هَذِهِ الْقِصَّةُ؟",
+          "options": [
+            "زِرَاعَةُ الْأَشْجَارِ",
+            "اللَّعِبُ فِي الْمَلْعَبِ",
+            "الرِّفْقُ بِالْحَيَوَانِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g3-market",
+      "title": "صَبَاحٌ فِي سُوقِ الْفَاكِهَةِ",
+      "gradeLevel": 3,
+      "gradeLabel": "الصف الثالث الابتدائي",
+      "category": "قصة اجتماعية متدرجة · الصف الثالث الابتدائي (تشكيل كامل)",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل (متدرج للصف الثالث)",
+      "wordCount": 53,
+      "words": [
+        "ذَهَبَ",
+        "طَارِقٌ",
+        "مَعَ",
+        "وَالِدِهِ",
+        "يَوْمَ",
+        "الْجُمُعَةِ",
+        "إِلَى",
+        "سُوقِ",
+        "الْحَيِّ",
+        "الْقَرِيبِ.",
+        "حَمَلَ",
+        "طَارِقٌ",
+        "سَلَّةً",
+        "مِنَ",
+        "السَّعَفِ",
+        "لِيَضَعَ",
+        "فِيهَا",
+        "الْفَاكِهَةَ",
+        "الطَّازَجَةَ.",
+        "تَوَقَّفَ",
+        "الْوَالِدُ",
+        "أَمَامَ",
+        "مَتْجَرٍ",
+        "مُرَتَّبٍ",
+        "تَفُوحُ",
+        "مِنْهُ",
+        "رَائِحَةُ",
+        "الْفَوَاكِهِ",
+        "الزَّكِيَّةُ.",
+        "اشْتَرَى",
+        "الْوَالِدُ",
+        "عِنَباً",
+        "أَخْضَرَ",
+        "وَتِيناً",
+        "حُلْواً",
+        "وَبُرْتُقَالاً",
+        "كَثِيراً",
+        "لِأُسْرَتِهِ.",
+        "وَزَنَ",
+        "الْبَائِعُ",
+        "الْفَاكِهَةَ",
+        "بِالْمِيزَانِ",
+        "بِدِقَّةٍ،",
+        "ثُمَّ",
+        "شَكَرَ",
+        "طَارِقاً",
+        "عَلَى",
+        "مُسَاعَدَتِهِ",
+        "لِوَالِدِهِ",
+        "وَأَهْدَاهُ",
+        "تُفَّاحَةً",
+        "حَمْرَاءَ",
+        "لَذِيذَةً."
+      ],
+      "fullText": "ذَهَبَ طَارِقٌ مَعَ وَالِدِهِ يَوْمَ الْجُمُعَةِ إِلَى سُوقِ الْحَيِّ الْقَرِيبِ. حَمَلَ طَارِقٌ سَلَّةً مِنَ السَّعَفِ لِيَضَعَ فِيهَا الْفَاكِهَةَ الطَّازَجَةَ. تَوَقَّفَ الْوَالِدُ أَمَامَ مَتْجَرٍ مُرَتَّبٍ تَفُوحُ مِنْهُ رَائِحَةُ الْفَوَاكِهِ الزَّكِيَّةُ. اشْتَرَى الْوَالِدُ عِنَباً أَخْضَرَ وَتِيناً حُلْواً وَبُرْتُقَالاً كَثِيراً لِأُسْرَتِهِ. وَزَنَ الْبَائِعُ الْفَاكِهَةَ بِالْمِيزَانِ بِدِقَّةٍ، ثُمَّ شَكَرَ طَارِقاً عَلَى مُسَاعَدَتِهِ لِوَالِدِهِ وَأَهْدَاهُ تُفَّاحَةً حَمْرَاءَ لَذِيذَةً.",
+      "targetSkillsAr": [
+        "الطلاقة القرائية في الجمل السردية المترابطة",
+        "قراءة التنوين بالضم والفتح والكسر في أواخر الكلمات",
+        "التفريق بين الحروف المتقاربة مخرجاً (س / ص، ت / ط، د / ض)"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "بِمَاذَا وَزَنَ الْبَائِعُ الْفَاكِهَةَ فِي السُّوقِ؟",
+          "options": [
+            "بِمِيزَانِهِ الدَّقِيقِ",
+            "بِصُنْدُوقِ الْخَشَبِ",
+            "بِالْعَدِّ السَّرِيعِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "أَيُّ سُلُوكٍ يُفَسِّرُ حُصُولَ طَارِقٍ عَلَى تُفَّاحَةٍ إِضَافِيَّةٍ؟",
+          "options": [
+            "لِأَنَّهُ وَزَنَ الْفَاكِهَةَ بِسُرْعَةٍ",
+            "لِأَنَّهُ سَاعَدَ وَالِدَهُ فِي التَّسَوُّقِ",
+            "لِأَنَّ الْبَائِعَ كَانَ يُغْلِقُ مَتْجَرَهُ"
+          ],
+          "correctIndex": 1,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "مَا مَعْنَى كَلِمَةِ «الزَّكِيَّةُ» فِي جُمْلَةِ «تَفُوحُ مِنْهُ رَائِحَةُ الْفَوَاكِهِ الزَّكِيَّةُ»؟",
+          "options": [
+            "بَعِيدَةٌ وَمَخْفِيَّةٌ",
+            "ثَقِيلَةٌ وَمُزْعِجَةٌ",
+            "طَيِّبَةُ الرَّائِحَةِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "مَا الْفِكْرَةُ الرَّئِيسَةُ لِقِصَّةِ «صَبَاحٌ فِي سُوقِ الْفَاكِهَةِ»؟",
+          "options": [
+            "صِنَاعَةُ السِّلَالِ",
+            "التَّعَاوُنُ أَثْنَاءَ التَّسَوُّقِ",
+            "إِغْلَاقُ الْمَتَاجِرِ مَسَاءً"
+          ],
+          "correctIndex": 1,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g3-astronomy",
+      "title": "رِحْلَةٌ إِلَى المَرْصَدِ الفَلَكِيِّ",
+      "gradeLevel": 3,
+      "gradeLabel": "الصف الثالث الابتدائي (متقدم)",
+      "category": "علوم وفلك · الصف الثالث الابتدائي (تشكيل كامل)",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل (نصوص علمية مبسّطة)",
+      "wordCount": 55,
+      "words": [
+        "زَارَ",
+        "طُلَّابُ",
+        "المَدْرَسَةِ",
+        "المَرْصَدَ",
+        "الفَلَكِيَّ",
+        "فِي",
+        "مَسَاءٍ",
+        "صَافٍ",
+        "لِمُشَاهَدَةِ",
+        "الكَوَاكِبِ",
+        "المُضِيئَةِ.",
+        "اسْتَقْبَلَهُمُ",
+        "البَاحِثُ",
+        "فِي",
+        "قَاعَةِ",
+        "العَرْضِ",
+        "وَشَرَحَ",
+        "لَهُمْ",
+        "حَرَكَةَ",
+        "الأَرْضِ",
+        "حَوْلَ",
+        "الشَّمْسِ.",
+        "وَضَعَ",
+        "المُهَنْدِسُ",
+        "المِنْظَارَ",
+        "الدَّقِيقَ",
+        "نَحْوَ",
+        "السَّمَاءِ،",
+        "فَظَهَرَتْ",
+        "حَلَقَاتُ",
+        "كَوْكَبِ",
+        "زُحَلَ",
+        "الوَاضِحَةُ",
+        "أَمَامَ",
+        "الجَمِيعِ.",
+        "سَجَّلَ",
+        "الأَطْفَالُ",
+        "مُلَاحَظَاتِهِمْ",
+        "فِي",
+        "دَفْتَرِ",
+        "البَحْثِ",
+        "العِلْمِيِّ",
+        "بِحَمَاسٍ",
+        "شَدِيدٍ،",
+        "وَتَمَنَّى",
+        "كُلُّ",
+        "طَالِبٍ",
+        "أَنْ",
+        "يَقْرَأَ",
+        "كُتُباً",
+        "جَدِيدَةً",
+        "عَنْ",
+        "عَالَمِ",
+        "الفَضَاءِ",
+        "الوَاسِعِ."
+      ],
+      "fullText": "زَارَ طُلَّابُ المَدْرَسَةِ المَرْصَدَ الفَلَكِيَّ فِي مَسَاءٍ صَافٍ لِمُشَاهَدَةِ الكَوَاكِبِ المُضِيئَةِ. اسْتَقْبَلَهُمُ البَاحِثُ فِي قَاعَةِ العَرْضِ وَشَرَحَ لَهُمْ حَرَكَةَ الأَرْضِ حَوْلَ الشَّمْسِ. وَضَعَ المُهَنْدِسُ المِنْظَارَ الدَّقِيقَ نَحْوَ السَّمَاءِ، فَظَهَرَتْ حَلَقَاتُ كَوْكَبِ زُحَلَ الوَاضِحَةُ أَمَامَ الجَمِيعِ. سَجَّلَ الأَطْفَالُ مُلَاحَظَاتِهِمْ فِي دَفْتَرِ البَحْثِ العِلْمِيِّ بِحَمَاسٍ شَدِيدٍ، وَتَمَنَّى كُلُّ طَالِبٍ أَنْ يَقْرَأَ كُتُباً جَدِيدَةً عَنْ عَالَمِ الفَضَاءِ الوَاسِعِ.",
+      "targetSkillsAr": [
+        "قراءة الكلمات المتصلة بالسوابق واللواحق (لِمُشَاهَدَةِ، مُلَاحَظَاتِهِمْ)",
+        "التمييز بين حرفي الظاء والضاد (المِنْظَارَ / المُضِيئَةِ)",
+        "فهم الجمل العلمية المركبة واستخلاص الفكرة الرئيسة"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "مَا الكَوْكَبُ الَّذِي ظَهَرَتْ حَلَقَاتُهُ الوَاضِحَةُ فِي المِنْظَارِ؟",
+          "options": [
+            "كَوْكَبُ الْمِرِّيخِ",
+            "كَوْكَبُ عُطَارِدَ",
+            "كَوْكَبُ زُحَلَ"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "مَا الَّذِي سَاعَدَ الطُّلَّابَ عَلَى رُؤْيَةِ حَلَقَاتِ زُحَلَ بِوُضُوحٍ؟",
+          "options": [
+            "صَفَاءُ السَّمَاءِ وَاسْتِخْدَامُ الْمِنْظَارِ",
+            "زِيَارَةُ الْمَرْصَدِ وَقْتَ الظَّهِيرَةِ",
+            "مُشَاهَدَةُ خَرَائِطَ الْمَدِينَةِ فَقَطْ"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "مَا المَقْصُودُ بِكَلِمَةِ «المِنْظَارَ» فِي النَّصِّ؟",
+          "options": [
+            "مِصْبَاحٌ كَهْرَبَائِيٌّ لِلْغُرْفَةِ",
+            "أَدَاةٌ تُقَرِّبُ الْأَجْسَامَ الْبَعِيدَةَ",
+            "كِتَابٌ لِلْخَرَائِطِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "مَا الفِكْرَةُ الرَّئِيسَةُ لِهَذَا النَّصِّ؟",
+          "options": [
+            "زِيَارَةُ الْمَرْصَدِ وَمُشَاهَدَةُ الْكَوَاكِبِ",
+            "صِنَاعَةُ الدَّفَاتِرِ الْمَدْرَسِيَّةِ",
+            "تَعَاقُبُ الْفُصُولِ الْأَرْبَعَةِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g4-oasis",
+      "title": "واحةُ النخيلِ والقنواتُ المائيةُ",
+      "gradeLevel": 4,
+      "gradeLabel": "الصف الرابع الابتدائي",
+      "category": "بيئة وتراث · الصف الرابع الابتدائي (تشكيل جزئي وظيفي)",
+      "diacriticLevel": "partial",
+      "diacriticLabelAr": "مشكّل جزئياً (ضبط أواخر الكلمات واللبس)",
+      "wordCount": 57,
+      "words": [
+        "تتميزُ",
+        "الواحاتُ",
+        "العربيةُ",
+        "بنظامِ",
+        "ريٍّ",
+        "عريقٍ",
+        "يُعرفُ",
+        "باسمِ",
+        "الأفلاجِ",
+        "المائيةِ.",
+        "تنسابُ",
+        "المياهُ",
+        "العذبةُ",
+        "منَ",
+        "الينابيعِ",
+        "الجبليةِ",
+        "عبرَ",
+        "قنواتٍ",
+        "متصلةٍ",
+        "لترْويَ",
+        "بساتينَ",
+        "النخيلِ",
+        "والحقولَ",
+        "الخضراءَ.",
+        "حفرَ",
+        "الأجدادُ",
+        "هذهِ",
+        "القنواتِ",
+        "تحتَ",
+        "الأرضِ",
+        "لحمايةِ",
+        "الماءِ",
+        "منَ",
+        "التبخرِ",
+        "في",
+        "أيامِ",
+        "الصيفِ",
+        "الحارةِ.",
+        "يتعاونُ",
+        "المزارعونَ",
+        "يومياً",
+        "لتوزيعِ",
+        "حصصِ",
+        "المياهِ",
+        "بالعدلِ",
+        "والدقةِ",
+        "بينَ",
+        "جميعِ",
+        "المزارعِ،",
+        "فتظلُّ",
+        "الواحةُ",
+        "عامرةً",
+        "بالثمارِ",
+        "والظلالِ",
+        "الوارفةِ",
+        "طوالَ",
+        "العامِ."
+      ],
+      "fullText": "تتميزُ الواحاتُ العربيةُ بنظامِ ريٍّ عريقٍ يُعرفُ باسمِ الأفلاجِ المائيةِ. تنسابُ المياهُ العذبةُ منَ الينابيعِ الجبليةِ عبرَ قنواتٍ متصلةٍ لترْويَ بساتينَ النخيلِ والحقولَ الخضراءَ. حفرَ الأجدادُ هذهِ القنواتِ تحتَ الأرضِ لحمايةِ الماءِ منَ التبخرِ في أيامِ الصيفِ الحارةِ. يتعاونُ المزارعونَ يومياً لتوزيعِ حصصِ المياهِ بالعدلِ والدقةِ بينَ جميعِ المزارعِ، فتظلُّ الواحةُ عامرةً بالثمارِ والظلالِ الوارفةِ طوالَ العامِ.",
+      "targetSkillsAr": [
+        "القراءة بتشكيل جزئي يضبط أواخر الكلمات ومواضع اللبس",
+        "قراءة الجموع (جمع التكسير وجمع المؤنث السالم وجمع المذكر السالم)",
+        "فهم المفردات البيئية من السياق"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما اسمُ نظامِ الريِّ الذي ينقلُ المياهَ في الواحةِ؟",
+          "options": [
+            "السُّدُودُ الرَّمْلِيَّةُ",
+            "الْأَفْلَاجُ",
+            "الصَّهَارِيجُ الْمَعْدِنِيَّةُ"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "إِذَا تَعَطَّلَتْ قَنَوَاتُ الْأَفْلَاجِ، فَمَا الْأَثَرُ الْأَقْرَبُ عَلَى الْوَاحَةِ؟",
+          "options": [
+            "تَتَحَسَّنُ زِرَاعَةُ النَّخِيلِ بِسُرْعَةٍ",
+            "تَتَوَقَّفُ التُّرْبَةُ عَنْ امْتِصَاصِ ضَوْءِ الشَّمْسِ",
+            "يَقِلُّ وُصُولُ الْمَاءِ إِلَى الْمَزَارِعِ وَالنَّخِيلِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "ما معنى كلمةِ «تنسابُ» في جملةِ «تنسابُ المياهُ العذبةُ عبرَ قنواتٍ متصلةٍ»؟",
+          "options": [
+            "تَجْرِي بِهُدُوءٍ وَاسْتِمْرَارٍ",
+            "تَتَوَقَّفُ وَتَتَجَمَّدُ",
+            "تَتَبَخَّرُ فِي الْهَوَاءِ الْحَارِّ"
+          ],
+          "correctIndex": 0,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "ما الفكرةُ الرئيسةُ التي يتناولُها نصُّ «واحةُ النخيلِ والقنواتُ المائيةُ»؟",
+          "options": [
+            "تَسَلُّقُ الْجِبَالِ شِتَاءً",
+            "أَهَمِّيَّةُ الْأَفْلَاجِ وَتَعَاوُنُ الْمُزَارِعِينَ",
+            "أَنْوَاعُ التُّمُورِ فِي الْأَسْوَاقِ الْمَحَلِّيَّةِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g4-partial-water",
+      "title": "ساقيةُ القريةِ وحقولُ القمحِ",
+      "gradeLevel": 4,
+      "gradeLabel": "الصف الرابع الابتدائي",
+      "category": "تشكيل جزئي وظيفي · الصف الرابع الابتدائي",
+      "diacriticLevel": "partial",
+      "diacriticLabelAr": "مشكّل جزئياً (أواخر الكلمات وضبط اللبس)",
+      "wordCount": 55,
+      "words": [
+        "في",
+        "صباحٍ",
+        "هادئٍ",
+        "اجتمعَ",
+        "أهلُ",
+        "القريةِ",
+        "حولَ",
+        "ساقيةِ",
+        "الماءِ",
+        "القديمةِ.",
+        "تدورُ",
+        "عجلةُ",
+        "الساقيةِ",
+        "الخشبيةُ",
+        "بانتظامٍ",
+        "لترفعَ",
+        "الماءَ",
+        "منَ",
+        "النهرِ",
+        "إلى",
+        "جداولِ",
+        "الحقولِ",
+        "المجاورةِ.",
+        "تَفقَّدَ",
+        "الفلاحُ",
+        "محصولَ",
+        "القمحِ",
+        "الذهبيِّ،",
+        "واطمأنَّ",
+        "إلى",
+        "وصولِ",
+        "الماءِ",
+        "لكلِّ",
+        "نبْتةٍ",
+        "صغيرةٍ",
+        "قبلَ",
+        "حلولِ",
+        "الظهيرةِ.",
+        "شاركهُ",
+        "الأبناءُ",
+        "في",
+        "تنظيفِ",
+        "المجرى",
+        "المائيِّ",
+        "منَ",
+        "الأوراقِ",
+        "المتساقطةِ",
+        "حتى",
+        "يتدفقَ",
+        "الماءُ",
+        "بسهولةٍ",
+        "ويعمَّ",
+        "الخيرُ",
+        "أرجاءَ",
+        "القريةِ."
+      ],
+      "fullText": "في صباحٍ هادئٍ اجتمعَ أهلُ القريةِ حولَ ساقيةِ الماءِ القديمةِ. تدورُ عجلةُ الساقيةِ الخشبيةُ بانتظامٍ لترفعَ الماءَ منَ النهرِ إلى جداولِ الحقولِ المجاورةِ. تَفقَّدَ الفلاحُ محصولَ القمحِ الذهبيِّ، واطمأنَّ إلى وصولِ الماءِ لكلِّ نبْتةٍ صغيرةٍ قبلَ حلولِ الظهيرةِ. شاركهُ الأبناءُ في تنظيفِ المجرى المائيِّ منَ الأوراقِ المتساقطةِ حتى يتدفقَ الماءُ بسهولةٍ ويعمَّ الخيرُ أرجاءَ القريةِ.",
+      "targetSkillsAr": [
+        "القراءة بتشكيل جزئي يقتصر على أواخر الكلمات ومواضع اللبس",
+        "استنتاج الحركات الداخلية للكلمات المألوفة من السياق النحوي",
+        "مفردات عربية مشتركة ومألوفة في جميع البلدان العربية"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما وظيفةُ عجلةِ الساقيةِ الخشبيةِ في القريةِ؟",
+          "options": [
+            "طَحْنُ الْقَمْحِ إِلَى دَقِيقٍ",
+            "تَحْرِيكُ الْهَوَاءِ فِي الْحُقُولِ",
+            "رَفْعُ الْمَاءِ إِلَى الْجَدَاوِلِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "مَا الْمُشْكِلَةُ الْمُحْتَمَلَةُ إِذَا سَدَّتِ الْأَوْرَاقُ مَجْرَى السَّاقِيَةِ؟",
+          "options": [
+            "قَدْ يَقِلُّ تَدَفُّقُ الْمَاءِ إِلَى النَّبَاتَاتِ",
+            "يَزْدَادُ الْمَحْصُولُ دُونَ حَاجَةٍ إِلَى رَيٍّ",
+            "تَتَحَوَّلُ السَّاقِيَةُ إِلَى أَدَاةٍ لِطَحْنِ الْقَمْحِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "ما معنى كلمةِ «تَفقَّدَ» في جملةِ «تَفقَّدَ الفلاحُ محصولَ القمحِ الذهبيِّ»؟",
+          "options": [
+            "ضَلَّ الطَّرِيقَ إِلَى الْحَقْلِ",
+            "فَحَصَ الْمَحْصُولَ وَاطْمَأَنَّ عَلَيْهِ",
+            "جَمَعَ الْقَمْحَ وَبَاعَهُ بِالْمَدِينَةِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "ما الفكرةُ الرئيسةُ لنصِّ «ساقيةُ القريةِ وحقولُ القمحِ»؟",
+          "options": [
+            "بِنَاءُ جُسُورٍ حَجَرِيَّةٍ فَوْقَ الْأَنْهَارِ",
+            "هِجْرَةُ الطُّيُورِ فِي بَدَايَةِ الْخَرِيفِ",
+            "تَعَاوُنُ أَهْلِ الْقَرْيَةِ فِي الرَّيِّ"
+          ],
+          "correctIndex": 2,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g5-solar",
+      "title": "الطاقةُ الشمسيةُ في مدينتِنا",
+      "gradeLevel": 5,
+      "gradeLabel": "الصف الخامس الابتدائي",
+      "category": "علوم وتقنية حديثة · الصف الخامس الابتدائي (تشكيل جزئي وظيفي)",
+      "diacriticLevel": "partial",
+      "diacriticLabelAr": "مشكّل جزئياً (للصف الخامس الابتدائي)",
+      "wordCount": 58,
+      "words": [
+        "تشهدُ",
+        "المدنُ",
+        "العربيةُ",
+        "توسعاً",
+        "كبيراً",
+        "في",
+        "استخدامِ",
+        "الطاقةِ",
+        "الشمسيةِ",
+        "النظيفةِ.",
+        "تستقبلُ",
+        "الألواحُ",
+        "الشمسيةُ",
+        "المثبتةُ",
+        "فوقَ",
+        "أسطحِ",
+        "المدارسِ",
+        "والمنازلِ",
+        "أشعةَ",
+        "الشمسِ",
+        "الساطعةَ",
+        "طوالَ",
+        "النهارِ،",
+        "ثمَّ",
+        "تحوّلُها",
+        "إلى",
+        "كهرباءَ",
+        "تُضيءُ",
+        "الفصولَ",
+        "الدراسيةَ",
+        "وتشغّلُ",
+        "الأجهزةَ",
+        "التعليميةَ.",
+        "تُخزَّنُ",
+        "الطاقةُ",
+        "الفائضةُ",
+        "في",
+        "بطارياتٍ",
+        "حديثةٍ",
+        "ليستفيدَ",
+        "منها",
+        "الناسُ",
+        "بعدَ",
+        "غروبِ",
+        "الشمسِ.",
+        "وبفضلِ",
+        "هذا",
+        "الابتكارِ",
+        "المتجددِ،",
+        "ينخفضُ",
+        "تلوثُ",
+        "الهواءِ",
+        "وتبقى",
+        "البيئةُ",
+        "صحيةً",
+        "وآمنةً",
+        "للأجيالِ",
+        "القادمةِ."
+      ],
+      "fullText": "تشهدُ المدنُ العربيةُ توسعاً كبيراً في استخدامِ الطاقةِ الشمسيةِ النظيفةِ. تستقبلُ الألواحُ الشمسيةُ المثبتةُ فوقَ أسطحِ المدارسِ والمنازلِ أشعةَ الشمسِ الساطعةَ طوالَ النهارِ، ثمَّ تحوّلُها إلى كهرباءَ تُضيءُ الفصولَ الدراسيةَ وتشغّلُ الأجهزةَ التعليميةَ. تُخزَّنُ الطاقةُ الفائضةُ في بطارياتٍ حديثةٍ ليستفيدَ منها الناسُ بعدَ غروبِ الشمسِ. وبفضلِ هذا الابتكارِ المتجددِ، ينخفضُ تلوثُ الهواءِ وتبقى البيئةُ صحيةً وآمنةً للأجيالِ القادمةِ.",
+      "targetSkillsAr": [
+        "قراءة النصوص العلمية للصف الخامس بتشكيل جزئي وظيفي",
+        "معالجة الجمل المركبة المحتوية على روابط سببية وزمنية",
+        "التمييز السريع بين الصيغ الصرفية للمضارع والمبني للمجهول (تستقبلُ / تُخزَّنُ)"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "أينَ تُثبَّتُ الألواحُ الشمسيةُ كما وردَ في النصِّ؟",
+          "options": [
+            "فَوْقَ أَسْطُحِ الْمَدَارِسِ وَالْمَنَازِلِ",
+            "تَحْتَ مِيَاهِ الْأَنْهَارِ وَالْبِحَارِ",
+            "دَاخِلَ أَنْفَاقٍ أَرْضِيَّةٍ مُظْلِمَةٍ"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "أَيُّ احْتِيَاجٍ تُلَبِّيهِ الْبَطَّارِيَّاتُ فِي هَذَا النِّظَامِ؟",
+          "options": [
+            "تَوْلِيدُ كَهْرَبَاءَ مِنْ ضَوْءِ الْقَمَرِ",
+            "زِيَادَةُ ضَوْءِ الشَّمْسِ بَعْدَ الْغُرُوبِ",
+            "اِسْتِخْدَامُ الطَّاقَةِ الْمُخَزَّنَةِ عِنْدَ غِيَابِ الشَّمْسِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "ما المقصودُ بكلمةِ «الفائضةُ» في جملةِ «تُخزَّنُ الطاقةُ الفائضةُ في بطارياتٍ حديثةٍ»؟",
+          "options": [
+            "الطَّاقَةُ الضَّعِيفَةُ",
+            "الزَّائِدَةُ عَنْ حَاجَةِ النَّهَارِ",
+            "الطَّاقَةُ التَّالِفَةُ غَيْرُ الصَّالِحَةِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "ما الفكرةُ الرئيسةُ لنصِّ «الطاقةُ الشمسيةُ في مدينتِنا»؟",
+          "options": [
+            "الْكَهْرَبَاءُ الشَّمْسِيَّةُ وَحِمَايَةُ الْبِيئَةِ",
+            "صِنَاعَةُ الزُّجَاجِ الْمُلَوَّنِ فِي الْمَصَانِعِ",
+            "جَدْوَلُ الْحِصَصِ الْمَدْرَسِيَّةِ الْيَوْمِيَّةِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g6-unvowelized-library",
+      "title": "مكتبة المدرسة وصناعة الورق",
+      "gradeLevel": 6,
+      "gradeLabel": "الصف السادس الابتدائي",
+      "category": "نص غير مشكّل (قراءة سياقية) · الصف السادس الابتدائي",
+      "diacriticLevel": "minimal",
+      "diacriticLabelAr": "بدون تشكيل (قراءة سياقية للصف السادس)",
+      "wordCount": 65,
+      "words": [
+        "تعد",
+        "صناعة",
+        "الورق",
+        "من",
+        "أهم",
+        "الابتكارات",
+        "التي",
+        "أسهمت",
+        "في",
+        "نشر",
+        "المعرفة",
+        "وحفظ",
+        "العلوم",
+        "عبر",
+        "العصور.",
+        "قبل",
+        "انتشار",
+        "الورق،",
+        "كان",
+        "الناس",
+        "يدونون",
+        "رسائلهم",
+        "على",
+        "ورق",
+        "البردي",
+        "أو",
+        "الجلود",
+        "الثقيلة",
+        "التي",
+        "يصعب",
+        "حملها",
+        "ونقلها",
+        "بين",
+        "البلدان.",
+        "وعندما",
+        "أنشئت",
+        "مصانع",
+        "الورق",
+        "في",
+        "الحواضر",
+        "العربية",
+        "القديمة،",
+        "ازدهرت",
+        "حركة",
+        "التأليف",
+        "والترجمة",
+        "ونشأت",
+        "المكتبات",
+        "الكبرى.",
+        "واليوم",
+        "تجمع",
+        "مكتبة",
+        "المدرسة",
+        "بين",
+        "الكتب",
+        "الورقية",
+        "المطبوعة",
+        "والمنصات",
+        "الرقمية",
+        "الحديثة",
+        "لتيسير",
+        "البحث",
+        "والقراءة",
+        "لكل",
+        "طالب."
+      ],
+      "fullText": "تعد صناعة الورق من أهم الابتكارات التي أسهمت في نشر المعرفة وحفظ العلوم عبر العصور. قبل انتشار الورق، كان الناس يدونون رسائلهم على ورق البردي أو الجلود الثقيلة التي يصعب حملها ونقلها بين البلدان. وعندما أنشئت مصانع الورق في الحواضر العربية القديمة، ازدهرت حركة التأليف والترجمة ونشأت المكتبات الكبرى. واليوم تجمع مكتبة المدرسة بين الكتب الورقية المطبوعة والمنصات الرقمية الحديثة لتيسير البحث والقراءة لكل طالب.",
+      "targetSkillsAr": [
+        "قراءة النص العربي غير المشكّل بالاعتماد على الفهم السياقي والصرفي",
+        "التمييز بين المشتركات اللفظية دون حركات قصيرة",
+        "معالجة الجمل الطويلة واستخلاص العلاقات السببية والتاريخية"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "علامَ كان الناس يدونون رسائلهم قبل انتشار صناعة الورق؟",
+          "options": [
+            "عَلَى أَلْوَاحِ الزُّجَاجِ",
+            "عَلَى الْأَقْمِشَةِ الْحَرِيرِيَّةِ",
+            "عَلَى الْبَرْدِيِّ وَالْجُلُودِ"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "الاسترجاع المباشر"
+        },
+        {
+          "question": "لماذا أسهم انتشار مصانع الورق في ازدهار حركة التأليف والترجمة؟",
+          "options": [
+            "لِأَنَّ الْجِلْدَ كَانَ أَرْخَصَ",
+            "لِأَنَّ الْوَرَقَ أَخَفُّ وَأَسْهَلُ حَمْلًا",
+            "لِأَنَّ الْمَكَاتِبَ مَنَعَتِ الِاسْتِعَارَةَ"
+          ],
+          "correctIndex": 1,
+          "skillType": "inferential",
+          "skillLabelAr": "الفهم الضمني والاستنتاج"
+        },
+        {
+          "question": "ما معنى كلمة «يدونون» في سياق جملة «كان الناس يدونون رسائلهم»؟",
+          "options": [
+            "يَكْتُبُونَ وَيُسَجِّلُونَ",
+            "يَقْرَؤُونَ بِصَوْتٍ مُرْتَفِعٍ",
+            "يُرْسِلُونَ عَبْرَ الْهَوَاتِفِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "vocabulary_context",
+          "skillLabelAr": "المفردات في السياق"
+        },
+        {
+          "question": "ما الفكرة الرئيسة لنص «مكتبة المدرسة وصناعة الورق»؟",
+          "options": [
+            "قَوَاعِدُ اسْتِعَارَةِ الْأَجْهِزَةِ الْمَدْرَسِيَّةِ",
+            "تَطَوُّرُ وَسَائِلِ الْكِتَابَةِ وَحِفْظِ الْمَعْرِفَةِ",
+            "صِنَاعَةُ الْجُلُودِ فِي الْعُصُورِ الْقَدِيمَةِ"
+          ],
+          "correctIndex": 1,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g1-garden",
+      "title": "زَهْرَةُ لَيْلَى",
+      "gradeLevel": 1,
+      "gradeLabel": "الصف الأول الابتدائي",
+      "category": "قصة قصيرة من الحياة اليومية",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل",
+      "wordCount": 50,
+      "words": [
+        "فِي",
+        "صَبَاحٍ",
+        "جَمِيلٍ،",
+        "خَرَجَتْ",
+        "لَيْلَى",
+        "مَعَ",
+        "أُمِّهَا",
+        "إِلَى",
+        "الْحَدِيقَةِ.",
+        "سَارَتْ",
+        "مَعَ",
+        "أُمِّهَا",
+        "بَيْنَ",
+        "الزُّهُورِ",
+        "وَشَمَّتْ",
+        "رَائِحَةَ",
+        "الْوَرْدِ",
+        "الْعَطِرَةِ.",
+        "رَأَتْ",
+        "زَهْرَةً",
+        "صَفْرَاءَ",
+        "وَفَرَاشَةً",
+        "صَغِيرَةً.",
+        "سَقَتْ",
+        "أُمُّهَا",
+        "الزَّهْرَةَ",
+        "بِقَلِيلٍ",
+        "مِنَ",
+        "الْمَاءِ.",
+        "جَلَسَتْ",
+        "لَيْلَى",
+        "تَرْسُمُ",
+        "الْفَرَاشَةَ",
+        "فِي",
+        "دَفْتَرِهَا",
+        "فَرِحَةً.",
+        "عِنْدَمَا",
+        "عَادَتْ",
+        "إِلَى",
+        "الْبَيْتِ،",
+        "وَضَعَتِ",
+        "الرَّسْمَ",
+        "عَلَى",
+        "الطَّاوِلَةِ،",
+        "وَشَكَرَتْ",
+        "أُمَّهَا",
+        "عَلَى",
+        "رِفْقَتِهَا",
+        "الْجَمِيلَةِ",
+        "مَسْرُورَةً."
+      ],
+      "fullText": "فِي صَبَاحٍ جَمِيلٍ، خَرَجَتْ لَيْلَى مَعَ أُمِّهَا إِلَى الْحَدِيقَةِ. سَارَتْ مَعَ أُمِّهَا بَيْنَ الزُّهُورِ وَشَمَّتْ رَائِحَةَ الْوَرْدِ الْعَطِرَةِ. رَأَتْ زَهْرَةً صَفْرَاءَ وَفَرَاشَةً صَغِيرَةً. سَقَتْ أُمُّهَا الزَّهْرَةَ بِقَلِيلٍ مِنَ الْمَاءِ. جَلَسَتْ لَيْلَى تَرْسُمُ الْفَرَاشَةَ فِي دَفْتَرِهَا فَرِحَةً. عِنْدَمَا عَادَتْ إِلَى الْبَيْتِ، وَضَعَتِ الرَّسْمَ عَلَى الطَّاوِلَةِ، وَشَكَرَتْ أُمَّهَا عَلَى رِفْقَتِهَا الْجَمِيلَةِ مَسْرُورَةً.",
+      "targetSkillsAr": [
+        "قراءة الجمل القصيرة",
+        "مفردات من البيئة المحيطة",
+        "تحديد تسلسل الأحداث"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "إلى أين ذهبت ليلى مع أمها؟",
+          "options": [
+            "إلى الحديقة",
+            "إلى السوق",
+            "إلى المكتبة"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "ماذا فعلت الأم للزهرة؟",
+          "options": [
+            "قطفت أوراقها",
+            "سقتها بالماء",
+            "وضعتها في صندوق"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "لماذا أحضرت الأم الماء؟",
+          "options": [
+            "لتنظيف الدفتر",
+            "لرسم الفراشة",
+            "لتسقي الزهرة"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "فهم العلاقة بين الحدث والسبب"
+        },
+        {
+          "question": "ماذا فعلت ليلى بعد عودتها؟",
+          "options": [
+            "وَضَعَتِ الرَّسْمَ عَلَى الطَّاوِلَةِ",
+            "نَامَتْ فِي الْحَدِيقَةِ",
+            "ذَهَبَتْ إِلَى السُّوقِ"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "تسلسل الأحداث"
+        }
+      ]
+    },
+    {
+      "id": "passage-g1-schoolbag",
+      "title": "حَقِيبَةُ عُمَرَ",
+      "gradeLevel": 1,
+      "gradeLabel": "الصف الأول الابتدائي",
+      "category": "قصة مدرسية قصيرة",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل",
+      "wordCount": 50,
+      "words": [
+        "فِي",
+        "الصَّبَاحِ،",
+        "جَهَّزَ",
+        "عُمَرُ",
+        "حَقِيبَتَهُ",
+        "لِلْمَدْرَسَةِ.",
+        "وَضَعَ",
+        "كِتَابًا",
+        "وَدَفْتَرًا",
+        "وَقَلَمًا",
+        "أَزْرَقَ",
+        "دَاخِلَهَا.",
+        "بَحَثَ",
+        "عَنْ",
+        "مِمْحَاتِهِ",
+        "فَوَجَدَهَا",
+        "تَحْتَ",
+        "السَّرِيرِ.",
+        "سَاعَدَتْهُ",
+        "أُخْتُهُ",
+        "فِي",
+        "تَرْتِيبِ",
+        "الْأَدَوَاتِ،",
+        "فَشَكَرَهَا",
+        "عَلَى",
+        "مُسَاعَدَتِهَا.",
+        "تَأَكَّدَ",
+        "عُمَرُ",
+        "مِنْ",
+        "أَنَّ",
+        "كُتُبَهُ",
+        "وَدَفَاتِرَهُ",
+        "مُرَتَّبَةٌ،",
+        "ثُمَّ",
+        "ارْتَدَى",
+        "حِذَاءَهُ،",
+        "وَخَرَجَ",
+        "مِنَ",
+        "الْبَيْتِ",
+        "وَهُوَ",
+        "مُسْتَعِدٌّ",
+        "لِيَوْمٍ",
+        "جَدِيدٍ،",
+        "وَأَغْلَقَ",
+        "الْبَابَ",
+        "بِهُدُوءٍ،",
+        "وَانْطَلَقَ",
+        "نَحْوَ",
+        "مَدْرَسَتِهِ",
+        "سَعِيدًا."
+      ],
+      "fullText": "فِي الصَّبَاحِ، جَهَّزَ عُمَرُ حَقِيبَتَهُ لِلْمَدْرَسَةِ. وَضَعَ كِتَابًا وَدَفْتَرًا وَقَلَمًا أَزْرَقَ دَاخِلَهَا. بَحَثَ عَنْ مِمْحَاتِهِ فَوَجَدَهَا تَحْتَ السَّرِيرِ. سَاعَدَتْهُ أُخْتُهُ فِي تَرْتِيبِ الْأَدَوَاتِ، فَشَكَرَهَا عَلَى مُسَاعَدَتِهَا. تَأَكَّدَ عُمَرُ مِنْ أَنَّ كُتُبَهُ وَدَفَاتِرَهُ مُرَتَّبَةٌ، ثُمَّ ارْتَدَى حِذَاءَهُ، وَخَرَجَ مِنَ الْبَيْتِ وَهُوَ مُسْتَعِدٌّ لِيَوْمٍ جَدِيدٍ، وَأَغْلَقَ الْبَابَ بِهُدُوءٍ، وَانْطَلَقَ نَحْوَ مَدْرَسَتِهِ سَعِيدًا.",
+      "targetSkillsAr": [
+        "مفردات المدرسة",
+        "ترتيب المعلومات",
+        "قراءة الجمل المترابطة"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما اللون الذي كان عليه قلم عمر؟",
+          "options": [
+            "أخضر",
+            "أحمر",
+            "أزرق"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "أين وجد عمر الممحاة؟",
+          "options": [
+            "تحت السرير",
+            "داخل الحقيبة",
+            "فوق المكتب"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "من ساعد عمر في ترتيب الأدوات؟",
+          "options": [
+            "صديقه",
+            "أخته",
+            "زميله"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "لماذا جهز عمر حقيبته؟",
+          "options": [
+            "ليذهب إلى السوق",
+            "ليزور الحديقة",
+            "ليستعد للمدرسة"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج من السياق"
+        }
+      ]
+    },
+    {
+      "id": "passage-g2-rain",
+      "title": "المَطَرُ فِي الحَيِّ",
+      "gradeLevel": 2,
+      "gradeLabel": "الصف الثاني الابتدائي",
+      "category": "قصة عن الطقس والحي",
+      "diacriticLevel": "full",
+      "diacriticLabelAr": "مشكّل بالكامل",
+      "wordCount": 50,
+      "words": [
+        "اسْتَيْقَظَتْ",
+        "مَرْيَمُ",
+        "عَلَى",
+        "صَوْتِ",
+        "الْمَطَرِ",
+        "أَمَامَ",
+        "النَّافِذَةِ.",
+        "لَبِسَتْ",
+        "مِعْطَفَهَا",
+        "وَحَمَلَتْ",
+        "مِظَلَّتَهَا",
+        "قَبْلَ",
+        "الذَّهَابِ",
+        "إِلَى",
+        "الْمَدْرَسَةِ.",
+        "فِي",
+        "الطَّرِيقِ،",
+        "رَأَتْ",
+        "مَاءً",
+        "يَتَجَمَّعُ",
+        "عِنْدَ",
+        "الرَّصِيفِ،",
+        "فَاخْتَارَتْ",
+        "مَسَارًا",
+        "جَافًّا.",
+        "وَصَلَتْ",
+        "مُبَكِّرَةً،",
+        "وَشَرَحَتْ",
+        "لِزُمَلَائِهَا",
+        "كَيْفَ",
+        "سَاعَدَتْهَا",
+        "الْمِظَلَّةُ",
+        "عَلَى",
+        "الْبَقَاءِ",
+        "جَافَّةً.",
+        "وَعِنْدَمَا",
+        "تَوَقَّفَ",
+        "الْمَطَرُ",
+        "ظُهْرًا",
+        "شَاهَدَتْ",
+        "مَرْيَمُ",
+        "الْعُمَّالَ",
+        "وَهُمْ",
+        "يُنَظِّفُونَ",
+        "مَجْرَى",
+        "الْمَاءِ",
+        "مِنَ",
+        "الْأَوْرَاقِ",
+        "الْمُتَسَاقِطَةِ",
+        "بِإِتْقَانٍ."
+      ],
+      "fullText": "اسْتَيْقَظَتْ مَرْيَمُ عَلَى صَوْتِ الْمَطَرِ أَمَامَ النَّافِذَةِ. لَبِسَتْ مِعْطَفَهَا وَحَمَلَتْ مِظَلَّتَهَا قَبْلَ الذَّهَابِ إِلَى الْمَدْرَسَةِ. فِي الطَّرِيقِ، رَأَتْ مَاءً يَتَجَمَّعُ عِنْدَ الرَّصِيفِ، فَاخْتَارَتْ مَسَارًا جَافًّا. وَصَلَتْ مُبَكِّرَةً، وَشَرَحَتْ لِزُمَلَائِهَا كَيْفَ سَاعَدَتْهَا الْمِظَلَّةُ عَلَى الْبَقَاءِ جَافَّةً. وَعِنْدَمَا تَوَقَّفَ الْمَطَرُ ظُهْرًا شَاهَدَتْ مَرْيَمُ الْعُمَّالَ وَهُمْ يُنَظِّفُونَ مَجْرَى الْمَاءِ مِنَ الْأَوْرَاقِ الْمُتَسَاقِطَةِ بِإِتْقَانٍ.",
+      "targetSkillsAr": [
+        "فهم السبب والنتيجة",
+        "مفردات الطقس",
+        "استخلاص الفكرة"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما الذي حملته مريم قبل الخروج؟",
+          "options": [
+            "حقيبة رياضة",
+            "مظلة",
+            "كرة صغيرة"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "لماذا اختارت مريم مسارًا جافًا؟",
+          "options": [
+            "لتجنب البرك",
+            "لتصل إلى متجر قريب",
+            "لتبحث عن صديقتها"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج من النص"
+        },
+        {
+          "question": "ما فائدة المظلة في القصة؟",
+          "options": [
+            "جعلت الطريق أقصر",
+            "منعت صوت المطر",
+            "أبقتها جافة"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "ما الفكرة الرئيسة للنص؟",
+          "options": [
+            "الاستعداد للمطر أثناء الذهاب إلى المدرسة",
+            "كيفية صنع معطف جديد",
+            "ألعاب الأطفال في يوم مشمس"
+          ],
+          "correctIndex": 0,
+          "skillType": "main_idea",
+          "skillLabelAr": "الفكرة الرئيسة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g5-water",
+      "title": "إدارة الماء في المدرسة",
+      "gradeLevel": 5,
+      "gradeLabel": "الصف الخامس الابتدائي",
+      "category": "نص علمي بيئي",
+      "diacriticLevel": "partial",
+      "diacriticLabelAr": "مشكّل جزئيًا",
+      "wordCount": 79,
+      "words": [
+        "لاحظَ",
+        "طلابُ",
+        "الصفِّ",
+        "الخامسِ",
+        "أنَّ",
+        "صنبورًا",
+        "في",
+        "ساحةِ",
+        "المدرسةِ",
+        "يظلُّ",
+        "مفتوحًا",
+        "بعدَ",
+        "انتهاءِ",
+        "الاستعمالِ.",
+        "اقترحوا",
+        "وضعَ",
+        "ملصقٍ",
+        "يذكِّرُ",
+        "الجميعَ",
+        "بإغلاقِ",
+        "الصنابيرِ،",
+        "وفحصِ",
+        "التسرباتِ",
+        "كلَّ",
+        "أسبوعٍ.",
+        "كما",
+        "جمعوا",
+        "ماءَ",
+        "غسلِ",
+        "الفواكهِ",
+        "في",
+        "وعاءٍ",
+        "لاستخدامِه",
+        "في",
+        "ريِّ",
+        "النباتاتِ",
+        "غيرِ",
+        "المثمرةِ.",
+        "شرحَ",
+        "المرشدُ",
+        "أنَّ",
+        "ترشيدَ",
+        "الماءِ",
+        "لا",
+        "يعتمدُ",
+        "على",
+        "إجراءٍ",
+        "واحدٍ،",
+        "بل",
+        "على",
+        "عاداتٍ",
+        "يوميةٍ",
+        "ومتابعةٍ",
+        "منتظمةٍ.",
+        "وبعدَ",
+        "شهرٍ،",
+        "سجّلَ",
+        "الطلابُ",
+        "عددَ",
+        "مراتِ",
+        "العثورِ",
+        "على",
+        "صنبورٍ",
+        "مفتوحٍ،",
+        "وقارنوا",
+        "الملاحظاتِ",
+        "بالأسبوعِ",
+        "الأولِ.",
+        "ساعدَهم",
+        "التسجيلُ",
+        "على",
+        "معرفةِ",
+        "ما",
+        "تحسّنَ",
+        "وما",
+        "يحتاجُ",
+        "إلى",
+        "متابعةٍ",
+        "إضافيةٍ."
+      ],
+      "fullText": "لاحظَ طلابُ الصفِّ الخامسِ أنَّ صنبورًا في ساحةِ المدرسةِ يظلُّ مفتوحًا بعدَ انتهاءِ الاستعمالِ. اقترحوا وضعَ ملصقٍ يذكِّرُ الجميعَ بإغلاقِ الصنابيرِ، وفحصِ التسرباتِ كلَّ أسبوعٍ. كما جمعوا ماءَ غسلِ الفواكهِ في وعاءٍ لاستخدامِه في ريِّ النباتاتِ غيرِ المثمرةِ. شرحَ المرشدُ أنَّ ترشيدَ الماءِ لا يعتمدُ على إجراءٍ واحدٍ، بل على عاداتٍ يوميةٍ ومتابعةٍ منتظمةٍ. وبعدَ شهرٍ، سجّلَ الطلابُ عددَ مراتِ العثورِ على صنبورٍ مفتوحٍ، وقارنوا الملاحظاتِ بالأسبوعِ الأولِ. ساعدَهم التسجيلُ على معرفةِ ما تحسّنَ وما يحتاجُ إلى متابعةٍ إضافيةٍ.",
+      "targetSkillsAr": [
+        "تحديد السبب والنتيجة",
+        "قراءة نص معلوماتي",
+        "استخلاص الغرض من البيانات"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما المشكلة التي لاحظها الطلاب؟",
+          "options": [
+            "صنبور مفتوح",
+            "نقص الملصقات في الصفوف",
+            "تأخر الحافلة عن المدرسة"
+          ],
+          "correctIndex": 0,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "لماذا سجل الطلاب الملاحظات أسبوعيًا؟",
+          "options": [
+            "ليحسبوا درجات الرياضيات",
+            "لمتابعة التحسن",
+            "ليختاروا نباتات جديدة فقط"
+          ],
+          "correctIndex": 1,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج من النص"
+        },
+        {
+          "question": "كيف أعاد الطلاب استخدام بعض الماء؟",
+          "options": [
+            "غسلوا به الكتب المدرسية",
+            "خزنوه للشرب لاحقًا",
+            "استخدموه في ري النباتات"
+          ],
+          "correctIndex": 2,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "أي استنتاج تدعمه القصة؟",
+          "options": [
+            "المتابعة تكشف التحسن",
+            "ملصق واحد يحل كل المشكلات",
+            "الماء لا يحتاج إلى ترشيد"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج مدعوم بالأدلة"
+        }
+      ]
+    },
+    {
+      "id": "passage-g6-local-history",
+      "title": "حفظ الحكايات المحلية",
+      "gradeLevel": 6,
+      "gradeLabel": "الصف السادس الابتدائي",
+      "category": "نص معلوماتي عن الذاكرة المجتمعية",
+      "diacriticLevel": "minimal",
+      "diacriticLabelAr": "بدون تشكيل",
+      "wordCount": 78,
+      "words": [
+        "قررت",
+        "مجموعة",
+        "من",
+        "الطلاب",
+        "تسجيل",
+        "حكايات",
+        "كبار",
+        "السن",
+        "في",
+        "الحي",
+        "قبل",
+        "أن",
+        "تضيع",
+        "تفاصيلها.",
+        "أعدوا",
+        "أسئلة",
+        "عن",
+        "المهن",
+        "القديمة",
+        "والأسواق",
+        "وطرق",
+        "السفر،",
+        "ثم",
+        "طلبوا",
+        "الإذن",
+        "قبل",
+        "تسجيل",
+        "المقابلات.",
+        "بعد",
+        "ذلك،",
+        "راجعوا",
+        "الأسماء",
+        "والتواريخ",
+        "مع",
+        "أصحاب",
+        "الحكايات،",
+        "وقارنوا",
+        "الروايات",
+        "بالمصادر",
+        "المكتوبة",
+        "المتاحة",
+        "في",
+        "المكتبة.",
+        "لم",
+        "يتفق",
+        "الراويان",
+        "دائمًا",
+        "على",
+        "التفاصيل",
+        "نفسها،",
+        "فدوّن",
+        "الطلاب",
+        "مواضع",
+        "الاختلاف",
+        "بدل",
+        "اختيار",
+        "رواية",
+        "من",
+        "دون",
+        "دليل.",
+        "وفي",
+        "نهاية",
+        "المشروع،",
+        "أنشؤوا",
+        "أرشيفًا",
+        "صغيرًا",
+        "يضم",
+        "النصوص",
+        "والتسجيلات",
+        "بموافقة",
+        "أصحابها،",
+        "ليستخدمه",
+        "طلاب",
+        "آخرون",
+        "في",
+        "دراسة",
+        "تاريخ",
+        "الحي."
+      ],
+      "fullText": "قررت مجموعة من الطلاب تسجيل حكايات كبار السن في الحي قبل أن تضيع تفاصيلها. أعدوا أسئلة عن المهن القديمة والأسواق وطرق السفر، ثم طلبوا الإذن قبل تسجيل المقابلات. بعد ذلك، راجعوا الأسماء والتواريخ مع أصحاب الحكايات، وقارنوا الروايات بالمصادر المكتوبة المتاحة في المكتبة. لم يتفق الراويان دائمًا على التفاصيل نفسها، فدوّن الطلاب مواضع الاختلاف بدل اختيار رواية من دون دليل. وفي نهاية المشروع، أنشؤوا أرشيفًا صغيرًا يضم النصوص والتسجيلات بموافقة أصحابها، ليستخدمه طلاب آخرون في دراسة تاريخ الحي.",
+      "targetSkillsAr": [
+        "تقييم الأدلة",
+        "تلخيص نص معلوماتي",
+        "تمييز الحقيقة عن الاختلاف في الروايات"
+      ],
+      "comprehensionQuestions": [
+        {
+          "question": "ما الفائدة التي يحققها الأرشيف للطلاب لاحقًا؟",
+          "options": [
+            "ليتمكن طلاب آخرون من دراسة تاريخ الحي",
+            "لاختيار فائز في مسابقة",
+            "لإعداد إعلان عن السوق"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج من النص"
+        },
+        {
+          "question": "ماذا فعل الطلاب عندما اختلفت روايتان؟",
+          "options": [
+            "حذفوا المقابلتين",
+            "سجلوا مواضع الاختلاف",
+            "اختاروا الرواية الأطول"
+          ],
+          "correctIndex": 1,
+          "skillType": "literal_recall",
+          "skillLabelAr": "استرجاع مباشر"
+        },
+        {
+          "question": "أي مبدأ اتبعه الطلاب عندما اختلفت الروايات؟",
+          "options": [
+            "اختيار الرواية الأطول",
+            "تجاهل الاختلاف بين الشهادات",
+            "الاعتماد على الدليل عند اختلاف الروايات"
+          ],
+          "correctIndex": 2,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج من النص"
+        },
+        {
+          "question": "أي ممارسة تدل على احترام المشاركين؟",
+          "options": [
+            "طلب الإذن قبل التسجيل",
+            "نشر كل التسجيلات فورًا",
+            "حذف أسماء أصحاب الحكايات من سجلاتهم دون مراجعة"
+          ],
+          "correctIndex": 0,
+          "skillType": "inferential",
+          "skillLabelAr": "استنتاج أخلاقي من النص"
+        }
+      ]
+    }
+  ]
+}

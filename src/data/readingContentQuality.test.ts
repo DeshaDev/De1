@@ -64,3 +64,26 @@ test('inferential answer choices require applying the passage rather than copyin
       `${passage.id}: inferential answer copies a ${copiedRun}-word sequence from the passage: ${question.question}`);
   }
 });
+
+test('reading passage diacritic density strictly matches declared badge levels', () => {
+  for (const passage of ARABIC_READING_PASSAGES) {
+    const fullText = passage.words.join(' ');
+    let lettersCount = 0;
+    let diacriticsCount = 0;
+    for (const ch of fullText) {
+      if (/[\u064B-\u065F\u0670]/.test(ch)) {
+        diacriticsCount += 1;
+      } else if (/[\u0621-\u064A]/.test(ch)) {
+        lettersCount += 1;
+      }
+    }
+    const ratio = (diacriticsCount / Math.max(1, lettersCount)) * 100;
+    if (passage.diacriticLevel === 'full') {
+      assert.ok(ratio >= 50, `${passage.id} declared full but diacritic ratio is ${ratio.toFixed(1)}% (< 50%)`);
+    } else if (passage.diacriticLevel === 'partial') {
+      assert.ok(ratio >= 10 && ratio <= 55, `${passage.id} declared partial but ratio is ${ratio.toFixed(1)}%`);
+    } else if (passage.diacriticLevel === 'minimal') {
+      assert.ok(ratio <= 10, `${passage.id} declared minimal but ratio is ${ratio.toFixed(1)}% (> 10%)`);
+    }
+  }
+});

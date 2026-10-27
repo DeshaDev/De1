@@ -117,7 +117,7 @@ test('key arithmetic answers match their mathematical meaning and written choice
     'wp-1': '٧', 'wp-2': '٧', 'wp-3': '١٠', 'wp-4': '٥', 'wp-5': '١٢',
     'fr-1': 'جزء واحد من جزأين متساويين',
     'fr-2': 'جزء واحد من ٤ أجزاء متساوية',
-    'fr-3': '١/٢', 'fr-4': '٣/٤', 'fr-5': '١/٢',
+    'fr-3': '١/٢', 'fr-4': '٣/٤', 'fr-5': '٤/٤',
   };
   const mathLessons = MATH_CURRICULUM_SEQUENCE.map((item) => getCurriculumLesson('math', item.id)!);
   const questions = mathLessons.flatMap((lesson) => lesson.questions);
@@ -140,12 +140,12 @@ test('core Arabic reading items preserve their intended phonological, grapheme a
     'sb-1': 'رَسَمَ', 'sb-2': 'سَمَكٌ', 'sb-3': 'لَعِبَ',
     'sb-4': 'قَلَمٌ', 'sb-5': 'شَجَرَةٌ',
     'lm-1': 'بَابٌ', 'lm-2': 'مَكْتُوبٌ', 'lm-3': 'نُورٌ',
-    'lm-4': 'نُورٌ', 'lm-5': 'كَاتِبٌ',
+    'lm-4': 'تِينٌ', 'lm-5': 'مَدْرَسَةٌ',
     'ct-1': 'إلى المكتبة', 'ct-2': 'عن البحر',
     'ct-3': 'حكت لأسرتها ما تعلمته', 'ct-4': 'صفحتين',
     'ct-5': 'شاركت ما تعلمته',
-    'rc-1': 'قرب النافذة', 'rc-2': 'بانت بعد أن لم تكن ظاهرة',
-    'rc-3': 'لأن سامر سقاها ووضعها قرب النافذة', 'rc-4': 'كل صباح',
+    'rc-1': 'قرب النافذة', 'rc-2': 'بدت ووضحت للعيان',
+    'rc-3': 'لأنّ سامراً سقاها ووضعها قرب النافذة', 'rc-4': 'كل صباح',
     'rc-5': 'ظهور ورقتين خضراوين',
   };
   for (const [id, answer] of Object.entries(expected)) {
