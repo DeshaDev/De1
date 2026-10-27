@@ -105,7 +105,7 @@ interface TenantCredential {
 
 /** Role and tenant are derived from an independently provisioned secret, never from request claims. */
 function getTenantCredentialEntries(): TenantCredential[] {
-  const raw = (process.env.BASEERA_TENANT_CREDENTIALS || process.env.CLINICAL_TENANT_CREDENTIALS || '').trim();
+  const raw = (process.env.BASEERA_TENANT_CREDENTIALS || '').trim();
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -166,7 +166,7 @@ function getTenantCredentialEntries(): TenantCredential[] {
 }
 
 function getStoreEncryptionKey(): Buffer | null {
-  const raw = (process.env.BASEERA_STORE_ENCRYPTION_KEY || process.env.CLINICAL_STORE_ENCRYPTION_KEY || '').trim();
+  const raw = (process.env.BASEERA_STORE_ENCRYPTION_KEY || '').trim();
   if (!/^[a-f0-9]{64}$/i.test(raw)) return null;
   return Buffer.from(raw, 'hex');
 }
@@ -517,6 +517,8 @@ function demoRequestRateLimiter(
   next();
 }
 
+const DEMO_REQUEST_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
 function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
   try {
     if (!fs.existsSync(DEMO_REQUESTS_PATH)) return [];
@@ -528,14 +530,41 @@ function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
       key,
       'baseera-demo-requests-aes-256-gcm-v1'
     );
-    if (decrypted.wasEncrypted && Array.isArray(decrypted.data)) {
-      return decrypted.data;
+    if (!decrypted.wasEncrypted || !Array.isArray(decrypted.data)) return [];
+
+    const now = Date.now();
+    const retained = decrypted.data.filter((item) => {
+      if (!item || typeof item.submittedAt !== 'string') return false;
+      const submittedAt = Date.parse(item.submittedAt);
+      return Number.isFinite(submittedAt) &&
+        submittedAt <= now &&
+        now - submittedAt < DEMO_REQUEST_RETENTION_MS;
+    });
+
+    if (retained.length !== decrypted.data.length) {
+      try {
+        const encrypted = encryptJsonPayload(
+          retained,
+          key,
+          'baseera-demo-requests-aes-256-gcm-v1'
+        );
+        if (!writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, encrypted)) {
+          console.error(
+            `[BASEERA PRIVACY] Could not persist retention cleanup for ${decrypted.data.length - retained.length} expired/invalid school lead records.`
+          );
+        }
+      } catch {
+        console.error(
+          `[BASEERA PRIVACY] Retention cleanup failed for ${decrypted.data.length - retained.length} expired/invalid school lead records.`
+        );
+      }
     }
-    return [];
+    return retained;
   } catch {
     return [];
   }
 }
+
 
 function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
   success: boolean;
@@ -611,36 +640,59 @@ function updatePersistedDemoRequest(
 }
 
 function notifyOperationsTeamOfDemoRequest(item: PersistedSchoolDemoRequest): void {
-  console.log(
-    `[BASEERA OPS ALERT] New School Demo Request: ID=${item.id}, School="${item.schoolName}", Contact="${item.contactName}" <${item.workEmail}>, Phone="${item.phone}". Operational SLA: Contact within 24-48 business hours.`
-  );
-  const webhookUrl = process.env.ADMIN_ALERT_WEBHOOK_URL;
-  if (webhookUrl && /^https?:\/\//i.test(webhookUrl)) {
-    try {
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'school_demo_request.created',
-          id: item.id,
-          schoolName: item.schoolName,
-          contactName: item.contactName,
-          roleTitle: item.roleTitle || '',
-          workEmail: item.workEmail,
-          phone: item.phone,
-          expectedStudents: item.expectedStudents || '',
-          notes: item.notes || '',
-          submittedAt: item.submittedAt,
-          slaTargetHours: 48,
-        }),
-      }).catch((err) => {
-        console.warn('[BASEERA OPS ALERT] Webhook dispatch notification failed:', err?.message || err);
-      });
-    } catch {
-      // Non-blocking
-    }
+  // Never write contact names, emails, phone numbers, school names, or free-text notes to application logs.
+  const webhookUrl = (process.env.ADMIN_ALERT_WEBHOOK_URL || '').trim();
+  if (!webhookUrl) {
+    console.warn(
+      `[BASEERA OPS ALERT] School demo lead stored (id=${item.id}); ADMIN_ALERT_WEBHOOK_URL is not configured. Review the platform admin queue. Contact details are omitted from logs.`
+    );
+    return;
   }
+
+  let parsedWebhookUrl: URL;
+  try {
+    parsedWebhookUrl = new URL(webhookUrl);
+  } catch {
+    console.warn(
+      `[BASEERA OPS ALERT] Lead ${item.id} stored, but the notification webhook URL is invalid. Contact details are omitted from logs.`
+    );
+    return;
+  }
+  if (parsedWebhookUrl.protocol !== 'https:') {
+    console.warn(
+      `[BASEERA OPS ALERT] Lead ${item.id} stored, but the notification webhook must use HTTPS. Contact details are omitted from logs.`
+    );
+    return;
+  }
+
+  void fetch(parsedWebhookUrl.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      eventType: 'school_demo_request.created',
+      id: item.id,
+      schoolName: item.schoolName,
+      contactName: item.contactName,
+      roleTitle: item.roleTitle || '',
+      workEmail: item.workEmail,
+      phone: item.phone,
+      expectedStudents: item.expectedStudents || '',
+      notes: item.notes || '',
+      submittedAt: item.submittedAt,
+    }),
+  }).then((response) => {
+    if (!response.ok) {
+      console.warn(
+        `[BASEERA OPS ALERT] Webhook returned HTTP ${response.status} for lead ${item.id}. Contact details are omitted from logs.`
+      );
+    }
+  }).catch(() => {
+    console.warn(
+      `[BASEERA OPS ALERT] Webhook dispatch failed for lead ${item.id}. Contact details are omitted from logs.`
+    );
+  });
 }
+
 
 const SchoolDemoRequestSchema = z.object({
   schoolName: z.string().trim().min(2, 'يرجى إدخال اسم المدرسة أو المركز التعليمي').max(150),
@@ -987,6 +1039,12 @@ async function startServer() {
   };
 
   loadSecurityState();
+  // Purge expired lead requests at startup and retry once per day while the service is running.
+  loadPersistedDemoRequests();
+  const demoRetentionSweep = setInterval(() => {
+    loadPersistedDemoRequests();
+  }, 24 * 60 * 60 * 1000);
+  demoRetentionSweep.unref();
 
   // School administrator / educator authentication & RBAC Session Issuing Endpoint.
   // Failed attempts are IP-scoped; unauthenticated tenant hints never influence throttling.
@@ -1321,6 +1379,9 @@ async function startServer() {
         }),
         guardianConsentGiven: true,
         guardianConsentRecordedAt: String(incoming.guardianConsentRecordedAt),
+        // Server receipt time records when this consent declaration was accepted; it does not independently verify guardian identity or delegation.
+        serverConsentReceivedAt: nowIso,
+        policyVersion: '2026.1',
         guardianConsentSource: String(incoming.guardianConsentSource).trim(),
         guardianAudioConsentGiven: incoming.guardianAudioConsentGiven === true,
         guardianAudioConsentRecordedAt:
@@ -1504,6 +1565,9 @@ async function startServer() {
         }),
         guardianConsentGiven: true,
         guardianConsentRecordedAt: String(incoming.guardianConsentRecordedAt),
+        // Server receipt time records when this consent declaration was accepted; it does not independently verify guardian identity or delegation.
+        serverConsentReceivedAt: nowIso,
+        policyVersion: '2026.1',
         guardianConsentSource: String(incoming.guardianConsentSource).trim(),
         guardianAudioConsentGiven: incoming.guardianAudioConsentGiven === true,
         guardianAudioConsentRecordedAt:
@@ -2671,7 +2735,7 @@ async function startServer() {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
-      console.warn(`[Azure Assessment] Azure service call unfulfilled: ${message}. Falling back cleanly to Tier 2 Baseera Voice AI Aligner.`);
+      console.warn(`[Azure Assessment] Azure service call failed: ${message}. No fallback was applied; the request will fail closed.`);
 
       if ([
         'INVALID_AUDIO_PAYLOAD',
@@ -2744,7 +2808,7 @@ async function startServer() {
 
     res.status(201).json({
       ok: true,
-      message: 'تم استلام طلبكم بنجاح وسيتواصل معكم فريق حلول المدارس عبر البريد الإلكتروني الرسمي خلال ٢٤ إلى ٤٨ ساعة عمل.',
+      message: 'تم استلام طلبكم بنجاح وحفظه. سيُراجع الفريق الطلب للتواصل بشأن الخطوات التالية؛ وهذا تأكيد استلام وليس موعداً مضموناً للتواصل.',
     });
   });
 
@@ -2843,7 +2907,7 @@ async function startServer() {
         id,
         ['purged']
       );
-      res.json({ ok: true, message: 'تم حذف طلب التجربة وتطهير السجل المشفر بنجاح.' });
+      res.json({ ok: true, message: 'تم حذف طلب التجربة من مخزن التطبيق النشط المشفر وتسجيل العملية.' });
     }
   );
 
