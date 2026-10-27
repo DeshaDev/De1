@@ -1,4 +1,4 @@
-export type BaseeraRole = 'school_admin' | 'educator_readonly';
+export type BaseeraRole = 'platform_admin' | 'school_admin' | 'educator_readonly';
 
 export interface BaseeraSessionInfo {
   token: string;
@@ -13,6 +13,8 @@ export interface BaseeraSessionInfo {
 }
 
 const TENANT_DISPLAY_FALLBACKS: Record<string, string> = {
+  platform: 'إدارة منصة بصيرة المركزية',
+  baseera_hq: 'المقر الرئيسي لمنصة بصيرة',
   default: 'مدرسة الرواد الابتدائية',
   school_a: 'مدرسة الرواد الأولى (أ)',
   school_b: 'مدرسة النخبة الثانية (ب)',

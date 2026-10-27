@@ -47,14 +47,15 @@ export interface VerifiedAutomatedAudioAssessment {
   }>;
 }
 
-export type BaseeraRole = 'school_admin' | 'educator_readonly';
+export type BaseeraRole = 'platform_admin' | 'school_admin' | 'educator_readonly';
 
 export type BaseeraScope =
   | 'students:read'
   | 'students:write'
   | 'students:delete'
   | 'ai:analyze'
-  | 'audit:read';
+  | 'audit:read'
+  | 'leads:manage';
 
 export interface VerifiedBaseeraSession {
   token: string;
@@ -72,6 +73,14 @@ export interface VerifiedBaseeraSession {
 }
 
 const ROLE_SCOPES: Record<BaseeraRole, BaseeraScope[]> = {
+  platform_admin: [
+    'students:read',
+    'students:write',
+    'students:delete',
+    'ai:analyze',
+    'audit:read',
+    'leads:manage',
+  ],
   school_admin: [
     'students:read',
     'students:write',
@@ -83,6 +92,8 @@ const ROLE_SCOPES: Record<BaseeraRole, BaseeraScope[]> = {
 };
 
 const TENANT_DISPLAY_NAME_MAP: Record<string, string> = {
+  platform: 'إدارة منصة بصيرة المركزية',
+  baseera_hq: 'المقر الرئيسي لمنصة بصيرة',
   default: 'مدرسة الرواد الابتدائية',
   school_a: 'مدرسة الرواد الأولى (أ)',
   school_b: 'مدرسة النخبة الثانية (ب)',
@@ -148,7 +159,7 @@ export function issueBaseeraSessionToken(
   tenantId = 'default',
   customTenantDisplayNameAr?: string
 ): VerifiedBaseeraSession {
-  if (role !== 'school_admin' && role !== 'educator_readonly') {
+  if (role !== 'platform_admin' && role !== 'school_admin' && role !== 'educator_readonly') {
     throw new Error('Invalid learning-session role');
   }
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(tenantId)) {
@@ -233,7 +244,7 @@ export function verifyBaseeraSessionToken(
       !parsed ||
       typeof parsed.expiresAt !== 'number' ||
       parsed.expiresAt <= nowMs ||
-      (parsed.role !== 'school_admin' && parsed.role !== 'educator_readonly') ||
+      (parsed.role !== 'platform_admin' && parsed.role !== 'school_admin' && parsed.role !== 'educator_readonly') ||
       typeof parsed.tenantId !== 'string' ||
       !/^[a-zA-Z0-9_-]{1,80}$/.test(parsed.tenantId) ||
       typeof parsed.sessionId !== 'string' ||

@@ -7,6 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
+const PLATFORM_ADMIN_CODE = 'ee7c3523458b091f0923ac7815de4231b578cde09852341a';
 const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
 const SCHOOL_A_EDUCATOR_CODE = 'f0ab09100c10d620b00517b933ab8c45109b7c8eab249f34';
 const SCHOOL_B_ADMIN_CODE = '3a105ca0e52fb126fd4ed59979ea6ac2e8ddcd0f0edfcd53';
@@ -22,6 +23,10 @@ const TEST_ENV = {
   BASEERA_SESSION_SECRET:
     'test-hmac-signing-secret-32chars-minimum-distinct-2026!',
   BASEERA_TENANT_CREDENTIALS: JSON.stringify({
+    platform: {
+      platform_admin: PLATFORM_ADMIN_CODE,
+      displayNameAr: 'إدارة منصة بصيرة المركزية',
+    },
     school_a: {
       school_admin: SCHOOL_A_ADMIN_CODE,
       educator_readonly: SCHOOL_A_EDUCATOR_CODE,
@@ -697,18 +702,59 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(educatorRes.status, 403);
 
-    // 3c. School admin -> 200 with decrypted list including submitted lead
-    const admin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
-    const adminRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
-      headers: { Authorization: `Bearer ${admin.token}` },
+    // 3c. School admin -> 403 Forbidden (Strict Scope & Tenant Isolation: school admin cannot read platform leads)
+    const schoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const schoolAdminRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
+      headers: { Authorization: `Bearer ${schoolAdmin.token}` },
     });
-    assert.equal(adminRes.status, 200);
-    const adminJson = (await adminRes.json()) as {
+    assert.equal(schoolAdminRes.status, 403, 'school_admin must be strictly denied from leads:manage endpoint');
+
+    // 3d. Platform admin -> 200 OK with decrypted list including submitted lead
+    const platformAdmin = await loginWithCode(PLATFORM_ADMIN_CODE);
+    const platformAdminRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
+      headers: { Authorization: `Bearer ${platformAdmin.token}` },
+    });
+    assert.equal(platformAdminRes.status, 200);
+    const adminJson = (await platformAdminRes.json()) as {
       ok: boolean;
-      requests: Array<{ workEmail: string; schoolName: string }>;
+      requests: Array<{ id: string; workEmail: string; schoolName: string; status?: string }>;
     };
     assert.equal(adminJson.ok, true);
     assert.ok(Array.isArray(adminJson.requests));
-    assert.ok(adminJson.requests.some((r) => r.workEmail === 'mariam@qatar-school.edu.qa'));
+    const targetLead = adminJson.requests.find((r) => r.workEmail === 'mariam@qatar-school.edu.qa');
+    assert.ok(targetLead);
+    assert.equal(targetLead.status, 'new');
+
+    // 3e. Platform admin updates lead status via PATCH -> 200 OK
+    const patchRes = await fetch(`${baseUrl}/api/admin/school-demo-requests/${targetLead.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${platformAdmin.token}`,
+      },
+      body: JSON.stringify({ status: 'contacted', adminNotes: 'تم التواصل بالهاتف وجدولة التجربة' }),
+    });
+    assert.equal(patchRes.status, 200);
+
+    // 3f. School admin attempting to delete lead -> 403 Forbidden
+    const unauthDelete = await fetch(`${baseUrl}/api/admin/school-demo-requests/${targetLead.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${schoolAdmin.token}` },
+    });
+    assert.equal(unauthDelete.status, 403);
+
+    // 3g. Platform admin deletes lead (Privacy Erasure SLA) -> 200 OK
+    const authDelete = await fetch(`${baseUrl}/api/admin/school-demo-requests/${targetLead.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${platformAdmin.token}` },
+    });
+    assert.equal(authDelete.status, 200);
+
+    // 3h. Confirm permanent deletion from encrypted file
+    const verifyDelRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
+      headers: { Authorization: `Bearer ${platformAdmin.token}` },
+    });
+    const verifyDelJson = (await verifyDelRes.json()) as { requests: Array<{ id: string }> };
+    assert.ok(!verifyDelJson.requests.some((r) => r.id === targetLead.id));
   });
 });

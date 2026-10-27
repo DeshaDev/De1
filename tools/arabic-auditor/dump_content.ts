@@ -48,11 +48,28 @@ const passages = ARABIC_READING_PASSAGES.map((p) => ({
   diacriticLevel: p.diacriticLevel,
   diacriticLabelAr: p.diacriticLabelAr,
   wordCount: p.wordCount,
-  words: p.words,
-  fullText: p.words.join(' '),
-  targetSkillsAr: p.targetSkillsAr,
-  comprehensionQuestions: p.comprehensionQuestions,
+  text: p.words.join(' '),
+  questions: p.comprehensionQuestions.map((q, idx) => ({
+    id: `${p.id}-q${idx + 1}`,
+    question: q.question,
+    options: q.options,
+    correctAnswer: q.options[q.correctIndex],
+    skillType: q.skillType,
+    skillLabelAr: q.skillLabelAr,
+  })),
 }));
 
-fs.writeFileSync(outPath, JSON.stringify({ questions, passages }, null, 2), 'utf-8');
-console.log(`Successfully exported ${questions.length} questions and ${passages.length} passages to ${outPath}`);
+const dump = {
+  metadata: {
+    exportedAt: new Date().toISOString(),
+    totalQuestions: questions.length,
+    totalPassages: passages.length,
+    totalPassageQuestions: passages.reduce((acc, p) => acc + p.questions.length, 0),
+  },
+  curriculumQuestions: questions,
+  readingPassages: passages,
+};
+
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
+fs.writeFileSync(outPath, JSON.stringify(dump, null, 2), 'utf8');
+console.log(`Exported ${questions.length} curriculum questions and ${passages.length} passages to ${outPath}`);

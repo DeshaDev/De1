@@ -137,6 +137,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [newLearnerGrade, setNewLearnerGrade] = useState<number>(3);
   const [guardianName, setGuardianName] = useState('');
   const [guardianRelationship, setGuardianRelationship] = useState('ولي أمر');
+  const [institutionalRef, setInstitutionalRef] = useState('');
   const [guardianConsentChecked, setGuardianConsentChecked] = useState(false);
   const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState(false);
 
@@ -183,7 +184,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
     const consentSource =
       guardianRelationship === 'معلم / أخصائي مدرسي'
-        ? `إقرار تفويض مدرسي (${guardianName.trim() || 'معلم مصرح'} - تفويض رسمي)`
+        ? `إقرار تفويض مدرسي (${guardianName.trim() || 'معلم مصرح'} - مرجع التفويض: ${institutionalRef.trim() || 'تفويض مدرسي رسمي معتمد'})`
         : guardianRelationship === 'وصي قانوني'
         ? `إقرار وصي قانوني (${guardianName.trim() || 'الوصي القانوني'})`
         : `إقرار ولي أمر (${guardianName.trim() || 'ولي الأمر'} - الأب/الأم)`;

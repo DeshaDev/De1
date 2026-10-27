@@ -121,6 +121,16 @@ export interface StudentRecord {
   guardianName?: string;
   guardianRelationship?: string;
   guardianConsentPeriod?: string;
+  serverConsentReceivedAt?: string;
+  policyVersion?: string;
+  institutionalAuthorization?: {
+    verified: boolean;
+    tenantId: string;
+    authorizedByAccount: string;
+    authorizedRole: string;
+    verifiedAt: string;
+    referenceNumber?: string;
+  };
   teacherVerified?: boolean;
   /** True only when the server validated a short-lived receipt for a completed Azure audio assessment. */
   aiAssessmentVerified?: boolean;

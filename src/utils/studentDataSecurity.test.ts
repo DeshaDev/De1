@@ -49,6 +49,18 @@ describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate 
     assert.equal(verified.role, 'school_admin');
     assert.equal(verified.tenantId, 'school_a');
     assert.equal(verified.tenantDisplayNameAr, 'مدرسة الرواد الأولى (أ)');
+
+    // Platform admin has dedicated leads:manage scope
+    const platformSession = issueBaseeraSessionToken(
+      'platform_admin',
+      'مسؤول منصة بصيرة',
+      TEST_SECRET,
+      60_000,
+      'platform'
+    );
+    assert.equal(platformSession.role, 'platform_admin');
+    assert.ok(platformSession.scopes.includes('leads:manage'));
+    assert.ok(!issued.scopes.includes('leads:manage'), 'school_admin must not have leads:manage scope');
   });
 
   it('rejects tampered or expired tokens and enforces educator_readonly restrictions', () => {

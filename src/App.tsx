@@ -97,7 +97,7 @@ export default function App() {
   const [demoRequestsError, setDemoRequestsError] = useState<string>('');
 
   const fetchDemoRequests = async () => {
-    if (!baseeraSession || baseeraSession.role !== 'school_admin') return;
+    if (!baseeraSession || baseeraSession.role !== 'platform_admin') return;
     setIsLoadingDemoRequests(true);
     setDemoRequestsError('');
     try {
@@ -113,6 +113,37 @@ export default function App() {
       setDemoRequestsError('خطأ في الاتصال بالخادم.');
     } finally {
       setIsLoadingDemoRequests(false);
+    }
+  };
+
+  const handleUpdateLeadStatus = async (id: string, newStatus: string) => {
+    try {
+      const res = await authenticatedFetch(`/api/admin/school-demo-requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setDemoRequests((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+        );
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا الطلب نهائياً وتطهير بياناته التشفيرية؟')) return;
+    try {
+      const res = await authenticatedFetch(`/api/admin/school-demo-requests/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setDemoRequests((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch {
+      // Non-blocking
     }
   };
 
@@ -304,6 +335,8 @@ export default function App() {
         newRecord.guardianConsentGiven === true
           ? newRecord.guardianConsentSource
           : undefined,
+      serverConsentReceivedAt: new Date().toISOString(),
+      policyVersion: newRecord.policyVersion || '2026.1',
     };
     setStudents((prev) => [
       completedRecord,
@@ -1085,7 +1118,7 @@ export default function App() {
                   <FileText className="w-3.5 h-3.5 text-[#0284C7]" />
                   <span>٢. تقرير التقدّم وخطة المساندة</span>
                 </button>
-                {baseeraSession?.role === 'school_admin' && (
+                {baseeraSession?.role === 'platform_admin' && (
                   <button
                     type="button"
                     role="tab"
@@ -1599,8 +1632,8 @@ export default function App() {
               </section>
             )}
 
-            {/* SUB-VIEW 3: SCHOOL & INSTITUTION DEMO REQUESTS (RBAC: SCHOOL_ADMIN) */}
-            {dashboardSubView === 'demo_requests' && baseeraSession?.role === 'school_admin' && (
+            {/* SUB-VIEW 3: SCHOOL & INSTITUTION DEMO REQUESTS (RBAC: LEADS:MANAGE / PLATFORM_ADMIN ONLY) */}
+            {dashboardSubView === 'demo_requests' && baseeraSession?.role === 'platform_admin' && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
                   <div>
@@ -1676,6 +1709,34 @@ export default function App() {
                               <p className="leading-relaxed">{req.notes}</p>
                             </div>
                           )}
+                          <div className="flex flex-wrap items-center gap-2 pt-2">
+                            <span className="text-[11px] font-bold text-slate-500">الإجراء التشغيلي:</span>
+                            {req.status !== 'contacted' && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateLeadStatus(req.id, 'contacted')}
+                                className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition-colors cursor-pointer"
+                              >
+                                تحديد كـ: تم التواصل
+                              </button>
+                            )}
+                            {req.status !== 'archived' && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateLeadStatus(req.id, 'archived')}
+                                className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
+                              >
+                                أرشفة
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLead(req.id)}
+                              className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                            >
+                              حذف وتطهير الطلب نهائياً
+                            </button>
+                          </div>
                         </div>
                         <div className="text-right md:text-left text-[11px] text-slate-400 font-mono shrink-0 flex items-center gap-1">
                           <Clock size={12} />

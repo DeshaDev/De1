@@ -62,7 +62,7 @@ export interface BaseeraAuditLogEntry {
   eventId: string;
   timestamp: string;
   tenantId: string;
-  actorRole: BaseeraRole;
+  actorRole: BaseeraRole | 'public_lead';
   sessionId: string;
   action:
     | 'student.create'
@@ -70,7 +70,10 @@ export interface BaseeraAuditLogEntry {
     | 'student.math.assess'
     | 'student.report.update'
     | 'student.profile.patch'
-    | 'student.delete';
+    | 'student.delete'
+    | 'lead.create'
+    | 'lead.update'
+    | 'lead.delete';
   targetStudentId: string;
   changedFields: string[];
 }
@@ -129,8 +132,9 @@ function getTenantCredentialEntries(): TenantCredential[] {
         tenantId,
         customSchoolName
       );
-      for (const role of ['school_admin', 'educator_readonly'] as const) {
+      for (const role of ['platform_admin', 'school_admin', 'educator_readonly'] as const) {
         const accessCode = (credentials[role] || (role === 'school_admin' ? credentials.clinician : undefined)) as string | undefined;
+        if (!accessCode) continue;
         if (
           !isStrongBaseeraAccessCode(accessCode) ||
           seenCodes.has(accessCode)
@@ -144,6 +148,16 @@ function getTenantCredentialEntries(): TenantCredential[] {
           accessCode,
         });
       }
+    }
+    const envPlatformCode = (process.env.BASEERA_PLATFORM_ADMIN_CODE || '').trim();
+    if (isStrongBaseeraAccessCode(envPlatformCode) && !seenCodes.has(envPlatformCode)) {
+      seenCodes.add(envPlatformCode);
+      entries.push({
+        tenantId: 'platform_hq',
+        tenantDisplayNameAr: 'إدارة منصة بصيرة المركزية',
+        role: 'platform_admin',
+        accessCode: envPlatformCode,
+      });
     }
     return entries.length >= 2 ? entries : [];
   } catch {
@@ -466,6 +480,9 @@ interface PersistedSchoolDemoRequest {
   phone: string;
   expectedStudents?: string;
   notes?: string;
+  status?: 'new' | 'contacted' | 'qualified' | 'archived';
+  statusUpdatedAt?: string;
+  adminNotes?: string;
 }
 
 const demoRequestBuckets = new Map<string, number[]>();
@@ -544,6 +561,84 @@ function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
   } catch (err) {
     console.error('Failed to save school demo request:', err);
     return { success: false, reason: 'EXCEPTION' };
+  }
+}
+
+function deletePersistedDemoRequest(id: string): {
+  success: boolean;
+  reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'NOT_FOUND' | 'WRITE_ERROR' | 'EXCEPTION';
+} {
+  try {
+    const key = getStoreEncryptionKey();
+    if (!key) return { success: false, reason: 'ENCRYPTION_KEY_UNAVAILABLE' };
+    const list = loadPersistedDemoRequests();
+    const idx = list.findIndex((item) => item.id === id);
+    if (idx === -1) return { success: false, reason: 'NOT_FOUND' };
+    list.splice(idx, 1);
+    const content = encryptJsonPayload(list, key, 'baseera-demo-requests-aes-256-gcm-v1');
+    const written = writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+    return { success: written, reason: written ? undefined : 'WRITE_ERROR' };
+  } catch (err) {
+    console.error('Failed to delete school demo request:', err);
+    return { success: false, reason: 'EXCEPTION' };
+  }
+}
+
+function updatePersistedDemoRequest(
+  id: string,
+  updates: { status?: 'new' | 'contacted' | 'qualified' | 'archived'; adminNotes?: string }
+): {
+  success: boolean;
+  updated?: PersistedSchoolDemoRequest;
+  reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'NOT_FOUND' | 'WRITE_ERROR' | 'EXCEPTION';
+} {
+  try {
+    const key = getStoreEncryptionKey();
+    if (!key) return { success: false, reason: 'ENCRYPTION_KEY_UNAVAILABLE' };
+    const list = loadPersistedDemoRequests();
+    const item = list.find((d) => d.id === id);
+    if (!item) return { success: false, reason: 'NOT_FOUND' };
+    if (updates.status) item.status = updates.status;
+    if (typeof updates.adminNotes === 'string') item.adminNotes = updates.adminNotes;
+    item.statusUpdatedAt = new Date().toISOString();
+    const content = encryptJsonPayload(list, key, 'baseera-demo-requests-aes-256-gcm-v1');
+    const written = writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+    return { success: written, updated: item, reason: written ? undefined : 'WRITE_ERROR' };
+  } catch (err) {
+    console.error('Failed to update school demo request:', err);
+    return { success: false, reason: 'EXCEPTION' };
+  }
+}
+
+function notifyOperationsTeamOfDemoRequest(item: PersistedSchoolDemoRequest): void {
+  console.log(
+    `[BASEERA OPS ALERT] New School Demo Request: ID=${item.id}, School="${item.schoolName}", Contact="${item.contactName}" <${item.workEmail}>, Phone="${item.phone}". Operational SLA: Contact within 24-48 business hours.`
+  );
+  const webhookUrl = process.env.ADMIN_ALERT_WEBHOOK_URL;
+  if (webhookUrl && /^https?:\/\//i.test(webhookUrl)) {
+    try {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'school_demo_request.created',
+          id: item.id,
+          schoolName: item.schoolName,
+          contactName: item.contactName,
+          roleTitle: item.roleTitle || '',
+          workEmail: item.workEmail,
+          phone: item.phone,
+          expectedStudents: item.expectedStudents || '',
+          notes: item.notes || '',
+          submittedAt: item.submittedAt,
+          slaTargetHours: 48,
+        }),
+      }).catch((err) => {
+        console.warn('[BASEERA OPS ALERT] Webhook dispatch notification failed:', err?.message || err);
+      });
+    } catch {
+      // Non-blocking
+    }
   }
 }
 
@@ -711,6 +806,28 @@ function commitStudentMutationWithAudit(
     return { ok: false, students: currentStudents };
   }
   return { ok: true, students: nextStudents };
+}
+
+function recordLeadAuditLog(
+  tenantId: string,
+  actorRole: BaseeraRole | 'public_lead',
+  sessionId: string,
+  action: 'lead.create' | 'lead.update' | 'lead.delete',
+  targetId: string,
+  changedFields: string[]
+): void {
+  const entry: BaseeraAuditLogEntry = {
+    eventId: `aud-${crypto.randomBytes(12).toString('hex')}`,
+    timestamp: new Date().toISOString(),
+    tenantId,
+    actorRole,
+    sessionId,
+    action,
+    targetStudentId: targetId,
+    changedFields,
+  };
+  auditLogsDb = [entry, ...auditLogsDb];
+  saveSecurityState();
 }
 
 // Role-Based Access Control (RBAC) Middleware for protecting child records & AI analysis
@@ -2594,10 +2711,23 @@ async function startServer() {
       id: `demo_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
       submittedAt: new Date().toISOString(),
       clientIp: req.ip || req.socket.remoteAddress || 'local',
+      status: 'new',
+      statusUpdatedAt: new Date().toISOString(),
       ...parsed.data,
     };
 
     const saveResult = saveSchoolDemoRequest(demoRecord);
+    if (saveResult.success) {
+      notifyOperationsTeamOfDemoRequest(demoRecord);
+      recordLeadAuditLog(
+        'platform',
+        'public_lead',
+        'public',
+        'lead.create',
+        demoRecord.id,
+        ['schoolName', 'contactName', 'workEmail', 'phone']
+      );
+    }
     if (!saveResult.success) {
       if (saveResult.reason === 'ENCRYPTION_KEY_UNAVAILABLE') {
         res.status(503).json({
@@ -2618,15 +2748,15 @@ async function startServer() {
     });
   });
 
-  // Admin Endpoint: Review Submitted School / Institution Demo Requests (RBAC: audit:read / school_admin)
+  // Admin Endpoint: Review Submitted School Demo Requests (RBAC: leads:manage / platform_admin ONLY)
   app.get(
     '/api/admin/school-demo-requests',
-    requireBaseeraAuth('audit:read'),
+    requireBaseeraAuth('leads:manage'),
     (req, res) => {
       const session = (req as any).baseeraSession as VerifiedBaseeraSession;
-      if (session.role !== 'school_admin') {
+      if (session.role !== 'platform_admin') {
         res.status(403).json({
-          error: 'صلاحية مسؤول المدرسة مطلوبة للاطلاع على طلبات الشراكة والتجربة.',
+          error: 'صلاحية مسؤول المنصة (Platform Admin) مطلوبة للاطلاع على طلبات الشراكة والتجربة.',
         });
         return;
       }
@@ -2637,6 +2767,83 @@ async function startServer() {
         count: requests.length,
         retrievedAt: new Date().toISOString(),
       });
+    }
+  );
+
+  // Admin Endpoint: Update Lead Status (RBAC: leads:manage / platform_admin)
+  app.patch(
+    '/api/admin/school-demo-requests/:id',
+    requireBaseeraAuth('leads:manage'),
+    (req, res) => {
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+      if (session.role !== 'platform_admin') {
+        res.status(403).json({
+          error: 'صلاحية مسؤول المنصة (Platform Admin) مطلوبة لتحديث حالة طلب التجربة.',
+        });
+        return;
+      }
+      const { id } = req.params;
+      const { status, adminNotes } = (req.body || {}) as {
+        status?: 'new' | 'contacted' | 'qualified' | 'archived';
+        adminNotes?: string;
+      };
+      const validStatuses = ['new', 'contacted', 'qualified', 'archived'];
+      if (status && !validStatuses.includes(status)) {
+        res.status(400).json({ error: 'حالة الطلب غير صالحة.' });
+        return;
+      }
+      const updateResult = updatePersistedDemoRequest(id, { status, adminNotes });
+      if (!updateResult.success) {
+        if (updateResult.reason === 'NOT_FOUND') {
+          res.status(404).json({ error: 'طلب التجربة غير موجود.' });
+          return;
+        }
+        res.status(500).json({ error: 'تعذر تحديث حالة الطلب.' });
+        return;
+      }
+      recordLeadAuditLog(
+        session.tenantId,
+        session.role,
+        session.sessionId,
+        'lead.update',
+        id,
+        ['status', 'adminNotes']
+      );
+      res.json({ ok: true, updated: updateResult.updated });
+    }
+  );
+
+  // Admin Endpoint: Delete Lead upon privacy erasure request (RBAC: leads:manage / platform_admin)
+  app.delete(
+    '/api/admin/school-demo-requests/:id',
+    requireBaseeraAuth('leads:manage'),
+    (req, res) => {
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+      if (session.role !== 'platform_admin') {
+        res.status(403).json({
+          error: 'صلاحية مسؤول المنصة (Platform Admin) مطلوبة لحذف طلب الشراكة والتجربة.',
+        });
+        return;
+      }
+      const { id } = req.params;
+      const delResult = deletePersistedDemoRequest(id);
+      if (!delResult.success) {
+        if (delResult.reason === 'NOT_FOUND') {
+          res.status(404).json({ error: 'طلب التجربة غير موجود أو تم حذفه مسبقاً.' });
+          return;
+        }
+        res.status(500).json({ error: 'تعذر حذف طلب التجربة.' });
+        return;
+      }
+      recordLeadAuditLog(
+        session.tenantId,
+        session.role,
+        session.sessionId,
+        'lead.delete',
+        id,
+        ['purged']
+      );
+      res.json({ ok: true, message: 'تم حذف طلب التجربة وتطهير السجل المشفر بنجاح.' });
     }
   );
 
