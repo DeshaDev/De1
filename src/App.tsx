@@ -351,7 +351,8 @@ export default function App() {
       guardianAudioConsentGiven: boolean;
       guardianConsentRecordedAt: string;
       guardianConsentSource: string;
-    }
+    },
+    targetTab?: ActiveTab
   ) => {
     if (baseeraSession?.role === 'educator_readonly') {
       setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
@@ -402,13 +403,14 @@ export default function App() {
       const newStudent: StudentRecord = {
         id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
         name: cleanName,
+        isDemoRecord: false,
         sessionStatus: 'in_progress',
         sessionRoleLabel: roleLabel,
         assessmentHistory: [],
         gradeLevel: grade,
         ageYears: grade + 6,
-        schoolName: 'لم تُحدّد المدرسة',
-        lastScreenedDate: '',
+        schoolName: 'مدرستي',
+        lastScreenedDate: '—',
         passageId: ARABIC_READING_PASSAGES.find((passage) => passage.gradeLevel === grade)?.id || ARABIC_READING_PASSAGES[0].id,
         guardianConsentGiven: consentGiven,
         guardianConsentRecordedAt: consentRecordedAt,
@@ -422,7 +424,7 @@ export default function App() {
         dyslexiaRiskScore: null,
         readingHeuristicIndicator: null,
         readingRiskLevel: 'unassessed',
-        readingRiskLabelAr: 'لم تُسجّل بعد قياسات القراءة.',
+        readingRiskLabelAr: 'لم تبدأ جلسة القراءة بعد.',
         problematicWords: [],
         comprehensionScore: 0,
         dyscalculiaAssessed: false,
@@ -434,12 +436,12 @@ export default function App() {
         dyscalculiaRiskScore: null,
         mathHeuristicIndicator: null,
         mathRiskLevel: 'unassessed',
-        mathRiskLabelAr: 'لم يُجرَ اختبار الحساب بعد',
+        mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
         learningReport: {
-          learningSummary: 'لم تكتمل جلسة القراءة بعد، لذلك لا توجد مؤشرات يمكن تفسيرها.',
-          ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
-          orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر نص منطوق فعلي.',
-          dyscalculiaSpatialAnalysis: 'لم يُستكمل فحص الحساب بعد.',
+          learningSummary: 'جلسة جديدة قيد البدء؛ تظهر التوصيات والمؤشرات التربوية بعد إكمال أول تمرين.',
+          ocularMotorAnalysis: 'غير منطبق؛ منصة بصيرة لا تعتمد على الكاميرا أو تتبع العين.',
+          orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر تفريغ صوتي فعلي.',
+          dyscalculiaSpatialAnalysis: 'غير منطبق؛ يركز المسار الحالي على مهارات القراءة والوعي الصوتي.',
           interventionExercises: [],
           classroomAccommodations: [],
         },
@@ -447,9 +449,9 @@ export default function App() {
       setStudents((prev) => [newStudent, ...prev]);
       setSelectedStudentId(newStudent.id);
     }
-    setActiveTab('reading-lab');
+    setActiveTab(targetTab || 'remediation-gym');
     setAiStatusBanner(
-      `بدأت جلسة جديدة لـ «${cleanName}» (الصف ${grade}). لن تظهر ملاحظات الجلسة قبل إكمالها.`
+      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade} · 0 XP).`
     );
   };
 

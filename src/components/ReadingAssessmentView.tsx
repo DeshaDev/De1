@@ -134,6 +134,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const [isListening, setIsListening] = useState(false);
   const [audioPlaybackUrl, setAudioPlaybackUrl] = useState<string | null>(null);
   const [audioCaptureFailed, setAudioCaptureFailed] = useState(false);
+  const [audioFailureReason, setAudioFailureReason] = useState<
+    'permission_denied' | 'empty_audio' | 'service_unavailable' | 'unsupported_dialect' | null
+  >(null);
   const [readingModeNotice, setReadingModeNotice] = useState('');
   const [isAssessingPronunciation, setIsAssessingPronunciation] = useState(false);
   const [pronunciationAssessmentError, setPronunciationAssessmentError] = useState('');
@@ -262,6 +265,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     currentInterimRef.current = '';
     setSpokenTranscript('');
     setAudioCaptureFailed(false);
+    setAudioFailureReason(null);
     setReadingModeNotice('');
     // A retry starts a new session. Never carry forward prior answers or a previous receipt.
     setAiAssessmentReceipt(null);
@@ -419,9 +423,19 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         startReadingClock();
         startSpeechRecognition();
       })
-      .catch(() => {
+      .catch((err: any) => {
         if (!isReadingActiveRef.current) return;
-        fallBackToTimedSilent('تعذّر تشغيل الميكروفون؛ بدأ الاختبار بالقراءة الموقوتة دون تسجيل، ولن تُحتسب طلاقة شفوية.');
+        const isPermissionDenied =
+          err?.name === 'NotAllowedError' ||
+          err?.name === 'PermissionDeniedError' ||
+          String(err?.message || '').toLowerCase().includes('permission') ||
+          String(err?.message || '').toLowerCase().includes('denied');
+        setAudioFailureReason(isPermissionDenied ? 'permission_denied' : 'empty_audio');
+        fallBackToTimedSilent(
+          isPermissionDenied
+            ? 'لم يتم منح إذن الميكروفون في المتصفح. يمكنك إكمال القراءة الموقوتة صامتاً، أو السماح بالوصول من إعدادات المتصفح ثم إعادة المحاولة.'
+            : 'تعذّر تشغيل الميكروفون أو لم يتم العثور على جهاز إدخال صوتي. بدأ الاختبار بالقراءة الموقوتة دون تسجيل.'
+        );
       });
   };
 
@@ -615,14 +629,23 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
       // Fail closed if the acoustic assessment fails; browser ASR remains a preview only.
       if (!azureSuccess) {
-        setPronunciationAssessmentError(
-          !recordedAudio || recordedAudio.size === 0
-            ? 'لم يُلتقط تسجيل صوتي صالح. تحقق من أذونات الميكروفون ثم أعد القراءة.'
-            : studentDialect === 'levantine' || studentDialect === 'maghrebi'
-              ? 'لم يتوفر محرك تقييم صوتي موثّق لهذه اللهجة. اختر المصرية أو السعودية/الفصحى، أو تابع دون درجة نطق.'
-              : 'تعذر إكمال التقييم الصوتي الآلي. لم نستخدم تفريغ المتصفح لاحتساب درجات؛ أعد التسجيل أو تابع دون درجة نطق.'
-        );
-        setAudioCaptureFailed(!recordedAudio || recordedAudio.size === 0);
+        let reason: 'permission_denied' | 'empty_audio' | 'service_unavailable' | 'unsupported_dialect' = 'service_unavailable';
+        let errorMessage = 'تعذر إكمال التقييم الصوتي الآلي من محرك Azure AI. أعد المحاولة أو تابع دون احتساب طلاقة شفوية.';
+
+        if (!recordedAudio || recordedAudio.size === 0) {
+          reason = 'empty_audio';
+          errorMessage = 'لم يُلتقط تسجيل صوتي صالح (تسجيل فارغ أو مستوى صوت منخفض جداً). تحقق من الميكروفون ثم أعد القراءة.';
+        } else if (studentDialect === 'levantine' || studentDialect === 'maghrebi') {
+          reason = 'unsupported_dialect';
+          errorMessage = 'التقييم الصوتي الآلي المعتمد متاح حالياً للمصرية والسعودية/الخليجية والفصحى. اختر إحداها أو تابع دون درجة نطق.';
+        } else {
+          reason = 'service_unavailable';
+          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي (Azure AI) أو لم يتم تهيئة مفتاح الخدمة. يمكنك المتابعة ومراجعة الكلمات يدوياً دون توقف.';
+        }
+
+        setAudioFailureReason(reason);
+        setPronunciationAssessmentError(errorMessage);
+        setAudioCaptureFailed(true);
         setVerifiedWords(unresolvedWords);
         setAiAssessmentReceipt(null);
         setMeasuredWpm(undefined);
@@ -1344,14 +1367,82 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </div>
             )}
 
-            {/* Audio Capture Failure Alert */}
+            {/* Audio Capture & Processing Failure Diagnostic Banner */}
             {audioCaptureFailed && (
-              <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-right">
-                <div className="flex items-start gap-2.5">
-                  <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-950 leading-relaxed">
-                    <strong>تعذّر التقاط تفريغ صوتي من الميكروفون:</strong>
-                    لم يتوفر التقاط صوتي في هذه الجلسة. يمكنك إعادة القراءة بالميكروفون أو فحص الكلمات وتأكيدها للمتابعة.
+              <div
+                className={`mb-6 p-4 sm:p-5 rounded-2xl text-right border shadow-xs ${
+                  audioFailureReason === 'permission_denied'
+                    ? 'bg-rose-50 border-rose-300 text-rose-950'
+                    : audioFailureReason === 'empty_audio'
+                      ? 'bg-amber-50 border-amber-300 text-amber-950'
+                      : audioFailureReason === 'unsupported_dialect'
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-950'
+                        : 'bg-sky-50 border-sky-300 text-sky-950'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle
+                    className={`w-5 h-5 shrink-0 mt-0.5 ${
+                      audioFailureReason === 'permission_denied'
+                        ? 'text-rose-600'
+                        : audioFailureReason === 'empty_audio'
+                          ? 'text-amber-600'
+                          : audioFailureReason === 'unsupported_dialect'
+                            ? 'text-indigo-600'
+                            : 'text-sky-600'
+                    }`}
+                  />
+                  <div className="text-xs leading-relaxed space-y-1">
+                    {audioFailureReason === 'permission_denied' && (
+                      <>
+                        <strong className="block text-sm font-black text-rose-900">
+                          إذن الميكروفون مرفوض في المتصفح (Permission Denied)
+                        </strong>
+                        <p>
+                          لم تمنح المتصفح صلاحية استخدام الميكروفون. للتقييم الصوتي، اضغط على أيقونة القفل أو الميكروفون في شريط العنوان أعلى المتصفح، اختر «سماح/Allow»، ثم انقر «إعادة المحاولة». يمكنك الاستمرار حالياً وتأكيد الكلمات المقروءة يدوياً.
+                        </p>
+                      </>
+                    )}
+                    {audioFailureReason === 'empty_audio' && (
+                      <>
+                        <strong className="block text-sm font-black text-amber-900">
+                          لم يُرصد صوت واضح أثناء التسجيل (Empty / Quiet Audio)
+                        </strong>
+                        <p>
+                          التسجيل الصوتي فارغ أو الصوت كان منخفضاً جداً. تأكد من توصيل الميكروفون، رفع مستوى الإدخال، واقتراب الطفل من الجهاز أثناء القراءة ثم أعد المحاولة.
+                        </p>
+                      </>
+                    )}
+                    {audioFailureReason === 'service_unavailable' && (
+                      <>
+                        <strong className="block text-sm font-black text-sky-900">
+                          محرك التحليل الصوتي السحابي غير متاح حالياً (Azure Speech Notice)
+                        </strong>
+                        <p>
+                          تعذر الاتصال بخدمة التحليل الصوتي السحابي (Azure AI) أو لم يتم تهيئة مفتاح الخدمة. لا تقلق؛ يمكنك مواصلة الجلسة، مراجعة الكلمات يدوياً، واستكمال أسئلة الفهم بصورة طبيعية.
+                        </p>
+                      </>
+                    )}
+                    {audioFailureReason === 'unsupported_dialect' && (
+                      <>
+                        <strong className="block text-sm font-black text-indigo-900">
+                          تنبيه اللهجة المختارة (Dialect Notice)
+                        </strong>
+                        <p>
+                          محرك التحليل الصوتي الآلي يدعم حالياً اللهجة المصرية والسعودية/الخليجية والفصحى المعيارية. يمكن للمعلّم أو ولي الأمر تأكيد الكلمات المقروءة يدوياً للمتابعة.
+                        </p>
+                      </>
+                    )}
+                    {!audioFailureReason && (
+                      <>
+                        <strong className="block text-sm font-black">
+                          تنبيه التسجيل الصوتي
+                        </strong>
+                        <p>
+                          لم يتوفر التقاط صوتي في هذه الجلسة. يمكنك إعادة القراءة بالميكروفون أو فحص الكلمات وتأكيدها للمتابعة.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1931,6 +2022,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   setMeasuredWcpm(undefined);
                   setMeasuredAccuracyPercent(undefined);
                   setAudioCaptureFailed(false);
+                  setAudioFailureReason(null);
                   setReadingModeNotice('');
                   setAudioPlaybackUrl(null);
                   recordedAudioBlobRef.current = null;

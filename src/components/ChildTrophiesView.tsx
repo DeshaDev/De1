@@ -91,6 +91,25 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10" dir="rtl">
+      {/* Demo Student Notice */}
+      {isDemo && (
+        <div className="bg-amber-100/90 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-950 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>
+              <strong>نموذج توضيحي استعراضي:</strong> هذا الملف يعرض أوسمة ونقاطاً تجريبية لـ «{activeStudent.name}» (160 XP · 5 من 6 أوسمة) لأغراض التقييم المؤسسي.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('sprint')}
+            className="px-4 py-2 rounded-xl bg-amber-600 text-white font-black hover:bg-amber-700 transition-colors shrink-0 cursor-pointer shadow-xs"
+          >
+            ابدأ كمتعلم جديد (0 XP)
+          </button>
+        </div>
+      )}
+
       {/* Hero Podium Banner */}
       <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border-2 border-amber-300">
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-right">
