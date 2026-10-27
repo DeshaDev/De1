@@ -145,7 +145,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
   const oralEvidenceSourceLabel = oralEvidenceSource === 'server-verified-audio'
     ? 'نتيجة تقييم صوتي آلي موثقة من الخادم'
     : oralEvidenceSource === 'legacy-human-reviewed'
-      ? 'نتيجة من سجل سابق موثق بالمراجعة البشرية'
+      ? 'نتيجة موثقة بمراجعة واعتماد المعلم'
       : 'لا توجد نتيجة قراءة جهرية موثقة المصدر';
 
   // Display only measures that were actually recorded, in their native units.
@@ -209,30 +209,6 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         value: cog ? validValue(cog.phonemicAwarenessScorePercent) : null,
         unit: '%',
         detail: 'نسبة الإجابات الصحيحة المسجلة في مهام هذه الجولة؛ لا تعمم على كل مهارات القراءة.',
-        precision: 0,
-      },
-      {
-        id: 'quantity',
-        label: 'دقة تمييز الكميات',
-        value: math ? validValue(math.subitizingAccuracy) : null,
-        unit: '%',
-        detail: 'أداء الطفل في مهام تمييز الكميات المنفذة فقط.',
-        precision: 0,
-      },
-      {
-        id: 'number-line-error',
-        label: 'الخطأ في موضع العدد على خط الأعداد',
-        value: math ? validValue(math.numberLinePAE) : null,
-        unit: '% خطأ',
-        detail: 'هذا مقياس خطأ؛ الأقل يعني موضعًا أقرب في المهمة، وليس قدرة رياضية عامة.',
-        precision: 1,
-      },
-      {
-        id: 'number-transcoding',
-        label: 'دقة كتابة/قراءة رموز الأعداد',
-        value: math ? validValue(math.transcodingAccuracy) : null,
-        unit: '%',
-        detail: 'دقة التحويل بين رموز الأعداد كما سجلت في المهام المنفذة.',
         precision: 0,
       },
     ];
@@ -477,15 +453,15 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </button>
             </div>
 
-            {/* 3. Number-sense activity card */}
+            {/* 3. Literacy & Syllable Gym Card */}
             <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 hover:border-purple-300 transition-colors flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4">
-                  <Hand className="w-6 h-6" />
+                  <Gamepad2 className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-base mb-1">مغامرة الأعداد</h3>
+                <h3 className="font-bold text-slate-900 text-base mb-1">صالة التدريب القرائي والمقاطع</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  مهام قصيرة لاستكشاف دقة موقع الأعداد وتمييز الكميات وقراءة الأرقام. النتائج وصفية وليست تشخيصًا.
+                  أنشطة متدرجة لتعزيز الوعي الصوتي وفك المقاطع وتركيب الكلمات العربية بأسلوب شائق وممتع.
                 </p>
               </div>
               <button

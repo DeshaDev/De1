@@ -133,9 +133,25 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [autoPreview, setAutoPreview] = useState(true);
   const [motionAllowed, setMotionAllowed] = useState(true);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [newLearnerName, setNewLearnerName] = useState('البطل الصغير');
+  const [newLearnerName, setNewLearnerName] = useState('');
   const [newLearnerGrade, setNewLearnerGrade] = useState<number>(3);
-  const [guardianConsentChecked, setGuardianConsentChecked] = useState(true);
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianRelationship, setGuardianRelationship] = useState('ولي أمر');
+  const [guardianConsentChecked, setGuardianConsentChecked] = useState(false);
+  const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState(false);
+
+  // School Demo Request Modal state
+  const [showSchoolDemoModal, setShowSchoolDemoModal] = useState(false);
+  const [schoolName, setSchoolName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [roleTitle, setRoleTitle] = useState('');
+  const [workEmail, setWorkEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [expectedStudents, setExpectedStudents] = useState('');
+  const [demoNotes, setDemoNotes] = useState('');
+  const [isSubmittingDemo, setIsSubmittingDemo] = useState(false);
+  const [demoSubmitError, setDemoSubmitError] = useState('');
+  const [demoSubmitSuccess, setDemoSubmitSuccess] = useState(false);
 
   const selectedWord = SAMPLE_WORDS[activeWordIndex] || SAMPLE_WORDS[0];
   const demoStudent = students.find((student) => student.isDemoRecord) || students[0];
@@ -162,22 +178,56 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   }, []);
 
   const handleLaunchCleanLearner = () => {
-    const clean = newLearnerName.trim() || 'البطل الصغير';
+    const clean = newLearnerName.trim();
+    if (!clean || !guardianConsentChecked) return;
+
     onStartMockUserJourney(
       clean,
       newLearnerGrade,
       'متعلّم جديد',
       {
-        guardianName: 'ولي الأمر',
-        guardianRelationship: 'ولي أمر / معلم',
-        guardianConsentGiven: guardianConsentChecked,
-        guardianAudioConsentGiven: false,
+        guardianName: guardianName.trim() || 'ولي أمر الطالب',
+        guardianRelationship: guardianRelationship.trim() || 'ولي أمر',
+        guardianConsentGiven: true,
+        guardianAudioConsentGiven: guardianAudioConsentChecked,
         guardianConsentRecordedAt: new Date().toISOString(),
-        guardianConsentSource: 'بدء رحلة جديدة من الواجهة الرئيسية',
+        guardianConsentSource: 'إقرار صريح ومفصل داخل نافذة بدء التعلم (الواجهة الرئيسية)',
       },
       'sprint'
     );
     setShowOnboardingModal(false);
+  };
+
+  const handleSchoolDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingDemo(true);
+    setDemoSubmitError('');
+
+    try {
+      const res = await fetch('/api/school-demo-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolName: schoolName.trim(),
+          contactName: contactName.trim(),
+          roleTitle: roleTitle.trim(),
+          workEmail: workEmail.trim(),
+          phone: phone.trim(),
+          expectedStudents: expectedStudents.trim(),
+          notes: demoNotes.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'تعذر إرسال طلب التجربة.');
+      }
+      setDemoSubmitSuccess(true);
+    } catch (err: any) {
+      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقاً.');
+    } finally {
+      setIsSubmittingDemo(false);
+    }
   };
 
   return (
@@ -311,7 +361,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="space-y-4 text-sm">
               <div>
                 <label className="block text-xs font-black text-slate-700 mb-1.5">
-                  اسم الطفل المستعار أو اللقب:
+                  اسم الطفل المستعار أو اللقب: *
                 </label>
                 <input
                   type="text"
@@ -319,10 +369,40 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   onChange={(e) => setNewLearnerName(e.target.value)}
                   placeholder="مثال: البطل الصغير أو سارة"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  required
                 />
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  لا تستخدم الاسم الكامل الحقيقي للطفل للحفاظ على خصوصيته.
+                  لا تستخدم الاسم الكامل الحقيقي للطفل لحماية خصوصيته وفق مبدأ تقليل البيانات.
                 </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1.5">
+                    اسم ولي الأمر / المعلم المسؤول:
+                  </label>
+                  <input
+                    type="text"
+                    value={guardianName}
+                    onChange={(e) => setGuardianName(e.target.value)}
+                    placeholder="مثال: عبد الله أو نورة (اختياري)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1.5">
+                    الصفة والقرابة:
+                  </label>
+                  <select
+                    value={guardianRelationship}
+                    onChange={(e) => setGuardianRelationship(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs bg-white focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="ولي أمر">ولي أمر (الأب / الأم)</option>
+                    <option value="وصي قانوني">وصي قانوني</option>
+                    <option value="معلم / أخصائي مدرسي">معلم / أخصائي مدرسي</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -347,18 +427,43 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </div>
               </div>
 
-              <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs text-emerald-950 space-y-2">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={guardianConsentChecked}
-                    onChange={(e) => setGuardianConsentChecked(e.target.checked)}
-                    className="mt-0.5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <span className="font-bold leading-relaxed">
-                    أوافق كولي أمر / معلم على بدء التدريب التكويني القرائي واستخدام التطبيق وفقاً لسياسة الخصوصية وقانون حماية البيانات القطري.
-                  </span>
-                </label>
+              {/* Explicit Separated Consent Section */}
+              <div className="space-y-2.5 pt-1">
+                {/* 1. Mandatory App Usage Consent */}
+                <div className={`p-3.5 rounded-2xl border text-xs transition-colors ${
+                  guardianConsentChecked
+                    ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+                    : 'bg-amber-50/70 border-amber-200 text-amber-950'
+                }`}>
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={guardianConsentChecked}
+                      onChange={(e) => setGuardianConsentChecked(e.target.checked)}
+                      className="mt-0.5 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="font-bold leading-relaxed">
+                      <span className="text-emerald-700 underline font-black ml-1">[إلزامي للبدء]</span>
+                      أقر بصفتي ولي أمر / وصي قانوني / معلم مصرح بالموافقة الصريحة على إنشاء ملف تدريبي للطفل واستخدام منصة بصيرة للتدريب القرائي التكويني وفق سياسة الخصوصية.
+                    </span>
+                  </label>
+                </div>
+
+                {/* 2. Optional Separate Audio Processing Consent */}
+                <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-800">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={guardianAudioConsentChecked}
+                      onChange={(e) => setGuardianAudioConsentChecked(e.target.checked)}
+                      className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <span className="leading-relaxed">
+                      <span className="text-slate-600 font-black ml-1">[اختياري منفصل]</span>
+                      أوافق على معالجة قراءة الطفل الصوتية عبر التعرف الصوتي الآلي عند اختيار أنشطة القراءة الجهرية. (يمكن الاستفادة من المنصة كاملة بنمط القراءة الصامتة دون أي تسجيل صوتي).
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -366,7 +471,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <button
                 type="button"
                 onClick={handleLaunchCleanLearner}
-                className="flex-1 baseera-primary-action justify-center py-3 text-sm cursor-pointer"
+                disabled={!guardianConsentChecked || newLearnerName.trim().length < 2}
+                className="flex-1 baseera-primary-action justify-center py-3 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 انطلق في تدريب اليوم (0 XP)
                 <ArrowLeft size={18} />
@@ -517,9 +623,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="baseera-pricing-section" aria-labelledby="baseera-pricing-title">
         <div className="baseera-section-heading">
           <div>
-            <span className="baseera-section-kicker">الاستدامة والجاهزية التجارية</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 mb-2">
+              <Sparkles size={14} className="text-amber-600" />
+              <span>مرحلة التحقق الاسترشادي (Pilot Phase) · لا توجد مدفوعات حالياً</span>
+            </div>
             <h2 id="baseera-pricing-title">خطط الاشتراكات للمدارس والأسر</h2>
-            <p>حلول مصممة لدعم أقسام الدعم الإضافي في المدارس، وتوفير تدريب منزلي ميسّر للأسر.</p>
+            <p>
+              الأسعار المعروضة أدناه هي خطط استرشادية مقترحة قيد الدراسة والتجريب مع المدارس والأسر الشريكة؛ المنصة متاحة للتجربة الحرة دون أي التزام مالي أو بطاقة بنكية.
+            </p>
           </div>
         </div>
 
@@ -535,10 +646,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="flex items-baseline gap-1 my-3">
                 <span className="text-3xl font-black text-slate-900 font-mono">49</span>
                 <span className="text-sm font-bold text-slate-500">ر.ق / شهرياً</span>
-                <span className="text-xs text-slate-400 mr-2">(أو 399 ر.ق / سنوياً - توفير شهرين)</span>
+                <span className="text-xs text-slate-400 mr-2">(قيمة استرشادية مقترحة - متاحة مجاناً خلال الإطلاق التجريبي)</span>
               </div>
               <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-                ممارسة منزلية يومية مبهجة تبني ثقة طفلك في القراءة خطوة بخطوة مع تقرير أسبوعي لولي الأمر.
+                ممارسة منزلية يومية مبهجة تبني ثقة طفلك في القراءة خطوة بخطوة مع تقرير دوري لولي الأمر.
               </p>
 
               <ul className="space-y-3 text-xs text-slate-700 font-medium mb-8">
@@ -552,29 +663,34 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>تقرير دوري لولي الأمر مع رصد الفجوات وتوجيه المختص</span>
+                  <span>تقرير دوري لولي الأمر مع رصد الفجوات ومؤشرات التقدم</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>خصوصية تامة وحماية صوت الطفل وفق قانون حماية البيانات القطري</span>
+                  <span>حوكمة خصوصية عالية وضمانات لحماية صوت الطفل بالاسترشاد بالقوانين الوطنية</span>
                 </li>
               </ul>
             </div>
 
-            <button
-              type="button"
-              className="baseera-primary-action w-full justify-center py-3.5 text-sm cursor-pointer"
-              onClick={() => setShowOnboardingModal(true)}
-            >
-              ابدأ التجربة المجانية (٧ أيام)
-              <ArrowLeft size={17} />
-            </button>
+            <div>
+              <button
+                type="button"
+                className="baseera-primary-action w-full justify-center py-3.5 text-sm cursor-pointer"
+                onClick={() => setShowOnboardingModal(true)}
+              >
+                ابدأ تجربة المتعلّم الفورية (مفتوحة ومجانية)
+                <ArrowLeft size={17} />
+              </button>
+              <p className="text-[11px] text-center text-slate-500 mt-2 font-medium">
+                متاح مجاناً لكافة الأسر خلال مرحلة التحقق التجريبي دون الحاجة لبطاقة ائتمانية.
+              </p>
+            </div>
           </div>
 
           {/* Tier 2: School Enterprise B2B */}
           <div className="p-6 sm:p-8 rounded-3xl border-2 border-emerald-500 bg-gradient-to-b from-emerald-50/40 via-white to-white shadow-md flex flex-col justify-between text-right relative hover:shadow-lg transition-shadow">
             <div className="absolute -top-3.5 left-6 bg-emerald-600 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-xs">
-              الخيار المعتمد للمؤسسات
+              برنامج الشركاء التجريبي
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 mb-3">
@@ -583,11 +699,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </div>
               <h3 className="text-2xl font-black text-slate-900 mb-2">باقة المؤسسات والمدارس</h3>
               <div className="flex items-baseline gap-1 my-3">
-                <span className="text-2xl font-black text-emerald-900 font-sans">ترخيص سنوي</span>
-                <span className="text-xs font-bold text-slate-600">/ مقعد طالب حسب الحجم</span>
+                <span className="text-2xl font-black text-emerald-900 font-sans">ترخيص تجريبي للمؤسسات</span>
+                <span className="text-xs font-bold text-slate-600">/ مقاعد مخصصة لأفواج الطلبة</span>
               </div>
               <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-                حل متكامل لأقسام الدعم التعليمي الإضافي وغرف مصادر التعلم لمتابعة أفواج الطلبة وتوليد تقارير معتمدة.
+                حل متكامل لأقسام الدعم التعليمي الإضافي وغرف مصادر التعلم لمتابعة أفواج الطلبة وتوليد تقارير تربوية تفصيلية.
               </p>
 
               <ul className="space-y-3 text-xs text-slate-700 font-medium mb-8">
@@ -597,7 +713,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>تقارير تربوية جاهزة لخطط التعلم الفردية (IEP) ومراجعة الأخصائي</span>
+                  <span>تقارير تربوية مساندة لخطط التعلم الفردية (IEP) ومراجعة الأخصائي</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
@@ -605,7 +721,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>دعم تأهيلي لمعلمي اللغة العربية وأخصائيي مصادر التعلم</span>
+                  <span>جلسات تعريف وتدريب لمعلمي اللغة العربية وأخصائيي الدعم</span>
                 </li>
               </ul>
             </div>
@@ -614,7 +730,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               type="button"
               className="w-full py-3.5 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
               onClick={() => {
-                alert('شكراً لاهتمامكم! تم تسجيل طلب الشراكة لمدرستكم وسيتواصل معكم فريق حلول المؤسسات في بصيرة خلال ٢٤ ساعة عمل.');
+                setShowSchoolDemoModal(true);
+                setDemoSubmitSuccess(false);
+                setDemoSubmitError('');
               }}
             >
               طلب تجربة مدرسة / شريك تجريبي (Pilot)
@@ -623,6 +741,179 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* MODAL: REAL SCHOOL DEMO REQUEST PIPELINE */}
+      {showSchoolDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="demo-modal-title"
+            className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-right space-y-5 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <Building2 size={22} />
+                </div>
+                <div>
+                  <h3 id="demo-modal-title" className="text-xl font-black text-slate-900">
+                    طلب تجربة مدرسية وشراكة تجريبية
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    مرحلة التحقق التجريبي (Pilot) لأقسام الدعم التعليمي والمدارس
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSchoolDemoModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {demoSubmitSuccess ? (
+              <div className="py-6 text-center space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 size={36} />
+                </div>
+                <h4 className="text-lg font-black text-slate-900">
+                  تم استلام طلبكم بنجاح!
+                </h4>
+                <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
+                  شكراً لاهتمامكم بالانضمام للبرنامج التجريبي لمنصة بصيرة. سيتواصل فريق حلول المدارس معكم عبر البريد الرسمي خلال ٢٤ إلى ٤٨ ساعة عمل لترتيب جلسة تعريفية وتفعيل حساب تجريبي.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSchoolDemoModal(false)}
+                  className="px-6 py-2.5 bg-emerald-700 text-white rounded-xl font-bold text-sm hover:bg-emerald-800 cursor-pointer"
+                >
+                  إغلاق
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSchoolDemoSubmit} className="space-y-3.5 text-sm">
+                {demoSubmitError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-bold">
+                    {demoSubmitError}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1">
+                    اسم المدرسة أو المركز التعليمي: *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={schoolName}
+                    onChange={(e) => setSchoolName(e.target.value)}
+                    placeholder="مثال: مدرسة قطر الابتدائية"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      اسم مسؤول التواصل: *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="مثال: أ. مريم السليطي"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      الصفة الوظيفية:
+                    </label>
+                    <input
+                      type="text"
+                      value={roleTitle}
+                      onChange={(e) => setRoleTitle(e.target.value)}
+                      placeholder="منسق دعم / أخصائي تخاطب"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      البريد الإلكتروني المؤسسي: *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={workEmail}
+                      onChange={(e) => setWorkEmail(e.target.value)}
+                      placeholder="name@school.edu.qa"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1">
+                      رقم الهاتف للتواصل: *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+974 5500 0000"
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1">
+                    العدد التقديري للطلاب المستفيدين:
+                  </label>
+                  <input
+                    type="text"
+                    value={expectedStudents}
+                    onChange={(e) => setExpectedStudents(e.target.value)}
+                    placeholder="مثال: 15-30 طالباً في غرف المصادر"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1">
+                    ملاحظات أو احتياجات خاصة بالبرنامج:
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={demoNotes}
+                    onChange={(e) => setDemoNotes(e.target.value)}
+                    placeholder="أي متطلبات خاصة بالمتابعة أو التقارير..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDemo}
+                    className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingDemo ? 'جارٍ إرسال الطلب...' : 'إرسال طلب التجربة'}
+                    <Building2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSchoolDemoModal(false)}
+                    className="px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* SECTION 6: GOVERNANCE & REPORT ACCESS */}
       <section className="baseera-family-panel" aria-labelledby="baseera-family-title">

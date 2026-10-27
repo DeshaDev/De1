@@ -1021,22 +1021,61 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <span className="text-xs text-emerald-600">({passage.wordCount} كلمة)</span>
               </div>
 
+              {/* Explicit Separated Consent Section */}
+              <div className="max-w-md mx-auto text-right space-y-2.5 p-4 rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-800">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={guardianConsentChecked}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setGuardianConsentChecked(checked);
+                      if (checked && !guardianConsentRecordedAt) {
+                        setGuardianConsentRecordedAt(new Date().toISOString());
+                      }
+                    }}
+                    className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                  <span className="font-bold leading-relaxed">
+                    موافقة ولي الأمر / المعلم على إجراء جلسة التقييم القرائي التكويني وحفظ المؤشرات.
+                  </span>
+                </label>
+
+                {readingMode === 'oral_audio' && (
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={audioConsentChecked}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setAudioConsentChecked(checked);
+                        if (checked && !guardianAudioConsentRecordedAt) {
+                          setGuardianAudioConsentRecordedAt(new Date().toISOString());
+                        }
+                      }}
+                      className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="leading-relaxed">
+                      <span className="text-emerald-700 font-bold ml-1">[إذن صوتي منفصل]</span>
+                      أوافق صراحة على تسجيل ومعالجة قراءة الطفل الصوتية عبر تقنية التعرف الصوتي الذكي.
+                    </span>
+                  </label>
+                )}
+              </div>
+
               {/* Giant 3D Hero Launch Button */}
               <div className="pt-2 max-w-md mx-auto">
                 <button
                   type="button"
                   onClick={() => {
-                    if (!guardianConsentChecked) {
-                      setGuardianConsentChecked(true);
-                      setGuardianConsentRecordedAt(new Date().toISOString());
-                    }
+                    if (!guardianConsentChecked) return;
                     if (readingMode === 'oral_audio' && !audioConsentChecked) {
-                      setAudioConsentChecked(true);
-                      setGuardianAudioConsentRecordedAt(new Date().toISOString());
+                      setReadingMode('timed_silent');
                     }
                     handleStartReading();
                   }}
-                  className="duo-btn-green w-full py-4 sm:py-5 px-8 text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-lg"
+                  disabled={!guardianConsentChecked}
+                  className="duo-btn-green w-full py-4 sm:py-5 px-8 text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
                   <span>انطلق وابدأ القراءة الآن</span>

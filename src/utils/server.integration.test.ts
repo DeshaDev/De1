@@ -650,4 +650,39 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       'a valid login to another school must not clear the IP failure count'
     );
   });
+
+  it('validates and accepts school demo requests honestly', async () => {
+    // 1. Invalid payload: missing email
+    const badRes = await fetch(`${baseUrl}/api/school-demo-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schoolName: 'مدرسة قطر الابتدائية',
+        contactName: 'أ. جاسم الكواري',
+        phone: '97444112233',
+      }),
+    });
+    assert.equal(badRes.status, 400);
+    const badJson = await badRes.json() as { error?: string };
+    assert.ok(badJson.error);
+
+    // 2. Valid payload
+    const goodRes = await fetch(`${baseUrl}/api/school-demo-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schoolName: 'مدرسة قطر النموذجية',
+        contactName: 'أ. مريم السليطي',
+        roleTitle: 'منسقة الدعم التعليمي الإضافي',
+        workEmail: 'mariam@qatar-school.edu.qa',
+        phone: '+97455001122',
+        expectedStudents: '20-30',
+        notes: 'نرغب في تجربة المنصة مع قسم الدعم لطلاب الصفين الثالث والرابع.',
+      }),
+    });
+    assert.equal(goodRes.status, 201);
+    const goodJson = await goodRes.json() as { ok?: boolean; message?: string };
+    assert.equal(goodJson.ok, true);
+    assert.ok(goodJson.message && goodJson.message.includes('تم استلام طلبكم بنجاح'));
+  });
 });

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
@@ -48,6 +49,7 @@ const DATA_DIR = process.env.BASEERA_DATA_DIR
   : path.join(__dirname, '.runtime-store');
 const STORE_PATH = path.join(DATA_DIR, 'learning-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
+const DEMO_REQUESTS_PATH = path.join(DATA_DIR, 'school-demo-requests.json');
 
 let baseeraStoreReady = false;
 let securityStateReady = false;
@@ -452,6 +454,98 @@ function loadPersistedStudents(): StudentRecord[] {
     return createSeededStudents();
   }
 }
+
+interface PersistedSchoolDemoRequest {
+  id: string;
+  submittedAt: string;
+  clientIp: string;
+  schoolName: string;
+  contactName: string;
+  roleTitle?: string;
+  workEmail: string;
+  phone: string;
+  expectedStudents?: string;
+  notes?: string;
+}
+
+const demoRequestBuckets = new Map<string, number[]>();
+
+function demoRequestRateLimiter(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
+  const now = Date.now();
+  const windowMs = 15 * 60_000;
+  const maxRequests = 5;
+
+  const history = (demoRequestBuckets.get(clientIp) || []).filter(
+    (ts) => now - ts < windowMs
+  );
+  if (!demoRequestBuckets.has(clientIp) && demoRequestBuckets.size >= 1_000) {
+    const oldestKey = demoRequestBuckets.keys().next().value;
+    if (oldestKey !== undefined) demoRequestBuckets.delete(oldestKey);
+  }
+  if (history.length >= maxRequests) {
+    res.setHeader('Retry-After', '900');
+    res.status(429).json({
+      error:
+        'تم استلام عدد من طلبات التجربة من هذا العنوان مؤخراً. يرجى الانتظار قليلاً قبل إرسال طلب جديد.',
+    });
+    return;
+  }
+  history.push(now);
+  demoRequestBuckets.set(clientIp, history);
+  next();
+}
+
+function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
+  try {
+    if (!fs.existsSync(DEMO_REQUESTS_PATH)) return [];
+    const raw = fs.readFileSync(DEMO_REQUESTS_PATH, 'utf8');
+    const key = getStoreEncryptionKey();
+    if (key) {
+      const decrypted = decryptJsonPayload<PersistedSchoolDemoRequest[]>(
+        raw,
+        key,
+        'baseera-demo-requests-aes-256-gcm-v1'
+      );
+      if (decrypted.wasEncrypted && Array.isArray(decrypted.data)) {
+        return decrypted.data;
+      }
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): boolean {
+  try {
+    const list = loadPersistedDemoRequests();
+    list.push(item);
+    const key = getStoreEncryptionKey();
+    const content = key
+      ? encryptJsonPayload(list, key, 'baseera-demo-requests-aes-256-gcm-v1')
+      : JSON.stringify(list, null, 2);
+    return writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+  } catch (err) {
+    console.error('Failed to save school demo request:', err);
+    return false;
+  }
+}
+
+const SchoolDemoRequestSchema = z.object({
+  schoolName: z.string().trim().min(2, 'يرجى إدخال اسم المدرسة أو المركز التعليمي').max(150),
+  contactName: z.string().trim().min(2, 'يرجى إدخال اسم مسؤول التواصل').max(100),
+  roleTitle: z.string().trim().max(100).optional().default(''),
+  workEmail: z.string().trim().email('يرجى إدخال بريد إلكتروني صحيح ومؤسسي').max(120),
+  phone: z.string().trim().min(6, 'يرجى إدخال رقم هاتف صحيح للتواصل').max(30),
+  expectedStudents: z.string().trim().max(50).optional().default(''),
+  notes: z.string().trim().max(1000).optional().default(''),
+});
 
 function serializeSecurityState(): PersistedSecurityState {
   const now = Date.now();
@@ -2474,6 +2568,37 @@ async function startServer() {
         error: 'تعذر إكمال تقييم الصوت من Microsoft Azure. لم يتم استخدام تفريغ المتصفح بديلاً عن تقييم الصوت.',
       });
     }
+  });
+
+  // Public Endpoint: Submit School / Institution Demo & Pilot Request
+  app.post('/api/school-demo-request', demoRequestRateLimiter, (req, res) => {
+    const parsed = SchoolDemoRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: parsed.error.issues[0]?.message || 'بيانات طلب التجربة غير مكتملة أو غير صالحة.',
+      });
+      return;
+    }
+
+    const demoRecord: PersistedSchoolDemoRequest = {
+      id: `demo_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+      submittedAt: new Date().toISOString(),
+      clientIp: req.ip || req.socket.remoteAddress || 'local',
+      ...parsed.data,
+    };
+
+    const saved = saveSchoolDemoRequest(demoRecord);
+    if (!saved) {
+      res.status(500).json({
+        error: 'تعذر حفظ طلب التجربة حالياً. يرجى المحاولة لاحقاً أو مراسلتنا مباشرة.',
+      });
+      return;
+    }
+
+    res.status(201).json({
+      ok: true,
+      message: 'تم استلام طلبكم بنجاح وسيتواصل معكم فريق حلول المدارس عبر البريد الإلكتروني الرسمي خلال ٢٤ إلى ٤٨ ساعة عمل.',
+    });
   });
 
   // Unknown API routes must never fall through to the SPA index.html.

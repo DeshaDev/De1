@@ -126,17 +126,21 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const [mathAnswered, setMathAnswered] = useState<boolean>(false);
   const [mathErrorAbs, setMathErrorAbs] = useState<number | null>(null);
 
-  // Only teacher-reviewed words from a completed, non-demo session can be presented as observed targets.
+  // Only teacher-reviewed or server-verified audio words from a completed, non-demo session can be presented as observed targets.
   const observedTargetWords = useMemo(() => {
+    const isVerified =
+      activeStudent.teacherVerified === true ||
+      (activeStudent.aiAssessmentVerified === true &&
+        activeStudent.evidenceProvenance === 'server-verified-audio');
+
     if (
       activeStudent.sessionStatus !== 'completed' ||
-      activeStudent.teacherVerified !== true ||
+      !isVerified ||
       activeStudent.evidenceProvenance === 'demo-synthetic' ||
       !Array.isArray(activeStudent.verifiedWordsAlignment)
     ) return [];
 
-    // Only explicitly reviewed substitutions/omissions are training targets.
-    // Do not reuse gaze-derived or automatic-transcript candidates as teacher-verified errors.
+    // Only explicitly identified substitutions/omissions are training targets.
     return activeStudent.verifiedWordsAlignment
       .filter((item) => item.status === 'phonetic_substitution' || item.status === 'omitted')
       .map((item) => item.word)
@@ -146,6 +150,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
     activeStudent.id,
     activeStudent.sessionStatus,
     activeStudent.teacherVerified,
+    activeStudent.aiAssessmentVerified,
     activeStudent.evidenceProvenance,
     activeStudent.verifiedWordsAlignment,
   ]);
@@ -494,7 +499,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces, activeClass: 'clay-btn-purple' },
             { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook, activeClass: 'clay-btn-amber' },
             { id: 'sprint', label: 'سبرنت ٥ دقائق', icon: IconLightningBolt, activeClass: 'duo-btn-orange' },
-            { id: 'math', label: 'خط الأعداد', icon: IconNumberRuler, activeClass: 'clay-btn-sky' },
             { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook, activeClass: 'clay-btn-emerald' },
           ].map((st) => {
             const isActive = activeStation === st.id;

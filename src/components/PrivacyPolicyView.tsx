@@ -61,24 +61,28 @@ export const PrivacyPolicyView: React.FC = () => (
       <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-950">
         <EyeOff className="mt-1 h-5 w-5 shrink-0" aria-hidden={true} />
         <p>
-          <strong>حماية خصوصية الأطفال والطلاب:</strong> تلتزم بصيرة التزاماً تاماً بعدم جمع أو تخزين أي صور شخصية أو مقاطع فيديو. يُطلب إذن الميكروفون اختيارياً فقط في حال رغبة ولي الأمر أو المعلم في تفعيل نشاط القراءة الجهرية ومطابقة النطق، مع ضمان المعالجة العابرة دون تدريب نماذج عامة.
+          <strong>حماية خصوصية الأطفال والطلاب:</strong> تعتمد بصيرة مبدأ تقليل البيانات ولا تجمع أو تخزن أي صور شخصية أو مقاطع فيديو. يُطلب إذن الميكروفون اختيارياً وبشكل منفصل فقط في حال رغبة ولي الأمر أو المعلم في تفعيل نشاط القراءة الجهرية ومطابقة النطق، مع ضمان المعالجة العابرة دون تدريب نماذج عامة.
         </p>
       </div>
     </header>
 
     <PolicySection icon={Scale} title="الإطار القانوني والجهة المسؤولة">
       <p>
-        أُعدت هذه السياسة بما يتوافق تماماً مع قانون دولة قطر رقم (13) لسنة 2016 بشأن حماية خصوصية البيانات الشخصية، والإرشادات التنظيمية الصادرة عن الوكالة الوطنية للأمن السيبراني (NCSA). ويشمل القانون أحكامًا خاصة بالبيانات ذات الطبيعة الخاصة وببيانات الأطفال، لا سيما المادتين (16) و(17).
+        صُممت هذه السياسة بالاسترشاد بأحكام قانون دولة قطر رقم (13) لسنة 2016 بشأن حماية خصوصية البيانات الشخصية، والإرشادات التنظيمية الصادرة عن الوكالة الوطنية للأمن السيبراني (NCSA). وتخضع المنصة لمراجعة قانونية وتنظيمية مستمرة للتحقق من المواءمة التشغيلية قبل الإطلاق التجاري الكامل.
       </p>
       <p>
-        تتحدد صفة «المراقب» و«المعالج» بحسب الاتفاق الفعلي بين المدرسة أو المؤسسة التعليمية ومشغّل المنصة. تلتزم بصيرة بالعمل كمعالج بيانات ملتزم بتعليمات المؤسسة التعليمية المعتمدة ومسؤولي الخصوصية.
+        <strong>الجهة المسؤولة:</strong> مشروع بصيرة للتقنيات التعليمية (Baseera EdTech) - قيد التأسيس والتحقق التجريبي. وتتحدد صفة «المراقب» و«المعالج» بحسب الاتفاق الفعلي بين المدرسة أو المؤسسة التعليمية ومشغّل المنصة وفق التعليمات الرسمية لمسؤولي الخصوصية.
       </p>
       <div className="rounded-2xl bg-teal-50/70 border border-teal-200 p-4 text-xs leading-relaxed text-teal-950 space-y-1">
         <strong>مسؤول الخصوصية والاتصال الرسمي:</strong>
         <p>
-          لتوجيه أي استفسارات أو طلبات لحذف البيانات أو ممارسة حقوق أولياء الأمور بموجب القانون القطري، يُرجى التواصل مباشرة عبر البريد المعتمد:{' '}
+          لتوجيه أي استفسارات أو طلبات لحذف البيانات أو ممارسة حقوق أولياء الأمور بموجب القانون القطري، يُرجى التواصل مباشرة عبر القنوات الرسمية:{' '}
           <a href="mailto:privacy@baseera-edu.com" className="font-bold underline text-teal-800">
             privacy@baseera-edu.com
+          </a>
+          {' '}أو الفريق القانوني على:{' '}
+          <a href="mailto:legal@baseera-edu.com" className="font-bold underline text-teal-800">
+            legal@baseera-edu.com
           </a>
         </p>
       </div>
@@ -173,14 +177,24 @@ export const PrivacyPolicyView: React.FC = () => (
 
     <PolicySection icon={Trash2} title="ممارسة حقوق الخصوصية وحذف البيانات">
       <p>
-        لممارسة أي من حقوقك أو حقوق طفلك المنصوص عليها في قانون حماية البيانات الشخصية القطري (طلب معلومات، تعديل، سحب موافقة، أو حذف كامل للبيانات)، يُرجى إرسال طلب رسمي إلى فريق حوكمة البيانات على:
+        لممارسة أي من حقوقك أو حقوق طفلك المنصوص عليها في قانون حماية البيانات الشخصية القطري (طلب معلومات، تعديل، سحب موافقة، أو حذف كامل للبيانات)، يُرجى إرسال طلب رسمي إلى فريق حوكمة البيانات. تتم معالجة والتحقق من هوية مقدّم الطلب وإتمام إجراءات الحذف خلال مدة لا تتجاوز ١٤ يوم عمل.
       </p>
-      <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
-        <Mail size={16} className="text-teal-700" />
-        <span>البريد الإلكتروني للخصوصية: </span>
-        <a href="mailto:privacy@baseera-edu.com" className="text-teal-800 underline font-mono">
-          privacy@baseera-edu.com
-        </a>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+        <div className="flex items-center gap-2">
+          <Mail size={16} className="text-teal-700 shrink-0" />
+          <span>مسؤول الخصوصية:</span>
+          <a href="mailto:privacy@baseera-edu.com" className="text-teal-800 underline font-mono">
+            privacy@baseera-edu.com
+          </a>
+        </div>
+        <span className="hidden sm:inline text-slate-300">|</span>
+        <div className="flex items-center gap-2">
+          <Mail size={16} className="text-teal-700 shrink-0" />
+          <span>المراجعة القانونية:</span>
+          <a href="mailto:legal@baseera-edu.com" className="text-teal-800 underline font-mono">
+            legal@baseera-edu.com
+          </a>
+        </div>
       </div>
     </PolicySection>
 

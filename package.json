@@ -36,7 +36,8 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "@types/express": "^4.17.21"
+    "@types/express": "^4.17.21",
+    "@playwright/test": "^1.56.1"
   },
-  "description": "Baseera: Arabic educational activities for reading, comprehension, and mathematics; no camera or eye tracking."
+  "description": "Baseera: Arabic educational activities for foundational reading, comprehension, and literacy support; no camera or eye tracking."
 }

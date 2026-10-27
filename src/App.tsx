@@ -998,7 +998,11 @@ export default function App() {
                       : selectedReadingRate === null
                         ? 'لم تتوفر بيانات كافية لاحتساب السرعة.'
                         : selectedStudent.assessmentModality === 'voice_only'
-                          ? selectedStudent.teacherVerified === true ? 'معتمد بالذكاء الاصطناعي وفق التحليل الصوتي المباشر.' : 'تحليل صوتي آلي مكتمل.'
+                          ? selectedStudent.teacherVerified === true
+                            ? 'معتمد بمراجعة المعلم ومطابقة القراءة.'
+                            : selectedStudent.aiAssessmentVerified === true && selectedStudent.evidenceProvenance === 'server-verified-audio'
+                              ? 'تقييم صوتي آلي موثق المصدر.'
+                              : 'تحليل صوتي تجريبي مكتمل.'
                           : 'معدل مقاس لزمن إتمام النص؛ لا يقيس دقة الكلمات الفردية ولا يُقارن بمعيار الطلاقة الجهرية.'}
                   </p>
                 </article>
@@ -1232,19 +1236,25 @@ export default function App() {
                                     {stu.sessionStatus !== 'completed'
                                       ? 'لم تكتمل الجلسة'
                                       : stu.teacherVerified === true
-                                        ? 'معتمد بالذكاء الاصطناعي'
-                                        : stu.oralReadingAssessed === true
-                                          ? 'محاذاة صوتية أولية'
-                                          : 'قراءة موقوتة'}
+                                        ? 'مراجعة واعتماد المعلم'
+                                        : stu.aiAssessmentVerified === true && stu.evidenceProvenance === 'server-verified-audio'
+                                          ? 'تقييم صوتي آلي موثق'
+                                          : stu.oralReadingAssessed === true
+                                            ? 'محاذاة صوتية أولية'
+                                            : 'قراءة موقوتة'}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
-                                  {stu.dyscalculiaAssessed === true && typeof stu.numberLinePAE === 'number' ? (
+                                  {stu.sessionStatus === 'completed' ? (
                                     <span className="text-slate-700">
-                                      {stu.numberLinePAE}% فارق الموضع في المهمة
+                                      {stu.oralAccuracyPercent !== null && typeof stu.oralAccuracyPercent === 'number'
+                                        ? `دقة النطق ${stu.oralAccuracyPercent}%`
+                                        : stu.comprehensionScore !== null && typeof stu.comprehensionScore === 'number'
+                                          ? `الفهم ${stu.comprehensionScore}%`
+                                          : 'مكتمل'}
                                     </span>
                                   ) : (
-                                    <span className="text-slate-400">لم تُقَس</span>
+                                    <span className="text-slate-400">قيد المتابعة</span>
                                   )}
                                 </td>
                               </tr>
@@ -1439,10 +1449,12 @@ export default function App() {
                         {selectedStudent.sessionStatus !== 'completed'
                           ? 'ستظهر الملاحظات بعد إكمال نشاط القراءة.'
                           : selectedStudent.assessmentModality === 'voice_only'
-                            ? ((selectedStudent.spokenTranscript || '').trim() || selectedStudent.teacherVerified === true)
+                            ? ((selectedStudent.spokenTranscript || '').trim() || selectedStudent.teacherVerified === true || selectedStudent.aiAssessmentVerified === true)
                               ? selectedStudent.teacherVerified === true
-                                ? 'تمت مطابقة الكلمات بالتحليل الصوتي الذكي في القراءة الجهرية. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
-                                : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
+                                ? 'تمت مراجعة الجلسة واعتمادها من قِبل المعلم. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
+                                : selectedStudent.aiAssessmentVerified === true && selectedStudent.evidenceProvenance === 'server-verified-audio'
+                                  ? 'تمت مطابقة الكلمات بالتحليل الصوتي الآلي الموثق. سرعة الكلمات الصحيحة المقاسة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة (تُعد مؤشراً آلياً قابلاً لمراجعة الأخصائي).'
+                                  : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
                               : 'لا تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية.'
                             : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية مسجلة.'}
                       </p>
@@ -1617,7 +1629,7 @@ export default function App() {
 
         {activeTab === 'adaptive-reader' && (
           <AdaptiveReaderView
-            problematicWords={selectedStudent.sessionStatus === 'completed' && selectedStudent.teacherVerified === true && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}
+            problematicWords={selectedStudent.sessionStatus === 'completed' && (selectedStudent.teacherVerified === true || selectedStudent.aiAssessmentVerified === true) && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}
           />
