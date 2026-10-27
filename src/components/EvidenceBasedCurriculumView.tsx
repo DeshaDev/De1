@@ -24,7 +24,6 @@ interface Props {
 
 const DOMAIN_LABELS: Record<CurriculumDomain, string> = {
   reading: 'مسار القراءة والوعي الصوتي',
-  math: 'مسار القراءة المتقدمة',
 };
 
 const normalizeGrade = (gradeLevel: number) => Math.min(6, Math.max(1, Math.round(gradeLevel || 1)));
@@ -167,14 +166,6 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
 
   const startLesson = (nextSkill: CurriculumSkillId) => {
     setSkillId(nextSkill);
-    setRoundNumber((value) => value + 1);
-    clearRound();
-  };
-
-  const chooseDomain = (nextDomain: CurriculumDomain) => {
-    if (nextDomain === domain) return;
-    setDomain(nextDomain);
-    setSkillId(recommendCurriculumSkill(student, nextDomain).skillId);
     setRoundNumber((value) => value + 1);
     clearRound();
   };

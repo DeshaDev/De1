@@ -684,5 +684,31 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const goodJson = await goodRes.json() as { ok?: boolean; message?: string };
     assert.equal(goodJson.ok, true);
     assert.ok(goodJson.message && goodJson.message.includes('تم استلام طلبكم بنجاح'));
+
+    // 3. Admin review endpoint RBAC verification
+    // 3a. Unauthorized request -> 401
+    const noAuth = await fetch(`${baseUrl}/api/admin/school-demo-requests`);
+    assert.equal(noAuth.status, 401);
+
+    // 3b. Educator readonly -> 403
+    const educator = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
+    const educatorRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
+      headers: { Authorization: `Bearer ${educator.token}` },
+    });
+    assert.equal(educatorRes.status, 403);
+
+    // 3c. School admin -> 200 with decrypted list including submitted lead
+    const admin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const adminRes = await fetch(`${baseUrl}/api/admin/school-demo-requests`, {
+      headers: { Authorization: `Bearer ${admin.token}` },
+    });
+    assert.equal(adminRes.status, 200);
+    const adminJson = (await adminRes.json()) as {
+      ok: boolean;
+      requests: Array<{ workEmail: string; schoolName: string }>;
+    };
+    assert.equal(adminJson.ok, true);
+    assert.ok(Array.isArray(adminJson.requests));
+    assert.ok(adminJson.requests.some((r) => r.workEmail === 'mariam@qatar-school.edu.qa'));
   });
 });

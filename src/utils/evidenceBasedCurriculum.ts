@@ -5,7 +5,7 @@
  * not age norms, diagnostic thresholds, or evidence of a learning disorder.
  */
 
-export type CurriculumDomain = 'reading' | 'math';
+export type CurriculumDomain = 'reading';
 
 export type CurriculumSkillId =
   | 'phonological-awareness'
@@ -14,15 +14,7 @@ export type CurriculumSkillId =
   | 'syllable-blending'
   | 'long-vowels-and-morphemes'
   | 'connected-text'
-  | 'reading-comprehension'
-  | 'quantity-cardinality'
-  | 'number-symbol-mapping'
-  | 'magnitude-number-line'
-  | 'place-value'
-  | 'addition-subtraction'
-  | 'multiplication-division'
-  | 'math-word-problems'
-  | 'fractions';
+  | 'reading-comprehension';
 
 export interface CurriculumQuestion {
   id: string;
@@ -231,155 +223,7 @@ const readingLessons: CurriculumLesson[] = [
   },
 ];
 
-const mathLessons: CurriculumLesson[] = [
-  {
-    id: 'quantity-cardinality',
-    domain: 'math',
-    stage: 1,
-    title: 'أفهم الكمية قبل اسم العدد',
-    objective: 'ربط مجموعة أشياء بعددها، والتمييز بين رؤية الكمية وتسميتها.',
-    model: 'كل نقطة تمثل شيئًا واحدًا. طابق المجموعة مع العدد، ثم تحقق بعدّ نقطة واحدة في كل مرة.',
-    guidedPractice: 'مثال: إذا رأيت ثلاث نقاط، فعددها ٣ مهما اختلف ترتيب النقاط.',
-    successGuidance: 'جيد. جرّب ترتيبًا بصريًا مختلفًا للكمية نفسها للتأكد من أنك فهمت العدد.',
-    retryGuidance: 'عدّ كل نقطة مرة واحدة بالإشارة إليها، ثم اختر العدد المطابق. لا نعتمد على السرعة وحدها.',
-    questions: [
-      question('qc-1', 'كم نقطة ترى؟', ['٣', '٤', '٥'], 1, 'صحيح؛ توجد أربع نقاط.', 'أشر إلى كل نقطة مرة واحدة وعدّها.', undefined, 4),
-      question('qc-2', 'كم نقطة ترى؟', ['٢', '٥', '٦'], 1, 'صحيح؛ توجد خمس نقاط.', 'تتبّع النقاط واحدة واحدة، وتجنب عدّ النقطة مرتين.', undefined, 5),
-      question('qc-3', 'كم نقطة ترى؟', ['٦', '٧', '٨'], 0, 'صحيح؛ توجد ست نقاط.', 'قسّم المجموعة بصريًا إلى مجموعتين أصغر ثم اجمع الكميتين.', undefined, 6),
-      question('qc-4', 'كم نقطة ترى؟', ['٦', '٧', '٨'], 1, 'صحيح؛ توجد سبع نقاط.', 'عدّ كل نقطة مرة واحدة قبل اختيار الرمز.', undefined, 7),
-      question('qc-5', 'كم نقطة ترى؟', ['٧', '٨', '٩'], 1, 'صحيح؛ توجد ثماني نقاط.', 'قسّم النقاط إلى مجموعتين صغيرتين وعدّ كل مجموعة ثم اجمعهما.', undefined, 8),
-    ],
-  },
-  {
-    id: 'number-symbol-mapping',
-    domain: 'math',
-    stage: 2,
-    title: 'أربط الكمية برمز العدد',
-    objective: 'الربط بين العدد المنطوق ورمزه المكتوب وكمية الأشياء.',
-    model: 'العدد له اسم منطوق ورمز مكتوب وكمية تمثله. نتحقق من الأشكال التي يتعلمها الطفل في بيئته، ومنها الأرقام العربية الهندية ٠١٢٣٤٥٦٧٨٩ أو الأرقام الغربية 0123456789.',
-    guidedPractice: 'مثال: «خمسة» تمثلها ٥ أو 5 بحسب نظام كتابة الأرقام المستخدم في السؤال.',
-    successGuidance: 'أحسنت. اربط العدد بأكثر من تمثيل حتى لا تعتمد على حفظ شكل واحد فقط.',
-    retryGuidance: 'قل اسم العدد، ثم عدّ المجموعة، وبعد ذلك اختر الرمز المطابق.',
-    questions: [
-      question('ns-1', 'أي رمز يمثل «سبعة»؟', ['٧', '٣', '٩'], 0, 'صحيح؛ الرمز ٧ يمثل سبعة.', 'ردد اسم العدد، ثم قارن الرموز قبل الاختيار.', 'سبعة'),
-      question('ns-2', 'أي رمز يمثل «اثنا عشر»؟', ['٢١', '١٢', '٢٠'], 1, 'صحيح؛ ١٢ يتكون من عشرة واثنين.', 'اقرأ الرمز ١٢ «اثنا عشر» لا «واحد وعشرون»، وانتبه إلى منزلة العشرات والآحاد.', 'اثنا عشر'),
-      question('ns-3', 'أي مجموعة تمثل العدد «أربعة»؟', ['٣ أشياء', '٤ أشياء', '٥ أشياء'], 1, 'صحيح؛ العدد والكمية متطابقان.', 'عدّ العناصر مرة واحدة وقارن المجموع بالرمز.'),
-      question('ns-4', 'أي رمز يمثل «تسعة»؟', ['٦', '٩', '٧'], 1, 'صحيح؛ الرمز ٩ يمثل تسعة.', 'قل اسم العدد، ثم قارن شكل الرموز بهدوء.', 'تسعة'),
-      question('ns-5', 'ما الاسم الصحيح للعدد ١٥؟', ['خمسة عشر', 'واحد وخمسون', 'خمسة'], 0, 'صحيح؛ ١٥ يعني عشرة وخمسة آحاد.', 'انتبه إلى ترتيب العشرات والآحاد في العدد المكتوب.', '١٥'),
-    ],
-  },
-  {
-    id: 'magnitude-number-line',
-    domain: 'math',
-    stage: 3,
-    title: 'أقارن الأعداد وأحدد موقعها',
-    objective: 'فهم الأكبر والأصغر والمسافة بين العددين باستخدام خط الأعداد.',
-    model: 'على خط الأعداد تزداد القيمة كلما اتجهنا نحو الطرف الأكبر. ابدأ بتحديد طرفي الخط، ثم مكان الصفر والعشرات قبل تقدير موضع العدد.',
-    guidedPractice: 'مثال: على خط من ٠ إلى ١٠، يقع العدد ٣ بعد ٢ بخطوة واحدة وقبل ٥ بخطوتين.',
-    successGuidance: 'جيد. استخدم نقاطًا مرجعية مثل ٠ والمنتصف والنهاية لتقدير المسافات.',
-    retryGuidance: 'حدد البداية والنهاية والمنتصف أولًا، ثم قارن العددين أو احسب عدد الخطوات.',
-    questions: [
-      question('mn-1', 'أيهما أكبر؟', ['٨', '٥', 'متساويان'], 0, 'صحيح؛ ٨ أكبر من ٥.', 'ضع العددين على خط يبدأ من الصفر، وانظر أيهما يقع إلى اليمين.', '٨ أم ٥'),
-      question('mn-2', 'أي عدد أقرب إلى ١٠؟', ['٣', '٨', '٤'], 1, 'صحيح؛ ٨ يبعد خطوتين عن ١٠.', 'قارن المسافة إلى ١٠، لا حجم الرقم المكتوب فقط.', '٣، ٨، ٤'),
-      question('mn-3', 'ما العدد الذي يأتي بعد ٢٩ مباشرة؟', ['٢٨', '٣٠', '٣٩'], 1, 'صحيح؛ بعد ٢٩ يأتي ٣٠.', 'عدّ خطوة واحدة للأمام، وانتبه إلى انتقال الآحاد إلى العشرات.', '٢٩ → ؟'),
-      question('mn-4', 'ما العدد الواقع بين ٤ و٦؟', ['٣', '٥', '٧'], 1, 'صحيح؛ ٥ يقع بين ٤ و٦.', 'ابدأ من ٤ وتقدم خطوة واحدة على خط الأعداد.', '٤ — ؟ — ٦'),
-      question('mn-5', 'إذا تحركت خطوتين إلى اليسار من ٧ على خط الأعداد، فأين تصل؟', ['٥', '٦', '٩'], 0, 'صحيح؛ ٧ ثم ٦ ثم ٥.', 'التحرك يسارًا يعني الانتقال إلى أعداد أصغر في خط الأعداد المعتاد.', '٧ ← ← ؟'),
-    ],
-  },
-  {
-    id: 'place-value',
-    domain: 'math',
-    stage: 4,
-    title: 'أفهم العشرات والآحاد',
-    objective: 'فهم أن قيمة الرقم مرتبطة بموقعه، وتمثيل العدد بالعشرات والآحاد.',
-    model: 'في العدد ٣٦، الرقم ٣ في منزلة العشرات وقيمته ٣٠، والرقم ٦ يمثل ستة آحاد. نستخدم مجموعات من عشرة ثم نكتب الرمز.',
-    guidedPractice: 'مثال: ٤٢ = أربع عشرات وآحادان؛ أي ٤٠ + ٢.',
-    successGuidance: 'أحسنت. جرّب تفكيك أعداد أخرى إلى عشرات وآحاد ثم أعد تركيبها.',
-    retryGuidance: 'كوّن مجموعات من عشرة، ثم عدّ الوحدات المتبقية. لا تقرأ العدد كرقمين منفصلين فقط.',
-    questions: [
-      question('pv-1', 'في العدد ٤٣، كم عشرة كاملة؟', ['٣', '٤', '٤٣'], 1, 'صحيح؛ فيه أربع عشرات.', 'الرقم الأول من اليسار في هذا العدد يمثل العشرات.', '٤٣'),
-      question('pv-2', 'أي تفكيك يمثّل العدد ٢٧؟', ['٢٠ + ٧', '٢ + ٧٠', '٢٠ + ٧٠'], 0, 'صحيح؛ ٢٧ تساوي عشرَتين وسبعة آحاد.', 'افصل العشرات عن الآحاد ثم أعد جمعهما.', '٢٧'),
-      question('pv-3', 'ما قيمة الرقم ٥ في العدد ٥٢؟', ['٥', '٥٠', '٢'], 1, 'صحيح؛ الرقم ٥ في منزلة العشرات وقيمته ٥٠.', 'تعرّف إلى المنزلة قبل اختيار القيمة.', '٥٢'),
-      question('pv-4', 'ما قيمة الرقم ٨ في العدد ٥٨؟', ['٨', '٨٠', '٥'], 0, 'صحيح؛ الرقم ٨ في منزلة الآحاد وقيمته ٨.', 'ميّز بين منزلة العشرات ومنزلة الآحاد.', '٥٨'),
-      question('pv-5', 'أي تفكيك يمثّل العدد ٦٤؟', ['٦ + ٤', '٦٠ + ٤', '٦٠ + ٤٠'], 1, 'صحيح؛ ٦٤ تساوي ستّ عشرات وأربعة آحاد.', 'اكتب قيمة العشرات ثم أضف قيمة الآحاد.', '٦٤'),
-    ],
-  },
-  {
-    id: 'addition-subtraction',
-    domain: 'math',
-    stage: 5,
-    title: 'أفكّر في الجمع والطرح',
-    objective: 'استخدام استراتيجية واضحة للجمع والطرح بدل الاعتماد على التخمين.',
-    model: 'يمكن تفكيك العدد أو تكوين عشرة كاملة. في ٩ + ٢، نأخذ ١ من الاثنين لنكمل ١٠، ويتبقى ١؛ إذن الناتج ١١.',
-    guidedPractice: 'مثال آخر: ١٣ − ٤. اطرح ٣ لتصل إلى ١٠، ثم اطرح ١ أخرى؛ الناتج ٩.',
-    successGuidance: 'جيد. اشرح الاستراتيجية بكلماتك قبل الانتقال إلى تمارين أسرع.',
-    retryGuidance: 'استخدم خط الأعداد أو قسّم العدد إلى جزء يصل إلى عشرة، ثم أكمل العملية.',
-    questions: [
-      question('as-1', 'ما ناتج ٨ + ٥؟', ['١٢', '١٣', '١٤'], 1, 'صحيح؛ نكمل ١٠ بأخذ ٢ من الخمسة، ويتبقى ٣.', 'قسّم ٥ إلى ٢ و٣، ثم احسب ٨ + ٢ + ٣.', '٨ + ٥'),
-      question('as-2', 'ما ناتج ١٤ − ٦؟', ['٨', '٩', '٧'], 0, 'صحيح؛ الناتج ٨.', 'اطرح ٤ لتصل إلى ١٠، ثم اطرح ٢ أخرى.', '١٤ − ٦'),
-      question('as-3', 'أي جملة عددية تساوي ١٠؟', ['٦ + ٣', '٧ + ٣', '٨ + ٣'], 1, 'صحيح؛ ٧ + ٣ = ١٠.', 'ابحث عن العدد الذي يكمل ٧ إلى ١٠.', '؟ + ٣ = ١٠'),
-      question('as-4', 'ما ناتج ٧ + ٦؟', ['١٢', '١٣', '١٤'], 1, 'صحيح؛ ٧ + ٦ = ١٣.', 'أكمل إلى عشرة: خذ ٣ من الستة، ثم أضف ما تبقّى.', '٧ + ٦'),
-      question('as-5', 'ما ناتج ١٥ − ٧؟', ['٧', '٨', '٩'], 1, 'صحيح؛ ١٥ − ٧ = ٨.', 'اطرح ٥ لتصل إلى ١٠، ثم اطرح ٢ أخرى.', '١٥ − ٧'),
-    ],
-  },
-  {
-    id: 'multiplication-division',
-    domain: 'math',
-    stage: 6,
-    title: 'أفهم المجموعات المتساوية',
-    objective: 'ربط الضرب بالمجموعات المتساوية والقسمة بتوزيع الكمية بالتساوي.',
-    model: 'مجموعتان في كل منهما أربعة عناصر تعني ٤ + ٤ = ٨، ويمكن كتابتها ٢ × ٤ = ٨.',
-    guidedPractice: 'مثال: ١٠ قطع توزّع بالتساوي على مجموعتين؛ في كل مجموعة ٥ قطع.',
-    successGuidance: 'أحسنت. استخدم رسم المجموعات أو مصفوفة قبل الاعتماد على الحقيقة الحسابية المحفوظة.',
-    retryGuidance: 'ارسم مجموعات متساوية ثم عدّ العناصر الكلية أو وزّعها بالتساوي.',
-    questions: [
-      question('md-1', '٣ مجموعات، في كل مجموعة عنصران. كم عنصرًا؟', ['٥', '٦', '٨'], 1, 'صحيح؛ ٢ + ٢ + ٢ = ٦.', 'ارسم ثلاث مجموعات وضع عنصرين في كل مجموعة.'),
-      question('md-2', 'ما ناتج ٤ × ٥؟', ['٩', '٢٠', '١٥'], 1, 'صحيح؛ أربع مجموعات من خمسة تساوي ٢٠.', 'حوّل الضرب إلى جمع متكرر: ٥ + ٥ + ٥ + ٥.', '٤ × ٥'),
-      question('md-3', '١٢ قطعة تقسم بالتساوي على ٣ أطفال. كم قطعة لكل طفل؟', ['٣', '٤', '٥'], 1, 'صحيح؛ ١٢ ÷ ٣ = ٤.', 'وزّع القطع واحدة تلو الأخرى على ثلاثة أطفال حتى تنتهي.'),
-      question('md-4', 'أربع مجموعات، في كل مجموعة ثلاثة عناصر. كم عنصرًا؟', ['٧', '١٢', '٩'], 1, 'صحيح؛ ٤ × ٣ = ١٢.', 'ارسم أربع مجموعات وضع ثلاثة عناصر في كل مجموعة.'),
-      question('md-5', 'وُزّعت ١٥ قطعة بالتساوي على خمسة أطفال. كم قطعة لكل طفل؟', ['٥', '٣', '٤'], 1, 'صحيح؛ ١٥ ÷ ٥ = ٣.', 'وزّع القطع على الأطفال واحدًا واحدًا حتى تنتهي.'),
-    ],
-  },
-  {
-    id: 'math-word-problems',
-    domain: 'math',
-    stage: 7,
-    title: 'أحوّل المسألة إلى خطة حل',
-    objective: 'فهم سياق المسألة، وتحديد المطلوب والكمية والعلاقة، ثم اختيار العملية وتفسير الناتج.',
-    model: 'اقرأ المسألة، واشرح ما نعرفه وما نبحث عنه. يمكن رسم الكميات أو وضعها في مخطط قبل اختيار العملية.',
-    guidedPractice: 'مثال: لدى سارة ٥ كرات، ثم حصلت على كرتين إضافيتين. نعرف البداية والزيادة، لذا نجمع: ٥ + ٢ = ٧.',
-    successGuidance: 'جيد. اشرح لماذا اخترت العملية، وتحقق من أن الإجابة تناسب القصة.',
-    retryGuidance: 'أعد صياغة السؤال، وميّز بين ما كان موجودًا وما تغيّر وما يطلبه السؤال.',
-    questions: [
-      question('wp-1', 'مع مريم ٤ أقلام وأعطاها أخوها ٣ أخرى. كم أصبح معها؟', ['١', '٧', '١٢'], 1, 'صحيح؛ نضيف ٣ إلى ٤ فيصبح المجموع ٧.', 'ارسم ٤ أقلام ثم أضف ٣، وبعدها عدّ المجموع.'),
-      question('wp-2', 'كان مع عمر ٩ كرات، وأعطى صديقه ٢. كم بقي معه؟', ['٧', '١١', '٦'], 0, 'صحيح؛ عندما نعطي جزءًا من الكمية يقل ما بقي.', 'ابدأ بـ٩ ثم احذف كرتين أو تحرك خطوتين للخلف.'),
-      question('wp-3', 'في كل صندوق ٥ كتب، ولدينا صندوقان. كم كتابًا؟', ['٧', '١٠', '٥'], 1, 'صحيح؛ مجموعتان من خمسة تساويان ١٠.', 'ارسم صندوقين وضع ٥ علامات في كل صندوق، ثم اجمع.'),
-      question('wp-4', 'مع هدى ٨ تفاحات، وأكلت ٣. كم تفاحة بقيت؟', ['٥', '١١', '٦'], 0, 'صحيح؛ نطرح ما أكلته من العدد الكلي: ٨ − ٣ = ٥.', 'ابدأ بثماني تفاحات ثم احذف ثلاثًا وعدّ الباقي.'),
-      question('wp-5', 'ثلاثة أكياس، في كلِّ كيسٍ منها أربعةُ أقلامٍ. ما مجموعُ الأقلامِ؟', ['٧', '١٢', '٩'], 1, 'صحيح؛ ٣ مجموعات من أربعة تساوي ١٢.', 'مثّل كل كيس كمجموعة مستقلة ثم اجمع الأقلام.'),
-    ],
-  },
-  {
-    id: 'fractions',
-    domain: 'math',
-    stage: 8,
-    title: 'أفهم الجزء من الكل',
-    objective: 'تمييز الكسور بوصفها أجزاء متساوية من كل واحد.',
-    model: 'لا يكفي عدد الأجزاء؛ يجب أن تكون الأجزاء متساوية. في النصف، نقسم الكل إلى جزأين متساويين ونأخذ جزءًا واحدًا.',
-    guidedPractice: 'مثال: إذا قُسّم الشكل إلى أربعة أجزاء متساوية وأخذنا ثلاثة، فهذه ثلاثة أرباع.',
-    successGuidance: 'أحسنت. اربط الرمز بصورة أجزاء متساوية قبل مقارنة الكسور.',
-    retryGuidance: 'تأكد من أن الأجزاء متساوية، ثم حدّد كم جزءًا أخذنا من مجموع الأجزاء.',
-    questions: [
-      question('fr-1', 'ماذا يعني ١/٢؟', ['جزء واحد من جزأين متساويين', 'جزآن من ثلاثة', 'ثلاثة أجزاء من أربعة'], 0, 'صحيح؛ البسط ١ والمقام ٢.', 'اقرأ المقام بوصفه عدد الأجزاء المتساوية والبسط بوصفه الأجزاء المختارة.', '١/٢'),
-      question('fr-2', 'أي مجموعة تمثل ربعًا؟', ['جزء واحد من ٤ أجزاء متساوية', 'جزآن من ٤', '٣ أجزاء من ٤'], 0, 'صحيح؛ الربع جزء واحد من أربعة أجزاء متساوية.', 'تخيّل الكل مقسّمًا إلى أربعة أجزاء متساوية واختر جزءًا واحدًا.', '١/٤'),
-      question('fr-3', 'أي كسر أكبر؟', ['١/٢', '١/٤', 'متساويان'], 0, 'صحيح؛ نصف الكل أكبر من ربعه عند تساوي الكل.', 'قارن مقدار الجزء عندما يكون الكل نفسه.'),
-      question('fr-4', 'قُسم شكل إلى أربعة أجزاء متساوية وأُخذت ثلاثة. ما الكسر؟', ['١/٤', '٣/٤', '٢/٤'], 1, 'صحيح؛ ثلاثة من أربعة أجزاء متساوية تكتب ٣/٤.', 'المقام عدد الأجزاء كلها، والبسط عدد الأجزاء المختارة.'),
-      question('fr-5', 'أي كسر يمثل الشكل كاملاً دون نقص؟', ['٤/٤', '١/٤', '٢/٤'], 0, 'صحيح؛ عندما يتساوى البسط والمقام (٤/٤) فإن الكسر يمثل الكل كاملاً.', 'تذكّر أن الكسر الذي يتساوى فيه البسط مع المقام يمثّل الشكل كاملًا.'),
-    ],
-  },
-];
-
 export const READING_CURRICULUM_SEQUENCE = readingLessons.map(({ id, stage, title }) => ({ id, stage, title }));
-export const MATH_CURRICULUM_SEQUENCE = mathLessons.map(({ id, stage, title }) => ({ id, stage, title }));
 
 /** Selects a short formative round from the larger lesson bank. Consecutive rounds overlap
  * deliberately for retrieval, but rotate through new items so a repeat is not the same test. */
@@ -405,7 +249,7 @@ export function getCurriculumLesson(
   domain: CurriculumDomain,
   skillId: CurriculumSkillId,
 ): CurriculumLesson | null {
-  return (domain === 'reading' ? readingLessons : mathLessons).find((lesson) => lesson.id === skillId) ?? null;
+  return readingLessons.find((lesson) => lesson.id === skillId) ?? null;
 }
 
 const isPercent = (value: unknown): value is number =>
@@ -413,106 +257,66 @@ const isPercent = (value: unknown): value is number =>
 
 export function recommendCurriculumSkill(
   student: CurriculumStudentEvidence,
-  domain: CurriculumDomain,
+  domain: CurriculumDomain = 'reading',
 ): CurriculumRecommendation {
   const grade = Number.isInteger(student.gradeLevel) ? (student.gradeLevel as number) : 1;
-  if (domain === 'reading') {
-    const cognition = student.isDemoRecord ? null : student.cognitiveResults;
-    if (isPercent(cognition?.phonemicAwarenessScorePercent) &&
-        cognition.phonemicAwarenessScorePercent < CURRICULUM_ROUTING_RULES.phonologicalAwarenessReviewPercent) {
-      return {
-        domain, skillId: 'phonological-awareness',
-        reasonAr: 'اخترنا تدريب الأصوات أولًا بناءً على نتيجة مهمة الوعي الصوتي المسجلة.',
-        evidenceAr: `نتيجة المهمة: ${cognition.phonemicAwarenessScorePercent}%؛ تُستخدم لتوجيه التدريب فقط وليست معيارًا عمريًا أو تشخيصًا.`,
-        isBaseline: false,
-      };
-    }
-    // Candidate pseudo-word items are not independently lexicon/dialect-reviewed yet.
-    // Do not use their score to route a learner until that content has been reviewed and validated.
-    if (
-      !student.isDemoRecord &&
-      student.evidenceProvenance === 'server-verified-audio' &&
-      student.aiAssessmentVerified === true &&
-      isPercent(student.oralAccuracyPercent) &&
-      student.oralAccuracyPercent < CURRICULUM_ROUTING_RULES.oralAccuracyReviewPercent
-    ) {
-      return {
-        domain, skillId: 'syllable-blending',
-        reasonAr: 'نوصي بإعادة تدريب دمج المقاطع وقراءة الكلمات بدقة.',
-        evidenceAr: 'هذه الإشارة مشتقة من نتيجة الصوت الآلية المكتملة؛ قد يتأثر التقدير بالتعرف الصوتي واللهجة، لذلك لا تُعامل كحقيقة مرجعية أو تشخيص.',
-        isBaseline: false,
-      };
-    }
-    if (!student.isDemoRecord &&
-        student.sessionStatus === 'completed' &&
-        isPercent(student.comprehensionScore) &&
-        student.comprehensionScore < CURRICULUM_ROUTING_RULES.comprehensionReviewPercent) {
-      return {
-        domain, skillId: 'reading-comprehension',
-        reasonAr: 'نبدأ بتمارين فهم النص واستخراج الدليل من القراءة السابقة.',
-        evidenceAr: `نتيجة أسئلة النص السابق: ${student.comprehensionScore}%؛ تعكس النص المحدد ولا تُعمّم على القدرة القرائية كلها.`,
-        isBaseline: false,
-      };
-    }
+  const cognition = student.isDemoRecord ? null : student.cognitiveResults;
+  if (
+    isPercent(cognition?.phonemicAwarenessScorePercent) &&
+    cognition.phonemicAwarenessScorePercent < CURRICULUM_ROUTING_RULES.phonologicalAwarenessReviewPercent
+  ) {
     return {
-      domain,
-      skillId: grade >= 3 ? 'short-vowel-decoding' : 'phonological-awareness',
-      reasonAr: 'ابدأ بجولة تأسيسية قصيرة، ثم دع إجاباتك تحدد المهارة التالية.',
-      evidenceAr: 'لا توجد بيانات سابقة كافية لتوجيه أدق؛ لن نفترض وجود صعوبة أو اضطراب.',
-      isBaseline: true,
+      domain: 'reading',
+      skillId: 'phonological-awareness',
+      reasonAr: 'اخترنا تدريب الأصوات أولًا بناءً على نتيجة مهمة الوعي الصوتي المسجلة.',
+      evidenceAr: `نتيجة المهمة: ${cognition.phonemicAwarenessScorePercent}%؛ تُستخدم لتوجيه التدريب فقط وليست معيارًا عمريًا أو تشخيصًا.`,
+      isBaseline: false,
     };
   }
-
-  if (!student.isDemoRecord && student.dyscalculiaAssessed === true) {
-    if (isPercent(student.subitizingAccuracy) &&
-        student.subitizingAccuracy < CURRICULUM_ROUTING_RULES.quantityReviewPercent) {
-      return {
-        domain, skillId: 'quantity-cardinality',
-        reasonAr: 'نبدأ بربط مجموعات الأشياء بالكمية التي تمثلها.',
-        evidenceAr: `دقة تمييز الكميات في المهام السابقة: ${student.subitizingAccuracy}%؛ مقياس وصفي لهذه المهمة فقط.`,
-        isBaseline: false,
-      };
-    }
-    if (isPercent(student.transcodingAccuracy) &&
-        student.transcodingAccuracy < CURRICULUM_ROUTING_RULES.numberSymbolReviewPercent) {
-      return {
-        domain, skillId: 'number-symbol-mapping',
-        reasonAr: 'نراجع الربط بين اسم العدد ورمزه والكمية.',
-        evidenceAr: `دقة ترميز الأعداد في المهام السابقة: ${student.transcodingAccuracy}%؛ مقياس وصفي لهذه المهمة فقط.`,
-        isBaseline: false,
-      };
-    }
-    if (isPercent(student.numberLinePAE) &&
-        student.numberLinePAE > CURRICULUM_ROUTING_RULES.numberLineErrorReviewPercent) {
-      return {
-        domain, skillId: 'magnitude-number-line',
-        reasonAr: 'نراجع مقارنة الأعداد وتحديد مواقعها على خط الأعداد.',
-        evidenceAr: `الخطأ المطلق في موضع خط الأعداد: ${student.numberLinePAE}%؛ لا يُستخدم وحده للحكم على القدرة الرياضية العامة.`,
-        isBaseline: false,
-      };
-    }
+  if (
+    !student.isDemoRecord &&
+    student.evidenceProvenance === 'server-verified-audio' &&
+    student.aiAssessmentVerified === true &&
+    isPercent(student.oralAccuracyPercent) &&
+    student.oralAccuracyPercent < CURRICULUM_ROUTING_RULES.oralAccuracyReviewPercent
+  ) {
+    return {
+      domain: 'reading',
+      skillId: 'syllable-blending',
+      reasonAr: 'نوصي بإعادة تدريب دمج المقاطع وقراءة الكلمات بدقة.',
+      evidenceAr: 'هذه الإشارة مشتقة من نتيجة الصوت الآلية المكتملة؛ قد يتأثر التقدير بالتعرف الصوتي واللهجة، لذلك لا تُعامل كحقيقة مرجعية أو تشخيص.',
+      isBaseline: false,
+    };
+  }
+  if (
+    !student.isDemoRecord &&
+    student.sessionStatus === 'completed' &&
+    isPercent(student.comprehensionScore) &&
+    student.comprehensionScore < CURRICULUM_ROUTING_RULES.comprehensionReviewPercent
+  ) {
+    return {
+      domain: 'reading',
+      skillId: 'reading-comprehension',
+      reasonAr: 'نبدأ بتمارين فهم النص واستخراج الدليل من القراءة السابقة.',
+      evidenceAr: `نتيجة أسئلة النص السابق: ${student.comprehensionScore}%؛ تعكس النص المحدد ولا تُعمّم على القدرة القرائية كلها.`,
+      isBaseline: false,
+    };
   }
   return {
-    domain,
-    skillId: grade >= 3 ? 'magnitude-number-line' : 'quantity-cardinality',
-    reasonAr: 'ابدأ بمهمة تعليمية قصيرة لربط الكمية بالعدد، ثم انتقل وفق الإجابات.',
-    evidenceAr: 'لا توجد بيانات كافية لاختيار هدف أضيق؛ لا نفترض وجود صعوبة أو اضطراب.',
+    domain: 'reading',
+    skillId: grade >= 3 ? 'short-vowel-decoding' : 'phonological-awareness',
+    reasonAr: 'ابدأ بجولة تأسيسية قصيرة، ثم دع إجاباتك تحدد المهارة التالية.',
+    evidenceAr: 'لا توجد بيانات سابقة كافية لتوجيه أدق؛ لن نفترض وجود صعوبة أو اضطراب.',
     isBaseline: true,
   };
 }
 
 export function getNextCurriculumSkill(
-  domain: CurriculumDomain,
+  _domain: CurriculumDomain,
   currentSkillId: CurriculumSkillId,
-  gradeLevel = 1,
+  _gradeLevel = 1,
 ): CurriculumSkillId {
-  const sequence = domain === 'reading'
-    ? readingLessons
-    : mathLessons.filter((lesson) => {
-        if (lesson.id === 'multiplication-division') return gradeLevel >= 3;
-        if (lesson.id === 'fractions') return gradeLevel >= 4;
-        return true;
-      });
+  const sequence = readingLessons;
   const index = sequence.findIndex((lesson) => lesson.id === currentSkillId);
   return sequence[Math.min(index < 0 ? 0 : index + 1, sequence.length - 1)].id;
 }

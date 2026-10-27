@@ -181,6 +181,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
     const clean = newLearnerName.trim();
     if (!clean || !guardianConsentChecked) return;
 
+    const consentSource =
+      guardianRelationship === 'معلم / أخصائي مدرسي'
+        ? `إقرار تفويض مدرسي (${guardianName.trim() || 'معلم مصرح'} - تفويض رسمي)`
+        : guardianRelationship === 'وصي قانوني'
+        ? `إقرار وصي قانوني (${guardianName.trim() || 'الوصي القانوني'})`
+        : `إقرار ولي أمر (${guardianName.trim() || 'ولي الأمر'} - الأب/الأم)`;
+
     onStartMockUserJourney(
       clean,
       newLearnerGrade,
@@ -191,7 +198,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         guardianConsentGiven: true,
         guardianAudioConsentGiven: guardianAudioConsentChecked,
         guardianConsentRecordedAt: new Date().toISOString(),
-        guardianConsentSource: 'إقرار صريح ومفصل داخل نافذة بدء التعلم (الواجهة الرئيسية)',
+        guardianConsentSource: consentSource,
       },
       'sprint'
     );
@@ -444,7 +451,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     />
                     <span className="font-bold leading-relaxed">
                       <span className="text-emerald-700 underline font-black ml-1">[إلزامي للبدء]</span>
-                      أقر بصفتي ولي أمر / وصي قانوني / معلم مصرح بالموافقة الصريحة على إنشاء ملف تدريبي للطفل واستخدام منصة بصيرة للتدريب القرائي التكويني وفق سياسة الخصوصية.
+                      {guardianRelationship === 'معلم / أخصائي مدرسي' ? (
+                        <>أقر بصفتي معلماً / أخصائياً مخولاً بوجود تفويض رسمي من إدارة المدرسة وموافقة مسبقة من ولي أمر الطالب على استخدام منصة بصيرة للتدريب القرائي التكويني وفق سياسة الخصوصية.</>
+                      ) : guardianRelationship === 'وصي قانوني' ? (
+                        <>أقر بصفتي الوصي القانوني على الطالب بالموافقة الصريحة على إنشاء ملف تدريبي واستخدام منصة بصيرة للتدريب القرائي التكويني وفق سياسة الخصوصية.</>
+                      ) : (
+                        <>أقر بصفتي ولي أمر الطالب (الأب / الأم) بالموافقة الصريحة على إنشاء ملف تدريبي للطفل واستخدام منصة بصيرة للتدريب القرائي التكويني وفق سياسة الخصوصية.</>
+                      )}
                     </span>
                   </label>
                 </div>

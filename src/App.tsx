@@ -19,6 +19,11 @@ import {
   ShieldCheck,
   FileText,
   Users,
+  Building2,
+  Mail,
+  Phone,
+  Clock,
+  RefreshCw,
 } from 'lucide-react';
 import {
   INITIAL_STUDENTS,
@@ -54,7 +59,7 @@ import {
 
 type ActiveTab = AppTabId;
 
-type DashboardSubView = 'roster' | 'report';
+type DashboardSubView = 'roster' | 'report' | 'demo_requests';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
@@ -87,6 +92,29 @@ export default function App() {
   const [baseeraAccessCode, setBaseeraAccessCode] = useState<string>('');
   const [baseeraLoginError, setBaseeraLoginError] = useState<string>('');
   const [isBaseeraLoggingIn, setIsBaseeraLoggingIn] = useState<boolean>(false);
+  const [demoRequests, setDemoRequests] = useState<any[]>([]);
+  const [isLoadingDemoRequests, setIsLoadingDemoRequests] = useState<boolean>(false);
+  const [demoRequestsError, setDemoRequestsError] = useState<string>('');
+
+  const fetchDemoRequests = async () => {
+    if (!baseeraSession || baseeraSession.role !== 'school_admin') return;
+    setIsLoadingDemoRequests(true);
+    setDemoRequestsError('');
+    try {
+      const res = await authenticatedFetch('/api/admin/school-demo-requests');
+      if (res.ok) {
+        const data = await res.json();
+        setDemoRequests(Array.isArray(data.requests) ? data.requests : []);
+      } else {
+        const err = await res.json().catch(() => null);
+        setDemoRequestsError(err?.error || 'تعذر تحميل طلبات المدارس.');
+      }
+    } catch {
+      setDemoRequestsError('خطأ في الاتصال بالخادم.');
+    } finally {
+      setIsLoadingDemoRequests(false);
+    }
+  };
 
   // Roster filtering & search
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -230,14 +258,10 @@ export default function App() {
     dyscalculiaAssessed: record.dyscalculiaAssessed,
     ...(record.mathTrials ? { mathTrials: record.mathTrials } : {}),
     guardianConsentGiven: record.guardianConsentGiven === true,
-    guardianConsentRecordedAt: record.guardianConsentRecordedAt || (record.guardianConsentGiven ? new Date().toISOString() : undefined),
-    guardianConsentSource: record.guardianConsentSource || (record.guardianConsentGiven ? 'إقرار ولي الأمر والمدرسة' : undefined),
+    guardianConsentRecordedAt: record.guardianConsentRecordedAt,
+    guardianConsentSource: record.guardianConsentSource,
     guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
-    guardianAudioConsentRecordedAt:
-      record.guardianAudioConsentRecordedAt ||
-      (record.guardianAudioConsentGiven
-        ? (record.sessionCompletedAt || new Date().toISOString())
-        : undefined),
+    guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
     speechRecognitionUsed: record.speechRecognitionUsed === true,
     audioRecordingStarted: record.audioRecordingStarted === true,
   });
@@ -260,7 +284,7 @@ export default function App() {
     }
     const consentRecordedAt =
       newRecord.guardianConsentGiven === true
-        ? newRecord.guardianConsentRecordedAt || new Date().toISOString()
+        ? newRecord.guardianConsentRecordedAt
         : undefined;
     const completedAt = new Date().toISOString();
     const completedRecord: StudentRecord = {
@@ -278,7 +302,7 @@ export default function App() {
       guardianConsentRecordedAt: consentRecordedAt,
       guardianConsentSource:
         newRecord.guardianConsentGiven === true
-          ? newRecord.guardianConsentSource || 'إقرار صريح داخل واجهة الفحص'
+          ? newRecord.guardianConsentSource
           : undefined,
     };
     setStudents((prev) => [
@@ -366,7 +390,7 @@ export default function App() {
 
     const consentGiven = guardianConsent?.guardianConsentGiven === true;
     const consentRecordedAt = consentGiven
-      ? (guardianConsent?.guardianConsentRecordedAt || new Date().toISOString())
+      ? guardianConsent?.guardianConsentRecordedAt
       : undefined;
     const consentSource = consentGiven
       ? (guardianConsent?.guardianConsentSource || `إقرار ولي الأمر (${guardianConsent?.guardianName || 'ولي الأمر'} - ${guardianConsent?.guardianRelationship || 'الوصي'})`)
@@ -1061,6 +1085,25 @@ export default function App() {
                   <FileText className="w-3.5 h-3.5 text-[#0284C7]" />
                   <span>٢. تقرير التقدّم وخطة المساندة</span>
                 </button>
+                {baseeraSession?.role === 'school_admin' && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={dashboardSubView === 'demo_requests'}
+                    onClick={() => {
+                      setDashboardSubView('demo_requests');
+                      void fetchDemoRequests();
+                    }}
+                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                      dashboardSubView === 'demo_requests'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-[#0284C7]" />
+                    <span>٣. طلبات المدارس والتجربة ({demoRequests.length})</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-xs text-slate-500">
@@ -1554,6 +1597,95 @@ export default function App() {
                   </div>
                 </div>
               </section>
+            )}
+
+            {/* SUB-VIEW 3: SCHOOL & INSTITUTION DEMO REQUESTS (RBAC: SCHOOL_ADMIN) */}
+            {dashboardSubView === 'demo_requests' && baseeraSession?.role === 'school_admin' && (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 sm:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-teal-600" />
+                      <span>طلبات الشراكة والتجربة للمدارس والمراكز التعليمية</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">
+                      سجل آمن ومشفر بطلبات المدارس الواردة عبر النموذج الرسمي. اتفاقية الخدمة تقتضي التواصل خلال ٢٤ إلى ٤٨ ساعة عمل.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void fetchDemoRequests()}
+                    disabled={isLoadingDemoRequests}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDemoRequests ? 'animate-spin' : ''}`} />
+                    <span>تحديث القائمة</span>
+                  </button>
+                </div>
+
+                {isLoadingDemoRequests ? (
+                  <div className="py-12 text-center text-xs text-slate-500">جارٍ جلب وتفريغ الطلبات المشفرة...</div>
+                ) : demoRequestsError ? (
+                  <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-medium">
+                    {demoRequestsError}
+                  </div>
+                ) : demoRequests.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-slate-500">
+                    لا توجد طلبات تجربة جديدة مسجلة حالياً في المخزن المشفر.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {demoRequests.map((req) => (
+                      <div
+                        key={req.id || req.submittedAt}
+                        className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-4"
+                      >
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm font-black text-slate-900">{req.schoolName}</h3>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
+                              بانتظار المتابعة (SLA 24-48h)
+                            </span>
+                            {req.expectedStudents && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
+                                {req.expectedStudents} طالب
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-4 pt-1">
+                            <span className="flex items-center gap-1">
+                              <span className="font-bold text-slate-800">المسؤول:</span>
+                              <span>{req.contactName} {req.roleTitle ? `(${req.roleTitle})` : ''}</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Mail size={13} className="text-slate-400" />
+                              <a href={`mailto:${req.workEmail}`} className="text-teal-700 underline font-medium">
+                                {req.workEmail}
+                              </a>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Phone size={13} className="text-slate-400" />
+                              <a href={`tel:${req.phone}`} dir="ltr" className="text-slate-700 font-mono">
+                                {req.phone}
+                              </a>
+                            </span>
+                          </div>
+                          {req.notes && (
+                            <div className="mt-2 text-xs bg-white p-3 rounded-xl border border-slate-200 text-slate-700">
+                              <span className="font-bold text-slate-800 block mb-0.5">ملاحظات واحتياجات المدرسة:</span>
+                              <p className="leading-relaxed">{req.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right md:text-left text-[11px] text-slate-400 font-mono shrink-0 flex items-center gap-1">
+                          <Clock size={12} />
+                          <span>{new Date(req.submittedAt).toLocaleString('ar-QA')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

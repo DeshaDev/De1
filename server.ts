@@ -503,37 +503,47 @@ function demoRequestRateLimiter(
 function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
   try {
     if (!fs.existsSync(DEMO_REQUESTS_PATH)) return [];
-    const raw = fs.readFileSync(DEMO_REQUESTS_PATH, 'utf8');
     const key = getStoreEncryptionKey();
-    if (key) {
-      const decrypted = decryptJsonPayload<PersistedSchoolDemoRequest[]>(
-        raw,
-        key,
-        'baseera-demo-requests-aes-256-gcm-v1'
-      );
-      if (decrypted.wasEncrypted && Array.isArray(decrypted.data)) {
-        return decrypted.data;
-      }
+    if (!key) return [];
+    const raw = fs.readFileSync(DEMO_REQUESTS_PATH, 'utf8');
+    const decrypted = decryptJsonPayload<PersistedSchoolDemoRequest[]>(
+      raw,
+      key,
+      'baseera-demo-requests-aes-256-gcm-v1'
+    );
+    if (decrypted.wasEncrypted && Array.isArray(decrypted.data)) {
+      return decrypted.data;
     }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return [];
   } catch {
     return [];
   }
 }
 
-function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): boolean {
+function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
+  success: boolean;
+  reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'WRITE_ERROR' | 'EXCEPTION';
+} {
   try {
+    const key = getStoreEncryptionKey();
+    if (!key) {
+      console.error(
+        'Cannot save school demo request: BASEERA_STORE_ENCRYPTION_KEY is not configured (fail-closed).'
+      );
+      return { success: false, reason: 'ENCRYPTION_KEY_UNAVAILABLE' };
+    }
     const list = loadPersistedDemoRequests();
     list.push(item);
-    const key = getStoreEncryptionKey();
-    const content = key
-      ? encryptJsonPayload(list, key, 'baseera-demo-requests-aes-256-gcm-v1')
-      : JSON.stringify(list, null, 2);
-    return writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+    const content = encryptJsonPayload(
+      list,
+      key,
+      'baseera-demo-requests-aes-256-gcm-v1'
+    );
+    const written = writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+    return { success: written, reason: written ? undefined : 'WRITE_ERROR' };
   } catch (err) {
     console.error('Failed to save school demo request:', err);
-    return false;
+    return { success: false, reason: 'EXCEPTION' };
   }
 }
 
@@ -2587,8 +2597,15 @@ async function startServer() {
       ...parsed.data,
     };
 
-    const saved = saveSchoolDemoRequest(demoRecord);
-    if (!saved) {
+    const saveResult = saveSchoolDemoRequest(demoRecord);
+    if (!saveResult.success) {
+      if (saveResult.reason === 'ENCRYPTION_KEY_UNAVAILABLE') {
+        res.status(503).json({
+          error:
+            'خدمة تسجيل طلبات المدارس غير متاحة حالياً لعدم اكتمال تهيئة مفتاح التشفير الآمن للخادم. يرجى مراجعة إدارة النظام.',
+        });
+        return;
+      }
       res.status(500).json({
         error: 'تعذر حفظ طلب التجربة حالياً. يرجى المحاولة لاحقاً أو مراسلتنا مباشرة.',
       });
@@ -2600,6 +2617,28 @@ async function startServer() {
       message: 'تم استلام طلبكم بنجاح وسيتواصل معكم فريق حلول المدارس عبر البريد الإلكتروني الرسمي خلال ٢٤ إلى ٤٨ ساعة عمل.',
     });
   });
+
+  // Admin Endpoint: Review Submitted School / Institution Demo Requests (RBAC: audit:read / school_admin)
+  app.get(
+    '/api/admin/school-demo-requests',
+    requireBaseeraAuth('audit:read'),
+    (req, res) => {
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+      if (session.role !== 'school_admin') {
+        res.status(403).json({
+          error: 'صلاحية مسؤول المدرسة مطلوبة للاطلاع على طلبات الشراكة والتجربة.',
+        });
+        return;
+      }
+      const requests = loadPersistedDemoRequests();
+      res.json({
+        ok: true,
+        requests,
+        count: requests.length,
+        retrievedAt: new Date().toISOString(),
+      });
+    }
+  );
 
   // Unknown API routes must never fall through to the SPA index.html.
   app.use('/api', (_req, res) => {
