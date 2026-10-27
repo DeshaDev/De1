@@ -39,7 +39,6 @@ import { AssessmentProvider } from './contexts/AssessmentContext';
 import ReadingAssessmentView from './components/ReadingAssessmentView';
 import CognitiveScreeningView from './components/CognitiveScreeningView';
 import AdaptiveReports from './components/AdaptiveReports';
-import { DyscalculiaLabView } from './components/DyscalculiaLabView';
 import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
 import { ChildTrophiesView } from './components/ChildTrophiesView';
@@ -799,7 +798,6 @@ export default function App() {
               { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
               { id: 'trophies', label: 'تقدّمي', icon: Trophy },
               { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
-              { id: 'dyscalculia-lab', label: 'فحص الحساب', icon: Calculator },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -876,7 +874,6 @@ export default function App() {
           { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
           { id: 'trophies', label: 'تقدّمي', icon: Trophy },
           { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
-          { id: 'dyscalculia-lab', label: 'فحص الحساب', icon: Calculator },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1009,10 +1006,10 @@ export default function App() {
                   <p>ملخص إجابات أسئلة الفهم القرائي.</p>
                 </article>
                 <article className="baseera-summary-card baseera-summary-yellow">
-                  <span className="baseera-summary-label">الأعداد والحساب</span>
-                  <strong>{selectedStudent.dyscalculiaAssessed === true && selectedStudent.numberLinePAE !== null ? selectedStudent.numberLinePAE + '% خطأ' : 'لم يُقَس بعد'}</strong>
-                  <p>فارق تحديد الموضع على خط الأعداد؛ مقياس وصفي لدقة المهمة.</p>
-                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('dyscalculia-lab')}>جرّب مهام الحساب <ArrowLeft aria-hidden="true" size={15} /></button>
+                  <span className="baseera-summary-label">الطلاقة القرائية والوعي الصوتي</span>
+                  <strong>{selectedStudent.oralWcpm ? selectedStudent.oralWcpm + ' ك/د' : 'قيد المتابعة'}</strong>
+                  <p>مؤشر الطلاقة ودقة فك الكلمات في جلسات الفحص والتدريب.</p>
+                  <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('dyslexia-lab')}>فحص القراءة والطلاقة <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
                 <article className="baseera-summary-card baseera-summary-lilac">
                   <span className="baseera-summary-label">خطوتك القادمة</span>
@@ -1190,7 +1187,7 @@ export default function App() {
                             <th className="py-3 px-3 text-left">الطلاقة</th>
                             <th className="py-3 px-3 text-left">الفهم</th>
                             <th className="py-3 px-3">حالة القراءة</th>
-                            <th className="py-3 px-4">الحساب</th>
+                            <th className="py-3 px-4">الفهم القرائي</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1324,7 +1321,7 @@ export default function App() {
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500 mb-1 flex flex-wrap items-center gap-2">
-                      <span>ملخص الأداء القرائي والحسابي</span>
+                      <span>ملخص الأداء القرائي واللغوي</span>
                       <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                         مصدر الأدلة: {selectedStudent.evidenceProvenanceLabelAr || (selectedStudent.isDemoRecord ? 'بيانات نموذجية توضيحية' : 'بيانات الجلسة المسجلة')}
                       </span>
@@ -1353,7 +1350,7 @@ export default function App() {
                         `التاريخ: ${selectedStudent.lastScreenedDate || 'لم تُسجل جلسة مكتملة'}`,
                         `سرعة القراءة: ${selectedStudent.sessionStatus === 'in_progress' ? 'غير متاحة — الجلسة غير مكتملة' : `${selectedStudent.wpm} كلمة/دقيقة`}`,
                         `الكلمات المستهدفة للتدريب: ${(selectedStudent.problematicWords || []).join('، ') || 'لم تُحدد بعد'}`,
-                        'تقرير تقييم الأداء القرائي والحسابي.',
+                        'تقرير تقييم الأداء القرائي واللغوي.',
                       ].join('\n');
                       try {
                         if (navigator.share) {
@@ -1395,7 +1392,7 @@ export default function App() {
                   <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
                     <div>
                       <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
-                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات إتمام النص، وفهم المقروء، والمهام الحسابية عبر الزمن.</p>
+                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات إتمام النص، وفهم المقروء، والوعي الفونولوجي عبر الزمن.</p>
                     </div>
                     <ol className='space-y-3'>
                       {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
@@ -1426,7 +1423,7 @@ export default function App() {
                   <div className="p-6 sm:p-8 space-y-6">
                     <div className="space-y-2">
                       <h3 className="text-sm font-bold text-slate-900">
-                        ٠١. ملخص الأداء القرائي والحسابي
+                        ٠١. ملخص الأداء القرائي واللغوي
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {selectedStudent.learningReport.learningSummary}
@@ -1464,13 +1461,10 @@ export default function App() {
                     </div>
                     <div className="pt-6 border-t border-slate-200 space-y-2">
                       <h3 className="text-sm font-bold text-slate-900">
-                        ٠٤. مؤشرات الحس المكاني للأعداد وخط الأعداد
+                        ٠٤. توصيات المسار القرائي وفك الكلمات
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        {
-                          selectedStudent.learningReport
-                            .dyscalculiaSpatialAnalysis
-                        }
+                        يُوصى بالتركيز على جلسات سبرنت ٥ دقائق اليومية، وربط الصوامت بالحركات القصيرة، وقراءة القصص المشكولة تدريجياً لتعزيز الثقة وطلاقة النطق.
                       </p>
                     </div>
                   </div>
@@ -1529,7 +1523,7 @@ export default function App() {
                           )
                         ) : (
                           <li className="text-slate-600 leading-relaxed">
-                            ستظهر التيسيرات الصفية المقترحة فور إتمام جلسة الفحص القرائي والحسابي.
+                            ستظهر التيسيرات الصفية المقترحة فور إتمام جلسة الفحص القرائي الشامل.
                           </li>
                         )}
                       </ul>
@@ -1578,19 +1572,7 @@ export default function App() {
           />
         )}
 
-        {/* VIEW 3: DYSCALCULIA & NUMERICAL COGNITION LAB */}
-        {activeTab === 'dyscalculia-lab' && (
-          <DyscalculiaLabView
-            students={students}
-            selectedStudentId={selectedStudentId}
-            onSelectStudent={setSelectedStudentId}
-            onUpdateStudentMath={handleUpdateStudentMath}
-            onOpenFinalReport={() => {
-              setActiveTab('dashboard');
-              setDashboardSubView('report');
-            }}
-          />
-        )}
+
 
         {/* VIEW 4: REMEDIATION GYM & STATIONS */}
         {activeTab === 'remediation-gym' && (
@@ -1650,7 +1632,7 @@ export default function App() {
             <span className="baseera-brand-mark"><BookOpen aria-hidden="true" size={22} /></span>
             <div>
               <strong>بصيرة</strong>
-              <p>مساحة تعليمية عربية لاستكشاف مهارات القراءة والحساب، خطوة بخطوة.</p>
+              <p>مساحة تعليمية عربية متخصصة لتقييم وتدريب مهارات القراءة واللغة (الديسلكسيا)، خطوة بخطوة.</p>
             </div>
           </div>
           <nav className="baseera-footer-links" aria-label="روابط إضافية">

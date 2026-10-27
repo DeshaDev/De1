@@ -16,23 +16,22 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
   const isDemo = Boolean(activeStudent.isDemoRecord);
   const hasReading = Boolean(activeStudent.wpm && activeStudent.wpm > 0);
   const hasCognitive = Boolean(activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent > 0);
-  const hasMath = Boolean(activeStudent.dyscalculiaAssessed);
 
-  const streakDays = isDemo ? 3 : ((hasReading || hasMath) ? 1 : 0);
+  const streakDays = isDemo ? 3 : (hasReading ? 1 : 0);
   const xpPoints = isDemo
     ? 160
-    : ((hasReading ? 40 : 0) + (hasCognitive ? 30 : 0) + (hasMath ? 40 : 0) + (activeStudent.comprehensionScore || 0));
+    : ((hasReading ? 40 : 0) + (hasCognitive ? 30 : 0) + (activeStudent.comprehensionScore || 0));
 
   const BADGES = [
     {
       id: 'sprint',
       title: 'وسام البرق السريع',
-      description: isDemo || (hasReading && hasMath)
+      description: isDemo || hasReading
         ? 'أكملت تدريب سبرنت الـ ٥ دقائق المكثف بنجاح!'
         : 'أكمل تدريب سبرنت اليوم (٥ دقائق) لفتح هذا الوسام!',
       icon: 'lightning',
       color: 'from-amber-400 to-orange-500',
-      earned: isDemo || (hasReading && hasMath),
+      earned: isDemo || hasReading,
       category: 'طلاقة وسرعة',
     },
     {
@@ -69,15 +68,15 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       category: 'تركيب لغوي',
     },
     {
-      id: 'math',
-      title: 'بطل قفزات الأرقام',
-      description: isDemo || hasMath
-        ? 'حدّدت مواقع الأعداد بدقة على خط الأعداد التفاعلي!'
-        : 'أكمل مهام مختبر الأرقام والحساب لفتح هذا الوسام!',
-      icon: 'numbers',
+      id: 'comprehension',
+      title: 'بطل الفهم والاستنتاج',
+      description: isDemo || Boolean(activeStudent.comprehensionScore && activeStudent.comprehensionScore > 0)
+        ? 'أجبت عن أسئلة فهم المقروء بذكاء واستخرجت الفكرة الرئيسية!'
+        : 'أكمل نصوص الفهم القرائي بنجاح لفتح هذا الوسام!',
+      icon: 'story',
       color: 'from-sky-400 to-cyan-500',
-      earned: isDemo || hasMath,
-      category: 'إدراك عددي',
+      earned: Boolean(isDemo || (activeStudent.comprehensionScore && activeStudent.comprehensionScore > 0)),
+      category: 'فهم واستنتاج',
     },
     {
       id: 'master',
@@ -165,7 +164,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
                   {b.id === 'story' && <IconStoryBook size={34} />}
                   {b.id === 'letters' && <IconLettersBlock size={34} />}
                   {b.id === 'syllables' && <IconPuzzlePieces size={34} />}
-                  {b.id === 'math' && <IconNumberRuler size={34} />}
+                  {b.id === 'comprehension' && <IconStoryBook size={34} />}
                   {b.id === 'master' && <IconTrophy size={34} />}
                 </div>
                 <span className={`text-[10px] font-black px-3 py-1 rounded-full ${

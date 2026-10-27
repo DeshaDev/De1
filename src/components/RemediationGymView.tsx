@@ -53,7 +53,7 @@ interface RemediationGymViewProps {
   /** Only signed-in school administrators can load the curated activity bank. */
   canGeneratePlan?: boolean;
   /** Specific station to open directly (e.g., from top navigation bar) */
-  initialStation?: 'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen';
+  initialStation?: 'phonics' | 'syllables' | 'pacer' | 'sprint' | 'storygen';
 }
 
 export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
@@ -71,7 +71,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   );
 
   // Active Station Tab: phonics | syllables | pacer | math | sprint | storygen
-  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'math' | 'sprint' | 'storygen'>(
+  const [activeStation, setActiveStation] = useState<'phonics' | 'syllables' | 'pacer' | 'sprint' | 'storygen'>(
     initialStation || 'phonics'
   );
 
@@ -894,142 +894,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         </div>
       )}
 
-      {/* ------------------------------------------------------------- */}
-      {/* STATION 4: NUMBER LINE (Clean, Focused) */}
-      {/* ------------------------------------------------------------- */}
-      {activeStation === 'math' && (
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-lg">
-                نشاط تعليمي على خط الأعداد
-              </span>
-              <span className="text-xs font-medium text-slate-500">
-                تدريب اختياري على القيمة المكانية وخط الأعداد
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-slate-600">
-              {mathIdx + 1} / {mathList.length}
-            </div>
-          </div>
 
-          <div className="rounded-2xl bg-gradient-to-br from-[#FAF6EE] via-white to-[#ECFDF5]/40 border border-[#E5DEC9] p-4 sm:p-5 space-y-4 text-center">
-            <div className="space-y-1">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                {currentMath.prompt}
-              </h2>
-            </div>
-
-            {/* Interactive Illustrated Number Line */}
-            <div className="clay-card-sky p-5 sm:p-7 space-y-4 max-w-xl mx-auto">
-              <InteractiveNumberLine
-                min={currentMath.min}
-                max={currentMath.max}
-                value={sliderVal}
-                onChange={(val) => {
-                  setSliderVal(val);
-                  setMathAnswered(false);
-                }}
-                targetNumber={currentMath.targetNumber}
-              />
-
-              {mathAnswered && mathErrorAbs !== null && (
-                <div className={'p-3 rounded-2xl border-2 font-child font-black text-sm animate-fade-slide-up ' + (
-                  mathErrorAbs <= 5 ? 'bg-emerald-50 border-emerald-400 text-emerald-900' : 'bg-amber-50 border-amber-400 text-amber-900'
-                )}>
-                  <span>فارق القفزة عن الهدف: {toEasternArabicDigits(mathErrorAbs)} أرقام ({mathErrorAbs <= 5 ? 'دقة ممتازة وبطل خارق!' : 'قريب جداً، واصل المحاولة!'})</span>
-                </div>
-              )}
-            </div>
-
-            {/* Base-10 Place-Value breakdown */}
-            <div className="p-3 rounded-xl bg-white border border-slate-200 max-w-md mx-auto text-right space-y-1.5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-[#0284C7]" />
-                  <span>تفكيك المنازل المكانية لمنع عكس الخانات:</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={triggerMathScaffold}
-                  className="text-[11px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer"
-                >
-                  <Lightbulb className="w-3 h-3 text-amber-600" />
-                  <span>تلميح</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 text-xs font-semibold">
-                <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg text-amber-950">
-                  <span>العشرات:</span>
-                  <span className="font-mono font-bold">{Math.floor(currentMath.targetNumber / 10)}</span>
-                  <span className="text-amber-700 font-normal">({Math.floor(currentMath.targetNumber / 10) * 10})</span>
-                </div>
-                <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg text-emerald-950">
-                  <span>الآحاد:</span>
-                  <span className="font-mono font-bold">{currentMath.targetNumber % 10}</span>
-                  <span className="text-emerald-700 font-normal">({currentMath.targetNumber % 10})</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Optional learning hint */}
-            {activeScaffold && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs sm:text-sm max-w-lg mx-auto flex items-start justify-between gap-2 text-right shadow-xs animate-fade-slide-up">
-                <div className="space-y-1">
-                  <span className="font-bold block text-amber-900 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{activeScaffold.title}</span>
-                  </span>
-                  <p className="text-amber-950 leading-relaxed font-medium">{activeScaffold.text}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => speakText(activeScaffold.audioText)}
-                    className="p-1.5 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-900 cursor-pointer"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveScaffold(null)}
-                    className="p-1.5 rounded-lg hover:bg-amber-200/80 text-amber-800 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons: Confirm & Next Centered */}
-            <div className="pt-2 flex flex-col items-center justify-center gap-1">
-              {!mathAnswered ? (
-                <button
-                  type="button"
-                  onClick={handleCheckMath}
-                  className="w-full sm:w-auto min-w-[280px] px-8 py-3.5 rounded-2xl bg-[#0284C7] hover:bg-[#0369A1] active:scale-95 text-white text-base font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
-                >
-                  <Check className="w-5 h-5 stroke-[3]" />
-                  <span>اعتماد الموضع وفحص الدقة</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleNextMath}
-                  className="w-full sm:w-auto min-w-[280px] px-8 py-3.5 rounded-2xl bg-[#15803D] hover:bg-[#166534] active:scale-95 text-white text-base font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
-                >
-                  <span>الانتقال للتدريب التالي</span>
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
-              <span className="text-[11px] text-slate-500 font-medium">
-                التدريب {mathIdx + 1} من {mathList.length}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ------------------------------------------------------------- */}
       {/* STATION 5: 5-MINUTE DAILY SPRINT (VTO READING MODEL)          */}

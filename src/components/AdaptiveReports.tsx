@@ -43,13 +43,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
   // Check if ANY verified assessment data has been gathered
   const hasSpeechData = Boolean(currentAssessment?.speechResults?.summary);
-  const hasMathData = Boolean(!student?.isDemoRecord && student?.dyscalculiaAssessed === true && student.mathTrials);
+  const hasMathData = false;
   const hasReadingData = Boolean(
     currentAssessment?.readingResults ||
     (student && !student.isDemoRecord && student.sessionStatus === 'completed' && student.wpm > 0)
   );
 
-  const hasAnyAssessmentData = hasSpeechData || hasMathData || hasReadingData;
+  const hasAnyAssessmentData = hasSpeechData || hasReadingData;
 
   // Synthesize student data strictly from genuine assessments
   const studentData = useMemo(() => {
@@ -354,17 +354,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
         '. لا تمثل هذه القيمة دقة النطق؛ راجع أي اختلاف بين التفريغ والكلمة المستهدفة.'
       );
     }
-    if (studentData.math) {
-      const details: string[] = [];
-      if (typeof studentData.math.subitizingAccuracy === 'number') details.push('دقة تمييز الكميات ' + studentData.math.subitizingAccuracy + '%');
-      if (typeof studentData.math.numberLinePAE === 'number') details.push('خطأ خط الأعداد ' + studentData.math.numberLinePAE + '%');
-      if (typeof studentData.math.transcodingAccuracy === 'number') details.push('دقة ترميز الأعداد ' + studentData.math.transcodingAccuracy + '%');
-      observations.push(
-        'تم تسجيل ' + studentData.math.tasksRecorded + ' محاولات في مهام الحساب' +
-        (details.length ? '، ' + details.join('، ') : '') +
-        '. هذه ملاحظات للمهام المكتملة فقط.'
-      );
-    }
+
 
     const text = `مرحباً بكم. هذا ملخص تعليمي لنتائج ${studentData.studentName}. ${
       observations.length > 0 ? observations.join('، ') + '.' : ''
@@ -405,13 +395,13 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       iconColor: 'bg-indigo-500 text-white',
     },
     {
-      id: 'number-line-jumper',
-      title: 'مغامرة خط الأعداد (0–100)',
-      description: 'نشاط للتدرّب على دقة موضع الأعداد ومقارنة الإجابة بالموقع المرجعي.',
-      targetSkill: 'تحديد المواضع على خط الأعداد',
+      id: 'syllable-builder',
+      title: 'تركيب المقاطع والكلمات',
+      description: 'نشاط للتدرّب على دمج المقاطع الصوتية وبناء الكلمات بسلاسة.',
+      targetSkill: 'الوعي الصوتي وتركيب المقاطع',
       difficulty: 'متوسط' as const,
-      duration: '12 دقيقة يومياً',
-      tabTarget: 'dyscalculia-lab',
+      duration: '10 دقائق يومياً',
+      tabTarget: 'remediation-gym',
       iconColor: 'bg-purple-500 text-white',
     },
     {
@@ -499,10 +489,10 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
               </div>
               <button
-                onClick={() => onNavigateTab && onNavigateTab('dyscalculia-lab')}
+                onClick={() => onNavigateTab && onNavigateTab('remediation-gym')}
                 className="mt-6 w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>ابدأ مهام الحساب</span>
+                <span>ابدأ تدريب المقاطع</span>
                 <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
@@ -697,25 +687,21 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 </p>
               </div>
 
-              {/* 3. Number-sense task observations */}
-              <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-100 text-right">
+              {/* 3. Reading Comprehension observations */}
+              <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-100 text-right">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
-                    <Hand className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
+                    <BookOpen className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold text-purple-700 font-mono">
-                    {studentData.math ? `${studentData.math.tasksRecorded} محاولات` : 'لم تُسجّل'}
+                  <span className="text-xs font-bold text-teal-800 font-mono">
+                    {student?.comprehensionScore ? `${student.comprehensionScore}%` : 'قيد المتابعة'}
                   </span>
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">مهام الحساب والحس العددي</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-1">الفهم القرائي والاستنتاج</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  {studentData.math
-                    ? [
-                        typeof studentData.math.subitizingAccuracy === 'number' ? `تمييز الكميات: ${studentData.math.subitizingAccuracy}%` : '',
-                        typeof studentData.math.numberLinePAE === 'number' ? `خطأ خط الأعداد: ${studentData.math.numberLinePAE}%` : '',
-                        typeof studentData.math.transcodingAccuracy === 'number' ? `ترميز الأعداد: ${studentData.math.transcodingAccuracy}%` : '',
-                      ].filter(Boolean).join('؛ ') || 'تم حفظ المحاولات دون مقاييس رقمية متاحة.'
-                    : 'لم تُحفظ بعد محاولات حساب مكتملة لهذا الطالب.'}
+                  {student?.comprehensionScore
+                    ? `دقة الإجابة عن أسئلة فهم المقروء: ${student.comprehensionScore}%. تركز على استرجاع المعنى والعلاقة بين السبب والنتيجة.`
+                    : 'تُقاس دقة الفهم القرائي عبر أسئلة الاسترجاع المباشر والاستنتاج في مكتبة القراءة.'}
                 </p>
               </div>
             </div>
@@ -747,9 +733,9 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-right">
                   <span className="text-xs font-bold text-teal-700 block mb-1">الدقائق (١١ - ١٥)</span>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">خط الأعداد والتعزيز</h4>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">تركيب المقاطع والتعزيز</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    تخمين موقع رقم على خط أعداد بسيط مع تقديم الثناء المعنوي على الجهد المبذول.
+                    تركيب كلمات قصيرة من مقاطع صوتية مألوفة مع تقديم الثناء المعنوي على الجهد المبذول.
                   </p>
                 </div>
               </div>
@@ -908,24 +894,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     </td>
                   </tr>
 
-                  {/* Number-sense task observations */}
-                  <tr>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">مهام الحساب</td>
-                    <td className="py-3.5 px-4 text-slate-600">تمييز الكميات، وتحديد مواضع خط الأعداد، وترميز الأرقام</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-purple-700">
-                      {studentData.math
-                        ? `${studentData.math.tasksRecorded} محاولات`
-                        : 'لم تُقَس'}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500">عدد المهام لا يكفي لتصنيف الخطر</td>
-                    <td className="py-3.5 px-4">
-                      {studentData.math ? (
-                        <span className="text-slate-600">مقاييس وصفية للمهام المكتملة، دون معيار أو تصنيف</span>
-                      ) : (
-                        <span className="text-slate-400">غير مكتمل</span>
-                      )}
-                    </td>
-                  </tr>
+
 
                 </tbody>
               </table>
@@ -962,11 +931,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                 <p>تضم المجموعة 355 عبارة منطوقة من 288 طفلًا ناطقًا باللهجة الشامية (6–13 سنة)، واختبرت الدراسة ثمانية نماذج Whisper؛ سجّل Whisper Large-v3 أفضل WER في الدراسة (0.66). هذه نتيجة للمجموعة والنماذج المختبرة، ولا تمثل أداء التعرف الصوتي داخل متصفح المستخدم.</p>
                 <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://arxiv.org/abs/2510.23319" target="_blank" rel="noreferrer">فتح الدراسة ومجموعة البيانات</a>
               </article>
-              <article className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80">
-                <h4 className="font-bold text-teal-300 block mb-2">A Dyscalculia Diagnostic Battery for Moroccan Children (2026)</h4>
-                <p>تصف الدراسة بطارية من 79 بندًا وتسعة مجالات، مع أدلة صلاحية أولية لدى 128 طفلًا نمائيًا و32 طفلًا ذوي تشخيص مستقل بعسر الحساب، في سياق الصف الرابع بالمغرب. ليست هذه البطارية جزءًا من بصيرة، ولا تثبت صلاحية أنشطتها أو توفر معيارًا قطريًا أو عربيًا عامًا.</p>
-                <a className="inline-block mt-2 underline text-teal-200 hover:text-white" href="https://doi.org/10.1177/07342829261484042" target="_blank" rel="noreferrer">فتح الدراسة المنشورة</a>
-              </article>
+
             </div>
             <div className="mt-4 pt-3 border-t border-slate-700 text-[11px] leading-relaxed text-slate-300">
               لا يدّعي هذا النموذج اعتمادًا سريريًا أو امتثالًا قانونيًا. قبل استخدامه مع بيانات أطفال حقيقية، يلزم التحقق المستقل من القياس ومراجعة الخصوصية والموافقة والمتطلبات القانونية المختصة.

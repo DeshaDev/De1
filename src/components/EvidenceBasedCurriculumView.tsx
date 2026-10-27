@@ -281,29 +281,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
         </span>
       </header>
 
-      {/* 2. Domain Switcher */}
-      <div className="grid grid-cols-2 gap-3" role="group" aria-label="اختر مجال التدريب">
-        {(['reading', 'math'] as const).map((item) => {
-          const active = item === domain;
-          const Icon = item === 'reading' ? BookOpen : Calculator;
-          return (
-            <button
-              key={item}
-              type="button"
-              onClick={() => chooseDomain(item)}
-              aria-pressed={active}
-              className={'flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border-2 px-4 py-3 text-sm font-black transition-all cursor-pointer ' + (
-                active
-                  ? 'border-teal-700 bg-teal-700 text-white shadow-md scale-101'
-                  : 'border-slate-200 bg-white text-slate-700 hover:border-teal-400 hover:bg-slate-50'
-              )}
-            >
-              <Icon size={18} aria-hidden="true" />
-              {DOMAIN_LABELS[item]}
-            </button>
-          );
-        })}
-      </div>
+
 
       {/* 3. Main Single-Column Focused Exercise Card */}
       <div className="rounded-3xl border-2 border-teal-100 bg-white p-5 sm:p-7 shadow-sm space-y-5">
@@ -623,10 +601,9 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
 
           <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
             <h4 className="font-black text-slate-900 mb-2">كيف يسير المنهج؟</h4>
-            <ol className="space-y-1.5 text-slate-700">
-              <li><span className="font-black text-slate-900">القراءة:</span> الوعي بالأصوات ← ربط الصوت بالحرف ← الحركات وفك الكلمات ← النص المتصل ← الفهم.</li>
-              <li><span className="font-black text-slate-900">الحساب:</span> الكمية ← رمز العدد ← المقارنة وخط الأعداد ← القيمة المكانية ← العمليات والمسائل.</li>
-            </ol>
+            <p className="text-slate-700 font-bold">
+              مسار مهارات القراءة واللغة: الوعي بالأصوات ← ربط الصوت بالحرف ← الحركات وفك الكلمات ← النص المتصل ← الفهم القرائي.
+            </p>
             <p className="mt-3 text-[11px] leading-5 text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200">
               الأمثلة مكتوبة بالفصحى، وقد تختلف بعض الكلمات عن لهجة الطفل المألوفة. يساعد المعلم أو ولي الأمر في وصل الكلمة المنطوقة المألوفة بالفصحى؛ ولا ينبغي اعتبار اختلاف اللهجة وحده خطأ. النسخة الحالية لا تضبط المحتوى تلقائيًا حسب اللهجة. ثلاث إجابات تقيس الجولة الحالية فقط، ويحتاج التحقق من التعلم إلى العودة للمهارة عبر جولات لاحقة.
             </p>

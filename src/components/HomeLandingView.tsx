@@ -23,7 +23,6 @@ import { StudentRecord } from '../data/seedData';
 export type AppTabId =
   | 'home'
   | 'dyslexia-lab'
-  | 'dyscalculia-lab'
   | 'remediation-gym'
   | 'dashboard'
   | 'adaptive-reader'
@@ -85,14 +84,6 @@ const ACTIVITIES = [
     icon: BookOpen,
   },
   {
-    id: 'dyscalculia-lab',
-    title: 'مغامرة الأعداد',
-    description: 'اكتشف الأرقام والكميات من خلال مهام تفاعلية.',
-    action: 'اكتشف الحساب',
-    tone: 'yellow',
-    icon: Calculator,
-  },
-  {
     id: 'adaptive-reader',
     title: 'القارئ الميسّر',
     description: 'غيّر طريقة عرض الكلمات واستمع إلى نطقها.',
@@ -103,7 +94,7 @@ const ACTIVITIES = [
   {
     id: 'remediation-gym',
     title: 'صالة التدريب',
-    description: 'تدرّب على الحروف والمقاطع والأعداد بالوتيرة التي تناسبك.',
+    description: 'تدرّب على الحروف والمقاطع وقراءة النصوص بالوتيرة التي تناسبك.',
     action: 'هيا نتدرّب',
     tone: 'mint',
     icon: Gamepad2,
@@ -163,14 +154,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="baseera-hero-copy">
           <div className="baseera-eyebrow">
             <Sparkles aria-hidden="true" size={18} />
-            <span>تدريب يومي مخصص لتعثّر القراءة والحساب</span>
+            <span>تدريب يومي مخصص لتعثّر القراءة واللغة (الديسلكسيا)</span>
           </div>
           <h1 id="baseera-welcome-title">
             تدريب يومي قصير بالعربية
-            <span> لأطفال الصفوف 1–4 المتعثرين في القراءة والحساب.</span>
+            <span> لأطفال الصفوف 1–4 المتعثرين في القراءة وفك الكلمات.</span>
           </h1>
           <p className="baseera-hero-intro">
-            بصيرة: تدريب يومي قصير بالعربية لأطفال الصفوف 1–4 المتعثرين في القراءة والحساب (مع مسارات استدراك للصفين 5–6)، يحدد أين الفجوة، ثم يدرّبهم عليها ويُري الأهل التقدم. لا نشخّص، ونوجّه للمختص عند الحاجة.
+            بصيرة: تدريب يومي قصير بالعربية لأطفال الصفوف 1–4 المتعثرين في القراءة والطلاقة اللغوية (مع مسارات استدراك للصفين 5–6)، يحدد أين الفجوة، ثم يدرّبهم عليها ويُري الأهل التقدم. لا نشخّص، ونوجّه للمختص عند الحاجة.
           </p>
           <div className="baseera-hero-actions">
             <button
@@ -347,7 +338,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="baseera-family-copy">
           <h2 id="baseera-family-title">ملخص التعلّم والمتابعة</h2>
           <p>
-            تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة أو عسر الحساب. يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
+            تقيس بصيرة الأداء داخل أنشطة محددة، ولا تدّعي تشخيص عسر القراءة (الديسلكسيا). يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلًا سريريًا.
           </p>
         </div>
         <div className="baseera-family-actions">
