@@ -134,7 +134,7 @@ export default function App() {
   };
 
   const handleDeleteLead = async (id: string) => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا الطلب نهائياً وتطهير بياناته التشفيرية؟')) return;
+    if (!window.confirm('هل تؤكد حذف طلب التواصل من مخزن التطبيق النشط؟ هذا لا يؤكد محو أي نسخة احتياطية لدى مزود الاستضافة.')) return;
     try {
       const res = await authenticatedFetch(`/api/admin/school-demo-requests/${id}`, {
         method: 'DELETE',
@@ -335,7 +335,6 @@ export default function App() {
         newRecord.guardianConsentGiven === true
           ? newRecord.guardianConsentSource
           : undefined,
-      serverConsentReceivedAt: new Date().toISOString(),
       policyVersion: newRecord.policyVersion || '2026.1',
     };
     setStudents((prev) => [
@@ -1642,7 +1641,7 @@ export default function App() {
                       <span>طلبات الشراكة والتجربة للمدارس والمراكز التعليمية</span>
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">
-                      سجل آمن ومشفر بطلبات المدارس الواردة عبر النموذج الرسمي. اتفاقية الخدمة تقتضي التواصل خلال ٢٤ إلى ٤٨ ساعة عمل.
+                      سجل آمن ومشفر بطلبات المدارس الواردة عبر النموذج الرسمي. راجع الطلبات من لوحة المنصة؛ لا يضمن النموذج موعداً ثابتاً للتواصل.
                     </p>
                   </div>
                   <button
@@ -1677,7 +1676,7 @@ export default function App() {
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-sm font-black text-slate-900">{req.schoolName}</h3>
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
-                              بانتظار المتابعة (SLA 24-48h)
+                              بانتظار المتابعة
                             </span>
                             {req.expectedStudents && (
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
