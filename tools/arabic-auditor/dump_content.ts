@@ -3,17 +3,17 @@ import path from 'path';
 import {
   getCurriculumLesson,
   READING_CURRICULUM_SEQUENCE,
-  MATH_CURRICULUM_SEQUENCE,
   CurriculumSkillId,
 } from '../../src/utils/evidenceBasedCurriculum';
 import { ARABIC_READING_PASSAGES } from '../../src/data/seedData';
 
 const outPath = path.resolve('tools/arabic-auditor/exported_arabic_content.json');
 
-const allSkillIds: { id: CurriculumSkillId; domain: 'reading' | 'math' }[] = [
-  ...READING_CURRICULUM_SEQUENCE.map((s) => ({ id: s.id as CurriculumSkillId, domain: 'reading' as const })),
-  ...MATH_CURRICULUM_SEQUENCE.map((s) => ({ id: s.id as CurriculumSkillId, domain: 'math' as const })),
-];
+const allSkillIds: { id: CurriculumSkillId; domain: 'reading' }[] =
+  READING_CURRICULUM_SEQUENCE.map((skill) => ({
+    id: skill.id as CurriculumSkillId,
+    domain: 'reading',
+  }));
 
 const questions: any[] = [];
 for (const item of allSkillIds) {
