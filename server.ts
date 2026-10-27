@@ -122,6 +122,8 @@ function getTenantCredentialEntries(): TenantCredential[] {
       )
         return [];
       const credentials = value as Record<string, unknown>;
+      // Platform-wide access must come only from BASEERA_PLATFORM_ADMIN_CODE, never a tenant-scoped JSON entry.
+      if (Object.prototype.hasOwnProperty.call(credentials, 'platform_admin')) return [];
       const customSchoolName =
         typeof credentials.schoolName === 'string'
           ? credentials.schoolName
@@ -132,7 +134,7 @@ function getTenantCredentialEntries(): TenantCredential[] {
         tenantId,
         customSchoolName
       );
-      for (const role of ['platform_admin', 'school_admin', 'educator_readonly'] as const) {
+      for (const role of ['school_admin', 'educator_readonly'] as const) {
         const accessCode = (credentials[role] || (role === 'school_admin' ? credentials.clinician : undefined)) as string | undefined;
         if (!accessCode) continue;
         if (
