@@ -3,7 +3,7 @@ import {
   ArrowLeft,
   BookOpen,
   Brain,
-  Check,
+  Building2,
   CheckCircle2,
   ChevronLeft,
   Gamepad2,
@@ -16,13 +16,9 @@ import {
   Sparkles,
   Star,
   Trophy,
-  User,
   UserPlus,
-  Users,
   Volume2,
   Zap,
-  Building2,
-  Lock,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 
@@ -64,48 +60,13 @@ interface HomeLandingViewProps {
 }
 
 const SAMPLE_WORDS = [
-  { text: 'في', hint: 'كلمة قصيرة تساعدنا على بدء الجملة.' },
-  { text: 'صَباحٍ', hint: 'متى بدأت القصة؟ في الصباح.' },
-  { text: 'جَميلٍ', hint: 'كلمة تصف الصباح.' },
-  { text: 'خَرَجَتْ', hint: 'فعل يخبرنا بما حدث.' },
-  { text: 'سَلْمَى', hint: 'هذه بطلة قصتنا.' },
-  { text: 'إلى', hint: 'كلمة تساعدنا على معرفة الاتجاه.' },
-  { text: 'الحَديقَةِ', hint: 'إلى أين ذهبت سلمى؟ إلى الحديقة.' },
-] as const;
-
-const ACTIVITIES = [
-  {
-    id: 'cognitive-lab',
-    title: 'استكشاف مهارات القراءة',
-    description: 'أنشطة قصيرة للتسمية وقراءة كلمات تدريبية والوعي بالأصوات؛ نتائجها وصفية وليست تشخيصًا.',
-    action: 'استكشف المهارات',
-    tone: 'blue',
-    icon: Brain,
-  },
-  {
-    id: 'reading-lab',
-    title: 'رحلة القراءة والطلاقة',
-    description: 'اقرأ نصًا قصيرًا مشكولاً بصوتك أو صامتاً، ثم أجب عن أسئلة الفهم القرائي.',
-    action: 'ابدأ القراءة',
-    tone: 'blue',
-    icon: BookOpen,
-  },
-  {
-    id: 'adaptive-reader',
-    title: 'القارئ الميسّر',
-    description: 'غيّر طريقة عرض الكلمات، مسافات الأسطر، واستمع إلى نطقها لمساعدة القارئ.',
-    action: 'افتح القارئ',
-    tone: 'pink',
-    icon: Heart,
-  },
-  {
-    id: 'remediation-gym',
-    title: 'صالة التدريب القرائي',
-    description: 'تدرّب على الحروف والمقاطع وقراءة النصوص بالوتيرة التي تناسبك.',
-    action: 'هيا نتدرّب',
-    tone: 'mint',
-    icon: Gamepad2,
-  },
+  { text: 'فِي', hint: 'كلمة قصيرة تساعدنا على بدء الجملة.' },
+  { text: 'صَبَاحٍ', hint: 'متى بدأت القصة؟ في الصباح المشرق.' },
+  { text: 'جَمِيلٍ', hint: 'كلمة تصف جمال اليوم.' },
+  { text: 'خَرَجَتْ', hint: 'فعل يخبرنا بحركة سلمى.' },
+  { text: 'سَلْمَى', hint: 'هذه بطلة قصتنا اللطيفة.' },
+  { text: 'إِلَى', hint: 'كلمة توجّهنا نحو المكان.' },
+  { text: 'الحَدِيقَةِ', hint: 'وجهة سلمى حيث الأزهار والأشجار.' },
 ] as const;
 
 function speakArabicWord(word: string) {
@@ -114,10 +75,10 @@ function speakArabicWord(word: string) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.lang = 'ar-SA';
-    utterance.rate = 0.86;
+    utterance.rate = 0.84;
     window.speechSynthesis.speak(utterance);
   } catch {
-    // Speech playback is optional; reading and navigation remain available.
+    // Speech playback is an optional enhancement
   }
 }
 
@@ -168,7 +129,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
     if (!autoPreview || !motionAllowed) return;
     const timer = window.setInterval(() => {
       setActiveWordIndex((current) => (current + 1) % SAMPLE_WORDS.length);
-    }, 2600);
+    }, 2800);
     return () => window.clearInterval(timer);
   }, [autoPreview, motionAllowed]);
 
@@ -239,102 +200,494 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   };
 
   return (
-    <div className="baseera-home" dir="rtl">
-      {/* SECTION 1: HERO VALUE PROPOSITION */}
-      <section className="baseera-hero" aria-labelledby="baseera-welcome-title">
-        <div className="baseera-hero-copy">
-          <div className="baseera-eyebrow">
-            <Sparkles aria-hidden="true" size={18} />
-            <span>تدريب تكويني يومي لدعم مهارات القراءة واللغة العربية</span>
-          </div>
-          <h1 id="baseera-welcome-title">
-            تدريب يومي قصير بالعربية
-            <span> لأطفال الصفوف 1–4 لتمكين القراءة وفك الكلمات بثقة.</span>
-          </h1>
-          <p className="baseera-hero-intro">
-            بصيرة: بيئة تدريب استدراكية تفاعلية بالعربية لأطفال الصفوف 1–4 لتقوية الوعي الصوتي والطلاقة وفهم المقروء. نرصد مؤشرات التعثر بالأدلة العلمية، وندرّب الطفل بالتدريج، ونمنح الأهل والمعلم رؤية واضحة دون أي ادعاء بالتشخيص السريري.
-          </p>
+    <div className="baseera-home space-y-12 sm:space-y-16" dir="rtl">
+      {/* =========================================================================
+          SECTION 1: HERO VALUE PROPOSITION (Clean, Punchy, Focused, Zero Wall-of-Text)
+          ========================================================================= */}
+      <section className="baseera-hero relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-sky-50/40 to-blue-50/60 p-6 sm:p-12 shadow-sm" aria-labelledby="baseera-welcome-title">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          {/* Right Column: Hero Copy & Primary Direct CTAs */}
+          <div className="lg:col-span-7 space-y-5 text-right">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-black">
+              <Sparkles size={16} className="text-emerald-600" />
+              <span>تدريب تكويني يومي لدعم مهارات القراءة واللغة العربية</span>
+            </div>
 
-          {/* TWO CLEAR PATHS: NEW LEARNER vs DEMO PORTFOLIO */}
-          <div className="baseera-hero-paths-container mt-6">
-            <div className="flex flex-wrap items-center gap-3">
+            <h1 id="baseera-welcome-title" className="text-3xl sm:text-5xl font-black text-slate-900 leading-tight">
+              نتعلّم القراءة العربية{' '}
+              <span className="text-blue-600 inline-block">بثقة ومرح</span>
+            </h1>
+
+            <p className="text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed font-medium">
+              تدريب تفاعلي ممتع مدته ٥ دقائق يومياً لأطفال{' '}
+              <span className="font-bold text-slate-800 whitespace-nowrap">الصفوف ١–٤</span>{' '}
+              لتطوير مخارج الأصوات، فك الكلمات، والطلاقة القرائية خطوة بخطوة دون إجهاد.
+            </p>
+
+            {/* ONLY TWO PROMINENT ACTIONS (Zero Clutter) */}
+            <div className="pt-2 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                className="baseera-primary-action flex items-center gap-2 cursor-pointer"
+                className="baseera-primary-action px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm sm:text-base shadow-md shadow-blue-500/20 flex items-center justify-center gap-2.5 transition-transform hover:-translate-y-0.5 cursor-pointer"
                 onClick={() => setShowOnboardingModal(true)}
               >
-                <UserPlus aria-hidden="true" size={19} />
+                <UserPlus aria-hidden="true" size={20} />
                 <span>ابدأ كمتعلّم جديد (سجل نظيف · 0 XP)</span>
+                <ArrowLeft size={18} />
               </button>
 
               {demoStudent && (
                 <button
                   type="button"
-                  className="baseera-secondary-action flex items-center gap-2 cursor-pointer"
+                  className="baseera-secondary-action px-5 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-200 shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   onClick={() => onSelectExistingDemoJourney(demoStudent.id, 'dashboard')}
                 >
-                  <Building2 aria-hidden="true" size={18} />
+                  <Building2 aria-hidden="true" size={18} className="text-emerald-600" />
                   <span>استعراض لوحة المعلم والمدرسة (Demo)</span>
                 </button>
               )}
             </div>
 
-            {/* Quick Action Pills */}
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-slate-200/60">
-              <span className="text-xs font-bold text-slate-500">أو جرّب مباشرة:</span>
-              <button
-                type="button"
-                className="text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-full border border-teal-200 transition-colors cursor-pointer flex items-center gap-1.5"
-                onClick={() => onNavigateTab('sprint')}
-              >
-                <Zap size={14} className="text-amber-500" />
-                <span>تدريب اليوم السريع (٥ دقائق)</span>
-              </button>
-              <button
-                type="button"
-                className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
-                onClick={() => onNavigateTab('dyslexia-lab')}
-              >
-                <BookOpen size={14} className="text-blue-500" />
-                <span>مقياس مؤشرات التعثر القرائي</span>
-              </button>
-              <button
-                type="button"
-                className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
-                onClick={() => onNavigateTab('adaptive-reader')}
-              >
-                <Heart size={14} className="text-pink-500" />
-                <span>القارئ الميسّر</span>
-              </button>
+            {/* Trust Reassurance Chips */}
+            <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500 pt-3 border-t border-slate-200/60">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck aria-hidden="true" size={16} className="text-emerald-600" />
+                مسار مهارات متدرج مبني على الأدلة التربوية
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Heart aria-hidden="true" size={16} className="text-rose-500" />
+                توجيه صريح للمختص المعتمد دون ادعاء تشخيص سريري
+              </span>
             </div>
           </div>
 
-          <div className="baseera-promise-row" aria-label="مميزات بصيرة">
-            <span><ShieldCheck aria-hidden="true" size={18} /> مسار مهارات متدرج مبني على الأدلة التربوية</span>
-            <span><Heart aria-hidden="true" size={18} /> توجيه صريح للمختص المعتمد دون ادعاء تشخيص سريري</span>
+          {/* Left Column: Visual Child-Friendly Interactive Graphic */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 p-6 sm:p-8 text-white shadow-xl shadow-blue-500/15 overflow-hidden text-center space-y-4">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+              <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-amber-400/20 rounded-full blur-lg pointer-events-none" />
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs text-xs font-bold text-amber-200 mx-auto">
+                <Star size={14} className="fill-amber-300 text-amber-300" />
+                <span>خطوة جديدة كل يوم!</span>
+              </div>
+
+              <div className="w-20 h-20 mx-auto rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shadow-inner">
+                <BookOpen size={42} strokeWidth={2.2} className="text-white drop-shadow-sm" />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-black text-white">أبطال القراءة العربية</h3>
+                <p className="text-xs text-blue-100 font-medium mt-1">
+                  ٥ دقائق يومياً تصنع فارقاً حقيقياً في ثقة طفلك
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('sprint')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Zap size={16} className="fill-slate-950" />
+                  <span>تدريب اليوم السريع (٥ دقائق)</span>
+                </button>
+              </div>
+            </div>
           </div>
+
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 2: FOUR CLEAR LEARNING STATIONS (Vibrant, Tactile, No Clutter)
+          ========================================================================= */}
+      <section className="space-y-6" aria-labelledby="baseera-activities-title">
+        <div className="text-center sm:text-right space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+            <Gamepad2 size={15} />
+            <span>مساحات التعلّم</span>
+          </div>
+          <h2 id="baseera-activities-title" className="text-2xl sm:text-3xl font-black text-slate-900">
+            ماذا نجرّب اليوم؟
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            أربع مساحات للممارسة والتعلّم، اختر منها ما يناسب هدفك.
+          </p>
         </div>
 
-        <div className="baseera-hero-art" aria-hidden="true">
-          <span className="baseera-art-star baseera-art-star-one"><Star size={25} fill="currentColor" /></span>
-          <span className="baseera-art-star baseera-art-star-two"><Sparkles size={28} /></span>
-          <span className="baseera-art-dot baseera-art-dot-one" />
-          <span className="baseera-art-dot baseera-art-dot-two" />
-          <div className="baseera-art-note baseera-art-note-top">خطوة جديدة كل يوم!</div>
-          <div className="baseera-art-book">
-            <BookOpen size={88} strokeWidth={1.7} />
-            <span className="baseera-art-book-line" />
-            <span className="baseera-art-book-line short" />
-            <span className="baseera-art-book-line" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* Station 1: Diagnostic / Cognitive Lab */}
+          <button
+            type="button"
+            onClick={() => onNavigateTab('cognitive-lab')}
+            className="group rounded-3xl p-6 bg-white border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between text-right cursor-pointer"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Brain size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">استكشاف مهارات القراءة (مؤشرات التعثر القرائي)</h3>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                أنشطة قصيرة للتسمية وقراءة كلمات تدريبية والوعي بالأصوات؛ نتائجها وصفية وليست تشخيصًا.
+              </p>
+            </div>
+            <div className="pt-5 flex items-center gap-1.5 text-blue-600 font-black text-xs group-hover:translate-x-[-4px] transition-transform">
+              <span>استكشف المهارات</span>
+              <ChevronLeft size={16} />
+            </div>
+          </button>
+
+          {/* Station 2: Reading Lab */}
+          <button
+            type="button"
+            onClick={() => onNavigateTab('reading-lab')}
+            className="group rounded-3xl p-6 bg-white border border-slate-200 hover:border-sky-400 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between text-right cursor-pointer"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <BookOpen size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">رحلة القراءة والطلاقة</h3>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                اقرأ نصًا قصيرًا مشكولاً بصوتك أو صامتاً، ثم أجب عن أسئلة الفهم القرائي.
+              </p>
+            </div>
+            <div className="pt-5 flex items-center gap-1.5 text-sky-600 font-black text-xs group-hover:translate-x-[-4px] transition-transform">
+              <span>ابدأ رحلة القراءة</span>
+              <ChevronLeft size={16} />
+            </div>
+          </button>
+
+          {/* Station 3: Remediation Gym */}
+          <button
+            type="button"
+            onClick={() => onNavigateTab('remediation-gym')}
+            className="group rounded-3xl p-6 bg-white border border-slate-200 hover:border-emerald-400 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between text-right cursor-pointer"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Gamepad2 size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">صالة التدريب القرائي (تدريبي)</h3>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                تدرّب على الحروف والمقاطع وقراءة النصوص بالوتيرة التي تناسبك.
+              </p>
+            </div>
+            <div className="pt-5 flex items-center gap-1.5 text-emerald-600 font-black text-xs group-hover:translate-x-[-4px] transition-transform">
+              <span>ادخل صالة التدريب</span>
+              <ChevronLeft size={16} />
+            </div>
+          </button>
+
+          {/* Station 4: Accessible Reader */}
+          <button
+            type="button"
+            onClick={() => onNavigateTab('adaptive-reader')}
+            className="group rounded-3xl p-6 bg-white border border-slate-200 hover:border-pink-400 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between text-right cursor-pointer"
+          >
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-pink-50 text-pink-600 border border-pink-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Heart size={24} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900">القارئ الميسّر</h3>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                غيّر طريقة عرض الكلمات، مسافات الأسطر، واستمع إلى نطقها لمساعدة القارئ.
+              </p>
+            </div>
+            <div className="pt-5 flex items-center gap-1.5 text-pink-600 font-black text-xs group-hover:translate-x-[-4px] transition-transform">
+              <span>افتح القارئ الميسّر</span>
+              <ChevronLeft size={16} />
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 3: TACTILE INTERACTIVE READING SANDBOX (Crisp, Fun & Responsive)
+          ========================================================================= */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs space-y-6" aria-labelledby="baseera-reading-preview-title">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="space-y-1 text-right">
+            <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+              <Star size={13} className="fill-amber-500" />
+              <span>جرّب بنفسك</span>
+            </div>
+            <h2 id="baseera-reading-preview-title" className="text-xl sm:text-2xl font-black text-slate-900">
+              محاكاة جلسة القراءة التفاعلية
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+              انقر على أي كلمة لتسمع نطقها الصحيح فورياً.
+            </p>
           </div>
-          <div className="baseera-art-note baseera-art-note-bottom">
-            <Trophy aria-hidden="true" size={22} />
-            <span>أبطال القراءة العربية</span>
+
+          <button
+            type="button"
+            className="self-start sm:self-center px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+            onClick={() => setAutoPreview((v) => !v)}
+            aria-pressed={autoPreview}
+          >
+            {autoPreview ? <Pause size={15} /> : <Play size={15} />}
+            <span>{autoPreview ? 'إيقاف الحركة التلقائية' : 'تشغيل الحركة التلقائية'}</span>
+          </button>
+        </div>
+
+        {/* Word Chips Row */}
+        <div className="rounded-2xl bg-slate-50/70 border border-slate-200 p-6 sm:p-8 text-center space-y-6">
+          <div className="flex flex-wrap justify-center items-center gap-2.5 sm:gap-3.5 text-2xl sm:text-3xl font-black text-slate-800" dir="rtl">
+            {SAMPLE_WORDS.map((item, index) => {
+              const isActive = index === activeWordIndex;
+              return (
+                <button
+                  key={item.text}
+                  type="button"
+                  onClick={() => {
+                    setAutoPreview(false);
+                    setActiveWordIndex(index);
+                    speakArabicWord(item.text);
+                  }}
+                  className={`px-4 py-2 rounded-2xl border-2 transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
+                      : 'bg-white text-slate-800 border-slate-200 hover:border-blue-300 hover:bg-blue-50/40'
+                  }`}
+                  aria-pressed={isActive}
+                  aria-label={'اختر كلمة ' + item.text}
+                >
+                  {item.text}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Word Support Callout */}
+          <div className="max-w-md mx-auto rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex items-center justify-between gap-4 text-right">
+            <div>
+              <span className="text-[11px] font-black text-blue-600 block">الكلمة المحددة:</span>
+              <span className="text-xl font-black text-slate-900 ml-2">{selectedWord.text}</span>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">{selectedWord.hint}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => speakArabicWord(selectedWord.text)}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+            >
+              <Volume2 size={16} />
+              <span>استمع</span>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* MODAL: ONBOARDING FOR NEW LEARNER */}
+      {/* =========================================================================
+          SECTION 4: 3-STEP CLEAR PEDAGOGICAL JOURNEY (Eliminated Bureaucracy)
+          ========================================================================= */}
+      <section className="space-y-6" aria-labelledby="baseera-steps-title">
+        <div className="text-center sm:text-right space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+            <Lightbulb size={15} />
+            <span>رحلة الدعم المتدرج</span>
+          </div>
+          <h2 id="baseera-steps-title" className="text-2xl sm:text-3xl font-black text-slate-900">
+            رحلتك في أربع خطوات واضحة
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
+            <span className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 font-black text-sm flex items-center justify-center">١</span>
+            <h3 className="text-base font-black text-slate-900">رصد استطلاعي مبكر</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              رصد مؤشرات التعثر في الوعي الصوتي وفك الكلمات والطلاقة دون إجهاد للطفل، استناداً إلى أدلة علمية.
+            </p>
+          </div>
+
+          <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
+            <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 font-black text-sm flex items-center justify-center">٢</span>
+            <h3 className="text-base font-black text-slate-900">مسار استدراك مخصص</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              تحديد المهارات المستهدفة بالتقوية وفق منهجية تراكمية متدرجة من تمييز الحرف والمقطع إلى قراءة النص.
+            </p>
+          </div>
+
+          <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
+            <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 font-black text-sm flex items-center justify-center">٣</span>
+            <h3 className="text-base font-black text-slate-900">تدريب يومي ممتع</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              جلسات تفاعلية قصيرة (٥–١٠ دقائق) تركز على مخارج الأصوات، التمييز البصري، وقراءة النصوص المشكولة.
+            </p>
+          </div>
+
+          <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
+            <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-900 font-black text-sm flex items-center justify-center">٤</span>
+            <h3 className="text-base font-black text-slate-900">متابعة موضوعية وتوجيه للأهل</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              لوحة متابعة تكوينية تُظهر التقدم والتيسيرات الصفية، مع توجيه صريح للمختصين المعتمدين عند الحاجة.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 5: COMMERCIAL MODEL & PRICING PLANS (Tidy, Modern & Legible)
+          ========================================================================= */}
+      <section className="space-y-6" aria-labelledby="baseera-pricing-title">
+        <div className="text-center sm:text-right space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+            <Sparkles size={14} className="text-amber-600" />
+            <span>مرحلة التحقق الاسترشادي (Pilot Phase) · لا توجد مدفوعات حالياً</span>
+          </div>
+          <h2 id="baseera-pricing-title" className="text-2xl sm:text-3xl font-black text-slate-900">
+            خطط الاشتراكات للمدارس والأسر
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            الأسعار المعروضة أدناه هي خطط استرشادية مقترحة قيد الدراسة والتجريب؛ المنصة متاحة للتجربة الحرة دون أي التزام مالي.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Family (B2C) */}
+          <div className="rounded-3xl p-6 sm:p-8 bg-white border border-slate-200 shadow-xs flex flex-col justify-between text-right space-y-6">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
+                <Heart size={14} />
+                <span>للأسر والمنازل (B2C)</span>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900">باقة رفيق القراءة</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 font-mono">49</span>
+                <span className="text-sm font-bold text-slate-500">ر.ق / شهرياً</span>
+                <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  متاحة مجاناً خلال الإطلاق التجريبي
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                ممارسة منزلية يومية مبهجة تبني ثقة طفلك في القراءة خطوة بخطوة مع تقرير دوري لولي الأمر.
+              </p>
+
+              <ul className="space-y-2.5 text-xs text-slate-700 font-medium pt-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
+                  <span>تدريب سبرنت اليومي (٥–١٠ دقائق) ومكتبة الألعاب القرائية</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
+                  <span>القارئ الميسّر بألوان وأسطر مكيفة لدعم تعثر القراءة</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
+                  <span>تقرير دوري لولي الأمر مع رصد الفجوات ومؤشرات التقدم</span>
+                </li>
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-3 px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => setShowOnboardingModal(true)}
+            >
+              <span>ابدأ تجربة المتعلّم الفورية (مفتوحة ومجانية)</span>
+              <ArrowLeft size={16} />
+            </button>
+          </div>
+
+          {/* Card 2: Schools (B2B) */}
+          <div className="rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-emerald-50/50 via-white to-white border-2 border-emerald-500 shadow-md flex flex-col justify-between text-right space-y-6 relative">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                <Building2 size={14} />
+                <span>للمدارس ومراكز التعلم (B2B)</span>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900">باقة المؤسسات والمدارس</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-black text-emerald-900">ترخيص تجريبي للمؤسسات</span>
+                <span className="text-xs font-bold text-slate-500">/ مقاعد مخصصة لأفواج الطلبة</span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                حل متكامل لأقسام الدعم التعليمي الإضافي وغرف مصادر التعلم لمتابعة أفواج الطلبة وتوليد تقارير تربوية تفصيلية.
+              </p>
+
+              <ul className="space-y-2.5 text-xs text-slate-700 font-medium pt-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                  <span>لوحة تحكم المعلم الشاملة لإدارة الفصول ورصد التقدم التكويني</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                  <span>تقارير تربوية مساندة لخطط التعلم الفردية (IEP) ومراجعة الأخصائي</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                  <span>صلاحيات متعددة المستويات (RBAC) وحوكمة بيانات الأطفال</span>
+                </li>
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-3.5 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => {
+                setShowSchoolDemoModal(true);
+                setDemoSubmitSuccess(false);
+                setDemoSubmitError('');
+              }}
+            >
+              <span>طلب تجربة مدرسة / شريك تجريبي (Pilot)</span>
+              <Building2 size={16} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          SECTION 6: GOVERNANCE & PROGRESS REASSURANCE
+          ========================================================================= */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-6 text-right" aria-labelledby="baseera-family-title">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center shrink-0">
+            <GraduationCap size={28} />
+          </div>
+          <div className="space-y-1">
+            <h2 id="baseera-family-title" className="text-lg font-black text-slate-900">
+              ملخص التعلّم والمتابعة التكوينية
+            </h2>
+            <p className="text-xs text-slate-500 font-medium max-w-xl leading-relaxed">
+              تقيس بصيرة الأداء داخل أنشطة قرائية محددة، ولا تدّعي تشخيص عسر القراءة (الديسلكسيا). يجري تطوير المنصة والتحقق من مؤشرات أدائها كأداة تدريبية استرشادية لمساعدة المعلم والأسرة.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            className="px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors"
+            onClick={() => onSelectStudentReport(activeStudent.id)}
+          >
+            <span>عرض ملخص التعلّم</span>
+            <ArrowLeft size={16} />
+          </button>
+          {demoStudent && (
+            <button
+              type="button"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              onClick={() => onSelectExistingDemoJourney(demoStudent.id, 'dashboard')}
+            >
+              استعراض نموذج توضيحي مكتمل
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* Kind Encouragement Note */}
+      <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3 text-emerald-900 text-xs font-bold text-right">
+        <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+        <p>لا توجد إجابات تجعلك أقلّ قدرة من غيرك؛ كل محاولة فرصة جديدة لتثبيت مهارة القراءة.</p>
+      </div>
+
+      {/* =========================================================================
+          MODAL: ONBOARDING FOR NEW LEARNER (Strict Qatar Privacy & Parental Consent)
+          ========================================================================= */}
       {showOnboardingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
           <div
@@ -345,7 +698,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center">
                   <UserPlus size={22} />
                 </div>
                 <div>
@@ -376,7 +729,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   value={newLearnerName}
                   onChange={(e) => setNewLearnerName(e.target.value)}
                   placeholder="مثال: البطل الصغير أو سارة"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   required
                 />
                 <span className="text-[11px] text-slate-500 mt-1 block">
@@ -394,7 +747,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                     value={guardianName}
                     onChange={(e) => setGuardianName(e.target.value)}
                     placeholder="مثال: عبد الله أو نورة (اختياري)"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-teal-500"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -404,7 +757,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <select
                     value={guardianRelationship}
                     onChange={(e) => setGuardianRelationship(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs bg-white focus:ring-2 focus:ring-teal-500"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-800 text-xs bg-white focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="ولي أمر">ولي أمر (الأب / الأم)</option>
                     <option value="وصي قانوني">وصي قانوني</option>
@@ -412,6 +765,21 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   </select>
                 </div>
               </div>
+
+              {guardianRelationship === 'معلم / أخصائي مدرسي' && (
+                <div>
+                  <label className="block text-xs font-black text-slate-700 mb-1.5">
+                    مرجع التفويض المدرسي الرسمي: *
+                  </label>
+                  <input
+                    type="text"
+                    value={institutionalRef}
+                    onChange={(e) => setInstitutionalRef(e.target.value)}
+                    placeholder="مثال: كتاب تفويض إدارة مدرسة قطر رقم 2026/41"
+                    className="w-full px-3.5 py-2 rounded-xl border border-blue-300 bg-blue-50/40 font-bold text-slate-800 text-xs focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-black text-slate-700 mb-1.5">
@@ -425,7 +793,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                       onClick={() => setNewLearnerGrade(grade)}
                       className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${
                         newLearnerGrade === grade
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
@@ -435,9 +803,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </div>
               </div>
 
-              {/* Explicit Separated Consent Section */}
+              {/* Consent Checkboxes */}
               <div className="space-y-2.5 pt-1">
-                {/* 1. Mandatory App Usage Consent */}
                 <div className={`p-3.5 rounded-2xl border text-xs transition-colors ${
                   guardianConsentChecked
                     ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
@@ -463,14 +830,13 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   </label>
                 </div>
 
-                {/* 2. Optional Separate Audio Processing Consent */}
                 <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-800">
                   <label className="flex items-start gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={guardianAudioConsentChecked}
                       onChange={(e) => setGuardianAudioConsentChecked(e.target.checked)}
-                      className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                      className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <span className="leading-relaxed">
                       <span className="text-slate-600 font-black ml-1">[اختياري منفصل]</span>
@@ -486,9 +852,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 type="button"
                 onClick={handleLaunchCleanLearner}
                 disabled={!guardianConsentChecked || newLearnerName.trim().length < 2}
-                className="flex-1 baseera-primary-action justify-center py-3 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                انطلق في تدريب اليوم (0 XP)
+                <span>انطلق في تدريب اليوم (0 XP)</span>
                 <ArrowLeft size={18} />
               </button>
               <button
@@ -503,260 +869,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         </div>
       )}
 
-      {/* SECTION 2: INTERACTIVE READING PREVIEW */}
-      <section className="baseera-preview-section" aria-labelledby="baseera-reading-preview-title">
-        <div className="baseera-section-heading">
-          <div>
-            <span className="baseera-section-kicker">جرّب بنفسك</span>
-            <h2 id="baseera-reading-preview-title">محاكاة جلسة القراءة التفاعلية</h2>
-            <p>انقر على كلمة لتحديدها أو الاستماع إلى نطقها.</p>
-          </div>
-          <button
-            type="button"
-            className="baseera-preview-toggle"
-            onClick={() => setAutoPreview((value) => !value)}
-            aria-pressed={autoPreview}
-          >
-            {autoPreview
-              ? <Pause aria-hidden="true" size={17} />
-              : <Play aria-hidden="true" size={17} />}
-            {autoPreview ? 'إيقاف الحركة' : 'تشغيل الحركة'}
-          </button>
-        </div>
-
-        <div className="baseera-reading-preview">
-          <div className="baseera-story-topline">
-            <span className="baseera-story-label"><BookOpen aria-hidden="true" size={17} /> قصة قصيرة</span>
-            <span className="baseera-story-grade">مثال تفاعلي · الصف {activeStudent.gradeLevel}</span>
-          </div>
-          <p className="baseera-story-sentence" dir="rtl" lang="ar">
-            {SAMPLE_WORDS.map((item, index) => (
-              <button
-                key={item.text}
-                type="button"
-                className={'baseera-story-word' + (index === activeWordIndex ? ' is-active' : '')}
-                onClick={() => {
-                  setAutoPreview(false);
-                  setActiveWordIndex(index);
-                  speakArabicWord(item.text);
-                }}
-                aria-pressed={index === activeWordIndex}
-                aria-label={'اختر كلمة ' + item.text}
-              >
-                {item.text}
-              </button>
-            ))}
-          </p>
-          <div className="baseera-word-support">
-            <div className="baseera-word-explanation">
-              <span className="baseera-word-label">الكلمة التي اخترتها</span>
-              <strong>{selectedWord.text}</strong>
-              <p>{selectedWord.hint}</p>
-            </div>
-            <button
-              type="button"
-              className="baseera-listen-action"
-              onClick={() => speakArabicWord(selectedWord.text)}
-            >
-              <Volume2 aria-hidden="true" size={19} />
-              استمع إلى الكلمة
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3: CORE LEARNING DOMAINS */}
-      <section className="baseera-activities-section" aria-labelledby="baseera-activities-title">
-        <div className="baseera-section-heading">
-          <div>
-            <span className="baseera-section-kicker">مساحات التعلّم</span>
-            <h2 id="baseera-activities-title">ماذا نجرّب اليوم؟</h2>
-            <p>أربع مساحات للممارسة والتعلّم، اختر منها ما يناسب هدفك.</p>
-          </div>
-        </div>
-        <div className="baseera-activity-grid">
-          {ACTIVITIES.map((activity) => {
-            const Icon = activity.icon;
-            return (
-              <button
-                key={activity.id}
-                type="button"
-                className={'baseera-activity-card baseera-tone-' + activity.tone}
-                onClick={() => onNavigateTab(activity.id)}
-              >
-                <span className="baseera-activity-icon"><Icon aria-hidden="true" size={29} /></span>
-                <span className="baseera-activity-title">{activity.title}</span>
-                <span className="baseera-activity-description">{activity.description}</span>
-                <span className="baseera-activity-link">
-                  {activity.action}
-                  <ChevronLeft aria-hidden="true" size={18} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* SECTION 4: THE 4-STEP PEDAGOGICAL JOURNEY */}
-      <section className="baseera-steps-section" aria-labelledby="baseera-steps-title">
-        <div className="baseera-section-heading">
-          <div>
-            <span className="baseera-section-kicker">رحلة الدعم المتدرج</span>
-            <h2 id="baseera-steps-title">رحلتك في أربع خطوات واضحة</h2>
-          </div>
-        </div>
-        <div className="baseera-steps-grid">
-          <article className="baseera-step-card">
-            <span className="baseera-step-number">١</span>
-            <div className="baseera-step-icon"><Lightbulb aria-hidden="true" size={25} /></div>
-            <h3>رصد استطلاعي مبكر (١٠ دقائق)</h3>
-            <p>رصد مؤشرات التعثر في الوعي الصوتي وفك الكلمات والطلاقة دون إجهاد للطفل، استناداً إلى أدلة علمية.</p>
-          </article>
-          <article className="baseera-step-card">
-            <span className="baseera-step-number">٢</span>
-            <div className="baseera-step-icon"><Brain aria-hidden="true" size={25} /></div>
-            <h3>مسار استدراك مخصص (٣ مهارات)</h3>
-            <p>تحديد المهارات المستهدفة بالتقوية وفق منهجية تراكمية متدرجة من تمييز الحرف والمقطع إلى قراءة النص.</p>
-          </article>
-          <article className="baseera-step-card">
-            <span className="baseera-step-number">٣</span>
-            <div className="baseera-step-icon"><Star aria-hidden="true" size={25} /></div>
-            <h3>تدريب يومي ممتع (٥–١٠ دقائق)</h3>
-            <p>جلسات تفاعلية قصيرة تركز على مخارج الأصوات، التمييز البصري، وقراءة النصوص المشكولة وتثبيتها.</p>
-          </article>
-          <article className="baseera-step-card">
-            <span className="baseera-step-number">٤</span>
-            <div className="baseera-step-icon"><Trophy aria-hidden="true" size={25} /></div>
-            <h3>متابعة موضوعية وتوجيه للأهل</h3>
-            <p>لوحة متابعة تكوينية تُظهر التقدم والتيسيرات الصفية، مع توجيه صريح للمختصين المعتمدين عند الحاجة.</p>
-          </article>
-        </div>
-      </section>
-
-      {/* SECTION 5: COMMERCIAL MODEL & PRICING PLANS */}
-      <section className="baseera-pricing-section" aria-labelledby="baseera-pricing-title">
-        <div className="baseera-section-heading">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 mb-2">
-              <Sparkles size={14} className="text-amber-600" />
-              <span>مرحلة التحقق الاسترشادي (Pilot Phase) · لا توجد مدفوعات حالياً</span>
-            </div>
-            <h2 id="baseera-pricing-title">خطط الاشتراكات للمدارس والأسر</h2>
-            <p>
-              الأسعار المعروضة أدناه هي خطط استرشادية مقترحة قيد الدراسة والتجريب مع المدارس والأسر الشريكة؛ المنصة متاحة للتجربة الحرة دون أي التزام مالي أو بطاقة بنكية.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-          {/* Tier 1: Family B2C */}
-          <div className="p-6 sm:p-8 rounded-3xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between text-right relative hover:shadow-md transition-shadow">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-800 border border-blue-200 mb-3">
-                <Heart size={14} />
-                <span>للأسر والمنازل (B2C)</span>
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-2">باقة رفيق القراءة</h3>
-              <div className="flex items-baseline gap-1 my-3">
-                <span className="text-3xl font-black text-slate-900 font-mono">49</span>
-                <span className="text-sm font-bold text-slate-500">ر.ق / شهرياً</span>
-                <span className="text-xs text-slate-400 mr-2">(قيمة استرشادية مقترحة - متاحة مجاناً خلال الإطلاق التجريبي)</span>
-              </div>
-              <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-                ممارسة منزلية يومية مبهجة تبني ثقة طفلك في القراءة خطوة بخطوة مع تقرير دوري لولي الأمر.
-              </p>
-
-              <ul className="space-y-3 text-xs text-slate-700 font-medium mb-8">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>تدريب سبرنت اليومي (٥–١٠ دقائق) ومكتبة الألعاب القرائية</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>القارئ الميسّر بألوان وأسطر مكيفة لدعم تعثر القراءة</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>تقرير دوري لولي الأمر مع رصد الفجوات ومؤشرات التقدم</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
-                  <span>حوكمة خصوصية عالية وضمانات لحماية صوت الطفل بالاسترشاد بالقوانين الوطنية</span>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <button
-                type="button"
-                className="baseera-primary-action w-full justify-center py-3.5 text-sm cursor-pointer"
-                onClick={() => setShowOnboardingModal(true)}
-              >
-                ابدأ تجربة المتعلّم الفورية (مفتوحة ومجانية)
-                <ArrowLeft size={17} />
-              </button>
-              <p className="text-[11px] text-center text-slate-500 mt-2 font-medium">
-                متاح مجاناً لكافة الأسر خلال مرحلة التحقق التجريبي دون الحاجة لبطاقة ائتمانية.
-              </p>
-            </div>
-          </div>
-
-          {/* Tier 2: School Enterprise B2B */}
-          <div className="p-6 sm:p-8 rounded-3xl border-2 border-emerald-500 bg-gradient-to-b from-emerald-50/40 via-white to-white shadow-md flex flex-col justify-between text-right relative hover:shadow-lg transition-shadow">
-            <div className="absolute -top-3.5 left-6 bg-emerald-600 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-xs">
-              برنامج الشركاء التجريبي
-            </div>
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 mb-3">
-                <Building2 size={14} />
-                <span>للمدارس ومراكز التعلم (B2B)</span>
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 mb-2">باقة المؤسسات والمدارس</h3>
-              <div className="flex items-baseline gap-1 my-3">
-                <span className="text-2xl font-black text-emerald-900 font-sans">ترخيص تجريبي للمؤسسات</span>
-                <span className="text-xs font-bold text-slate-600">/ مقاعد مخصصة لأفواج الطلبة</span>
-              </div>
-              <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-                حل متكامل لأقسام الدعم التعليمي الإضافي وغرف مصادر التعلم لمتابعة أفواج الطلبة وتوليد تقارير تربوية تفصيلية.
-              </p>
-
-              <ul className="space-y-3 text-xs text-slate-700 font-medium mb-8">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>لوحة تحكم المعلم الشاملة لإدارة الفصول ورصد التقدم التكويني</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>تقارير تربوية مساندة لخطط التعلم الفردية (IEP) ومراجعة الأخصائي</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>صلاحيات متعددة المستويات (RBAC) وتشفير محلي صارم AES-256</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                  <span>جلسات تعريف وتدريب لمعلمي اللغة العربية وأخصائيي الدعم</span>
-                </li>
-              </ul>
-            </div>
-
-            <button
-              type="button"
-              className="w-full py-3.5 px-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
-              onClick={() => {
-                setShowSchoolDemoModal(true);
-                setDemoSubmitSuccess(false);
-                setDemoSubmitError('');
-              }}
-            >
-              طلب تجربة مدرسة / شريك تجريبي (Pilot)
-              <Building2 size={17} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* MODAL: REAL SCHOOL DEMO REQUEST PIPELINE */}
+      {/* =========================================================================
+          MODAL: REAL SCHOOL DEMO REQUEST PIPELINE
+          ========================================================================= */}
       {showSchoolDemoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
           <div
@@ -796,7 +911,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 <h4 className="text-lg font-black text-slate-900">
                   تم استلام طلبكم بنجاح!
                 </h4>
-                <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto">
+                <p className="text-sm text-slate-600 leading-relaxed max-w-sm mx-auto font-medium">
                   شكراً لاهتمامكم بالانضمام للبرنامج التجريبي لمنصة بصيرة. سيتواصل فريق حلول المدارس معكم عبر البريد الرسمي خلال ٢٤ إلى ٤٨ ساعة عمل لترتيب جلسة تعريفية وتفعيل حساب تجريبي.
                 </p>
                 <button
@@ -910,7 +1025,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmittingDemo}
-                    className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-colors"
                   >
                     {isSubmittingDemo ? 'جارٍ إرسال الطلب...' : 'إرسال طلب التجربة'}
                     <Building2 size={16} />
@@ -928,41 +1043,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* SECTION 6: GOVERNANCE & REPORT ACCESS */}
-      <section className="baseera-family-panel" aria-labelledby="baseera-family-title">
-        <div className="baseera-family-icon"><GraduationCap aria-hidden="true" size={30} /></div>
-        <div className="baseera-family-copy">
-          <h2 id="baseera-family-title">ملخص التعلّم والمتابعة التكوينية</h2>
-          <p>
-            تقيس بصيرة الأداء داخل أنشطة قرائية محددة، ولا تدّعي تشخيص عسر القراءة (الديسلكسيا). يجري تطوير المنصة والتحقق من مؤشرات أدائها؛ ولا ينبغي اعتبار النتائج الحالية معايير سكانية أو دليلاً سريرياً، بل مؤشرات استرشادية لمساعدة المعلم والأسرة.
-          </p>
-        </div>
-        <div className="baseera-family-actions">
-          <button
-            type="button"
-            className="baseera-secondary-action"
-            onClick={() => onSelectStudentReport(activeStudent.id)}
-          >
-            عرض ملخص التعلّم
-            <ArrowLeft aria-hidden="true" size={18} />
-          </button>
-          {demoStudent && (
-            <button
-              type="button"
-              className="baseera-text-action font-bold"
-              onClick={() => onSelectExistingDemoJourney(demoStudent.id, 'dashboard')}
-            >
-              استعراض نموذج توضيحي مكتمل
-            </button>
-          )}
-        </div>
-      </section>
-
-      <div className="baseera-kind-note">
-        <CheckCircle2 aria-hidden="true" size={19} />
-        <p>لا توجد إجابات تجعلك أقلّ قدرة من غيرك؛ كل محاولة فرصة جديدة لتثبيت مهارة القراءة.</p>
-      </div>
     </div>
   );
 };

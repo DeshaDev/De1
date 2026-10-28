@@ -852,9 +852,9 @@ export default function App() {
 
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
-              { id: 'home', label: 'ابدأ', icon: Home },
-              { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
-              { id: 'trophies', label: 'تقدّمي', icon: Trophy },
+              { id: 'home', label: 'الرئيسية', icon: Home },
+              { id: 'remediation-gym', label: 'صالة التدريب', icon: Flame },
+              { id: 'trophies', label: 'أوسمتي', icon: Trophy },
               { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
             ] as const).map((item) => {
               const Icon = item.icon;
@@ -928,10 +928,10 @@ export default function App() {
 
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([
-          { id: 'home', label: 'ابدأ', icon: Home },
-          { id: 'remediation-gym', label: 'تدريبي', icon: Flame },
-          { id: 'trophies', label: 'تقدّمي', icon: Trophy },
-          { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
+          { id: 'home', label: 'الرئيسية', icon: Home },
+              { id: 'remediation-gym', label: 'صالة التدريب', icon: Flame },
+              { id: 'trophies', label: 'أوسمتي', icon: Trophy },
+              { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
