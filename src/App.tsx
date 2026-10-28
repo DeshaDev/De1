@@ -1464,7 +1464,7 @@ export default function App() {
                   <div className="baseera-support-item">
                     <span className="baseera-support-icon yellow"><Sparkles aria-hidden="true" size={21} /></span>
                     <div>
-                      <strong>سبرنت الطلاقة اليومي</strong>
+                      <strong>تحدي الدقائق الخمس</strong>
                       <p>تحدي الدقائق الخمس لتثبيت مخارج الحروف وقراءة الكلمات بالتشكيل التام.</p>
                     </div>
                   </div>
@@ -1629,7 +1629,7 @@ export default function App() {
                         ٠٤. توصيات المسار القرائي وفك الكلمات
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        يُوصى بالتركيز على جلسات سبرنت ٥ دقائق اليومية، وربط الصوامت بالحركات القصيرة، وقراءة القصص المشكولة تدريجياً لتعزيز الثقة وطلاقة النطق.
+                        يُوصى بالتركيز على تحدي الدقائق الخمس اليومي، وربط الصوامت بالحركات القصيرة، وقراءة القصص المشكولة تدريجياً لتعزيز الثقة وطلاقة النطق.
                       </p>
                     </div>
                   </div>

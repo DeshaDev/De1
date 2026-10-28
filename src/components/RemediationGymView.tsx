@@ -264,7 +264,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
     if (option.isCorrect) {
       speakText(`أحسنت! كلمة ${currentPhonics.spokenWord}`);
-      triggerCelebration('رائع! إجابة صحيحة (+25 نقطة)', 25);
+      triggerCelebration('رائع! إجابة صحيحة (+٢٥ نقطة)', 25);
     } else {
       speakText(option.explanation);
     }
@@ -290,7 +290,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         setSyllableComplete(true);
         setTimeout(() => {
           speakText(currentSyllable.targetWord);
-          triggerCelebration(`ممتاز! ركّبت كلمة «${currentSyllable.targetWord}» (+30 نقطة)`, 30);
+          triggerCelebration(`ممتاز! ركّبت كلمة «${currentSyllable.targetWord}» (+٣٠ نقطة)`, 30);
         }, 400);
       }
     }
@@ -394,7 +394,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               صالة تدريب وبطولات الأبطال
             </h1>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,.8)' }}>
-              اصطد الحروف وركّب المقاطع الصوتية لتجمع كؤوس ونقاط التميز!
+              اصطد الحروف وركّب المقاطع لتجمع الكؤوس ونقاط التميّز!
             </p>
           </div>
         </div>
@@ -466,7 +466,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock, activeClass: 'clay-btn-emerald' },
             { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces, activeClass: 'clay-btn-purple' },
             { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook, activeClass: 'clay-btn-amber' },
-            { id: 'sprint', label: 'سبرنت ٥ دقائق', icon: IconLightningBolt, activeClass: 'duo-btn-orange' },
+            { id: 'sprint', label: 'تحدي الدقائق الخمس', icon: IconLightningBolt, activeClass: 'duo-btn-orange' },
             { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook, activeClass: 'clay-btn-emerald' },
           ].map((st) => {
             const isActive = activeStation === st.id;
@@ -502,7 +502,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             <Trophy className="w-5 h-5 text-amber-300 fill-current" />
             <span>{celebrationMessage}</span>
           </div>
-          <span className="text-emerald-100 text-xs font-bold">كفو يا بطل!</span>
+          <span className="text-emerald-100 text-xs font-bold">أحسنت يا بطل!</span>
         </div>
       )}
 

@@ -128,7 +128,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   const handleChoosePhoneme = async (phonemeSound: string) => {
     setSelectedPhoneme(phonemeSound);
     setWizardStep('generating');
-    speakText('جاري كتابة قصة جميلة مشكولة خصيصاً لك يا بطل');
+    speakText('جارٍ كتابة قصة مشكولة لك يا بطل');
 
     try {
       const generated = await generateDecodableStory({
@@ -158,7 +158,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
     setSelectedQuizAnswer(optionIdx);
     const isCorrect = optionIdx === story.questions[0]?.answerIndex;
     if (isCorrect) {
-      triggerCelebration(`أحسنت يا ${activeStudent.name}! إجابة بطل خارق (+50 نقطة)`, 50);
+      triggerCelebration(`أحسنت يا ${activeStudent.name}! إجابة بطل خارق (+٥٠ نقطة)`, 50);
       speakText('ممتاز! إجابة صحيحة وفهم رائع للقصة!');
       setTimeout(() => {
         setWizardStep('celebrate');
@@ -219,7 +219,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               <IconLettersBlock size={38} />
             </div>
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
-              ما هو الصوت الذي سنتحداه في القصة؟
+              أيّ صوت سنتدرّب عليه في القصة؟
             </h2>
             <p className="font-child text-sm font-bold text-slate-600">
               اختر تحدي الحروف لتبدأ كتابة القصة فوراً
@@ -268,10 +268,10 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             <IconMagicWand size={44} />
           </div>
           <h3 className="font-child text-2xl font-black text-slate-900">
-            جاري تأليف قصتك المشكولة الآن...
+            جارٍ تأليف قصتك المشكولة…
           </h3>
           <p className="font-child text-sm text-slate-600 font-bold">
-            تجهيز الحركات، التنوين، والمغامرة الخاصة بك يا بطل!
+            نضع الحركات والتنوين ونجهّز مغامرتك يا بطل!
           </p>
         </div>
       )}

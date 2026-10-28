@@ -27,8 +27,8 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       id: 'sprint',
       title: 'وسام البرق السريع',
       description: isDemo || hasReading
-        ? 'أكملت تدريب سبرنت الـ ٥ دقائق المكثف بنجاح!'
-        : 'أكمل تدريب سبرنت اليوم (٥ دقائق) لفتح هذا الوسام!',
+        ? 'أكملت تدريب الدقائق الخمس بنجاح!'
+        : 'أكمل تحدي الدقائق الخمس لتفتح هذا الوسام!',
       icon: 'lightning',
       color: 'from-amber-400 to-orange-500',
       earned: isDemo || hasReading,
@@ -39,7 +39,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       title: 'وسام حكواتي بصيرة',
       description: isDemo || hasReading
         ? 'قرأت قصة مشكولة كاملة وسجلت صوتك الرائع!'
-        : 'اقرأ قصة كاملة بصوتك في فحص القراءة لفتح هذا الوسام!',
+        : 'اقرأ قصة كاملة بصوتك في فحص القراءة لتفتح هذا الوسام!',
       icon: 'book',
       color: 'from-emerald-400 to-teal-500',
       earned: isDemo || hasReading,
@@ -50,7 +50,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       title: 'صائد الحروف الذهبي',
       description: isDemo || (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent >= 70)
         ? 'أتقنت التمييز بين الحروف المتشابهة ومخارج الأصوات بدقة.'
-        : 'أكمل تحدي الوعي الصوتي بدقة ٧٠٪ فأكثر لفتح هذا الوسام!',
+        : 'أكمل تحدي الوعي الصوتي بدقة ٧٠٪ فأكثر لتفتح هذا الوسام!',
       icon: 'letters',
       color: 'from-blue-400 to-indigo-500',
       earned: Boolean(isDemo || (activeStudent.cognitiveResults?.phonemicAwarenessScorePercent && activeStudent.cognitiveResults.phonemicAwarenessScorePercent >= 70)),
@@ -61,7 +61,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       title: 'مهندس المقاطع والكلمات',
       description: isDemo || (activeStudent.cognitiveResults?.pseudoWordScorePercent && activeStudent.cognitiveResults.pseudoWordScorePercent >= 60)
         ? 'ركّبت المقاطع الصوتية لتكوين الكلمات العربية بنجاح.'
-        : 'ركّب الكلمات في تدريب المقاطع بنجاح لفتح هذا الوسام!',
+        : 'ركّب الكلمات في تدريب المقاطع بنجاح لتفتح هذا الوسام!',
       icon: 'puzzle',
       color: 'from-purple-400 to-pink-500',
       earned: Boolean(isDemo || (activeStudent.cognitiveResults?.pseudoWordScorePercent && activeStudent.cognitiveResults.pseudoWordScorePercent >= 60)),
@@ -72,7 +72,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
       title: 'بطل الفهم والاستنتاج',
       description: isDemo || Boolean(activeStudent.comprehensionScore && activeStudent.comprehensionScore > 0)
         ? 'أجبت عن أسئلة فهم المقروء بذكاء واستخرجت الفكرة الرئيسية!'
-        : 'أكمل نصوص الفهم القرائي بنجاح لفتح هذا الوسام!',
+        : 'أكمل نصوص الفهم القرائي بنجاح لتفتح هذا الوسام!',
       icon: 'story',
       color: 'from-sky-400 to-cyan-500',
       earned: Boolean(isDemo || (activeStudent.comprehensionScore && activeStudent.comprehensionScore > 0)),
@@ -81,7 +81,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
     {
       id: 'master',
       title: 'وسام القارئ الخارق',
-      description: 'أكمل ٣ قصص إضافية هذا الأسبوع لفتح هذا الوسام الأسطوري!',
+      description: 'أكمل ٣ قصص إضافية هذا الأسبوع لتفتح هذا الوسام!',
       icon: 'trophy',
       color: 'from-slate-200 to-slate-300',
       earned: false,
@@ -97,7 +97,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
             <span>
-              <strong>نموذج توضيحي استعراضي:</strong> هذا الملف يعرض أوسمة ونقاطاً تجريبية لـ «{activeStudent.name}» (١٦٠ نقطة · ٥ من ٦ أوسمة) لأغراض التقييم المؤسسي.
+              <strong>نموذج توضيحي استعراضي:</strong> هذا الملف يعرض أوسمة ونقاطاً تجريبية للمتعلّم «{activeStudent.name}» (١٦٠ نقطة · ٥ من ٦ أوسمة) لأغراض التقييم المؤسسي.
             </span>
           </div>
           <button
@@ -225,7 +225,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
             جاهز لكسب وسام جديد اليوم؟
           </h3>
           <p className="font-child text-sm text-emerald-100 font-bold">
-            انطلق في تحدي سبرنت الـ ٥ دقائق أو اقرأ قصة جديدة لرفع مستواك!
+            ابدأ تحدي الدقائق الخمس، أو اقرأ قصة جديدة لترفع مستواك!
           </p>
         </div>
 
@@ -234,7 +234,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           onClick={() => onNavigateTab('sprint')}
           className="child-tactile-btn px-6 py-3 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 font-child font-black text-base shadow-md cursor-pointer whitespace-nowrap border-b-4 border-emerald-200 active:border-b-1 active:translate-y-1"
         >
-          <span>ابدأ سبرنت اليوم</span>
+          <span>ابدأ تحدي اليوم</span>
         </button>
       </div>
     </div>

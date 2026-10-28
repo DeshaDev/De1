@@ -423,10 +423,10 @@ function discriminationTask(random: () => number, level: Level, n: number): Choi
     audio: [
       { text: first, pauseAfterMs: 700 },
       { text: second, pauseAfterMs: 400 },
-      { text: 'نَفْسُ الصَّوْتِ، أَمْ مُخْتَلِفَانِ؟' },
+      { text: 'الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ؟' },
     ],
     options: [
-      { id: 'same', visual: { type: 'sameDifferent', value: 'same', label: 'نفس الصوت' } },
+      { id: 'same', visual: { type: 'sameDifferent', value: 'same', label: 'الصوت نفسه' } },
       { id: 'different', visual: { type: 'sameDifferent', value: 'different', label: 'صوتان مختلفان' } },
     ],
     correctId: same ? 'same' : 'different',
@@ -449,7 +449,7 @@ function letterSoundTask(random: () => number, level: Level, n: number): ChoiceI
   const sound = letter + SHORT_VOWEL[vowel];
   return {
     id: `tr-ls-${n}`,
-    promptAr: 'أيّ حرف يصدر هذا الصوت؟',
+    promptAr: 'أيّ حرف له هذا الصوت؟',
     audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound} ... ${sound}؟` }],
     options: shuffleWith([letter, ...distractors], random).map(glyph),
     correctId: letter,

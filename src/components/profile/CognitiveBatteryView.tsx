@@ -529,6 +529,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         syncEnabled={syncEnabled}
         onRecordUpdated={onRecordUpdated}
         student={activeStudent}
+        showBack={initialView !== 'training'}
       />
     );
   }

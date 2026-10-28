@@ -325,7 +325,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       }, 1000);
     } else if (timerSeconds === 0 && isTimerRunning) {
       setIsTimerRunning(false);
-      triggerCelebration('انتهى وقت السبرنت اليومي بنجاح! أحسنت الالتزام (+50 نقطة)', 50);
+      triggerCelebration('انتهى تحدي اليوم بنجاح! أحسنت الالتزام (+50 نقطة)', 50);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerSeconds]);
@@ -750,13 +750,13 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trophy className="w-5 h-5 text-amber-300 fill-current" />
-              <span>إتمام سبرنت اليوم وتسجيله على هذا الجهاز (+٥٠ نقطة)</span>
+              <span>إنهاء تحدي اليوم وحفظه على هذا الجهاز (+٥٠ نقطة)</span>
             </button>
           ) : (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
               <div className="flex items-center justify-center gap-2 text-emerald-900 font-black text-base">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>رائع! اكتمل سبرنت اليوم بنجاح مبهر</span>
+                <span>رائع! أكملت تحدي اليوم</span>
               </div>
               <p className="text-xs text-emerald-700">
                 حافظت على وتيرة التدريب اليومية. موعدنا غداً في 5 دقائق جديدة!

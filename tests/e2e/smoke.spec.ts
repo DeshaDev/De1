@@ -45,7 +45,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
 
   await page.getByRole('button', { name: 'صالة التدريب' }).first().click();
   await page.getByRole('button', { name: /ألعاب المهارات/ }).click();
-  await page.getByRole('button', { name: /سبرنت ٥ دقائق/ }).click();
+  await page.getByRole('button', { name: /تحدي الدقائق الخمس/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
   await expect(page.getByText(/سلسلة الالتزام:\s*4/)).toHaveCount(0);
 
@@ -65,7 +65,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
     await nextWord.click();
   }
 
-  await expect(page.getByRole('button', { name: /إتمام سبرنت اليوم/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /إنهاء تحدي اليوم/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 

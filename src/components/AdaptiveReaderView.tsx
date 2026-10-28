@@ -570,7 +570,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
 
         {problematicWords.length > 0 && (
         <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
-          <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` لـ «${studentName}»` : ''}</h3>
+          <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` للمتعلّم «${studentName}»` : ''}</h3>
           <p className="text-xs leading-relaxed text-amber-900">هذه الكلمات تم تحديدها بالتحليل الصوتي الآلي في جلسة سابقة للتدريب والمراجعة. جرّب قراءتها وفهمها؛ لا تعني القائمة وحدها وجود صعوبة.</p>
           <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
         </section>
@@ -643,7 +643,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 <Sparkles className="w-4 h-4" />
                 <span>
                   {isAdapting
-                    ? 'جاري التحليل الصرفي...'
+                    ? 'جارٍ التحليل الصرفي…'
                      : 'اقتراح تبسيط للمراجعة'}
                 </span>
               </button>
