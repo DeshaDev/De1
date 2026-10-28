@@ -155,10 +155,10 @@ export function bandFromCentile(centile: number): Band {
 }
 
 export const BAND_META: Record<Band, { labelAr: string; color: string; bg: string }> = {
-  severe: { labelAr: 'ضعف واضح', color: '#b91c1c', bg: '#fee2e2' },
-  below: { labelAr: 'دون المتوقع لعمره', color: '#c2410c', bg: '#ffedd5' },
-  average: { labelAr: 'ضمن المتوقع لعمره', color: '#047857', bg: '#d1fae5' },
-  strength: { labelAr: 'نقطة قوة', color: '#1d4ed8', bg: '#dbeafe' },
+  severe: { labelAr: 'ضعف واضح', color: '#B42318', bg: '#FDECEA' },
+  below: { labelAr: 'دون المتوقع لعمره', color: '#B54708', bg: '#FEF0E1' },
+  average: { labelAr: 'ضمن المتوقع لعمره', color: '#4A5868', bg: '#EFEDE7' },
+  strength: { labelAr: 'نقطة قوة', color: '#0B6E69', bg: '#E3F1EF' },
 };
 
 function median(values: number[]): number | null {

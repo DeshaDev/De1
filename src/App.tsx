@@ -25,6 +25,7 @@ import {
   Clock,
   RefreshCw,
   Target,
+  Dumbbell,
 } from 'lucide-react';
 import {
   INITIAL_STUDENTS,
@@ -49,6 +50,7 @@ import { AdaptiveReaderView } from './components/AdaptiveReaderView';
 import RemediationGymView from './components/RemediationGymView';
 import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
+import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -798,42 +800,39 @@ export default function App() {
       <div
         data-dyslexia-theme={surfaceTheme}
         data-dyslexia-spacing={spacingMode}
-        className={`baseera-app min-h-screen w-full overflow-x-hidden flex flex-col transition-colors duration-200 ${
-          surfaceTheme === 'night'
-          ? 'bg-[#0B1120] text-slate-100'
-          : surfaceTheme === 'sage'
-            ? 'bg-[#EFF7F3] text-[#0F291E]'
-            : surfaceTheme === 'sky'
-              ? 'bg-[#EFF6FF] text-[#0F172A]'
-              : surfaceTheme === 'lab'
-                ? 'bg-[#F8FAFC] text-[#0F172A]'
-                : 'bg-[#FAF6EE] text-[#1E293B]'
-      }`}
-    >
+        className="baseera-app min-h-screen w-full flex flex-col"
+      >
       <a className="baseera-skip-link" href="#main-content">تجاوز إلى المحتوى</a>
       {showBaseeraLogin && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="baseera-login-title">
+        <div className="bz-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="baseera-login-title">
           <form
             onSubmit={(event) => { event.preventDefault(); void handleBaseeraLogin(); }}
-            className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 text-slate-900 shadow-2xl"
+            className="bz-modal space-y-5"
+            style={{ width: 'min(100%, 440px)' }}
           >
-            <h2 id="baseera-login-title" className="text-lg font-bold">تسجيل الدخول إلى لوحة التحليل الذكي</h2>
-            <p className="text-sm text-slate-600">أدخل رمز المدرسة الذي سلّمه لك مسؤول النظام. تُحدَّد صلاحيات الحساب تلقائيًا.</p>
-            <label className="block space-y-1 text-sm font-medium">
-              <span>رمز الوصول</span>
-              <input autoComplete="current-password" type="password" value={baseeraAccessCode} onChange={(event) => setBaseeraAccessCode(event.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" required />
+            <div className="flex items-center gap-3">
+              <BrandMark size={40} />
+              <div>
+                <h2 id="baseera-login-title" className="bz-h3">دخول المعلم والأخصائي</h2>
+                <p className="bz-small bz-muted">لوحة متابعة الطلاب والتقارير</p>
+              </div>
+            </div>
+            <label className="bz-field">
+              <span className="bz-label">رمز الوصول</span>
+              <input autoComplete="current-password" type="password" value={baseeraAccessCode} onChange={(event) => setBaseeraAccessCode(event.target.value)} className="bz-input" required />
+              <span className="bz-hint">يسلّمه لك مسؤول النظام في مدرستك، وتُحدَّد صلاحياتك تلقائيًا.</span>
             </label>
-            {baseeraLoginError && <p role="alert" className="text-sm text-red-700">{baseeraLoginError}</p>}
+            {baseeraLoginError && <p role="alert" className="text-sm text-risk">{baseeraLoginError}</p>}
             <div className="flex gap-2">
-              <button type="submit" disabled={isBaseeraLoggingIn} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              <button type="submit" disabled={isBaseeraLoggingIn} className="bz-btn bz-btn-primary flex-1">
                 {isBaseeraLoggingIn ? 'جارٍ التحقق…' : 'تسجيل الدخول'}
               </button>
-              <button type="button" onClick={() => { setShowBaseeraLogin(false); setBaseeraLoginError(''); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">إلغاء</button>
+              <button type="button" onClick={() => { setShowBaseeraLogin(false); setBaseeraLoginError(''); }} className="bz-btn bz-btn-ghost">إلغاء</button>
             </div>
           </form>
         </div>
       )}
-      <header className="baseera-topbar sticky top-0 z-30">
+      <header className="baseera-topbar">
         <div className="baseera-topbar-inner">
           <a
             href="#top"
@@ -844,11 +843,7 @@ export default function App() {
             className="baseera-brand"
             aria-label="بصيرة — الصفحة الرئيسية"
           >
-            <span className="baseera-brand-mark"><BookOpen aria-hidden="true" size={25} /></span>
-            <span className="baseera-brand-copy">
-              <strong>بصيرة</strong>
-              <small>نتعلّم خطوة بخطوة</small>
-            </span>
+            <BrandLockup />
           </a>
 
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
@@ -856,8 +851,8 @@ export default function App() {
               { id: 'home', label: 'الرئيسية', icon: Home },
               { id: 'dyslexia-lab', label: 'الفحص الشامل', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
-              { id: 'remediation-gym', label: 'صالة التدريب', icon: Flame },
-              { id: 'trophies', label: 'أوسمتي', icon: Trophy },
+              { id: 'remediation-gym', label: 'صالة التدريب', icon: Dumbbell },
+              { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: BookOpen },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -868,7 +863,7 @@ export default function App() {
                   className={'baseera-nav-link' + (activeTab === item.id ? ' is-active' : '')}
                   aria-current={activeTab === item.id ? 'page' : undefined}
                 >
-                  <Icon aria-hidden="true" size={18} />
+                  <Icon aria-hidden="true" size={17} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -876,22 +871,29 @@ export default function App() {
           </nav>
 
           <div className="baseera-header-actions">
+            <DyslexiaComfortBar
+              activeTab={activeTab}
+              surfaceTheme={surfaceTheme}
+              onChangeSurfaceTheme={setSurfaceTheme}
+              spacingMode={spacingMode}
+              onChangeSpacingMode={setSpacingMode}
+              readingRulerEnabled={readingRulerEnabled}
+              onToggleReadingRuler={() => setReadingRulerEnabled((prev) => !prev)}
+            />
             <button
               type="button"
-              className="baseera-teacher-action"
+              className="bz-btn bz-btn-ghost bz-hide-sm"
               onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
             >
-              <GraduationCap aria-hidden="true" size={19} />
-              <span>{baseeraSession ? 'للأهل والمعلم' : 'دخول الأهل والمعلم'}</span>
+              <GraduationCap aria-hidden="true" size={18} />
+              <span>{baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}</span>
             </button>
             <button
               type="button"
-              className="baseera-primary-action baseera-header-cta"
-              onClick={() => setActiveTab('sprint')}
-              title="ابدأ سبرنت اليوم (5 دقائق تدريب وتأسيس مكثف)"
+              className="bz-btn bz-btn-primary"
+              onClick={() => setActiveTab('dyslexia-lab')}
             >
-              <Flame aria-hidden="true" size={17} className="text-amber-300 animate-pulse" />
-              <span>سبرنت اليوم</span>
+              <span>ابدأ الفحص</span>
             </button>
           </div>
         </div>
@@ -900,40 +902,32 @@ export default function App() {
       {!['sprint', 'storygen', 'remediation-gym', 'dyslexia-lab', 'home'].includes(activeTab) && baseeraSession && (
         <div className="baseera-session-strip" role="status">
           <span className="baseera-session-copy">
-            <ShieldCheck aria-hidden="true" size={17} />
-            {baseeraSession
-              ? 'جلسة المدرسة متصلة: ' + baseeraSession.accountName + ' · ' + getTenantDisplayLabelAr(baseeraSession)
-              : 'وضع التجربة — لا توجد جلسة مدرسة متصلة.'}
+            <ShieldCheck aria-hidden="true" size={16} />
+            {'جلسة المدرسة متصلة: ' + baseeraSession.accountName + ' · ' + getTenantDisplayLabelAr(baseeraSession)}
           </span>
-          {baseeraSession ? (
-            <button
-              type="button"
-              className="baseera-session-action"
-              onClick={() => {
-                void (async () => {
-                  await logoutBaseeraSession();
-                  setBaseeraSession(null);
-                  setIsPersistedStoreLoaded(false);
-                  setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
-                })();
-              }}
-            >
-              تسجيل الخروج
-            </button>
-          ) : (
-            <button type="button" className="baseera-session-action" onClick={() => setShowBaseeraLogin(true)}>
-              دخول لوحة التحليل الذكي
-            </button>
-          )}
+          <button
+            type="button"
+            className="baseera-session-action"
+            onClick={() => {
+              void (async () => {
+                await logoutBaseeraSession();
+                setBaseeraSession(null);
+                setIsPersistedStoreLoaded(false);
+                setAiStatusBanner('تم تسجيل الخروج وإبطال الجلسة.');
+              })();
+            }}
+          >
+            تسجيل الخروج
+          </button>
         </div>
       )}
 
-      <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
+      <nav className="baseera-mobile-nav" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
-          { id: 'remediation-gym', label: 'التدريب', icon: Flame },
+          { id: 'remediation-gym', label: 'التدريب', icon: Dumbbell },
           { id: 'trophies', label: 'أوسمتي', icon: Trophy },
         ] as const).map((item) => {
           const Icon = item.icon;
@@ -952,19 +946,7 @@ export default function App() {
         })}
       </nav>
 
-      {/* Floating Accessibility & Night Mode Widget */}
-      <DyslexiaComfortBar
-        activeTab={activeTab}
-        surfaceTheme={surfaceTheme}
-        onChangeSurfaceTheme={setSurfaceTheme}
-        spacingMode={spacingMode}
-        onChangeSpacingMode={setSpacingMode}
-        readingRulerEnabled={readingRulerEnabled}
-        onToggleReadingRuler={() => setReadingRulerEnabled((prev) => !prev)}
-      />
-
-      {/* Main Content Container (Single Unified Navigation — Zero Duplicate Top Stepper Bar) */}
-      <main id="main-content" className="baseera-main flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-8 py-6 space-y-6 pb-28 md:pb-10">
+      <main id="main-content" className={'baseera-main flex-1' + (activeTab === 'home' ? ' is-home' : '')}>
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
           {/* VIEW: CHILD TROPHIES & ACHIEVEMENTS */}
           {activeTab === 'trophies' && (
@@ -990,7 +972,7 @@ export default function App() {
             />
           )}
           {aiStatusBanner && (
-            <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-950">
+            <div role="status" className="w-[min(100%-32px,1200px)] mx-auto px-4 py-3 bg-brand-tint border border-line rounded-xl flex items-center justify-between gap-4 text-sm text-ink">
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
                 <span>{aiStatusBanner}</span>
@@ -1373,7 +1355,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <aside className="baseera-next-steps-card">
+                <aside className="baseera-next-steps-card lg:col-span-5">
                   <span className="baseera-section-kicker">خطوة صغيرة تالية</span>
                   <h2>أنشطة مساندة مقترحة</h2>
                   <p className="baseera-next-steps-intro">اختر نشاطًا تدريبيًا بناءً على ما تمّ في الجلسة، لا على درجة خطورة.</p>
@@ -1846,19 +1828,37 @@ export default function App() {
       <footer className="baseera-footer">
         <div className="baseera-footer-inner">
           <div className="baseera-footer-brand">
-            <span className="baseera-brand-mark"><BookOpen aria-hidden="true" size={22} /></span>
-            <div>
-              <strong>بصيرة</strong>
-              <p>مساحة تعليمية عربية متخصصة لتقييم وتدريب مهارات القراءة واللغة (الديسلكسيا)، خطوة بخطوة.</p>
-            </div>
+            <span className="baseera-brand"><BrandLockup tagline={false} /></span>
+            <p>فحص معرفي مبكر لمهارات ما قبل القراءة، وبرنامج تدريبي عربي يتكيّف مع تقدّم الطفل — للأسر والمدارس والأخصائيين.</p>
           </div>
-          <nav className="baseera-footer-links" aria-label="روابط إضافية">
-            <button type="button" onClick={() => setActiveTab('home')}>الرئيسية</button>
-            <button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button>
-            <button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button>
-            <button type="button" onClick={() => setActiveTab('dashboard')}>لوحة التحليل والتقارير</button>
-          </nav>
-          <p className="baseera-footer-note">منصة بصيرة لدعم وتطوير مهارات القراءة والتعلم.</p>
+          <div className="baseera-footer-col">
+            <h2>المنصة</h2>
+            <ul>
+              <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>الفحص المعرفي الشامل</button></li>
+              <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
+              <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>صالة التدريب</button></li>
+              <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر</button></li>
+            </ul>
+          </div>
+          <div className="baseera-footer-col">
+            <h2>للمدارس والأخصائيين</h2>
+            <ul>
+              <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
+              <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
+              <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
+            </ul>
+          </div>
+          <div className="baseera-footer-col">
+            <h2>الثقة والخصوصية</h2>
+            <ul>
+              <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
+              <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
+            </ul>
+          </div>
+          <p className="baseera-footer-note">
+            <span>© ٢٠٢٦ بصيرة</span>
+            <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. التشخيص يتم لدى مختص مؤهل.</span>
+          </p>
         </div>
       </footer>
     </div>

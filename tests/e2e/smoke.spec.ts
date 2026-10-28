@@ -43,7 +43,9 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'سبرنت اليوم', exact: true }).click();
+  await page.getByRole('button', { name: 'صالة التدريب' }).first().click();
+  await page.getByRole('button', { name: /ألعاب المهارات/ }).click();
+  await page.getByRole('button', { name: /سبرنت ٥ دقائق/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
   await expect(page.getByText(/سلسلة الالتزام:\s*4/)).toHaveCount(0);
 
@@ -141,7 +143,7 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
   await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
   const start = page.getByRole('button', { name: 'بدء الفحص' });
   await expect(start).toBeDisabled();
-  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/]) {
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
     await page.getByLabel(label).check();
   }
   await start.click();
@@ -150,5 +152,5 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
   }
   await expect(page.getByRole('button', { name: 'الملف المعرفي والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
-  await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
 });
