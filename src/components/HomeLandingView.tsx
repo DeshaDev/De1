@@ -35,7 +35,8 @@ export type AppTabId =
   | 'terms'
   | 'sprint'
   | 'storygen'
-  | 'trophies';
+  | 'trophies'
+  | 'guided-program';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];
@@ -321,20 +322,20 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           {/* Station 1: Diagnostic / Cognitive Lab */}
           <button
             type="button"
-            onClick={() => onNavigateTab('cognitive-lab')}
+            onClick={() => onNavigateTab('dyslexia-lab')}
             className="group rounded-3xl p-6 bg-white border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between text-right cursor-pointer"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Brain size={24} />
               </div>
-              <h3 className="text-lg font-black text-slate-900">استكشاف مهارات القراءة (مؤشرات التعثر القرائي)</h3>
+              <h3 className="text-lg font-black text-slate-900">الفحص المعرفي الشامل (٩ ألعاب)</h3>
               <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                أنشطة قصيرة للتسمية وقراءة كلمات تدريبية والوعي بالأصوات؛ نتائجها وصفية وليست تشخيصًا.
+                ملف معرفي للطفل (٤–٨ سنوات) يقارنه بعمره: الذاكرة، الوعي الصوتي، التمييز، الحروف، مع مؤشر خطر مبكر لعسر القراءة.
               </p>
             </div>
             <div className="pt-5 flex items-center gap-1.5 text-blue-600 font-black text-xs group-hover:translate-x-[-4px] transition-transform">
-              <span>استكشف المهارات</span>
+              <span>ابدأ الفحص</span>
               <ChevronLeft size={16} />
             </div>
           </button>
@@ -497,17 +498,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
             <span className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 font-black text-sm flex items-center justify-center">١</span>
-            <h3 className="text-base font-black text-slate-900">رصد استطلاعي مبكر</h3>
+            <h3 className="text-base font-black text-slate-900">فحص معرفي مبكر</h3>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              رصد مؤشرات التعثر في الوعي الصوتي وفك الكلمات والطلاقة دون إجهاد للطفل، استناداً إلى أدلة علمية.
+              تسع ألعاب قصيرة ترسم ملفًا معرفيًا يحدد بدقة أين تكمن الصعوبة: الذاكرة السمعية أم البصرية أم المعالجة الصوتية.
             </p>
           </div>
 
           <div className="rounded-3xl p-6 bg-white border border-slate-200 shadow-xs text-right space-y-3">
             <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-800 font-black text-sm flex items-center justify-center">٢</span>
-            <h3 className="text-base font-black text-slate-900">مسار استدراك مخصص</h3>
+            <h3 className="text-base font-black text-slate-900">برنامج تدريبي موجّه</h3>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              تحديد المهارات المستهدفة بالتقوية وفق منهجية تراكمية متدرجة من تمييز الحرف والمقطع إلى قراءة النص.
+              يُبنى من نتائج الفحص: يركّز على المهارات الأضعف بمستويات متدرجة ومعيار إتقان واضح، ثم إعادة الفحص لقياس التقدّم.
             </p>
           </div>
 
