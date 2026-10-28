@@ -350,7 +350,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             className="duo-btn-orange w-full py-4 text-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg"
           >
             <IconTrophy size={24} />
-            <span>أنا جاهز لتحدي الأبطال! (+50 XP)</span>
+            <span>أنا جاهز لتحدي الأبطال! (+٥٠ نقطة)</span>
           </button>
         </div>
       )}
@@ -423,7 +423,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             </p>
             <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl font-mono text-base font-black text-amber-900 mt-2">
               <IconStar size={20} />
-              <span>+50 XP أضيفت لرصيدك!</span>
+              <span>+٥٠ نقطة أضيفت لرصيدك!</span>
             </div>
           </div>
 

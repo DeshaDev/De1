@@ -1,3 +1,4 @@
+import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
@@ -22,6 +23,9 @@ import {
   sessionsCompleted,
 } from '../../cognitiveProfile/training';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
+import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
+import { trackUsage } from '../../utils/usageTracking';
+import type { StudentRecord } from '../../data/seedData';
 import { ChoicePlayer, SpanPlayer } from './TaskPlayers';
 import { speak } from './audio';
 
@@ -76,10 +80,16 @@ interface Props {
   onBack: () => void;
   onGoToBattery: () => void;
   onRunningChange?: (running: boolean) => void;
+  /** Progress stored in the school record, used when this device has none. */
+  serverProgress?: TrainingProgress | null;
+  /** Mirror progress to the school record (school account signed in). */
+  syncEnabled?: boolean;
+  onRecordUpdated?: (student: StudentRecord) => void;
+  student?: StudentRecord;
 }
 
-export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange }: Props) {
-  const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId));
+export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student }: Props) {
+  const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId) ?? serverProgress);
   const [run, setRun] = useState<Run | null>(null);
   useEffect(() => {
     onRunningChange?.(run !== null);
@@ -91,9 +101,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const persist = (p: TrainingProgress) => {
     setProgress(p);
     saveTrainingProgress(studentId, p);
+    if (syncEnabled) {
+      syncTrainingToSchool(studentId, p, student)
+        .then((student) => student && onRecordUpdated?.(student))
+        .catch(() => {
+          // Progress is kept on this device; the next session retries the sync.
+        });
+    }
   };
 
-  const startProgram = (plan: TrainingPlan) => persist(createProgress(plan));
+  const startProgram = (plan: TrainingPlan) => {
+    trackUsage('training_started');
+    persist(createProgress(plan));
+  };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
   const todaySkills = activeSkills.length > 0 ? activeSkills : progress?.plan.focus ?? [];
@@ -126,7 +146,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const skill = sessionSkills[run.skillIndex];
     const { progress: updated, change } = applySession(progress, skill, nextCorrect, run.tasks.length);
     persist(updated);
-    if (change === 'up' || change === 'mastered') speak('أَحْسَنْتَ! انْتَقَلْتَ إِلَى مُسْتَوًى جَدِيدٍ.');
+    if (change === 'up' || change === 'mastered') speak(PHRASES.levelUp);
     setRun({
       ...run,
       correct: nextCorrect,
@@ -188,7 +208,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <button
                 type="button"
                 onClick={() =>
-                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : setRun({ ...run, phase: 'summary' })
+                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : (trackUsage('training_session_completed'), setRun({ ...run, phase: 'summary' }))
                 }
                 className="bz-btn bz-btn-primary bz-btn-lg"
               >

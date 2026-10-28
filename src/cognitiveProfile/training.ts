@@ -20,6 +20,8 @@ import {
   DISTANT_PHONEME_PAIRS,
   LEXICON,
   LEXICON_IDS,
+  PICTURE_IDS,
+  dialectMerged,
   LexiconEntry,
   lex,
 } from './lexicon';
@@ -272,7 +274,7 @@ function stripDiacritics(text: string): string {
 function rhymeTask(random: () => number, level: Level, n: number): ChoiceItem | null {
   const optionCount = level + 1;
   const groups = new Map<string, LexiconEntry[]>();
-  for (const id of LEXICON_IDS) {
+  for (const id of PICTURE_IDS) {
     const e = LEXICON[id];
     groups.set(e.rhyme, [...(groups.get(e.rhyme) ?? []), e]);
   }
@@ -280,7 +282,7 @@ function rhymeTask(random: () => number, level: Level, n: number): ChoiceItem | 
   const set = pick(rhymingSets, random);
   const [target, answer] = shuffleWith(set, random);
   const distractors = shuffleWith(
-    LEXICON_IDS.map((id) => LEXICON[id]).filter((e) => e.rhyme !== target.rhyme),
+    PICTURE_IDS.map((id) => LEXICON[id]).filter((e) => e.rhyme !== target.rhyme),
     random
   ).slice(0, optionCount - 1);
   const options = shuffleWith([answer, ...distractors], random).map((e) => e.id);
@@ -308,7 +310,7 @@ function confusableWith(letter: string): string[] {
 function soundPositionTask(random: () => number, level: Level, n: number): ChoiceItem | null {
   const useCoda = level === 3;
   const key = (e: LexiconEntry) => (useCoda ? e.coda : e.onset);
-  const entries = LEXICON_IDS.map((id) => LEXICON[id]).filter((e) => key(e) !== null);
+  const entries = PICTURE_IDS.map((id) => LEXICON[id]).filter((e) => key(e) !== null);
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const target = pick(entries, random);
     const sound = key(target) as string;
@@ -316,7 +318,11 @@ function soundPositionTask(random: () => number, level: Level, n: number): Choic
     if (matches.length === 0) continue;
     const answer = pick(matches, random);
     const close = level === 2 ? confusableWith(sound) : [];
-    const pool = entries.filter((e) => key(e) !== sound && e.id !== target.id);
+    // Outside the deliberate fine-contrast level, never offer a distractor whose sound a common
+    // dialect merges with the answer's (it could be a second correct answer for that child).
+    const pool = entries.filter(
+      (e) => key(e) !== sound && e.id !== target.id && (close.includes(key(e) as string) || !dialectMerged(key(e) as string, sound))
+    );
     const preferred = shuffleWith(pool.filter((e) => close.includes(key(e) as string)), random);
     const others = shuffleWith(pool.filter((e) => !close.includes(key(e) as string)), random);
     const distractors = [...preferred, ...others].slice(0, 2);
@@ -343,7 +349,7 @@ function soundPositionTask(random: () => number, level: Level, n: number): Choic
 }
 
 function blendingTask(random: () => number, level: Level, n: number): ChoiceItem | null {
-  const entries = LEXICON_IDS.map((id) => LEXICON[id]);
+  const entries = PICTURE_IDS.map((id) => LEXICON[id]);
   if (level === 3) {
     const target = pick(entries.filter((e) => e.syllables.length <= 4), random);
     return {

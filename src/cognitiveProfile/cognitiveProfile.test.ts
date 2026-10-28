@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BATTERY, ChoiceItem, SUBTESTS_BY_ID, SubtestId, scoredItemCount } from './battery';
 import { LEXICON, lex } from './lexicon';
@@ -304,4 +304,34 @@ test('mastery: two sessions at ≥80% move up a level; two below 50% step back a
 test('report language describes indicators and never claims a diagnosis or cure', () => {
   const text = JSON.stringify([SUBTEST_GUIDANCE, RISK_META, PATTERN_META, SKILLS]);
   assert.doesNotMatch(text, /تشخيص مؤكد|يشخّص عسر|يعالج عسر|يشفي|مصاب بعسر/);
+});
+
+describe('audio catalogue', () => {
+  it('covers every text that unseen training sessions speak', async () => {
+    const { buildAudioCatalog, audioKey } = await import('./audioCatalog');
+    const { generateSession, SKILLS } = await import('./training');
+    const { lex } = await import('./lexicon');
+    const keys = new Set(buildAudioCatalog().map((e) => e.key));
+    const missing = new Set<string>();
+    for (const skill of Object.keys(SKILLS) as Array<keyof typeof SKILLS>) {
+      for (const level of [1, 2, 3] as const) {
+        for (let seed = 90_000; seed < 90_150; seed++) {
+          for (const task of generateSession(skill, level, seed)) {
+            const texts = task.kind === 'choice'
+              ? task.item.audio.map((s) => s.text)
+              : [...task.trial.sequence, ...task.trial.choices].map((id) => lex(id).word);
+            for (const t of texts) if (!keys.has(audioKey(t))) missing.add(t);
+          }
+        }
+      }
+    }
+    assert.deepEqual([...missing], []);
+  });
+
+  it('keys are stable and ignore spacing and Unicode composition differences', async () => {
+    const { audioKey } = await import('./audioCatalog');
+    assert.equal(audioKey('مَا الكَلِمَةُ؟'), audioKey('  مَا   الكَلِمَةُ؟ '));
+    assert.match(audioKey('بَ'), /^[0-9a-f]{16}$/);
+    assert.notEqual(audioKey('تِين'), audioKey('طِين'));
+  });
 });

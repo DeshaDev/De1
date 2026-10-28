@@ -17,6 +17,8 @@ interface DyslexiaScreeningHubProps {
   onCompleteOralSession: (record: StudentRecord) => void;
   onCompleteCognitiveScreening: (cogData: CognitiveScreeningData) => void;
   initialSubTab?: ScreeningSubTab;
+  onStudentUpdated?: (student: StudentRecord) => void;
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
 }
 
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
@@ -32,6 +34,8 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
   onCompleteOralSession,
   onCompleteCognitiveScreening,
   initialSubTab = 'battery',
+  onStudentUpdated,
+  onCreateLearner,
 }) => {
   const [subTab, setSubTab] = useState<ScreeningSubTab>(initialSubTab);
   const [focused, setFocused] = useState(false);
@@ -83,6 +87,8 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           activeStudent={activeStudent}
           initialView={subTab === 'training' ? 'training' : 'map'}
           onFocusModeChange={setFocused}
+          onRecordUpdated={onStudentUpdated}
+          onCreateLearner={onCreateLearner}
         />
       )}
 

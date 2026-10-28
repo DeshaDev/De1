@@ -10,6 +10,18 @@ import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionP
 import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
+  UsageEventSchema,
+  emptyUsageStore,
+  recordUsageEvent,
+  summarizeUsage,
+  type UsageStore,
+} from './src/utils/usageMetrics';
+import {
+  CognitiveBatteryUploadSchema,
+  TrainingProgressUploadSchema,
+  summarizeBattery,
+} from './src/cognitiveProfile/records';
+import {
   BaseeraRole,
   BaseeraScope,
   AuthFailureBucket,
@@ -50,6 +62,7 @@ const DATA_DIR = process.env.BASEERA_DATA_DIR
 const STORE_PATH = path.join(DATA_DIR, 'learning-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
 const DEMO_REQUESTS_PATH = path.join(DATA_DIR, 'school-demo-requests.json');
+const USAGE_PATH = path.join(DATA_DIR, 'usage-metrics.json');
 
 let baseeraStoreReady = false;
 let securityStateReady = false;
@@ -69,6 +82,8 @@ export interface BaseeraAuditLogEntry {
     | 'student.session.append'
     | 'student.math.assess'
     | 'student.report.update'
+    | 'student.cognitive.update'
+    | 'student.training.update'
     | 'student.profile.patch'
     | 'student.delete'
     | 'lead.create'
@@ -309,8 +324,23 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
     ? 'هذا سجل من إصدار سابق؛ أزيلت منه حقول النظر ودرجات الخطورة غير المعتمدة. أعد إجراء النشاط للحصول على ملخص وصفي حديث، ولا تستخدم التقرير السابق للتشخيص أو المقارنة المعيارية.'
     : oldSummary.replace(/^\\[سجل تجريبي توضيحي[^\\]]*\\]\\s*/g, '').trim();
 
+  // Recompute the battery summary from raw responses so a new reference table
+  // (e.g. real norms replacing the provisional ones) updates every stored report.
+  let cognitiveBattery = normalized.cognitiveBattery;
+  if (cognitiveBattery && typeof cognitiveBattery === 'object') {
+    try {
+      cognitiveBattery = {
+        ...cognitiveBattery,
+        summary: summarizeBattery(cognitiveBattery.results || {}, cognitiveBattery.ageMonths),
+      };
+    } catch {
+      cognitiveBattery = null;
+    }
+  }
+
   return {
     ...normalized,
+    cognitiveBattery,
     name: cleanName,
     schoolName: cleanSchool,
     learningReport: normalized.learningReport
@@ -516,6 +546,53 @@ function demoRequestRateLimiter(
   }
   history.push(now);
   demoRequestBuckets.set(clientIp, history);
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Anonymous usage counts (no personal data): see src/utils/usageMetrics.ts
+// ---------------------------------------------------------------------------
+let usageStore: UsageStore = emptyUsageStore();
+let usageDirty = false;
+
+function loadUsageStore(): void {
+  try {
+    if (!fs.existsSync(USAGE_PATH)) return;
+    const parsed = JSON.parse(fs.readFileSync(USAGE_PATH, 'utf8')) as UsageStore;
+    if (parsed && parsed.version === 1 && parsed.days && typeof parsed.days === 'object') usageStore = parsed;
+  } catch {
+    usageStore = emptyUsageStore();
+  }
+}
+
+function flushUsageStore(): void {
+  if (!usageDirty) return;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmp = `${USAGE_PATH}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(usageStore), { mode: 0o600 });
+    fs.renameSync(tmp, USAGE_PATH);
+    usageDirty = false;
+  } catch (err) {
+    console.warn('[usage] could not persist usage counts:', err);
+  }
+}
+
+const usageBuckets = new Map<string, number[]>();
+function usageRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
+  const now = Date.now();
+  const history = (usageBuckets.get(clientIp) || []).filter((ts) => now - ts < 60_000);
+  if (!usageBuckets.has(clientIp) && usageBuckets.size >= 5_000) {
+    const oldest = usageBuckets.keys().next().value;
+    if (oldest !== undefined) usageBuckets.delete(oldest);
+  }
+  if (history.length >= 120) {
+    res.status(429).json({ error: 'طلبات كثيرة.' });
+    return;
+  }
+  history.push(now);
+  usageBuckets.set(clientIp, history);
   next();
 }
 
@@ -1788,6 +1865,228 @@ async function startServer() {
     handleUpdateLearningReport
   );
 
+  // Cognitive battery and training programme. The client sends raw item responses only;
+  // the profile (centiles, risk, pattern) is recomputed here and never trusted from input.
+  const findConsentedStudent = (
+    req: express.Request,
+    res: express.Response
+  ): { idx: number; session: VerifiedBaseeraSession } | null => {
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const idx = studentsDb.findIndex(
+      (s) => s.id === req.params.id && s.tenantId === session.tenantId
+    );
+    if (idx === -1) {
+      res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
+      return null;
+    }
+    const current = studentsDb[idx];
+    if (current.isDemoRecord) {
+      res.status(409).json({ error: 'لا تُحفظ النتائج في السجلات التوضيحية.' });
+      return null;
+    }
+    const consentCheck = validateExplicitGuardianConsent(current.guardianConsentGiven);
+    if (!consentCheck.valid || !current.guardianConsentRecordedAt) {
+      res.status(403).json({ error: 'لا يمكن حفظ النتائج لسجل لا يتضمن موافقة ولي أمر مسجلة.' });
+      return null;
+    }
+    const body = req.body as unknown;
+    if (!body || typeof body !== 'object' || Array.isArray(body) || hasForbiddenPrototypeKeys(body)) {
+      res.status(400).json({ error: 'جسم الطلب غير صالح.' });
+      return null;
+    }
+    return { idx, session };
+  };
+
+  // Enrol a learner in the school record before any reading session (e.g. for the cognitive
+  // battery, which starts at age 4). Same identity, tenant and consent rules as session creation.
+  const EnrollSchema = z
+    .object({
+      id: z.string().regex(/^[a-zA-Z0-9._:-]{1,120}$/),
+      name: z.string().trim().min(2).max(120),
+      gradeLevel: z.number().int().min(0).max(6),
+      ageYears: z.number().int().min(4).max(16),
+      schoolName: z.string().trim().max(160).optional(),
+      guardianConsentGiven: z.literal(true),
+      guardianConsentRecordedAt: z.string().max(40).refine((v) => Number.isFinite(Date.parse(v))),
+      guardianConsentSource: z.string().trim().min(1).max(400),
+      guardianName: z.string().trim().max(120).optional(),
+      guardianRelationship: z.string().trim().max(80).optional(),
+    })
+    .strict();
+
+  app.post('/api/students/enroll', requireBaseeraAuth('students:write'), (req, res) => {
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    if (hasForbiddenPrototypeKeys(req.body)) {
+      res.status(400).json({ error: 'جسم الطلب غير صالح.' });
+      return;
+    }
+    const parsed = EnrollSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const consentMissing = parsed.error.issues.some((i) => String(i.path[0] || '').startsWith('guardianConsent'));
+      res.status(consentMissing ? 403 : 400).json({
+        error: consentMissing
+          ? 'يلزم تسجيل موافقة ولي الأمر ووقتها ومصدرها قبل إنشاء سجل الطالب.'
+          : 'بيانات هوية الطالب أو الصف غير مكتملة أو غير صالحة.',
+      });
+      return;
+    }
+    const data = parsed.data;
+    const existing = studentsDb.find((student) => student.id === data.id);
+    if (existing) {
+      if (existing.tenantId !== session.tenantId) {
+        res.status(404).json({ error: 'سجل الطالب غير موجود في هذه المدرسة.' });
+        return;
+      }
+      res.status(200).json({ student: existing, persisted: true, existing: true });
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const record: StudentRecord = sanitizeStudentRecord({
+      id: data.id,
+      tenantId: session.tenantId,
+      name: data.name.replace(/\s+/g, ' '),
+      isDemoRecord: false,
+      sessionStatus: 'in_progress',
+      sessionRoleLabel: 'متعلّم مسجّل',
+      assessmentHistory: [],
+      gradeLevel: data.gradeLevel,
+      ageYears: data.ageYears,
+      schoolName: data.schoolName || session.tenantDisplayNameAr,
+      lastScreenedDate: '—',
+      passageId: ARABIC_READING_PASSAGES[0].id,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: data.guardianConsentRecordedAt,
+      serverConsentReceivedAt: nowIso,
+      guardianConsentSource: data.guardianConsentSource,
+      guardianName: data.guardianName,
+      guardianRelationship: data.guardianRelationship,
+      guardianAudioConsentGiven: false,
+      policyVersion: '2026.1',
+      wpm: 0,
+      dyslexiaRiskScore: null,
+      readingHeuristicIndicator: null,
+      readingRiskLevel: 'unassessed',
+      readingRiskLabelAr: 'لم تبدأ جلسة القراءة بعد.',
+      problematicWords: [],
+      comprehensionScore: 0,
+      dyscalculiaAssessed: false,
+      subitizingAccuracy: null,
+      avgSubitizingMs: null,
+      numberLinePAE: null,
+      transcodingAccuracy: null,
+      reversalErrorCount: null,
+      dyscalculiaRiskScore: null,
+      mathHeuristicIndicator: null,
+      mathRiskLevel: 'unassessed',
+      mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
+      learningReport: {
+        learningSummary: 'سجل جديد؛ تظهر الملاحظات بعد إكمال أول نشاط.',
+        ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الكاميرا أو تتبّع العين.',
+        orthographicAndPhonologicalPatterns: 'تظهر بعد إكمال الفحص أو القراءة.',
+        dyscalculiaSpatialAnalysis: 'غير منطبق.',
+        interventionExercises: [],
+        classroomAccommodations: [],
+      },
+    } as StudentRecord);
+    const committed = commitStudentMutationWithAudit(
+      studentsDb,
+      [record, ...studentsDb],
+      session,
+      'student.create',
+      record.id,
+      ['enroll']
+    );
+    if (!committed.ok) {
+      res.status(503).json({ error: 'تعذر حفظ سجل الطالب في التخزين المشفر.' });
+      return;
+    }
+    studentsDb = committed.students;
+    res.status(201).json({ student: record, persisted: true });
+  });
+
+  app.put(
+    '/api/students/:id/cognitive-battery',
+    requireBaseeraAuth('students:write'),
+    (req, res) => {
+      const found = findConsentedStudent(req, res);
+      if (!found) return;
+      const parsed = CognitiveBatteryUploadSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'بيانات الفحص غير صالحة.',
+          issues: parsed.error.issues.slice(0, 10).map((i) => i.message),
+        });
+        return;
+      }
+      const results = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+      const updatedRecord: StudentRecord = {
+        ...studentsDb[found.idx],
+        cognitiveBattery: {
+          ageMonths: parsed.data.ageMonths,
+          examinerName: parsed.data.examinerName.trim(),
+          startedAt: parsed.data.startedAt,
+          dialect: parsed.data.dialect,
+          updatedAt: new Date().toISOString(),
+          results,
+          summary: summarizeBattery(results, parsed.data.ageMonths),
+        },
+      };
+      const nextRecords = [...studentsDb];
+      nextRecords[found.idx] = updatedRecord;
+      const committed = commitStudentMutationWithAudit(
+        studentsDb,
+        nextRecords,
+        found.session,
+        'student.cognitive.update',
+        updatedRecord.id,
+        ['cognitiveBattery']
+      );
+      if (!committed.ok) {
+        res.status(503).json({ error: 'تعذر حفظ نتائج الفحص في التخزين المشفر.' });
+        return;
+      }
+      studentsDb = committed.students;
+      res.status(200).json({ student: updatedRecord, persisted: true });
+    }
+  );
+
+  app.put(
+    '/api/students/:id/training-progress',
+    requireBaseeraAuth('students:write'),
+    (req, res) => {
+      const found = findConsentedStudent(req, res);
+      if (!found) return;
+      const parsed = TrainingProgressUploadSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: 'بيانات البرنامج التدريبي غير صالحة.',
+          issues: parsed.error.issues.slice(0, 10).map((i) => i.message),
+        });
+        return;
+      }
+      const updatedRecord: StudentRecord = {
+        ...studentsDb[found.idx],
+        trainingProgress: { ...(parsed.data as Omit<NonNullable<StudentRecord['trainingProgress']>, 'updatedAt'>), updatedAt: new Date().toISOString() },
+      };
+      const nextRecords = [...studentsDb];
+      nextRecords[found.idx] = updatedRecord;
+      const committed = commitStudentMutationWithAudit(
+        studentsDb,
+        nextRecords,
+        found.session,
+        'student.training.update',
+        updatedRecord.id,
+        ['trainingProgress']
+      );
+      if (!committed.ok) {
+        res.status(503).json({ error: 'تعذر حفظ تقدم البرنامج في التخزين المشفر.' });
+        return;
+      }
+      studentsDb = committed.students;
+      res.status(200).json({ student: updatedRecord, persisted: true });
+    }
+  );
+
   // Strict 4-field profile PATCH (`name`, `schoolName`, `gradeLevel`, `ageYears` only)
   app.patch(
     '/api/students/:id',
@@ -2764,6 +3063,40 @@ async function startServer() {
   });
 
   // Public Endpoint: Submit School / Institution Demo & Pilot Request
+  // Anonymous usage events. Never accepts names, ids of students or answers.
+  loadUsageStore();
+  const usageFlushTimer = setInterval(flushUsageStore, 15_000);
+  usageFlushTimer.unref();
+  process.once('beforeExit', flushUsageStore);
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => {
+      flushUsageStore();
+      process.exit(0);
+    });
+  }
+
+  app.post('/api/metrics/event', usageRateLimiter, (req, res) => {
+    const parsed = UsageEventSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'حدث غير صالح.' });
+      return;
+    }
+    const hashedDevice = crypto
+      .createHmac('sha256', BASEERA_SESSION_SECRET || 'baseera-usage')
+      .update(parsed.data.device)
+      .digest('hex')
+      .slice(0, 24);
+    usageStore = recordUsageEvent(usageStore, parsed.data, hashedDevice);
+    usageDirty = true;
+    res.status(204).end();
+  });
+
+  app.get('/api/admin/metrics', requireBaseeraAuth('leads:manage'), (req, res) => {
+    const days = Math.min(365, Math.max(7, Number(req.query.days) || 30));
+    flushUsageStore();
+    res.json({ summary: summarizeUsage(usageStore, days) });
+  });
+
   app.post('/api/school-demo-request', demoRequestRateLimiter, (req, res) => {
     const parsed = SchoolDemoRequestSchema.safeParse(req.body);
     if (!parsed.success) {

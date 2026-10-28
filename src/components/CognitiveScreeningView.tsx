@@ -1602,7 +1602,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     onClick={() => onNavigateTab('dashboard')}
                     className="flex-1 sm:flex-none py-3 px-6 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>لوحة التحليل والتقارير الذكية</span>
+                    <span>لوحة المتابعة والتقارير</span>
                     <ArrowLeft className="w-4 h-4" />
                   </button>
                 )}

@@ -1,3 +1,4 @@
+import type { StoredCognitiveBattery, StoredTrainingProgress } from '../cognitiveProfile/records';
 import {
   SubitizingTrialResult,
   NumberLineTrialResult,
@@ -90,6 +91,10 @@ export interface StudentMathTrialsPayload {
 
 export interface StudentRecord {
   id: string;
+  /** Raw battery responses plus the server-computed summary (see cognitiveProfile/records.ts). */
+  cognitiveBattery?: StoredCognitiveBattery | null;
+  /** Guided training programme state, synced from the device. */
+  trainingProgress?: StoredTrainingProgress | null;
   /** Set by the server from the signed session; never trusted from client input. */
   tenantId?: string;
   name: string;

@@ -515,7 +515,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <ShieldCheck className="w-5 h-5 text-slate-600 shrink-0 mt-0.5" />
           <div className="text-xs text-slate-700 leading-relaxed">
             <span className="font-bold block mb-0.5">ضوابط التقرير التربوي:</span>
-            يلخص التقرير قياسات جلسة تعليمية بالذكاء الاصطناعي؛ لا يثبت وحده وجود اضطراب تعلم ولا ينفيه، وتوفر المنصة مؤشرات تفصيلية لمتابعة التطور.
+            يلخص التقرير قياسات جلسة تعليمية مسجّلة آليًا؛ لا يثبت وحده وجود اضطراب تعلم ولا ينفيه، وتوفر المنصة مؤشرات تفصيلية لمتابعة التطور.
           </div>
         </div>
       </div>
@@ -541,7 +541,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>خطة الدعم والتدخل الذكية</span>
+          <span>خطة الدعم والتدخل</span>
         </button>
 
         <button
@@ -569,7 +569,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
               </div>
               <div className="text-right">
                 <h3 className="font-extrabold text-slate-900 text-base mb-1">
-                  القارئ الصوتي الذكي لولي الأمر
+                  الاستماع للتقرير (لولي الأمر)
                 </h3>
                 <p className="text-xs text-slate-600">
                   استمع لملخص صوتي باللغة العربية يشرح نتائج القراءة والنطق وأبرز التوصيات المنزلية.
@@ -721,7 +721,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* VIEW 2: AI IEP & ANALYTICS REPORT (خطة الدعم والتدخل الذكية) */}
+      {/* VIEW 2: AI IEP & ANALYTICS REPORT (خطة الدعم والتدخل) */}
       {/* ========================================================================= */}
       {activeView === 'teacher' && (
         <div className="space-y-8 animate-fadeIn">
@@ -736,7 +736,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   تقرير الأداء التعليمي: {studentData.studentName}
                 </h2>
                 <p className="text-sm text-slate-400">
-                  ملاحظات وصفية تفصيلية مستخرجة آلياً بواسطة الذكاء الاصطناعي لمساندة التدخل الفردي
+                  ملاحظات وصفية تفصيلية مستخرجة آليًا لمساندة التدخل الفردي
                 </p>
               </div>
 
@@ -950,7 +950,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
           <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-teal-800 rounded-3xl p-8 md:p-10 text-white shadow-xl">
             <h2 className="text-3xl font-black mb-2">الألعاب التكيفية الداعمة للطالب</h2>
             <p className="text-sm text-indigo-100 max-w-xl leading-relaxed">
-              هذه أنشطة تعليمية عامة قابلة للاختيار تم توليدها بالذكاء الاصطناعي بناءً على سجل الأداء؛ لا يثبت عرض اللعبة وحده وجود صعوبة أو أثر علاجي.
+              هذه أنشطة تعليمية عامة قابلة للاختيار تم توليدها آليًا بناءً على سجل الأداء؛ لا يثبت عرض اللعبة وحده وجود صعوبة أو أثر علاجي.
             </p>
           </div>
 

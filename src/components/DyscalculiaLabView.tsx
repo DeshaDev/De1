@@ -561,7 +561,7 @@ export const DyscalculiaLabView: React.FC<DyscalculiaLabViewProps> = ({
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[95px] border-b-4 border-amber-500">
               <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
                 <IconStar size={18} />
-                <span>{totalCompleted * 15} XP</span>
+                <span>{totalCompleted * 15} نقطة</span>
               </span>
               <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط البطل</span>
             </div>

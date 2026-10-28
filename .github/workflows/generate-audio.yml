@@ -1,0 +1,62 @@
+name: Generate game audio (Azure)
+
+# Run manually from the Actions tab. Needs repository secrets AZURE_SPEECH_KEY and
+# AZURE_SPEECH_REGION. Generates any missing clips, re-checks them with Azure speech
+# recognition, and commits public/audio/v1 and docs/AUDIO_QA_REPORT_AR.md to the branch.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'missing = only new clips · force = regenerate all · qa-only = re-check existing'
+        type: choice
+        options: [missing, force, qa-only]
+        default: missing
+      voice:
+        description: 'Azure neural voice'
+        type: string
+        default: ar-SA-ZariyahNeural
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-audio-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Generate and check audio
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          AUDIO_VOICE: ${{ inputs.voice }}
+        run: |
+          case "${{ inputs.mode }}" in
+            force) npx tsx scripts/generate-audio.ts --force ;;
+            qa-only) npx tsx scripts/generate-audio.ts --qa-only ;;
+            *) npx tsx scripts/generate-audio.ts ;;
+          esac
+
+      - name: Commit audio and QA report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/audio docs/AUDIO_QA_REPORT_AR.md
+          if git diff --cached --quiet; then
+            echo "No audio changes."
+          else
+            git commit -m "chore(audio): generate Azure neural audio clips and QA report"
+            git push
+          fi

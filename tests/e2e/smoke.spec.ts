@@ -143,6 +143,7 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
   await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
   const start = page.getByRole('button', { name: 'بدء الفحص' });
   await expect(start).toBeDisabled();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
     await page.getByLabel(label).check();
   }

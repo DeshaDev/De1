@@ -97,7 +97,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
             <span>
-              <strong>نموذج توضيحي استعراضي:</strong> هذا الملف يعرض أوسمة ونقاطاً تجريبية لـ «{activeStudent.name}» (160 XP · 5 من 6 أوسمة) لأغراض التقييم المؤسسي.
+              <strong>نموذج توضيحي استعراضي:</strong> هذا الملف يعرض أوسمة ونقاطاً تجريبية لـ «{activeStudent.name}» (١٦٠ نقطة · ٥ من ٦ أوسمة) لأغراض التقييم المؤسسي.
             </span>
           </div>
           <button
@@ -105,7 +105,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
             onClick={() => onNavigateTab('sprint')}
             className="px-4 py-2 rounded-xl bg-amber-600 text-white font-black hover:bg-amber-700 transition-colors shrink-0 cursor-pointer shadow-xs"
           >
-            ابدأ كمتعلم جديد (0 XP)
+            ابدأ كمتعلم جديد
           </button>
         </div>
       )}
@@ -139,7 +139,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
               <span className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
                 <span className="flex items-center gap-1"><IconStar size={18} /> {xpPoints}</span>
               </span>
-              <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط الخبرة XP</span>
+              <span className="font-child text-xs font-bold text-slate-500 block mt-0.5">نقاط الإنجاز</span>
             </div>
 
             <div className="bg-white text-slate-900 rounded-2xl p-3 px-4 shadow-md text-center min-w-[90px] border-b-4 border-orange-600">
@@ -206,7 +206,7 @@ export const ChildTrophiesView: React.FC<ChildTrophiesViewProps> = ({
               {b.earned ? (
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-emerald-700">
                   <span>تم التتويج بنجاح</span>
-                  <span className="font-mono text-amber-600 font-black">+25 XP</span>
+                  <span className="font-mono text-amber-600 font-black">+٢٥ نقطة</span>
                 </div>
               ) : (
                 <div className="pt-2 border-t border-dashed border-slate-200 text-[11px] font-bold text-slate-400">

@@ -51,6 +51,9 @@ import RemediationGymView from './components/RemediationGymView';
 import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
+import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
+import { trackUsage } from './utils/usageTracking';
+import { UsageMetricsPanel } from './components/UsageMetricsPanel';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -62,7 +65,7 @@ import {
 
 type ActiveTab = AppTabId;
 
-type DashboardSubView = 'roster' | 'report' | 'demo_requests';
+type DashboardSubView = 'roster' | 'report' | 'demo_requests' | 'metrics';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
@@ -74,6 +77,17 @@ export default function App() {
     }
     return 'home';
   });
+
+  // One anonymous visit per browser session (see utils/usageTracking).
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('baseera.visitCounted')) return;
+      sessionStorage.setItem('baseera.visitCounted', '1');
+    } catch {
+      // ignore storage errors
+    }
+    trackUsage('visit');
+  }, []);
 
   // Always reset scroll to top on tab change so user never lands midway down a page
   useEffect(() => {
@@ -510,8 +524,64 @@ export default function App() {
     }
     setActiveTab(targetTab || 'remediation-gym');
     setAiStatusBanner(
-      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade} · 0 XP).`
+      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade}).`
     );
+  };
+
+  /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
+  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string }): string | null => {
+    if (baseeraSession?.role === 'educator_readonly') return null;
+    const cleanName = input.name.trim().replace(/\s+/g, ' ');
+    if (cleanName.length < 2) return null;
+    const recordedAt = new Date().toISOString();
+    const learner: StudentRecord = {
+      id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
+      name: cleanName,
+      isDemoRecord: false,
+      sessionStatus: 'in_progress',
+      sessionRoleLabel: 'فحص معرفي',
+      assessmentHistory: [],
+      cognitiveBattery: null,
+      trainingProgress: null,
+      gradeLevel: Math.max(0, input.ageYears - 6),
+      ageYears: input.ageYears,
+      schoolName: 'مدرستي',
+      lastScreenedDate: '—',
+      passageId: ARABIC_READING_PASSAGES[0].id,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: recordedAt,
+      guardianConsentSource: `إقرار الفاحص (${input.examinerName.trim() || 'الفاحص'}) بموافقة ولي الأمر في شاشة إعداد الفحص`,
+      guardianAudioConsentGiven: false,
+      speechRecognitionUsed: false,
+      wpm: 0,
+      dyslexiaRiskScore: null,
+      readingHeuristicIndicator: null,
+      readingRiskLevel: 'unassessed',
+      readingRiskLabelAr: 'لم تبدأ جلسة القراءة بعد.',
+      problematicWords: [],
+      comprehensionScore: 0,
+      dyscalculiaAssessed: false,
+      subitizingAccuracy: null,
+      avgSubitizingMs: null,
+      numberLinePAE: null,
+      transcodingAccuracy: null,
+      reversalErrorCount: null,
+      dyscalculiaRiskScore: null,
+      mathHeuristicIndicator: null,
+      mathRiskLevel: 'unassessed',
+      mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
+      learningReport: {
+        learningSummary: 'سجل جديد؛ تظهر الملاحظات بعد إكمال أول نشاط.',
+        ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الكاميرا أو تتبّع العين.',
+        orthographicAndPhonologicalPatterns: 'تظهر بعد إكمال الفحص أو القراءة.',
+        dyscalculiaSpatialAnalysis: 'غير منطبق.',
+        interventionExercises: [],
+        classroomAccommodations: [],
+      },
+    };
+    setStudents((prev) => [learner, ...prev]);
+    setSelectedStudentId(learner.id);
+    return learner.id;
   };
 
   const handleSelectExistingDemoJourney = (
@@ -995,7 +1065,7 @@ export default function App() {
               <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>مساحة التحليل الذكي والمتابعة</span>
+                    <span>لوحة المتابعة</span>
                     <span aria-hidden="true">·</span>
                     <span>الصف {selectedStudent.gradeLevel}</span>
                     <span aria-hidden="true">·</span>
@@ -1119,6 +1189,20 @@ export default function App() {
                   >
                     <Building2 className="w-3.5 h-3.5 text-[#0284C7]" />
                     <span>٣. طلبات المدارس والتجربة ({demoRequests.length})</span>
+                  </button>
+                )}
+                {baseeraSession?.role === 'platform_admin' && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={dashboardSubView === 'metrics'}
+                    onClick={() => setDashboardSubView('metrics')}
+                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                      dashboardSubView === 'metrics' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-[#0284C7]" />
+                    <span>٤. مؤشرات الاستخدام</span>
                   </button>
                 )}
               </div>
@@ -1254,6 +1338,7 @@ export default function App() {
                             <th className="py-3 px-3 text-left">الفهم</th>
                             <th className="py-3 px-3">حالة القراءة</th>
                             <th className="py-3 px-4">الفهم القرائي</th>
+                            <th className="py-3 px-4">الفحص المعرفي</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1316,6 +1401,9 @@ export default function App() {
                                   ) : (
                                     <span className="text-slate-400">قيد المتابعة</span>
                                   )}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <BatteryRiskBadge student={stu} />
                                 </td>
                               </tr>
                             );
@@ -1388,6 +1476,9 @@ export default function App() {
               </div>
             )}
             {/* SUB-VIEW 3: LEARNING PERFORMANCE SUMMARY & SUPPORT PLAN */}
+            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
+              <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
+            )}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1617,6 +1708,8 @@ export default function App() {
             )}
 
             {/* SUB-VIEW 3: SCHOOL & INSTITUTION DEMO REQUESTS (RBAC: LEADS:MANAGE / PLATFORM_ADMIN ONLY) */}
+            {dashboardSubView === 'metrics' && baseeraSession?.role === 'platform_admin' && <UsageMetricsPanel />}
+
             {dashboardSubView === 'demo_requests' && baseeraSession?.role === 'platform_admin' && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
@@ -1752,6 +1845,10 @@ export default function App() {
                     : 'battery'
             }
             onCompleteOralSession={handleCompleteNewSession}
+            onCreateLearner={handleCreateBatteryLearner}
+            onStudentUpdated={(updated) =>
+              setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)))
+            }
             onCompleteCognitiveScreening={(cogData) => {
               setStudents(prev => prev.map(student =>
                 student.id === selectedStudent.id
@@ -1786,7 +1883,7 @@ export default function App() {
           />
         )}
 
-        {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (VTO READING MODEL) */}
+        {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (timed fluency drill) */}
         {activeTab === 'sprint' && (
           <RemediationGymView
             students={students}
@@ -1799,7 +1896,7 @@ export default function App() {
           />
         )}
 
-        {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (LUCA AI MODEL) */}
+        {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (generated decodable stories) */}
         {activeTab === 'storygen' && (
           <RemediationGymView
             students={students}

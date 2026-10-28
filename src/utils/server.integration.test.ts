@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
+import { SUBTESTS_BY_ID } from '../cognitiveProfile/battery';
 
 const PLATFORM_ADMIN_CODE = 'ee7c3523458b091f0923ac7815de4231b578cde09852341a';
 const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
@@ -754,5 +755,107 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     const verifyDelJson = (await verifyDelRes.json()) as { requests: Array<{ id: string }> };
     assert.ok(!verifyDelJson.requests.some((r) => r.id === targetLead.id));
+  });
+
+  it('stores cognitive battery responses, recomputes the profile on the server, and enforces role, tenant and item checks', async () => {
+    const admin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const educator = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
+    const otherSchool = await loginWithCode(SCHOOL_B_ADMIN_CODE);
+    const json = (token: string, method: string, body: unknown) => ({
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+
+    const created = await fetch(`${baseUrl}/api/students`, json(admin.token, 'POST', {
+      id: 'stu-battery-1',
+      name: 'طالب الفحص',
+      gradeLevel: 1,
+      ageYears: 6,
+      schoolName: 'مدرسة أ',
+      ...buildPlausibleReadingEvidence(),
+    }));
+    assert.equal(created.status, 201);
+
+    const rhyme = SUBTESTS_BY_ID.rhyme;
+    assert.equal(rhyme.kind, 'choice');
+    const items = rhyme.kind === 'choice' ? rhyme.items : [];
+    const results = {
+      rhyme: {
+        subtestId: 'rhyme',
+        responses: items.map((item, i) => ({ itemId: item.id, correct: i % 4 === 0, rtMs: 2100, replays: 0 })),
+        discontinued: false,
+        completedAt: '2026-10-01T09:00:00.000Z',
+      },
+    };
+    const upload = { ageMonths: 78, examinerName: 'أ. منى', startedAt: '2026-10-01T08:50:00.000Z', results };
+    const route = `${baseUrl}/api/students/stu-battery-1/cognitive-battery`;
+
+    const saved = await fetch(route, json(admin.token, 'PUT', upload));
+    assert.equal(saved.status, 200, await saved.clone().text());
+    const savedBody = (await saved.json()) as { student: { cognitiveBattery: { summary: { completedSubtests: number; referenceStatus: string; subtests: Array<{ centile: number }> } } } };
+    const summary = savedBody.student.cognitiveBattery.summary;
+    assert.equal(summary.completedSubtests, 1);
+    assert.equal(summary.referenceStatus, 'provisional');
+    assert.ok(summary.subtests[0].centile >= 1 && summary.subtests[0].centile <= 99);
+
+    // A client-supplied summary is rejected rather than stored.
+    const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
+    assert.equal(forgedSummary.status, 400);
+
+    // Unknown or duplicated item ids are rejected.
+    const forgedItem = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { rhyme: { ...results.rhyme, responses: [{ itemId: 'made-up', correct: true, rtMs: 900, replays: 0 }] } },
+    }));
+    assert.equal(forgedItem.status, 400);
+    const duplicated = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { rhyme: { ...results.rhyme, responses: [results.rhyme.responses[0], results.rhyme.responses[0]] } },
+    }));
+    assert.equal(duplicated.status, 400);
+
+    // Read-only educators cannot write; other schools cannot see the record.
+    assert.equal((await fetch(route, json(educator.token, 'PUT', upload))).status, 403);
+    assert.equal((await fetch(route, json(otherSchool.token, 'PUT', upload))).status, 404);
+
+    // The educator can read the stored summary.
+    const list = await fetch(`${baseUrl}/api/students`, { headers: { Authorization: `Bearer ${educator.token}` } });
+    const listed = ((await list.json()) as { students: Array<{ id: string; cognitiveBattery?: { summary?: unknown } }> }).students;
+    assert.ok(listed.find((s) => s.id === 'stu-battery-1')?.cognitiveBattery?.summary);
+
+    // Training progress is validated and stored.
+    const progressRoute = `${baseUrl}/api/students/stu-battery-1/training-progress`;
+    const progress = {
+      plan: { createdAt: '2026-10-02T08:00:00.000Z', preventive: false, focus: ['rhyme'], rationaleAr: ['اختبار'] },
+      levels: { rhyme: 1 },
+      mastered: [],
+      history: [{ date: '2026-10-02T08:10:00.000Z', skill: 'rhyme', level: 1, correct: 6, total: 8 }],
+      supportFlags: [],
+    };
+    const progressRes = await fetch(progressRoute, json(admin.token, 'PUT', progress));
+    assert.equal(progressRes.status, 200, await progressRes.clone().text());
+    const impossible = { ...progress, history: [{ ...progress.history[0], correct: 9, total: 8 }] };
+    assert.equal((await fetch(progressRoute, json(admin.token, 'PUT', impossible))).status, 400);
+  });
+
+  it('accepts anonymous usage events and shows totals only to the platform admin', async () => {
+    const device = '0f'.repeat(16);
+    const send = (body: unknown) =>
+      fetch(`${baseUrl}/api/metrics/event`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    assert.equal((await send({ event: 'battery_started', device })).status, 204);
+    assert.equal((await send({ event: 'subtest_completed', device, subtestId: 'rhyme', discontinued: false })).status, 204);
+    assert.equal((await send({ event: 'visit', device, studentName: 'سارة' })).status, 400);
+
+    const schoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const denied = await fetch(`${baseUrl}/api/admin/metrics`, { headers: { Authorization: `Bearer ${schoolAdmin.token}` } });
+    assert.equal(denied.status, 403);
+
+    const platform = await loginWithCode(PLATFORM_ADMIN_CODE);
+    const res = await fetch(`${baseUrl}/api/admin/metrics?days=7`, { headers: { Authorization: `Bearer ${platform.token}` } });
+    assert.equal(res.status, 200);
+    const { summary } = (await res.json()) as { summary: { totals: Record<string, number>; uniqueDevices: number } };
+    assert.ok(summary.totals.battery_started >= 1);
+    assert.ok(summary.uniqueDevices >= 1);
   });
 });

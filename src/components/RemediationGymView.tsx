@@ -189,7 +189,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   // Authenticated loading of curated educational activities for the selected grade.
   const fetchCuratedSession = async (student: StudentRecord, announce: boolean = true) => {
     if (!canGeneratePlan) {
-      setActivityStatusMessage('الأنشطة العامة متاحة ومخصصة بالذكاء الاصطناعي.');
+      setActivityStatusMessage('الأنشطة العامة متاحة.');
       return;
     }
     setIsLoadingCurated(true);
@@ -209,7 +209,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       if (!res.ok) {
         setActivityStatusMessage(
           res.status === 401 || res.status === 403
-            ? 'الأنشطة متاحة ومحدثة بالذكاء الاصطناعي.'
+            ? 'الأنشطة متاحة ومحدّثة.'
             : 'تعذّر تحميل أنشطة الصف؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
         );
         return;
@@ -403,7 +403,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="rounded-2xl p-2.5 px-4 text-center min-w-[95px]" style={{ background: '#FFFFFF', color: '#0F1E2E' }}>
             <div className="text-xl font-bold flex items-center justify-center gap-1" style={{ color: '#B7700B' }}>
               <IconStar size={18} />
-              <span>{xpPoints} XP</span>
+              <span>{xpPoints} نقطة</span>
             </div>
             <span className="font-child text-[11px] font-bold text-slate-500 block mt-0.5">نقاط البطل</span>
           </div>
@@ -527,7 +527,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               <IconBaseeraFalcon size={38} />
             </div>
             <div>
-              <span className="text-xs font-black text-emerald-950 block">صقر بصيرة الذكي:</span>
+              <span className="text-xs font-black text-emerald-950 block">صقر بصيرة:</span>
               <p className="font-child text-xs sm:text-sm font-bold text-slate-700 mt-0.5">
                 المس الزر الأخضر لسماع الكلمة، ثم ضع الحرف الناقص في صندوق الكلمة!
               </p>
@@ -869,7 +869,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 5: 5-MINUTE DAILY SPRINT (VTO READING MODEL)          */}
+      {/* STATION 5: 5-MINUTE DAILY SPRINT (timed fluency drill)          */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'sprint' && (
         <DailySprintStation
@@ -880,7 +880,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* STATION 6: ADAPTIVE DECODABLE STORYGEN (LUCA AI MODEL)       */}
+      {/* STATION 6: ADAPTIVE DECODABLE STORYGEN (generated decodable stories)       */}
       {/* ------------------------------------------------------------- */}
       {activeStation === 'storygen' && (
         <StoryGenStation
