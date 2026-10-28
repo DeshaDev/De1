@@ -379,72 +379,43 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
-      {/* 1. PLAYFUL HERO QUEST BANNER */}
-      <div className="rounded-3xl p-5 sm:p-7 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #0B6E69 0%, #084B48 100%)', color: '#FFFFFF' }}>
-        <div className="flex items-center gap-4 text-center sm:text-right">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,.12)' }}>
-            <IconBaseeraFalcon size={48} />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-1.5" style={{ background: 'rgba(255,255,255,.12)', color: 'rgba(255,255,255,.85)' }}>
-              <IconLettersBlock size={15} />
-              <span>صالة ألعاب وبطولات القراءة · البطل {activeStudent.name}</span>
-            </div>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold" style={{ color: '#FFFFFF' }}>
-              صالة تدريب وبطولات الأبطال
-            </h1>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,.8)' }}>
-              اصطد الحروف وركّب المقاطع لتجمع الكؤوس ونقاط التميّز!
-            </p>
-          </div>
+      {/* Header: who is training, and their points */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="bz-h2">صالة التدريب</h1>
+          <p className="bz-muted">تدريب {activeStudent.name}: تمرين يومي قصير، وألعاب لكل مهارة.</p>
         </div>
+        <span className="bz-badge bz-badge-sun text-base px-4 py-2">
+          <IconStar size={16} /> <span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة
+        </span>
+      </header>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="rounded-2xl p-2.5 px-4 text-center min-w-[95px]" style={{ background: '#FFFFFF', color: '#0F1E2E' }}>
-            <div className="text-xl font-bold flex items-center justify-center gap-1" style={{ color: '#B7700B' }}>
-              <IconStar size={18} />
-              <span>{xpPoints} نقطة</span>
-            </div>
-            <span className="font-child text-[11px] font-bold text-slate-500 block mt-0.5">نقاط البطل</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. TACTILE MODE SELECTOR: Daily Lesson vs Skill Games */}
-      <div className="flex items-center justify-center p-1 bg-soft rounded-2xl border border-line max-w-md mx-auto">
+      {/* Two ways to train */}
+      <div className="bz-segment w-full sm:w-auto" role="tablist" aria-label="طريقة التدريب">
         <button
           type="button"
+          role="tab"
+          aria-selected={gymMode === 'curriculum'}
           onClick={() => {
             setGymMode('curriculum');
             setActiveScaffold(null);
           }}
-          className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
-            gymMode === 'curriculum'
-              ? 'bg-card text-ink shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-          )}
         >
-          <Target size={17} />
-          <span>🎯 تدريب اليوم (٣ أسئلة)</span>
+          <Target size={17} /> تمرين اليوم · ٣ أسئلة
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={gymMode === 'stations'}
           onClick={() => {
             setGymMode('stations');
             setActiveScaffold(null);
           }}
-          className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
-            gymMode === 'stations'
-              ? 'bg-card text-ink shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-          )}
         >
-          <Sparkles size={17} />
-          <span>🎮 ألعاب المهارات (٦ ألعاب)</span>
+          <Sparkles size={17} /> ألعاب المهارات · ٥ ألعاب
         </button>
       </div>
 
-      {/* MODE 1: DAILY STRUCTURED CURRICULUM (Focused, clean, zero extra drills on screen) */}
       {gymMode === 'curriculum' && (
         <EvidenceBasedCurriculumView
           student={activeStudent}
@@ -456,43 +427,37 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         />
       )}
 
-      {/* MODE 2: 6 SKILL STATIONS (Playful gym games, no curriculum stacked on top) */}
       {gymMode === 'stations' && (
         <>
-          {/* 2. CHUNKY 3D CLAYMORPHIC STATION NAVIGATION BAR */}
-      <div className="bg-white rounded-3xl p-3 shadow-md border-2 border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 overflow-x-auto py-1 w-full sm:w-auto">
-          {[
-            { id: 'phonics', label: 'صائد الحروف', icon: IconLettersBlock, activeClass: 'clay-btn-emerald' },
-            { id: 'syllables', label: 'تركيب المقاطع', icon: IconPuzzlePieces, activeClass: 'clay-btn-purple' },
-            { id: 'storygen', label: 'قصص الأبطال', icon: IconStoryBook, activeClass: 'clay-btn-amber' },
-            { id: 'sprint', label: 'تحدي الدقائق الخمس', icon: IconLightningBolt, activeClass: 'duo-btn-orange' },
-            { id: 'pacer', label: 'طلاقة القراءة', icon: IconStoryBook, activeClass: 'clay-btn-emerald' },
-          ].map((st) => {
-            const isActive = activeStation === st.id;
-            const IconComp = st.icon;
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => {
-                  setActiveStation(st.id as any);
-                  setActiveScaffold(null);
-                  exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }}
-                className={'px-4 py-2.5 rounded-2xl font-child font-black text-xs sm:text-sm transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ' + (
-                  isActive
-                    ? st.activeClass + ' scale-103 shadow-md'
-                    : 'duo-btn-white hover:border-sky-300'
-                )}
-              >
-                <IconComp size={20} className="shrink-0" />
-                <span>{st.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5" aria-label="ألعاب المهارات">
+        {[
+          { id: 'phonics', label: 'صائد الحروف', hint: 'أكمل الحرف الناقص', icon: IconLettersBlock },
+          { id: 'syllables', label: 'تركيب المقاطع', hint: 'ابنِ الكلمة من مقاطعها', icon: IconPuzzlePieces },
+          { id: 'storygen', label: 'قصص الأبطال', hint: 'قصة قصيرة حول صوت واحد', icon: IconStoryBook },
+          { id: 'sprint', label: 'تحدي الدقائق الخمس', hint: 'قراءة كلمات متتابعة', icon: IconLightningBolt },
+          { id: 'pacer', label: 'طلاقة القراءة', hint: 'نص بإيقاع مريح', icon: IconStoryBook },
+        ].map((st) => {
+          const isActive = activeStation === st.id;
+          const IconComp = st.icon;
+          return (
+            <button
+              key={st.id}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => {
+                setActiveStation(st.id as any);
+                setActiveScaffold(null);
+                exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }}
+              className={'text-right rounded-2xl border p-3 transition flex flex-col gap-1.5 ' + (isActive ? 'border-brand bg-brand-soft' : 'border-line bg-card hover:border-line-strong')}
+            >
+              <IconComp size={26} className="shrink-0" />
+              <span className="font-semibold text-ink">{st.label}</span>
+              <span className="bz-small bz-muted">{st.hint}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Floating Celebration Toast */}
 
@@ -542,7 +507,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               className="clay-btn-emerald py-4 px-8 text-lg sm:text-xl font-black inline-flex items-center justify-center gap-3 shadow-lg hover:scale-103 active:scale-95 cursor-pointer mx-auto w-full sm:w-auto"
             >
               <Volume2 className="w-6 h-6 animate-pulse" />
-              <span>استمع لنطق الكلمة: « {currentPhonics.spokenWord} »</span>
+              <span>استمع إلى الكلمة</span>
             </button>
           </div>
 
@@ -604,7 +569,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 }}
                 className="clay-btn-sky w-full py-4 text-xl font-black flex items-center justify-center gap-2.5 cursor-pointer shadow-lg"
               >
-                <span>انطلق للسؤال التالي</span>
+                <span>السؤال التالي</span>
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </div>
@@ -622,7 +587,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               تركيب المقاطع
             </span>
             <span className="font-mono text-slate-700">
-              الكلمة {syllableIdx + 1} من {syllableList.length}
+              الكلمة {toEasternArabicDigits(syllableIdx + 1)} من {toEasternArabicDigits(syllableList.length)}
             </span>
           </div>
 
@@ -639,7 +604,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="p-4 rounded-2xl bg-slate-50 border-2 border-dashed border-emerald-400 min-h-[70px] flex items-center justify-center gap-2 shadow-inner">
             {assembledSyllables.length === 0 ? (
               <span className="text-xs text-slate-400 font-bold">
-                انقر على المقاطع بالأسفل لتركيب الكلمة...
+                اضغط المقاطع بالترتيب لتركيب الكلمة.
               </span>
             ) : (
               <div className="flex items-center gap-2 text-2xl sm:text-3xl font-serif font-black text-emerald-800">
@@ -695,7 +660,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 className="duo-btn-green py-2 px-4 text-xs font-black flex items-center gap-1.5 cursor-pointer"
               >
                 <Volume2 className="w-3.5 h-3.5" />
-                <span>استمع «{currentSyllable.targetWord}»</span>
+                <span>استمع إلى الكلمة</span>
               </button>
             )}
           </div>
@@ -774,7 +739,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="rounded-2xl bg-gradient-to-br from-[#FAF6EE] via-white to-[#ECFDF5]/40 border border-[#E5DEC9] p-4 sm:p-5 space-y-4 text-center">
             <div className="flex items-center justify-between text-xs text-slate-600 border-b border-[#E5DEC9] pb-2">
               <span className="font-bold text-slate-900">
-                «{currentPassage.title}» · {currentPassage.gradeLevel}
+                «{currentPassage.title}» · {toEasternArabicDigits(currentPassage.gradeLevel)}
               </span>
               <div className="flex items-center gap-1.5 font-mono">
                 <span>الإيقاع:</span>

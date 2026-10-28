@@ -129,6 +129,19 @@ export function ageBandIndex(ageMonths: number): { index: number; outOfRange: bo
   return { index, outOfRange: false };
 }
 
+/**
+ * How much weight a screening result can carry at this age.
+ * Precursor screening is least stable before school entry (Thompson et al., 2015), and from
+ * about eight the child's reading itself should be measured directly.
+ */
+export function ageCautionAr(ageMonths: number): string | null {
+  if (ageMonths < 60)
+    return 'في عمر أربع سنوات لا يُتوقَّع من الطفل أن يقرأ، والفحص لا يطلب منه القراءة؛ يقيس المهارات التي تسبقها (الأصوات والذاكرة والتمييز). لكن نتائج هذا العمر أقل ثباتًا، فاعتبرها مؤشرًا أوليًا وأعد الفحص بعد ستة أشهر قبل أي استنتاج.';
+  if (ageMonths >= 96)
+    return 'في عمر ثماني سنوات يكون الطفل قد تلقّى غالبًا سنتين من تعليم القراءة، فتقلّ دلالة المهارات السابقة للقراءة وحدها. أضف تقييمًا مباشرًا للقراءة (قراءة نص وفهمه، والتسمية السريعة) وراجع أخصائيًا عند الاشتباه.';
+  return null;
+}
+
 /** Standard normal CDF (Abramowitz–Stegun 7.1.26), accurate to ~1e-7. */
 export function normalCdf(z: number): number {
   const sign = z < 0 ? -1 : 1;

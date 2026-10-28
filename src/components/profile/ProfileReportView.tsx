@@ -3,6 +3,7 @@ import { ArrowRight, Printer, Dumbbell, AlertTriangle, ChevronDown, Info } from 
 import { BATTERY, DOMAINS, SUBTESTS_BY_ID, SubtestId } from '../../cognitiveProfile/battery';
 import {
   BAND_META,
+  ageCautionAr,
   CognitiveProfile,
   REFERENCE_TABLE,
   ScoredSubtest,
@@ -282,6 +283,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
           {/* Method note */}
           <section className="rounded-2xl bg-soft p-5 bz-small text-ink-2 space-y-2">
             <p className="flex items-center gap-1.5 font-semibold text-ink"><Info className="w-4 h-4" /> عن المقارنة العمرية وحدود التفسير</p>
+            {ageCautionAr(session.ageMonths) && <p className="font-semibold text-ink">{ageCautionAr(session.ageMonths)}</p>}
             {profile.referenceStatus === 'provisional' ? (
               <p>
                 المئينات في هذا التقرير <strong>تقديرية</strong> ومحسوبة مقابل جدول مرجعي مؤقت ({REFERENCE_TABLE.version}). {REFERENCE_TABLE.sourceAr} لذلك تُستخدم النتائج للفرز المبكر وتوجيه التدريب، ولا تُغني عن تقييم شامل لدى أخصائي مؤهل.

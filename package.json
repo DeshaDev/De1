@@ -11,7 +11,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "audio:generate": "tsx scripts/generate-audio.ts",
-    "test": "tsx --test src/utils/learningMetrics.test.ts src/utils/dyslexiaEngines.test.ts src/utils/studentDataSecurity.test.ts src/utils/server.integration.test.ts src/utils/cameraFreeIntegration.test.ts src/utils/scientificIntegrity.test.ts src/utils/remediationEngine.test.ts src/utils/transcriptComparison.test.ts src/data/readingContentQuality.test.ts src/utils/cognitiveScreening.test.ts src/utils/pronunciationAssessment.test.ts src/utils/evidenceBasedCurriculum.test.ts src/cognitiveProfile/cognitiveProfile.test.ts src/utils/usageMetrics.test.ts src/cognitiveProfile/contentQuality.test.ts",
+    "test": "tsx --test src/utils/learningMetrics.test.ts src/utils/dyslexiaEngines.test.ts src/utils/studentDataSecurity.test.ts src/utils/server.integration.test.ts src/utils/cameraFreeIntegration.test.ts src/utils/scientificIntegrity.test.ts src/utils/remediationEngine.test.ts src/utils/transcriptComparison.test.ts src/data/readingContentQuality.test.ts src/utils/cognitiveScreening.test.ts src/utils/pronunciationAssessment.test.ts src/utils/evidenceBasedCurriculum.test.ts src/cognitiveProfile/cognitiveProfile.test.ts src/utils/usageMetrics.test.ts src/cognitiveProfile/contentQuality.test.ts src/components/reader/chunks.test.ts",
     "e2e": "playwright test"
   },
   "dependencies": {
