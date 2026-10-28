@@ -129,7 +129,7 @@ async function qaClip(text: string): Promise<QaResult> {
           'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
           Accept: 'application/json',
         },
-        body: wav,
+        body: new Uint8Array(wav),
       }
     );
     if (r.status === 429 || r.status >= 500) throw new Error(`STT HTTP ${r.status}`);
