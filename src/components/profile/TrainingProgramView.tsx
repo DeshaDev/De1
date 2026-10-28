@@ -23,6 +23,7 @@ import {
 } from '../../cognitiveProfile/training';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
 import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
+import { trackUsage } from '../../utils/usageTracking';
 import type { StudentRecord } from '../../data/seedData';
 import { ChoicePlayer, SpanPlayer } from './TaskPlayers';
 import { speak } from './audio';
@@ -108,7 +109,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     }
   };
 
-  const startProgram = (plan: TrainingPlan) => persist(createProgress(plan));
+  const startProgram = (plan: TrainingPlan) => {
+    trackUsage('training_started');
+    persist(createProgress(plan));
+  };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
   const todaySkills = activeSkills.length > 0 ? activeSkills : progress?.plan.focus ?? [];
@@ -203,7 +207,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <button
                 type="button"
                 onClick={() =>
-                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : setRun({ ...run, phase: 'summary' })
+                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : (trackUsage('training_session_completed'), setRun({ ...run, phase: 'summary' }))
                 }
                 className="bz-btn bz-btn-primary bz-btn-lg"
               >

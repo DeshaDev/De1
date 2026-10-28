@@ -838,4 +838,24 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const impossible = { ...progress, history: [{ ...progress.history[0], correct: 9, total: 8 }] };
     assert.equal((await fetch(progressRoute, json(admin.token, 'PUT', impossible))).status, 400);
   });
+
+  it('accepts anonymous usage events and shows totals only to the platform admin', async () => {
+    const device = '0f'.repeat(16);
+    const send = (body: unknown) =>
+      fetch(`${baseUrl}/api/metrics/event`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    assert.equal((await send({ event: 'battery_started', device })).status, 204);
+    assert.equal((await send({ event: 'subtest_completed', device, subtestId: 'rhyme', discontinued: false })).status, 204);
+    assert.equal((await send({ event: 'visit', device, studentName: 'سارة' })).status, 400);
+
+    const schoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const denied = await fetch(`${baseUrl}/api/admin/metrics`, { headers: { Authorization: `Bearer ${schoolAdmin.token}` } });
+    assert.equal(denied.status, 403);
+
+    const platform = await loginWithCode(PLATFORM_ADMIN_CODE);
+    const res = await fetch(`${baseUrl}/api/admin/metrics?days=7`, { headers: { Authorization: `Bearer ${platform.token}` } });
+    assert.equal(res.status, 200);
+    const { summary } = (await res.json()) as { summary: { totals: Record<string, number>; uniqueDevices: number } };
+    assert.ok(summary.totals.battery_started >= 1);
+    assert.ok(summary.uniqueDevices >= 1);
+  });
 });

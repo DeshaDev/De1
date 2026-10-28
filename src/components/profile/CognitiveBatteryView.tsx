@@ -38,6 +38,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
+import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
@@ -409,6 +410,11 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
   );
 }
 
+function ReportViewTracker({ children }: { children: React.ReactNode }) {
+  useEffect(() => trackUsage('report_viewed'), []);
+  return <>{children}</>;
+}
+
 function SyncBadge({ state, onRetry }: { state: SyncState; onRetry: () => void }) {
   if (state === 'saved') return <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> محفوظ في سجل المدرسة</span>;
   if (state === 'saving') return <span className="bz-badge bz-badge-neutral">جارٍ الحفظ في سجل المدرسة…</span>;
@@ -487,6 +493,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const saveResult = (result: SubtestResult) => {
     if (!session) return;
     const updated = { ...session, results: { ...session.results, [result.subtestId]: result } };
+    trackUsage('subtest_completed', { subtestId: result.subtestId, discontinued: result.discontinued });
+    const wasComplete = BATTERY.every((s) => session.results[s.id]);
+    if (!wasComplete && BATTERY.every((s) => updated.results[s.id])) trackUsage('battery_completed');
     setSession(updated);
     saveBatterySession(updated);
     pushToSchool(updated);
@@ -514,6 +523,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <SetupView
         student={activeStudent}
         onStart={(s) => {
+          trackUsage('battery_started');
           // Never record a real child's results under a demo record.
           if (needsOwnRecord(activeStudent) && onCreateLearner) {
             const newId = onCreateLearner({ name: s.childName, ageYears: Math.floor(s.ageMonths / 12), examinerName: s.examinerName });
@@ -543,12 +553,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
 
   if (view.name === 'report' && profile) {
     return (
+      <ReportViewTracker>
       <ProfileReportView
         profile={profile}
         session={session}
         onBack={() => setView({ name: 'map' })}
         onStartTraining={() => setView({ name: 'training' })}
       />
+      </ReportViewTracker>
     );
   }
 

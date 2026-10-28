@@ -52,6 +52,8 @@ import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
+import { trackUsage } from './utils/usageTracking';
+import { UsageMetricsPanel } from './components/UsageMetricsPanel';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -63,7 +65,7 @@ import {
 
 type ActiveTab = AppTabId;
 
-type DashboardSubView = 'roster' | 'report' | 'demo_requests';
+type DashboardSubView = 'roster' | 'report' | 'demo_requests' | 'metrics';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
@@ -75,6 +77,17 @@ export default function App() {
     }
     return 'home';
   });
+
+  // One anonymous visit per browser session (see utils/usageTracking).
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('baseera.visitCounted')) return;
+      sessionStorage.setItem('baseera.visitCounted', '1');
+    } catch {
+      // ignore storage errors
+    }
+    trackUsage('visit');
+  }, []);
 
   // Always reset scroll to top on tab change so user never lands midway down a page
   useEffect(() => {
@@ -1178,6 +1191,20 @@ export default function App() {
                     <span>٣. طلبات المدارس والتجربة ({demoRequests.length})</span>
                   </button>
                 )}
+                {baseeraSession?.role === 'platform_admin' && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={dashboardSubView === 'metrics'}
+                    onClick={() => setDashboardSubView('metrics')}
+                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+                      dashboardSubView === 'metrics' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-[#0284C7]" />
+                    <span>٤. مؤشرات الاستخدام</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-4 text-xs text-slate-500">
@@ -1681,6 +1708,8 @@ export default function App() {
             )}
 
             {/* SUB-VIEW 3: SCHOOL & INSTITUTION DEMO REQUESTS (RBAC: LEADS:MANAGE / PLATFORM_ADMIN ONLY) */}
+            {dashboardSubView === 'metrics' && baseeraSession?.role === 'platform_admin' && <UsageMetricsPanel />}
+
             {dashboardSubView === 'demo_requests' && baseeraSession?.role === 'platform_admin' && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">

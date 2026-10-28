@@ -10,6 +10,13 @@ import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionP
 import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
+  UsageEventSchema,
+  emptyUsageStore,
+  recordUsageEvent,
+  summarizeUsage,
+  type UsageStore,
+} from './src/utils/usageMetrics';
+import {
   CognitiveBatteryUploadSchema,
   TrainingProgressUploadSchema,
   summarizeBattery,
@@ -55,6 +62,7 @@ const DATA_DIR = process.env.BASEERA_DATA_DIR
 const STORE_PATH = path.join(DATA_DIR, 'learning-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
 const DEMO_REQUESTS_PATH = path.join(DATA_DIR, 'school-demo-requests.json');
+const USAGE_PATH = path.join(DATA_DIR, 'usage-metrics.json');
 
 let baseeraStoreReady = false;
 let securityStateReady = false;
@@ -538,6 +546,53 @@ function demoRequestRateLimiter(
   }
   history.push(now);
   demoRequestBuckets.set(clientIp, history);
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Anonymous usage counts (no personal data): see src/utils/usageMetrics.ts
+// ---------------------------------------------------------------------------
+let usageStore: UsageStore = emptyUsageStore();
+let usageDirty = false;
+
+function loadUsageStore(): void {
+  try {
+    if (!fs.existsSync(USAGE_PATH)) return;
+    const parsed = JSON.parse(fs.readFileSync(USAGE_PATH, 'utf8')) as UsageStore;
+    if (parsed && parsed.version === 1 && parsed.days && typeof parsed.days === 'object') usageStore = parsed;
+  } catch {
+    usageStore = emptyUsageStore();
+  }
+}
+
+function flushUsageStore(): void {
+  if (!usageDirty) return;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmp = `${USAGE_PATH}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(usageStore), { mode: 0o600 });
+    fs.renameSync(tmp, USAGE_PATH);
+    usageDirty = false;
+  } catch (err) {
+    console.warn('[usage] could not persist usage counts:', err);
+  }
+}
+
+const usageBuckets = new Map<string, number[]>();
+function usageRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'local';
+  const now = Date.now();
+  const history = (usageBuckets.get(clientIp) || []).filter((ts) => now - ts < 60_000);
+  if (!usageBuckets.has(clientIp) && usageBuckets.size >= 5_000) {
+    const oldest = usageBuckets.keys().next().value;
+    if (oldest !== undefined) usageBuckets.delete(oldest);
+  }
+  if (history.length >= 120) {
+    res.status(429).json({ error: 'طلبات كثيرة.' });
+    return;
+  }
+  history.push(now);
+  usageBuckets.set(clientIp, history);
   next();
 }
 
@@ -3007,6 +3062,40 @@ async function startServer() {
   });
 
   // Public Endpoint: Submit School / Institution Demo & Pilot Request
+  // Anonymous usage events. Never accepts names, ids of students or answers.
+  loadUsageStore();
+  const usageFlushTimer = setInterval(flushUsageStore, 15_000);
+  usageFlushTimer.unref();
+  process.once('beforeExit', flushUsageStore);
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => {
+      flushUsageStore();
+      process.exit(0);
+    });
+  }
+
+  app.post('/api/metrics/event', usageRateLimiter, (req, res) => {
+    const parsed = UsageEventSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'حدث غير صالح.' });
+      return;
+    }
+    const hashedDevice = crypto
+      .createHmac('sha256', BASEERA_SESSION_SECRET || 'baseera-usage')
+      .update(parsed.data.device)
+      .digest('hex')
+      .slice(0, 24);
+    usageStore = recordUsageEvent(usageStore, parsed.data, hashedDevice);
+    usageDirty = true;
+    res.status(204).end();
+  });
+
+  app.get('/api/admin/metrics', requireBaseeraAuth('leads:manage'), (req, res) => {
+    const days = Math.min(365, Math.max(7, Number(req.query.days) || 30));
+    flushUsageStore();
+    res.json({ summary: summarizeUsage(usageStore, days) });
+  });
+
   app.post('/api/school-demo-request', demoRequestRateLimiter, (req, res) => {
     const parsed = SchoolDemoRequestSchema.safeParse(req.body);
     if (!parsed.success) {
