@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { BookOpen, Brain, Sparkles, Award, ShieldCheck, Flame, Star, Trophy } from 'lucide-react';
-import { StudentRecord, StudentAssessmentSnapshot, CognitiveScreeningData } from '../data/seedData';
+import React, { useEffect, useState } from 'react';
+import { BookOpen, Brain, Dumbbell, Timer } from 'lucide-react';
+import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
 import ReadingAssessmentView from './ReadingAssessmentView';
 import CognitiveScreeningView from './CognitiveScreeningView';
+import CognitiveBatteryView from './profile/CognitiveBatteryView';
 import { AppTabId } from './HomeLandingView';
-import { IconTrophy, IconStoryBook, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
+import { TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
+
+export type ScreeningSubTab = 'battery' | 'training' | 'oral-reading' | 'cognitive-screening';
 
 interface DyslexiaScreeningHubProps {
   students: StudentRecord[];
@@ -13,117 +16,88 @@ interface DyslexiaScreeningHubProps {
   onNavigateTab: (tab: AppTabId) => void;
   onCompleteOralSession: (record: StudentRecord) => void;
   onCompleteCognitiveScreening: (cogData: CognitiveScreeningData) => void;
-  initialSubTab?: 'oral-reading' | 'cognitive-screening';
+  initialSubTab?: ScreeningSubTab;
 }
 
+const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
+  { id: 'battery', label: 'الفحص المعرفي الشامل', hint: '٩ ألعاب · ٤–٨ سنوات', icon: Brain },
+  { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
+  { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'تكميلي · من الصف الأول', icon: BookOpen },
+  { id: 'cognitive-screening', label: 'التسمية السريعة والكلمات غير الحقيقية', hint: 'تكميلي · من الصف الأول', icon: Timer },
+];
+
 export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
-  students,
   activeStudent,
-  onSelectStudent,
   onNavigateTab,
   onCompleteOralSession,
   onCompleteCognitiveScreening,
-  initialSubTab = 'oral-reading',
+  initialSubTab = 'battery',
 }) => {
-  const [subTab, setSubTab] = useState<'oral-reading' | 'cognitive-screening'>(initialSubTab);
-  const [showClinicalDetails, setShowClinicalDetails] = useState<boolean>(false);
+  const [subTab, setSubTab] = useState<ScreeningSubTab>(initialSubTab);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => setSubTab(initialSubTab), [initialSubTab]);
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Playful Hero Quest Header */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-2 border-emerald-200/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 text-right w-full md:w-auto">
-          <div className="w-13 h-13 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center shadow-sm shrink-0 animate-bounce-gentle">
-            <IconTrophy size={32} />
-          </div>
+      {!focused && (
+      <header className="bg-white border border-slate-200 rounded-[2rem] p-5 sm:p-6 space-y-5">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-child text-lg sm:text-2xl font-black text-slate-900">
-                تحديات بطل القراءة الذكي
-              </h1>
-              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                مستوى الأبطال
-              </span>
-            </div>
-            <p className="font-child text-xs sm:text-sm text-slate-600 font-bold mt-0.5">
-              مرحباً بالبطل <strong className="text-emerald-700 font-black">{activeStudent.name}</strong>! انطلق في تحدي القراءة وسَمِّ الأشكال لتكسب وسام الطلاقة الذهبي.
+            <p className="text-xs font-black text-emerald-700">بصيرة · الفحص المبكر لصعوبات القراءة</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">الفحص المعرفي الشامل لمهارات القراءة</h1>
+            <p className="text-sm text-slate-600 mt-2 max-w-3xl leading-relaxed">
+              تسع ألعاب قصيرة (نحو {TOTAL_BATTERY_MINUTES} دقيقة) ترسم ملفًا معرفيًا للطفل: الذاكرة البصرية والسمعية، والتعلّم الترابطي، والوعي الصوتي، والتمييز السمعي والبصري، ومعرفة الحروف. يقارن التقرير أداء الطفل بالمتوقع لعمره، ويحدد نقاط القوة والضعف، ويقترح استراتيجيات تعليمية وبرنامجًا تدريبيًا مخصصًا.
             </p>
           </div>
         </div>
-
-        {/* The Two Child-Friendly Action Tracks */}
-        <div className="flex items-center gap-2 bg-white/90 backdrop-blur p-1.5 rounded-2xl text-xs font-black w-full md:w-auto justify-center border border-emerald-200 shadow-xs">
-          <button
-            type="button"
-            onClick={() => setSubTab('oral-reading')}
-            className={`child-tactile-btn px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-              subTab === 'oral-reading'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                : 'text-slate-600 hover:text-emerald-700'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span className="font-child font-black">١. تحدي قراءة القصة والطلاقة</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSubTab('cognitive-screening')}
-            className={`child-tactile-btn px-4 py-2.5 rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-              subTab === 'cognitive-screening'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                : 'text-slate-600 hover:text-emerald-700'
-            }`}
-          >
-            <Brain className="w-4 h-4" />
-            <span className="font-child font-black">٢. سباق سرعة الأشكال والكلمات</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Discreet Specialist Info Toggle (For Teachers/Clinicians Only) */}
-      <div className="flex items-center justify-end px-2">
-        <button
-          type="button"
-          onClick={() => setShowClinicalDetails(prev => !prev)}
-          className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>{showClinicalDetails ? 'إخفاء مؤشرات الفحص التربوي' : 'عرض مؤشرات الفحص التربوي والمعرفي للمعلم'}</span>
-        </button>
-      </div>
-
-      {showClinicalDetails && (
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5 animate-fade-slide-up">
-          <div className="font-bold text-slate-900 flex items-center gap-2">
-            <span>🔬 مؤشرات الفحص المعرفي والطلاقة (Screening Indicators):</span>
-          </div>
-          <p className="leading-relaxed text-slate-600">
-            تدمج هذه المحطة قياس الطلاقة الشفوية المباشرة (WCPM) بدقة المقاطع ومعدل الاستبدال والحذف، واختبار التسمية الآلية السريعة (RAN) لزمن الرجع والمعالجة الفونولوجية السريعة، بالإضافة إلى الكلمات غير المعجمية (Pseudowords) لفك التشفير الإملائي المستقل.
-          </p>
-        </div>
+        <nav className="grid grid-cols-2 lg:grid-cols-4 gap-2" aria-label="أقسام الفحص">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = subTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSubTab(tab.id)}
+                aria-current={active ? 'page' : undefined}
+                className={`text-right rounded-2xl px-4 py-3 border-2 transition-all cursor-pointer ${
+                  active ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <span className={`flex items-center gap-2 text-sm font-black ${active ? 'text-emerald-800' : 'text-slate-800'}`}>
+                  <Icon className="w-4 h-4 shrink-0" /> {tab.label}
+                </span>
+                <span className="block text-[11px] font-bold text-slate-500 mt-0.5">{tab.hint}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </header>
       )}
 
-      {/* Track 1: Oral Reading & Fluency Assessment */}
+      {(subTab === 'battery' || subTab === 'training') && (
+        <CognitiveBatteryView
+          key={subTab}
+          activeStudent={activeStudent}
+          initialView={subTab === 'training' ? 'training' : 'map'}
+          onFocusModeChange={setFocused}
+        />
+      )}
+
       {subTab === 'oral-reading' && (
-        <div className="animate-fade-slide-up">
-          <ReadingAssessmentView
-            activeStudent={activeStudent}
-            onCompleteSession={onCompleteOralSession}
-            onNavigateTab={(tab) => onNavigateTab(tab as any)}
-          />
-        </div>
+        <ReadingAssessmentView
+          activeStudent={activeStudent}
+          onCompleteSession={onCompleteOralSession}
+          onNavigateTab={(tab) => onNavigateTab(tab as AppTabId)}
+        />
       )}
 
-      {/* Track 2: Cognitive Screening (RAN, Pseudowords, Phonemic Awareness, Summary) */}
       {subTab === 'cognitive-screening' && (
-        <div className="animate-fade-slide-up">
-          <CognitiveScreeningView
-            student={activeStudent}
-            onNavigateTab={(tab) => onNavigateTab(tab as any)}
-            onCompleteScreening={onCompleteCognitiveScreening}
-          />
-        </div>
+        <CognitiveScreeningView
+          student={activeStudent}
+          onNavigateTab={(tab) => onNavigateTab(tab as AppTabId)}
+          onCompleteScreening={onCompleteCognitiveScreening}
+        />
       )}
     </div>
   );
