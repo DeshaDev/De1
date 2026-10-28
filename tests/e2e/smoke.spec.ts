@@ -10,15 +10,16 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
 test('reading view opens from primary navigation', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
-  await expect(page.getByRole('heading', { name: 'تحديات بطل القراءة الذكي' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'الفحص المعرفي الشامل لمهارات القراءة' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /قراءة نص وفهمه/ })).toHaveAttribute('aria-current', 'page');
 });
 
 test('screening, accessible-reader, and training views open from primary navigation', async ({ page }) => {
   await page.goto('/');
 
   // 1. Reading screening / diagnostic hub
-  await page.getByRole('button', { name: /مؤشرات التعثر القرائي|فحص القراءة/ }).first().click();
-  await expect(page.getByRole('heading', { name: /تحديات بطل القراءة الذكي/ })).toBeVisible();
+  await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
+  await expect(page.getByRole('heading', { name: /الفحص المعرفي الشامل لمهارات القراءة/ })).toBeVisible();
 
   // Return to home
   await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
@@ -132,4 +133,22 @@ test('parental consent onboarding enforces consent before launch and school demo
 
   await page.getByRole('button', { name: 'إرسال طلب التجربة' }).click();
   await expect(page.getByText('تم استلام طلبكم بنجاح!')).toBeVisible();
+});
+
+test('cognitive battery: setup, nine-game map, and training program entry', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
+  const start = page.getByRole('button', { name: 'بدء الفحص' });
+  await expect(start).toBeDisabled();
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/]) {
+    await page.getByLabel(label).check();
+  }
+  await start.click();
+  for (const game of ['نوافذ القلعة', 'بيوت الحيوانات', 'ببغاء الحديقة', 'أصدقاء الفضاء', 'كلمات تتشابه', 'مختبر الأصوات', 'الأذن الذهبية', 'عين الصقر', 'صندوق الحروف']) {
+    await expect(page.getByText(game, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('button', { name: 'الملف المعرفي والتقرير' })).toBeDisabled();
+  await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
+  await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ })).toBeVisible();
 });
