@@ -47,7 +47,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
   await expect(page.getByText(/سلسلة الالتزام:\s*4/)).toHaveCount(0);
 
-  const targetWords = ['سَيْفٌ', 'صَابُونٌ', 'تِينٌ', 'طَبِيبٌ', 'دَلَّ', 'كَلْبٌ', 'حَمَلَ', 'ذَلَّ'];
+  const targetWords = ['سَيْفٌ', 'صَابُونٌ', 'تِينٌ', 'طَبِيبٌ', 'دَلَّ', 'كَلْبٌ', 'حَمَلَ', 'ذَلَّ'];
   for (let i = 0; i < targetWords.length; i += 1) {
     const target = page.getByText(targetWords[i], { exact: true });
     await expect(target).toBeVisible();
