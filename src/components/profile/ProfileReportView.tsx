@@ -267,7 +267,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
                 <p className="font-semibold text-warn">ملاحظات صلاحية التطبيق</p>
                 {dialectNotes.length > 0 && (
                   <p>
-                    <strong className="text-ink">التمييز السمعي واللهجة:</strong> أخطأ الطفل في {dialectNotes.join('، ')}، وهي أصوات تدمجها اللهجة {DIALECT_LABELS_AR[session.dialect!]} في الكلام اليومي. قد يعكس الخطأ لهجته لا ضعفًا في التمييز السمعي؛ فسّر هذا الاختبار بحذر.
+                    <strong className="text-ink">التمييز السمعي واللهجة:</strong> أخطأ الطفل في {dialectNotes.join('، ')}، وهي أصوات تدمجها اللهجة ال{DIALECT_LABELS_AR[session.dialect!]} في الكلام اليومي. قد يعكس الخطأ لهجته لا ضعفًا في التمييز السمعي؛ فسّر هذا الاختبار بحذر.
                   </p>
                 )}
                 {flagged.map((s) => (
