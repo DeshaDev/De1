@@ -24,6 +24,7 @@ import {
   Phone,
   Clock,
   RefreshCw,
+  Target,
 } from 'lucide-react';
 import {
   INITIAL_STUDENTS,
@@ -853,9 +854,10 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
+              { id: 'dyslexia-lab', label: 'الفحص الشامل', icon: Brain },
+              { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
               { id: 'remediation-gym', label: 'صالة التدريب', icon: Flame },
               { id: 'trophies', label: 'أوسمتي', icon: Trophy },
-              { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -929,9 +931,10 @@ export default function App() {
       <nav className="baseera-mobile-nav md:hidden" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'remediation-gym', label: 'صالة التدريب', icon: Flame },
-              { id: 'trophies', label: 'أوسمتي', icon: Trophy },
-              { id: 'dyslexia-lab', label: 'فحص القراءة', icon: Brain },
+          { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
+          { id: 'guided-program', label: 'البرنامج', icon: Target },
+          { id: 'remediation-gym', label: 'التدريب', icon: Flame },
+          { id: 'trophies', label: 'أوسمتي', icon: Trophy },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -949,7 +952,7 @@ export default function App() {
         })}
       </nav>
 
-      {/* Floating Accessibility & Night Mode Widget */}      {/* Floating Accessibility & Night Mode Widget */}
+      {/* Floating Accessibility & Night Mode Widget */}
       <DyslexiaComfortBar
         activeTab={activeTab}
         surfaceTheme={surfaceTheme}
@@ -1751,13 +1754,21 @@ export default function App() {
         )}
 
         {/* UNIFIED DYSLEXIA SCREENING & DIAGNOSTIC HUB (All Reading Tests in One Creative Hub) */}
-        {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab') && (
+        {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
           <DyslexiaScreeningHub
             students={students}
             activeStudent={selectedStudent}
             onSelectStudent={setSelectedStudentId}
             onNavigateTab={(tab) => setActiveTab(tab)}
-            initialSubTab={activeTab === 'cognitive-lab' ? 'cognitive-screening' : 'oral-reading'}
+            initialSubTab={
+              activeTab === 'cognitive-lab'
+                ? 'cognitive-screening'
+                : activeTab === 'reading-lab'
+                  ? 'oral-reading'
+                  : activeTab === 'guided-program'
+                    ? 'training'
+                    : 'battery'
+            }
             onCompleteOralSession={handleCompleteNewSession}
             onCompleteCognitiveScreening={(cogData) => {
               setStudents(prev => prev.map(student =>
