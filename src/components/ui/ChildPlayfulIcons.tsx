@@ -273,7 +273,7 @@ export const IconNumberRuler: React.FC<IconProps> = ({ className = 'w-6 h-6', si
   </svg>
 );
 
-// 10. Friendly Baseera Falcon Mascot («صقر بصيرة الذكي»)
+// 10. Friendly Baseera Falcon Mascot («صقر بصيرة»)
 export const IconBaseeraFalcon: React.FC<IconProps> = ({ className = 'w-8 h-8', size = 32 }) => (
   <svg
     width={size}

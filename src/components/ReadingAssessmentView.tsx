@@ -1212,7 +1212,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-sm text-emerald-300">
-                        تسجيل صوتي وتحليل ذكي مباشر (Live Voice AI)
+                        تسجيل صوتي وتعرّف آلي على الكلام
                       </span>
                       <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
@@ -1220,7 +1220,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 mt-0.5">
-                      الذكاء الاصطناعي يستمع لقراءتك ويسجل صوتك الآن — اقرأ الكلمات بصوت واضح ومسموع
+                      النظام يستمع لقراءتك ويسجلها الآن — اقرأ الكلمات بصوت واضح ومسموع
                     </p>
                   </div>
                 </div>
@@ -1312,7 +1312,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
       {/* =====================================================================
           STAGE 2.5: TEACHER & SPECIALIST HUMAN-IN-THE-LOOP VERIFICATION
-          (التحليل الصوتي المباشر واعتماد الذكاء الاصطناعي)
+          (التعرف الآلي على الكلام ومراجعة المعلم)
           ===================================================================== */}
       {stage === 'verification' && (
         <div className="max-w-4xl w-full mx-auto p-4 md:p-8 pt-8">
@@ -1493,7 +1493,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Volume2 className="w-4 h-4 text-teal-600" />
-                    <span>ما سمعه الميكروفون وسجّله الذكاء الاصطناعي أثناء قراءتك:</span>
+                    <span>ما التقطه التعرف الآلي على الكلام أثناء قراءتك:</span>
                   </span>
                   <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">
                     {azureAssessmentMode || 'التفريغ الصوتي الفعلي'}
@@ -1878,7 +1878,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           </div>
                           {item.spokenWord ? (
                             <div className="text-xs font-bold text-rose-700 bg-white/90 p-2 rounded-xl border border-rose-200">
-                              ما سمعه الذكاء الاصطناعي: <span className="font-mono text-rose-900">"{item.spokenWord}"</span>
+                              ما التقطه التعرف الآلي: <span className="font-mono text-rose-900">"{item.spokenWord}"</span>
                             </div>
                           ) : (
                             <div className="text-xs text-slate-500 italic bg-white/60 p-2 rounded-xl">

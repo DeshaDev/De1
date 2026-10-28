@@ -510,7 +510,7 @@ export default function App() {
     }
     setActiveTab(targetTab || 'remediation-gym');
     setAiStatusBanner(
-      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade} · 0 XP).`
+      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade}).`
     );
   };
 
@@ -995,7 +995,7 @@ export default function App() {
               <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>مساحة التحليل الذكي والمتابعة</span>
+                    <span>لوحة المتابعة</span>
                     <span aria-hidden="true">·</span>
                     <span>الصف {selectedStudent.gradeLevel}</span>
                     <span aria-hidden="true">·</span>
@@ -1786,7 +1786,7 @@ export default function App() {
           />
         )}
 
-        {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (VTO READING MODEL) */}
+        {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (timed fluency drill) */}
         {activeTab === 'sprint' && (
           <RemediationGymView
             students={students}
@@ -1799,7 +1799,7 @@ export default function App() {
           />
         )}
 
-        {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (LUCA AI MODEL) */}
+        {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (generated decodable stories) */}
         {activeTab === 'storygen' && (
           <RemediationGymView
             students={students}

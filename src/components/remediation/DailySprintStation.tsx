@@ -750,7 +750,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trophy className="w-5 h-5 text-amber-300 fill-current" />
-              <span>إتمام سبرنت اليوم وتسجيله على هذا الجهاز (+50 XP)</span>
+              <span>إتمام سبرنت اليوم وتسجيله على هذا الجهاز (+٥٠ نقطة)</span>
             </button>
           ) : (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
