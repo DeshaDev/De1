@@ -1,3 +1,4 @@
+import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
@@ -145,7 +146,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const skill = sessionSkills[run.skillIndex];
     const { progress: updated, change } = applySession(progress, skill, nextCorrect, run.tasks.length);
     persist(updated);
-    if (change === 'up' || change === 'mastered') speak('أَحْسَنْتَ! انْتَقَلْتَ إِلَى مُسْتَوًى جَدِيدٍ.');
+    if (change === 'up' || change === 'mastered') speak(PHRASES.levelUp);
     setRun({
       ...run,
       correct: nextCorrect,

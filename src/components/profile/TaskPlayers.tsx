@@ -1,3 +1,4 @@
+import { PHRASES, palThis, palWhere, palYes } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useRef, useState } from 'react';
 import { Volume2, Undo2, Play } from 'lucide-react';
 import type { AssociationBlock, ChoiceItem, PalCreature, SpanTrial, Visual } from '../../cognitiveProfile/battery';
@@ -6,7 +7,7 @@ import type { ItemResponse } from '../../cognitiveProfile/scoring';
 import { scoreSpanTrial } from '../../cognitiveProfile/scoring';
 import { PlaybackHandle, speak, speakSegments, stopSpeech, wait } from './audio';
 
-const PRAISE = ['أَحْسَنْتَ!', 'رَائِع!', 'مُمْتَاز!'];
+const PRAISE = PHRASES.praise;
 
 // ---------------------------------------------------------------------------
 // Shared visuals
@@ -114,7 +115,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     const response: ItemResponse = { itemId: item.id, correct, rtMs, replays };
     setFeedback({ chosen: id, correct });
     if (showFeedback) {
-      await speak(correct ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : 'انْظُرْ، هَذَا هُوَ الجَوَابُ.');
+      await speak(correct ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : PHRASES.lookAnswer);
       await wait(400);
     } else {
       await wait(350);
@@ -240,7 +241,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
       setResult(correct);
       setPhase('feedback');
       if (showFeedback) {
-        await speak(correct ? 'أَحْسَنْتَ!' : 'انْظُرْ إِلَى التَّرْتِيبِ الصَّحِيحِ.');
+        await speak(correct ? PHRASES.wellDone : PHRASES.lookOrder);
         await wait(correct ? 300 : 1500);
       } else {
         await wait(500);
@@ -504,7 +505,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
 
   const ask = async (b: number, t: number) => {
     setListening(true);
-    await speak(`أَيْنَ ${byId(blocks[b].order[t]).name}؟`);
+    await speak(palWhere(byId(blocks[b].order[t]).name));
     if (cancelled.current) return;
     setListening(false);
     askedAt.current = performance.now();
@@ -515,7 +516,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
     for (const c of creatures) {
       if (cancelled.current) return;
       setSpotlight(c.id);
-      await speak(`هَذَا ${c.name}.`);
+      await speak(palThis(c.name));
       await wait(500);
     }
     setSpotlight(null);
@@ -538,7 +539,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
     });
     blockScores.current[blockIndex] = (blockScores.current[blockIndex] ?? 0) + (correct ? 1 : 0);
     setFlash({ chosen: id, correctId: target });
-    await speak(correct ? `نَعَمْ، هَذَا ${byId(target).name}!` : `هَذَا ${byId(target).name}.`);
+    await speak(correct ? palYes(byId(target).name) : palThis(byId(target).name));
     await wait(300);
     setFlash(null);
     if (cancelled.current) return;

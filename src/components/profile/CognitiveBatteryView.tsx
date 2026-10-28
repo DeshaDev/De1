@@ -1,3 +1,4 @@
+import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -84,13 +85,13 @@ function SubtestRunner({
       ...extra,
     });
     setStage('done');
-    speak('أَحْسَنْتَ! انْتَهَتِ اللُّعْبَةُ.');
+    speak(PHRASES.gameOver);
   };
 
   const startTest = () => {
     setIndex(0);
     setStage('transition');
-    speak('رَائِع! الآنَ نَبْدَأُ اللُّعْبَةَ. لَنْ أُخْبِرَكَ إِنْ كَانَتْ إِجَابَتُكَ صَحِيحَةً؛ فَقَطْ حَاوِلْ أَفْضَلَ مَا تَسْتَطِيعُ.');
+    speak(PHRASES.testStarts);
   };
 
   const nextPractice = () => {
@@ -333,7 +334,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">٢</span>
               <h2 className="bz-h3">قبل البدء</h2>
             </div>
-            <button type="button" onClick={() => speak('مَرْحَبًا! هَلْ تَسْمَعُنِي جَيِّدًا؟')} className="bz-btn bz-btn-secondary bz-btn-sm">
+            <button type="button" onClick={() => speak(PHRASES.soundCheck)} className="bz-btn bz-btn-secondary bz-btn-sm">
               <Headphones className="w-4 h-4" /> اختبار الصوت
             </button>
           </div>
