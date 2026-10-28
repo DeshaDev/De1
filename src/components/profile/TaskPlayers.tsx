@@ -51,14 +51,14 @@ type Feedback = { chosen: string; correct: boolean } | null;
 
 function optionClass(id: string, highlight: string | null, feedback: Feedback, correctId: string, disabled: boolean) {
   const base =
-    'relative flex items-center justify-center min-h-[110px] sm:min-h-[130px] rounded-3xl border-4 bg-white p-3 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-300';
+    'relative flex items-center justify-center min-h-[120px] sm:min-h-[150px] rounded-3xl border-[3px] bg-white p-3 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--brand-soft)]';
   if (feedback) {
     if (id === correctId && (feedback.correct || feedback.chosen !== id)) return `${base} border-emerald-500 bg-emerald-50 scale-105`;
     if (id === feedback.chosen && !feedback.correct) return `${base} border-rose-400 bg-rose-50 opacity-80`;
     return `${base} border-slate-200 opacity-50`;
   }
-  if (highlight === id) return `${base} border-amber-400 bg-amber-50 scale-105 shadow-lg`;
-  return `${base} border-slate-200 shadow-sm ${disabled ? 'opacity-70' : 'hover:border-sky-400 hover:-translate-y-0.5 cursor-pointer'}`;
+  if (highlight === id) return `${base} border-sun bg-sun-soft scale-105 shadow-lg`;
+  return `${base} border-line shadow-sm ${disabled ? 'opacity-70' : 'hover:border-brand hover:-translate-y-0.5 cursor-pointer'}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,11 +125,11 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const neutral = feedback && !showFeedback;
 
   return (
-    <div className="flex flex-col items-center gap-5" dir="rtl">
+    <div className="w-full flex flex-col items-center gap-5" dir="rtl">
       {item.stimulus && (
         <div
-          className={`flex items-center justify-center min-w-[140px] min-h-[130px] px-6 rounded-[2rem] border-4 bg-gradient-to-b from-sky-50 to-white transition-all ${
-            highlight === 'stimulus' ? 'border-amber-400 scale-105 shadow-lg' : 'border-sky-200'
+          className={`flex items-center justify-center min-w-[140px] min-h-[130px] px-6 rounded-[2rem] border-4 bg-card transition-all ${
+            highlight === 'stimulus' ? 'border-sun scale-105 shadow-lg' : 'border-line'
           }`}
         >
           <VisualView visual={item.stimulus} size="lg" />
@@ -145,7 +145,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
               play();
             }}
             disabled={listening || Boolean(feedback)}
-            className="shrink-0 w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"
+            className="shrink-0 w-11 h-11 rounded-full bg-brand-soft text-brand flex items-center justify-center disabled:opacity-40 cursor-pointer"
             aria-label="استمع مرة أخرى"
           >
             <Volume2 className="w-5 h-5" />
@@ -166,7 +166,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
             aria-label={option.visual.label}
             className={
               neutral
-                ? optionClass(option.id, null, null, item.correctId, true) + (feedback?.chosen === option.id ? ' !border-sky-400 !bg-sky-50' : '')
+                ? optionClass(option.id, null, null, item.correctId, true) + (feedback?.chosen === option.id ? ' !border-brand !bg-brand-tint' : '')
                 : optionClass(option.id, highlight, showFeedback ? feedback : null, item.correctId, listening)
             }
           >
@@ -250,13 +250,13 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
   };
 
   return (
-    <div className="flex flex-col items-center gap-5" dir="rtl">
-      <div className="relative w-56 h-48 sm:w-64 sm:h-56 rounded-t-[7rem] rounded-b-3xl border-[10px] border-amber-700/80 bg-gradient-to-b from-sky-100 to-sky-50 flex items-center justify-center shadow-inner overflow-hidden">
+    <div className="w-full flex flex-col items-center gap-5" dir="rtl">
+      <div className="relative w-56 h-48 sm:w-64 sm:h-56 rounded-t-[7rem] rounded-b-3xl border-[10px] border-amber-700/80 bg-gradient-to-b from-brand-soft to-brand-tint flex items-center justify-center shadow-inner overflow-hidden">
         {phase === 'ready' && (
           <button
             type="button"
             onClick={present}
-            className="font-child flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white text-lg font-black shadow-md cursor-pointer"
+            className="font-child bz-btn bz-btn-sun bz-btn-lg text-lg"
           >
             <Play className="w-5 h-5" /> {modality === 'visual' ? 'انظر!' : 'استمع!'}
           </button>
@@ -284,7 +284,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
                 <div
                   key={i}
                   className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-4 flex items-center justify-center text-4xl bg-white ${
-                    showTruth ? (given === expected ? 'border-emerald-500' : 'border-rose-400') : given ? 'border-sky-400' : 'border-dashed border-slate-300'
+                    showTruth ? (given === expected ? 'border-emerald-500' : 'border-rose-400') : given ? 'border-brand' : 'border-dashed border-slate-300'
                   }`}
                 >
                   {showTruth && given !== expected ? lex(expected).emoji : given ? lex(given).emoji : <span className="text-base font-black text-slate-300">{i + 1}</span>}
@@ -312,7 +312,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
                 onClick={() => tap(id)}
                 disabled={phase !== 'respond'}
                 aria-label={lex(id).word}
-                className="min-h-[88px] rounded-3xl border-4 border-slate-200 bg-white text-5xl shadow-sm hover:border-sky-400 cursor-pointer disabled:cursor-default"
+                className="min-h-[88px] rounded-3xl border-[3px] border-slate-200 bg-white text-5xl shadow-sm hover:border-brand cursor-pointer disabled:cursor-default"
               >
                 {lex(id).emoji}
               </button>
@@ -395,7 +395,7 @@ export function AssociationPlayer({ block, showFeedback, onDone }: AssociationPl
   const currentResident = block.queryOrder[queryIndex];
 
   return (
-    <div className="flex flex-col items-center gap-6" dir="rtl">
+    <div className="w-full flex flex-col items-center gap-6" dir="rtl">
       {phase === 'query' && (
         <div className="flex flex-col items-center gap-2">
           <div className="w-28 h-28 rounded-full bg-amber-50 border-4 border-amber-300 flex items-center justify-center text-6xl">
@@ -408,7 +408,7 @@ export function AssociationPlayer({ block, showFeedback, onDone }: AssociationPl
         <button
           type="button"
           onClick={present}
-          className="font-child flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white text-lg font-black shadow-md cursor-pointer"
+          className="font-child bz-btn bz-btn-sun bz-btn-lg text-lg"
         >
           <Play className="w-5 h-5" /> انظر إلى البيوت!
         </button>
@@ -554,12 +554,12 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-6" dir="rtl">
+    <div className="w-full flex flex-col items-center gap-6" dir="rtl">
       {phase === 'ready' && (
         <button
           type="button"
           onClick={() => learn(0)}
-          className="font-child flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white text-lg font-black shadow-md cursor-pointer"
+          className="font-child bz-btn bz-btn-sun bz-btn-lg text-lg"
         >
           <Play className="w-5 h-5" /> تعرّف على الأصدقاء
         </button>
@@ -582,7 +582,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
               onClick={() => choose(c.id)}
               disabled={phase !== 'test'}
               aria-label="شخصية فضائية"
-              className={`flex flex-col items-center justify-center w-32 h-36 rounded-3xl border-4 bg-white transition-all cursor-pointer disabled:cursor-default ${
+              className={`flex flex-col items-center justify-center w-32 h-36 rounded-3xl border-[3px] bg-white transition-all cursor-pointer disabled:cursor-default ${
                 isSpot || isCorrect ? 'border-emerald-400 scale-105 shadow-lg' : isWrong ? 'border-rose-300' : 'border-slate-200'
               } ${phase === 'learn' && !isSpot ? 'opacity-40' : ''}`}
             >

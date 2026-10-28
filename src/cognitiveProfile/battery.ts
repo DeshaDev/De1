@@ -138,27 +138,27 @@ export const DOMAINS: Record<DomainId, { nameAr: string; descriptionAr: string; 
   visualMemory: {
     nameAr: 'الذاكرة البصرية',
     descriptionAr: 'الاحتفاظ بما يراه الطفل وترتيبه وربطه بمكانه؛ تدعم تذكّر أشكال الحروف والكلمات.',
-    color: '#0ea5e9',
+    color: '#2F6DB5',
   },
   auditoryMemory: {
     nameAr: 'الذاكرة السمعية والتعلّم الترابطي',
     descriptionAr: 'الاحتفاظ بتسلسل ما يُسمع وربط الأسماء بالرموز؛ أساس ربط الحرف بصوته.',
-    color: '#8b5cf6',
+    color: '#6E56CF',
   },
   phonological: {
     nameAr: 'المعالجة الصوتية',
     descriptionAr: 'إدراك بنية الكلمة الصوتية: القافية، الصوت الأول والأخير، تركيب المقاطع وعدّها.',
-    color: '#f59e0b',
+    color: '#B9611A',
   },
   perceptual: {
     nameAr: 'التمييز السمعي والبصري',
     descriptionAr: 'التفريق بين الأصوات المتقاربة (س/ص، ت/ط) وبين الحروف المتشابهة في الشكل والنقاط.',
-    color: '#10b981',
+    color: '#0B6E69',
   },
   alphabetic: {
     nameAr: 'المعرفة الأبجدية',
     descriptionAr: 'معرفة صوت الحرف المكتوب؛ الجسر المباشر من المهارات المعرفية إلى القراءة.',
-    color: '#ef4444',
+    color: '#B4415A',
   },
 };
 
@@ -381,7 +381,7 @@ const AUDITORY_SEQUENCES: string[][] = [
 ];
 
 export const PAL_CREATURES: PalCreature[] = [
-  { id: 'c1', name: 'زُوبَا', color: '#8b5cf6', shape: 'circle', eyes: 1 },
+  { id: 'c1', name: 'زُوبَا', color: '#6E56CF', shape: 'circle', eyes: 1 },
   { id: 'c2', name: 'نِيكُو', color: '#f97316', shape: 'square', eyes: 2 },
   { id: 'c3', name: 'طَافِي', color: '#14b8a6', shape: 'triangle', eyes: 3 },
   { id: 'c4', name: 'بِيرُو', color: '#ec4899', shape: 'blob', eyes: 2 },

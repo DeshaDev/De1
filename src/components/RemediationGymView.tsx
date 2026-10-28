@@ -380,28 +380,28 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   return (
     <div className="space-y-5 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
       {/* 1. PLAYFUL HERO QUEST BANNER */}
-      <div className="bg-gradient-to-r from-emerald-400 via-teal-500 to-sky-500 rounded-3xl p-5 sm:p-6 text-white shadow-xl border-3 border-emerald-300 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="rounded-3xl p-5 sm:p-7 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #0B6E69 0%, #084B48 100%)', color: '#FFFFFF' }}>
         <div className="flex items-center gap-4 text-center sm:text-right">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white/20 backdrop-blur border-2 border-white/40 flex items-center justify-center shrink-0 animate-bounce-gentle shadow-inner">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,.12)' }}>
             <IconBaseeraFalcon size={48} />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1.5 bg-black/20 px-3 py-1 rounded-full text-xs font-black text-emerald-100 mb-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-1.5" style={{ background: 'rgba(255,255,255,.12)', color: 'rgba(255,255,255,.85)' }}>
               <IconLettersBlock size={15} />
               <span>صالة ألعاب وبطولات القراءة · البطل {activeStudent.name}</span>
             </div>
-            <h1 className="font-child text-2xl sm:text-3xl font-black">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold" style={{ color: '#FFFFFF' }}>
               صالة تدريب وبطولات الأبطال
             </h1>
-            <p className="font-child text-xs sm:text-sm text-emerald-100 font-bold mt-0.5">
+            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,.8)' }}>
               اصطد الحروف وركّب المقاطع الصوتية لتجمع كؤوس ونقاط التميز!
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="bg-white text-slate-900 rounded-2xl p-2.5 px-4 shadow-md text-center min-w-[95px] border-b-4 border-amber-500">
-            <div className="text-xl font-black text-amber-600 font-mono flex items-center justify-center gap-1">
+          <div className="rounded-2xl p-2.5 px-4 text-center min-w-[95px]" style={{ background: '#FFFFFF', color: '#0F1E2E' }}>
+            <div className="text-xl font-bold flex items-center justify-center gap-1" style={{ color: '#B7700B' }}>
               <IconStar size={18} />
               <span>{xpPoints} XP</span>
             </div>
@@ -411,7 +411,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       </div>
 
       {/* 2. TACTILE MODE SELECTOR: Daily Lesson vs Skill Games */}
-      <div className="flex items-center justify-center p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 shadow-inner max-w-md mx-auto">
+      <div className="flex items-center justify-center p-1 bg-soft rounded-2xl border border-line max-w-md mx-auto">
         <button
           type="button"
           onClick={() => {
@@ -420,7 +420,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           }}
           className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
             gymMode === 'curriculum'
-              ? 'bg-teal-700 text-white shadow-md'
+              ? 'bg-card text-ink shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           )}
         >
@@ -435,7 +435,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           }}
           className={'flex-1 py-2.5 px-4 rounded-xl font-child font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ' + (
             gymMode === 'stations'
-              ? 'bg-emerald-600 text-white shadow-md'
+              ? 'bg-card text-ink shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           )}
         >

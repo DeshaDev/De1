@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Volume2,
   ChevronDown,
+  ArrowLeft as ArrowLeftIcon,
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import {
@@ -116,13 +117,13 @@ function SubtestRunner({
   const answered = stage === 'test' ? responses.current.length : 0;
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden" dir="rtl">
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-slate-100 bg-slate-50/70">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl" aria-hidden="true">{subtest.icon}</span>
-          <div>
-            <p className="font-child font-black text-slate-900 leading-tight">{subtest.gameNameAr}</p>
-            <p className="text-[11px] font-bold text-slate-500">{subtest.skillNameAr}</p>
+    <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-line bg-soft">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="grid place-items-center w-10 h-10 rounded-xl bg-card text-2xl shrink-0" aria-hidden="true">{subtest.icon}</span>
+          <div className="min-w-0">
+            <p className="font-child font-bold text-ink leading-tight text-lg truncate">{subtest.gameNameAr}</p>
+            <p className="text-[12px] text-muted truncate">{subtest.skillNameAr}</p>
           </div>
         </div>
         {stage !== 'done' && (
@@ -131,7 +132,7 @@ function SubtestRunner({
             onClick={() => {
               if (window.confirm('إيقاف هذه اللعبة؟ لن تُحفظ إجاباتها، ويمكن إعادتها لاحقًا.')) onExit();
             }}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-rose-600 cursor-pointer"
+            className="bz-btn bz-btn-ghost bz-btn-sm"
           >
             <PauseCircle className="w-4 h-4" /> إيقاف
           </button>
@@ -139,29 +140,28 @@ function SubtestRunner({
       </div>
 
       {(stage === 'test' || stage === 'practice') && (
-        <div className="px-6 pt-4">
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
-            <span>{stage === 'practice' ? 'تدريب' : 'اللعبة'}</span>
-            {stage === 'test' && <span>{toArabicDigits(answered)} / {toArabicDigits(total)}</span>}
+        <div className="px-4 sm:px-6 pt-4">
+          <div className="flex items-center justify-between text-[12px] font-semibold text-muted mb-1.5">
+            <span>{stage === 'practice' ? 'تدريب مع تصحيح' : 'اللعبة'}</span>
+            {stage === 'test' && <span className="bz-num">{toArabicDigits(answered)} / {toArabicDigits(total)}</span>}
           </div>
-          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${stage === 'practice' ? 'bg-amber-400' : 'bg-emerald-500'}`}
-              style={{ width: stage === 'practice' ? '100%' : `${(answered / total) * 100}%` }}
+          <div className="bz-progress">
+            <span
+              style={{ width: stage === 'practice' ? '100%' : `${(answered / total) * 100}%`, background: stage === 'practice' ? 'var(--sun)' : 'var(--brand)' }}
             />
           </div>
         </div>
       )}
 
-      <div className="p-5 sm:p-8 min-h-[420px] flex flex-col items-center justify-center">
+      <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-            <span className="text-8xl animate-bounce-gentle" aria-hidden="true">{subtest.icon}</span>
-            <h2 className="font-child text-3xl font-black text-slate-900">{subtest.gameNameAr}</h2>
+            <span className="grid place-items-center w-36 h-36 rounded-[40px] bg-sun-soft text-8xl animate-bounce-gentle" aria-hidden="true">{subtest.icon}</span>
+            <h2 className="font-child text-4xl font-bold text-ink" style={{ fontFamily: 'var(--font-child)' }}>{subtest.gameNameAr}</h2>
             <button
               type="button"
               onClick={() => speak(subtest.introAudio)}
-              className="flex items-center gap-2 text-sm font-bold text-sky-700 bg-sky-50 px-4 py-2 rounded-full cursor-pointer"
+              className="bz-btn bz-btn-secondary"
             >
               <Volume2 className="w-4 h-4" /> استمع للتعليمات
             </button>
@@ -175,7 +175,7 @@ function SubtestRunner({
                   setStage('practice');
                 }
               }}
-              className="font-child flex items-center gap-2 px-8 py-4 rounded-2xl bg-emerald-600 text-white text-xl font-black shadow-lg cursor-pointer"
+              className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
             >
               <Play className="w-6 h-6" /> {subtest.kind === 'pal' ? 'ابدأ' : 'لنتدرّب أولًا'}
             </button>
@@ -183,14 +183,14 @@ function SubtestRunner({
               <button
                 type="button"
                 onClick={() => setShowNote(!showNote)}
-                className="flex items-center gap-1 text-xs font-bold text-slate-500 cursor-pointer"
+                className="bz-btn bz-btn-ghost bz-btn-sm"
                 aria-expanded={showNote}
               >
                 <ClipboardList className="w-3.5 h-3.5" /> ملاحظة للفاحص
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNote ? 'rotate-180' : ''}`} />
               </button>
               {showNote && (
-                <p className="mt-2 text-xs leading-relaxed text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <p className="mt-2 bz-small text-ink-2 bz-card-quiet p-4">
                   {subtest.examinerNoteAr}
                 </p>
               )}
@@ -210,16 +210,16 @@ function SubtestRunner({
 
         {stage === 'transition' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="text-7xl" aria-hidden="true">🌟</span>
-            <p className="font-child text-2xl font-black text-slate-900">رائع! الآن نبدأ اللعبة</p>
-            <p className="text-sm text-slate-500 max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
+            <span className="grid place-items-center w-28 h-28 rounded-full bg-sun-soft text-7xl" aria-hidden="true">🌟</span>
+            <p className="font-child text-3xl font-bold text-ink">رائع! الآن نبدأ اللعبة</p>
+            <p className="bz-body max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
             <button
               type="button"
               onClick={() => {
                 stopSpeech();
                 setStage('test');
               }}
-              className="font-child flex items-center gap-2 px-8 py-4 rounded-2xl bg-emerald-600 text-white text-xl font-black shadow-lg cursor-pointer"
+              className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
             >
               <Play className="w-6 h-6" /> هيا بنا
             </button>
@@ -254,12 +254,12 @@ function SubtestRunner({
 
         {stage === 'done' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="text-8xl" aria-hidden="true">🏆</span>
-            <p className="font-child text-2xl font-black text-slate-900">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+            <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
+            <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
             <button
               type="button"
               onClick={onExit}
-              className="font-child flex items-center gap-2 px-8 py-4 rounded-2xl bg-sky-600 text-white text-lg font-black shadow-lg cursor-pointer"
+              className="bz-btn bz-btn-primary bz-btn-lg"
             >
               العودة إلى خريطة الألعاب
             </button>
@@ -279,67 +279,78 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState('');
-  const [checks, setChecks] = useState({ quiet: false, headphones: false, ready: false });
-  const allChecked = checks.quiet && checks.headphones && checks.ready;
+  const [checks, setChecks] = useState({ consent: false, quiet: false, headphones: false, ready: false });
+  const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
 
   return (
-    <div className="grid lg:grid-cols-[1fr_1.1fr] gap-6" dir="rtl">
-      <section className="bg-white rounded-[2rem] border border-slate-200 p-6 space-y-4">
-        <h2 className="text-xl font-black text-slate-900">بيانات الطفل والفاحص</h2>
-        <label className="block text-sm font-bold text-slate-700">
-          اسم الطفل
-          <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base" />
-        </label>
-        <div>
-          <span className="block text-sm font-bold text-slate-700">العمر بدقة (مهم للمقارنة العمرية)</span>
-          <div className="mt-1 grid grid-cols-2 gap-3">
-            <label className="text-xs font-bold text-slate-500">
-              السنوات
-              <select value={years} onChange={(e) => setYears(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base">
-                {[4, 5, 6, 7, 8].map((y) => <option key={y} value={y}>{toArabicDigits(y)}</option>)}
-              </select>
-            </label>
-            <label className="text-xs font-bold text-slate-500">
-              الأشهر
-              <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base">
-                {Array.from({ length: 12 }, (_, m) => <option key={m} value={m}>{toArabicDigits(m)}</option>)}
-              </select>
+    <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 items-start" dir="rtl">
+      <section className="bz-card bz-card-pad space-y-8">
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">١</span>
+            <h2 className="bz-h3">بيانات الطفل</h2>
+          </div>
+          <label className="bz-field">
+            <span className="bz-label">اسم الطفل أو لقبه</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="bz-input" />
+          </label>
+          <div className="bz-field">
+            <span className="bz-label">العمر بدقة</span>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="bz-field">
+                <span className="bz-hint">السنوات</span>
+                <select value={years} onChange={(e) => setYears(Number(e.target.value))} className="bz-input">
+                  {[4, 5, 6, 7, 8].map((y) => <option key={y} value={y}>{toArabicDigits(y)} سنوات</option>)}
+                </select>
+              </label>
+              <label className="bz-field">
+                <span className="bz-hint">الأشهر</span>
+                <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className="bz-input">
+                  {Array.from({ length: 12 }, (_, m) => <option key={m} value={m}>{toArabicDigits(m)} {m === 1 ? 'شهر' : 'أشهر'}</option>)}
+                </select>
+              </label>
+            </div>
+            <span className="bz-hint">تُقارن نتائج الطفل بأقرانه في العمر نفسه، لذلك تهمّ دقة الأشهر.</span>
+          </div>
+          <label className="bz-field">
+            <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
+            <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
+          </label>
+        </div>
+
+        <hr className="bz-divider" />
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">٢</span>
+              <h2 className="bz-h3">قبل البدء</h2>
+            </div>
+            <button type="button" onClick={() => speak('مَرْحَبًا! هَلْ تَسْمَعُنِي جَيِّدًا؟')} className="bz-btn bz-btn-secondary bz-btn-sm">
+              <Headphones className="w-4 h-4" /> اختبار الصوت
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {([
+              ['quiet', 'المكان هادئ'],
+              ['headphones', 'الصوت واضح (يُفضَّل سماعات)'],
+              ['ready', 'الطفل مرتاح ومستعد'],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="bz-check">
+                <input type="checkbox" checked={checks[key]} onChange={(e) => setChecks({ ...checks, [key]: e.target.checked })} />
+                <span className="font-semibold text-ink-2">{label}</span>
+              </label>
+            ))}
+            <label className="bz-check sm:col-span-2">
+              <input type="checkbox" checked={checks.consent} onChange={(e) => setChecks({ ...checks, consent: e.target.checked })} />
+              <span className="text-ink-2">
+                <span className="font-semibold text-ink">موافقة ولي الأمر</span>
+                <span className="block bz-small bz-muted">أقر بموافقة ولي أمر الطفل على إجراء الفحص وحفظ نتائجه على هذا الجهاز.</span>
+              </span>
             </label>
           </div>
         </div>
-        <label className="block text-sm font-bold text-slate-700">
-          اسم الفاحص (المعلم أو الأخصائي)
-          <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base" />
-        </label>
-      </section>
 
-      <section className="bg-white rounded-[2rem] border border-slate-200 p-6 space-y-4">
-        <h2 className="text-xl font-black text-slate-900">قبل البدء</h2>
-        <ul className="text-sm text-slate-700 space-y-2 leading-relaxed list-disc pr-5">
-          <li>يُطبَّق الفحص بحضور شخص بالغ يجلس بجانب الطفل، ولا يساعده في الإجابة.</li>
-          <li>مدته الكلية نحو {toArabicDigits(TOTAL_BATTERY_MINUTES)} دقيقة؛ يُفضَّل تقسيمه على جلستين (الألعاب ١–٥ ثم ٦–٩). يُحفظ التقدّم تلقائيًا على هذا الجهاز.</li>
-          <li>كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.</li>
-          <li>إذا بدا الطفل متعبًا أو مشتتًا فأوقف اللعبة وأكملها في وقت آخر.</li>
-        </ul>
-        <button
-          type="button"
-          onClick={() => speak('مَرْحَبًا! هَلْ تَسْمَعُنِي جَيِّدًا؟')}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-50 text-sky-800 text-sm font-bold cursor-pointer"
-        >
-          <Headphones className="w-4 h-4" /> اختبار الصوت
-        </button>
-        <div className="space-y-2">
-          {([
-            ['quiet', 'المكان هادئ'],
-            ['headphones', 'الصوت واضح (يُفضَّل سماعات)'],
-            ['ready', 'الطفل مرتاح ومستعد'],
-          ] as const).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-              <input type="checkbox" checked={checks[key]} onChange={(e) => setChecks({ ...checks, [key]: e.target.checked })} className="w-5 h-5 accent-emerald-600" />
-              {label}
-            </label>
-          ))}
-        </div>
         <button
           type="button"
           disabled={!allChecked || !name.trim()}
@@ -353,11 +364,41 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               results: {},
             })
           }
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 text-white text-lg font-black shadow disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
         >
           <Play className="w-5 h-5" /> بدء الفحص
         </button>
       </section>
+
+      <aside className="space-y-4">
+        <div className="bz-card-quiet p-6">
+          <h2 className="bz-h3">كيف يسير الفحص؟</h2>
+          <ul className="mt-4 space-y-3 bz-small text-ink-2">
+            {[
+              `تسع ألعاب قصيرة، مدتها الكلية نحو ${toArabicDigits(TOTAL_BATTERY_MINUTES)} دقيقة. يمكن تقسيمها على جلستين (١–٥ ثم ٦–٩).`,
+              'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
+              'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة.',
+              'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
+            ].map((t) => (
+              <li key={t} className="flex gap-2.5">
+                <CheckCircle2 className="w-[18px] h-[18px] text-brand shrink-0 mt-1" aria-hidden="true" />
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="bz-card p-6">
+          <h2 className="font-semibold text-ink">ما الذي نقيسه</h2>
+          <ul className="mt-3 grid grid-cols-1 gap-2">
+            {Object.values(DOMAINS).map((d) => (
+              <li key={d.nameAr} className="flex items-center gap-2.5 bz-small text-ink-2">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} aria-hidden="true" />
+                {d.nameAr}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -463,77 +504,69 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
 
   return (
     <div className="space-y-6" dir="rtl">
-      <section className="bg-white rounded-[2rem] border border-slate-200 p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-black text-emerald-700">فحص {session.childName}</p>
-          <h2 className="text-2xl font-black text-slate-900 mt-0.5">
-            {completed.length === BATTERY.length ? 'اكتملت الألعاب التسع 🎉' : `أُنجزت ${toArabicDigits(completed.length)} من ٩ ألعاب`}
+      <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex-1 min-w-0">
+          <p className="bz-small text-brand font-semibold">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
+          <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
+            {completed.length === BATTERY.length ? 'اكتملت الألعاب التسع' : `أُنجزت ${toArabicDigits(completed.length)} من ٩ ألعاب`}
           </h2>
-          <div className="mt-3 h-3 w-full md:w-80 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(completed.length / BATTERY.length) * 100}%` }} />
+          <div className="mt-4 flex items-center gap-3 max-w-md">
+            <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / BATTERY.length) * 100}%` }} /></div>
+            {remainingMinutes > 0 && <span className="bz-small bz-muted shrink-0">بقي نحو {toArabicDigits(remainingMinutes)} دقيقة</span>}
           </div>
-          {remainingMinutes > 0 && <p className="text-xs text-slate-500 mt-2">الوقت المتبقي التقريبي: {toArabicDigits(remainingMinutes)} دقيقة</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {nextSubtest && (
-            <button
-              type="button"
-              onClick={() => setView({ name: 'run', id: nextSubtest.id })}
-              className="font-child flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 text-white font-black shadow cursor-pointer"
-            >
+            <button type="button" onClick={() => setView({ name: 'run', id: nextSubtest.id })} className="bz-btn bz-btn-primary bz-btn-lg">
               <Play className="w-5 h-5" /> {completed.length === 0 ? 'ابدأ اللعبة الأولى' : 'اللعبة التالية'}
             </button>
           )}
-          <button
-            type="button"
-            disabled={!profile}
-            onClick={() => setView({ name: 'report' })}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl border-2 border-slate-800 text-slate-900 font-black disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-          >
+          <button type="button" disabled={!profile} onClick={() => setView({ name: 'report' })} className="bz-btn bz-btn-secondary bz-btn-lg">
             <FileBarChart className="w-5 h-5" /> الملف المعرفي والتقرير
           </button>
         </div>
       </section>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {BATTERY.map((s) => {
           const done = Boolean(session.results[s.id]);
+          const isNext = nextSubtest?.id === s.id;
           const domain = DOMAINS[s.domain];
           return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setView({ name: 'run', id: s.id })}
-              className={`text-right rounded-3xl border-2 p-5 bg-white transition-all hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
-                done ? 'border-emerald-300 bg-emerald-50/40' : nextSubtest?.id === s.id ? 'border-sky-400 shadow-md' : 'border-slate-200'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-5xl" aria-hidden="true">{s.icon}</span>
-                <span className="text-xs font-black text-slate-400">{toArabicDigits(s.order)}</span>
-              </div>
-              <p className="font-child text-xl font-black text-slate-900 mt-3">{s.gameNameAr}</p>
-              <p className="text-xs font-bold text-slate-600 mt-1">{s.skillNameAr}</p>
-              <div className="mt-3 flex items-center justify-between text-[11px] font-bold">
-                <span className="px-2 py-0.5 rounded-full" style={{ color: domain.color, backgroundColor: `${domain.color}18` }}>{domain.nameAr}</span>
-                {done ? (
-                  <span className="flex items-center gap-1 text-emerald-700"><CheckCircle2 className="w-4 h-4" /> مكتملة · إعادة</span>
-                ) : (
-                  <span className="text-slate-500">≈ {toArabicDigits(s.minutes)} د</span>
-                )}
-              </div>
-            </button>
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => setView({ name: 'run', id: s.id })}
+                className="bz-card bz-card-interactive w-full h-full p-5 flex flex-col gap-4"
+                style={isNext ? { borderColor: 'var(--brand)', boxShadow: '0 0 0 3px var(--brand-soft)' } : undefined}
+              >
+                <div className="flex items-start justify-between gap-3 w-full">
+                  <span className="grid place-items-center w-16 h-16 rounded-2xl text-4xl" style={{ background: `color-mix(in srgb, ${domain.color} 12%, var(--card))` }} aria-hidden="true">{s.icon}</span>
+                  {done ? (
+                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
+                  ) : isNext ? (
+                    <span className="bz-badge bz-badge-sun">التالية</span>
+                  ) : (
+                    <span className="bz-small bz-muted bz-num">{toArabicDigits(s.order)} / ٩</span>
+                  )}
+                </div>
+                <div className="w-full">
+                  <p className="font-child text-[22px] font-bold text-ink leading-snug">{s.gameNameAr}</p>
+                  <p className="bz-small text-ink-2 mt-1">{s.skillNameAr}</p>
+                </div>
+                <div className="mt-auto w-full flex items-center justify-between text-[12px] font-semibold pt-3 border-t border-line">
+                  <span style={{ color: domain.color }}>{domain.nameAr}</span>
+                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
+                </div>
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-        <button
-          type="button"
-          onClick={() => setView({ name: 'training' })}
-          className="font-bold text-emerald-700 hover:underline cursor-pointer"
-        >
-          الانتقال إلى البرنامج التدريبي الموجّه
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={() => setView({ name: 'training' })} className="bz-link">
+          الانتقال إلى البرنامج التدريبي الموجّه <ArrowLeftIcon className="w-4 h-4" />
         </button>
         <button
           type="button"
@@ -544,7 +577,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               setView({ name: 'setup' });
             }
           }}
-          className="flex items-center gap-1 font-bold hover:text-rose-600 cursor-pointer"
+          className="bz-btn bz-btn-ghost bz-btn-sm"
         >
           <RotateCcw className="w-3.5 h-3.5" /> فحص جديد
         </button>

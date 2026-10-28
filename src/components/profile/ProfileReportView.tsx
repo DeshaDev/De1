@@ -10,28 +10,17 @@ import {
 } from '../../cognitiveProfile/scoring';
 import { FLAG_TEXT_AR, PATTERN_META, RISK_META, SUBTEST_GUIDANCE, nextStepsAr } from '../../cognitiveProfile/guidance';
 import type { BatterySession } from '../../cognitiveProfile/storage';
+import { BandLegend, CentileTrack } from './CentileTrack';
+import { BrandMark } from '../ui/BrandMark';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
 function CentileBar({ scored }: { scored: ScoredSubtest }) {
-  const meta = BAND_META[scored.band];
-  return (
-    <div className="relative h-7 w-full" dir="ltr" aria-label={`المئين التقديري ${scored.centile}`}>
-      <div className="absolute inset-y-1 inset-x-0 flex rounded-full overflow-hidden">
-        <div style={{ width: '5%' }} className="bg-rose-200" />
-        <div style={{ width: '15%' }} className="bg-orange-100" />
-        <div style={{ width: '60%' }} className="bg-emerald-50" />
-        <div style={{ width: '20%' }} className="bg-sky-100" />
-      </div>
-      <div className="absolute inset-y-0 border-l-2 border-dashed border-slate-400" style={{ left: '50%' }} title="متوسط العمر" />
-      <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-6 min-w-6 px-1.5 rounded-full text-[11px] font-black text-white flex items-center justify-center shadow"
-        style={{ left: `${scored.centile}%`, backgroundColor: meta.color }}
-      >
-        {toArabicDigits(scored.centile)}
-      </div>
-    </div>
-  );
+  return <CentileTrack centile={scored.centile} label={SUBTESTS_BY_ID[scored.subtestId].skillNameAr} />;
+}
+
+function bandBadge(band: keyof typeof BAND_META) {
+  return { color: BAND_META[band].color, backgroundColor: BAND_META[band].bg };
 }
 
 interface Props {
@@ -48,247 +37,251 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
   const flagged = profile.subtests.filter((s) => s.flags.length > 0);
 
+  const testedDate = new Date(session.startedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-5" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-        <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-slate-900 cursor-pointer">
+        <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
           <ArrowRight className="w-4 h-4" /> العودة إلى الألعاب
         </button>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-700 cursor-pointer">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => window.print()} className="bz-btn bz-btn-secondary">
             <Printer className="w-4 h-4" /> طباعة / PDF
           </button>
-          <button type="button" onClick={onStartTraining} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-black shadow cursor-pointer">
+          <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
             <Dumbbell className="w-4 h-4" /> البرنامج التدريبي المقترح
           </button>
         </div>
       </div>
 
-      <article className="print-report-root bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-8 space-y-8">
+      <article className="print-report-root bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }}>
         {/* Header */}
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
-          <div>
-            <p className="text-xs font-black text-emerald-700 tracking-wide">بصيرة · تقرير الملف المعرفي القرائي</p>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{session.childName}</h1>
-            <p className="text-sm text-slate-600 mt-1">
-              العمر عند الفحص: <strong>{formatAge(profile.ageMonths)}</strong> · فئة المقارنة: {profile.ageBandLabelAr}
-            </p>
+        <header className="px-5 sm:px-10 pt-8 pb-6 border-b border-line flex flex-wrap items-start justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <BrandMark size={44} />
+            <div>
+              <p className="bz-small text-brand font-semibold">بصيرة · تقرير الملف المعرفي القرائي</p>
+              <h1 className="bz-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>{session.childName}</h1>
+              <p className="bz-small text-ink-2 mt-1">
+                العمر عند الفحص: <strong className="text-ink">{formatAge(profile.ageMonths)}</strong> · فئة المقارنة: {profile.ageBandLabelAr}
+              </p>
+            </div>
           </div>
-          <dl className="text-xs text-slate-600 grid grid-cols-2 gap-x-4 gap-y-1">
-            <dt className="font-bold">تاريخ الفحص</dt>
-            <dd>{new Date(session.startedAt).toLocaleDateString('ar-EG')}</dd>
-            <dt className="font-bold">الفاحص</dt>
-            <dd>{session.examinerName || '—'}</dd>
-            <dt className="font-bold">الاختبارات المكتملة</dt>
-            <dd>{toArabicDigits(profile.subtests.length)} من ٩</dd>
+          <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 bz-small">
+            <dt className="bz-muted">تاريخ الفحص</dt>
+            <dd className="text-ink font-semibold">{testedDate}</dd>
+            <dt className="bz-muted">الفاحص</dt>
+            <dd className="text-ink font-semibold">{session.examinerName || '—'}</dd>
+            <dt className="bz-muted">الاختبارات المكتملة</dt>
+            <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من ٩</dd>
           </dl>
         </header>
 
-        {profile.ageOutOfRange && (
-          <p className="flex gap-2 text-sm bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            عمر الطفل خارج المدى المصمَّم له الفحص (٤:٠–٨:١١)؛ قورنت النتائج بأقرب فئة عمرية، وتُفسَّر بحذر.
-          </p>
-        )}
+        <div className="px-5 sm:px-10 py-8 space-y-10">
+          {profile.ageOutOfRange && (
+            <p className="flex gap-2 bz-small rounded-xl p-3 bg-warn-soft text-warn font-semibold">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-1" />
+              عمر الطفل خارج المدى المصمَّم له الفحص (٤:٠–٨:١١)؛ قورنت النتائج بأقرب فئة عمرية، وتُفسَّر بحذر.
+            </p>
+          )}
 
-        {/* Risk summary */}
-        <section className="rounded-2xl border-2 p-5" style={{ borderColor: risk.color, backgroundColor: risk.bg }}>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="px-3 py-1 rounded-full text-sm font-black text-white" style={{ backgroundColor: risk.color }}>
-              {risk.labelAr}
-            </span>
-            {profile.pattern !== 'none' && <span className="text-sm font-black text-slate-800">{pattern.titleAr}</span>}
-          </div>
-          <p className="mt-3 text-sm sm:text-base leading-relaxed text-slate-800">{risk.summaryAr}</p>
-          {profile.pattern !== 'none' && <p className="mt-2 text-sm leading-relaxed text-slate-700">{pattern.textAr}</p>}
-          <h3 className="mt-4 text-sm font-black text-slate-900">الخطوات التالية</h3>
-          <ol className="mt-1 list-decimal pr-5 text-sm text-slate-800 space-y-1">
-            {nextStepsAr(profile.risk, profile.pattern).map((s) => (
-              <li key={s}>{s}</li>
-            ))}
-          </ol>
-        </section>
-
-        {/* Graphical profile */}
-        <section>
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-black text-slate-900">الملف المعرفي البياني</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                موقع الطفل مقارنة بالمتوقع لعمره (مئين تقديري ١–٩٩؛ ٥٠ = متوسط العمر).
-              </p>
+          {/* Executive summary */}
+          <section className="grid lg:grid-cols-[1.4fr_1fr] gap-4" aria-labelledby="summary-title">
+            <div className="rounded-2xl p-6" style={{ backgroundColor: risk.bg, border: `1px solid color-mix(in srgb, ${risk.color} 30%, transparent)` }}>
+              <h2 id="summary-title" className="sr-only">الخلاصة</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bz-badge" style={{ backgroundColor: risk.color, color: '#FFFFFF' }}>{risk.labelAr}</span>
+                {profile.pattern !== 'none' && <span className="bz-badge bz-badge-neutral" style={{ background: 'rgba(255,255,255,.7)' }}>{pattern.titleAr}</span>}
+              </div>
+              <p className="mt-4 text-[16px] leading-[1.9] text-ink">{risk.summaryAr}</p>
+              {profile.pattern !== 'none' && <p className="mt-2 bz-small text-ink-2">{pattern.textAr}</p>}
             </div>
-            <div className="flex flex-wrap gap-3 text-[11px] font-bold text-slate-600">
-              {(['severe', 'below', 'average', 'strength'] as const).map((b) => (
-                <span key={b} className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: BAND_META[b].color }} />
-                  {BAND_META[b].labelAr}
-                </span>
-              ))}
+            <div className="bz-card-quiet p-6">
+              <h3 className="font-semibold text-ink">الخطوات التالية</h3>
+              <ol className="mt-3 space-y-3">
+                {nextStepsAr(profile.risk, profile.pattern).map((step, i) => (
+                  <li key={step} className="flex gap-3 bz-small text-ink-2">
+                    <span className="grid place-items-center w-6 h-6 shrink-0 rounded-full bg-brand text-on-brand text-[12px] font-bold bz-num">{toArabicDigits(i + 1)}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
-          </div>
-
-          <div className="mt-4 space-y-5">
-            {(Object.keys(DOMAINS) as Array<keyof typeof DOMAINS>).map((domainId) => {
-              const domain = DOMAINS[domainId];
-              const domainScore = profile.domains.find((d) => d.domain === domainId);
-              const members = BATTERY.filter((s) => s.domain === domainId);
-              return (
-                <div key={domainId} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <h3 className="font-black text-slate-900 flex items-center gap-2">
-                      <span className="w-2.5 h-6 rounded-full" style={{ backgroundColor: domain.color }} />
-                      {domain.nameAr}
-                    </h3>
-                    {domainScore && (
-                      <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ color: BAND_META[domainScore.band].color, backgroundColor: BAND_META[domainScore.band].bg }}>
-                        {BAND_META[domainScore.band].labelAr}
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    {members.map((s) => {
-                      const scored = scoredById.get(s.id);
-                      return (
-                        <div key={s.id} className="grid grid-cols-1 sm:grid-cols-[13rem_1fr] items-center gap-x-4 gap-y-1">
-                          <div className="text-sm">
-                            <span className="font-bold text-slate-800">{s.skillNameAr}</span>
-                            <span className="text-slate-400 text-xs"> · {s.gameNameAr}</span>
-                          </div>
-                          {scored ? <CentileBar scored={scored} /> : <div className="text-xs text-slate-400">لم يُطبَّق بعد</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Strengths */}
-        {profile.strengths.length > 0 && (
-          <section>
-            <h2 className="text-xl font-black text-slate-900">نقاط القوة وكيف نستثمرها</h2>
-            <ul className="mt-3 space-y-2">
-              {profile.strengths.map((id) => (
-                <li key={id} className="rounded-xl bg-sky-50 border border-sky-100 p-3 text-sm">
-                  <strong className="text-sky-900">{SUBTESTS_BY_ID[id].skillNameAr}:</strong>{' '}
-                  <span className="text-slate-700">{SUBTEST_GUIDANCE[id].strengthUseAr}</span>
-                </li>
-              ))}
-            </ul>
           </section>
-        )}
 
-        {/* Weaknesses + strategies */}
-        <section>
-          <h2 className="text-xl font-black text-slate-900">جوانب الاحتياج والاستراتيجيات التعليمية</h2>
-          {profile.weaknesses.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-600">لا توجد مهارة دون المتوقع لعمر الطفل في الاختبارات المكتملة.</p>
-          ) : (
-            <div className="mt-3 space-y-3">
-              {profile.weaknesses.map((id) => {
-                const g = SUBTEST_GUIDANCE[id];
-                const scored = scoredById.get(id) as ScoredSubtest;
-                const open = openStrategy === id;
+          {/* Graphical profile */}
+          <section aria-labelledby="profile-title">
+            <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-line">
+              <div>
+                <h2 id="profile-title" className="bz-h3" style={{ fontSize: 22 }}>الملف المعرفي البياني</h2>
+                <p className="bz-small bz-muted mt-1">موقع الطفل مقارنةً بأقرانه في العمر (مئين تقديري ١–٩٩، والخط الأوسط = متوسط العمر).</p>
+              </div>
+              <BandLegend />
+            </div>
+
+            <div className="divide-y divide-line">
+              {(Object.keys(DOMAINS) as Array<keyof typeof DOMAINS>).map((domainId) => {
+                const domain = DOMAINS[domainId];
+                const domainScore = profile.domains.find((d) => d.domain === domainId);
+                const members = BATTERY.filter((s) => s.domain === domainId);
                 return (
-                  <div key={id} className="rounded-2xl border border-slate-200 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setOpenStrategy(open ? null : id)}
-                      className="w-full flex items-center justify-between gap-3 p-4 text-right bg-slate-50 cursor-pointer"
-                      aria-expanded={open}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ color: BAND_META[scored.band].color, backgroundColor: BAND_META[scored.band].bg }}>
-                          {BAND_META[scored.band].labelAr}
-                        </span>
-                        <span className="font-black text-slate-900">{SUBTESTS_BY_ID[id].skillNameAr}</span>
-                      </span>
-                      <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform no-print ${open ? 'rotate-180' : ''}`} />
-                    </button>
-                    <div className={`${open ? 'block' : 'hidden'} print:block p-4 space-y-3 text-sm leading-relaxed`}>
-                      <p><strong>ماذا يقيس:</strong> {g.measuresAr}</p>
-                      <p><strong>لماذا يهم للقراءة:</strong> {g.whyItMattersAr}</p>
-                      <p><strong>ماذا تعني النتيجة:</strong> {g.weaknessMeaningAr}</p>
-                      <div>
-                        <strong>استراتيجيات للمعلم والأخصائي:</strong>
-                        <ul className="list-disc pr-5 mt-1 space-y-1">
-                          {g.strategiesAr.map((s) => <li key={s}>{s}</li>)}
-                        </ul>
-                      </div>
-                      <div>
-                        <strong>أنشطة منزلية للأسرة:</strong>
-                        <ul className="list-disc pr-5 mt-1 space-y-1">
-                          {g.homeActivitiesAr.map((s) => <li key={s}>{s}</li>)}
-                        </ul>
-                      </div>
+                  <div key={domainId} className="py-5 grid md:grid-cols-[14rem_minmax(0,1fr)] gap-x-8 gap-y-3">
+                    <div>
+                      <h3 className="font-semibold text-ink flex items-center gap-2">
+                        <span className="w-1.5 h-5 rounded-full" style={{ backgroundColor: domain.color }} aria-hidden="true" />
+                        {domain.nameAr}
+                      </h3>
+                      {domainScore && (
+                        <span className="bz-badge mt-2" style={bandBadge(domainScore.band)}>{BAND_META[domainScore.band].labelAr}</span>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {members.map((s) => {
+                        const scored = scoredById.get(s.id);
+                        return (
+                          <div key={s.id} className="grid grid-cols-1 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] items-center gap-x-4 gap-y-1">
+                            <div className="bz-small leading-snug">
+                              <span className="font-semibold text-ink">{s.skillNameAr}</span>
+                              <span className="block text-[12px] bz-muted">{s.gameNameAr}</span>
+                            </div>
+                            {scored ? <CentileBar scored={scored} /> : <div className="bz-small bz-muted">لم يُطبَّق بعد</div>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </section>
+          </section>
 
-        {/* Specialist table */}
-        <section>
-          <h2 className="text-xl font-black text-slate-900">جدول الدرجات للأخصائي</h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-sm border-collapse min-w-[560px]">
-              <thead>
-                <tr className="bg-slate-100 text-slate-700">
-                  <th className="p-2 text-right">الاختبار</th>
-                  <th className="p-2">الخام</th>
-                  <th className="p-2">النسبة</th>
-                  <th className="p-2">z</th>
-                  <th className="p-2">المئين التقديري</th>
-                  <th className="p-2">وسيط زمن الاستجابة</th>
-                  <th className="p-2">التصنيف</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profile.subtests.map((s) => (
-                  <tr key={s.subtestId} className="border-b border-slate-100 text-center">
-                    <td className="p-2 text-right font-bold">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}</td>
-                    <td className="p-2">{toArabicDigits(`${s.correct}/${s.total}`)}</td>
-                    <td className="p-2">{toArabicDigits(s.percent)}٪</td>
-                    <td className="p-2" dir="ltr">{s.z.toFixed(2)}</td>
-                    <td className="p-2">{toArabicDigits(s.centile)}</td>
-                    <td className="p-2">{s.medianRtMs ? `${toArabicDigits((s.medianRtMs / 1000).toFixed(1))} ث` : '—'}</td>
-                    <td className="p-2 font-bold" style={{ color: BAND_META[s.band].color }}>{BAND_META[s.band].labelAr}</td>
-                  </tr>
+          {/* Strengths */}
+          {profile.strengths.length > 0 && (
+            <section>
+              <h2 className="bz-h3" style={{ fontSize: 22 }}>نقاط القوة وكيف نستثمرها</h2>
+              <ul className="mt-4 grid md:grid-cols-2 gap-3">
+                {profile.strengths.map((id) => (
+                  <li key={id} className="rounded-xl p-4 bg-brand-tint border border-line bz-small">
+                    <strong className="block text-brand-strong">{SUBTESTS_BY_ID[id].skillNameAr}</strong>
+                    <span className="text-ink-2">{SUBTEST_GUIDANCE[id].strengthUseAr}</span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          {flagged.length > 0 && (
-            <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
-              <p className="font-black">ملاحظات صلاحية التطبيق:</p>
-              {flagged.map((s) => (
-                <p key={s.subtestId}>
-                  <strong>{SUBTESTS_BY_ID[s.subtestId].skillNameAr}:</strong> {s.flags.map((f) => FLAG_TEXT_AR[f]).join(' ')}
-                </p>
-              ))}
-            </div>
+              </ul>
+            </section>
           )}
-        </section>
 
-        {/* Method note */}
-        <section className="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-xs leading-relaxed text-slate-600 space-y-2">
-          <p className="flex items-center gap-1.5 font-black text-slate-800"><Info className="w-4 h-4" /> عن المقارنة العمرية وحدود التفسير</p>
-          {profile.referenceStatus === 'provisional' ? (
+          {/* Weaknesses + strategies */}
+          <section>
+            <h2 className="bz-h3" style={{ fontSize: 22 }}>جوانب الاحتياج والاستراتيجيات التعليمية</h2>
+            {profile.weaknesses.length === 0 ? (
+              <p className="mt-2 bz-body">لا توجد مهارة دون المتوقع لعمر الطفل في الاختبارات المكتملة.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {profile.weaknesses.map((id) => {
+                  const g = SUBTEST_GUIDANCE[id];
+                  const scored = scoredById.get(id) as ScoredSubtest;
+                  const open = openStrategy === id;
+                  return (
+                    <div key={id} className="rounded-2xl border border-line overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setOpenStrategy(open ? null : id)}
+                        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-right bg-card hover:bg-soft cursor-pointer"
+                        aria-expanded={open}
+                      >
+                        <span className="flex flex-wrap items-center gap-3">
+                          <span className="font-semibold text-ink">{SUBTESTS_BY_ID[id].skillNameAr}</span>
+                          <span className="bz-badge" style={bandBadge(scored.band)}>{BAND_META[scored.band].labelAr}</span>
+                        </span>
+                        <ChevronDown className={`w-5 h-5 text-muted transition-transform no-print ${open ? 'rotate-180' : ''}`} />
+                      </button>
+                      <div className={`${open ? 'block' : 'hidden'} print:block px-5 pb-5 pt-1 border-t border-line`}>
+                        <dl className="grid md:grid-cols-3 gap-4 py-4 bz-small">
+                          <div><dt className="font-semibold text-ink">ماذا يقيس</dt><dd className="text-ink-2 mt-1">{g.measuresAr}</dd></div>
+                          <div><dt className="font-semibold text-ink">لماذا يهم للقراءة</dt><dd className="text-ink-2 mt-1">{g.whyItMattersAr}</dd></div>
+                          <div><dt className="font-semibold text-ink">ماذا تعني النتيجة</dt><dd className="text-ink-2 mt-1">{g.weaknessMeaningAr}</dd></div>
+                        </dl>
+                        <div className="grid md:grid-cols-2 gap-3">
+                          <div className="rounded-xl p-4 bg-soft">
+                            <p className="font-semibold text-ink bz-small">في الصف · للمعلم والأخصائي</p>
+                            <ul className="list-disc pr-5 mt-2 space-y-1.5 bz-small text-ink-2">
+                              {g.strategiesAr.map((x) => <li key={x}>{x}</li>)}
+                            </ul>
+                          </div>
+                          <div className="rounded-xl p-4 bg-sun-soft">
+                            <p className="font-semibold text-ink bz-small">في البيت · للأسرة</p>
+                            <ul className="list-disc pr-5 mt-2 space-y-1.5 bz-small text-ink-2">
+                              {g.homeActivitiesAr.map((x) => <li key={x}>{x}</li>)}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Specialist table */}
+          <section>
+            <h2 className="bz-h3" style={{ fontSize: 22 }}>جدول الدرجات للأخصائي</h2>
+            <div className="mt-4 overflow-x-auto rounded-xl border border-line">
+              <table className="w-full text-sm border-collapse min-w-[620px]">
+                <thead>
+                  <tr className="bg-soft text-ink-2">
+                    <th className="px-3 py-2.5 text-right font-semibold">الاختبار</th>
+                    <th className="px-3 py-2.5 font-semibold">الخام</th>
+                    <th className="px-3 py-2.5 font-semibold">النسبة</th>
+                    <th className="px-3 py-2.5 font-semibold">z</th>
+                    <th className="px-3 py-2.5 font-semibold">المئين</th>
+                    <th className="px-3 py-2.5 font-semibold">وسيط الاستجابة</th>
+                    <th className="px-3 py-2.5 font-semibold">التصنيف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.subtests.map((s) => (
+                    <tr key={s.subtestId} className="border-t border-line text-center bz-num">
+                      <td className="px-3 py-2.5 text-right font-semibold text-ink">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}</td>
+                      <td className="px-3 py-2.5">{toArabicDigits(`${s.correct}/${s.total}`)}</td>
+                      <td className="px-3 py-2.5">{toArabicDigits(s.percent)}٪</td>
+                      <td className="px-3 py-2.5" dir="ltr">{s.z.toFixed(2)}</td>
+                      <td className="px-3 py-2.5">{toArabicDigits(s.centile)}</td>
+                      <td className="px-3 py-2.5">{s.medianRtMs ? `${toArabicDigits((s.medianRtMs / 1000).toFixed(1))} ث` : '—'}</td>
+                      <td className="px-3 py-2.5"><span className="bz-badge" style={bandBadge(s.band)}>{BAND_META[s.band].labelAr}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {flagged.length > 0 && (
+              <div className="mt-3 rounded-xl p-4 bg-warn-soft bz-small text-ink-2 space-y-1">
+                <p className="font-semibold text-warn">ملاحظات صلاحية التطبيق</p>
+                {flagged.map((s) => (
+                  <p key={s.subtestId}>
+                    <strong className="text-ink">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}:</strong> {s.flags.map((f) => FLAG_TEXT_AR[f]).join(' ')}
+                  </p>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Method note */}
+          <section className="rounded-2xl bg-soft p-5 bz-small text-ink-2 space-y-2">
+            <p className="flex items-center gap-1.5 font-semibold text-ink"><Info className="w-4 h-4" /> عن المقارنة العمرية وحدود التفسير</p>
+            {profile.referenceStatus === 'provisional' ? (
+              <p>
+                المئينات في هذا التقرير <strong>تقديرية</strong> ومحسوبة مقابل جدول مرجعي مؤقت ({REFERENCE_TABLE.version}). {REFERENCE_TABLE.sourceAr} لذلك تُستخدم النتائج للفرز المبكر وتوجيه التدريب، ولا تُغني عن تقييم شامل لدى أخصائي مؤهل.
+              </p>
+            ) : (
+              <p>المئينات محسوبة مقابل معايير مقننة ({REFERENCE_TABLE.version}). {REFERENCE_TABLE.sourceAr}</p>
+            )}
             <p>
-              المئينات في هذا التقرير <strong>تقديرية</strong> ومحسوبة مقابل جدول مرجعي مؤقت ({REFERENCE_TABLE.version}). {REFERENCE_TABLE.sourceAr} لذلك تُستخدم النتائج للفرز المبكر وتوجيه التدريب، ولا تُغني عن تقييم شامل لدى أخصائي مؤهل.
+              الفحص أداة فرز ومؤشر مبكر لاحتمال صعوبة تعلّم القراءة، وليس تشخيصًا. يتأثر الأداء بالانتباه والتعب واللهجة وجودة الصوت. إذا بدت النتيجة غير متسقة مع ما يعرفه المعلم عن الطفل فأعد الاختبار المعنيّ في يوم آخر.
             </p>
-          ) : (
-            <p>المئينات محسوبة مقابل معايير مقننة ({REFERENCE_TABLE.version}). {REFERENCE_TABLE.sourceAr}</p>
-          )}
-          <p>
-            الفحص أداة فرز ومؤشر مبكر لاحتمال صعوبة تعلّم القراءة، وليس تشخيصًا. يتأثر الأداء بالانتباه والتعب واللهجة وجودة الصوت. إذا بدت النتيجة غير متسقة مع ما يعرفه المعلم عن الطفل فأعد الاختبار المعنيّ في يوم آخر.
-          </p>
-        </section>
+          </section>
+        </div>
       </article>
     </div>
   );
