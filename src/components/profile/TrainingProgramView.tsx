@@ -22,6 +22,8 @@ import {
   sessionsCompleted,
 } from '../../cognitiveProfile/training';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
+import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
+import type { StudentRecord } from '../../data/seedData';
 import { ChoicePlayer, SpanPlayer } from './TaskPlayers';
 import { speak } from './audio';
 
@@ -76,10 +78,16 @@ interface Props {
   onBack: () => void;
   onGoToBattery: () => void;
   onRunningChange?: (running: boolean) => void;
+  /** Progress stored in the school record, used when this device has none. */
+  serverProgress?: TrainingProgress | null;
+  /** Mirror progress to the school record (school account signed in). */
+  syncEnabled?: boolean;
+  onRecordUpdated?: (student: StudentRecord) => void;
+  student?: StudentRecord;
 }
 
-export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange }: Props) {
-  const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId));
+export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student }: Props) {
+  const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId) ?? serverProgress);
   const [run, setRun] = useState<Run | null>(null);
   useEffect(() => {
     onRunningChange?.(run !== null);
@@ -91,6 +99,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const persist = (p: TrainingProgress) => {
     setProgress(p);
     saveTrainingProgress(studentId, p);
+    if (syncEnabled) {
+      syncTrainingToSchool(studentId, p, student)
+        .then((student) => student && onRecordUpdated?.(student))
+        .catch(() => {
+          // Progress is kept on this device; the next session retries the sync.
+        });
+    }
   };
 
   const startProgram = (plan: TrainingPlan) => persist(createProgress(plan));

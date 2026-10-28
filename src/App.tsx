@@ -51,6 +51,7 @@ import RemediationGymView from './components/RemediationGymView';
 import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
+import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { TermsOfUseView } from './components/TermsOfUseView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
@@ -512,6 +513,62 @@ export default function App() {
     setAiStatusBanner(
       `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade}).`
     );
+  };
+
+  /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
+  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string }): string | null => {
+    if (baseeraSession?.role === 'educator_readonly') return null;
+    const cleanName = input.name.trim().replace(/\s+/g, ' ');
+    if (cleanName.length < 2) return null;
+    const recordedAt = new Date().toISOString();
+    const learner: StudentRecord = {
+      id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
+      name: cleanName,
+      isDemoRecord: false,
+      sessionStatus: 'in_progress',
+      sessionRoleLabel: 'فحص معرفي',
+      assessmentHistory: [],
+      cognitiveBattery: null,
+      trainingProgress: null,
+      gradeLevel: Math.max(0, input.ageYears - 6),
+      ageYears: input.ageYears,
+      schoolName: 'مدرستي',
+      lastScreenedDate: '—',
+      passageId: ARABIC_READING_PASSAGES[0].id,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: recordedAt,
+      guardianConsentSource: `إقرار الفاحص (${input.examinerName.trim() || 'الفاحص'}) بموافقة ولي الأمر في شاشة إعداد الفحص`,
+      guardianAudioConsentGiven: false,
+      speechRecognitionUsed: false,
+      wpm: 0,
+      dyslexiaRiskScore: null,
+      readingHeuristicIndicator: null,
+      readingRiskLevel: 'unassessed',
+      readingRiskLabelAr: 'لم تبدأ جلسة القراءة بعد.',
+      problematicWords: [],
+      comprehensionScore: 0,
+      dyscalculiaAssessed: false,
+      subitizingAccuracy: null,
+      avgSubitizingMs: null,
+      numberLinePAE: null,
+      transcodingAccuracy: null,
+      reversalErrorCount: null,
+      dyscalculiaRiskScore: null,
+      mathHeuristicIndicator: null,
+      mathRiskLevel: 'unassessed',
+      mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
+      learningReport: {
+        learningSummary: 'سجل جديد؛ تظهر الملاحظات بعد إكمال أول نشاط.',
+        ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الكاميرا أو تتبّع العين.',
+        orthographicAndPhonologicalPatterns: 'تظهر بعد إكمال الفحص أو القراءة.',
+        dyscalculiaSpatialAnalysis: 'غير منطبق.',
+        interventionExercises: [],
+        classroomAccommodations: [],
+      },
+    };
+    setStudents((prev) => [learner, ...prev]);
+    setSelectedStudentId(learner.id);
+    return learner.id;
   };
 
   const handleSelectExistingDemoJourney = (
@@ -1254,6 +1311,7 @@ export default function App() {
                             <th className="py-3 px-3 text-left">الفهم</th>
                             <th className="py-3 px-3">حالة القراءة</th>
                             <th className="py-3 px-4">الفهم القرائي</th>
+                            <th className="py-3 px-4">الفحص المعرفي</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1316,6 +1374,9 @@ export default function App() {
                                   ) : (
                                     <span className="text-slate-400">قيد المتابعة</span>
                                   )}
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  <BatteryRiskBadge student={stu} />
                                 </td>
                               </tr>
                             );
@@ -1388,6 +1449,9 @@ export default function App() {
               </div>
             )}
             {/* SUB-VIEW 3: LEARNING PERFORMANCE SUMMARY & SUPPORT PLAN */}
+            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
+              <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
+            )}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
                 <div className="p-6 sm:p-8 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1752,6 +1816,10 @@ export default function App() {
                     : 'battery'
             }
             onCompleteOralSession={handleCompleteNewSession}
+            onCreateLearner={handleCreateBatteryLearner}
+            onStudentUpdated={(updated) =>
+              setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)))
+            }
             onCompleteCognitiveScreening={(cogData) => {
               setStudents(prev => prev.map(student =>
                 student.id === selectedStudent.id

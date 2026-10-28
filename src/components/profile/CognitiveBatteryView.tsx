@@ -38,6 +38,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
+import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
 import TrainingProgramView from './TrainingProgramView';
@@ -273,9 +274,14 @@ function SubtestRunner({
 // ---------------------------------------------------------------------------
 // Setup form
 // ---------------------------------------------------------------------------
+/** Demo and guest records have no recorded consent; a real screening gets its own learner record. */
+function needsOwnRecord(student: StudentRecord): boolean {
+  return student.isDemoRecord === true || student.guardianConsentGiven !== true;
+}
+
 function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: BatterySession) => void }) {
   const defaultYears = student.ageYears >= 4 && student.ageYears <= 8 ? student.ageYears : 6;
-  const [name, setName] = useState(student.name);
+  const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState('');
@@ -403,6 +409,19 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
   );
 }
 
+function SyncBadge({ state, onRetry }: { state: SyncState; onRetry: () => void }) {
+  if (state === 'saved') return <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> محفوظ في سجل المدرسة</span>;
+  if (state === 'saving') return <span className="bz-badge bz-badge-neutral">جارٍ الحفظ في سجل المدرسة…</span>;
+  if (state === 'error')
+    return (
+      <span className="inline-flex items-center gap-2">
+        <span className="bz-badge bz-badge-warn">تعذّر الحفظ في سجل المدرسة · النتائج محفوظة على هذا الجهاز</span>
+        <button type="button" className="bz-link bz-small" onClick={onRetry}>إعادة المحاولة</button>
+      </span>
+    );
+  return <span className="bz-badge bz-badge-neutral" title="سجّل دخول المدرسة لحفظ النتائج في سجل الطالب">محفوظ على هذا الجهاز فقط</span>;
+}
+
 // ---------------------------------------------------------------------------
 // Main view
 // ---------------------------------------------------------------------------
@@ -413,17 +432,35 @@ interface Props {
   initialView?: 'map' | 'training';
   /** Called with true while a child is playing, so the host can hide surrounding chrome. */
   onFocusModeChange?: (focused: boolean) => void;
+  /** Called with the server copy after results are saved to the school record. */
+  onRecordUpdated?: (student: StudentRecord) => void;
+  /** Create a real learner record (used when the active record is a demo); returns its id. */
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
 }
 
-export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange }: Props) {
+export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
-  const [session, setSession] = useState<BatterySession | null>(() => loadBatterySession(activeStudent.id));
+  const syncEnabled = canSyncToSchool(activeStudent);
+  const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
+  const loadInitial = () => loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
+  const [session, setSession] = useState<BatterySession | null>(loadInitial);
+
+  const pushToSchool = (s: BatterySession) => {
+    if (!syncEnabled) return;
+    setSyncState('saving');
+    syncBatteryToSchool(s, activeStudent)
+      .then((student) => {
+        setSyncState('saved');
+        if (student) onRecordUpdated?.(student);
+      })
+      .catch(() => setSyncState('error'));
+  };
   const [view, setView] = useState<View>(() =>
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
 
   useEffect(() => {
-    const loaded = loadBatterySession(activeStudent.id);
+    const loaded = loadInitial();
     setSession(loaded);
     setView(initialView === 'training' ? { name: 'training' } : loaded ? { name: 'map' } : { name: 'setup' });
   }, [activeStudent.id, initialView]);
@@ -452,6 +489,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     const updated = { ...session, results: { ...session.results, [result.subtestId]: result } };
     setSession(updated);
     saveBatterySession(updated);
+    pushToSchool(updated);
   };
 
   if (view.name === 'training') {
@@ -463,6 +501,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         onBack={() => setView(!session ? { name: 'setup' } : profile ? { name: 'report' } : { name: 'map' })}
         onGoToBattery={() => setView(session ? { name: 'map' } : { name: 'setup' })}
         onRunningChange={setTrainingRunning}
+        serverProgress={trainingFromRecord(activeStudent)}
+        syncEnabled={syncEnabled}
+        onRecordUpdated={onRecordUpdated}
+        student={activeStudent}
       />
     );
   }
@@ -472,6 +514,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <SetupView
         student={activeStudent}
         onStart={(s) => {
+          // Never record a real child's results under a demo record.
+          if (needsOwnRecord(activeStudent) && onCreateLearner) {
+            const newId = onCreateLearner({ name: s.childName, ageYears: Math.floor(s.ageMonths / 12), examinerName: s.examinerName });
+            if (newId) {
+              saveBatterySession({ ...s, studentId: newId });
+              return; // the host selects the new learner and this view reloads their session
+            }
+          }
           setSession(s);
           saveBatterySession(s);
           setView({ name: 'map' });
@@ -506,7 +556,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     <div className="space-y-6" dir="rtl">
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex-1 min-w-0">
-          <p className="bz-small text-brand font-semibold">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
+          <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
+          <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
             {completed.length === BATTERY.length ? 'اكتملت الألعاب التسع' : `أُنجزت ${toArabicDigits(completed.length)} من ٩ ألعاب`}
           </h2>
@@ -571,7 +622,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('بدء فحص جديد سيحذف نتائج هذا الفحص من هذا الجهاز. متابعة؟')) {
+            if (window.confirm('بدء فحص جديد سيحذف نتائج هذا الفحص من هذا الجهاز، وتُستبدل نسخة سجل المدرسة عند حفظ أول لعبة. متابعة؟')) {
               clearBatterySession(activeStudent.id);
               setSession(null);
               setView({ name: 'setup' });
