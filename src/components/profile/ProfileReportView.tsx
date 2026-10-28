@@ -9,7 +9,7 @@ import {
   formatAge,
 } from '../../cognitiveProfile/scoring';
 import { FLAG_TEXT_AR, PATTERN_META, RISK_META, SUBTEST_GUIDANCE, nextStepsAr } from '../../cognitiveProfile/guidance';
-import type { BatterySession } from '../../cognitiveProfile/storage';
+import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession } from '../../cognitiveProfile/storage';
 import { BandLegend, CentileTrack } from './CentileTrack';
 import { BrandMark } from '../ui/BrandMark';
 
@@ -37,6 +37,11 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
   const flagged = profile.subtests.filter((s) => s.flags.length > 0);
 
+  const dialectNotes = session.dialect
+    ? (session.results.auditoryDiscrimination?.responses ?? [])
+        .filter((r) => !r.correct && DIALECT_SENSITIVE_ITEMS[r.itemId]?.dialects.includes(session.dialect!))
+        .map((r) => DIALECT_SENSITIVE_ITEMS[r.itemId].pairAr)
+    : [];
   const testedDate = new Date(session.startedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
@@ -73,6 +78,8 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
             <dd className="text-ink font-semibold">{testedDate}</dd>
             <dt className="bz-muted">الفاحص</dt>
             <dd className="text-ink font-semibold">{session.examinerName || '—'}</dd>
+            <dt className="bz-muted">لهجة البيت</dt>
+            <dd className="text-ink font-semibold">{session.dialect ? DIALECT_LABELS_AR[session.dialect] : 'لم تُحدَّد'}</dd>
             <dt className="bz-muted">الاختبارات المكتملة</dt>
             <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من ٩</dd>
           </dl>
@@ -255,9 +262,14 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
                 </tbody>
               </table>
             </div>
-            {flagged.length > 0 && (
+            {(flagged.length > 0 || dialectNotes.length > 0) && (
               <div className="mt-3 rounded-xl p-4 bg-warn-soft bz-small text-ink-2 space-y-1">
                 <p className="font-semibold text-warn">ملاحظات صلاحية التطبيق</p>
+                {dialectNotes.length > 0 && (
+                  <p>
+                    <strong className="text-ink">التمييز السمعي واللهجة:</strong> أخطأ الطفل في {dialectNotes.join('، ')}، وهي أصوات تدمجها اللهجة {DIALECT_LABELS_AR[session.dialect!]} في الكلام اليومي. قد يعكس الخطأ لهجته لا ضعفًا في التمييز السمعي؛ فسّر هذا الاختبار بحذر.
+                  </p>
+                )}
                 {flagged.map((s) => (
                   <p key={s.subtestId}>
                     <strong className="text-ink">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}:</strong> {s.flags.map((f) => FLAG_TEXT_AR[f]).join(' ')}

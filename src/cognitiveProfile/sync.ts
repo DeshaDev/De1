@@ -59,6 +59,7 @@ export function syncBatteryToSchool(session: BatterySession, student?: StudentRe
       ageMonths: session.ageMonths,
       examinerName: session.examinerName,
       startedAt: session.startedAt,
+      dialect: session.dialect,
       results: session.results,
     },
     student
@@ -84,6 +85,7 @@ export function batterySessionFromRecord(student: StudentRecord): BatterySession
     ageMonths: stored.ageMonths,
     examinerName: stored.examinerName,
     startedAt: stored.startedAt,
+    dialect: stored.dialect,
     results: stored.results,
   };
 }

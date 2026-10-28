@@ -33,6 +33,8 @@ import {
   shouldStopSpan,
 } from '../../cognitiveProfile/scoring';
 import {
+  DIALECT_LABELS_AR,
+  type HomeDialect,
   BatterySession,
   clearBatterySession,
   loadBatterySession,
@@ -287,6 +289,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState('');
+  const [dialect, setDialect] = useState<HomeDialect | ''>('');
   const [checks, setChecks] = useState({ consent: false, quiet: false, headphones: false, ready: false });
   const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
 
@@ -320,6 +323,16 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
             </div>
             <span className="bz-hint">تُقارن نتائج الطفل بأقرانه في العمر نفسه، لذلك تهمّ دقة الأشهر.</span>
           </div>
+          <label className="bz-field">
+            <span className="bz-label">لهجة الطفل في البيت</span>
+            <select value={dialect} onChange={(e) => setDialect(e.target.value as HomeDialect | '')} className="bz-input">
+              <option value="">اختر اللهجة</option>
+              {(Object.keys(DIALECT_LABELS_AR) as HomeDialect[]).map((d) => (
+                <option key={d} value={d}>{DIALECT_LABELS_AR[d]}</option>
+              ))}
+            </select>
+            <span className="bz-hint">بعض اللهجات تدمج أصواتًا مثل ث/س وذ/ز؛ نستخدم اللهجة لتفسير هذه البنود بإنصاف.</span>
+          </label>
           <label className="bz-field">
             <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
             <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
@@ -369,6 +382,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               ageMonths: years * 12 + months,
               examinerName: examiner.trim(),
               startedAt: new Date().toISOString(),
+              ...(dialect ? { dialect } : {}),
               results: {},
             })
           }

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { BATTERY, SUBTESTS_BY_ID, SubtestId } from './battery';
 import { REFERENCE_TABLE, buildProfile, type Band, type ProfilePattern, type RiskLevel, type SubtestResult } from './scoring';
 import { SKILLS, type SkillId, type TrainingProgress } from './training';
+import type { HomeDialect } from './storage';
 
 export interface CognitiveBatterySummary {
   referenceVersion: string;
@@ -26,6 +27,7 @@ export interface StoredCognitiveBattery {
   examinerName: string;
   startedAt: string;
   updatedAt: string;
+  dialect?: HomeDialect;
   results: Partial<Record<SubtestId, SubtestResult>>;
   summary: CognitiveBatterySummary | null;
 }
@@ -75,6 +77,7 @@ export const CognitiveBatteryUploadSchema = z
     ageMonths: z.number().int().min(36).max(144),
     examinerName: z.string().max(80).default(''),
     startedAt: isoDate,
+    dialect: z.enum(['gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other']).optional(),
     results: z.record(z.string(), SubtestResultSchema),
   })
   .strict()

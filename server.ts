@@ -2025,6 +2025,7 @@ async function startServer() {
           ageMonths: parsed.data.ageMonths,
           examinerName: parsed.data.examinerName.trim(),
           startedAt: parsed.data.startedAt,
+          dialect: parsed.data.dialect,
           updatedAt: new Date().toISOString(),
           results,
           summary: summarizeBattery(results, parsed.data.ageMonths),
