@@ -175,7 +175,7 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-isolation-1',
     categoryAr: 'عزل الصوت الأول',
-    titleAr: 'عَزْلُ الصَّوْتِ الأَوَّلِ (Initial Sound Isolation)',
+    titleAr: 'عَزْلُ الصَّوْتِ الأَوَّلِ',
     promptAr: 'مَا هُوَ الصَّوْتُ الأَوَّلُ الَّذِي تَبْدَأُ بِهِ كَلِمَةُ "زُهُور"؟',
     audioSpeechPrompt: 'ما الصوت الأول في كلمة زُهُور؟',
     targetWordAr: 'زُهُور',
@@ -187,7 +187,7 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-elision-1',
     categoryAr: 'حذف المقطع الأول',
-    titleAr: 'حذف المقطع الأول (Initial Syllable Deletion)',
+    titleAr: 'حذف المقطع الأول',
     promptAr: 'اسمع الكلمة «سَلَام». إذا حذفنا المقطع الأول /سَ/، فما الجزء المتبقي؟',
     audioSpeechPrompt: 'سَلَام. احذف المقطع الأول سَ. ما الجزء المتبقي؟',
     targetWordAr: 'سَلَام',
@@ -199,7 +199,7 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-blending-1',
     categoryAr: 'دمج المقاطع',
-    titleAr: 'دَمْجُ الأَصْوَاتِ (Phoneme Blending)',
+    titleAr: 'دَمْجُ الأَصْوَاتِ',
     promptAr: 'استمع إلى الأصوات المنفصلة /شَ/ + /مْ/ + /سْ/. ما الكلمة الناتجة عند دمجها؟',
     audioSpeechPrompt: 'شَ ... مْ ... سْ. ما الكلمة الناتجة؟',
     targetWordAr: 'شَمْس',
@@ -211,7 +211,7 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-rhyme-1',
     categoryAr: 'القافية',
-    titleAr: 'اكتشاف القافية بين الكلمات (Rhyme Detection)',
+    titleAr: 'اكتشاف القافية بين الكلمات',
     promptAr: 'أي كلمة تنتهي بمقطع يشبه نهاية كلمة «قَلَم»؟',
     audioSpeechPrompt: 'أي كلمة تنتهي بمقطع يشبه نهاية كلمة قَلَم؟',
     targetWordAr: 'قَلَم',
@@ -223,7 +223,7 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-elision-final-1',
     categoryAr: 'حذف الصوت الأخير',
-    titleAr: 'حذف الصوت الأخير (Final Phoneme Deletion)',
+    titleAr: 'حذف الصوت الأخير',
     promptAr: 'اسمع الكلمة «سَلَام». إذا حذفنا الصوت الأخير /م/، فما الكلمة المتبقية؟',
     audioSpeechPrompt: 'سَلَام. احذف صوت الميم في النهاية. ما الكلمة المتبقية؟',
     targetWordAr: 'سَلَام',
@@ -235,14 +235,14 @@ export const ARABIC_PHONEMIC_TASK_CANDIDATES: PhonemicTask[] = [
   {
     id: 'ph-discrimination-1',
     categoryAr: 'التمييز السمعي للأصوات المتقاربة',
-    titleAr: 'التمييز السمعي (Phonological Discrimination)',
+    titleAr: 'التمييز السمعي',
     promptAr: 'أَيُّ زَوْجٍ مِنَ الكَلِمَاتِ يَخْتَلِفُ فَقَطْ فِي صَوْتٍ وَاحِدٍ بَيْنَ (المرقق والمفخم)؟',
     audioSpeechPrompt: 'أي زوج من الكلمات يختلف في صوت واحد فقط؟',
     targetWordAr: 'تِين / طِين',
     optionsAr: ['تِين / طِين', 'بَاب / نَار', 'شَمْس / قَمَر'],
     correctIndex: 0,
     difficultyAr: 'متقدم',
-    explanationAr: 'الزوج (تِين / طِين) زوج أدنى (Minimal Pair) يختلف فقط في صوت التاء المرققة والطاء المفخمة',
+    explanationAr: 'الزوج (تِين / طِين) زوج أدنى يختلف فقط في صوت التاء المرققة والطاء المفخمة',
   },
 ];
 
@@ -828,67 +828,28 @@ export const CognitiveScreeningView: React.FC<Props> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8" dir="rtl">
+    <div className="text-slate-800" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Top Navigation & Student Header */}
         <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-700 flex items-center justify-center">
-                <Brain className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-black text-slate-900">
-                  أنشطة استكشافية لمهارات القراءة
-                </h1>
-                <p className="text-xs text-slate-500">
-                  ملاحظات عن زمن التسمية، وقراءة صيغ تدريبية مرشحة، والوعي بالأصوات
-                </p>
-              </div>
-            </div>
-
             {/* Stages Step Tabs */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
-              <button
-                onClick={() => setActiveStage('intro')}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  activeStage === 'intro' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
+            <div className="bz-segment" role="tablist" aria-label="الأنشطة">
+              <button type="button" role="tab" aria-selected={activeStage === 'intro'} onClick={() => setActiveStage('intro')}>
                 المقدمة
               </button>
-              <button
-                onClick={() => setActiveStage('ran')}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  activeStage === 'ran' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                1. نشاط التسمية
+              <button type="button" role="tab" aria-selected={activeStage === 'ran'} onClick={() => setActiveStage('ran')}>
+                ١. التسمية السريعة
               </button>
-              <button
-                onClick={() => setActiveStage('pseudo')}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  activeStage === 'pseudo' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                2. الكلمات غير المعجمية
+              <button type="button" role="tab" aria-selected={activeStage === 'pseudo'} onClick={() => setActiveStage('pseudo')}>
+                ٢. الكلمات غير الحقيقية
               </button>
-              <button
-                onClick={() => setActiveStage('phonemic')}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  activeStage === 'phonemic' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                3. الوعي الصوتي
+              <button type="button" role="tab" aria-selected={activeStage === 'phonemic'} onClick={() => setActiveStage('phonemic')}>
+                ٣. الوعي الصوتي
               </button>
-              <button
-                onClick={() => setActiveStage('summary')}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  activeStage === 'summary' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                ملخص الأنشطة
+              <button type="button" role="tab" aria-selected={activeStage === 'summary'} onClick={() => setActiveStage('summary')}>
+                الملخص
               </button>
             </div>
           </div>
@@ -897,21 +858,12 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="flex items-center gap-3">
               <span>الطالب: <strong className="text-slate-800">{student.name}</strong></span>
               <span>·</span>
-              <span>الصف: <strong className="text-slate-800">{student.gradeLevel}</strong></span>
+              <span>الصف: <strong className="text-slate-800">{String(student.gradeLevel).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])}</strong></span>
               <span>·</span>
               <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 تسجيل صوتي لمهام القراءة
               </span>
             </div>
-            {onNavigateTab && (
-              <button
-                onClick={() => onNavigateTab('dashboard')}
-                className="text-teal-700 hover:text-teal-800 font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <span>العودة للوحة الرئيسية</span>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -921,12 +873,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
         {activeStage === 'intro' && (
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80 space-y-6">
             <div className="border-b border-slate-100 pb-5">
-              <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                مجموعة أنشطة استكشافية لمهارات مرتبطة بالقراءة
-              </span>
-              <h2 className="text-2xl md:text-3xl font-black text-slate-900 mt-2">
-                أنشطة استكشافية لبعض المهارات المرتبطة بالقراءة
-              </h2>
+              <h2 className="bz-h3">ثلاثة أنشطة قصيرة</h2>
               <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                 تستكشف هذه الأنشطة زمن التسمية وقراءة صيغ تدريبية والوعي بالأصوات. نتائجها ملاحظات أولية لمهام محددة، وقد تتأثر باللغة واللهجة وجودة التعرف الصوتي؛ لا تُستخدم وحدها لتشخيص أو تصنيف الطفل.
               </p>
@@ -939,7 +886,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ١
                 </div>
                 <h3 className="font-extrabold text-slate-900 text-sm">
-                  التسمية الآلية السريعة (RAN)
+                  التسمية الآلية السريعة
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   نشاط لتسمية ألوان أو أعداد؛ قد يسجل النظام توقيتًا والتقاطًا صوتيًا، لكن أخطاء التعرف واللهجة تؤثر في النتيجة ولا تُستخدم الحدود الزمنية الثابتة للتصنيف.
@@ -951,10 +898,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ٢
                 </div>
                 <h3 className="font-extrabold text-slate-900 text-sm">
-                  قراءة الكلمات غير المعجمية (Pseudo-Words)
+                  قراءة كلمات غير حقيقية
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  12 صيغة تدريبية مرشحة على أوزان عربية؛ لم تُقنّن بعد ولا نؤكد خلو كل صيغة من المعنى في جميع المعاجم واللهجات.
+                  ١٢ كلمة مركّبة على أوزان عربية لكن لا معنى لها، تقيس فك الترميز دون الاعتماد على حفظ الكلمة؛ لم تُقنّن بعد ولا نؤكد خلو كل صيغة من المعنى في جميع المعاجم واللهجات.
                 </p>
               </div>
 
@@ -963,7 +910,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ٣
                 </div>
                 <h3 className="font-extrabold text-slate-900 text-sm">
-                  ألعاب الوعي الصوتي (Phonemic Awareness)
+                  ألعاب الوعي الصوتي
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   ستة بنود مكتوبة بالفصحى لعزل الصوت والدمج والحذف والقافية؛ لم تُقنّن معاييرها حسب العمر أو اللهجة.
@@ -983,9 +930,9 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="pt-4 flex justify-end">
               <button
                 onClick={() => setActiveStage('ran')}
-                className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-base py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center gap-3 cursor-pointer"
+                className="bz-btn bz-btn-primary bz-btn-lg"
               >
-                <span>الانتقال للمحور 1: التسمية الآلية السريعة (RAN)</span>
+                <span>ابدأ النشاط الأول: التسمية السريعة</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
             </div>
@@ -1001,7 +948,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
               <div>
                 <span className="text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
-                  المحور 1: التسمية الآلية السريعة (RAN)
+                  النشاط الأول: التسمية السريعة
                 </span>
                 <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
                   رصد الزمن في نشاط تسمية 20 عنصرًا
@@ -1050,19 +997,19 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             </div>
 
             {/* Timer & Autonomous Voice Control Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 text-white p-4 md:p-5 rounded-2xl mb-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-soft border border-line text-ink p-4 md:p-5 rounded-2xl mb-6">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Clock className={`w-5 h-5 ${ranIsRunning ? 'text-amber-400 animate-spin' : 'text-slate-400'}`} />
-                  <span className="font-mono text-2xl font-black">
-                    {(ranElapsedMs / 1000).toFixed(1)} ث
+                  <span className="bz-num text-2xl font-black">
+                    {(ranElapsedMs / 1000).toFixed(1).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])} ث
                   </span>
                 </div>
-                <div className="text-xs text-slate-300 font-mono">
-                  عنصر: {ranCurrentIndex} / {ranMatrix.length}
+                <div className="text-xs bz-muted">
+                  العنصر {String(ranCurrentIndex).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])} من {String(ranMatrix.length).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])}
                 </div>
                 {ranIsRunning && (
-                  <div className="text-xs text-amber-300 font-mono flex items-center gap-2">
+                  <div className="text-xs text-warn flex items-center gap-2">
                     <span>تردد: {ranHesitations}</span>
                     <span>خطأ: {ranErrors}</span>
                   </div>
@@ -1239,7 +1186,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                     onClick={() => setActiveStage('pseudo')}
                     className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <span>الانتقال للمحور 2: صيغ تدريبية مرشحة</span>
+                    <span>التالي: الكلمات غير الحقيقية</span>
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                 </div>
@@ -1266,7 +1213,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80">
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                المحور 2: قراءة صيغ تدريبية مرشحة
+                النشاط الثاني: قراءة كلمات غير حقيقية
               </span>
               <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
                 مهمة تعليمية لقراءة كلمات غير مألوفة
@@ -1363,7 +1310,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               <div className="p-6 rounded-2xl bg-teal-50 border border-teal-200 text-center max-w-lg mx-auto mb-6">
                 <CheckCircle2 className="w-12 h-12 text-teal-600 mx-auto mb-3" />
                 <h3 className="text-lg font-black text-slate-900 mb-1">
-                  اكتمل رصد الكلمات غير المعجمية
+                  اكتمل نشاط الكلمات غير الحقيقية
                 </h3>
                 <div className="text-3xl font-black text-teal-700 font-mono my-2">
                   {pseudoMetrics.percent}%
@@ -1385,7 +1332,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   onClick={() => setActiveStage('phonemic')}
                   className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-xl flex items-center gap-2 mx-auto shadow-sm transition-all cursor-pointer"
                 >
-                  <span>الانتقال للمحور 3: الوعي الصوتي والفونولوجي</span>
+                  <span>التالي: الوعي الصوتي</span>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -1400,7 +1347,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80">
             <div className="border-b border-slate-100 pb-5 mb-6 text-right">
               <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                المحور 3: مهام الوعي الصوتي (Phonemic & Phonological Awareness)
+                النشاط الثالث: الوعي الصوتي
               </span>
               <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
                 تمييز الأصوات، الحذف، والدمج باللغة الفصحى (6 بنود متدرجة)
@@ -1529,7 +1476,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <div className="p-5 rounded-2xl bg-amber-50/80 border border-amber-200 text-right">
                 <span className="text-xs font-bold text-amber-900 block mb-1">
-                  1. التسمية الآلية السريعة (RAN)
+                  ١. التسمية السريعة
                 </span>
                 <div className="text-2xl font-black text-amber-800 font-mono">
                   {ranMetrics.durSec} ث <span className="text-xs font-normal">({ranMetrics.speedItemsPerSec} عنصر/ث)</span>
@@ -1547,7 +1494,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
               <div className="p-5 rounded-2xl bg-teal-50/80 border border-teal-200 text-right">
                 <span className="text-xs font-bold text-teal-900 block mb-1">
-                  2. فك الكلمات غير المعجمية (12 كلمة)
+                  ٢. قراءة الكلمات غير الحقيقية (١٢ كلمة)
                 </span>
                 <div className="text-2xl font-black text-teal-800 font-mono">
                   {pseudoMetrics.percent}%
@@ -1565,7 +1512,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
               <div className="p-5 rounded-2xl bg-indigo-50/80 border border-indigo-200 text-right">
                 <span className="text-xs font-bold text-indigo-900 block mb-1">
-                  3. الوعي الصوتي والفونولوجي
+                  ٣. الوعي الصوتي
                 </span>
                 <div className="text-2xl font-black text-indigo-800 font-mono">
                   {phonemicMetrics.percent}%
@@ -1611,7 +1558,8 @@ export const CognitiveScreeningView: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Persistent Global Stage Switcher Footer */}
+        {/* Stage switcher (not on the introduction, which has its own start button) */}
+        {activeStage !== 'intro' && (
         <div className="bg-white rounded-3xl p-4 md:p-5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-700">
           <button
             type="button"
@@ -1620,20 +1568,19 @@ export const CognitiveScreeningView: React.FC<Props> = ({
               const curIdx = stages.indexOf(activeStage);
               if (curIdx > 0) setActiveStage(stages[curIdx - 1]);
             }}
-            disabled={activeStage === 'intro'}
+            disabled={activeStage === "ran"}
             className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 transition-all cursor-pointer flex items-center gap-1.5"
           >
             <ChevronRight className="w-4 h-4" />
-            <span>المحور السابق</span>
+            <span>النشاط السابق</span>
           </button>
 
           <div className="flex items-center gap-2">
             <span className="text-slate-500">أنت الآن في:</span>
             <span className="text-teal-900 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200 font-black">
-              {activeStage === 'intro' ? 'المقدمة والتعليمات' :
-               activeStage === 'ran' ? '1. التسمية السريعة (RAN)' :
-               activeStage === 'pseudo' ? '2. الكلمات غير المعجمية' :
-               activeStage === 'phonemic' ? '3. الوعي الصوتي والفونولوجي' : 'ملخص الأنشطة'}
+              {activeStage === 'ran' ? '١. التسمية السريعة' :
+               activeStage === 'pseudo' ? '٢. الكلمات غير الحقيقية' :
+               activeStage === 'phonemic' ? '٣. الوعي الصوتي' : 'الملخص'}
             </span>
           </div>
 
@@ -1647,10 +1594,11 @@ export const CognitiveScreeningView: React.FC<Props> = ({
             disabled={activeStage === 'summary'}
             className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-30 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
           >
-            <span>المحور التالي</span>
+            <span>النشاط التالي</span>
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
+        )}
       </div>
     </div>
   );

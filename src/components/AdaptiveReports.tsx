@@ -777,7 +777,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {isOralReading ? 'القراءة الجهرية الموثقة المصدر' : 'الطلاقة الشفوية (غير منطبقة)'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة (WCPM)</td>
+                    <td className="py-3.5 px-4 text-slate-600">الكلمات الصحيحة في الدقيقة</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading && isOralReading && hasOralReadingEvidence && typeof verifiedOralWcpm === 'number'
                         ? `${verifiedOralWcpm} WCPM (نتيجة موثقة المصدر)`
@@ -804,7 +804,7 @@ export const AdaptiveReports: React.FC<AdaptiveReportsProps> = ({
                   {/* Reading Fluency Total WPM */}
                   <tr>
                     <td className="py-3.5 px-4 font-bold text-slate-900">السرعة القرائية الكلية</td>
-                    <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي (WPM)</td>
+                    <td className="py-3.5 px-4 text-slate-600">معدل الكلمات الكلي</td>
                     <td className="py-3.5 px-4 font-mono font-bold text-teal-700">
                       {studentData.reading
                         ? isOralReading

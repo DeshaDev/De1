@@ -640,7 +640,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           errorMessage = 'التقييم الصوتي الآلي المعتمد متاح حالياً للمصرية والسعودية/الخليجية والفصحى. اختر إحداها أو تابع دون درجة نطق.';
         } else {
           reason = 'service_unavailable';
-          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي (Azure AI) أو لم يتم تهيئة مفتاح الخدمة. يمكنك المتابعة ومراجعة الكلمات يدوياً دون توقف.';
+          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك المتابعة ومراجعة الكلمات يدوياً دون توقف.';
         }
 
         setAudioFailureReason(reason);
@@ -902,7 +902,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-blue-50/40 flex flex-col justify-between font-sans select-none" dir="rtl">
+    <div className="flex flex-col font-sans select-none" dir="rtl">
       {/* =====================================================================
           STAGE 1: BRIEFING & PASSAGE SELECTION
           ===================================================================== */}
@@ -910,80 +910,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8 pt-6 sm:pt-10">
           {/* STEP 1: PICK YOUR STORY (Pure Storybook Selection — Zero Clutter) */}
           {introStep === 'pick_story' && (
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-200/80 p-6 sm:p-10 space-y-6 animate-fade-slide-up">
-              {/* Header */}
-              <div className="text-center space-y-2">
-                <div className="w-16 h-16 mx-auto bg-amber-100 border-2 border-amber-300 rounded-2xl flex items-center justify-center mb-3 shadow-md animate-bounce-gentle">
-                  <IconStoryBook size={38} />
-                </div>
-                <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
-                  اختر قصة اليوم يا بطل
-                </h1>
-                <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold">
-                  اختر القصة التي تعجبك لنقرأها معاً ونكسب نجوم الطلاقة والأوسمة الذهبية!
-                </p>
-                <div className="flex items-center justify-center gap-2 pt-1">
-                  <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-0.5 rounded-full">
-                    صفوف التأسيس (1–4)
-                  </span>
-                  <span className="text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-3 py-0.5 rounded-full">
-                    استدراك متدرج (5–6)
-                  </span>
-                </div>
-              </div>
-
-              {/* Story Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
-                {sortedPassagesWithIndex.map(({ p, originalIndex }, idx) => {
-                  const isSelected = selectedPassageIndex === originalIndex;
-                  const StoryIconComponent = [
-                    StoryIcons.cat,
-                    StoryIcons.fruit,
-                    StoryIcons.space,
-                    StoryIcons.castle,
-                    StoryIcons.sea,
-                    StoryIcons.eagle,
-                  ][idx % 6];
-
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPassageIndex(originalIndex);
-                        setIntroStep('ready_mic');
-                      }}
-                      className={'child-tactile-btn text-right p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 border-b-6 active:border-b-2 active:translate-y-1 ' + (
-                        isSelected
-                          ? 'border-emerald-500 bg-emerald-50/70 shadow-lg ring-4 ring-emerald-400/20'
-                          : 'border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/40 shadow-sm'
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 flex items-center justify-center"><StoryIconComponent /></div>
-                        <span className="text-[11px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                          {p.gradeLabel}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="font-child text-lg sm:text-xl font-black text-slate-900 leading-snug mb-1">
-                          {p.title}
-                        </h3>
-                        <p className="font-child text-xs font-bold text-slate-500">
-                          {p.wordCount} كلمة · {p.diacriticLevel === 'full' ? 'مشكّل بالكامل ✨' : p.diacriticLevel === 'partial' ? 'تشكيل جزئي وظيفي 🌿' : 'بدون تشكيل 📖'}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-black text-emerald-700">
-                        <span>قراءة القصة</span>
-                        <span>←</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <PassagePickerCard
+              passages={sortedPassagesWithIndex}
+              selectedIndex={selectedPassageIndex}
+              onPick={(originalIndex) => {
+                setSelectedPassageIndex(originalIndex);
+                setIntroStep('ready_mic');
+              }}
+            />
           )}
 
           {/* STEP 2: MIC READY & LAUNCH (Single Action Focus) */}
@@ -997,7 +931,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   className="child-tactile-btn text-xs font-black text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>→</span>
-                  <span>اختيار قصة أخرى</span>
+                  <span>اختيار نص آخر</span>
                 </button>
               </div>
 
@@ -1007,18 +941,18 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <IconMicGlow size={46} />
                 </div>
                 <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
-                  الميكروفون جاهز للاستماع يا بطل
+                  جاهزون للقراءة
                 </h1>
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
-                  اقرأ بصوتك الطبيعي. إذا اخترت القراءة الجهرية، سيحاول النظام مطابقة التسجيل مع النص لاقتراح كلمات للمراجعة؛ قد يخطئ في التعرف أو يتأثر باللهجة. لا تُفسّر النتيجة الآلية وحدها بوصفها حكمًا على قدرة الطفل.
+                  يقرأ الطفل بصوته الطبيعي. في القراءة الجهرية يطابق النظام التسجيل مع النص ويقترح كلمات للمراجعة، وقد يخطئ أو يتأثر باللهجة؛ فلا تُعتمد النتيجة الآلية وحدها حكمًا على قدرة الطفل.
                 </p>
               </div>
 
               {/* Selected Story Pill */}
               <div className="inline-flex items-center gap-2 bg-emerald-50 border-2 border-emerald-200 px-5 py-2.5 rounded-2xl text-emerald-950 font-child font-black text-base shadow-xs">
-                <span>قصة اليوم:</span>
+                <span>النص:</span>
                 <span className="text-emerald-700">«{passage.title}»</span>
-                <span className="text-xs text-emerald-600">({passage.wordCount} كلمة)</span>
+                <span className="text-xs text-emerald-600">({passage.wordCount.toString().replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)])} كلمة)</span>
               </div>
 
               {/* Explicit Separated Consent Section */}
@@ -1037,7 +971,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                   />
                   <span className="font-bold leading-relaxed">
-                    موافقة ولي الأمر / المعلم على إجراء جلسة التقييم القرائي التكويني وحفظ المؤشرات.
+                    يوافق ولي الأمر أو المعلم على إجراء القراءة وحفظ نتائجها.
                   </span>
                 </label>
 
@@ -1056,8 +990,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
                     <span className="leading-relaxed">
-                      <span className="text-emerald-700 font-bold ml-1">[إذن صوتي منفصل]</span>
-                      أوافق صراحة على تسجيل ومعالجة قراءة الطفل الصوتية عبر تقنية التعرف الصوتي الذكي.
+                      <span className="text-emerald-700 font-bold ml-1">إذن منفصل للصوت:</span>
+                      أوافق على تسجيل صوت الطفل أثناء القراءة وتحليله آليًا للتعرّف على الكلمات.
                     </span>
                   </label>
                 )}
@@ -1075,22 +1009,22 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     handleStartReading();
                   }}
                   disabled={!guardianConsentChecked}
-                  className="duo-btn-green w-full py-4 sm:py-5 px-8 text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
                 >
-                  <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
-                  <span>انطلق وابدأ القراءة الآن</span>
+                  
+                  <span>ابدأ القراءة</span>
                 </button>
               </div>
 
               {/* Collapsible Teacher / Specialist Drawer */}
               <details className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-right text-xs text-slate-600 space-y-3">
                 <summary className="cursor-pointer font-bold text-slate-700 hover:text-slate-900 select-none flex items-center justify-between">
-                  <span>خيارات المعلم والأخصائي المتقدمة (نمط القراءة واللهجة)</span>
-                  <span className="text-slate-400">انقر للتعديل</span>
+                  <span>خيارات الأخصائي: طريقة القراءة واللهجة</span>
+                  <span className="text-slate-400">تعديل</span>
                 </summary>
                 <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">نمط الفحص:</label>
+                    <label className="block font-bold text-slate-800 mb-1">طريقة القراءة:</label>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -1109,17 +1043,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     </div>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">اللهجة المرجعية للطالب:</label>
+                    <label className="block font-bold text-slate-800 mb-1">لهجة الطفل:</label>
                     <select
                       value={studentDialect}
                       onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
                       className="w-full p-2 border border-slate-300 rounded-xl bg-white font-bold"
                     >
-                      <option value="egyptian">اللهجة المصرية (Egyptian)</option>
-                      <option value="gulf">اللهجة الخليجية والسعودية (Gulf / Saudi)</option>
-                      <option value="levantine">اللهجة الشامية (Levantine)</option>
-                      <option value="maghrebi">اللهجة المغاربية (Maghrebi)</option>
-                      <option value="msa">العربية الفصحى المعيارية (Modern Standard)</option>
+                      <option value="egyptian">اللهجة المصرية</option>
+                      <option value="gulf">اللهجة الخليجية</option>
+                      <option value="levantine">اللهجة الشامية</option>
+                      <option value="maghrebi">اللهجة المغاربية</option>
+                      <option value="msa">الفصحى</option>
                     </select>
                   </div>
                 </div>
@@ -1133,7 +1067,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           STAGE 2: ACTIVE READING PASSAGE (PURE TIMED TEXT)
           ===================================================================== */}
       {stage === 'reading' && (
-        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex flex-col justify-start min-h-screen">
+        <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex flex-col justify-start">
           {readingModeNotice && <p role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950">{readingModeNotice}</p>}
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 md:p-10 mt-0">
             {/* Top Toolbar */}
@@ -1341,7 +1275,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-right">
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
                 <span className="text-[11px] font-bold text-emerald-800 block mb-1">
-                  معدل سرعة وطلاقة القراءة (WCPM)
+                  معدل سرعة وطلاقة القراءة
                 </span>
                 <div className="text-2xl font-black text-emerald-700 font-mono">
                   {azureAssessmentComplete && aiAssessmentReceipt ? (measuredWcpm ?? wordStats.liveWcpm ?? 'غير متاح') : 'غير متاح'} <span className="text-xs font-sans">كلمة صحيحة / دقيقة</span>
@@ -1435,7 +1369,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     {audioFailureReason === 'permission_denied' && (
                       <>
                         <strong className="block text-sm font-black text-rose-900">
-                          إذن الميكروفون مرفوض في المتصفح (Permission Denied)
+                          إذن الميكروفون مرفوض في المتصفح
                         </strong>
                         <p>
                           لم تمنح المتصفح صلاحية استخدام الميكروفون. للتقييم الصوتي، اضغط على أيقونة القفل أو الميكروفون في شريط العنوان أعلى المتصفح، اختر «سماح/Allow»، ثم انقر «إعادة المحاولة». يمكنك الاستمرار حالياً وتأكيد الكلمات المقروءة يدوياً.
@@ -1445,7 +1379,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     {audioFailureReason === 'empty_audio' && (
                       <>
                         <strong className="block text-sm font-black text-amber-900">
-                          لم يُرصد صوت واضح أثناء التسجيل (Empty / Quiet Audio)
+                          لم يُرصد صوت واضح أثناء التسجيل
                         </strong>
                         <p>
                           التسجيل الصوتي فارغ أو الصوت كان منخفضاً جداً. تأكد من توصيل الميكروفون، رفع مستوى الإدخال، واقتراب الطفل من الجهاز أثناء القراءة ثم أعد المحاولة.
@@ -1455,17 +1389,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     {audioFailureReason === 'service_unavailable' && (
                       <>
                         <strong className="block text-sm font-black text-sky-900">
-                          محرك التحليل الصوتي السحابي غير متاح حالياً (Azure Speech Notice)
+                          محرك التحليل الصوتي السحابي غير متاح حالياً
                         </strong>
                         <p>
-                          تعذر الاتصال بخدمة التحليل الصوتي السحابي (Azure AI) أو لم يتم تهيئة مفتاح الخدمة. لا تقلق؛ يمكنك مواصلة الجلسة، مراجعة الكلمات يدوياً، واستكمال أسئلة الفهم بصورة طبيعية.
+                          تعذر الاتصال بخدمة التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. لا تقلق؛ يمكنك مواصلة الجلسة، مراجعة الكلمات يدوياً، واستكمال أسئلة الفهم بصورة طبيعية.
                         </p>
                       </>
                     )}
                     {audioFailureReason === 'unsupported_dialect' && (
                       <>
                         <strong className="block text-sm font-black text-indigo-900">
-                          تنبيه اللهجة المختارة (Dialect Notice)
+                          تنبيه اللهجة المختارة
                         </strong>
                         <p>
                           محرك التحليل الصوتي الآلي يدعم حالياً اللهجة المصرية والسعودية/الخليجية والفصحى المعيارية. يمكن للمعلّم أو ولي الأمر تأكيد الكلمات المقروءة يدوياً للمتابعة.
@@ -1519,16 +1453,16 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               {/* Status Legend */}
               <div className="flex flex-wrap items-center gap-2 mb-4 text-[11px]">
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold">
-                  ● صحيحة (Correct)
+                  ● صحيحة
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-sky-100 text-sky-900 border border-sky-300 font-bold">
-                  ● لهجة مقبولة (Dialect)
+                  ● لهجة مقبولة
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-bold">
-                  ● إبدال صوتي (Substitution)
+                  ● إبدال صوتي
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 font-bold">
-                  ● تخطي / لم تُنطق (Omission)
+                  ● تخطي / لم تُنطق
                 </span>
               </div>
 
@@ -2081,3 +2015,55 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 };
 
 export default ReadingAssessmentView;
+
+
+const toArabicDigitsLocal = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+
+/** Text choice for the oral reading check: grade tabs, then the texts of that grade. */
+function PassagePickerCard({
+  passages,
+  selectedIndex,
+  onPick,
+}: {
+  passages: Array<{ p: { id: string; title: string; gradeLevel: number; wordCount: number; diacriticLevel: string }; originalIndex: number }>;
+  selectedIndex: number;
+  onPick: (originalIndex: number) => void;
+}) {
+  const grades = Array.from(new Set(passages.map(({ p }) => p.gradeLevel))).sort((a, b) => a - b);
+  const current = passages.find(({ originalIndex }) => originalIndex === selectedIndex);
+  const [grade, setGrade] = useState<number>(current?.p.gradeLevel ?? grades[0]);
+  const inGrade = passages.filter(({ p }) => p.gradeLevel === grade);
+  return (
+    <section className="bz-card bz-card-pad space-y-5">
+      <div className="space-y-1">
+        <h2 className="bz-h3">اختر نصًّا مناسبًا لصف الطفل</h2>
+        <p className="bz-small bz-muted">يقرأ الطفل النص بصوت مسموع مرة واحدة، ثم يجيب عن أسئلة الفهم. يستغرق ذلك نحو خمس دقائق.</p>
+      </div>
+      <div className="bz-segment" role="tablist" aria-label="الصف">
+        {grades.map((g) => (
+          <button key={g} type="button" role="tab" aria-selected={grade === g} onClick={() => setGrade(g)}>
+            الصف {toArabicDigitsLocal(g)}
+          </button>
+        ))}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {inGrade.map(({ p, originalIndex }) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onPick(originalIndex)}
+            className="text-right rounded-2xl border-2 border-line bg-card p-4 transition hover:border-brand flex items-center justify-between gap-3"
+          >
+            <span>
+              <span className="block font-semibold text-ink text-lg leading-relaxed">{p.title}</span>
+              <span className="block bz-small bz-muted mt-1">
+                {toArabicDigitsLocal(p.wordCount)} كلمة · {p.diacriticLevel === 'full' ? 'مشكول بالكامل' : p.diacriticLevel === 'partial' ? 'مشكول جزئيًا' : 'بلا تشكيل'}
+              </span>
+            </span>
+            <span className="bz-btn bz-btn-secondary bz-btn-sm shrink-0">اختيار</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}

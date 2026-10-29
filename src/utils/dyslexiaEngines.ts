@@ -369,7 +369,7 @@ export function computeDyslexicoWeightedLevenshtein(
     ) {
       detectedPatterns.push({
         type: 'phonetic_spelling',
-        labelAr: 'كتابة صوتية مطابقة للنطق (Phonetic Grapheme Mapping)',
+        labelAr: 'كتابة صوتية مطابقة للنطق',
         detailAr: `كتابة المقطع الصوتي كما يُنطق (${sourceRaw} ← ${targetRaw})`,
         costApplied: 0.16,
       });
@@ -417,7 +417,7 @@ export function computeDyslexicoWeightedLevenshtein(
         if (!detectedPatterns.some((p) => p.type === 'phonetic_spelling')) {
           detectedPatterns.push({
             type: 'phonetic_spelling',
-            labelAr: 'تشابه فونولوجي صوتي (Phonological Substitution)',
+            labelAr: 'تشابه فونولوجي صوتي',
             detailAr: `تقارب مخرج الصوت بين (${c1}) و (${c2})`,
             costApplied: 0.18,
           });
@@ -450,7 +450,7 @@ export function computeDyslexicoWeightedLevenshtein(
           ) {
             detectedPatterns.push({
               type: 'kinetic_transposition',
-              labelAr: 'قلب مكاني لتسلسل الحروف (Kinetic Letter Transposition)',
+              labelAr: 'قلب مكاني لتسلسل الحروف',
               detailAr: `تبديل ترتيب الحرفين المتجاورين (${s1[i - 2]}${s1[i - 1]} ← ${s2[j - 2]}${s2[j - 1]})`,
               costApplied: transCost,
             });

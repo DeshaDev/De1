@@ -1350,20 +1350,12 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLevel: 'unassessed',
     mathRiskLabelAr: 'لم تبدأ مهام الحساب بعد.',
     learningReport: {
-      learningSummary: 'لم تبدأ جلسات التقييم بعد. تظهر هنا المؤشرات التربوية الاسترشادية بعد إكمال أول جلسة قراءة أو حساب.',
+      learningSummary: 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة.',
       ocularMotorAnalysis: 'غير منطبق؛ منصة بصيرة لا تعتمد على الكاميرا أو تتبع حركة العين.',
-      orthographicAndPhonologicalPatterns: 'في انتظار بيانات القراءة الأولى لتحليل الأنماط الصوتية والإملائية.',
+      orthographicAndPhonologicalPatterns: 'تظهر هنا الأخطاء المتكررة في الأصوات والكلمات بعد أول نشاط قراءة.',
       dyscalculiaSpatialAnalysis: 'في انتظار بيانات مختبر الحساب لتحليل الإدراك المكاني للكميات وخط الأعداد.',
-      interventionExercises: [
-        {
-          title: 'التهيئة القرائية اليومية',
-          durationMinutes: 10,
-          description: 'اختر نصاً قصيراً مشكولاً من مكتبة القراءة لتسجيل انطلاقة القراءة الأولى.',
-        },
-      ],
-      classroomAccommodations: [
-        'توفير بيئة هادئة ومحفزة عند بدء أنشطة القراءة والحساب.',
-      ],
+      interventionExercises: [],
+      classroomAccommodations: [],
     },
   },
   {
@@ -1479,7 +1471,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
         'قيم المهام الحسابية اصطناعية لتوضيح شكل التقرير؛ لا تُفسر على أنها أداء طبيعي أو غير طبيعي أو درجة خطر.',
       interventionExercises: [
         {
-          title: 'تدريب الإدراك الكمي السريع (Subitizing Flash)',
+          title: 'تدريب الإدراك الكمي السريع',
           durationMinutes: 10,
           description: 'عرض أنماط نقطية منتظمة وعشوائية (3 إلى 7 نقاط) لتعزيز الحس الكمي المباشر دون عدّ فردي بطيء.',
         },
