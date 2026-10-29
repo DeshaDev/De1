@@ -50,7 +50,9 @@ const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
   privacy:
     'أنت في سياسة الخصوصية. راجع البيانات التي قد تُعالج وخيارات الصوت وحقوق ولي الأمر قبل استخدام المنصة.',
   terms:
-    'أنت في شروط استخدام بصيرة وإرشادات الاستخدام التعليمي.'
+    'أنت في شروط استخدام بصيرة وإرشادات الاستخدام التعليمي.',
+  'content-review':
+    'أنت في صفحة مراجعة المحتوى قبل الإطلاق، وهي مخصصة للمراجع المتخصص.'
 };
 
 export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({

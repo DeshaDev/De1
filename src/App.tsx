@@ -53,6 +53,7 @@ import { trackUsage } from './utils/usageTracking';
 const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
 const TermsOfUseView = lazy(() => import('./components/TermsOfUseView'));
+const ContentReviewView = lazy(() => import('./components/review/ContentReviewView'));
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -71,6 +72,7 @@ export default function App() {
       if (params.get('autostart') === '1' || params.get('tab') === 'dashboard') {
         return 'dashboard';
       }
+      if (params.get('review') === '1') return 'content-review';
     }
     return 'home';
   });
@@ -1908,6 +1910,7 @@ export default function App() {
 
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         {activeTab === 'terms' && <TermsOfUseView />}
+        {activeTab === 'content-review' && <ContentReviewView />}
         </div>
         </Suspense>
       </main>
