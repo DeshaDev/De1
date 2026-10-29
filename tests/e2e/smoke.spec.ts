@@ -187,3 +187,9 @@ test('guided reader shows one sentence at a time and walks through the micro-ste
   await expect(page.getByText(/الجملة ٢ من/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test('teachers can reach the login on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'دخول المعلم' })).toBeVisible();
+});

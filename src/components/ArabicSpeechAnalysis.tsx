@@ -35,7 +35,7 @@ export interface TestWord {
 }
 
 export const ARABIC_PRACTICE_WORDS: TestWord[] = [
-  // 1. الحروف المتشابهة بصرياً (Visual-orthographic homographs)
+  // 1. الحروف المتشابهة بصرياً
   {
     id: 1,
     word: 'بَيْتٌ',
@@ -77,7 +77,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     description: 'التمييز بين الدال والذال'
   },
 
-  // 2. الأصوات المتقاربة مخرجاً (Phonetic / Acoustic Contrasts)
+  // 2. الأصوات المتقاربة مخرجاً
   {
     id: 6,
     word: 'طَبِيبٌ',
@@ -103,7 +103,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     description: 'صوت القاف اللهوي مقابل الكاف الحنكي'
   },
 
-  // 3. الحركات القصيرة وضبط البنية (Diacritics & Short Vowels)
+  // 3. الحركات القصيرة وضبط البنية
   {
     id: 9,
     word: 'كَتَبَ',
@@ -121,7 +121,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     description: 'الانتقال بين ضمتين متتاليتين وتنوين الضم'
   },
 
-  // 4. الحركات القصيرة مقابل المدود الطويلة (Short vs Long Vowels)
+  // 4. الحركات القصيرة مقابل المدود الطويلة
   {
     id: 11,
     word: 'بَابٌ',
@@ -139,7 +139,7 @@ export const ARABIC_PRACTICE_WORDS: TestWord[] = [
     description: 'إشباع الكسرة لتوليد مد الياء'
   },
 
-  // 5. التضعيف والشدّة والمقاطع المركبة (Geminates & Complex Syllables)
+  // 5. التضعيف والشدّة والمقاطع المركبة
   {
     id: 13,
     word: 'مُعَلِّمٌ',

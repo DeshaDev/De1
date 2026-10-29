@@ -39,7 +39,7 @@ export const DESSA_INTEGRATION_PROFILE: DessaModelAdapterConfig = {
   modelVariant: 'dessa-research-preview',
   fullDuplexMode: true,
   statusNotesAr:
-    'نموذج Dessa (Block / Jack Dorsey) قيد المعاينة البحثية المغلقة (Research Preview) بدون واجهة API عامة متاحة حتى الآن. تم إعداد موصل الربط المعماري لاستقبال الواجهة فور فتحها.',
+    'نموذج Dessa (Block / Jack Dorsey) قيد المعاينة البحثية المغلقة بدون واجهة API عامة متاحة حتى الآن. تم إعداد موصل الربط المعماري لاستقبال الواجهة فور فتحها.',
 };
 
 export type WordErrorType =
