@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@twemoji/svg": "^15.0.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",

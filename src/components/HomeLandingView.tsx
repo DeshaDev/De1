@@ -28,6 +28,7 @@ import {
   PROGRAM_WEEKS,
   SESSIONS_PER_WEEK,
   SKILLS,
+  FOCUS_SKILLS,
   STEP_BACK_PERCENT,
 } from '../cognitiveProfile/training';
 import { BAND_META, BandLegend, CentileTrack, bandOf } from './profile/CentileTrack';
@@ -486,7 +487,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               </div>
             </div>
             <p className="mt-6 bz-small bz-muted">
-              المهارات: {Object.values(SKILLS).map((s) => s.nameAr).join('، ')}.
+              المهارات المدرَّبة: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}.
             </p>
           </div>
         </div>

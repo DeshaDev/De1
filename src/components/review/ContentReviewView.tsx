@@ -10,6 +10,7 @@ import { AlertTriangle, Check, Download, Pencil, Upload, Volume2 } from 'lucide-
 import { buildReviewUnits, SECTION_META, type ReviewSection, type ReviewUnit } from '../../review/itemBank';
 import machineFlags from '../../review/machineFlags.json';
 import { speak, stopSpeech } from '../profile/audio';
+import { Pic } from '../profile/TaskPlayers';
 
 type Verdict = 'ok' | 'fix';
 interface Decision { verdict: Verdict; note: string; at: string; reviewer: string }
@@ -192,7 +193,7 @@ export const ContentReviewView: React.FC = () => {
                   <div key={i} className="grid grid-cols-[8.5rem_1fr] gap-3 py-2 items-center">
                     <dt className="bz-small bz-muted">{f.labelAr}</dt>
                     <dd className={`flex items-center gap-3 ${f.correct ? 'font-semibold text-brand' : 'text-ink'}`}>
-                      {f.picture && <span className="text-4xl leading-none" aria-hidden="true">{f.picture}</span>}
+                      {f.picture && <span className="text-4xl leading-none"><Pic emoji={f.picture} label={f.text} /></span>}
                       <span className="text-lg leading-loose">{f.text}</span>
                       {f.correct && <Check className="w-4 h-4 shrink-0" aria-label="الإجابة الصحيحة" />}
                       {f.audio && (

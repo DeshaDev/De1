@@ -24,6 +24,7 @@ import {
   dialectMerged,
   LexiconEntry,
   lex,
+  showsSynonymPair,
 } from './lexicon';
 import type { CognitiveProfile } from './scoring';
 
@@ -137,6 +138,16 @@ export const SESSIONS_PER_WEEK = 4;
 export const MINUTES_PER_SESSION = 15;
 const MAX_FOCUS_SKILLS = 3;
 
+/**
+ * Skills the programme does not choose as training goals. Training memory improves memory
+ * tasks but does not transfer to word decoding or reading comprehension (Melby-Lervåg,
+ * Redick & Hulme, 2016, meta-analysis of 87 publications). A memory weakness stays in the
+ * report with teaching accommodations; training time goes to phonological and letter skills.
+ * The definitions remain so plans created before this rule still run.
+ */
+export const NOT_TRAINED_AS_FOCUS: ReadonlySet<SkillId> = new Set<SkillId>(['auditoryMemory', 'visualMemory']);
+export const FOCUS_SKILLS = (Object.keys(SKILLS) as SkillId[]).filter((id) => !NOT_TRAINED_AS_FOCUS.has(id));
+
 export interface TrainingPlan {
   createdAt: string;
   preventive: boolean;
@@ -154,16 +165,25 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
       }
     }
   }
-  const preventive = ordered.length === 0;
-  const chosen = preventive ? (['blending', 'letterSound'] as SkillId[]) : ordered.slice(0, MAX_FOCUS_SKILLS);
+  const memoryOnly = ordered.filter((s) => NOT_TRAINED_AS_FOCUS.has(s));
+  const trainable = ordered.filter((s) => !NOT_TRAINED_AS_FOCUS.has(s));
+  const preventive = trainable.length === 0;
+  const chosen = preventive ? (['blending', 'letterSound'] as SkillId[]) : trainable.slice(0, MAX_FOCUS_SKILLS);
   const focus = [...chosen].sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
 
+  if (memoryOnly.length > 0) {
+    rationaleAr.push('ظهر ضعف في الذاكرة، لكن تدريب الذاكرة لا ينتقل أثره إلى القراءة في الأبحاث؛ لذلك لا يتدرّب عليها البرنامج، وتجد في التقرير طرقًا لتكييف التدريس معها.');
+  }
   if (preventive) {
-    rationaleAr.push('لا تظهر مهارة دون المتوقع؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.');
+    rationaleAr.push(
+      memoryOnly.length > 0
+        ? 'يركّز البرنامج على التركيب الصوتي وربط الحرف بصوته، وهما أساس تعلّم القراءة.'
+        : 'لا تظهر مهارة دون المتوقع؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
+    );
   } else {
     rationaleAr.push('اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.');
     rationaleAr.push('رُتّبت المهارات في الجلسة وفق تسلسل النمو: التمييز السمعي، ثم القافية، ثم الأصوات، ثم التركيب، ثم الحروف.');
-    if (ordered.length > MAX_FOCUS_SKILLS) {
+    if (trainable.length > MAX_FOCUS_SKILLS) {
       rationaleAr.push('بقية المهارات الضعيفة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
   }
@@ -555,6 +575,10 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
   for (let n = 0; tasks.length < ITEMS_PER_SESSION && n < ITEMS_PER_SESSION * 6; n += 1) {
     const item = generator[skill](random, level, n);
     if (!item) continue;
+    const pictureIds = [item.stimulus, ...item.options.map((o) => o.visual)].flatMap((v) =>
+      v && v.type === 'emoji' ? Object.values(LEXICON).filter((e) => e.emoji === v.value).map((e) => e.id) : []
+    );
+    if (showsSynonymPair(pictureIds)) continue;
     const signature = `${item.stimulus?.value ?? ''}|${item.audio.map((s) => s.text).join('|')}`;
     if (seen.has(signature)) continue;
     seen.add(signature);

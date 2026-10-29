@@ -97,6 +97,17 @@ export const LEXICON_IDS = entries.map((entry) => entry.id);
  * pictures in training tasks.
  */
 export const NOT_PICTURABLE = new Set(['summer']);
+
+/**
+ * Picture pairs a young child may call by the same name. They never appear together in one
+ * question, because the answer would change with the name the child uses (name agreement is
+ * the strongest predictor of picture naming; Khwaileh et al., 2018, Gulf Arabic norms).
+ */
+export const PICTURE_SYNONYMS: Array<[string, string]> = [
+  ['horse', 'mare'],
+  ['rooster', 'chicken'],
+];
+export const showsSynonymPair = (ids: string[]) => PICTURE_SYNONYMS.some(([a, b]) => ids.includes(a) && ids.includes(b));
 export const PICTURE_IDS = LEXICON_IDS.filter((id) => !NOT_PICTURABLE.has(id));
 
 export function lex(id: string): LexiconEntry {
