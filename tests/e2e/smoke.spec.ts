@@ -10,7 +10,7 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
 test('reading view opens from primary navigation', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
-  await expect(page.getByRole('heading', { name: 'الفحص المعرفي الشامل لمهارات القراءة' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'قراءة نص وفهمه', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /قراءة نص وفهمه/ })).toHaveAttribute('aria-current', 'page');
 });
 
@@ -26,14 +26,14 @@ test('screening, accessible-reader, and training views open from primary navigat
 
   // 2. Accessible reader view
   await page.getByRole('button', { name: /القارئ الميسّر/ }).last().click();
-  await expect(page.getByRole('heading', { name: /القارئ العربي الميسّر/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'القارئ الميسّر', exact: true })).toBeVisible();
 
   // Return to home
   await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
 
   // 3. Remediation training gym
   await page.getByRole('button', { name: /صالة التدريب|تدريبي/ }).last().click();
-  await expect(page.getByRole('heading', { name: 'صالة تدريب وبطولات الأبطال' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'صالة التدريب', exact: true })).toBeVisible();
 });
 
 test('daily sprint can reach its finish card without a Trophy runtime error or fake streak', async ({ page }) => {
@@ -44,8 +44,8 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await page.goto('/');
 
   await page.getByRole('button', { name: 'صالة التدريب' }).first().click();
-  await page.getByRole('button', { name: /ألعاب المهارات/ }).click();
-  await page.getByRole('button', { name: /سبرنت ٥ دقائق/ }).click();
+  await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
+  await page.getByRole('button', { name: /تحدي الدقائق الخمس/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
   await expect(page.getByText(/سلسلة الالتزام:\s*4/)).toHaveCount(0);
 
@@ -65,7 +65,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
     await nextWord.click();
   }
 
-  await expect(page.getByRole('button', { name: /إتمام سبرنت اليوم/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /إنهاء تحدي اليوم/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
@@ -154,4 +154,29 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
   await expect(page.getByRole('button', { name: 'الملف المعرفي والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
+});
+
+test('guided reader shows one sentence at a time and walks through the micro-steps', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /القارئ الميسّر/ }).last().click();
+  await page.getByRole('button', { name: /ابدأ القراءة/ }).click();
+
+  await expect(page.getByText(/الجملة ١ من/)).toBeVisible();
+  await page.getByRole('button', { name: /أنا جاهز للقراءة/ }).click();
+  // Read with me: advance word by word until the sentence is finished.
+  for (let i = 0; i < 15; i += 1) {
+    const next = page.getByRole('button', { name: /الكلمة التالية/ });
+    if (!(await next.isVisible())) break;
+    await next.click();
+  }
+  await page.getByRole('button', { name: /أنهيت الجملة/ }).click();
+  await page.getByRole('button', { name: /^قرأتها/ }).click();
+  await expect(page.getByRole('button', { name: /استمع إلى الكلمة/ })).toBeVisible();
+  await page.locator('section.rounded-3xl .grid button').first().click();
+  await page.getByRole('button', { name: /الجملة التالية/ }).click();
+  await expect(page.getByText(/الجملة ٢ من/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });

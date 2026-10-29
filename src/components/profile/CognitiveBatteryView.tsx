@@ -27,6 +27,7 @@ import {
 import {
   ItemResponse,
   SubtestResult,
+  ageCautionAr,
   buildProfile,
   maxSpanFrom,
   shouldDiscontinue,
@@ -322,6 +323,9 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               </label>
             </div>
             <span className="bz-hint">تُقارن نتائج الطفل بأقرانه في العمر نفسه، لذلك تهمّ دقة الأشهر.</span>
+            {ageCautionAr(years * 12 + months) && (
+              <p className="rounded-xl bg-warn-soft p-3 bz-small text-ink-2">{ageCautionAr(years * 12 + months)}</p>
+            )}
           </div>
           <label className="bz-field">
             <span className="bz-label">لهجة الطفل في البيت</span>
@@ -529,6 +533,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         syncEnabled={syncEnabled}
         onRecordUpdated={onRecordUpdated}
         student={activeStudent}
+        showBack={initialView !== 'training'}
       />
     );
   }

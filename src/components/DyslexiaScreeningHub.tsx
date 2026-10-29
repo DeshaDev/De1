@@ -49,35 +49,49 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
 
   return (
     <div className="space-y-6" dir="rtl">
-      {!focused && (
-        <header className="space-y-5">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
-            <div className="max-w-3xl">
-              <span className="bz-eyebrow">{subTab === 'training' ? 'بعد الفحص' : 'فحص مبكر · من ٤ إلى ٨ سنوات'}</span>
-              <h1 className="bz-h2 mt-2">
-                {subTab === 'training' ? 'البرنامج التدريبي الموجّه' : 'الفحص المعرفي الشامل لمهارات القراءة'}
-              </h1>
-              <p className="bz-body mt-2">
-                {subTab === 'training'
-                  ? 'جلسات قصيرة تركّز على أضعف مهارات الطفل في الفحص، وتتقدّم مستوى بعد مستوى عند الإتقان.'
-                  : `تسع ألعاب قصيرة (نحو ${TOTAL_BATTERY_MINUTES} دقيقة) ترسم ملفًا معرفيًا للطفل مقارنةً بأقرانه في العمر، ثم تقترح استراتيجيات وبرنامجًا تدريبيًا.`}
-              </p>
-            </div>
+      {!focused && subTab !== 'training' && (
+        <header className="space-y-4">
+          <div className="max-w-3xl">
+            <span className="bz-eyebrow">من ٤ إلى ٨ سنوات</span>
+            <h1 className="bz-h2 mt-2">
+              {subTab === 'battery' ? 'الفحص المعرفي الشامل لمهارات القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
+            </h1>
+            <p className="bz-body mt-2">
+              {subTab === 'battery'
+                ? `تسع ألعاب قصيرة (نحو ${TOTAL_BATTERY_MINUTES} دقيقة) ترسم ملفًا معرفيًا للطفل مقارنةً بأقرانه في العمر، ثم تقترح استراتيجيات وبرنامجًا تدريبيًا.`
+                : 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة (من الصف الأول)، تُستخدم إلى جانب الفحص الشامل لا بديلًا عنه.'}
+            </p>
           </div>
-          <nav className="bz-segment" aria-label="أقسام الفحص">
-            {TABS.map((tab, i) => {
+          <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
+            {subTab !== 'battery' && (
+              <button type="button" className="bz-link" onClick={() => setSubTab('battery')}>
+                العودة إلى الفحص الشامل
+              </button>
+            )}
+            {subTab === 'battery' && <span className="bz-muted">أدوات تكميلية للأخصائي:</span>}
+            {TABS.filter((t) => t.id === 'oral-reading' || t.id === 'cognitive-screening').map((tab) => {
               const Icon = tab.icon;
               const active = subTab === tab.id;
               return (
-                <React.Fragment key={tab.id}>
-                  {i === 2 && <span aria-hidden="true" className="w-px self-stretch my-2 bg-line-strong mx-1" />}
-                  <button type="button" onClick={() => setSubTab(tab.id)} aria-current={active ? 'page' : undefined} title={tab.hint}>
-                    <Icon className="w-4 h-4 shrink-0" aria-hidden="true" /> {tab.label}
-                  </button>
-                </React.Fragment>
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSubTab(tab.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`bz-btn bz-btn-sm ${active ? 'bz-btn-secondary' : 'bz-btn-ghost'}`}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" /> {tab.label}
+                </button>
               );
             })}
           </nav>
+        </header>
+      )}
+
+      {!focused && subTab === 'training' && (
+        <header className="max-w-3xl">
+          <h1 className="bz-h2">البرنامج التدريبي الموجّه</h1>
+          <p className="bz-body mt-2">جلسات قصيرة تركّز على أضعف مهارات الطفل في الفحص، وتتقدّم مستوى بعد مستوى عند الإتقان.</p>
         </header>
       )}
 

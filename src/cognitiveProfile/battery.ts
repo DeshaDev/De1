@@ -264,7 +264,7 @@ function syllableCountItem(id: string, target: string): ChoiceItem {
 }
 
 const SAME_DIFFERENT: ChoiceOption[] = [
-  { id: 'same', visual: { type: 'sameDifferent', value: 'same', label: 'نفس الصوت' } },
+  { id: 'same', visual: { type: 'sameDifferent', value: 'same', label: 'الصوت نفسه' } },
   { id: 'different', visual: { type: 'sameDifferent', value: 'different', label: 'صوتان مختلفان' } },
 ];
 
@@ -275,7 +275,7 @@ function sameDifferentItem(id: string, first: string, second: string): ChoiceIte
     audio: [
       { text: first, pauseAfterMs: 700 },
       { text: second, pauseAfterMs: 400 },
-      { text: 'نَفْسُ الصَّوْتِ، أَمْ مُخْتَلِفَانِ؟' },
+      { text: 'الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ؟' },
     ],
     options: SAME_DIFFERENT,
     correctId: first === second ? 'same' : 'different',
@@ -309,7 +309,7 @@ function matchItem(id: string, target: string, options: string[]): ChoiceItem {
 function letterSoundItem(id: string, sound: string, letter: string, options: string[]): ChoiceItem {
   return {
     id,
-    promptAr: 'أيّ حرف يصدر هذا الصوت؟',
+    promptAr: 'أيّ حرف له هذا الصوت؟',
     audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound} ... ${sound}؟` }],
     options: options.map(glyph),
     correctId: letter,

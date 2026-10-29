@@ -413,7 +413,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
           if (ev.name === 'word') {
             boundaryEventFired = true;
             setPacingSyncModeLabel(
-              'متزامن مع حدود نطق الكلمات في المتصفح (onboundary)'
+              'متزامن مع نطق الكلمات في المتصفح'
             );
             const prefix = text.slice(0, ev.charIndex);
             const wordIdx = Math.min(
@@ -524,11 +524,11 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
         <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200">
           <div>
             <div className="text-xs text-slate-500 mb-1">
-              بيئة القراءة المساندة والتحليل اللغوي الثلاثي
+              أدوات الأخصائي
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 font-display">
-              القارئ العربي الميسّر ومحلل الكلمات
-            </h1>
+            <h2 className="text-2xl font-bold text-slate-900 font-display">
+              النص كاملًا وتحليل الفروق الإملائية واللهجية
+            </h2>
           </div>
 
           {/* 2-Mode Segmented Studio Switcher */}
@@ -549,7 +549,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>١. القارئ العربي الميسّر</span>
+              <span>عرض النص كاملًا</span>
             </button>
             <button
               type="button"
@@ -563,14 +563,14 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               }`}
             >
               <Code2 className="w-3.5 h-3.5 text-[#0284C7]" />
-              <span>٢. مراجعة الفروق الإملائية واللهجية</span>
+              <span>الفروق الإملائية واللهجية</span>
             </button>
           </div>
         </div>
 
         {problematicWords.length > 0 && (
         <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
-          <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` لـ «${studentName}»` : ''}</h3>
+          <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` للمتعلّم «${studentName}»` : ''}</h3>
           <p className="text-xs leading-relaxed text-amber-900">هذه الكلمات تم تحديدها بالتحليل الصوتي الآلي في جلسة سابقة للتدريب والمراجعة. جرّب قراءتها وفهمها؛ لا تعني القائمة وحدها وجود صعوبة.</p>
           <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
         </section>
@@ -643,7 +643,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 <Sparkles className="w-4 h-4" />
                 <span>
                   {isAdapting
-                    ? 'جاري التحليل الصرفي...'
+                    ? 'جارٍ التحليل الصرفي…'
                      : 'اقتراح تبسيط للمراجعة'}
                 </span>
               </button>
@@ -1367,7 +1367,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                   </div>
                   <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl">
                     <div className="text-[11px] text-[#0284C7] font-semibold">
-                      مسافة Dyslexico الموزونة
+                      مسافة الاختلاف الموزونة
                     </div>
                     <div className="text-lg font-bold font-mono tabular-nums text-[#0284C7] mt-0.5">
                       {pairMetrics.weightedDistance.toFixed(2)}

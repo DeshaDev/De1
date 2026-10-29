@@ -46,7 +46,7 @@ import { AssessmentProvider } from './contexts/AssessmentContext';
 import ReadingAssessmentView from './components/ReadingAssessmentView';
 import CognitiveScreeningView from './components/CognitiveScreeningView';
 import AdaptiveReports from './components/AdaptiveReports';
-import { AdaptiveReaderView } from './components/AdaptiveReaderView';
+import { ReaderPage } from './components/reader/ReaderPage';
 import RemediationGymView from './components/RemediationGymView';
 import { ChildTrophiesView } from './components/ChildTrophiesView';
 import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
@@ -363,7 +363,7 @@ export default function App() {
     setDashboardSubView('report');
     if (!baseeraSession) {
       setPendingServerRecord(completedRecord);
-      setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها في التخزين المشفر.');
+      setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان في سجل المدرسة.');
       setShowBaseeraLogin(true);
       return;
     }
@@ -396,7 +396,7 @@ export default function App() {
           ));
         }
         setIsPersistedStoreLoaded(true);
-        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${completedRecord.name}) في التخزين المشفر.`);
+        setAiStatusBanner(`تم حفظ جلسة الفحص للطالب (${completedRecord.name}) في سجل المدرسة المحمي.`);
       } else {
         const data = await response.json().catch(() => ({}));
         setPendingServerRecord(completedRecord);
@@ -652,7 +652,7 @@ export default function App() {
             : student
         )
       );
-      setAiStatusBanner('تم اشتقاق وحفظ تحديث السجل في التخزين المشفر على الخادم.');
+      setAiStatusBanner('حُفظ تحديث السجل في سجل المدرسة المحمي.');
     } catch {
       setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حفظ تحديث السجل.');
     }
@@ -684,7 +684,7 @@ export default function App() {
         setSelectedStudentId(remaining[0].id);
       }
       setAiStatusBanner(
-        `تم حذف سجل الطالب (${target?.name || studentId}) من التخزين المشفر.`
+        `تم حذف سجل الطالب (${target?.name || studentId}) من سجل المدرسة المحمي.`
       );
     } catch {
       setAiStatusBanner('تعذر الاتصال بالخادم؛ لم يتم حذف السجل.');
@@ -801,7 +801,7 @@ export default function App() {
         'مسؤول المدرسة'
       );
       if (!session) {
-        setBaseeraLoginError('فشل تسجيل الدخول. تحقق من الرمز ومن إعدادات المصادقة والتخزين المشفر على الخادم.');
+        setBaseeraLoginError('تعذّر تسجيل الدخول. تحقّق من الرمز وحاول مرة أخرى.');
         return;
       }
       setBaseeraSession(session);
@@ -843,7 +843,7 @@ export default function App() {
             ];
             setPendingServerRecord(null);
             setSelectedStudentId(savedRecord.id);
-            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${savedRecord.name} في التخزين المشفر.`);
+            setAiStatusBanner(`تم تسجيل الدخول وحفظ جلسة ${savedRecord.name} في سجل المدرسة المحمي.`);
           } else {
             const saveError = await pendingSave.json().catch(() => ({}));
             setAiStatusBanner(saveError?.error || 'تم تسجيل الدخول، لكن تعذر حفظ الجلسة المعلّقة.');
@@ -1464,7 +1464,7 @@ export default function App() {
                   <div className="baseera-support-item">
                     <span className="baseera-support-icon yellow"><Sparkles aria-hidden="true" size={21} /></span>
                     <div>
-                      <strong>سبرنت الطلاقة اليومي</strong>
+                      <strong>تحدي الدقائق الخمس</strong>
                       <p>تحدي الدقائق الخمس لتثبيت مخارج الحروف وقراءة الكلمات بالتشكيل التام.</p>
                     </div>
                   </div>
@@ -1629,7 +1629,7 @@ export default function App() {
                         ٠٤. توصيات المسار القرائي وفك الكلمات
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        يُوصى بالتركيز على جلسات سبرنت ٥ دقائق اليومية، وربط الصوامت بالحركات القصيرة، وقراءة القصص المشكولة تدريجياً لتعزيز الثقة وطلاقة النطق.
+                        يُوصى بالتركيز على تحدي الدقائق الخمس اليومي، وربط الصوامت بالحركات القصيرة، وقراءة القصص المشكولة تدريجياً لتعزيز الثقة وطلاقة النطق.
                       </p>
                     </div>
                   </div>
@@ -1910,7 +1910,7 @@ export default function App() {
         )}
 
         {activeTab === 'adaptive-reader' && (
-          <AdaptiveReaderView
+          <ReaderPage
             problematicWords={selectedStudent.sessionStatus === 'completed' && (selectedStudent.teacherVerified === true || selectedStudent.aiAssessmentVerified === true) && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}

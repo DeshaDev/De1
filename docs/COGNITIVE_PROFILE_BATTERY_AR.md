@@ -97,3 +97,18 @@
 | `scripts/generate-audio.ts` | توليد الصوت بـ Azure وفحص جودته آليًا |
 | `src/cognitiveProfile/records.ts` | حفظ النتائج في سجل المدرسة والتحقق منها على الخادم |
 | `src/components/profile/*` | واجهات الألعاب والتقرير والبرنامج |
+
+## لماذا من ٤ إلى ٨ سنوات؟
+
+- **الفحص لا يطلب من الطفل أن يقرأ.** يقيس المهارات التي تسبق القراءة وتتنبأ بها: الوعي الصوتي، والذاكرة السمعية والبصرية، والتمييز، ومعرفة الحروف. لذلك يصلح قبل أن يتعلّم الطفل القراءة، وهذا هو الهدف: اكتشاف الخطر قبل أن يتأخر الطفل.
+- **النطاق نفسه في الأداة التي بُني عليها التصميم.** CoPS (GL Assessment) مخصص للأعمار ٤–٧ (حتى ٧ سنوات و١١ شهرًا)، ومن ٨ سنوات تنتقل الناشرة إلى LASS 8–11 الذي يقيس القراءة والإملاء مباشرة. جدولنا المرجعي يمتد حتى ٨ سنوات و١١ شهرًا، ويعرض التقرير لهذا العمر تنبيهًا بضرورة إضافة تقييم مباشر للقراءة.
+- **عمر ٤ سنوات ممكن لكنه أقل ثباتًا.** دراسة طولية لأطفال معرَّضين لعسر القراءة (Thompson et al., 2015) وجدت أن دقة الفرز لا تصل إلى مستوى مقبول إكلينيكيًا إلا قرب دخول المدرسة، حين تُجمع معرفة الحروف والوعي الصوتي والتسمية السريعة. ودراسة أسترالية (Carson) وجدت أن مهام الوعي الصوتي المحوسبة في عمر ٤–٤٫٥ ثابتة ومتنبئة بالقراءة في عمر ٥. لذلك يعرض بصيرة لعمر ٤ تنبيهًا: النتيجة مؤشر أولي، ويُعاد الفحص بعد ستة أشهر.
+- **ماذا يعرف الطفل العربي عن الحروف في الروضة؟** معرفة الحروف عند أطفال الروضة متفاوتة كثيرًا، وتتأثر بتكرار الحرف (Tibi et al.). ويبدأ تعليم القراءة الرسمي في قطر بالعربية في الصف الأول (نحو ٦ سنوات) بحسب موسوعة PIRLS. لذلك تُقارن الدرجات بالعمر بالأشهر، لا بدرجة خام.
+- **لماذا لا يمتد الفحص إلى ١٠ سنوات؟** بعد سنتين تقريبًا من تعليم القراءة تقترب مهام ما قبل القراءة من سقفها، ويصبح قياس القراءة نفسها (الدقة والطلاقة والفهم) أدق. لهذه الأعمار يقدّم بصيرة أداتَي «قراءة نص وفهمه» و«التسمية السريعة»، مع التنبيه إلى عدم وجود معايير عربية مقننة لها بعد.
+
+### المصادر
+- GL Assessment — CoPS: [gl-assessment.co.uk/products/cops](https://www.gl-assessment.co.uk/products/cops/) · LASS 8–11: [support.gl-assessment.co.uk](https://support.gl-assessment.co.uk/knowledge-base/assessments/lass-8-11-support/about-lass-8-11/)
+- Thompson, Hulme, Nash, Gooch, Hayiou-Thomas & Snowling (2015), *Developmental dyslexia: predicting individual risk*, JCPP: [White Rose eprints](https://eprints.whiterose.ac.uk/id/eprint/85575/1/jcpp12412.pdf)
+- Carson — Reliability and predictive validity of preschool web-based phonological awareness assessment: [Flinders](https://researchnow.flinders.edu.au/en/publications/reliability-and-predictive-validity-of-preschool-web-based-phonol/)
+- Tibi et al. — IRT analyses of Arabic letter knowledge in kindergarten: [Springer](https://link.springer.com/article/10.1007/s11145-020-10086-6) · Letter features and Arabic letter knowledge: [Scientific Studies of Reading](https://www.tandfonline.com/doi/abs/10.1080/10888438.2021.2016769)
+- PIRLS 2016 Encyclopedia — Qatar: [pirls2016.org](https://pirls2016.org/encyclopedia/countries/qatar/languagereading-curriculum-in-the-fourth-grade/index.html)

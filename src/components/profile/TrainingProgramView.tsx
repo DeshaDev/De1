@@ -86,9 +86,11 @@ interface Props {
   syncEnabled?: boolean;
   onRecordUpdated?: (student: StudentRecord) => void;
   student?: StudentRecord;
+  /** Show a back button (only when the user came here from the games map or the report). */
+  showBack?: boolean;
 }
 
-export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student }: Props) {
+export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true }: Props) {
   const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId) ?? serverProgress);
   const [run, setRun] = useState<Run | null>(null);
   useEffect(() => {
@@ -243,11 +245,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const plan = proposedPlan;
     return (
       <div className="space-y-6" dir="rtl">
-        <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
-          <ArrowRight className="w-4 h-4" /> رجوع
-        </button>
+        {showBack && (
+          <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
+            <ArrowRight className="w-4 h-4" /> العودة
+          </button>
+        )}
         <section className="bz-card bz-card-pad space-y-6">
-          <div><p className="bz-small text-brand font-semibold">خطة مقترحة من نتائج الفحص</p><h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>البرنامج التدريبي الموجّه لـ{childName}</h2></div>
+          <div><p className="bz-small text-brand font-semibold">الطفل: {childName}</p><h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>{plan ? 'الخطة المقترحة من نتائج الفحص' : 'لم يُجرَ الفحص بعد'}</h2></div>
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">
@@ -299,9 +303,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   return (
     <div className="space-y-6" dir="rtl">
-      <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
-        <ArrowRight className="w-4 h-4" /> رجوع
-      </button>
+      {showBack && (
+        <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
+          <ArrowRight className="w-4 h-4" /> العودة
+        </button>
+      )}
 
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>

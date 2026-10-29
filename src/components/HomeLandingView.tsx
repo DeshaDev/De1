@@ -214,7 +214,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,.6), transparent 85%)',
           }}
         />
-        <div className="bz-container relative grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-14 items-center py-14 sm:py-20 lg:py-24">
+        <div className="bz-container relative grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-14 items-start pt-10 pb-16 sm:pt-12 lg:pt-14 lg:pb-20">
           <div>
             <span className="bz-eyebrow">فحص مبكر وتدريب موجّه · من ٤ إلى ٨ سنوات</span>
             <h1 className="bz-display mt-5" style={{ fontSize: 'clamp(32px, 3.6vw, 50px)' }}>
@@ -447,7 +447,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <span className="bz-eyebrow">البرنامج التدريبي الموجّه</span>
               <h2 className="bz-h2">تدريب قصير كل يوم، يتقدّم بقدر ما يتقن الطفل</h2>
               <p className="bz-lead">
-                يختار البرنامج حتى ثلاث مهارات من أضعف نتائج الفحص، ويرتّبها نمائيًا. كل مهارة لها ثلاثة مستويات، والتمارين تُولَّد جديدة في كل جلسة ولا تكرر بنود الفحص.
+                يختار البرنامج حتى ثلاث مهارات من أضعف نتائج الفحص، ويرتّبها نمائيًا. كل مهارة لها ثلاثة مستويات، والتمارين تُوَلَّد جديدة في كل جلسة ولا تكرر بنود الفحص.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
