@@ -50,7 +50,7 @@ test('generic practice does not claim eye-tracking observations or individualize
 
   assert.match(plan.learningRationale, /أمثلة تعليمية وليست أخطاء مرصودة/);
   assert.doesNotMatch(plan.learningRationale, /تتبع حركة العين|جلسة علاجية|علاج عسر القراءة|القفزات التراجعية/);
-  assert.equal(plan.pacerPassage.title, 'قصة قصيرة للقراءة والتظليل');
+  assert.equal(plan.pacerPassage.title, 'عمر في الحديقة');
 });
 
 test('teacher-reviewed target status is stated narrowly and does not imply diagnosis', () => {

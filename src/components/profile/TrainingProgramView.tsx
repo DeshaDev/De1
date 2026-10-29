@@ -25,7 +25,7 @@ import {
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
 import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
 import { trackUsage } from '../../utils/usageTracking';
-import type { StudentRecord } from '../../data/seedData';
+import { GUEST_CHILD_NAME, type StudentRecord } from '../../data/seedData';
 import { ChoicePlayer, SpanPlayer } from './TaskPlayers';
 import { speak } from './audio';
 
@@ -251,7 +251,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           </button>
         )}
         <section className="bz-card bz-card-pad space-y-6">
-          <div><p className="bz-small text-brand font-semibold">الطفل: {childName}</p><h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>{plan ? 'الخطة المقترحة من نتائج الفحص' : 'لم يُجرَ الفحص بعد'}</h2></div>
+          <div><p className="bz-small text-brand font-semibold">{childName === GUEST_CHILD_NAME ? childName : `الطفل: ${childName}`}</p><h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>{plan ? 'الخطة المقترحة من نتائج الفحص' : 'لم يُجرَ الفحص بعد'}</h2></div>
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">

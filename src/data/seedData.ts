@@ -1316,10 +1316,13 @@ export const ARABIC_READING_PASSAGES: ReadingPassage[] = [
   },
 ];
 
+/** Name shown for the device's default learner before a real name is entered. */
+export const GUEST_CHILD_NAME = 'طفلك';
+
 export const INITIAL_STUDENTS: StudentRecord[] = [
   {
     id: 'stu-guest',
-    name: 'البطل الصغير',
+    name: GUEST_CHILD_NAME,
     isDemoRecord: false,
     gradeLevel: 3,
     ageYears: 8,

@@ -622,7 +622,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
             <label className="bz-field">
               <span className="bz-label">اسم الطفل المستعار أو اللقب</span>
-              <input type="text" value={newLearnerName} onChange={(e) => setNewLearnerName(e.target.value)} placeholder="مثال: البطل الصغير أو سارة" className="bz-input" required />
+              <input type="text" value={newLearnerName} onChange={(e) => setNewLearnerName(e.target.value)} placeholder="مثال: سارة أو أحمد" className="bz-input" required />
               <span className="bz-hint">لا تستخدم الاسم الكامل الحقيقي للطفل، حمايةً لخصوصيته.</span>
             </label>
 

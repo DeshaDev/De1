@@ -1,3 +1,4 @@
+import { toArabicNum } from '../utils/arabicDigits';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BookOpen, CheckCircle2, CircleHelp, Lightbulb, RotateCcw, Volume2, Sparkles, ChevronDown, Info,
@@ -229,7 +230,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
           </div>
         </div>
         <span className="shrink-0 self-start sm:self-center rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-1.5 text-xs font-black text-teal-900">
-          الصف {grade}
+          الصف {toArabicNum(grade)}
         </span>
       </header>
 
@@ -291,7 +292,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
                     <span>جرّب بنفسك</span>
                   </h4>
                   <span className="text-xs font-bold tabular-nums text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                    السؤال {questionIndex + 1} من {roundQuestions.length}
+                    السؤال {toArabicNum(questionIndex + 1)} من {toArabicNum(roundQuestions.length)}
                   </span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 border border-slate-200" role="progressbar" aria-label="تقدم الجولة" aria-valuemin={0} aria-valuemax={roundQuestions.length} aria-valuenow={questionIndex + 1}>

@@ -241,7 +241,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
                   </span>
                 </div>
                 <div className="font-child text-sm font-bold text-slate-700">{challenge.label}</div>
-                <div className="text-xs font-mono font-bold text-slate-500 flex items-center gap-1.5">
+                <div className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
                   <span className="text-emerald-700 font-bold">{challenge.exampleWord1}</span>
                   <span>مقابل</span>
                   <span className="text-amber-700 font-bold">{challenge.exampleWord2}</span>
@@ -421,7 +421,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             <p className="font-child text-sm sm:text-base font-bold text-emerald-700">
               أتممت قراءة القصة وفهمت تفاصيلها بنجاح باهر!
             </p>
-            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl font-mono text-base font-black text-amber-900 mt-2">
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 px-4 py-2 rounded-2xl bz-num text-base font-black text-amber-900 mt-2">
               <IconStar size={20} />
               <span>+٥٠ نقطة أضيفت لرصيدك!</span>
             </div>

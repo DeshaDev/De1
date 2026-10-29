@@ -4,6 +4,7 @@
  * comprehension questions and a summary of the words that need more practice.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, Headphones, RotateCcw, Settings2, Volume2, X } from 'lucide-react';
 import { ARABIC_READING_PASSAGES, type ReadingPassage } from '../../data/seedData';
 import { segmentArabicWordIntoSyllables } from '../../utils/learningMetrics';
@@ -89,10 +90,11 @@ interface FocusReaderProps {
   studentName?: string;
   problematicWords?: string[];
   passageId?: string;
-  onOpenTools?: () => void;
+  /** Called with true while a reading session is open, so the page can hide its own header. */
+  onReadingChange?: (reading: boolean) => void;
 }
 
-export const FocusReader: React.FC<FocusReaderProps> = ({ studentName, problematicWords = [], passageId, onOpenTools }) => {
+export const FocusReader: React.FC<FocusReaderProps> = ({ studentName, problematicWords = [], passageId, onReadingChange }) => {
   const [passage, setPassage] = useState<ReadingPassage | null>(null);
   const [support, setSupport] = useState<Support>('full');
   const [prefs, setPrefs] = useState<DisplayPrefs>(loadPrefs);
@@ -107,10 +109,11 @@ export const FocusReader: React.FC<FocusReaderProps> = ({ studentName, problemat
     }
   }, [prefs]);
   useEffect(() => () => stopSpeech(), []);
+  useEffect(() => onReadingChange?.(passage !== null), [passage, onReadingChange]);
 
   const prefsButton = (
-    <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" aria-expanded={showPrefs} onClick={() => setShowPrefs((v) => !v)}>
-      <Settings2 className="w-4 h-4" /> شكل النص
+    <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm shrink-0" aria-label="شكل النص" aria-expanded={showPrefs} onClick={() => setShowPrefs((v) => !v)}>
+      <Settings2 className="w-4 h-4" /> <span className="bz-hide-sm">شكل النص</span>
     </button>
   );
   const prefsPanel = showPrefs && (
@@ -157,7 +160,6 @@ export const FocusReader: React.FC<FocusReaderProps> = ({ studentName, problemat
         onSupport={setSupport}
         problemCount={problemSet.size}
         onStart={setPassage}
-        onOpenTools={onOpenTools}
       />
     );
   }
@@ -185,70 +187,92 @@ const PassagePicker: React.FC<{
   onSupport: (s: Support) => void;
   problemCount: number;
   onStart: (p: ReadingPassage) => void;
-  onOpenTools?: () => void;
-}> = ({ studentName, initialId, support, onSupport, problemCount, onStart, onOpenTools }) => {
+}> = ({ studentName, initialId, support, onSupport, problemCount, onStart }) => {
   const passages = useMemo(() => [...ARABIC_READING_PASSAGES].sort((a, b) => a.gradeLevel - b.gradeLevel), []);
-  const [selected, setSelected] = useState<string>(initialId && passages.some((p) => p.id === initialId) ? initialId : passages[0].id);
-  const chosen = passages.find((p) => p.id === selected)!;
+  const grades = useMemo(() => [...new Set(passages.map((p) => p.gradeLevel))], [passages]);
+  const initial = passages.find((p) => p.id === initialId) ?? passages[0];
+  const [grade, setGrade] = useState<number>(initial.gradeLevel);
+  const [selected, setSelected] = useState<string>(initial.id);
+  const inGrade = passages.filter((p) => p.gradeLevel === grade);
+  const chosen = passages.find((p) => p.id === selected) ?? inGrade[0];
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <section className="bz-card bz-card-pad space-y-5">
-        <div className="flex items-center gap-3">
-          <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">١</span>
-          <h2 className="bz-h3">اختر نصًّا{studentName ? ` لـ${studentName}` : ''}</h2>
+    <div className="space-y-5 pb-28" dir="rtl">
+      <section className="bz-card bz-card-pad space-y-3">
+        <h2 className="bz-h3">كم مساعدة يحتاج {studentName ?? 'الطفل'}؟</h2>
+        <div className="bz-segment" role="radiogroup" aria-label="مستوى المساعدة">
+          <button type="button" role="radio" aria-checked={support === 'full'} aria-pressed={support === 'full'} onClick={() => onSupport('full')}>مساعدة كاملة</button>
+          <button type="button" role="radio" aria-checked={support === 'light'} aria-pressed={support === 'light'} onClick={() => onSupport('light')}>قراءة مستقلة</button>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {passages.map((p) => (
+        <p className="bz-small bz-muted">
+          {support === 'full'
+            ? 'لكل جملة: يستمع إليها، ثم يقرؤها معنا كلمةً كلمة، ثم وحده، ثم يجيب عن سؤال سريع.'
+            : 'يقرأ كل جملة وحده، ويضغط أي كلمة ليسمعها عند الحاجة، ثم يجيب عن سؤال سريع.'}
+        </p>
+      </section>
+
+      <section className="bz-card bz-card-pad space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="bz-h3">اختر نصًّا</h2>
+          <div className="bz-segment" role="tablist" aria-label="الصف">
+            {grades.map((g) => (
+              <button
+                key={g}
+                type="button"
+                role="tab"
+                aria-selected={grade === g}
+                onClick={() => {
+                  if (g === grade) return;
+                  setGrade(g);
+                  setSelected(passages.find((p) => p.gradeLevel === g)!.id);
+                }}
+              >
+                الصف {toArabicDigits(g)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {inGrade.map((p) => (
             <button
               key={p.id}
               type="button"
-              aria-pressed={selected === p.id}
+              aria-pressed={chosen.id === p.id}
               onClick={() => setSelected(p.id)}
-              className={`text-right rounded-2xl border p-4 transition ${selected === p.id ? 'border-brand bg-brand-soft' : 'border-line bg-card hover:border-line-strong'}`}
+              className={`text-right rounded-2xl border-2 p-4 transition ${chosen.id === p.id ? 'border-brand bg-brand-soft' : 'border-line bg-card hover:border-line-strong'}`}
             >
-              <span className="bz-badge bz-badge-neutral">{p.gradeLabel}</span>
-              <span className="block mt-2 font-semibold text-ink leading-relaxed">{p.title}</span>
+              <span className="flex items-start justify-between gap-2">
+                <span className="font-semibold text-ink text-lg leading-relaxed">{p.title}</span>
+                {chosen.id === p.id && <Check className="w-5 h-5 text-brand shrink-0 mt-1" />}
+              </span>
               <span className="block bz-small bz-muted mt-1">
                 {toArabicDigits(chunkPassage(p.words).length)} جمل قصيرة · {p.diacriticLevel === 'full' ? 'مشكول بالكامل' : p.diacriticLevel === 'partial' ? 'مشكول جزئيًا' : 'بلا تشكيل تقريبًا'}
               </span>
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="bz-card bz-card-pad space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">٢</span>
-          <h2 className="bz-h3">كم مساعدة يحتاج الطفل؟</h2>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <button type="button" aria-pressed={support === 'full'} onClick={() => onSupport('full')} className={`text-right rounded-2xl border p-4 ${support === 'full' ? 'border-brand bg-brand-soft' : 'border-line bg-card'}`}>
-            <span className="block font-semibold text-ink">مساعدة كاملة</span>
-            <span className="block bz-small bz-muted mt-1">يستمع إلى الجملة، ثم يقرؤها معنا كلمةً كلمة، ثم وحده، ثم سؤال سريع.</span>
-          </button>
-          <button type="button" aria-pressed={support === 'light'} onClick={() => onSupport('light')} className={`text-right rounded-2xl border p-4 ${support === 'light' ? 'border-brand bg-brand-soft' : 'border-line bg-card'}`}>
-            <span className="block font-semibold text-ink">قراءة مستقلة</span>
-            <span className="block bz-small bz-muted mt-1">يقرأ كل جملة وحده، ويضغط أي كلمة ليسمعها عند الحاجة.</span>
-          </button>
-        </div>
         {problemCount > 0 && (
           <p className="bz-small text-ink-2 rounded-xl bg-sun-soft p-3">
-            في هذا النص كلمات تعثّر فيها الطفل في تقييمه الأخير؛ ستأتي في الأسئلة السريعة أولًا.
+            الكلمات التي تعثّر فيها الطفل في تقييمه الأخير تأتي أولًا في الأسئلة السريعة.
           </p>
         )}
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onStart(chosen)}>
-          ابدأ القراءة <ArrowLeft className="w-5 h-5" />
-        </button>
-        {onOpenTools && (
-          <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={onOpenTools}>
-            أدوات الأخصائي: عرض النص كاملًا وتحليل الأخطاء الإملائية
+      {/* Always on screen: what will be read, and the start button (portalled so page animations cannot unpin it). */}
+      {createPortal(
+      <div className="bz-action-bar" dir="rtl">
+        <div className="bz-container flex flex-wrap items-center justify-between gap-3 py-3">
+          <p className="min-w-0 text-ink">
+            <span className="bz-small bz-muted block">النص المختار</span>
+            <span className="font-semibold truncate block">{chosen.title}</span>
+          </p>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onStart(chosen)}>
+            ابدأ القراءة <ArrowLeft className="w-5 h-5" />
           </button>
-        )}
-      </div>
+        </div>
+      </div>,
+      document.body
+      )}
     </div>
   );
 };
@@ -290,6 +314,15 @@ const ReadingSession: React.FC<{
     setLit(null);
   };
   useEffect(() => stopAll, []);
+
+  // While reading, hide the site header and footer and keep the sentence at the top of the screen.
+  useEffect(() => {
+    document.body.classList.add('baseera-reading-focus');
+    return () => document.body.classList.remove('baseera-reading-focus');
+  }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [phase]);
 
   const say = async (text: string) => {
     stopAll();
@@ -349,11 +382,11 @@ const ReadingSession: React.FC<{
   const surface = SURFACE[prefs.surface];
 
   const header = (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={onExit}>
-        <X className="w-4 h-4" /> إنهاء القراءة
+    <div className="flex items-center justify-between gap-2">
+      <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm shrink-0" aria-label="إنهاء القراءة" onClick={onExit}>
+        <X className="w-4 h-4" /> <span className="bz-hide-sm">إنهاء القراءة</span>
       </button>
-      <p className="font-semibold text-ink">{passage.title}</p>
+      <p className="font-semibold text-ink truncate min-w-0">{passage.title}</p>
       {prefsButton}
     </div>
   );
@@ -429,8 +462,8 @@ const ReadingSession: React.FC<{
                 <button
                   key={opt}
                   type="button"
-                  disabled={answered}
-                  onClick={() => setQAnswers((a) => { const next = [...a]; next[phase.index] = i; return next; })}
+                  aria-disabled={answered}
+                  onClick={() => !answered && setQAnswers((a) => { const next = [...a]; next[phase.index] = i; return next; })}
                   className={`text-right rounded-2xl border border-line bg-card p-4 text-xl leading-loose ${state}`}
                 >
                   {opt}
@@ -501,7 +534,7 @@ const ReadingSession: React.FC<{
   };
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="flex flex-col gap-4" style={{ minHeight: 'calc(100dvh - 32px)' }} dir="rtl">
       {header}
       {progress}
       {prefsPanel}
@@ -520,6 +553,7 @@ const ReadingSession: React.FC<{
         </ol>
       </div>
 
+      <div className="flex-1 flex flex-col justify-center gap-5 pb-6">
       <section className="rounded-3xl border border-line p-6 sm:p-10 space-y-6" style={{ background: surface.bg }}>
         <p className="text-center font-semibold" style={{ color: surface.ink, opacity: 0.75 }}>{instructions[phase.step]}</p>
 
@@ -542,18 +576,19 @@ const ReadingSession: React.FC<{
               {check.options.map((opt) => {
                 const answered = answer !== null;
                 const right = opt === check.target;
-                const style = !answered ? 'border-line bg-card' : right ? 'border-brand bg-brand-soft' : answer === opt ? 'border-risk bg-risk-soft' : 'border-line bg-card opacity-60';
+                const style = !answered ? 'border-line bg-card hover:border-brand' : right ? 'border-brand bg-brand-soft' : answer === opt ? 'border-risk bg-risk-soft' : 'border-line bg-card opacity-50';
                 return (
                   <button
                     key={opt}
                     type="button"
-                    disabled={answered}
+                    aria-disabled={answered}
                     onClick={() => {
+                      if (answered) return;
                       setAnswer(opt);
                       setCheckScore((s) => ({ correct: s.correct + (right ? 1 : 0), total: s.total + 1 }));
                       if (!right) addPractice(check.target);
                     }}
-                    className={`rounded-2xl border p-4 font-semibold text-ink ${style}`}
+                    className={`rounded-2xl border-2 p-4 font-semibold text-ink disabled:cursor-default ${style}`}
                     style={{ fontSize: Math.round(SIZE_PX[prefs.size] * 0.85) }}
                   >
                     {opt}
@@ -611,6 +646,7 @@ const ReadingSession: React.FC<{
             {phase.index < chunks.length - 1 ? 'الجملة التالية' : 'إلى أسئلة الفهم'} <ArrowLeft className="w-5 h-5" />
           </button>
         )}
+      </div>
       </div>
     </div>
   );
