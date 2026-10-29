@@ -135,3 +135,33 @@ describe('dialect safety of scored sound items', () => {
     assert.deepEqual(problems, []);
   });
 });
+
+describe('audio coverage for any training session', () => {
+  it('every phrase of randomly seeded sessions has a pre-recorded clip (sessions are seeded by time)', async () => {
+    const { buildAudioCatalog, audioKey, normalizeSpokenText } = await import('./audioCatalog');
+    const keys = new Set(buildAudioCatalog().map((e) => e.key));
+    const missing = new Set<string>();
+    for (let i = 0; i < 300; i++) {
+      const seed = Math.floor(Math.random() * 2 ** 40);
+      for (const skill of Object.keys(SKILLS) as SkillId[])
+        for (const level of [1, 2, 3] as Level[])
+          for (const t of generateSession(skill, level, seed)) {
+            const texts = t.kind === 'choice' ? t.item.audio.map((a) => a.text) : [...t.trial.sequence, ...t.trial.choices].map((id) => lex(id).word);
+            for (const raw of texts) if (!keys.has(audioKey(normalizeSpokenText(raw)))) missing.add(raw);
+          }
+    }
+    assert.deepEqual([...missing], []);
+  });
+});
+
+describe('content review bank', () => {
+  it('contains every scored and practice battery item, every lexicon word and every passage', async () => {
+    const { buildReviewUnits } = await import('../review/itemBank');
+    const ids = new Set(buildReviewUnits().map((u) => u.id));
+    for (const s of BATTERY) {
+      if (s.kind === 'choice') for (const it of [...s.practice, ...s.items]) assert.ok(ids.has(`battery.${s.id}.${it.id}`), it.id);
+      if (s.kind === 'span') for (const t of [...s.practice, ...s.trials]) assert.ok(ids.has(`battery.${s.id}.${t.id}`), t.id);
+    }
+    for (const id of LEXICON_IDS) assert.ok(ids.has(`lexicon.${id}`), id);
+  });
+});

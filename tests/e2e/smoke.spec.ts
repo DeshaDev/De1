@@ -193,3 +193,12 @@ test('teachers can reach the login on a phone', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'دخول المعلم' })).toBeVisible();
 });
+
+test('content review page lists every unit and records a decision', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/?review=1');
+  await expect(page.getByRole('heading', { name: 'مراجعة محتوى بصيرة' })).toBeVisible();
+  await expect(page.getByText(/رُوجع ٠ من ٨٣٧/)).toBeVisible();
+  await page.getByRole('button', { name: 'صحيح' }).first().click();
+  await expect(page.getByText(/رُوجع ١ من ٨٣٧/)).toBeVisible();
+});
