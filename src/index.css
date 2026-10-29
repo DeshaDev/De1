@@ -1286,3 +1286,10 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   transform: scale(1.25);
 }
 
+
+/* Action bar pinned to the bottom of the screen (sits above the mobile tab bar). */
+.bz-action-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--card) 96%, transparent); backdrop-filter: blur(14px); box-shadow: 0 -8px 24px rgba(15, 30, 46, 0.08); }
+@media (max-width: 640px) {
+  .bz-action-bar { bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .bz-hide-sm { display: none; }
+}

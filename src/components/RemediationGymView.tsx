@@ -386,7 +386,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <p className="bz-muted">تدريب {activeStudent.name}: تمرين يومي قصير، وألعاب لكل مهارة.</p>
         </div>
         <span className="bz-badge bz-badge-sun text-base px-4 py-2">
-          <IconStar size={16} /> <span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة
+          <IconStar size={16} /> {xpPoints > 0 ? <><span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة</> : 'لا نقاط بعد'}
         </span>
       </header>
 
@@ -401,7 +401,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             setActiveScaffold(null);
           }}
         >
-          <Target size={17} /> تمرين اليوم · ٣ أسئلة
+          <Target size={17} /> تمرين اليوم (٣ أسئلة)
         </button>
         <button
           type="button"
@@ -412,7 +412,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             setActiveScaffold(null);
           }}
         >
-          <Sparkles size={17} /> ألعاب المهارات · ٥ ألعاب
+          <Sparkles size={17} /> ألعاب المهارات (٥ ألعاب)
         </button>
       </div>
 
@@ -481,7 +481,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             <span className="font-child text-xs font-black text-emerald-800 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-300">
               تحدي: {currentPhonics.family}
             </span>
-            <span className="font-mono text-xs font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+            <span className="bz-num text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
               السؤال {toEasternArabicDigits(phonicsIdx + 1)} من {toEasternArabicDigits(phonicsList.length)}
             </span>
           </div>
@@ -586,7 +586,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             <span className="font-child text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
               تركيب المقاطع
             </span>
-            <span className="font-mono text-slate-700">
+            <span className="bz-num text-slate-700">
               الكلمة {toEasternArabicDigits(syllableIdx + 1)} من {toEasternArabicDigits(syllableList.length)}
             </span>
           </div>
@@ -741,9 +741,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
               <span className="font-bold text-slate-900">
                 «{currentPassage.title}» · {toEasternArabicDigits(currentPassage.gradeLevel)}
               </span>
-              <div className="flex items-center gap-1.5 font-mono">
-                <span>الإيقاع:</span>
-                {[30, 45, 60].map((w) => (
+              <div className="flex items-center gap-1.5">
+                <span>السرعة:</span>
+                {([[30, 'بطيئة'], [45, 'متوسطة'], [60, 'أسرع']] as const).map(([w, label]) => (
                   <button
                     key={w}
                     type="button"
@@ -754,7 +754,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                         : 'bg-white border border-slate-200 text-slate-700'
                     }`}
                   >
-                    {w}
+                    {label}
                   </button>
                 ))}
               </div>

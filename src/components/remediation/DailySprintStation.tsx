@@ -1,3 +1,4 @@
+import { toArabicNum } from '../../utils/arabicDigits';
 import React, { useState, useEffect } from 'react';
 import {
   Flame,
@@ -333,7 +334,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
   const formatTimer = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return toArabicNum(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
   };
 
   const handleWarmupSelect = (word: string, isCorrect: boolean) => {
@@ -424,10 +425,10 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl font-bold text-amber-900 text-xs shadow-xs">
             <Flame className="w-4 h-4 fill-amber-500 text-amber-500" />
-            <span>سلسلة الالتزام: <strong className="font-mono text-sm">{streakDays}</strong> أيام متتالية</span>
+            <span>سلسلة الالتزام: <strong className="bz-num text-sm">{toArabicNum(streakDays)}</strong> أيام متتالية</span>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900 text-white px-3.5 py-1.5 rounded-xl font-mono text-sm font-bold shadow-xs">
+          <div className="flex items-center gap-2 bg-slate-900 text-white px-3.5 py-1.5 rounded-xl bz-num text-sm font-bold shadow-xs">
             <Clock className="w-4 h-4 text-emerald-400" />
             <span>{formatTimer(timerSeconds)}</span>
             <button
@@ -475,7 +476,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
               </span>
 
               <span className="text-xs font-bold text-slate-600 bg-white/80 px-3 py-1 rounded-xl border border-slate-200">
-                تمرين {warmupIdx + 1} من {warmupPairs.length}
+                تمرين {toArabicNum(warmupIdx + 1)} من {toArabicNum(warmupPairs.length)}
               </span>
             </div>
 

@@ -998,7 +998,7 @@ export default function App() {
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
           { id: 'remediation-gym', label: 'التدريب', icon: Dumbbell },
-          { id: 'trophies', label: 'أوسمتي', icon: Trophy },
+          { id: 'adaptive-reader', label: 'القارئ', icon: BookOpen },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (

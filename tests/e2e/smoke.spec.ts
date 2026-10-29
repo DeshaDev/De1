@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const toAr = (n: number) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+
 test('homepage renders in Arabic RTL', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/بصيرة/);
@@ -47,7 +49,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
   await page.getByRole('button', { name: /تحدي الدقائق الخمس/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
-  await expect(page.getByText(/سلسلة الالتزام:\s*4/)).toHaveCount(0);
+  await expect(page.getByText(/سلسلة الالتزام:\s*[4٤]/)).toHaveCount(0);
 
   const targetWords = ['سَيْفٌ', 'صَابُونٌ', 'تِينٌ', 'طَبِيبٌ', 'دَلَّ', 'كَلْبٌ', 'حَمَلَ', 'ذَلَّ'];
   for (let i = 0; i < targetWords.length; i += 1) {
@@ -55,7 +57,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
     await expect(target).toBeVisible();
     await target.locator('xpath=..').getByRole('button', { name: /اخْتَرْ هَذِهِ الكَلِمَة/ }).click();
     if (i < targetWords.length - 1) {
-      await expect(page.getByText(`تمرين ${i + 2} من 8`)).toBeVisible();
+      await expect(page.getByText(`تمرين ${toAr(i + 2)} من ٨`)).toBeVisible();
     }
   }
 
@@ -113,7 +115,7 @@ test('parental consent onboarding enforces consent before launch and school demo
   await expect(launchBtn).toBeDisabled();
 
   // Enter learner alias
-  await page.getByPlaceholder(/مثال: البطل الصغير أو سارة/).fill('سارة البطلة');
+  await page.getByPlaceholder(/مثال: سارة أو أحمد/).fill('سارة');
   // Still disabled because consent is unchecked
   await expect(launchBtn).toBeDisabled();
 
@@ -162,9 +164,14 @@ test('guided reader shows one sentence at a time and walks through the micro-ste
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /القارئ الميسّر/ }).last().click();
+  // The start button is on screen without scrolling.
+  await expect(page.getByRole('button', { name: /ابدأ القراءة/ })).toBeInViewport();
   await page.getByRole('button', { name: /ابدأ القراءة/ }).click();
 
-  await expect(page.getByText(/الجملة ١ من/)).toBeVisible();
+  // Reading opens at the sentence: site header and footer hidden, page at the top.
+  await expect(page.getByText(/الجملة ١ من/)).toBeInViewport();
+  await expect(page.locator('.baseera-footer')).toBeHidden();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await page.getByRole('button', { name: /أنا جاهز للقراءة/ }).click();
   // Read with me: advance word by word until the sentence is finished.
   for (let i = 0; i < 15; i += 1) {
