@@ -951,7 +951,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   النشاط الأول: التسمية السريعة
                 </span>
                 <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
-                  رصد الزمن في نشاط تسمية 20 عنصرًا
+                  رصد الزمن في نشاط تسمية ٢٠ عنصرًا
                 </h2>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   يسمي الطالب العناصر بصوته سطرًا بسطر. قد يلتقط التعرف الآلي بعض الكلمات وينقل المؤشر، لكنه قد يخطئ في اللهجة أو الكلمة؛ لا تفسّر النتيجة وحدها كمعيار عمري.
@@ -1165,7 +1165,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                         الزمن الكلي: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.durSec} ث</strong>
                       </span>
                       <span>
-                        معدل إكمال النشاط: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.speedItemsPerSec}</strong> عنصر/ثانية
+                        معدل إكمال النشاط: <strong className="bz-num text-teal-800 font-bold">{ar(ranMetrics.speedItemsPerSec)}</strong> عنصر/ثانية
                       </span>
                       <span>
                         متوسط زمن الانتقال/الاستجابة: <strong className="font-mono text-teal-800 font-bold">{ranMetrics.meanLatencyMs} ms</strong>
@@ -1232,7 +1232,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 >
                   <div className="flex items-center justify-between mb-4 text-xs">
                     <span className="font-bold text-teal-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                      {pseudoCurrentIndex + 1} من {ARABIC_PSEUDO_WORD_CANDIDATES.length} (الوزن: {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].patternAr})
+                      {ar(pseudoCurrentIndex + 1)} من {ar(ARABIC_PSEUDO_WORD_CANDIDATES.length)} (الوزن: {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].patternAr})
                     </span>
                     <span className="text-slate-400 text-[11px]">
                       {ARABIC_PSEUDO_WORD_CANDIDATES[pseudoCurrentIndex].linguisticLevel}
@@ -1313,7 +1313,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   اكتمل نشاط الكلمات غير الحقيقية
                 </h3>
                 <div className="text-3xl font-black text-teal-700 font-mono my-2">
-                  {pseudoMetrics.percent}%
+                  {ar(pseudoMetrics.percent)}٪
                 </div>
                 <p className="text-xs text-slate-600 mb-4 leading-6">
                   سجّل المشرف قراءة مطابقة كما كُتبت في {pseudoMetrics.correctCount} من {pseudoMetrics.totalCount} صيغ تدريبية؛
@@ -1350,7 +1350,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 النشاط الثالث: الوعي الصوتي
               </span>
               <h2 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
-                تمييز الأصوات، الحذف، والدمج باللغة الفصحى (6 بنود متدرجة)
+                تمييز الأصوات، الحذف، والدمج باللغة الفصحى (٦ بنود متدرجة)
               </h2>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                 هذه البنود مكتوبة بالفصحى، وقد يتأثر الأداء باللهجة والخبرة اللغوية؛ لا نفترض الحياد اللهجي.
@@ -1362,7 +1362,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                 <div className="p-6 md:p-8 rounded-3xl bg-indigo-50/60 border border-indigo-200 mb-6 text-right">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-bold text-indigo-900 bg-indigo-100 px-3 py-1 rounded-full">
-                      بند {phonemicCurrentIdx + 1} من {ARABIC_PHONEMIC_TASK_CANDIDATES.length}: {ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].titleAr}
+                      بند {ar(phonemicCurrentIdx + 1)} من {ar(ARABIC_PHONEMIC_TASK_CANDIDATES.length)}: {ARABIC_PHONEMIC_TASK_CANDIDATES[phonemicCurrentIdx].titleAr}
                     </span>
                     <button
                       type="button"
@@ -1403,7 +1403,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                       <span>البند السابق</span>
                     </button>
                     <span className="text-indigo-900 font-black">
-                      بند {phonemicCurrentIdx + 1} من {ARABIC_PHONEMIC_TASK_CANDIDATES.length}
+                      بند {ar(phonemicCurrentIdx + 1)} من {ar(ARABIC_PHONEMIC_TASK_CANDIDATES.length)}
                     </span>
                     <button
                       type="button"
@@ -1425,7 +1425,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   اكتملت مهام الوعي الصوتي
                 </h3>
                 <div className="text-3xl font-black text-indigo-700 font-mono my-2">
-                  {phonemicMetrics.percent}%
+                  {ar(phonemicMetrics.percent)}٪
                 </div>
                 <p className="text-xs text-slate-600 mb-4">
                   أجاب الطالب بشكل صحيح على {phonemicMetrics.correctCount} من إجمالي {phonemicMetrics.totalCount} مهام صوتية.
@@ -1479,7 +1479,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ١. التسمية السريعة
                 </span>
                 <div className="text-2xl font-black text-amber-800 font-mono">
-                  {ranMetrics.durSec} ث <span className="text-xs font-normal">({ranMetrics.speedItemsPerSec} عنصر/ث)</span>
+                  {ar(ranMetrics.durSec)} ث <span className="text-xs font-normal">({ar(ranMetrics.speedItemsPerSec)} عنصر/ث)</span>
                 </div>
                 <p className="text-[11px] text-amber-900 font-semibold mt-1">
                   {ranMetrics.statusLabelAr}
@@ -1497,10 +1497,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ٢. قراءة الكلمات غير الحقيقية (١٢ كلمة)
                 </span>
                 <div className="text-2xl font-black text-teal-800 font-mono">
-                  {pseudoMetrics.percent}%
+                  {ar(pseudoMetrics.percent)}٪
                 </div>
                 <p className="text-[11px] text-teal-900 font-semibold mt-1">
-                  فك شفرة {pseudoMetrics.correctCount} من {pseudoMetrics.totalCount} كلمات موزونة
+                  قرأ {ar(pseudoMetrics.correctCount)} من {ar(pseudoMetrics.totalCount)} كلمة قراءة صحيحة
                 </p>
                 {pseudoAudioUrl && (
                   <div className="mt-3 pt-3 border-t border-teal-200">
@@ -1515,10 +1515,10 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   ٣. الوعي الصوتي
                 </span>
                 <div className="text-2xl font-black text-indigo-800 font-mono">
-                  {phonemicMetrics.percent}%
+                  {ar(phonemicMetrics.percent)}٪
                 </div>
                 <p className="text-[11px] text-indigo-900 font-semibold mt-1">
-                  إتقان {phonemicMetrics.correctCount} من {phonemicMetrics.totalCount} مهام صوتية
+                  أجاب إجابة صحيحة في {ar(phonemicMetrics.correctCount)} من {ar(phonemicMetrics.totalCount)} مهام صوتية
                 </p>
               </div>
             </div>
@@ -1603,5 +1603,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
     </div>
   );
 };
+
+const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
 export default CognitiveScreeningView;

@@ -1,5 +1,5 @@
 import { toArabicNum } from './utils/arabicDigits';
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import {
   Search,
   Sparkles,
@@ -44,19 +44,15 @@ import {
   BaseeraSessionInfo,
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
-import ReadingAssessmentView from './components/ReadingAssessmentView';
-import CognitiveScreeningView from './components/CognitiveScreeningView';
-import AdaptiveReports from './components/AdaptiveReports';
-import { ReaderPage } from './components/reader/ReaderPage';
-import RemediationGymView from './components/RemediationGymView';
-import { ChildTrophiesView } from './components/ChildTrophiesView';
-import DyslexiaScreeningHub from './components/DyslexiaScreeningHub';
+const ReaderPage = lazy(() => import('./components/reader/ReaderPage').then((m) => ({ default: m.ReaderPage })));
+const RemediationGymView = lazy(() => import('./components/RemediationGymView'));
+const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHub'));
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
 import { trackUsage } from './utils/usageTracking';
-import { UsageMetricsPanel } from './components/UsageMetricsPanel';
-import { PrivacyPolicyView } from './components/PrivacyPolicyView';
-import { TermsOfUseView } from './components/TermsOfUseView';
+const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
+const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
+const TermsOfUseView = lazy(() => import('./components/TermsOfUseView'));
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -1022,15 +1018,8 @@ export default function App() {
       </nav>
 
       <main id="main-content" className={'baseera-main flex-1' + (activeTab === 'home' ? ' is-home' : '')}>
+        <Suspense fallback={<div className="py-24 text-center bz-muted" role="status">جارٍ التحميل…</div>}>
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
-          {/* VIEW: CHILD TROPHIES & ACHIEVEMENTS */}
-          {activeTab === 'trophies' && (
-            <ChildTrophiesView
-              activeStudent={selectedStudent}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-            />
-          )}
-
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
           {activeTab === 'home' && (
             <HomeLandingView
@@ -1867,12 +1856,6 @@ export default function App() {
         )}
 
         {/* NEW: ADAPTIVE REPORTS */}
-        {activeTab === 'adaptive-reports' && (
-          <AdaptiveReports
-            student={selectedStudent}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-          />
-        )}
 
 
 
@@ -1926,6 +1909,7 @@ export default function App() {
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         {activeTab === 'terms' && <TermsOfUseView />}
         </div>
+        </Suspense>
       </main>
 
       <footer className="baseera-footer">

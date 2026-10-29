@@ -50,7 +50,7 @@ export const PrivacyPolicyView: React.FC = () => (
         <ShieldCheck className="h-5 w-5" aria-hidden={true} />
         <span>الخصوصية وحماية البيانات</span>
         <span className="text-slate-400">·</span>
-        <span className="font-medium text-slate-500">آخر تحديث: 27 أكتوبر 2026</span>
+        <span className="font-medium text-slate-500">آخر تحديث: ٢٧ أكتوبر ٢٠٢٦</span>
       </div>
       <h1 className="text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
         سياسة الخصوصية وحوكمة بيانات الأطفال في بصيرة
@@ -68,7 +68,7 @@ export const PrivacyPolicyView: React.FC = () => (
 
     <PolicySection icon={Scale} title="الإطار القانوني والجهة المسؤولة">
       <p>
-        صُممت هذه السياسة بالاسترشاد بأحكام قانون دولة قطر رقم (13) لسنة 2016 بشأن حماية خصوصية البيانات الشخصية، والإرشادات التنظيمية الصادرة عن الوكالة الوطنية للأمن السيبراني (NCSA). وتخضع المنصة لمراجعة قانونية وتنظيمية مستمرة للتحقق من المواءمة التشغيلية قبل الإطلاق التجاري الكامل.
+        صُممت هذه السياسة بالاسترشاد بأحكام قانون دولة قطر رقم (١٣) لسنة ٢٠١٦ بشأن حماية خصوصية البيانات الشخصية، والإرشادات التنظيمية الصادرة عن الوكالة الوطنية للأمن السيبراني (NCSA). وتخضع المنصة لمراجعة قانونية وتنظيمية مستمرة للتحقق من المواءمة التشغيلية قبل الإطلاق التجاري الكامل.
       </p>
       <p>
         <strong>الجهة المسؤولة:</strong> مشروع بصيرة للتقنيات التعليمية (Baseera EdTech) - قيد التأسيس والتحقق التجريبي. وتتحدد صفة «المراقب» و«المعالج» بحسب الاتفاق الفعلي بين المدرسة أو المؤسسة التعليمية ومشغّل المنصة وفق التعليمات الرسمية لمسؤولي الخصوصية.
@@ -88,13 +88,13 @@ export const PrivacyPolicyView: React.FC = () => (
       </div>
       <div className="flex flex-wrap gap-4 text-sm pt-2">
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={QATAR_LAW_URL} target="_blank" rel="noreferrer">
-          قانون حماية خصوصية البيانات الشخصية القطري (13/2016) <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
+          قانون حماية خصوصية البيانات الشخصية القطري (١٣/٢٠١٦) <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={NCSA_GUIDANCE_URL} target="_blank" rel="noreferrer">
           إرشادات الوكالة الوطنية للأمن السيبراني <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
         <a className="inline-flex items-center gap-1 font-bold text-teal-800 underline" href={QATAR_CHILD_DATA_URL} target="_blank" rel="noreferrer">
-          المادة (17): حماية حقوق الأطفال على الإنترنت <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
+          المادة (١٧): حماية حقوق الأطفال على الإنترنت <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
         </a>
       </div>
     </PolicySection>
@@ -170,9 +170,9 @@ export const PrivacyPolicyView: React.FC = () => (
       </ul>
     </PolicySection>
 
-    <PolicySection icon={UserRoundCheck} title="حقوق الأطفال وموافقة ولي الأمر (المادتان 16 و17)">
+    <PolicySection icon={UserRoundCheck} title="حقوق الأطفال وموافقة ولي الأمر (المادتان ١٦ و١٧)">
       <p>
-        يصنّف القانون القطري رقم (13) لسنة 2016 بيانات الأطفال ضمن البيانات الشخصية ذات الطبيعة الخاصة، وقد يتطلب التعامل معها تصريحاً من الجهة المختصة بموجب المادة (16)، كما تفرض المادة (17) متطلبات خاصة بالمواقع الموجهة للأطفال. يجب على مشغّل المنصة التحقق من التصاريح والمتطلبات المنطبقة قبل الإطلاق؛ ولا تثبت هذه السياسة أو خانة الموافقة وحدهما الحصول على تصريح أو اكتمال الامتثال:
+        يصنّف القانون القطري رقم (١٣) لسنة ٢٠١٦ بيانات الأطفال ضمن البيانات الشخصية ذات الطبيعة الخاصة، وقد يتطلب التعامل معها تصريحاً من الجهة المختصة بموجب المادة (١٦)، كما تفرض المادة (١٧) متطلبات خاصة بالمواقع الموجهة للأطفال. يجب على مشغّل المنصة التحقق من التصاريح والمتطلبات المنطبقة قبل الإطلاق؛ ولا تثبت هذه السياسة أو خانة الموافقة وحدهما الحصول على تصريح أو اكتمال الامتثال:
       </p>
       <ul className="list-disc space-y-2 pr-5">
         <li><strong>الإخطار الواضح:</strong> تقديم شرح مبسط وواضح لولي الأمر والطفل حول طبيعة النشاط والبيانات المستخدمة.</li>
@@ -233,7 +233,7 @@ export const PrivacyPolicyView: React.FC = () => (
         <h2>تحديث السياسة</h2>
       </div>
       <p>
-        تخضع هذه السياسة للمراجعة الدورية لضمان استمرار توافقها مع القوانين الوطنية لدولة قطر ومعايير الأمان الدولية للأطفال. النسخة الحالية سارية اعتباراً من 27 أكتوبر 2026.
+        تخضع هذه السياسة للمراجعة الدورية لضمان استمرار توافقها مع القوانين الوطنية لدولة قطر ومعايير الأمان الدولية للأطفال. النسخة الحالية سارية اعتباراً من ٢٧ أكتوبر ٢٠٢٦.
       </p>
     </section>
   </main>

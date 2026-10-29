@@ -1,9 +1,9 @@
 import { toArabicNum } from '../utils/arabicDigits';
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BookOpen, Brain, Dumbbell, Timer } from 'lucide-react';
 import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
-import ReadingAssessmentView from './ReadingAssessmentView';
-import CognitiveScreeningView from './CognitiveScreeningView';
+const ReadingAssessmentView = lazy(() => import('./ReadingAssessmentView'));
+const CognitiveScreeningView = lazy(() => import('./CognitiveScreeningView'));
 import CognitiveBatteryView from './profile/CognitiveBatteryView';
 import { AppTabId } from './HomeLandingView';
 import { TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
@@ -107,6 +107,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
         />
       )}
 
+      <Suspense fallback={<div className="py-16 text-center bz-muted" role="status">جارٍ التحميل…</div>}>
       {subTab === 'oral-reading' && (
         <ReadingAssessmentView
           activeStudent={activeStudent}
@@ -122,6 +123,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           onCompleteScreening={onCompleteCognitiveScreening}
         />
       )}
+      </Suspense>
     </div>
   );
 };
