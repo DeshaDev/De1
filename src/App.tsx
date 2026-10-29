@@ -44,10 +44,8 @@ import {
   BaseeraSessionInfo,
 } from './utils/apiAuth';
 import { AssessmentProvider } from './contexts/AssessmentContext';
-const AdaptiveReports = lazy(() => import('./components/AdaptiveReports'));
 const ReaderPage = lazy(() => import('./components/reader/ReaderPage').then((m) => ({ default: m.ReaderPage })));
 const RemediationGymView = lazy(() => import('./components/RemediationGymView'));
-const ChildTrophiesView = lazy(() => import('./components/ChildTrophiesView'));
 const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHub'));
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
@@ -1022,14 +1020,6 @@ export default function App() {
       <main id="main-content" className={'baseera-main flex-1' + (activeTab === 'home' ? ' is-home' : '')}>
         <Suspense fallback={<div className="py-24 text-center bz-muted" role="status">جارٍ التحميل…</div>}>
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
-          {/* VIEW: CHILD TROPHIES & ACHIEVEMENTS */}
-          {activeTab === 'trophies' && (
-            <ChildTrophiesView
-              activeStudent={selectedStudent}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-            />
-          )}
-
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
           {activeTab === 'home' && (
             <HomeLandingView
@@ -1866,12 +1856,6 @@ export default function App() {
         )}
 
         {/* NEW: ADAPTIVE REPORTS */}
-        {activeTab === 'adaptive-reports' && (
-          <AdaptiveReports
-            student={selectedStudent}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-          />
-        )}
 
 
 

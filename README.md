@@ -11,10 +11,16 @@
 - **البرنامج التدريبي الموجّه:** يُبنى تلقائيًا من نتائج الفحص؛ ٨ سلالم مهارية بثلاثة مستويات، ومعيار إتقان (٨٠٪ في جلستين متتاليتين)، وبنود تدريب جديدة لا تكرر بنود الفحص، ثم إعادة الفحص بعد ٨ أسابيع.
 - **القراءة والفهم:** نصوص عربية متدرجة، مؤقت جلسة، وأسئلة فهم مرتبطة بالنص.
 - **القراءة الجهرية الاختيارية:** يستخدم مسار التقييم الصوتي خدمة Azure Pronunciation Assessment من الخادم عند ضبط بيانات الاعتماد والموافقة الصريحة المنفصلة. تُقبل النتيجة فقط عند اكتمال محاذاة الكلمات وتحقق الخادم؛ لا يعتمد المسار الحالي على تفريغ المتصفح وحده. عند نقص الدليل لا تُختلق درجة WCPM وتظهر النتيجة غير متاحة.
-- **صالة التدريب القرائي (Remediation Gym):** أنشطة تفاعلية لتعزيز صيد الحروف، وتركيب المقاطع الصوتية، وتثبيت الطلاقة عبر مرنان القراءة، والقصص التفاعلية، وتدريب سبرنت اليومي (٥ دقائق).
-- **القارئ الميسّر:** خيارات عرض بصرية مكيفة تدعم تباعد الأسطر وتلوين المقاطع والاستماع للنطق لمساندة تعثر القراءة.
+- **صالة التدريب:** تمرين يومي من ثلاثة أسئلة، وخمس ألعاب للمهارات: صائد الحروف، وتركيب المقاطع، وقصص قصيرة مشكولة حول صوت واحد، وتحدي الدقائق الخمس للطلاقة، والقراءة بإيقاع مريح.
+- **القارئ الميسّر:** قراءة موجّهة تعرض جملة قصيرة واحدة في كل مرة، بخطوات صغيرة: الاستماع، ثم القراءة كلمةً كلمة، ثم القراءة المستقلة، ثم سؤال سريع، ثم أسئلة الفهم وقائمة بالكلمات التي تحتاج تدريبًا. العرض الكامل للنص وتحليل الفروق الإملائية واللهجية متاحان للأخصائي.
 - **المسار التعليمي المتدرج:** يقدّم دروسًا قصيرة للقراءة تستند إلى مبادئ التعليم الصريح تبدأ بنمذجة المهارة ثم ممارسة موجهة مع بنك أسئلة وتغذية راجعة. يتدرج المسار من الوعي بالأصوات إلى فك المقاطع والكلمات والنصوص والفهم. (الألعاب التدريبية الإضافية هي وسائل مساندة وليست برنامج تدخل سريري مكتمل الفاعلية).
-- **مساحة المعلّم والتقارير:** لوحة تحكم مدرسية لعرض مؤشرات الأداء، صلاحيات متعددة (RBAC)، ودعم تصدير ملخصات المتابعة التكوينية المشفرة.
+- **مساحة المعلّم والتقارير:** لوحة مدرسية لسجل الطلاب وتقرير كل طالب، وصلاحيات حسب الدور، وطباعة التقرير.
+
+## وثائق للمراجعين والمستثمرين
+
+- [ملخص للمستثمرين: ما بُني، وما ثبت علميًا وما لم يثبت، وخطة التحقق](docs/INVESTOR_BRIEF_AR.md)
+- [البطارية المعرفية ومبررات الفئة العمرية](docs/COGNITIVE_PROFILE_BATTERY_AR.md)
+- [مراجعة المحتوى والأدوات المستخدمة فيها](docs/CONTENT_REVIEW_AR.md)
 
 ## الخصوصية: لا كاميرا ولا تتبّع للعين
 
@@ -85,7 +91,7 @@ The production build generates a browser bundle in `dist/` and a bundled Node.js
 
 This repository grants no public reuse license. The notice in `LICENSE` does not itself prove ownership; contributor assignments and third-party dependency and asset licenses must be reviewed before investment or commercial distribution. See [`docs/IP_OWNERSHIP_CHECKLIST.md`](docs/IP_OWNERSHIP_CHECKLIST.md) for the required due-diligence checklist.
 
-Playwright browser smoke tests run in CI against the production preview build. They cover selected UI paths but do not replace supervised user testing or independent educational validation.
+Playwright browser tests run in CI against the production preview build: smoke tests of the main paths, and a content audit (`tests/e2e/content-audit.spec.ts`) that reads the visible text of every page on desktop and phone and fails on Western digits, stray English, glued or doubled words, sideways scrolling or runtime errors. They do not replace supervised user testing or independent educational validation.
 
 
 **Live demo & Deployment:** The repository contains a Render Blueprint configuration (`render.yaml` with `autoDeploy: true`), but this does not prove that the Blueprint has been activated or that a public production URL exists. No live URL is confirmed here. Follow [`docs/DEPLOY_RENDER_AR.md`](docs/DEPLOY_RENDER_AR.md) to provision and verify the hosted service before sharing it.

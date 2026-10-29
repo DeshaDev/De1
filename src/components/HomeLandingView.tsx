@@ -40,12 +40,10 @@ export type AppTabId =
   | 'adaptive-reader'
   | 'reading-lab'
   | 'cognitive-lab'
-  | 'adaptive-reports'
   | 'privacy'
   | 'terms'
   | 'sprint'
   | 'storygen'
-  | 'trophies'
   | 'guided-program';
 
 interface HomeLandingViewProps {
@@ -280,7 +278,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             {
               icon: Timer,
               title: 'قبل أن يتعثّر في الصف',
-              body: 'نقيس المهارات التي تسبق القراءة وتتنبأ بها، فيمكن رصد الخطر من عمر أربع سنوات، قبل أن يظهر الفشل القرائي.',
+              body: 'نقيس المهارات التي تسبق القراءة وتتنبأ بها، فتبدأ المتابعة من عمر أربع سنوات، قبل أن يظهر التعثّر في القراءة.',
             },
             {
               icon: Languages,
@@ -353,8 +351,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
           <div className="bz-section-head mb-0">
             <span className="bz-eyebrow">الفحص المعرفي الشامل</span>
-            <h2 className="bz-h2">تسع ألعاب، خمسة مجالات، صورة كاملة</h2>
-            <p className="bz-lead">كل لعبة تقيس مهارة واحدة بدقة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية.</p>
+            <h2 className="bz-h2">تسع ألعاب، خمسة مجالات، صورة واضحة</h2>
+            <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية.</p>
           </div>
           <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={() => onNavigateTab('dyslexia-lab')}>
             جرّب الألعاب <ArrowLeft size={17} aria-hidden="true" />
@@ -385,8 +383,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="lg:sticky lg:top-28">
             <div className="bz-section-head">
               <span className="bz-eyebrow">التقرير</span>
-              <h2 className="bz-h2">تقرير يفهمه المعلم والأسرة، ويثق به الأخصائي</h2>
-              <p className="bz-lead">يظهر أداء الطفل في كل مهارة على مقياس مئيني مقارنةً بأقرانه في العمر، مع تفسير واضح لما تعنيه النتيجة.</p>
+              <h2 className="bz-h2">تقرير يفهمه المعلم والأسرة، ويجد فيه الأخصائي التفاصيل</h2>
+              <p className="bz-lead">يظهر أداء الطفل في كل مهارة مقارنةً بأقرانه في العمر، مع تفسير واضح لما تعنيه النتيجة. المقارنة تقديرية حتى تكتمل دراسة التقنين على أطفال عرب.</p>
             </div>
             <ul className="space-y-4">
               {[
@@ -515,7 +513,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <article className="bz-card bz-card-pad flex flex-col" style={{ borderColor: 'color-mix(in srgb, var(--brand) 40%, transparent)', boxShadow: 'var(--shadow-md)' }}>
               <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand" aria-hidden="true"><Building2 size={22} /></span>
               <h3 className="bz-h3 mt-5">المدارس ومراكز التعلّم</h3>
-              <p className="bz-body mt-2 flex-1">فرز مبكر لصفوف كاملة، ولوحة متابعة للمعلم، وتقارير فردية تساعد على توجيه الدعم لمن يحتاجه أولًا.</p>
+              <p className="bz-body mt-2 flex-1">فرز مبكر لطلاب الصفوف الأولى، ولوحة متابعة للمعلم، وتقارير فردية تساعد على توجيه الدعم لمن يحتاجه أولًا.</p>
               <div className="mt-6 grid gap-2">
                 <button
                   type="button"
@@ -536,7 +534,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <article className="bz-card bz-card-pad flex flex-col">
               <span className="grid place-items-center w-11 h-11 rounded-xl bg-info-soft text-info" aria-hidden="true"><Stethoscope size={22} /></span>
               <h3 className="bz-h3 mt-5">الأخصائيون</h3>
-              <p className="bz-body mt-2 flex-1">درجات خام ومئينات وأزمنة استجابة لكل اختبار، ومؤشرات صلاحية التطبيق، وأدوات تكميلية للقراءة الجهرية.</p>
+              <p className="bz-body mt-2 flex-1">درجات خام ومئينات تقديرية وأزمنة استجابة لكل اختبار، ومؤشرات صلاحية التطبيق، وأدوات تكميلية للقراءة الجهرية.</p>
               <div className="mt-6 grid gap-2">
                 <button type="button" className="bz-btn bz-btn-secondary" onClick={() => onNavigateTab('reading-lab')}>
                   <BookOpen size={17} aria-hidden="true" /> رحلة القراءة والطلاقة
