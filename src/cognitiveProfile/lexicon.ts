@@ -92,16 +92,14 @@ export const LEXICON: Record<string, LexiconEntry> = Object.fromEntries(
 export const LEXICON_IDS = entries.map((entry) => entry.id);
 
 /**
- * Words whose picture a young child would not name with that word (e.g. 🏖️ for «صَيْف»,
- * which children call «بَحْر» or «شَاطِئ»). They are used in listening-only items, never as
- * pictures in training tasks.
+ * Words kept for listening items but not shown as pictures to name, because children call the
+ * picture something else:
+ * - 🏖️ is «بحر» or «شاطئ» to a child, not «صَيْف».
+ * - The window is «دريشة» in Gulf Arabic, not «شُبّاك» (Khwaileh, Mustafawi, Herbert & Howard, 2018,
+ *   Behavior Research Methods, Table 1).
+ * - 👄 shows lips: 80% of Gulf speakers named a lips drawing «شفايف», not «فم» (same norms; see gulfNorms.ts).
  */
-/**
- * Words kept for listening items but not shown as pictures to name: «صيف» is not what a child
- * calls a beach picture, and the window is «دريشة» in Gulf Arabic, not «شُبّاك»
- * (Khwaileh, Mustafawi, Herbert & Howard, 2018, Behavior Research Methods, Table 1).
- */
-export const NOT_PICTURABLE = new Set(['summer', 'window']);
+export const NOT_PICTURABLE = new Set(['summer', 'window', 'mouth']);
 
 /**
  * Picture pairs a young child may call by the same name. They never appear together in one

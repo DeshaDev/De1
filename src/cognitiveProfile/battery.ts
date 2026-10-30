@@ -494,7 +494,9 @@ export const BATTERY: Subtest[] = [
       rhymeItem('rh-3', 'camel', ['honey', 'house', 'key'], 'honey'),
       rhymeItem('rh-4', 'horse', ['rabbit', 'dress', 'grapes'], 'dress'),
       rhymeItem('rh-5', 'lion', ['duck', 'banana', 'hand'], 'hand'),
-      rhymeItem('rh-6', 'drum', ['rope', 'carrot', 'pen'], 'rope'),
+      // rh-6 was «طبل ← حبل». In the Gulf norms «طبل» has a late estimated age of acquisition (4.0 ≈ 7–8 years)
+      // and 59% name agreement, and «حبل» is not normed. «أرنب/عنب» are both early (≈3) with 100% agreement.
+      rhymeItem('rh-6', 'rabbit', ['grapes', 'carrot', 'pen'], 'grapes'),
       rhymeItem('rh-7', 'tree', ['bear', 'cow', 'book'], 'cow'),
       rhymeItem('rh-8', 'ball', ['elephant', 'moon', 'corn'], 'corn'),
     ],
@@ -526,8 +528,9 @@ export const BATTERY: Subtest[] = [
       codaItem('ph-6', 'sun', ['fish', 'bell', 'moon'], 'bell'),
       // ph-7 was «ديك → شبّاك». In Gulf Arabic the window is «دريشة» and ك is often affricated
       // (سمكة → سمچة) (Khwaileh et al., 2018, Table 1), so a Gulf child could miss it for dialect
-      // reasons. Replaced with words named the same across dialects; ل is stable in all of them.
-      codaItem('ph-7', 'elephant', ['lion', 'house', 'drum'], 'drum'),
+      // reasons. The answer is «جمل», not «طبل»: in the same norms «طبل» is late (age of acquisition 4.0)
+      // with 59% name agreement, while «جمل» is 3.2 with 100%. ل is stable in all dialects.
+      codaItem('ph-7', 'elephant', ['lion', 'house', 'camel'], 'camel'),
       blendItem('ph-8', 'rabbit', ['lion', 'rabbit', 'grapes']),
       blendItem('ph-9', 'turtle', ['turtle', 'fish', 'frog']),
       blendItem('ph-10', 'orange', ['apple', 'cow', 'orange']),

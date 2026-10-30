@@ -187,3 +187,45 @@ describe('training plan follows the evidence on memory training', () => {
     assert.deepEqual([...mixed.focus].sort(), ['letterSound', 'rhyme']);
   });
 });
+
+describe('word familiarity in scored items (Gulf Arabic norms, Khwaileh et al., 2018)', () => {
+  /**
+   * «قلب» (ad-11, ad-14) is kept on purpose: its late age-of-acquisition rating conflicts with 100%
+   * name agreement and high familiarity, and no other lexicon pair tests ك/ق. It is checked in the
+   * child pilot instead (docs/CONTENT_REVIEW_AR.md §6).
+   */
+  const KEPT_DESPITE_LATE_RATING = new Set(['heart']);
+
+  it('no scored item uses a word rated as acquired at 7–8 years or later', async () => {
+    const { GULF_NORMS, LATE_AGE_OF_ACQUISITION } = await import('./gulfNorms');
+    const byEmoji = new Map(LEXICON_IDS.map((id) => [LEXICON[id].emoji, id]));
+    const late: string[] = [];
+    const check = (where: string, id: string | undefined) => {
+      const n = id ? GULF_NORMS[id] : undefined;
+      if (id && n && n.ageOfAcquisition >= LATE_AGE_OF_ACQUISITION && !KEPT_DESPITE_LATE_RATING.has(id)) late.push(`${where}: ${id}`);
+    };
+    for (const s of BATTERY) {
+      if (s.kind === 'choice') {
+        for (const item of s.items) {
+          if (item.stimulus?.type === 'emoji') check(item.id, byEmoji.get(item.stimulus.value));
+          for (const o of item.options) if (LEXICON[o.id]) check(item.id, o.id);
+        }
+      } else if (s.kind === 'span') {
+        for (const t of s.trials) [...t.sequence, ...t.choices].forEach((id) => check(t.id, id));
+      } else if (s.kind === 'association') {
+        for (const b of s.blocks) b.residents.forEach((id) => check(b.id, id));
+      }
+    }
+    assert.deepEqual(late, []);
+  });
+
+  it('norms are recorded only for lexicon words, with values inside the published scales', async () => {
+    const { GULF_NORMS } = await import('./gulfNorms');
+    for (const [id, n] of Object.entries(GULF_NORMS)) {
+      assert.ok(LEXICON[id], id);
+      assert.ok(n.nameAgreement > 0 && n.nameAgreement <= 1, id);
+      assert.ok(n.ageOfAcquisition >= 1 && n.ageOfAcquisition <= 7, id);
+      assert.ok(n.familiarity >= 1 && n.familiarity <= 5, id);
+    }
+  });
+});
