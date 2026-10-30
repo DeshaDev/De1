@@ -6,6 +6,7 @@
  */
 import { BATTERY, type ChoiceItem, type Visual } from '../cognitiveProfile/battery';
 import { LEXICON } from '../cognitiveProfile/lexicon';
+import { GULF_NORMS, LATE_AGE_OF_ACQUISITION, LOW_NAME_AGREEMENT } from '../cognitiveProfile/gulfNorms';
 import { SKILLS, generateSession, type Level, type SkillId } from '../cognitiveProfile/training';
 import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META } from '../cognitiveProfile/guidance';
 import { buildAudioCatalog } from '../cognitiveProfile/audioCatalog';
@@ -99,22 +100,56 @@ function choiceUnit(prefix: string, section: ReviewSection, title: string, subti
  * norms (Khwaileh et al., 2018), and the items stay unchanged until checked with children
  * or against those norms.
  */
+/**
+ * Reviewer notes on word familiarity and picture naming. Where the Gulf norms
+ * (Khwaileh et al., 2018; see `gulfNorms.ts`) cover a word, the note states what the data shows.
+ * Words without data are marked as such and stay hypotheses until checked.
+ */
 const FAMILIARITY_NOTES: Record<string, string> = {
-  dog: 'في بعض لهجات الخليج والعراق تُنطق الكاف «چ» (چلب)، فقد يختلف الصوت الأول لدى الطفل في البند ph-4. يحتاج تحققًا من لهجة الطفل.',
-  sword: 'الصورة خنجر؛ قد يسمّيه الطفل «سكين».',
-  mouth: 'الصورة شفتان؛ قد يقول الطفل «شفايف» لا «فم».',
+  dog: 'بيانات الخليج تذكر النطق «تشلب» (چلب)، مع أن المشاركين سمّوا الصورة «كلب». في البند ph-4 يسمع الطفل «كَلْب» من التطبيق؛ يُراجع أداء أطفال الخليج عليه في تجربة الملاءمة.',
+  heart: 'عمر الاكتساب التقديري متأخر (٥٫٥ ≈ ٩–١٠ سنوات)، مع أن كل المشاركين سمّوا رسم القلب نفسه «قلب» والألفة عالية (٤٫٢ من ٥). التقدير يتعارض مع بقية المؤشرات، ولا يوجد في المعجم زوج آخر للتمييز بين ك/ق؛ لذلك يبقى البندان ad-11 وad-14 ويُفحصان في تجربة الملاءمة.',
+  drum: 'عمر الاكتساب التقديري متأخر (٤٫٠ ≈ ٧–٨ سنوات) واتفاق التسمية ٥٩٪؛ لذلك أُزيل من البندين المحتسبين rh-6 وph-7، وبقي في تمارين البرنامج.',
+  flag: 'عمر الاكتساب التقديري متأخر (٤٫٠). يظهر في بندين تدريبيين (rh-p1 وph-p2) وفي مثال التعليمة «قلم وعلم»، لا في بند محتسب.',
+  moon: 'رسم البدر في الدراسة سمّاه ٤٥٪ فقط «قمر»، وصورة بصيرة 🌙 هلال، فقد يقول الطفل «هلال». في البنود المحتسبة يسمع الطفل الكلمة من التطبيق.',
+  mouth: 'مؤكَّد: رسم الشفتين سمّاه ٨٠٪ «شفايف» لا «فم»؛ لذلك لم تعد الكلمة تُعرض صورةً في تمارين البرنامج.',
+  banana: 'الاسم الأشيع لرسم الموز «موزة» (٥٧٪)، وهو يغيّر الصوت الأخير. في البنود المحتسبة يسمع الطفل «موز» من التطبيق ولا يُطلب منه تسمية الصورة.',
+  orange: 'اتفاق التسمية ٤١٪ فقط (برتقالة/برتقال). يُستخدم في بند تركيب المقاطع ph-10، والطفل يسمع المقاطع من التطبيق.',
+  boat: 'رسم القارب الشراعي اتفق ٤١٪ فقط على اسمه (الأشيع «قارب»). لا يُستخدم في بند محتسب.',
+  carrot: 'في الخليج «يزر»: الصوت الأول «ي» لا «ج». لا يُستخدم صوته الأول في بند محتسب.',
+  tree: 'في الخليج «شيرة» (ج ← ي). الصوت الأول «ش» لا يتغير.',
+  fish: 'في الخليج «سمتشة» (ك ← چ)، فيتغير الصوت الأخير. في البند ph-6 هي مشتِّت فقط.',
+  sword: 'صورة بصيرة خنجر 🗡️، والدراسة رسمت سيفًا؛ قد يسمّي الطفل الخنجر «سكين». عمر الاكتساب التقديري ٣٫٨ (قرب ٧ سنوات). مستخدمة في البند ad-13.',
+  fox: 'الألفة ٣٫٠ من ٥ (من الأدنى في المعجم). يُستخدم في لعبة الذاكرة الترابطية دون أن يُطلب من الطفل تسميته.',
   window: 'مؤكَّد: في الخليج «دريشة» (Khwaileh et al., 2018، الجدول ١)؛ لذلك لم تعد تُعرض صورةً للتسمية، واستُبدل البند ph-7.',
-  umbrella: 'في الخليج تُسمّى غالبًا «شمسية».',
-  turtle: 'قد تُسمّى «حمسة» في بعض لهجات الخليج.',
-  fox: 'قد يخلطه الطفل الصغير بالكلب.',
-  snow: '«ثلج» في الخليج تعني غالبًا مكعبات الثلج؛ صورة ندفة الثلج قد لا يسمّيها الطفل.',
-  rope: 'الصورة عقدة حبل، وقد لا يتعرّف عليها الطفل الصغير.',
-  boat: 'قد يقول الطفل «سفينة» أو «مركب».',
-  honey: 'الصورة جرّة؛ قد يقول الطفل «جرّة» أو «مرطبان».',
-  rooster: 'قد يسمّي الطفل الديك «دجاجة»؛ تحقق ألّا يظهرا معًا في سؤال واحد.',
-  chicken: 'قد يسمّي الطفل الدجاجة «ديك»؛ تحقق ألّا يظهرا معًا في سؤال واحد.',
-  summer: 'لا تُسمّى الصورة «صيف» عادةً (يقول الطفل «بحر» أو «شاطئ»)؛ مستخدمة في بند الاستماع فقط.',
+  rooster: 'الاسم الخليجي «ديتش» (ك ← چ). قد يسمّي الطفل الديك «دجاجة»؛ لذلك لا يظهران معًا في سؤال واحد.',
+  chicken: 'الاسم الخليجي «دياية» (ج ← ي). قد يسمّي الطفل الدجاجة «ديك»؛ لذلك لا يظهران معًا في سؤال واحد.',
+  snow: 'لا بيانات في معايير الخليج. «ثلج» في الخليج تعني غالبًا مكعبات الثلج؛ صورة ندفة الثلج قد لا يسمّيها الطفل.',
+  rope: 'لا بيانات في معايير الخليج. الصورة عقدة حبل، وقد لا يتعرّف عليها الطفل الصغير.',
+  honey: 'لا بيانات في معايير الخليج. الصورة جرّة؛ قد يقول الطفل «جرّة» أو «مرطبان».',
+  summer: 'لا بيانات في معايير الخليج. لا تُسمّى الصورة «صيف» عادةً (يقول الطفل «بحر» أو «شاطئ»)؛ مستخدمة في بند الاستماع فقط.',
 };
+
+/** One line summarising the Gulf norms for a word, for the reviewer. */
+function gulfNormsText(id: string): string {
+  const n = GULF_NORMS[id];
+  if (!n) return 'غير موجودة في قاعدة بيانات الخليج.';
+  const fixed = (v: number) => ar(v.toFixed(1)).replace('.', '٫');
+  return [
+    `الاسم الخليجي: ${n.gulfForm}`,
+    `الاسم الأشيع لرسم الدراسة: ${n.modalName} (${ar(Math.round(n.nameAgreement * 100))}٪)`,
+    `عمر الاكتساب التقديري: ${fixed(n.ageOfAcquisition)} من ٧ (٣ = ٥–٦ سنوات، ٤ = ٧–٨)`,
+    `الألفة: ${fixed(n.familiarity)} من ٥`,
+  ].join(' · ');
+}
+
+function gulfNormsFlags(id: string): string[] {
+  const n = GULF_NORMS[id];
+  if (!n) return [];
+  const flags: string[] = [];
+  if (n.ageOfAcquisition >= LATE_AGE_OF_ACQUISITION) flags.push('معايير الخليج — عمر الاكتساب التقديري متأخر لطفل في الرابعة أو الخامسة.');
+  if (n.nameAgreement < LOW_NAME_AGREEMENT) flags.push('معايير الخليج — اتفاق منخفض على اسم الصورة.');
+  return flags;
+}
 
 export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { status: string; recognized: string } }> }): ReviewUnit[] {
   const units: ReviewUnit[] = [];
@@ -130,8 +165,9 @@ export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { sta
         { labelAr: 'المقاطع', text: e.syllables.join(' · ') },
         { labelAr: 'الصوت الأول', text: e.onset },
         { labelAr: 'الصوت الأخير', text: e.coda ?? '— (تاء مربوطة)' },
+        { labelAr: 'معايير الخليج (Khwaileh et al., 2018)', text: gulfNormsText(e.id) },
       ],
-      flagsAr: FAMILIARITY_NOTES[e.id] ? [`للتحقق — ${FAMILIARITY_NOTES[e.id]}`] : [],
+      flagsAr: [...gulfNormsFlags(e.id), ...(FAMILIARITY_NOTES[e.id] ? [`للتحقق — ${FAMILIARITY_NOTES[e.id]}`] : [])],
     });
   }
 
