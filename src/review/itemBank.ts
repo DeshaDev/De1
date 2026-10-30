@@ -92,6 +92,30 @@ function choiceUnit(prefix: string, section: ReviewSection, title: string, subti
   };
 }
 
+/**
+ * Name-agreement risks to check first (a child may name the picture with another word, or
+ * the word differs in Gulf dialects). These are hypotheses for the reviewer, not decisions:
+ * name agreement is the strongest predictor of picture-naming success in the Gulf Arabic
+ * norms (Khwaileh et al., 2018), and the items stay unchanged until checked with children
+ * or against those norms.
+ */
+const FAMILIARITY_NOTES: Record<string, string> = {
+  dog: 'في بعض لهجات الخليج والعراق تُنطق الكاف «چ» (چلب)، فقد يختلف الصوت الأول لدى الطفل في البند ph-4. يحتاج تحققًا من لهجة الطفل.',
+  sword: 'الصورة خنجر؛ قد يسمّيه الطفل «سكين».',
+  mouth: 'الصورة شفتان؛ قد يقول الطفل «شفايف» لا «فم».',
+  window: 'مؤكَّد: في الخليج «دريشة» (Khwaileh et al., 2018، الجدول ١)؛ لذلك لم تعد تُعرض صورةً للتسمية، واستُبدل البند ph-7.',
+  umbrella: 'في الخليج تُسمّى غالبًا «شمسية».',
+  turtle: 'قد تُسمّى «حمسة» في بعض لهجات الخليج.',
+  fox: 'قد يخلطه الطفل الصغير بالكلب.',
+  snow: '«ثلج» في الخليج تعني غالبًا مكعبات الثلج؛ صورة ندفة الثلج قد لا يسمّيها الطفل.',
+  rope: 'الصورة عقدة حبل، وقد لا يتعرّف عليها الطفل الصغير.',
+  boat: 'قد يقول الطفل «سفينة» أو «مركب».',
+  honey: 'الصورة جرّة؛ قد يقول الطفل «جرّة» أو «مرطبان».',
+  rooster: 'قد يسمّي الطفل الديك «دجاجة»؛ تحقق ألّا يظهرا معًا في سؤال واحد.',
+  chicken: 'قد يسمّي الطفل الدجاجة «ديك»؛ تحقق ألّا يظهرا معًا في سؤال واحد.',
+  summer: 'لا تُسمّى الصورة «صيف» عادةً (يقول الطفل «بحر» أو «شاطئ»)؛ مستخدمة في بند الاستماع فقط.',
+};
+
 export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { status: string; recognized: string } }> }): ReviewUnit[] {
   const units: ReviewUnit[] = [];
 
@@ -107,7 +131,7 @@ export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { sta
         { labelAr: 'الصوت الأول', text: e.onset },
         { labelAr: 'الصوت الأخير', text: e.coda ?? '— (تاء مربوطة)' },
       ],
-      flagsAr: [],
+      flagsAr: FAMILIARITY_NOTES[e.id] ? [`للتحقق — ${FAMILIARITY_NOTES[e.id]}`] : [],
     });
   }
 

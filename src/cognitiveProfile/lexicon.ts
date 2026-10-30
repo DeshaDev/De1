@@ -96,7 +96,23 @@ export const LEXICON_IDS = entries.map((entry) => entry.id);
  * which children call «بَحْر» or «شَاطِئ»). They are used in listening-only items, never as
  * pictures in training tasks.
  */
-export const NOT_PICTURABLE = new Set(['summer']);
+/**
+ * Words kept for listening items but not shown as pictures to name: «صيف» is not what a child
+ * calls a beach picture, and the window is «دريشة» in Gulf Arabic, not «شُبّاك»
+ * (Khwaileh, Mustafawi, Herbert & Howard, 2018, Behavior Research Methods, Table 1).
+ */
+export const NOT_PICTURABLE = new Set(['summer', 'window']);
+
+/**
+ * Picture pairs a young child may call by the same name. They never appear together in one
+ * question, because the answer would change with the name the child uses (name agreement is
+ * the strongest predictor of picture naming; Khwaileh et al., 2018, Gulf Arabic norms).
+ */
+export const PICTURE_SYNONYMS: Array<[string, string]> = [
+  ['horse', 'mare'],
+  ['rooster', 'chicken'],
+];
+export const showsSynonymPair = (ids: string[]) => PICTURE_SYNONYMS.some(([a, b]) => ids.includes(a) && ids.includes(b));
 export const PICTURE_IDS = LEXICON_IDS.filter((id) => !NOT_PICTURABLE.has(id));
 
 export function lex(id: string): LexiconEntry {

@@ -524,7 +524,10 @@ export const BATTERY: Subtest[] = [
       onsetItem('ph-4', 'dog', ['tree', 'ball', 'camel'], 'ball'),
       codaItem('ph-5', 'book', ['bear', 'house', 'elephant'], 'bear'),
       codaItem('ph-6', 'sun', ['fish', 'bell', 'moon'], 'bell'),
-      codaItem('ph-7', 'rooster', ['dog', 'window', 'bear'], 'window'),
+      // ph-7 was «ديك → شبّاك». In Gulf Arabic the window is «دريشة» and ك is often affricated
+      // (سمكة → سمچة) (Khwaileh et al., 2018, Table 1), so a Gulf child could miss it for dialect
+      // reasons. Replaced with words named the same across dialects; ل is stable in all of them.
+      codaItem('ph-7', 'elephant', ['lion', 'house', 'drum'], 'drum'),
       blendItem('ph-8', 'rabbit', ['lion', 'rabbit', 'grapes']),
       blendItem('ph-9', 'turtle', ['turtle', 'fish', 'frog']),
       blendItem('ph-10', 'orange', ['apple', 'cow', 'orange']),

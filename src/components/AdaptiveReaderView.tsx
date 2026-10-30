@@ -828,7 +828,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
             <div className="pb-3 border-b border-slate-200">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
                 <Sliders className="w-3.5 h-3.5 text-[#0284C7]" />
-                <span>تخصيص الراحة البصرية</span>
+                <span>شكل النص</span>
               </div>
               <h3 className="text-base font-bold text-slate-900">
                 إعدادات الخط والتباعد البصري
@@ -1060,7 +1060,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
             {/* Irlen Visual Comfort Themes */}
             <div className="pt-3 border-t border-slate-200">
               <div className="text-xs font-medium text-slate-700 mb-2">
-                لون خلفية القراءة (مرشحات الراحة البصرية):
+                لون خلفية القراءة (اختر ما يريح عين الطفل؛ تغيير اللون لا يعالج عسر القراءة):
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[

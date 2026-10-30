@@ -5,7 +5,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { LEXICON, LEXICON_IDS, dialectMerged, lex } from './lexicon';
+import { LEXICON, LEXICON_IDS, PICTURE_SYNONYMS, dialectMerged, lex } from './lexicon';
 import { BATTERY } from './battery';
 import { SKILLS, generateSession, type Level, type SkillId } from './training';
 
@@ -83,8 +83,6 @@ describe('picture lexicon', () => {
   });
 });
 
-/** Pairs whose pictures a child could name with the other word. */
-export const PICTURE_SYNONYMS: Array<[string, string]> = [['horse', 'mare']];
 
 describe('items built from the lexicon', () => {
   const byEmoji = new Map(Object.values(LEXICON).map((e) => [e.emoji, e.id]));
@@ -163,5 +161,29 @@ describe('content review bank', () => {
       if (s.kind === 'span') for (const t of [...s.practice, ...s.trials]) assert.ok(ids.has(`battery.${s.id}.${t.id}`), t.id);
     }
     for (const id of LEXICON_IDS) assert.ok(ids.has(`lexicon.${id}`), id);
+  });
+});
+
+describe('fixed pictures', () => {
+  it('every lexicon word and game picture has a bundled drawing (same on every device)', async () => {
+    const fs = await import('node:fs');
+    const { pictureFile, UI_PICTURES } = await import('./pictures');
+    const missing = [...Object.values(LEXICON).map((e) => e.emoji), ...UI_PICTURES].filter(
+      (emoji) => !fs.existsSync(`public/pictures/${pictureFile(emoji)}`)
+    );
+    assert.deepEqual(missing, []);
+  });
+});
+
+describe('training plan follows the evidence on memory training', () => {
+  it('never chooses memory as a training goal, and keeps phonological and letter skills', async () => {
+    const { buildTrainingPlan, NOT_TRAINED_AS_FOCUS } = await import('./training');
+    const plan = (weaknesses: string[]) => buildTrainingPlan({ weaknesses } as never);
+    const onlyMemory = plan(['auditorySequential', 'visualSequential']);
+    assert.deepEqual([...onlyMemory.focus].sort(), ['blending', 'letterSound']);
+    assert.ok(onlyMemory.rationaleAr.some((t) => t.includes('الذاكرة')));
+    const mixed = plan(['visualAssociative', 'rhyme', 'letterSound']);
+    assert.ok(mixed.focus.every((s) => !NOT_TRAINED_AS_FOCUS.has(s)));
+    assert.deepEqual([...mixed.focus].sort(), ['letterSound', 'rhyme']);
   });
 });

@@ -1,3 +1,4 @@
+import { pictureUrl } from '../../cognitiveProfile/pictures';
 import { PHRASES, palThis, palWhere, palYes } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useRef, useState } from 'react';
 import { Volume2, Undo2, Play } from 'lucide-react';
@@ -12,13 +13,27 @@ const PRAISE = PHRASES.praise;
 // ---------------------------------------------------------------------------
 // Shared visuals
 // ---------------------------------------------------------------------------
+/** A fixed drawing (same on every device), sized by the surrounding font size like an emoji. */
+export function Pic({ emoji, label }: { emoji: string; label?: string }) {
+  return (
+    <img
+      src={pictureUrl(emoji)}
+      alt={label ?? ''}
+      aria-hidden={label ? undefined : true}
+      draggable={false}
+      className="inline-block align-middle select-none"
+      style={{ width: '1em', height: '1em' }}
+    />
+  );
+}
+
 export function VisualView({ visual, size = 'md' }: { visual: Visual; size?: 'sm' | 'md' | 'lg' }) {
   const emojiSize = size === 'lg' ? 'text-7xl sm:text-8xl' : size === 'md' ? 'text-5xl sm:text-6xl' : 'text-3xl';
   switch (visual.type) {
     case 'emoji':
       return (
-        <span className={`${emojiSize} leading-none select-none`} role="img" aria-label={visual.label}>
-          {visual.value}
+        <span className={`${emojiSize} leading-none select-none`}>
+          <Pic emoji={visual.value} label={visual.label} />
         </span>
       );
     case 'glyph':
@@ -34,14 +49,14 @@ export function VisualView({ visual, size = 'md' }: { visual: Visual; size?: 'sm
     case 'count':
       return (
         <span className="flex flex-col items-center gap-1" aria-label={`${visual.value}`}>
-          <span className="text-2xl leading-none">{'🥁'.repeat(visual.value)}</span>
+          <span className="text-2xl leading-none flex gap-0.5">{Array.from({ length: visual.value }, (_, i) => <Pic key={i} emoji="🥁" />)}</span>
           <span className="text-2xl font-black text-slate-800">{['١', '٢', '٣', '٤', '٥'][visual.value - 1]}</span>
         </span>
       );
     case 'sameDifferent':
       return (
         <span className="flex flex-col items-center gap-2">
-          <span className="text-5xl leading-none">{visual.value === 'same' ? '🟰' : '↔️'}</span>
+          <span className="text-5xl leading-none"><Pic emoji={visual.value === 'same' ? '🟰' : '↔️'} /></span>
           <span className="font-child text-base font-black text-slate-800">{visual.label}</span>
         </span>
       );
@@ -263,8 +278,8 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
           </button>
         )}
         {phase === 'present' && modality === 'visual' && shown && (
-          <span className="text-8xl animate-fade-slide-up" role="img" aria-label="صورة">
-            {lex(shown).emoji}
+          <span className="text-8xl animate-fade-slide-up">
+            <Pic emoji={lex(shown).emoji} label="صورة" />
           </span>
         )}
         {phase === 'present' && modality === 'auditory' && (
@@ -288,7 +303,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
                     showTruth ? (given === expected ? 'border-emerald-500' : 'border-rose-400') : given ? 'border-brand' : 'border-dashed border-slate-300'
                   }`}
                 >
-                  {showTruth && given !== expected ? lex(expected).emoji : given ? lex(given).emoji : <span className="text-base font-black text-slate-300">{i + 1}</span>}
+                  {showTruth && given !== expected ? <Pic emoji={lex(expected).emoji} /> : given ? <Pic emoji={lex(given).emoji} /> : <span className="text-base font-black text-slate-300">{i + 1}</span>}
                 </div>
               );
             })}
@@ -315,7 +330,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
                 aria-label={lex(id).word}
                 className="min-h-[88px] rounded-3xl border-[3px] border-slate-200 bg-white text-5xl shadow-sm hover:border-brand cursor-pointer disabled:cursor-default"
               >
-                {lex(id).emoji}
+                <Pic emoji={lex(id).emoji} />
               </button>
             ))}
           </div>
@@ -400,7 +415,7 @@ export function AssociationPlayer({ block, showFeedback, onDone }: AssociationPl
       {phase === 'query' && (
         <div className="flex flex-col items-center gap-2">
           <div className="w-28 h-28 rounded-full bg-amber-50 border-4 border-amber-300 flex items-center justify-center text-6xl">
-            {lex(currentResident).emoji}
+            <Pic emoji={lex(currentResident).emoji} label={lex(currentResident).word} />
           </div>
           <p className="font-child text-lg font-black text-slate-800">أين بيت هذا الحيوان؟</p>
         </div>
@@ -427,13 +442,13 @@ export function AssociationPlayer({ block, showFeedback, onDone }: AssociationPl
               aria-label={`البيت ${i + 1}`}
               className={`flex flex-col items-center cursor-pointer disabled:cursor-default rounded-2xl ${flashRing}`}
             >
-              <span className="text-5xl leading-none -mb-1" aria-hidden="true">🔺</span>
+              <span className="text-5xl leading-none -mb-1" aria-hidden="true"><Pic emoji="🔺" /></span>
               <span
                 className="w-20 h-24 sm:w-24 sm:h-28 rounded-b-xl flex items-end justify-center pb-2 border-4 border-white shadow-md"
                 style={{ backgroundColor: DOOR_COLORS[i] }}
               >
                 <span className="w-14 h-16 sm:w-16 sm:h-20 rounded-t-full bg-white/90 flex items-center justify-center text-4xl">
-                  {isOpen ? lex(resident).emoji : '🚪'}
+                  {isOpen ? <Pic emoji={lex(resident).emoji} /> : <Pic emoji="🚪" />}
                 </span>
               </span>
             </button>
