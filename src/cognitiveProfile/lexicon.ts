@@ -96,7 +96,12 @@ export const LEXICON_IDS = entries.map((entry) => entry.id);
  * which children call «بَحْر» or «شَاطِئ»). They are used in listening-only items, never as
  * pictures in training tasks.
  */
-export const NOT_PICTURABLE = new Set(['summer']);
+/**
+ * Words kept for listening items but not shown as pictures to name: «صيف» is not what a child
+ * calls a beach picture, and the window is «دريشة» in Gulf Arabic, not «شُبّاك»
+ * (Khwaileh, Mustafawi, Herbert & Howard, 2018, Behavior Research Methods, Table 1).
+ */
+export const NOT_PICTURABLE = new Set(['summer', 'window']);
 
 /**
  * Picture pairs a young child may call by the same name. They never appear together in one
