@@ -46,7 +46,8 @@ export type AppTabId =
   | 'sprint'
   | 'storygen'
   | 'guided-program'
-  | 'content-review';
+  | 'content-review'
+  | 'parent-portal';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];

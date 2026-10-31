@@ -27,6 +27,9 @@ import {
   RefreshCw,
   Target,
   Dumbbell,
+  Heart,
+  Baby,
+  UserPlus,
 } from 'lucide-react';
 import {
   INITIAL_STUDENTS,
@@ -62,6 +65,7 @@ const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
 const TermsOfUseView = lazy(() => import('./components/TermsOfUseView'));
 const ContentReviewView = lazy(() => import('./components/review/ContentReviewView'));
+import { ParentPortalView } from './components/ParentPortalView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -73,17 +77,106 @@ type ActiveTab = AppTabId;
 
 type DashboardSubView = 'roster' | 'report' | 'demo_requests' | 'metrics';
 
+function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
+  if (typeof window === 'undefined') return { tab: 'home' };
+  const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+  const params = new URLSearchParams(window.location.search);
+
+  if (rawPath === '/signin' || rawPath === '/login') {
+    return { tab: 'home', showLogin: true };
+  }
+  if (
+    rawPath === '/parent' ||
+    rawPath === '/register-child' ||
+    rawPath === '/child' ||
+    rawPath === '/family'
+  ) {
+    return { tab: 'parent-portal' };
+  }
+  if (rawPath === '/screening' || rawPath === '/dyslexia-lab') {
+    return { tab: 'dyslexia-lab' };
+  }
+  if (rawPath === '/training' || rawPath === '/guided-program') {
+    return { tab: 'guided-program' };
+  }
+  if (rawPath === '/gym' || rawPath === '/remediation-gym') {
+    return { tab: 'remediation-gym' };
+  }
+  if (rawPath === '/reader' || rawPath === '/adaptive-reader') {
+    return { tab: 'adaptive-reader' };
+  }
+  if (rawPath === '/dashboard' || rawPath === '/report') {
+    return { tab: 'dashboard' };
+  }
+  if (rawPath === '/privacy') {
+    return { tab: 'privacy' };
+  }
+  if (rawPath === '/terms') {
+    return { tab: 'terms' };
+  }
+  if (rawPath === '/review' || params.get('review') === '1') {
+    return { tab: 'content-review' };
+  }
+
+  // Fallback to query params
+  if (params.get('tab') === 'dashboard' || params.get('autostart') === '1') {
+    return { tab: 'dashboard' };
+  }
+  if (params.get('tab') === 'parent') {
+    return { tab: 'parent-portal' };
+  }
+  return { tab: 'home' };
+}
+
+function tabToUrlPath(tab: ActiveTab): string {
+  switch (tab) {
+    case 'home':
+      return '/';
+    case 'parent-portal':
+      return '/parent';
+    case 'dyslexia-lab':
+      return '/screening';
+    case 'guided-program':
+      return '/training';
+    case 'remediation-gym':
+      return '/gym';
+    case 'adaptive-reader':
+      return '/reader';
+    case 'dashboard':
+      return '/dashboard';
+    case 'privacy':
+      return '/privacy';
+    case 'terms':
+      return '/terms';
+    case 'content-review':
+      return '/review';
+    default:
+      return '/';
+  }
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('autostart') === '1' || params.get('tab') === 'dashboard') {
-        return 'dashboard';
-      }
-      if (params.get('review') === '1') return 'content-review';
+  const initialRoute = parseRouteFromLocation();
+  const [activeTab, setActiveTabState] = useState<ActiveTab>(initialRoute.tab);
+  const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(initialRoute.showLogin || false);
+
+  const setActiveTab = (tab: ActiveTab) => {
+    setActiveTabState(tab);
+    const newPath = tabToUrlPath(tab);
+    if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
     }
-    return 'home';
-  });
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseRouteFromLocation();
+      setActiveTabState(route.tab);
+      if (route.showLogin) setShowBaseeraLogin(true);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // One anonymous visit per browser session (see utils/usageTracking).
   useEffect(() => {
@@ -113,7 +206,6 @@ export default function App() {
     useState<BaseeraSessionInfo | null>(() => getStoredBaseeraSession());
   const [pendingServerRecord, setPendingServerRecord] =
     useState<StudentRecord | null>(null);
-  const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(false);
   const [baseeraAccessCode, setBaseeraAccessCode] = useState<string>('');
   const [baseeraLoginError, setBaseeraLoginError] = useState<string>('');
   const [isBaseeraLoggingIn, setIsBaseeraLoggingIn] = useState<boolean>(false);
@@ -647,6 +739,65 @@ export default function App() {
     return learner.id;
   };
 
+  /** Parent portal child registration handler */
+  const handleRegisterChildByParent = (child: {
+    name: string;
+    ageYears: number;
+    gradeLevel: number;
+    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine';
+    notes?: string;
+  }): string => {
+    const recordedAt = new Date().toISOString();
+    const newLearner: StudentRecord = {
+      id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
+      name: child.name,
+      isDemoRecord: false,
+      sessionStatus: 'in_progress',
+      sessionRoleLabel: 'ولي الأمر / فحص منزلي',
+      assessmentHistory: [],
+      cognitiveBattery: null,
+      trainingProgress: null,
+      gradeLevel: child.gradeLevel,
+      ageYears: child.ageYears,
+      dialectCode: child.dialectCode,
+      schoolName: supabaseUser
+        ? `حساب ولي الأمر (${supabaseUser.user_metadata?.full_name || supabaseUser.email || 'Google'})`
+        : 'حساب الأسرة',
+      lastScreenedDate: '—',
+      passageId: ARABIC_READING_PASSAGES[0].id,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: recordedAt,
+      guardianConsentSource: `موافقة ولي الأمر المسجلة عبر بوابة الأسرة (${recordedAt.split('T')[0]})`,
+      guardianAudioConsentGiven: true,
+      clinicalNotes: child.notes || undefined,
+      speechRecognitionUsed: false,
+      wpm: 0,
+      readingRiskLevel: 'unassessed',
+      readingRiskLabelAr: 'جاهز لبدء الفحص المنزلي.',
+      problematicWords: [],
+      comprehensionScore: 0,
+      dyscalculiaAssessed: false,
+      learningReport: {
+        learningSummary: `ملف جديد للطفل «${child.name}»؛ تظهر المؤشرات فور إكمال أول تمرين أو فحص.`,
+        ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع العين.',
+        orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+        dyscalculiaSpatialAnalysis: 'غير منطبق.',
+        interventionExercises: [],
+        classroomAccommodations: [],
+      },
+    };
+
+    setStudents((prev) => [newLearner, ...prev]);
+    setSelectedStudentId(newLearner.id);
+
+    if (supabaseUser) {
+      void syncStudentToSupabase(newLearner, supabaseUser.id);
+    }
+
+    setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+    return newLearner.id;
+  };
+
   const handleSelectExistingDemoJourney = (
     studentId: string,
     targetTab: ActiveTab
@@ -992,6 +1143,18 @@ export default function App() {
               </button>
               <button type="button" onClick={() => { setShowBaseeraLogin(false); setBaseeraLoginError(''); setSupabaseError(''); }} className="bz-btn bz-btn-ghost">إلغاء</button>
             </div>
+            <div className="text-center pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBaseeraLogin(false);
+                  setActiveTab('parent-portal');
+                }}
+                className="text-xs text-teal-700 hover:text-teal-900 font-bold underline cursor-pointer"
+              >
+                هل أنت ولي أمر؟ اضغط هنا لتسجيل بيانات طفلك ومتابعة تقريره مباشرة
+              </button>
+            </div>
           </form>
         </div>
       )}
@@ -1012,6 +1175,7 @@ export default function App() {
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
               { id: 'home', label: 'الرئيسية', icon: Home },
+              { id: 'parent-portal', label: 'بوابة ولي الأمر', icon: Heart },
               { id: 'dyslexia-lab', label: 'الفحص الشامل', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
               { id: 'remediation-gym', label: 'صالة التدريب', icon: Dumbbell },
@@ -1055,9 +1219,9 @@ export default function App() {
             <button
               type="button"
               className="bz-btn bz-btn-primary"
-              onClick={() => setActiveTab('dyslexia-lab')}
+              onClick={() => setActiveTab('parent-portal')}
             >
-              <span>ابدأ الفحص</span>
+              <span>تسجيل طفل</span>
             </button>
           </div>
         </div>
@@ -1099,6 +1263,7 @@ export default function App() {
       <nav className="baseera-mobile-nav" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
+          { id: 'parent-portal', label: 'ولي الأمر', icon: Heart },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
           { id: 'remediation-gym', label: 'التدريب', icon: Dumbbell },
@@ -1136,6 +1301,35 @@ export default function App() {
                 setActiveTab('dashboard');
                 setDashboardSubView('report');
               }}
+            />
+          )}
+
+          {/* VIEW: PARENT PORTAL & CHILD REGISTRATION */}
+          {activeTab === 'parent-portal' && (
+            <ParentPortalView
+              supabaseUser={supabaseUser}
+              authLoading={supabaseAuthLoading}
+              students={students}
+              onSignInWithGoogle={handleGoogleSignIn}
+              onSignOut={async () => {
+                if (supabaseUser) {
+                  try {
+                    await signOutSupabase();
+                  } catch (e) {
+                    console.error(e);
+                  }
+                  setSupabaseUser(null);
+                }
+                await logoutBaseeraSession();
+                setBaseeraSession(null);
+                setAiStatusBanner('تم تسجيل الخروج بنجاح.');
+              }}
+              onRegisterChild={handleRegisterChildByParent}
+              onSelectStudent={(studentId, targetTab) => {
+                setSelectedStudentId(studentId);
+                setActiveTab(targetTab);
+              }}
+              onNavigateHome={() => setActiveTab('home')}
             />
           )}
           {aiStatusBanner && (
