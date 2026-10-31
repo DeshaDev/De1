@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "dotenv": "^17.2.3",
@@ -41,5 +42,5 @@
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
   },
-  "description": "Baseera: Arabic educational activities for foundational reading, comprehension, and literacy support; no camera or eye tracking."
+  "description": "Haya Naqra (هَيَّا نَقْرَأْ): Arabic educational platform for early cognitive screening, foundational reading, and literacy support; no camera or eye tracking."
 }

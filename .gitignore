@@ -17,3 +17,5 @@ __pycache__/
 server.js
 playwright-report/
 test-results/
+*.zip
+scratch/

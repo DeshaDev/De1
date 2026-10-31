@@ -222,7 +222,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <span className="text-brand">ودرّبه على ما يحتاجه بالضبط.</span>
             </h1>
             <p className="bz-lead mt-6 max-w-[38rem]">
-              تسع ألعاب قصيرة ترسم ملفًا معرفيًا لطفلك مقارنةً بأقرانه في العمر: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. ثم تبني له بصيرة برنامجًا تدريبيًا عربيًا لثمانية أسابيع يتكيّف مع تقدّمه.
+              تسع ألعاب قصيرة ترسم ملفًا معرفيًا لطفلك مقارنةً بأقرانه في العمر: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. ثم تبني له هَيَّا نَقْرَأْ برنامجًا تدريبيًا عربيًا لثمانية أسابيع يتكيّف مع تقدّمه.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
@@ -269,7 +269,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       {/* ================= PROBLEM ================= */}
       <section className="bz-container py-16 sm:py-24">
         <div className="bz-section-head">
-          <span className="bz-eyebrow">لماذا بصيرة؟</span>
+          <span className="bz-eyebrow">لماذا هَيَّا نَقْرَأْ؟</span>
           <h2 className="bz-h2">صعوبة القراءة تُكتشف عادةً متأخرة، بعد أن يفقد الطفل ثقته بنفسه.</h2>
           <p className="bz-lead">
             يعاني بين ٥٪ و١٠٪ من الأطفال صعوبةً محددة في تعلّم القراءة وفق معظم التقديرات، وأثر التدخل يكون أكبر كلما بدأ مبكرًا. لكن الأدوات المتاحة بالعربية قليلة، ومعظمها مترجم.
@@ -497,7 +497,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="bg-card border-y border-line">
         <div className="bz-container py-16 sm:py-24">
           <div className="bz-section-head is-center">
-            <span className="bz-eyebrow">لمن صُممت بصيرة</span>
+            <span className="bz-eyebrow">لمن صُممت هَيَّا نَقْرَأْ</span>
             <h2 className="bz-h2">أداة واحدة، ثلاثة مستخدمين</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
@@ -557,7 +557,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <span className="bz-eyebrow">المنهجية والثقة</span>
             <h2 className="bz-h2">مبنية على أسس علمية، وشفافة في حدودها</h2>
             <p className="bz-lead">
-              نعلن بوضوح ما تقيسه بصيرة وما لا تقيسه. الفحص أداة فرز مبكر توجّه التدريب والإحالة، وليس تشخيصًا طبيًا.
+              نعلن بوضوح ما تقيسه هَيَّا نَقْرَأْ وما لا تقيسه. الفحص أداة فرز مبكر توجّه التدريب والإحالة، وليس تشخيصًا طبيًا.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -665,11 +665,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 <span className="bz-small text-ink-2">
                   <strong className="text-ink">مطلوب · </strong>
                   {guardianRelationship === 'معلم / أخصائي مدرسي' ? (
-                    <>أقر بصفتي معلماً أو أخصائياً مخولاً بوجود تفويض من إدارة المدرسة وموافقة مسبقة من ولي أمر الطالب على استخدام بصيرة وفق سياسة الخصوصية.</>
+                    <>أقر بصفتي معلماً أو أخصائياً مخولاً بوجود تفويض من إدارة المدرسة وموافقة مسبقة من ولي أمر الطالب على استخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
                   ) : guardianRelationship === 'وصي قانوني' ? (
-                    <>أقر بصفتي الوصي القانوني على الطالب بالموافقة على إنشاء ملف تدريبي واستخدام بصيرة وفق سياسة الخصوصية.</>
+                    <>أقر بصفتي الوصي القانوني على الطالب بالموافقة على إنشاء ملف تدريبي واستخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
                   ) : (
-                    <>أقر بصفتي ولي أمر الطالب (الأب / الأم) بالموافقة على إنشاء ملف تدريبي للطفل واستخدام بصيرة وفق سياسة الخصوصية.</>
+                    <>أقر بصفتي ولي أمر الطالب (الأب / الأم) بالموافقة على إنشاء ملف تدريبي للطفل واستخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
                   )}
                 </span>
               </label>
@@ -711,7 +711,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <div className="py-6 text-center space-y-4">
                 <span className="mx-auto grid place-items-center w-16 h-16 rounded-full bg-brand-soft text-brand"><CheckCircle2 size={34} /></span>
                 <h4 className="bz-h3">تم استلام طلبكم بنجاح!</h4>
-                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. سيتواصل معكم فريق بصيرة عبر البريد الرسمي لترتيب جلسة تعريفية وتفعيل حساب تجريبي.</p>
+                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. سيتواصل معكم فريق هَيَّا نَقْرَأْ عبر البريد الرسمي لترتيب جلسة تعريفية وتفعيل حساب تجريبي.</p>
                 <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-primary">إغلاق</button>
               </div>
             ) : (
