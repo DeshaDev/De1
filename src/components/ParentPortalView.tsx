@@ -52,8 +52,10 @@ export function ParentPortalView({
   const [formError, setFormError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Filter children created under this parent or non-demo records
-  const myChildren = students.filter((s) => !s.isDemoRecord);
+  // Real registered children only (exclude demo records AND guest placeholder):
+  const myChildren = students.filter(
+    (s) => !s.isDemoRecord && s.id !== 'stu-guest' && s.id !== 'stu-1' && s.name !== 'طفلك'
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +169,24 @@ export function ParentPortalView({
           </div>
         </div>
 
+        {/* Guest Session Notice (if user registered child without signing in) */}
+        {!supabaseUser && myChildren.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>أنت تتصفح في وضع الجلسة السريعة. لحفظ تقدم طفلك والوصول لتقاريره مستقبلاً من أي جهاز، اربط الحساب بـ Google.</span>
+            </div>
+            <button
+              type="button"
+              onClick={onSignInWithGoogle}
+              disabled={authLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs"
+            >
+              حفظ الحساب بجوجل
+            </button>
+          </div>
+        )}
+
         {/* Existing Children Section (if any) */}
         {myChildren.length > 0 && (
           <div className="space-y-4">
@@ -240,10 +260,20 @@ export function ParentPortalView({
               <div>
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                   <UserPlus size={20} className="text-teal-600" />
-                  <span>تسجيل بيانات طفل جديد</span>
+                  <span>
+                    {myChildren.length > 0
+                      ? 'تسجيل بيانات طفل إضافي'
+                      : supabaseUser
+                      ? 'إضافة طفلك الأول إلى حسابك السحابي'
+                      : 'تسجيل طفل للتقييم الفوري والبدء المباشر'}
+                  </span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  أدخل معلومات طفلك الأساسية لتهيئة اختبارات الوعي الصوتي والقراءة وفق فئته العمرية.
+                  {myChildren.length > 0
+                    ? 'أدخل بيانات الطفل الجديد لإضافته إلى قائمة أطفالك ومتابعة تقدمه المستقل.'
+                    : supabaseUser
+                    ? 'أدخل بيانات طفلك لإنشاء ملفه القرائي ومتابعة تقاريره وتدريباته بشكل دائم.'
+                    : 'أدخل اسم طفلك وعمره لبدء ألعاب الفحص والوعي الصوتي فوراً (ويمكنك ربطه بجوجل لاحقاً لحفظ النتائج).'}
                 </p>
               </div>
               {myChildren.length > 0 && (

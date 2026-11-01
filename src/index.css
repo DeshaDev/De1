@@ -788,37 +788,39 @@
   backdrop-filter: saturate(1.4) blur(12px);
 }
 .baseera-topbar-inner {
-  width: min(100% - 32px, 1240px);
-  min-height: 68px;
+  width: min(100% - 24px, 1420px);
+  min-height: 66px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
 }
 .baseera-brand { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
 .baseera-brand-copy { display: grid; line-height: 1.2; }
 .baseera-brand-copy strong { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
 .baseera-brand-copy small { color: var(--muted); font-size: 12px; font-weight: 500; }
-.baseera-desktop-nav { display: flex; align-items: center; gap: 2px; flex: 1; justify-content: center; }
+.baseera-desktop-nav { display: flex; align-items: center; gap: 3px; flex: 0 1 auto; justify-content: center; }
 .baseera-nav-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 8px 13px;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 11px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 .baseera-nav-link:hover { color: var(--ink); background: var(--soft); }
-.baseera-nav-link.is-active { color: var(--brand-strong); background: var(--brand-soft); }
-.baseera-header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.baseera-nav-link.is-active { color: var(--brand-strong); background: var(--brand-soft); font-weight: 700; }
+.baseera-header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-shrink: 0; white-space: nowrap; }
+.baseera-header-actions .bz-btn { flex-shrink: 0; white-space: nowrap; }
 
 .baseera-session-strip {
   display: flex;
@@ -938,35 +940,25 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
 /* ----------------------------------------------------------------------------
    Responsive
    ---------------------------------------------------------------------------- */
-@media (max-width: 1100px) {
-  .baseera-nav-link { padding-inline: 9px; font-size: 14px; }
+@media (max-width: 1240px) {
+  .baseera-nav-link { padding-inline: 8px; font-size: 13px; gap: 4px; }
   .baseera-nav-link svg { display: none; }
   .baseera-brand-copy small { display: none; }
   .baseera-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 900px) {
-  .baseera-desktop-nav { display: none; }
-  .baseera-brand-copy small { display: block; }
+@media (max-width: 1040px) {
+  .baseera-desktop-nav { display: none !important; }
+  .baseera-header-actions .bz-hide-sm { display: none; }
+  .baseera-brand-copy small { display: none; }
   .baseera-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .baseera-footer-brand { grid-column: 1 / -1; }
-}
-@media (max-width: 640px) {
-  .baseera-topbar-inner { min-height: 60px; gap: 8px; width: min(100% - 24px, 1240px); }
-  .baseera-brand-copy small { display: none; }
-  .baseera-brand-copy strong { font-size: 20px; }
-  .baseera-header-actions .bz-hide-sm { display: none; }
-  .baseera-header-actions .bz-btn { min-height: 40px; padding-inline: 12px; font-size: 14px; }
-  .baseera-main { width: min(100% - 24px, 1200px); padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-  .baseera-main.is-home { width: 100%; }
-  .baseera-summary-grid { grid-template-columns: minmax(0, 1fr); }
-  .baseera-footer-inner { grid-template-columns: minmax(0, 1fr); padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .baseera-mobile-nav {
     position: fixed;
     inset-inline: 0;
     bottom: 0;
     z-index: 35;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     background: color-mix(in srgb, var(--card) 96%, transparent);
     border-top: 1px solid var(--line);
@@ -979,19 +971,30 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
     justify-content: center;
     gap: 2px;
     min-width: 0;
-    min-height: 54px;
+    min-height: 52px;
     padding: 4px 2px;
     border: 0;
     border-radius: 12px;
     background: transparent;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
   }
   .baseera-mobile-nav-item.is-active { color: var(--brand-strong); }
-  .baseera-mobile-nav-item.is-active svg { background: var(--brand-soft); border-radius: 999px; padding: 3px 12px; width: 46px; height: 28px; }
+  .baseera-mobile-nav-item.is-active svg { background: var(--brand-soft); border-radius: 999px; padding: 2px 10px; width: 42px; height: 26px; }
+  .baseera-main { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 640px) {
+  .baseera-topbar-inner { min-height: 58px; gap: 8px; width: min(100% - 16px, 1240px); }
+  .baseera-brand-copy small { display: none; }
+  .baseera-brand-copy strong { font-size: 18px; }
+  .baseera-header-actions .bz-btn { min-height: 38px; padding-inline: 10px; font-size: 13px; }
+  .baseera-main { width: min(100% - 20px, 1200px); }
+  .baseera-main.is-home { width: 100%; }
+  .baseera-summary-grid { grid-template-columns: minmax(0, 1fr); }
+  .baseera-footer-inner { grid-template-columns: minmax(0, 1fr); padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .baseera-app main table { min-width: 620px; }
   .baseera-app .overflow-x-auto { max-width: 100%; }
   .bz-btn-lg { min-height: 50px; padding-inline: 20px; }

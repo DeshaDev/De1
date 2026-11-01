@@ -1209,19 +1209,19 @@ export default function App() {
             />
             <button
               type="button"
-              className="bz-btn bz-btn-ghost"
+              className="bz-btn bz-btn-ghost shrink-0 whitespace-nowrap"
               aria-label={baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}
               onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
             >
               <GraduationCap aria-hidden="true" size={18} />
-              <span className="bz-hide-sm">{baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}</span>
+              <span className="bz-hide-sm whitespace-nowrap">{baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}</span>
             </button>
             <button
               type="button"
-              className="bz-btn bz-btn-primary"
+              className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold"
               onClick={() => setActiveTab('parent-portal')}
             >
-              <span>تسجيل طفل</span>
+              <span className="whitespace-nowrap">تسجيل طفل</span>
             </button>
           </div>
         </div>

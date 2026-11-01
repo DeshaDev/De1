@@ -1323,7 +1323,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
   {
     id: 'stu-guest',
     name: GUEST_CHILD_NAME,
-    isDemoRecord: false,
+    isDemoRecord: true,
     gradeLevel: 3,
     ageYears: 8,
     schoolName: 'مدرستي',
