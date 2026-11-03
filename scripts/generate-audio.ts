@@ -17,9 +17,9 @@ import { buildAudioCatalog, type CatalogEntry } from '../src/cognitiveProfile/au
 
 const KEY = process.env.AZURE_SPEECH_KEY?.trim();
 const REGION = process.env.AZURE_SPEECH_REGION?.trim();
-const VOICE = process.env.AUDIO_VOICE?.trim() || 'ar-SA-ZariyahNeural';
-const RATE = process.env.AUDIO_RATE?.trim() || '-8%';
-const SHORT_RATE = '-20%'; // isolated syllables and sounds are spoken more slowly
+const VOICE = process.env.AUDIO_VOICE?.trim() || 'ar-EG-SalmaNeural';
+const RATE = process.env.AUDIO_RATE?.trim() || '-12%';
+const SHORT_RATE = '-15%'; // isolated syllables and sounds are spoken more slowly
 const OUT_DIR = path.resolve('public/audio/v1');
 const MANIFEST = path.join(OUT_DIR, 'manifest.json');
 const REPORT = path.resolve('docs/AUDIO_QA_REPORT_AR.md');
@@ -73,7 +73,7 @@ async function synthesize(text: string, format: string): Promise<Buffer> {
   const rate = isShort(text) ? SHORT_RATE : RATE;
   const ssml =
     `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA">` +
-    `<voice name="${VOICE}"><prosody rate="${rate}">${escapeXml(text)}</prosody></voice></speak>`;
+    `<voice name="${VOICE}"><prosody rate="${rate}" pitch="+2%">${escapeXml(text)}</prosody></voice></speak>`;
   const res = await fetch(`https://${REGION}.tts.speech.microsoft.com/cognitiveservices/v1`, {
     method: 'POST',
     headers: {

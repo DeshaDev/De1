@@ -13,6 +13,7 @@ import {
   ALargeSmall,
 } from 'lucide-react';
 import { AppTabId } from './HomeLandingView';
+import { playNaturalArabicAudio, stopNaturalArabicAudio } from '../utils/naturalSpeech';
 
 export type DyslexiaSurfaceTheme = 'cream' | 'sage' | 'sky' | 'night' | 'lab';
 export type DyslexiaSpacingMode = 'standard' | 'expanded' | 'xl';
@@ -28,7 +29,7 @@ interface DyslexiaComfortBarProps {
 }
 
 const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
-  home: 'مرحبًا بك في بصيرة. اختر نشاطًا للقراءة والطلاقة اللغوية، وخذ وقتك في التعلّم. يمكنك الاستماع إلى الكلمات وتغيير حجم النص والمسافات متى احتجت.',
+  home: 'مرحبًا بك في هَيَّا نَقْرَأُ. اختر نشاطًا للقراءة والطلاقة اللغوية، وخذ وقتك في التعلّم. يمكنك الاستماع إلى الكلمات وتغيير حجم النص والمسافات متى احتجت.',
   dashboard:
     'أنت في لوحة التحليل والمتابعة. راجع نتائج الجلسة ومؤشرات القراءة والفهم، ثم اختر نشاطًا تعليميًا مناسبًا للمتابعة.',
   'cognitive-lab':
@@ -72,55 +73,13 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const onPointer = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [isOpen]);
-
-  // Track mouse/touch Y position for the compositor-accelerated Reading Focus Ruler
-  useEffect(() => {
-    if (!readingRulerEnabled) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setRulerY(e.clientY);
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches && e.touches[0]) {
-        setRulerY(e.touches[0].clientY);
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [readingRulerEnabled]);
-
-  // Stop speech when tab changes
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopNaturalArabicAudio();
     setIsSpeaking(false);
   }, [activeTab]);
 
   const handleToggleSpeech = () => {
     if (isSpeaking) {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      stopNaturalArabicAudio();
       setIsSpeaking(false);
       return;
     }
@@ -128,21 +87,12 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
     const textToSpeak = TAB_AUDIO_SUMMARIES[activeTab] || TAB_AUDIO_SUMMARIES.home;
     setIsSpeaking(true);
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'ar-SA';
-        utterance.rate = 0.92;
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(utterance);
-      } catch {
-        setTimeout(() => setIsSpeaking(false), 4500);
-      }
-    } else {
-      setTimeout(() => setIsSpeaking(false), 4500);
-    }
+    playNaturalArabicAudio(textToSpeak, {
+      voice: 'ar-EG-SalmaNeural',
+      rate: '-12%',
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    }).catch(() => setIsSpeaking(false));
   };
 
   const isCustomized =

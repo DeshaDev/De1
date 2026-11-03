@@ -123,8 +123,9 @@ export function ParentPortalView({
     setFormError('');
 
     const cleanName = childName.trim();
-    if (cleanName.length < 3) {
-      setFormError('يرجى إدخال اسم الطفل الثلاثي بشكل صحيح (3 كلمات على الأقل).');
+    const nameParts = cleanName.split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      setFormError('يرجى إدخال اسم الطفل الثنائي بشكل صحيح (الاسم الأول واسم العائلة).');
       return;
     }
 
@@ -463,15 +464,15 @@ export function ParentPortalView({
                 </div>
               )}
 
-              {/* Child Name (Three-part name) */}
+              {/* Child Name (Two-part name) */}
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-700">اسم الطفل الثلاثي *</span>
+                <span className="text-xs font-bold text-slate-700">اسم الطفل الثنائي *</span>
                 <input
                   type="text"
                   required
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  placeholder="مثال: سلطان بن خالد العتيبي"
+                  placeholder="مثال: سلطان العتيبي"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
                 />
               </label>

@@ -176,7 +176,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   // 100% Natural Arabic Neural Speech Player (Authentic human pronunciation with studio-grade phoneme makharij)
   const speakText = (text: string) => {
-    playNaturalArabicAudio(text, { voice: selectedVoice, rate: '-5%' });
+    playNaturalArabicAudio(text, { voice: (selectedVoice as any) || 'ar-EG-SalmaNeural', rate: '-12%' });
   };
 
   // Positive celebration
