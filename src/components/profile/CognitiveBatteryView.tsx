@@ -44,6 +44,7 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
+import { summarizeBattery } from '../../cognitiveProfile/records';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
 import TrainingProgramView from './TrainingProgramView';
@@ -459,11 +460,13 @@ interface Props {
   onFocusModeChange?: (focused: boolean) => void;
   /** Called with the server copy after results are saved to the school record. */
   onRecordUpdated?: (student: StudentRecord) => void;
+  /** Open an optional extra activity (practice games or the reader). */
+  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
   onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
 }
 
-export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner }: Props) {
+export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
@@ -471,7 +474,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [session, setSession] = useState<BatterySession | null>(loadInitial);
 
   const pushToSchool = (s: BatterySession) => {
-    if (!syncEnabled) return;
+    if (!syncEnabled) {
+      // Family accounts and devices without a school: keep the result in the child's record too,
+      // so the app can save it to the family's database. The summary is computed on this device.
+      if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
+        onRecordUpdated?.({
+          ...activeStudent,
+          cognitiveBattery: {
+            ageMonths: s.ageMonths,
+            examinerName: s.examinerName,
+            startedAt: s.startedAt,
+            dialect: s.dialect,
+            updatedAt: new Date().toISOString(),
+            results: s.results,
+            summary: summarizeBattery(s.results, s.ageMonths),
+          },
+        });
+      }
+      return;
+    }
     setSyncState('saving');
     syncBatteryToSchool(s, activeStudent)
       .then((student) => {
@@ -534,6 +555,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         onRecordUpdated={onRecordUpdated}
         student={activeStudent}
         showBack={initialView !== 'training'}
+        onOpenExtra={onOpenExtra}
       />
     );
   }

@@ -31,7 +31,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
         <div className="flex items-start gap-3">
           <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand shrink-0"><Brain size={22} aria-hidden="true" /></span>
           <div>
-            <h2 className="bz-h3">الفحص المعرفي الشامل</h2>
+            <h2 className="bz-h3">فحص مؤشرات عسر القراءة</h2>
             <p className="bz-small text-ink-2 mt-1">لم تُحفظ نتائج فحص لهذا الطالب في سجل المدرسة بعد.</p>
           </div>
         </div>
@@ -51,7 +51,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
     <section className="bz-card overflow-hidden" aria-labelledby={`battery-summary-${student.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-line">
         <div>
-          <p className="bz-small text-brand font-semibold">الفحص المعرفي الشامل · آخر تحديث {updated}</p>
+          <p className="bz-small text-brand font-semibold">فحص مؤشرات عسر القراءة · آخر تحديث {updated}</p>
           <h2 id={`battery-summary-${student.id}`} className="bz-h3 mt-1">
             {ar(summary.completedSubtests)} من ٩ اختبارات · {summary.ageBandLabelAr}
           </h2>

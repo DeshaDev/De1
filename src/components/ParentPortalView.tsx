@@ -14,8 +14,53 @@ import {
   Lock,
   LogIn,
   CheckCircle2,
+  TrendingUp,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
+import { BATTERY } from '../cognitiveProfile/battery';
+import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
+import { summarizeProbes } from '../cognitiveProfile/progressProbe';
+import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/storage';
+import { toArabicNum } from '../utils/arabicDigits';
+
+const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+
+interface NextStep {
+  stageAr: string;
+  actionAr: string;
+  progressAr: string | null;
+  tab: 'dyslexia-lab' | 'guided-program';
+}
+
+/** The one thing a parent should do next for this child: screening, then the programme. */
+function nextStepFor(child: StudentRecord): NextStep {
+  const battery = loadBatterySession(child.id)?.results ?? child.cognitiveBattery?.results ?? {};
+  const done = BATTERY.filter((s) => battery[s.id]).length;
+  const training = loadTrainingProgress(child.id) ?? child.trainingProgress ?? null;
+  if (done === 0) {
+    return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مؤشرات عسر القراءة', progressAr: null, tab: 'dyslexia-lab' };
+  }
+  if (done < BATTERY.length && !training) {
+    return {
+      stageAr: 'الفحص قيد التنفيذ',
+      actionAr: 'أكمل الفحص',
+      progressAr: `أنهى ${toArabicNum(done)} من ${toArabicNum(BATTERY.length)} ألعاب. يمكن إكمالها على أكثر من جلسة.`,
+      tab: 'dyslexia-lab',
+    };
+  }
+  if (!training) {
+    return { stageAr: 'اكتمل الفحص', actionAr: 'ابدأ البرنامج التدريبي', progressAr: 'النتيجة جاهزة، والبرنامج مبني عليها.', tab: 'guided-program' };
+  }
+  const sessions = new Set(training.history.map((h) => h.date.slice(0, 10))).size;
+  const summary = summarizeProbes(training.probes ?? []);
+  const trend = summary && summary.count >= 2 ? ` · مقياس التقدّم: ${toArabicNum(summary.baseline)}٪ في البداية، ${toArabicNum(summary.latest)}٪ في آخر جلسة` : '';
+  return {
+    stageAr: 'في البرنامج التدريبي',
+    actionAr: 'ابدأ جلسة اليوم',
+    progressAr: `الجلسات: ${toArabicNum(sessions)} من ${toArabicNum(PROGRAM_SESSIONS)}${trend}`,
+    tab: 'guided-program',
+  };
+}
 import { BrandMark } from './ui/BrandMark';
 
 interface ParentPortalViewProps {
@@ -267,36 +312,38 @@ export function ParentPortalView({
                     <div>
                       <h3 className="font-extrabold text-slate-900 text-base">{child.name}</h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        العمر: {child.ageYears} سنوات · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${child.gradeLevel} الابتدائي`}
+                        العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}
                       </p>
                     </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                      child.sessionStatus === 'completed'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {child.sessionStatus === 'completed' ? 'اكتمل الفحص' : 'قيد التدريب'}
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800">
+                      {nextStepFor(child).stageAr}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => onSelectStudent(child.id, 'dyslexia-lab')}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      <Brain size={15} />
-                      <span>بدء الفحص</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onSelectStudent(child.id, 'dashboard')}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      <FileBarChart size={15} />
-                      <span>عرض التقرير</span>
-                    </button>
-                  </div>
+                  {(() => {
+                    const step = nextStepFor(child);
+                    return (
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        {step.progressAr && <p className="text-xs text-slate-600">{step.progressAr}</p>}
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudent(child.id, step.tab)}
+                          className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors cursor-pointer"
+                        >
+                          {step.tab === 'guided-program' ? <TrendingUp size={16} /> : <Brain size={16} />}
+                          <span>{step.actionAr}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudent(child.id, 'dashboard')}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <FileBarChart size={15} />
+                          <span>عرض التقرير</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

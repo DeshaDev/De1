@@ -4,7 +4,7 @@ const toAr = (n: number) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧
 
 test('homepage renders in Arabic RTL', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle(/بصيرة/);
+  await expect(page).toHaveTitle(/هَيَّا نَقْرَأْ/);
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByRole('button', { name: 'الرئيسية' }).first()).toBeVisible();
 });
@@ -20,18 +20,18 @@ test('screening, accessible-reader, and training views open from primary navigat
   await page.goto('/');
 
   // 1. Reading screening / diagnostic hub
-  await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
-  await expect(page.getByRole('heading', { name: /الفحص المعرفي الشامل لمهارات القراءة/ })).toBeVisible();
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await expect(page.getByRole('heading', { name: /فحص مؤشرات عسر القراءة/ }).first()).toBeVisible();
 
   // Return to home
-  await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
+  await page.getByRole('link', { name: /الصفحة الرئيسية/ }).click();
 
   // 2. Accessible reader view
   await page.getByRole('button', { name: /القارئ الميسّر/ }).last().click();
   await expect(page.getByRole('heading', { name: 'القارئ الميسّر', exact: true })).toBeVisible();
 
   // Return to home
-  await page.getByRole('link', { name: 'بصيرة — الصفحة الرئيسية' }).click();
+  await page.getByRole('link', { name: /الصفحة الرئيسية/ }).click();
 
   // 3. Remediation training gym
   await page.getByRole('button', { name: /صالة التدريب|تدريبي/ }).last().click();
@@ -45,7 +45,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'صالة التدريب' }).first().click();
+  await page.getByRole('button', { name: /صالة التدريب/ }).last().click();
   await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
   await page.getByRole('button', { name: /تحدي الدقائق الخمس/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
@@ -142,7 +142,7 @@ test('parental consent onboarding enforces consent before launch and school demo
 test('cognitive battery: setup, nine-game map, and training program entry', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /الفحص الشامل/ }).first().click();
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
   const start = page.getByRole('button', { name: 'بدء الفحص' });
   await expect(start).toBeDisabled();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
@@ -201,4 +201,21 @@ test('content review page lists every unit and records a decision', async ({ pag
   await expect(page.getByText(/رُوجع ٠ من [٠-٩]{3}/)).toBeVisible();
   await page.getByRole('button', { name: 'صحيح' }).first().click();
   await expect(page.getByText(/رُوجع ١ من [٠-٩]{3}/)).toBeVisible();
+});
+
+test('every training session opens with the daily progress probe (no feedback, fixed difficulty)', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.locator('.baseera-topbar').getByRole('button', { name: 'البرنامج التدريبي' }).click();
+  await page.getByRole('button', { name: /برنامج عام للاستعداد للقراءة/ }).click();
+  await expect(page.getByRole('heading', { name: /التقدّم من جلسة إلى جلسة/ })).toBeVisible();
+  await expect(page.getByText(/من ٢٠/).first()).toBeVisible();
+  await page.getByRole('button', { name: /ابدأ جلسة اليوم/ }).click();
+  await expect(page.getByText('مقياس التقدّم اليومي')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'أسئلة قصيرة قبل التدريب' })).toBeVisible();
+  await page.getByRole('button', { name: /^ابدأ$/ }).click();
+  await expect(page.getByText(/^١ من ١٢$/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });

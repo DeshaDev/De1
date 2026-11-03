@@ -99,6 +99,10 @@ export const CognitiveBatteryUploadSchema = z
 
 const SKILL_IDS = Object.keys(SKILLS) as [SkillId, ...SkillId[]];
 const LevelSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+const ProbeScoreSchema = z
+  .object({ correct: z.number().int().min(0).max(60), total: z.number().int().min(1).max(60) })
+  .strict()
+  .refine((s) => s.correct <= s.total, 'نتيجة مقياس غير منطقية');
 
 export const TrainingProgressUploadSchema = z
   .object({
@@ -127,6 +131,22 @@ export const TrainingProgressUploadSchema = z
       )
       .max(400),
     supportFlags: z.array(z.enum(SKILL_IDS)).max(8),
+    probes: z
+      .array(
+        z
+          .object({
+            date: isoDate,
+            session: z.number().int().min(1).max(500),
+            correct: z.number().int().min(0).max(60),
+            total: z.number().int().min(1).max(60),
+            bySkill: z.partialRecord(z.enum(SKILL_IDS), ProbeScoreSchema),
+            comparison: ProbeScoreSchema.extend({ skill: z.enum(SKILL_IDS) }).strict().optional(),
+          })
+          .strict()
+          .refine((p) => p.correct <= p.total, 'نتيجة مقياس غير منطقية')
+      )
+      .max(200)
+      .optional(),
   })
   .strict();
 

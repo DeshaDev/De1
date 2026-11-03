@@ -124,6 +124,8 @@ export interface StudentRecord {
   guardianConsentRecordedAt?: string;
   guardianConsentSource?: string;
   guardianName?: string;
+  /** Free-text notes a parent adds when registering the child. */
+  parentNotes?: string;
   guardianRelationship?: string;
   guardianConsentPeriod?: string;
   serverConsentReceivedAt?: string;

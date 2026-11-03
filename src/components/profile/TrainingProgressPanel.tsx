@@ -1,0 +1,70 @@
+import React from 'react';
+import { TrendingUp } from 'lucide-react';
+import type { StudentRecord } from '../../data/seedData';
+import { PROGRAM_SESSIONS, SKILLS } from '../../cognitiveProfile/training';
+import { describeProgressAr, summarizeProbes } from '../../cognitiveProfile/progressProbe';
+import ProgressChart from './ProgressChart';
+
+const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+const signed = (v: number) => (v > 0 ? `+${ar(v)}` : v < 0 ? `−${ar(Math.abs(v))}` : ar(0));
+
+/** Programme progress for reports: sessions done, the daily probe trend and per-skill change. */
+export function TrainingProgressPanel({ student, compact = false }: { student: StudentRecord; compact?: boolean }) {
+  const progress = student.trainingProgress;
+  if (!progress) return null;
+  const sessions = new Set(progress.history.map((h) => h.date.slice(0, 10))).size;
+  const probes = progress.probes ?? [];
+  const summary = summarizeProbes(probes);
+
+  return (
+    <section className="bz-card p-6 space-y-4" aria-labelledby={`training-progress-${student.id}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id={`training-progress-${student.id}`} className="bz-h3 flex items-center gap-2">
+          <TrendingUp size={20} aria-hidden="true" /> تقدّم البرنامج التدريبي
+        </h2>
+        <p className="bz-small text-ink-2">
+          الجلسات: <strong className="text-ink">{ar(sessions)}</strong> من {ar(PROGRAM_SESSIONS)}
+          {summary && <> · البداية <strong className="text-ink">{ar(summary.baseline)}٪</strong> · آخر جلسة <strong className="text-ink">{ar(summary.latest)}٪</strong></>}
+        </p>
+      </div>
+      <p className="bz-small text-ink-2">{describeProgressAr(summary)}</p>
+      {probes.length > 0 && <ProgressChart probes={probes} height={compact ? 140 : 180} />}
+      {!compact && summary && summary.bySkill.length > 0 && (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-ink-2">
+              <th className="text-right p-1.5">المهارة المدرَّبة</th>
+              <th className="p-1.5">البداية</th>
+              <th className="p-1.5">آخر جلسة</th>
+              <th className="p-1.5">التغيّر (أول ٣ ← آخر ٣ جلسات)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.bySkill.map((s) => (
+              <tr key={s.skill} className="border-t border-line">
+                <td className="p-1.5 font-semibold">{SKILLS[s.skill].nameAr}</td>
+                <td className="p-1.5 text-center">{ar(s.baseline)}٪</td>
+                <td className="p-1.5 text-center">{ar(s.latest)}٪</td>
+                <td className="p-1.5 text-center font-semibold">{signed(s.change)}</td>
+              </tr>
+            ))}
+            {summary.comparisonSkill && summary.comparisonChange !== null && (
+              <tr className="border-t border-line text-ink-2">
+                <td className="p-1.5">{SKILLS[summary.comparisonSkill].nameAr} (غير مدرَّبة، للمقارنة)</td>
+                <td className="p-1.5 text-center" colSpan={2}>—</td>
+                <td className="p-1.5 text-center">{signed(summary.comparisonChange)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+      {!compact && (
+        <p className="text-xs text-ink-2">
+          المقياس أسئلة جديدة بصعوبة ثابتة في بداية كل جلسة، بلا تصحيح. الاتجاه عبر الجلسات هو المؤشر، لا نتيجة يوم واحد. المقياس لم يُعايَر بعد على عينة من الأطفال.
+        </p>
+      )}
+    </section>
+  );
+}
+
+export default TrainingProgressPanel;

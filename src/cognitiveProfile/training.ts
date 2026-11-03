@@ -6,6 +6,7 @@
  * consecutive sessions at or above the mastery criterion. Training items are generated fresh
  * for every session from the lexicon, so the child never practises the scored test items.
  */
+import type { ProbeRecord } from './progressProbe';
 import {
   AudioSegment,
   ChoiceItem,
@@ -133,9 +134,18 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
 
 export const MASTERY_PERCENT = 80;
 export const STEP_BACK_PERCENT = 50;
-export const PROGRAM_WEEKS = 8;
-export const SESSIONS_PER_WEEK = 4;
+/**
+ * Programme dose: 20 sessions, 5 a week (about 4 weeks), 15 minutes of training plus a 2-minute
+ * progress probe, about 5.7 hours in all. In the National Reading Panel meta-analysis, phonemic
+ * awareness instruction had its largest effects at 5 to 18 hours in total; longer programmes were
+ * less effective (Ehri et al., 2001, Reading Research Quarterly 36(3), 250-287).
+ */
+export const PROGRAM_SESSIONS = 20;
+export const SESSIONS_PER_WEEK = 5;
+export const PROGRAM_WEEKS = PROGRAM_SESSIONS / SESSIONS_PER_WEEK;
 export const MINUTES_PER_SESSION = 15;
+/** Missed days are normal; reassessment is offered at the latest two weeks after the planned end. */
+const LATEST_REASSESSMENT_DAYS = (PROGRAM_WEEKS + 2) * 7;
 const MAX_FOCUS_SKILLS = 3;
 
 /**
@@ -208,6 +218,8 @@ export interface TrainingProgress {
   history: SessionRecord[];
   /** Skills that dropped back a level and may need adult support. */
   supportFlags: SkillId[];
+  /** One fixed-difficulty progress probe per session (see progressProbe.ts). Absent in older records. */
+  probes?: ProbeRecord[];
 }
 
 export function createProgress(plan: TrainingPlan, startLevel: Level = 1): TrainingProgress {
@@ -217,6 +229,7 @@ export function createProgress(plan: TrainingPlan, startLevel: Level = 1): Train
     mastered: [],
     history: [],
     supportFlags: [],
+    probes: [],
   };
 }
 
@@ -256,7 +269,7 @@ export function applySession(
     supportFlags = [...supportFlags, skill];
   }
 
-  return { progress: { plan: progress.plan, levels, mastered, history, supportFlags }, change };
+  return { progress: { ...progress, levels, mastered, history, supportFlags }, change };
 }
 
 export function sessionsCompleted(progress: TrainingProgress): number {
@@ -266,7 +279,7 @@ export function sessionsCompleted(progress: TrainingProgress): number {
 export function isReassessmentDue(progress: TrainingProgress, now = new Date()): boolean {
   const days = (now.getTime() - new Date(progress.plan.createdAt).getTime()) / 86_400_000;
   const allMastered = progress.plan.focus.every((s) => progress.mastered.includes(s));
-  return allMastered || days >= PROGRAM_WEEKS * 7 || sessionsCompleted(progress) >= PROGRAM_WEEKS * SESSIONS_PER_WEEK;
+  return allMastered || days >= LATEST_REASSESSMENT_DAYS || sessionsCompleted(progress) >= PROGRAM_SESSIONS;
 }
 
 // ---------------------------------------------------------------------------

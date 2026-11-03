@@ -1,4 +1,5 @@
-export type BaseeraRole = 'platform_admin' | 'school_admin' | 'educator_readonly';
+/** `parent` is a family account signed in with Supabase; the school server never issues it. */
+export type BaseeraRole = 'platform_admin' | 'school_admin' | 'educator_readonly' | 'parent';
 
 export interface BaseeraSessionInfo {
   token: string;
