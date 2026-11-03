@@ -1,18 +1,28 @@
 /**
  * Baseera Natural Arabic Speech Player
- * Powered by Microsoft Azure Neural Arabic Voices (ar-SA-ZariyahNeural & ar-EG-SalmaNeural)
- * Provides 100% human-grade, authentic phoneme articulation with 0ms client-side caching.
+ * Powered by Microsoft Azure Neural Arabic Voices:
+ * - Default: ar-EG-SalmaNeural (Warm, maternal, pedagogical teacher voice for children)
+ * - Optional: ar-AE-FatimaNeural, ar-SA-ZariyahNeural, ar-KW-NouraNeural
+ *
+ * Provides 100% authentic human-grade makharij al-huruf with client-side caching
+ * and direct browser cloud fallback for static hosting (cPanel / Namecheap).
  */
 
 import { authenticatedFetch } from './apiAuth';
 
 const audioMemoryCache = new Map<string, string>();
-const MAX_AUDIO_CACHE_ENTRIES = 12;
+const MAX_AUDIO_CACHE_ENTRIES = 30;
 const MAX_CACHED_AUDIO_URL_CHARS = 500_000;
 let currentActiveAudio: HTMLAudioElement | null = null;
 
+// Azure Speech credentials (direct browser fallback for static hosting like cPanel)
+const CLIENT_AZURE_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || '';
+
+const CLIENT_AZURE_REGION =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_REGION) || 'eastus';
+
 function cacheAudio(key: string, dataUrl: string): void {
-  // A single long story must not permanently consume unbounded browser memory.
   if (dataUrl.length > MAX_CACHED_AUDIO_URL_CHARS) return;
   audioMemoryCache.delete(key);
   while (audioMemoryCache.size >= MAX_AUDIO_CACHE_ENTRIES) {
@@ -23,37 +33,88 @@ function cacheAudio(key: string, dataUrl: string): void {
   audioMemoryCache.set(key, dataUrl);
 }
 
+export type ArabicTtsVoice =
+  | 'ar-EG-SalmaNeural'   // المعلمة سلمى: صوت تربوي أمومي دافئ وواضح جداً للأطفال
+  | 'ar-AE-FatimaNeural'  // فاطمة: صوت خليجي فصيح وهادئ
+  | 'ar-SA-ZariyahNeural' // زارية: صوت سعودي فصيح
+  | 'ar-SA-HamedNeural'   // حامد: صوت رجالي فصيح
+  | 'ar-KW-NouraNeural';  // نورة: صوت كويتي فصيح
+
 export interface NaturalSpeechOptions {
-  voice?: 'ar-SA-ZariyahNeural' | 'ar-SA-HamedNeural' | 'ar-EG-SalmaNeural';
-  rate?: string; // e.g. '-10%', '-5%', '0%'
+  voice?: ArabicTtsVoice;
+  rate?: string;  // e.g. '-12%', '-10%', '-5%'
+  pitch?: string; // e.g. '+2%', '0%'
   onEnd?: () => void;
   onError?: (err: unknown) => void;
 }
 
 /**
- * Prepares Arabic text for high-fidelity neural TTS articulation.
- * 1. Resolves Taa Marbutah truncation: Words ending with 'ة' without explicit diacritics
- *    are vocalized with tanween dammah ('ٌ') so Azure Speech articulates the full feminine ending (-tun)
- *    rather than dropping the syllable or truncating words like 'ساقية' into 'ساقي'.
- * 2. Removes tatweel (kashida 'ـ') which can distort phoneme acoustic models.
- * 3. Cleans whitespace and maintains phonological integrity.
+ * Prepares Arabic text for pristine educational neural articulation:
+ * 1. Strips tatweel (kashida 'ـ') which distorts acoustic models.
+ * 2. Cleans punctuation spacing while preserving diacritics and pauses.
+ * 3. Preserves natural Arabic waqf (الوقف بالسكون أو الهاء على التاء المربوطة)
+ *    WITHOUT injecting artificial, ungrammatical tanween.
  */
 export function prepareArabicTtsText(text: string): string {
   if (!text) return '';
   let cleaned = text.trim();
 
-  // Strip tatweel/kashida which causes acoustic anomalies in phoneme models
+  // Strip tatweel/kashida which causes acoustic anomalies
   cleaned = cleaned.replace(/ـ+/g, '');
 
-  // Add tanween dammah to any unvocalized taa marbutah at word boundaries or ends of string
-  // so the neural voice articulates the taa/feminine marker (-tun) cleanly without silent truncation.
-  cleaned = cleaned.replace(/(\u0629)(?![\u064B-\u0652])/g, (m) => m + '\u064C');
+  // Normalize excessive whitespaces
+  cleaned = cleaned.replace(/\s+/g, ' ');
 
   return cleaned;
 }
 
 /**
+ * Synthesizes Arabic speech directly via Azure Neural TTS REST API (Client-side with CORS)
+ * Ensures 100% studio-quality natural audio even on static hosts (Namecheap / cPanel)
+ * without requiring a Node.js backend.
+ */
+async function fetchDirectAzureAudio(
+  text: string,
+  voice: ArabicTtsVoice,
+  rate: string,
+  pitch: string
+): Promise<string | null> {
+  if (!CLIENT_AZURE_KEY || !CLIENT_AZURE_REGION) return null;
+
+  try {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}"><prosody rate="${rate}" pitch="${pitch}">${escaped}</prosody></voice></speak>`;
+
+    const endpoint = `https://${CLIENT_AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': CLIENT_AZURE_KEY,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+        'User-Agent': 'HayanAqra-Pedagogical-Audio',
+      },
+      body: ssml,
+    });
+
+    if (res.ok) {
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    console.warn('[NaturalSpeech] Direct Azure TTS fetch error:', err);
+  }
+
+  return null;
+}
+
+/**
  * Play crystal-clear natural Arabic speech with 100% accurate makharij al-huruf.
+ * Defaults to warm, pedagogical teacher voice (ar-EG-SalmaNeural) with gentle pacing (-12%).
  */
 export async function playNaturalArabicAudio(
   text: string,
@@ -62,9 +123,10 @@ export async function playNaturalArabicAudio(
   const preparedText = prepareArabicTtsText(text);
   if (!preparedText) return;
 
-  const voice = options.voice || 'ar-SA-ZariyahNeural';
-  const rate = options.rate || '-5%';
-  const cacheKey = `${voice}_${rate}_${preparedText}`;
+  const voice: ArabicTtsVoice = options.voice || 'ar-EG-SalmaNeural';
+  const rate = options.rate || '-12%';
+  const pitch = options.pitch || '+2%';
+  const cacheKey = `${voice}_${rate}_${pitch}_${preparedText}`;
 
   // Stop previous audio playback smoothly
   if (currentActiveAudio) {
@@ -89,12 +151,12 @@ export async function playNaturalArabicAudio(
     }
   }
 
-  // 2. Fetch studio-quality neural Arabic audio from Baseera server
+  // 2. Fetch studio-quality neural Arabic audio from Baseera server (if backend is running)
   try {
     const res = await authenticatedFetch('/api/ai/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: preparedText, voice, rate }),
+      body: JSON.stringify({ text: preparedText, voice, rate, pitch }),
     });
 
     if (res.ok) {
@@ -111,17 +173,32 @@ export async function playNaturalArabicAudio(
         return;
       }
     }
-  } catch (err) {
-    console.warn('[NaturalSpeech] Server neural TTS unreachable, using browser fallback:', err);
+  } catch {
+    // Expected on static hosting where /api/ai/tts is not routed
   }
 
-  // 3. Fallback: browser local speech synthesis if server is unreachable
+  // 3. Direct browser cloud fallback to Azure Neural Arabic Speech (for static hosting / cPanel)
+  const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
+  if (directAudioUrl) {
+    try {
+      cacheAudio(cacheKey, directAudioUrl);
+      const audio = new Audio(directAudioUrl);
+      currentActiveAudio = audio;
+      if (options.onEnd) audio.onended = () => options.onEnd?.();
+      await audio.play();
+      return;
+    } catch (directErr) {
+      console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
+    }
+  }
+
+  // 4. Ultimate fallback: browser local speech synthesis if offline
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(preparedText);
       utter.lang = voice.startsWith('ar-EG') ? 'ar-EG' : 'ar-SA';
-      utter.rate = 0.85;
+      utter.rate = 0.8;
       if (options.onEnd) utter.onend = () => options.onEnd?.();
       window.speechSynthesis.speak(utter);
     } catch (fallbackErr) {

@@ -2784,12 +2784,15 @@ async function startServer() {
 
     let cleanText = text.trim();
     cleanText = cleanText.replace(/ـ+/g, '');
-    cleanText = cleanText.replace(/(\u0629)(?![\u064B-\u0652])/g, (m) => m + '\u064C');
-    const selectedVoice = voice === 'ar-EG-SalmaNeural' ? 'ar-EG-SalmaNeural' :
+    cleanText = cleanText.replace(/\s+/g, ' ');
+    const selectedVoice = voice === 'ar-SA-ZariyahNeural' ? 'ar-SA-ZariyahNeural' :
+                         voice === 'ar-AE-FatimaNeural' ? 'ar-AE-FatimaNeural' :
+                         voice === 'ar-KW-NouraNeural' ? 'ar-KW-NouraNeural' :
                          voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
-                         'ar-SA-ZariyahNeural';
-    const prosodyRate = typeof rate === 'string' ? rate : '-5%';
-    const cacheKey = `${selectedVoice}_${prosodyRate}_${cleanText}`;
+                         'ar-EG-SalmaNeural';
+    const prosodyRate = typeof rate === 'string' ? rate : '-12%';
+    const prosodyPitch = typeof req.body?.pitch === 'string' ? req.body.pitch : '+2%';
+    const cacheKey = `${selectedVoice}_${prosodyRate}_${prosodyPitch}_${cleanText}`;
 
     if (ttsAudioCache.has(cacheKey)) {
       res.json(ttsAudioCache.get(cacheKey));
@@ -2806,7 +2809,7 @@ async function startServer() {
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
-        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="0%">${escaped}</prosody></voice></speak>`;
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="${prosodyPitch}">${escaped}</prosody></voice></speak>`;
 
         const endpoint = `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
         const azureRes = await fetch(endpoint, {

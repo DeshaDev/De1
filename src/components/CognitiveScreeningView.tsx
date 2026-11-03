@@ -802,7 +802,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
 
   // Speak Arabic prompt via 100% natural neural Arabic voice
   const handleSpeakText = (text: string) => {
-    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-5%' });
+    playNaturalArabicAudio(text, { voice: 'ar-EG-SalmaNeural', rate: '-12%' });
   };
 
   // Finalize complete screening results

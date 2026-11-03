@@ -1,4 +1,5 @@
 import { authenticatedFetch } from '../utils/apiAuth';
+import { playNaturalArabicAudio, stopNaturalArabicAudio } from '../utils/naturalSpeech';
 import React, { useState, useRef, useMemo } from 'react';
 import {
   Volume2,
@@ -370,7 +371,8 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
       if (res.ok) {
         const data = await res.json();
         if (data?.audioBase64) {
-          const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
+          const mimeType = data?.mimeType || 'audio/mp3';
+          const audio = new Audio(`data:${mimeType};base64,${data.audioBase64}`);
           audio.ontimeupdate = () => {
             if (
               audio.duration &&

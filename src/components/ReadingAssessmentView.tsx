@@ -39,6 +39,7 @@ import {
   ARABIC_DIALECT_PROFILES,
 } from '../utils/dyslexiaEngines';
 import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
+import { playNaturalArabicAudio } from '../utils/naturalSpeech';
 import { IconStoryBook, IconMicGlow, IconStar, StoryIcons } from './ui/ChildPlayfulIcons';
 
 
@@ -694,13 +695,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Speak Arabic word aloud via Web Speech Synthesis
   const handleSpeakWord = (word: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
     const clean = word.replace(/[.,!?،؟؛:"«»()[\]]/g, '').trim();
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.lang = 'ar-SA';
-    utter.rate = 0.85;
-    window.speechSynthesis.speak(utter);
+    if (!clean) return;
+    playNaturalArabicAudio(clean, { voice: 'ar-EG-SalmaNeural', rate: '-12%' });
   };
 
   // Comprehensive summary metrics of reading words
