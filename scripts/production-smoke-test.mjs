@@ -22,7 +22,7 @@ try {
   }
   assert.ok(response?.ok, 'Production server did not return a successful homepage response');
   const html = await response.text();
-  assert.match(html, /بصيرة/);
+  assert.match(html, /هَيَّا نَقْرَأْ/);
 } finally {
   child.kill('SIGTERM');
 }
