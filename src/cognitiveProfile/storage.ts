@@ -76,3 +76,16 @@ export const loadTrainingProgress = (studentId: string) => read<TrainingProgress
 export const saveTrainingProgress = (studentId: string, progress: TrainingProgress) =>
   write(TRAINING_KEY(studentId), progress);
 export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(studentId));
+
+/** Summary of a finished screening, kept when the child is screened again so the two can be compared. */
+export interface ScreeningSnapshot {
+  completedAt: string;
+  ageMonths: number;
+  risk: 'high' | 'moderate' | 'low' | 'insufficient';
+  completedSubtests: number;
+  domains: Array<{ domain: string; centile: number }>;
+}
+const HISTORY_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.history.${studentId}`;
+export const loadScreeningHistory = (studentId: string) => read<ScreeningSnapshot[]>(HISTORY_KEY(studentId)) ?? [];
+export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) => write(HISTORY_KEY(studentId), history.slice(-10));
+

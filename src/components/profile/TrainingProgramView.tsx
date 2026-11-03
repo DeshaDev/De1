@@ -351,7 +351,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">
-                يُبنى البرنامج من نتائج الفحص المعرفي: يختار المهارات الأضعف ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا (ولو جزئيًا) للحصول على برنامج مخصص.
+                يُبنى البرنامج من نتيجة فحص مؤشرات عسر القراءة: يختار المهارات الأضعف ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا (ولو جزئيًا) للحصول على برنامج مخصص.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-lg">
@@ -429,7 +429,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       {due && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-info">
-            <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص لقياس التقدّم وتحديث الخطة.
+            <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص: في صفحة الفحص اضغط «فحص جديد»، فتُحفظ نتيجة الفحص الأول وتظهر المقارنة قبل وبعد في التقرير.
           </p>
           <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-sm">
             الذهاب إلى الفحص

@@ -1,4 +1,5 @@
 import type { StoredCognitiveBattery, StoredTrainingProgress } from '../cognitiveProfile/records';
+import type { ScreeningSnapshot } from '../cognitiveProfile/storage';
 import {
   SubitizingTrialResult,
   NumberLineTrialResult,
@@ -126,6 +127,8 @@ export interface StudentRecord {
   guardianName?: string;
   /** Free-text notes a parent adds when registering the child. */
   parentNotes?: string;
+  /** Earlier screenings, kept when the child is screened again (before/after the programme). */
+  screeningHistory?: ScreeningSnapshot[];
   guardianRelationship?: string;
   guardianConsentPeriod?: string;
   serverConsentReceivedAt?: string;

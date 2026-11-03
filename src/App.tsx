@@ -1666,7 +1666,7 @@ export default function App() {
                             <th className="py-3 px-3">الفهم</th>
                             <th className="py-3 px-3 hidden md:table-cell">دقة القراءة</th>
                             <th className="py-3 px-3 hidden md:table-cell">طريقة القياس</th>
-                            <th className="py-3 px-4">الفحص المعرفي</th>
+                            <th className="py-3 px-4">فحص المؤشرات</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">

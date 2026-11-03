@@ -9,8 +9,8 @@ import {
   ScoredSubtest,
   formatAge,
 } from '../../cognitiveProfile/scoring';
-import { FLAG_TEXT_AR, PATTERN_META, RISK_META, SUBTEST_GUIDANCE, nextStepsAr } from '../../cognitiveProfile/guidance';
-import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession } from '../../cognitiveProfile/storage';
+import { FLAG_TEXT_AR, PARENT_RESULT, PATTERN_META, RISK_META, SUBTEST_GUIDANCE, nextStepsAr } from '../../cognitiveProfile/guidance';
+import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession, type ScreeningSnapshot } from '../../cognitiveProfile/storage';
 import { BandLegend, CentileTrack } from './CentileTrack';
 import { BrandMark } from '../ui/BrandMark';
 
@@ -29,11 +29,14 @@ interface Props {
   session: BatterySession;
   onBack: () => void;
   onStartTraining: () => void;
+  /** The child's previous screening, when this one is a re-screen. */
+  previous?: ScreeningSnapshot | null;
 }
 
-export function ProfileReportView({ profile, session, onBack, onStartTraining }: Props) {
+export function ProfileReportView({ profile, session, onBack, onStartTraining, previous = null }: Props) {
   const [openStrategy, setOpenStrategy] = useState<SubtestId | null>(profile.weaknesses[0] ?? null);
   const risk = RISK_META[profile.risk];
+  const parent = PARENT_RESULT[profile.risk];
   const pattern = PATTERN_META[profile.pattern];
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
   const flagged = profile.subtests.filter((s) => s.flags.length > 0);
@@ -67,7 +70,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
           <div className="flex items-start gap-4">
             <BrandMark size={44} />
             <div>
-              <p className="bz-small text-brand font-semibold">بصيرة · تقرير الملف المعرفي القرائي</p>
+              <p className="bz-small text-brand font-semibold">هَيَّا نَقْرَأْ · تقرير فحص مؤشرات عسر القراءة</p>
               <h1 className="bz-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>{session.childName}</h1>
               <p className="bz-small text-ink-2 mt-1">
                 العمر عند الفحص: <strong className="text-ink">{formatAge(profile.ageMonths)}</strong> · فئة المقارنة: {profile.ageBandLabelAr}
@@ -92,6 +95,54 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
               <AlertTriangle className="w-4 h-4 shrink-0 mt-1" />
               عمر الطفل خارج المدى المصمَّم له الفحص (٤:٠–٨:١١)؛ قورنت النتائج بأقرب فئة عمرية، وتُفسَّر بحذر.
             </p>
+          )}
+
+          {/* The result for parents, in one sentence */}
+          <section className="rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ backgroundColor: parent.bg, border: `2px solid ${parent.color}` }} aria-labelledby="parent-result-title">
+            <div>
+              <p className="bz-small font-semibold" style={{ color: parent.color }}>النتيجة باختصار</p>
+              <h2 id="parent-result-title" className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 28px)', color: parent.color }}>{parent.titleAr}</h2>
+              <p className="mt-2 text-[16px] leading-[1.8] text-ink max-w-2xl">{parent.textAr}</p>
+            </div>
+            {parent.actionAr && onStartTraining && (
+              <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary bz-btn-lg shrink-0 print:hidden">
+                {parent.actionAr}
+              </button>
+            )}
+          </section>
+
+          {previous && (
+            <section className="bz-card p-6 space-y-3" aria-labelledby="compare-title">
+              <h2 id="compare-title" className="bz-h3">مقارنة بالفحص السابق</h2>
+              <p className="bz-small text-ink-2">
+                الفحص السابق: {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })} · {RISK_META[previous.risk].labelAr}. الآن: {risk.labelAr}.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-ink-2">
+                    <th className="text-right p-1.5">المجال</th>
+                    <th className="p-1.5">قبل</th>
+                    <th className="p-1.5">الآن</th>
+                    <th className="p-1.5">التغيّر</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.domains.map((d) => {
+                    const before = previous.domains.find((p) => p.domain === d.domain);
+                    const change = before ? d.centile - before.centile : null;
+                    return (
+                      <tr key={d.domain} className="border-t border-line">
+                        <td className="p-1.5 font-semibold">{DOMAINS[d.domain].nameAr}</td>
+                        <td className="p-1.5 text-center bz-num">{before ? `المئين ${toArabicDigits(before.centile)}` : '—'}</td>
+                        <td className="p-1.5 text-center bz-num">المئين {toArabicDigits(d.centile)}</td>
+                        <td className="p-1.5 text-center bz-num font-semibold">{change === null ? '—' : change > 0 ? `+${toArabicDigits(change)}` : change < 0 ? `−${toArabicDigits(-change)}` : toArabicDigits(0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-ink-2">المئين يقارن الطفل بأقرانه في عمره، فارتفاعه يعني تقدّمًا أسرع من المتوقع بالعمر وحده. المعايير العمرية الحالية تقديرية، والفروق الصغيرة (أقل من ١٠) قد تكون تذبذبًا.</p>
+            </section>
           )}
 
           {/* Executive summary */}
@@ -122,7 +173,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining }:
           <section aria-labelledby="profile-title">
             <div className="flex flex-wrap items-end justify-between gap-3 pb-4 border-b border-line">
               <div>
-                <h2 id="profile-title" className="bz-h3" style={{ fontSize: 22 }}>الملف المعرفي البياني</h2>
+                <h2 id="profile-title" className="bz-h3" style={{ fontSize: 22 }}>تفاصيل النتيجة لكل مهارة (للمعلم والأخصائي)</h2>
                 <p className="bz-small bz-muted mt-1">موقع الطفل مقارنةً بأقرانه في العمر (مئين تقديري ١–٩٩، والخط الأوسط = متوسط العمر).</p>
               </div>
               <BandLegend />

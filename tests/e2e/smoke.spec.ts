@@ -153,7 +153,7 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
   for (const game of ['نوافذ القلعة', 'بيوت الحيوانات', 'ببغاء الحديقة', 'أصدقاء الفضاء', 'كلمات تتشابه', 'مختبر الأصوات', 'الأذن الذهبية', 'عين الصقر', 'صندوق الحروف']) {
     await expect(page.getByText(game, { exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('button', { name: 'الملف المعرفي والتقرير' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'النتيجة والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
 });

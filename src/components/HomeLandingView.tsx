@@ -87,7 +87,7 @@ function SampleProfileCard({ compact = false }: { compact?: boolean }) {
     <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
       <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-line">
         <div>
-          <p className="bz-small bz-muted">الملف المعرفي · نموذج توضيحي</p>
+          <p className="bz-small bz-muted">نتيجة الفحص · نموذج توضيحي</p>
           <p className="font-display font-bold text-ink text-lg mt-0.5">سارة · ٦ سنوات و٤ أشهر</p>
         </div>
         <span className="bz-badge bz-badge-risk">مؤشر خطر مرتفع</span>
@@ -593,7 +593,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             نصف ساعة اليوم قد توفّر على طفلك سنوات من التعثّر.
           </h2>
           <p className="relative mt-4 text-[17px] leading-relaxed max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,.82)' }}>
-            ابدأ الفحص الآن، واحصل على الملف المعرفي وخطة التدريب فور انتهاء الألعاب.
+            ابدأ الفحص الآن، واحصل على النتيجة وخطة التدريب فور انتهاء الألعاب.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>

@@ -260,3 +260,40 @@ export function nextStepsAr(risk: RiskLevel, pattern: ProfilePattern): string[] 
   }
   return steps;
 }
+
+/**
+ * The result in one sentence for parents: three states only, plus "incomplete".
+ * The detailed profile below it stays for teachers and specialists.
+ * A screening indicator is never a diagnosis; a high indicator always recommends a specialist.
+ */
+export const PARENT_RESULT: Record<RiskLevel, { titleAr: string; textAr: string; actionAr: string | null; color: string; bg: string }> = {
+  low: {
+    titleAr: 'لا تظهر مؤشرات مقلقة',
+    textAr: 'مهارات ما قبل القراءة الأساسية ضمن المتوقع لعمره. البرنامج القصير اختياري لتقوية الاستعداد، وتابع قراءته في المدرسة.',
+    actionAr: 'برنامج تقوية اختياري',
+    color: RISK_META.low.color,
+    bg: RISK_META.low.bg,
+  },
+  moderate: {
+    titleAr: 'يحتاج متابعة وتدريبًا',
+    textAr: 'ظهرت مهارة أضعف من المتوقع لعمره. ابدأ البرنامج التدريبي (٢٠ جلسة قصيرة)، ثم أعد الفحص. إذا بقي الضعف بعد البرنامج فاستشر أخصائيًا.',
+    actionAr: 'ابدأ البرنامج التدريبي',
+    color: RISK_META.moderate.color,
+    bg: RISK_META.moderate.bg,
+  },
+  high: {
+    titleAr: 'ننصح بزيارة أخصائي، وابدأ التدريب الآن',
+    textAr: 'ظهرت أكثر من مهارة أضعف من المتوقع لعمره، وهو نمط يستدعي تقييمًا لدى أخصائي صعوبات تعلّم أو تخاطب. هذه نتيجة فحص مبدئي وليست تشخيصًا، ولا داعي لانتظار الموعد: ابدأ البرنامج التدريبي الآن.',
+    actionAr: 'ابدأ البرنامج التدريبي',
+    color: RISK_META.high.color,
+    bg: RISK_META.high.bg,
+  },
+  insufficient: {
+    titleAr: 'أكمل الفحص لتظهر النتيجة',
+    textAr: 'لم تكتمل ألعاب كافية بعد. يمكن إكمالها في جلسة أخرى.',
+    actionAr: null,
+    color: RISK_META.insufficient.color,
+    bg: RISK_META.insufficient.bg,
+  },
+};
+
