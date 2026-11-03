@@ -3,15 +3,17 @@ import {
   Heart,
   Sparkles,
   UserPlus,
-  CheckCircle2,
   Brain,
   FileBarChart,
   LogOut,
   Calendar,
   BookOpen,
-  ArrowLeft,
   ShieldCheck,
   Baby,
+  Mail,
+  Lock,
+  LogIn,
+  CheckCircle2,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
 import { BrandMark } from './ui/BrandMark';
@@ -20,15 +22,17 @@ interface ParentPortalViewProps {
   supabaseUser: any;
   authLoading: boolean;
   students: StudentRecord[];
-  onSignInWithGoogle: () => Promise<void>;
+  onSignInWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   onSignOut: () => Promise<void>;
   onRegisterChild: (child: {
     name: string;
     ageYears: number;
     gradeLevel: number;
-    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine';
+    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
     notes?: string;
-  }) => string | null;
+    parentEmail?: string;
+    parentPassword?: string;
+  }) => Promise<string | null> | (string | null);
   onSelectStudent: (studentId: string, targetTab: 'dyslexia-lab' | 'dashboard' | 'guided-program') => void;
   onNavigateHome: () => void;
 }
@@ -37,53 +41,115 @@ export function ParentPortalView({
   supabaseUser,
   authLoading,
   students,
-  onSignInWithGoogle,
+  onSignInWithEmail,
   onSignOut,
   onRegisterChild,
   onSelectStudent,
   onNavigateHome,
 }: ParentPortalViewProps) {
+  // Mode: 'register' or 'login'
+  const [portalMode, setPortalMode] = useState<'register' | 'login'>('register');
+
+  // Registration Form State
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine'>('gulf');
+  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi'>('gulf');
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
   const [consentChecked, setConsentChecked] = useState(true);
   const [formError, setFormError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Login Form State
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   // Real registered children only (exclude demo records AND guest placeholder):
   const myChildren = students.filter(
     (s) => !s.isDemoRecord && s.id !== 'stu-guest' && s.id !== 'stu-1' && s.name !== 'طفلك'
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
     const cleanName = childName.trim();
-    if (cleanName.length < 2) {
-      setFormError('يرجى إدخال اسم الطفل الثلاثي أو الثنائي بشكل صحيح.');
+    if (cleanName.length < 3) {
+      setFormError('يرجى إدخال اسم الطفل الثلاثي بشكل صحيح (3 كلمات على الأقل).');
       return;
     }
+
+    if (!supabaseUser) {
+      const cleanEmail = parentEmail.trim();
+      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+        setFormError('يرجى إدخال بريد إلكتروني صحيح لحفظ ملف طفلك والتواصل معكم.');
+        return;
+      }
+      if (parentPassword.length < 6) {
+        setFormError('يرجى إدخال كلمة مرور من 6 خانات على الأقل لحماية حسابك.');
+        return;
+      }
+    }
+
     if (!consentChecked) {
-      setFormError('يرجى تأكيد موافقة ولي الأمر لمتابعة إنشاء الملف.');
+      setFormError('يرجى تأكيد موافقة ولي الأمر لمتابعة إنشاء الملف والبدء.');
       return;
     }
 
-    const newId = onRegisterChild({
-      name: cleanName,
-      ageYears,
-      gradeLevel,
-      dialectCode,
-      notes: parentNotes.trim(),
-    });
+    setIsSubmitting(true);
+    try {
+      const newId = await onRegisterChild({
+        name: cleanName,
+        ageYears,
+        gradeLevel,
+        dialectCode,
+        notes: parentNotes.trim(),
+        parentEmail: parentEmail.trim(),
+        parentPassword: parentPassword,
+      });
 
-    if (newId) {
-      setChildName('');
-      setParentNotes('');
-      setShowAddForm(false);
-      onSelectStudent(newId, 'dyslexia-lab');
+      if (newId) {
+        setChildName('');
+        setParentNotes('');
+        setParentPassword('');
+        setShowAddForm(false);
+        onSelectStudent(newId, 'dyslexia-lab');
+      }
+    } catch (err: any) {
+      setFormError(err?.message || 'حدث خطأ أثناء تسجيل البيانات. يرجى المحاولة ثانية.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    const cleanEmail = loginEmail.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLoginError('يرجى إدخال بريد إلكتروني صحيح.');
+      return;
+    }
+    if (!loginPassword) {
+      setLoginError('يرجى إدخال كلمة المرور.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const res = await onSignInWithEmail(cleanEmail, loginPassword);
+    setIsSubmitting(false);
+
+    if (res.success) {
+      setLoginEmail('');
+      setLoginPassword('');
+      setPortalMode('register');
+    } else {
+      setLoginError(res.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
     }
   };
 
@@ -111,51 +177,50 @@ export function ParentPortalView({
               </div>
             </div>
 
-            {/* User Profile / Login Button */}
+            {/* User Profile / Status */}
             <div>
               {supabaseUser ? (
                 <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 sm:px-4">
-                  {supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture ? (
-                    <img
-                      src={supabaseUser.user_metadata.avatar_url || supabaseUser.user_metadata.picture}
-                      alt="حسابك"
-                      className="w-10 h-10 rounded-full border border-teal-500 object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center">
-                      {(supabaseUser.user_metadata?.full_name || supabaseUser.email || 'و')[0].toUpperCase()}
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center">
+                    {(supabaseUser.user_metadata?.full_name || supabaseUser.email || 'و')[0].toUpperCase()}
+                  </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-slate-900 leading-tight">
-                      {supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || 'ولي أمر معتمد'}
+                      {supabaseUser.user_metadata?.full_name || 'ولي أمر مسجل'}
                     </p>
-                    <p className="text-[11px] text-slate-500 truncate max-w-[140px]">{supabaseUser.email}</p>
+                    <p className="text-[11px] text-slate-500 truncate max-w-[150px]">{supabaseUser.email}</p>
                   </div>
                   <button
                     type="button"
                     onClick={onSignOut}
                     title="تسجيل الخروج"
-                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                   >
                     <LogOut size={16} />
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={onSignInWithGoogle}
-                  disabled={authLoading}
-                  className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm shadow-xs transition-all cursor-pointer"
-                >
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                  <span>{authLoading ? 'جارٍ الاتصال بـ Google…' : 'دخول ولي الأمر بجوجل'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {portalMode === 'register' ? (
+                    <button
+                      type="button"
+                      onClick={() => setPortalMode('login')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                    >
+                      <LogIn size={15} className="text-teal-600" />
+                      <span>دخول ولي أمر مسجل</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPortalMode('register')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                    >
+                      <UserPlus size={15} className="text-teal-600" />
+                      <span>تسجيل طفل جديد</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -165,27 +230,9 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>خصوصية تامة وأمان عائلي:</strong> جميع بيانات الأطفال والتقارير تُحفظ مشفرة في قاعدة بياناتك الخاصة، ولا تُشارك مع أي طرف ثالث. التقييم يتم عبر ألعاب تفاعلية ممتعة دون استخدام الكاميرا أو أي تتبع بصري مزعج.
+            <strong>خصوصية تامة وأمان عائلي:</strong> جميع بيانات الأطفال والتقارير تُحفظ مشفرة في قاعدة بياناتك الخاصة، ولا تُشارك مع أي طرف ثالث. التقييم يتم عبر ألعاب تفاعلية ممتعة ومبسطة.
           </div>
         </div>
-
-        {/* Guest Session Notice (if user registered child without signing in) */}
-        {!supabaseUser && myChildren.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900">
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>أنت تتصفح في وضع الجلسة السريعة. لحفظ تقدم طفلك والوصول لتقاريره مستقبلاً من أي جهاز، اربط الحساب بـ Google.</span>
-            </div>
-            <button
-              type="button"
-              onClick={onSignInWithGoogle}
-              disabled={authLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 transition-colors shadow-xs"
-            >
-              حفظ الحساب بجوجل
-            </button>
-          </div>
-        )}
 
         {/* Existing Children Section (if any) */}
         {myChildren.length > 0 && (
@@ -198,8 +245,11 @@ export function ParentPortalView({
               {!showAddForm && (
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs hover:bg-teal-700 transition-colors shadow-xs"
+                  onClick={() => {
+                    setShowAddForm(true);
+                    setPortalMode('register');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs hover:bg-teal-700 transition-colors shadow-xs cursor-pointer"
                 >
                   <UserPlus size={15} />
                   <span>إضافة طفل آخر</span>
@@ -217,7 +267,7 @@ export function ParentPortalView({
                     <div>
                       <h3 className="font-extrabold text-slate-900 text-base">{child.name}</h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        العمر: {child.ageYears} سنوات · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : `الصف ${child.gradeLevel} الابتدائي`}
+                        العمر: {child.ageYears} سنوات · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${child.gradeLevel} الابتدائي`}
                       </p>
                     </div>
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
@@ -233,7 +283,7 @@ export function ParentPortalView({
                     <button
                       type="button"
                       onClick={() => onSelectStudent(child.id, 'dyslexia-lab')}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition-colors"
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition-colors cursor-pointer"
                     >
                       <Brain size={15} />
                       <span>بدء الفحص</span>
@@ -241,7 +291,7 @@ export function ParentPortalView({
                     <button
                       type="button"
                       onClick={() => onSelectStudent(child.id, 'dashboard')}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors"
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
                     >
                       <FileBarChart size={15} />
                       <span>عرض التقرير</span>
@@ -253,8 +303,80 @@ export function ParentPortalView({
           </div>
         )}
 
-        {/* Add Child Form (Shown if no children or user clicked add) */}
-        {(myChildren.length === 0 || showAddForm) && (
+        {/* VIEW 1: PARENT LOGIN FORM (When portalMode === 'login' and not logged in) */}
+        {!supabaseUser && portalMode === 'login' && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <LogIn size={20} className="text-teal-600" />
+                  <span>تسجيل دخول ولي أمر</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  أدخل بريدك الإلكتروني وكلمة المرور لمتابعة ملفات أطفالك وتقاريرهم القرائية السابقة.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPortalMode('register')}
+                className="text-xs text-teal-600 font-bold hover:underline cursor-pointer"
+              >
+                تسجيل طفل جديد ←
+              </button>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-4 max-w-md mx-auto">
+              {loginError && (
+                <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
+                  {loginError}
+                </div>
+              )}
+
+              <label className="block space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Mail size={14} className="text-slate-400" />
+                  <span>البريد الإلكتروني لولي الأمر *</span>
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="parent@example.com"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
+                  dir="ltr"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Lock size={14} className="text-slate-400" />
+                  <span>كلمة المرور *</span>
+                </span>
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
+                  dir="ltr"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {isSubmitting ? 'جارٍ تسجيل الدخول…' : 'تسجيل الدخول وعرض أطفالي'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* VIEW 2: ADD CHILD & IMMEDIATE REGISTRATION FORM */}
+        {(myChildren.length === 0 || showAddForm) && portalMode === 'register' && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
               <div>
@@ -264,7 +386,7 @@ export function ParentPortalView({
                     {myChildren.length > 0
                       ? 'تسجيل بيانات طفل إضافي'
                       : supabaseUser
-                      ? 'إضافة طفلك الأول إلى حسابك السحابي'
+                      ? 'إضافة طفلك إلى حسابك العائلي'
                       : 'تسجيل طفل للتقييم الفوري والبدء المباشر'}
                   </span>
                 </h2>
@@ -272,83 +394,86 @@ export function ParentPortalView({
                   {myChildren.length > 0
                     ? 'أدخل بيانات الطفل الجديد لإضافته إلى قائمة أطفالك ومتابعة تقدمه المستقل.'
                     : supabaseUser
-                    ? 'أدخل بيانات طفلك لإنشاء ملفه القرائي ومتابعة تقاريره وتدريباته بشكل دائم.'
-                    : 'أدخل اسم طفلك وعمره لبدء ألعاب الفحص والوعي الصوتي فوراً (ويمكنك ربطه بجوجل لاحقاً لحفظ النتائج).'}
+                    ? 'أدخل بيانات طفلك لتهيئة ألعاب الفحص والبرنامج المخصص له وحفظ تقدمه.'
+                    : 'أدخل بيانات طفلك للبدء الفوري في ألعاب فحص القراءة والوعي الصوتي، وحفظ نتائجه في حسابك.'}
                 </p>
               </div>
               {myChildren.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="text-xs text-slate-400 hover:text-slate-600"
+                  className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   إلغاء
                 </button>
               )}
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleRegisterSubmit} className="space-y-6">
               {formError && (
                 <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
                   {formError}
                 </div>
               )}
 
-              {/* Child Name */}
+              {/* Child Name (Three-part name) */}
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-700">اسم الطفل الثلاثي أو الثنائي *</span>
+                <span className="text-xs font-bold text-slate-700">اسم الطفل الثلاثي *</span>
                 <input
                   type="text"
                   required
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  placeholder="مثال: عمر محمد السعيد"
+                  placeholder="مثال: سلطان بن خالد العتيبي"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
                 />
               </label>
 
-              {/* Age Selection */}
+              {/* Age Selection (Expanded to 12+) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Calendar size={14} className="text-slate-400" />
                   <span>عمر الطفل بالسنوات *</span>
                 </span>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {[4, 5, 6, 7, 8, 9].map((age) => (
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+                  {[4, 5, 6, 7, 8, 9, 10, 11, 12].map((age) => (
                     <button
                       key={age}
                       type="button"
                       onClick={() => setAgeYears(age)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                         ageYears === age
                           ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      {age === 9 ? '9+ سنوات' : `${age} سنوات`}
+                      {age >= 12 ? '12+ سنة' : `${age} سنوات`}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Grade Selection */}
+              {/* Grade Selection (Expanded to Grade 6+) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <BookOpen size={14} className="text-slate-400" />
                   <span>المرحلة الدراسية الحالية *</span>
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                   {[
-                    { val: 0, label: 'الروضة / تمهيدي' },
-                    { val: 1, label: 'الصف الأول الابتدائي' },
-                    { val: 2, label: 'الصف الثاني الابتدائي' },
-                    { val: 3, label: 'الصف الثالث الابتدائي' },
+                    { val: 0, label: 'تمهيدي / روضة' },
+                    { val: 1, label: 'الصف الأول' },
+                    { val: 2, label: 'الصف الثاني' },
+                    { val: 3, label: 'الصف الثالث' },
+                    { val: 4, label: 'الصف الرابع' },
+                    { val: 5, label: 'الصف الخامس' },
+                    { val: 6, label: 'الصف السادس+' },
                   ].map((g) => (
                     <button
                       key={g.val}
                       type="button"
                       onClick={() => setGradeLevel(g.val)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                         gradeLevel === g.val
                           ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -360,24 +485,25 @@ export function ParentPortalView({
                 </div>
               </div>
 
-              {/* Home Dialect */}
+              {/* Home Dialect (Added Maghrebi) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
                 <p className="text-[11px] text-slate-500">
-                  تساعدنا على استبعاد المشتتات الصوتية التي تندمج في بعض اللهجات (مثل الذال والزاي، والقاف والكاف).
+                  تساعد المحرك التكيفي على استبعاد الفروق الصوتية اللهجية الطبيعية (مثل الذال والزاي، والقاف والجيم).
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
                     { code: 'gulf' as const, label: 'سعودية / خليجية' },
                     { code: 'msa' as const, label: 'فصحى معيارية' },
                     { code: 'egyptian' as const, label: 'مصرية' },
                     { code: 'levantine' as const, label: 'شامية' },
+                    { code: 'maghrebi' as const, label: 'مغاربية (مغرب / جزائر / تونس)' },
                   ].map((d) => (
                     <button
                       key={d.code}
                       type="button"
                       onClick={() => setDialectCode(d.code)}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all ${
+                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
                         dialectCode === d.code
                           ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -389,15 +515,61 @@ export function ParentPortalView({
                 </div>
               </div>
 
-              {/* Parent Notes (Optional) */}
+              {/* Parent Credentials (Only if not logged in) */}
+              {!supabaseUser && (
+                <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                    <Mail size={16} className="text-teal-600" />
+                    <span>بيانات حساب ولي الأمر (لحفظ ومتابعة تقارير طفلك)</span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <label className="block space-y-1">
+                      <span className="text-xs font-bold text-slate-700">بريدك الإلكتروني *</span>
+                      <input
+                        type="email"
+                        required
+                        value={parentEmail}
+                        onChange={(e) => setParentEmail(e.target.value)}
+                        placeholder="parent@example.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-medium text-slate-800"
+                        dir="ltr"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-xs font-bold text-slate-700">كلمة المرور للحساب *</span>
+                      <input
+                        type="password"
+                        required
+                        value={parentPassword}
+                        onChange={(e) => setParentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        minLength={6}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-medium text-slate-800"
+                        dir="ltr"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    تُحفظ نتائج فحص طفلك تلقائياً في حسابك المشفر، لتتمكن من الرجوع للتقرير والبرنامج التدريبي في أي وقت من هاتفك أو حاسوبك.
+                  </p>
+                </div>
+              )}
+
+              {/* Parent Notes (Optional) with AI Adaptation Hint */}
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-700">ملاحظات خاصة عن الطفل (اختياري)</span>
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-amber-500" />
+                  <span>ملاحظات خاصة عن الطفل (اختياري)</span>
+                </span>
+                <p className="text-[11px] text-slate-500">
+                  تُساعد الوكيل الذكي ونموذج التقييم على تخصيص الفحص ومطابقة تمارين القراءة مع التحديات التي يواجهها طفلك تحديداً.
+                </p>
                 <input
                   type="text"
                   value={parentNotes}
                   onChange={(e) => setParentNotes(e.target.value)}
                   placeholder="مثال: يخلط بين الحروف المتشابهة، يتردد عند قراءة الحركات..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 font-normal text-slate-800 text-sm"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-normal text-slate-800 text-sm"
                 />
               </label>
 
@@ -409,27 +581,29 @@ export function ParentPortalView({
                   onChange={(e) => setConsentChecked(e.target.checked)}
                   className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                 />
-                <span className="text-xs text-slate-700 leading-relaxed font-medium">
-                  <strong>موافقة وإقرار ولي الأمر:</strong> أوافق بصفتي ولي أمر الطفل على تسجيل بياناته وإجراء الفحص المعرفي وألعاب القراءة والاحتفاظ بتقريره في حسابي.
+                <span className="text-xs text-slate-700 leading-relaxed">
+                  أوافق بصفتي ولي أمر الطفل على إجراء الفحص التشخيصي الميسر عبر المنصة، وبناء الملف المعرفي والبرنامج التدريبي التكيفي المخصص له وفق سياسة الخصوصية.
                 </span>
               </label>
 
-              {/* Submit Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                {!supabaseUser && (
+                  <button
+                    type="button"
+                    onClick={() => setPortalMode('login')}
+                    className="text-xs text-slate-600 hover:text-teal-700 font-bold transition-colors cursor-pointer order-2 sm:order-1"
+                  >
+                    لديك حساب بالفعل؟ تسجيل الدخول هنا ←
+                  </button>
+                )}
                 <button
                   type="submit"
-                  className="flex-1 py-3.5 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                 >
-                  <Sparkles size={18} />
-                  <span>حفظ وبدء رحلة الفحص الآن</span>
-                  <ArrowLeft size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={onNavigateHome}
-                  className="py-3.5 px-6 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm transition-colors"
-                >
-                  العودة للرئيسية
+                  <Brain size={18} />
+                  <span>{isSubmitting ? 'جارٍ تهيئة الفحص…' : 'حفظ وبدء فحص القراءة الآن ←'}</span>
                 </button>
               </div>
             </form>

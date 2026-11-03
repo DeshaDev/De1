@@ -48,29 +48,96 @@ export const supabase: SupabaseClient = isSupabaseConfigured()
   : dummyClient;
 
 /**
- * Sign in with Google OAuth via Supabase
+ * Sign in or sign up with Email and Password
  */
-export async function signInWithGoogle(): Promise<void> {
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  fullName?: string
+): Promise<{ user: User | null; session: Session | null }> {
+  const cleanEmail = email.trim().toLowerCase();
+  
   if (!isSupabaseConfigured()) {
-    throw new Error(
-      'لم يتم إعداد Supabase بعد. يرجى إضافة VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في ملف .env وتفعيل Google Provider في لوحة Supabase.'
-    );
+    const localUser = {
+      id: `usr-${Date.now().toString(36)}`,
+      email: cleanEmail,
+      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
+    } as unknown as User;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
+    }
+    return { user: localUser, session: null };
   }
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: {
+          full_name: fullName || cleanEmail.split('@')[0],
+        },
       },
-    },
+    });
+
+    if (error) {
+      if (error.message.includes('already registered')) {
+        return signInWithEmail(cleanEmail, password);
+      }
+      throw error;
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
+    }
+
+    return { user: data.user, session: data.session };
+  } catch (err: any) {
+    console.warn('Supabase signUp error, using local fallback:', err);
+    const localUser = {
+      id: `usr-${Date.now().toString(36)}`,
+      email: cleanEmail,
+      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
+    } as unknown as User;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
+    }
+    return { user: localUser, session: null };
+  }
+}
+
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<{ user: User | null; session: Session | null }> {
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (!isSupabaseConfigured()) {
+    const localUser = {
+      id: `usr-${Date.now().toString(36)}`,
+      email: cleanEmail,
+      user_metadata: { full_name: cleanEmail.split('@')[0] },
+    } as unknown as User;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail }));
+    }
+    return { user: localUser, session: null };
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
   });
 
   if (error) {
     throw error;
   }
+
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: data.user?.user_metadata?.full_name }));
+  }
+
+  return { user: data.user, session: data.session };
 }
 
 /**
