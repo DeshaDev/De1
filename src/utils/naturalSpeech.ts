@@ -1,17 +1,18 @@
 /**
  * Baseera Natural Arabic Speech Player
  * Powered by Microsoft Azure Neural Arabic Voices:
- * - Default: ar-EG-SalmaNeural (Warm, maternal, pedagogical teacher voice for children)
- * - Optional: ar-AE-FatimaNeural, ar-SA-ZariyahNeural, ar-KW-NouraNeural
+ * - Default: ar-EG-SalmaNeural (Warm, maternal, pedagogical teacher voice for stories & sentences)
+ * - Phonemes / Isolated Letters: ar-SA-HamedNeural with Classical Fusha IPA (Tu, Ti, Ta, Bu...)
  *
  * Provides 100% authentic human-grade makharij al-huruf with client-side caching
  * and direct browser cloud fallback for static hosting (cPanel / Namecheap).
  */
 
 import { authenticatedFetch } from './apiAuth';
+import { formatArabicTextWithPhonemes, getArabicPhonemeIpa } from './arabicPhonemeBank';
 
 const audioMemoryCache = new Map<string, string>();
-const MAX_AUDIO_CACHE_ENTRIES = 30;
+const MAX_AUDIO_CACHE_ENTRIES = 50;
 const MAX_CACHED_AUDIO_URL_CHARS = 500_000;
 let currentActiveAudio: HTMLAudioElement | null = null;
 
@@ -34,10 +35,10 @@ function cacheAudio(key: string, dataUrl: string): void {
 }
 
 export type ArabicTtsVoice =
-  | 'ar-EG-SalmaNeural'   // المعلمة سلمى: صوت تربوي أمومي دافئ وواضح جداً للأطفال
+  | 'ar-EG-SalmaNeural'   // المعلمة سلمى: صوت تربوي أمومي دافئ للقصص والجمل
+  | 'ar-SA-HamedNeural'   // حامد: صوت فصحى أصيل ناصع المخارج للفونيمات والحروف المجردة
   | 'ar-AE-FatimaNeural'  // فاطمة: صوت خليجي فصيح وهادئ
   | 'ar-SA-ZariyahNeural' // زارية: صوت سعودي فصيح
-  | 'ar-SA-HamedNeural'   // حامد: صوت رجالي فصيح
   | 'ar-KW-NouraNeural';  // نورة: صوت كويتي فصيح
 
 export interface NaturalSpeechOptions {
@@ -51,15 +52,14 @@ export interface NaturalSpeechOptions {
 /**
  * Prepares Arabic text for pristine educational neural articulation:
  * 1. Strips tatweel (kashida 'ـ') which distorts acoustic models.
- * 2. Cleans punctuation spacing while preserving diacritics and pauses.
- * 3. Preserves natural Arabic waqf (الوقف بالسكون أو الهاء على التاء المربوطة)
- *    WITHOUT injecting artificial, ungrammatical tanween.
+ * 2. Normalizes whitespaces.
+ * 3. Preserves natural Arabic waqf without injecting artificial tanween.
  */
 export function prepareArabicTtsText(text: string): string {
   if (!text) return '';
   let cleaned = text.trim();
 
-  // Strip tatweel/kashida which causes acoustic anomalies
+  // Strip tatweel/kashida
   cleaned = cleaned.replace(/ـ+/g, '');
 
   // Normalize excessive whitespaces
@@ -71,7 +71,7 @@ export function prepareArabicTtsText(text: string): string {
 /**
  * Synthesizes Arabic speech directly via Azure Neural TTS REST API (Client-side with CORS)
  * Ensures 100% studio-quality natural audio even on static hosts (Namecheap / cPanel)
- * without requiring a Node.js backend.
+ * using Classical Fusha IPA phoneme tags for isolated sounds and letters.
  */
 async function fetchDirectAzureAudio(
   text: string,
@@ -87,7 +87,10 @@ async function fetchDirectAzureAudio(
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}"><prosody rate="${rate}" pitch="${pitch}">${escaped}</prosody></voice></speak>`;
+    // Inject IPA phoneme tags so 'تُ' is pronounced pure 'Tu' (never 'toh')
+    const formattedBody = formatArabicTextWithPhonemes(escaped);
+
+    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}"><prosody rate="${rate}" pitch="${pitch}">${formattedBody}</prosody></voice></speak>`;
 
     const endpoint = `https://${CLIENT_AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
     const res = await fetch(endpoint, {
@@ -114,7 +117,8 @@ async function fetchDirectAzureAudio(
 
 /**
  * Play crystal-clear natural Arabic speech with 100% accurate makharij al-huruf.
- * Defaults to warm, pedagogical teacher voice (ar-EG-SalmaNeural) with gentle pacing (-12%).
+ * For isolated letters and letter-sound tasks (تُ، بَ، سِ...) uses pure Fusha voice with IPA phonemes (Tu, Ba, Si...).
+ * For stories and sentences, defaults to warm pedagogical voice (ar-EG-SalmaNeural).
  */
 export async function playNaturalArabicAudio(
   text: string,
@@ -123,9 +127,18 @@ export async function playNaturalArabicAudio(
   const preparedText = prepareArabicTtsText(text);
   if (!preparedText) return;
 
-  const voice: ArabicTtsVoice = options.voice || 'ar-EG-SalmaNeural';
+  // Determine if this is an isolated letter or phoneme
+  const isIsolatedPhoneme =
+    Boolean(getArabicPhonemeIpa(preparedText)) ||
+    (preparedText.length <= 4 && !preparedText.includes(' '));
+
+  // For isolated letters and phonemes, prioritize authentic Classical Fusha voice
+  const voice: ArabicTtsVoice = isIsolatedPhoneme
+    ? 'ar-SA-HamedNeural'
+    : options.voice || 'ar-EG-SalmaNeural';
+
   const rate = options.rate || '-12%';
-  const pitch = options.pitch || '+2%';
+  const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+2%');
   const cacheKey = `${voice}_${rate}_${pitch}_${preparedText}`;
 
   // Stop previous audio playback smoothly

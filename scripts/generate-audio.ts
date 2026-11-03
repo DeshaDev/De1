@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildAudioCatalog, type CatalogEntry } from '../src/cognitiveProfile/audioCatalog';
+import { formatArabicTextWithPhonemes, getArabicPhonemeIpa } from '../src/utils/arabicPhonemeBank';
 
 const KEY = process.env.AZURE_SPEECH_KEY?.trim();
 const REGION = process.env.AZURE_SPEECH_REGION?.trim();
