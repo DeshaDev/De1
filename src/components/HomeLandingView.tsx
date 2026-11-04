@@ -28,6 +28,7 @@ import {
   SKILLS,
   FOCUS_SKILLS,
 } from '../cognitiveProfile/training';
+import { PROBE_MINUTES } from '../cognitiveProfile/progressProbe';
 
 export type AppTabId =
   | 'home'
@@ -389,7 +390,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { k: `${ar(MINUTES_PER_SESSION)} دقيقة`, v: 'للجلسة' },
+                { k: `${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, v: 'للجلسة (ممارسة + قياس)' },
                 { k: `${ar(SESSIONS_PER_WEEK)} جلسات`, v: 'أسبوعيًا' },
                 { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'ثم إعادة فحص' },
               ].map((s) => (
