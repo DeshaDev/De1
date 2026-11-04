@@ -147,6 +147,20 @@ export const TrainingProgressUploadSchema = z
       )
       .max(200)
       .optional(),
+    bkt: z
+      .record(
+        z.string().regex(/^[a-zA-Z]+:[123]$/),
+        z
+          .object({
+            p: z.number().min(0).max(1),
+            n: z.number().int().min(0).max(5000),
+            c: z.number().int().min(0).max(5000),
+            seq: z.string().max(300).regex(/^[01]*$/),
+          })
+          .strict()
+      )
+      .refine((r) => Object.keys(r).length <= 30, 'حالات كثيرة')
+      .optional(),
   })
   .strict();
 

@@ -285,20 +285,22 @@ test('training items never reuse a scored battery item verbatim', () => {
   assert.ok(collisions / total < 0.02, `collisions ${collisions}/${total}`);
 });
 
-test('mastery: two sessions at ≥80% move up a level; two below 50% step back and flag support', () => {
+test('mastery comes from knowledge tracing: steady correct answers move up a level; sustained errors step back and flag support', () => {
   const plan = { createdAt: new Date().toISOString(), preventive: false, focus: ['rhyme'] as SkillId[], rationaleAr: [] };
   let progress = createProgress(plan);
-  progress = applySession(progress, 'rhyme', 7, 8).progress;
-  const up = applySession(progress, 'rhyme', 8, 8);
-  assert.equal(up.change, 'up');
-  assert.equal(up.progress.levels.rhyme, 2);
+  progress = applySession(progress, 'rhyme', 8, 8).progress;
+  assert.equal(progress.levels.rhyme, 2, 'eight correct answers at chance 1/3 reach P(mastery) ≥ 0.95');
 
-  let p2 = up.progress;
-  p2 = applySession(p2, 'rhyme', 3, 8).progress;
-  const down = applySession(p2, 'rhyme', 2, 8);
-  assert.equal(down.change, 'down');
-  assert.equal(down.progress.levels.rhyme, 1);
-  assert.ok(down.progress.supportFlags.includes('rhyme'));
+  let wrong = progress;
+  let change = 'stay';
+  for (let i = 0; i < 8 && change !== 'down'; i++) {
+    const r = applySession(wrong, 'rhyme', 0, 1);
+    wrong = r.progress;
+    change = r.change;
+  }
+  assert.equal(change, 'down');
+  assert.equal(wrong.levels.rhyme, 1);
+  assert.ok(wrong.supportFlags.includes('rhyme'));
 });
 
 test('report language describes indicators and never claims a diagnosis or cure', () => {

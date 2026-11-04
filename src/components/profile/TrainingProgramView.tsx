@@ -5,24 +5,28 @@ import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
 import {
   Level,
   LevelChange,
-  MASTERY_PERCENT,
   MINUTES_PER_SESSION,
   PROGRAM_SESSIONS,
   PROGRAM_WEEKS,
   SESSIONS_PER_WEEK,
   SKILLS,
-  STEP_BACK_PERCENT,
   SkillId,
   TrainingPlan,
   TrainingProgress,
   TrainingTask,
-  applySession,
+  applyProbeEvidence,
   buildTrainingPlan,
+  chanceOf,
   createProgress,
-  generateSession,
+  generateItems,
   isReassessmentDue,
+  masteryEstimate,
+  recordAnswer,
+  recordSkillBlock,
   sessionsCompleted,
+  skillBandsFromProfile,
 } from '../../cognitiveProfile/training';
+import { MASTERY_THRESHOLD, allocateItems } from '../../cognitiveProfile/knowledgeTracing';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
 import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
 import { trackUsage } from '../../utils/usageTracking';
@@ -50,6 +54,23 @@ const CHANGE_TEXT: Record<LevelChange, string> = {
   down: 'سنعود خطوة إلى مستوى أسهل لتثبيت المهارة.',
   stay: 'نستمر في المستوى نفسه حتى الإتقان.',
 };
+const pct = (p: number) => toArabicDigits(Math.round(p * 100));
+
+/** P(mastered) from the knowledge-tracing model, as a labelled bar. */
+function MasteryBar({ p, label }: { p: number; label: string }) {
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between text-xs text-ink-2">
+        <span>{label}</span>
+        <strong className="text-ink">{pct(p)}٪</strong>
+      </div>
+      <div className="relative h-2 rounded-full bg-soft mt-1 overflow-hidden" role="img" aria-label={`${label}: ${pct(p)}٪`}>
+        <span className="absolute inset-y-0 right-0 rounded-full bg-brand" style={{ width: `${Math.round(p * 100)}%` }} />
+        <span className="absolute inset-y-0 w-px bg-ink" style={{ right: `${MASTERY_THRESHOLD * 100}%` }} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
 
 function LevelLadder({ skill, level, mastered }: { skill: SkillId; level: Level; mastered: boolean }) {
   return (
@@ -83,7 +104,13 @@ type Run = {
   correct: number;
   phase: 'probeIntro' | 'probe' | 'intro' | 'task' | 'result' | 'summary';
   change: LevelChange | null;
-  results: Array<{ skill: SkillId; correct: number; total: number; change: LevelChange }>;
+  results: Array<{ skill: SkillId; correct: number; total: number; change: LevelChange; pBefore: number; pAfter: number }>;
+  /** Practice items per skill this session, chosen from the model's mastery estimates. */
+  alloc: Record<string, number>;
+  /** Level and P(mastered) when the current skill block started. */
+  blockStart: { level: Level; p: number } | null;
+  /** Skills the probe moved up a level today. */
+  promoted: SkillId[];
   /** The fixed-difficulty progress probe that opens every session. */
   probe: { items: ProbeItem[]; index: number; answers: boolean[] } | null;
   todayProbe: ProbeRecord | null;
@@ -117,6 +144,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
 
+  /** Keep each answer on this device; the record and the school/family database are updated per block. */
+  const persistLocal = (p: TrainingProgress) => {
+    setProgress(p);
+    saveTrainingProgress(studentId, p);
+  };
+
   const persist = (p: TrainingProgress) => {
     setProgress(p);
     saveTrainingProgress(studentId, p);
@@ -134,7 +167,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   const startProgram = (plan: TrainingPlan) => {
     trackUsage('training_started');
-    persist(createProgress(plan));
+    persist(createProgress(plan, 1, skillBandsFromProfile(profile)));
   };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
@@ -156,6 +189,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       results: [],
       probe: { items: buildProbe(progress.plan, studentId, session), index: 0, answers: [] },
       todayProbe: null,
+      alloc: {},
+      blockStart: null,
+      promoted: [],
     });
   };
 
@@ -168,19 +204,28 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     }
     const session = (progress.probes?.length ?? 0) + 1;
     const record = scoreProbe(run.probe.items, answers, session);
-    persist({ ...progress, probes: [...(progress.probes ?? []), record] });
-    beginSkill(0, { ...run, probe: null, todayProbe: record });
+    // The probe also feeds the knowledge-tracing model (evidence only, no learning).
+    const evidence = run.probe.items
+      .map((item, i) => ({ skill: item.skill, correct: answers[i] === true, guess: chanceOf(item.task), trained: item.role === 'trained' }))
+      .filter((a) => a.trained);
+    const { progress: traced, promoted } = applyProbeEvidence(progress, evidence);
+    const next = { ...traced, probes: [...(progress.probes ?? []), record] };
+    persist(next);
+    // Practice time goes where the model is least sure the child has mastered the skill.
+    const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(next, skill).p })));
+    beginSkill(0, { ...run, probe: null, todayProbe: record, alloc, promoted }, next);
   };
 
-  const beginSkill = (skillIndex: number, prev: Run | null) => {
+  const beginSkill = (skillIndex: number, prev: Run | null, current: TrainingProgress | null = progress) => {
+    if (!current) return;
     const skills = prev?.skills ?? todaySkills;
     const skill = skills[skillIndex];
-    const level = (progress!.levels[skill] ?? 1) as Level;
+    const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
     setRun({
       skills,
       skillIndex,
-      tasks: generateSession(skill, level, seed.current),
+      tasks: generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8),
       taskIndex: 0,
       correct: 0,
       phase: 'intro',
@@ -188,26 +233,47 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       results: prev?.results ?? [],
       probe: null,
       todayProbe: prev?.todayProbe ?? null,
+      alloc: prev?.alloc ?? {},
+      blockStart: estimate,
+      promoted: prev?.promoted ?? [],
     });
   };
 
+  /** Every answer updates the knowledge-tracing model; the level can change in the middle of a block. */
   const onTaskDone = (correct: boolean) => {
     if (!run || !progress) return;
+    const skill = sessionSkills[run.skillIndex];
+    const task = run.tasks[run.taskIndex];
+    const { progress: updated, change } = recordAnswer(progress, skill, correct, chanceOf(task));
     const nextCorrect = run.correct + (correct ? 1 : 0);
-    if (run.taskIndex + 1 < run.tasks.length) {
-      setRun({ ...run, taskIndex: run.taskIndex + 1, correct: nextCorrect });
+    const blockChange: LevelChange =
+      change === 'mastered' || run.change === 'mastered' ? 'mastered' : change === 'up' || run.change === 'up' ? 'up' : change === 'down' || run.change === 'down' ? 'down' : 'stay';
+    let tasks = run.tasks;
+    if ((change === 'up' || change === 'down') && run.taskIndex + 1 < run.tasks.length) {
+      // The model moved the child to another level: the rest of the block is generated at that level.
+      seed.current += 7919;
+      const remaining = run.tasks.length - run.taskIndex - 1;
+      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining)];
+    }
+    const finishedSkill = change === 'mastered';
+    if (run.taskIndex + 1 < tasks.length && !finishedSkill) {
+      persistLocal(updated);
+      if (change === 'up') speak(PHRASES.levelUp);
+      setRun({ ...run, tasks, taskIndex: run.taskIndex + 1, correct: nextCorrect, change: blockChange === 'stay' ? run.change : blockChange });
       return;
     }
-    const skill = sessionSkills[run.skillIndex];
-    const { progress: updated, change } = applySession(progress, skill, nextCorrect, run.tasks.length);
-    persist(updated);
+    const answered = run.taskIndex + 1;
+    const logged = recordSkillBlock(updated, skill, run.blockStart?.level ?? ((progress.levels[skill] ?? 1) as Level), nextCorrect, answered);
+    persist(logged);
     if (change === 'up' || change === 'mastered') speak(PHRASES.levelUp);
+    const pAfter = masteryEstimate(logged, skill).p;
     setRun({
       ...run,
+      tasks: tasks.slice(0, answered),
       correct: nextCorrect,
       phase: 'result',
-      change,
-      results: [...run.results, { skill, correct: nextCorrect, total: run.tasks.length, change }],
+      change: blockChange,
+      results: [...run.results, { skill, correct: nextCorrect, total: answered, change: blockChange, pBefore: run.blockStart?.p ?? 0, pAfter }],
     });
   };
 
@@ -302,6 +368,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)} إجابات صحيحة
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
+              {run.results.length > 0 && (
+                <p className="text-xs text-ink-2 max-w-sm">
+                  تقدير النموذج لإتقان المستوى الحالي: من {pct(run.results[run.results.length - 1].pBefore)}٪ إلى {pct(run.results[run.results.length - 1].pAfter)}٪
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() =>
@@ -318,11 +389,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <span className="text-7xl" aria-hidden="true">🏆</span>
               <p className="font-child text-2xl font-black text-slate-900">انتهت جلسة اليوم!</p>
               {run.todayProbe && <TodayProbeCard today={run.todayProbe} probes={progress.probes ?? []} />}
+              {run.promoted.length > 0 && (
+                <p className="w-full rounded-xl bg-brand-tint px-4 py-2.5 text-sm text-right">
+                  أظهر مقياس اليوم إتقان المستوى الثاني في: {run.promoted.map((s) => SKILLS[s].nameAr).join('، ')}، فانتقل إليه مباشرة.
+                </p>
+              )}
               <ul className="w-full space-y-2">
                 {run.results.map((r) => (
-                  <li key={r.skill} className="flex items-center justify-between rounded-xl bg-soft px-4 py-2.5 text-sm">
-                    <span className="font-bold">{SKILLS[r.skill].nameAr}</span>
-                    <span>{toArabicDigits(Math.round((r.correct / r.total) * 100))}٪</span>
+                  <li key={r.skill} className="rounded-xl bg-soft px-4 py-2.5 text-sm text-right">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">{SKILLS[r.skill].nameAr}</span>
+                      <span>{toArabicDigits(r.correct)} من {toArabicDigits(r.total)}</span>
+                    </div>
+                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · انتقل مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · عاد مستوى' : ''}</p>
                   </li>
                 ))}
               </ul>
@@ -467,6 +546,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <p className="font-display font-semibold text-ink text-lg mt-3">{SKILLS[s].nameAr}</p>
               <p className="bz-small text-ink-2 mt-0.5">{SKILLS[s].goalAr}</p>
               <LevelLadder skill={s} level={level} mastered={isMastered} />
+              <MasteryBar p={masteryEstimate(progress, s).p} label={isMastered ? 'احتمال الإتقان (المستوى الثالث)' : `احتمال إتقان المستوى ${toArabicDigits(level)}`} />
               {last && (
                 <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5" /> آخر جلسة: {toArabicDigits(Math.round((last.correct / last.total) * 100))}٪
@@ -515,8 +595,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   <td className="p-1.5">{new Date(h.date).toLocaleDateString('ar-EG')}</td>
                   <td className="p-1.5 font-bold">{SKILLS[h.skill].nameAr}</td>
                   <td className="p-1.5 text-center">{toArabicDigits(h.level)}</td>
-                  <td className={`p-1.5 text-center font-bold ${(h.correct / h.total) * 100 >= MASTERY_PERCENT ? 'text-emerald-700' : 'text-slate-700'}`}>
-                    {toArabicDigits(Math.round((h.correct / h.total) * 100))}٪
+                  <td className="p-1.5 text-center font-bold text-slate-700">
+                    {toArabicDigits(h.correct)} من {toArabicDigits(h.total)}
                   </td>
                 </tr>
               ))}
@@ -562,7 +642,7 @@ function ProgramRules() {
         <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
           <li><strong>مقياس التقدّم ({toArabicDigits(PROBE_MINUTES)} دقائق):</strong> أسئلة جديدة بالصعوبة نفسها كل يوم، بلا تصحيح، لمهارات التركيز ولمهارة واحدة لا يتدرّب عليها الطفل للمقارنة.</li>
-          <li>تمرين قصير لكل مهارة من مهارات التركيز (٨ بنود أو ٥ سلاسل) مع تصحيح فوري.</li>
+          <li>تمرين لكل مهارة من مهارات التركيز مع تصحيح فوري. عدد البنود (٤ إلى ١٢) يحدده النموذج: المهارة الأبعد عن الإتقان تأخذ تمرينًا أكثر.</li>
           <li>تُرتَّب المهارات من الأسهل نمائيًا: التمييز السمعي ← القافية ← الأصوات ← التركيب ← الحروف.</li>
           <li>بنود التدريب تُولَّد جديدة في كل جلسة ولا تكرر بنود الفحص، كي لا يتدرّب الطفل على الاختبار نفسه.</li>
         </ol>
@@ -570,8 +650,10 @@ function ProgramRules() {
       <div>
         <h3 className="font-black text-slate-900">قواعد التقدّم والمتابعة</h3>
         <ul className="list-disc pr-5 mt-2 space-y-1 leading-relaxed">
-          <li><strong>الإتقان:</strong> {toArabicDigits(MASTERY_PERCENT)}٪ فأكثر في جلستين متتاليتين ← المستوى التالي.</li>
-          <li><strong>الرجوع خطوة:</strong> أقل من {toArabicDigits(STEP_BACK_PERCENT)}٪ في جلستين متتاليتين ← مستوى أسهل وتنبيه للمعلم.</li>
+          <li><strong>نموذج تتبّع المعرفة (Bayesian Knowledge Tracing):</strong> بعد كل إجابة يحدّث احتمال أن الطفل أتقن المستوى، مع احتساب احتمال التخمين (حسب عدد الخيارات) واحتمال الخطأ رغم الإتقان. يبدأ التقدير من نتيجة الفحص.</li>
+          <li><strong>الإتقان:</strong> حين يبلغ الاحتمال ٩٥٪ بعد ٥ إجابات على الأقل ← المستوى التالي فورًا، ولو في منتصف التمرين.</li>
+          <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وتنبيه للمعلم.</li>
+          <li><strong>مقياس التقدّم:</strong> إجاباته تحدّث تقدير المستوى الثاني دون تعلّم، فإن أظهر إتقانه انتقل الطفل إليه مباشرة.</li>
           <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم إعادة الفحص لقياس الأثر وتحديث الخطة. مجموعها نحو ٦ ساعات، في المدى الذي حقق فيه تدريب الوعي الصوتي أكبر أثر في التحليل البعدي للجنة القراءة الوطنية الأمريكية (٥ إلى ١٨ ساعة).</li>
         </ul>
       </div>

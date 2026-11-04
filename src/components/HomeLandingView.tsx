@@ -23,13 +23,11 @@ import {
 import { StudentRecord } from '../data/seedData';
 import { BATTERY, DOMAINS, TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 import {
-  MASTERY_PERCENT,
   MINUTES_PER_SESSION,
   PROGRAM_SESSIONS,
   SESSIONS_PER_WEEK,
   SKILLS,
   FOCUS_SKILLS,
-  STEP_BACK_PERCENT,
 } from '../cognitiveProfile/training';
 import { BAND_META, BandLegend, CentileTrack, bandOf } from './profile/CentileTrack';
 
@@ -480,11 +478,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="mt-6 grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl p-4 bg-brand-tint border border-line">
                 <p className="font-semibold text-brand-strong">يتقدّم مستوى</p>
-                <p className="bz-small text-ink-2 mt-1">عند {ar(MASTERY_PERCENT)}٪ فأكثر في جلستين متتاليتين.</p>
+                <p className="bz-small text-ink-2 mt-1">حين يقدّر نموذج تتبّع المعرفة أن احتمال إتقانه المستوى بلغ ٩٥٪، بعد ٥ إجابات على الأقل.</p>
               </div>
               <div className="rounded-xl p-4 bg-sun-soft border border-line">
                 <p className="font-semibold text-sun-strong">يعود مستوى وينبّه المعلم</p>
-                <p className="bz-small text-ink-2 mt-1">عند أقل من {ar(STEP_BACK_PERCENT)}٪ في جلستين متتاليتين.</p>
+                <p className="bz-small text-ink-2 mt-1">حين يبقى احتمال الإتقان أقل من ٢٠٪ بعد ٨ إجابات.</p>
               </div>
             </div>
             <p className="mt-6 bz-small bz-muted">

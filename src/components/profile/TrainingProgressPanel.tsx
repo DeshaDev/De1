@@ -1,7 +1,7 @@
 import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
-import { PROGRAM_SESSIONS, SKILLS } from '../../cognitiveProfile/training';
+import { PROGRAM_SESSIONS, SKILLS, masteryEstimate } from '../../cognitiveProfile/training';
 import { describeProgressAr, summarizeProbes } from '../../cognitiveProfile/progressProbe';
 import ProgressChart from './ProgressChart';
 
@@ -29,6 +29,23 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
       </div>
       <p className="bz-small text-ink-2">{describeProgressAr(summary)}</p>
       {probes.length > 0 && <ProgressChart probes={probes} height={compact ? 140 : 180} />}
+      {!compact && (
+        <div>
+          <p className="bz-small font-semibold text-ink">تقدير نموذج تتبّع المعرفة (احتمال إتقان المستوى الحالي)</p>
+          <ul className="mt-2 grid sm:grid-cols-3 gap-2">
+            {progress.plan.focus.map((skill) => {
+              const e = masteryEstimate(progress, skill);
+              const done = progress.mastered.includes(skill);
+              return (
+                <li key={skill} className="rounded-xl border border-line px-3 py-2 text-sm">
+                  <span className="font-semibold">{SKILLS[skill].nameAr}</span>
+                  <span className="block text-xs text-ink-2">{done ? 'أُتقنت كل المستويات' : `المستوى ${ar(e.level)}`} · {ar(Math.round(e.p * 100))}٪</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
       {!compact && summary && summary.bySkill.length > 0 && (
         <table className="w-full text-sm">
           <thead>

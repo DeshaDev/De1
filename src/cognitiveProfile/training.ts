@@ -7,6 +7,20 @@
  * for every session from the lexicon, so the child never practises the scored test items.
  */
 import type { ProbeRecord } from './progressProbe';
+import type { Band } from './scoring';
+import {
+  MIN_ATTEMPTS_FOR_MASTERY,
+  STEP_BACK_BELOW,
+  STEP_BACK_MIN_ATTEMPTS,
+  SUPPORT_MIN_ATTEMPTS,
+  bktKey,
+  initialStates,
+  isMastered,
+  observe,
+  priorFor,
+  type BktLevel,
+  type BktStates,
+} from './knowledgeTracing';
 import {
   AudioSegment,
   ChoiceItem,
@@ -132,8 +146,6 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   letterSound: ['letterSound'],
 };
 
-export const MASTERY_PERCENT = 80;
-export const STEP_BACK_PERCENT = 50;
 /**
  * Programme dose: 20 sessions, 5 a week (about 4 weeks), 15 minutes of training plus a 2-minute
  * progress probe, about 5.7 hours in all. In the National Reading Panel meta-analysis, phonemic
@@ -220,40 +232,85 @@ export interface TrainingProgress {
   supportFlags: SkillId[];
   /** One fixed-difficulty progress probe per session (see progressProbe.ts). Absent in older records. */
   probes?: ProbeRecord[];
+  /** Knowledge-tracing state per skill and level (see knowledgeTracing.ts). Absent in older records. */
+  bkt?: BktStates;
 }
 
-export function createProgress(plan: TrainingPlan, startLevel: Level = 1): TrainingProgress {
+const BAND_ORDER: Band[] = ['severe', 'below', 'average', 'strength'];
+
+/** The screening band behind each trainable skill (the weakest subtest that feeds it). */
+export function skillBandsFromProfile(profile: Pick<CognitiveProfile, 'subtests'> | null | undefined): Partial<Record<SkillId, Band>> {
+  const bands: Partial<Record<SkillId, Band>> = {};
+  for (const s of profile?.subtests ?? []) {
+    for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
+      const current = bands[skill];
+      if (!current || BAND_ORDER.indexOf(s.band) < BAND_ORDER.indexOf(current)) bands[skill] = s.band;
+    }
+  }
+  return bands;
+}
+
+export function createProgress(plan: TrainingPlan, startLevel: Level = 1, bands: Partial<Record<SkillId, Band>> = {}): TrainingProgress {
+  const levels = Object.fromEntries(plan.focus.map((s) => [s, plan.preventive ? 2 : startLevel])) as Record<string, Level>;
   return {
     plan,
-    levels: Object.fromEntries(plan.focus.map((s) => [s, plan.preventive ? 2 : startLevel])),
+    levels,
     mastered: [],
     history: [],
     supportFlags: [],
     probes: [],
+    bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>),
   };
+}
+
+/** Older progress records have no knowledge-tracing state: rebuild a neutral one from their levels. */
+export function ensureBkt(progress: TrainingProgress): TrainingProgress & { bkt: BktStates } {
+  if (progress.bkt) return progress as TrainingProgress & { bkt: BktStates };
+  const bkt: BktStates = {};
+  for (const skill of progress.plan.focus) {
+    const current = (progress.levels[skill] ?? 1) as BktLevel;
+    const done = progress.mastered.includes(skill);
+    for (const level of [1, 2, 3] as BktLevel[]) {
+      const known = done || level < current;
+      bkt[bktKey(skill, level)] = known ? { p: 0.95, n: MIN_ATTEMPTS_FOR_MASTERY, c: MIN_ATTEMPTS_FOR_MASTERY, seq: '' } : { p: priorFor(undefined, level), n: 0, c: 0, seq: '' };
+    }
+  }
+  return { ...progress, bkt };
+}
+
+/** The model's current estimate for a skill: the level being practised and P(mastered) there. */
+export function masteryEstimate(progress: TrainingProgress, skill: SkillId): { level: Level; p: number } {
+  const p = ensureBkt(progress);
+  const level = (p.levels[skill] ?? 1) as Level;
+  const state = p.bkt[bktKey(skill, p.mastered.includes(skill) ? 3 : level)];
+  return { level, p: state?.p ?? 0 };
 }
 
 export type LevelChange = 'up' | 'down' | 'mastered' | 'stay';
 
-export function applySession(
+/**
+ * One practice answer (with feedback). The knowledge-tracing model updates P(mastered) for the
+ * skill's current level and decides: move up at P >= 0.95 (after at least 5 answers), step back
+ * a level when P stays below 0.2 after 8 answers, or flag adult support at level 1.
+ */
+export function recordAnswer(
   progress: TrainingProgress,
   skill: SkillId,
-  correct: number,
-  total: number,
-  now = new Date()
+  correct: boolean,
+  guess: number
 ): { progress: TrainingProgress; change: LevelChange } {
-  const level = (progress.levels[skill] ?? 1) as Level;
-  const record: SessionRecord = { date: now.toISOString(), skill, level, correct, total };
-  const history = [...progress.history, record];
-  const atLevel = history.filter((h) => h.skill === skill && h.level === level).slice(-2);
-  const pct = (h: SessionRecord) => (h.total === 0 ? 0 : (h.correct / h.total) * 100);
-
+  const p = ensureBkt(progress);
+  const level = (p.levels[skill] ?? 1) as BktLevel;
+  const key = bktKey(skill, level);
+  const state = observe(p.bkt[key] ?? { p: priorFor(undefined, level), n: 0, c: 0, seq: '' }, correct, guess, true);
+  const bkt: BktStates = { ...p.bkt, [key]: state };
+  const levels = { ...p.levels };
+  const mastered = [...p.mastered];
+  let supportFlags = [...p.supportFlags];
   let change: LevelChange = 'stay';
-  const levels = { ...progress.levels };
-  let mastered = [...progress.mastered];
-  let supportFlags = progress.supportFlags.filter((s) => s !== skill);
 
-  if (atLevel.length === 2 && atLevel.every((h) => pct(h) >= MASTERY_PERCENT)) {
+  if (isMastered(state)) {
+    supportFlags = supportFlags.filter((s) => s !== skill);
     if (level < 3) {
       levels[skill] = (level + 1) as Level;
       change = 'up';
@@ -261,15 +318,80 @@ export function applySession(
       mastered.push(skill);
       change = 'mastered';
     }
-  } else if (atLevel.length === 2 && atLevel.every((h) => pct(h) < STEP_BACK_PERCENT)) {
-    if (level > 1) {
-      levels[skill] = (level - 1) as Level;
-      change = 'down';
-    }
-    supportFlags = [...supportFlags, skill];
+  } else if (level > 1 && state.n >= STEP_BACK_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW) {
+    levels[skill] = (level - 1) as Level;
+    // The easier level was assumed secure; this evidence says it is not, so it must be re-earned.
+    const lower = bktKey(skill, (level - 1) as BktLevel);
+    bkt[lower] = { ...bkt[lower], p: Math.min(bkt[lower]?.p ?? 0.5, 0.6), n: 0 };
+    bkt[key] = { ...state, n: 0 };
+    if (!supportFlags.includes(skill)) supportFlags.push(skill);
+    change = 'down';
+  } else if (level === 1 && state.n >= SUPPORT_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW && !supportFlags.includes(skill)) {
+    supportFlags.push(skill);
   }
+  return { progress: { ...p, bkt, levels, mastered, supportFlags }, change };
+}
 
-  return { progress: { ...progress, levels, mastered, history, supportFlags }, change };
+/** Log one block of practice for the session history (sessions count and teacher table). */
+export function recordSkillBlock(progress: TrainingProgress, skill: SkillId, level: Level, correct: number, total: number, now = new Date()): TrainingProgress {
+  return { ...progress, history: [...progress.history, { date: now.toISOString(), skill, level, correct, total }] };
+}
+
+/**
+ * Probe answers are evidence without learning: they update the level-2 estimate of each trained
+ * skill. A child still at level 1 who has clearly mastered level 2 on the probe moves up.
+ */
+export function applyProbeEvidence(
+  progress: TrainingProgress,
+  answers: Array<{ skill: SkillId; correct: boolean; guess: number }>
+): { progress: TrainingProgress; promoted: SkillId[] } {
+  const p = ensureBkt(progress);
+  const bkt: BktStates = { ...p.bkt };
+  const levels = { ...p.levels };
+  for (const a of answers) {
+    if (!p.plan.focus.includes(a.skill)) continue;
+    const key = bktKey(a.skill, 2);
+    bkt[key] = observe(bkt[key] ?? { p: priorFor(undefined, 2), n: 0, c: 0, seq: '' }, a.correct, a.guess, false);
+  }
+  const promoted: SkillId[] = [];
+  for (const skill of p.plan.focus) {
+    if ((levels[skill] ?? 1) === 1 && isMastered(bkt[bktKey(skill, 2)])) {
+      levels[skill] = 2;
+      bkt[bktKey(skill, 1)] = { ...bkt[bktKey(skill, 1)], p: Math.max(bkt[bktKey(skill, 1)]?.p ?? 0, 0.95) };
+      promoted.push(skill);
+    }
+  }
+  return { progress: { ...p, bkt, levels }, promoted };
+}
+
+/**
+ * Compatibility for callers that only know a block score: replays the block as answers
+ * (correct and wrong answers spread evenly) at chance level `guess`, then logs it.
+ */
+export function applySession(
+  progress: TrainingProgress,
+  skill: SkillId,
+  correct: number,
+  total: number,
+  now = new Date(),
+  guess = 1 / 3
+): { progress: TrainingProgress; change: LevelChange } {
+  const level = (progress.levels[skill] ?? 1) as Level;
+  let current = progress;
+  let change: LevelChange = 'stay';
+  for (let i = 0; i < total; i++) {
+    const isCorrect = Math.floor(((i + 1) * correct) / total) > Math.floor((i * correct) / total);
+    const r = recordAnswer(current, skill, isCorrect, guess);
+    current = r.progress;
+    if (r.change !== 'stay') change = r.change;
+  }
+  return { progress: recordSkillBlock(current, skill, level, correct, total, now), change };
+}
+
+/** Chance of answering an item right by guessing: the "guess" parameter of the model. */
+export function chanceOf(task: TrainingTask): number {
+  if (task.kind === 'choice') return 1 / Math.max(2, task.item.options.length);
+  return 0.05;
 }
 
 export function sessionsCompleted(progress: TrainingProgress): number {
@@ -598,4 +720,24 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
     tasks.push({ kind: 'choice', item: { ...item, id: `${item.id}-${tasks.length}` } });
   }
   return tasks;
+}
+
+/** `count` practice items for one skill and level (more or fewer than one standard block). */
+export function generateItems(skill: SkillId, level: Level, seed: number, count: number): TrainingTask[] {
+  const out: TrainingTask[] = [];
+  const seen = new Set<string>();
+  for (let k = 0; out.length < count && k < 8; k++) {
+    for (const task of generateSession(skill, level, seed + k * 104_729)) {
+      if (out.length >= count) break;
+      const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+      out.push(
+        task.kind === 'choice'
+          ? { ...task, item: { ...task.item, id: `${task.item.id}-b${k}` } }
+          : { ...task, trial: { ...task.trial, id: `${task.trial.id}-b${k}` } }
+      );
+    }
+  }
+  return out;
 }
