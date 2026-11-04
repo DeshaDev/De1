@@ -562,7 +562,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <div className="py-6 text-center space-y-4">
                 <span className="mx-auto grid place-items-center w-16 h-16 rounded-full bg-brand-soft text-brand"><CheckCircle2 size={34} /></span>
                 <h4 className="bz-h3">تم استلام طلبكم بنجاح!</h4>
-                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. سيتواصل معكم فريق هَيَّا نَقْرَأْ عبر البريد الرسمي لترتيب جلسة تعريفية وتفعيل حساب تجريبي.</p>
+                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. ستُستكمل آلية التواصل وجدولة الجلسات قبل بدء التجربة.</p>
                 <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-primary">إغلاق</button>
               </div>
             ) : (
