@@ -164,7 +164,7 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
           {editing ? (
             <textarea className="w-full rounded-xl border border-line p-3" rows={3} value={editing.summaryAr} onChange={(e) => setEditing({ ...editing, summaryAr: e.target.value })} aria-label="ملخص الخطة" />
           ) : (
-            <p className="leading-relaxed">{shown.summaryAr}</p>
+            <p className="leading-relaxed">{ar(shown.summaryAr)}</p>
           )}
           <div>
             <h3 className="font-semibold">الأهداف</h3>
@@ -180,10 +180,10 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
                       onChange={(e) => setEditing({ ...editing, goals: editing.goals.map((x, j) => (j === i ? { ...x, goalAr: e.target.value } : x)) })}
                     />
                   ) : (
-                    <span className="font-semibold">{g.goalAr}</span>
+                    <span className="font-semibold">{ar(g.goalAr)}</span>
                   )}
                   <span className="block text-xs text-ink-2">
-                    {SKILLS[g.skill as SkillId]?.nameAr ?? g.skill} · الدليل: {g.evidenceAr}
+                    {SKILLS[g.skill as SkillId]?.nameAr ?? g.skill} · الدليل: {ar(g.evidenceAr)}
                   </span>
                 </li>
               ))}
@@ -195,7 +195,7 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
               {shown.activities.map((a) => (
                 <li key={a.id} className="rounded-lg bg-soft px-3 py-2">
                   <span className="font-semibold">{ACTIVITY_CATALOG[a.id]}</span> · {FREQUENCIES[a.frequency]}
-                  <span className="block text-xs text-ink-2">{a.whyAr}</span>
+                  <span className="block text-xs text-ink-2">{ar(a.whyAr)}</span>
                 </li>
               ))}
             </ul>
@@ -203,7 +203,7 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
           {shown.homeTipsAr.length > 0 && (
             <div>
               <h3 className="font-semibold">نصائح للبيت</h3>
-              <ul className="mt-1 list-disc pr-5 space-y-1">{shown.homeTipsAr.map((t) => <li key={t}>{t}</li>)}</ul>
+              <ul className="mt-1 list-disc pr-5 space-y-1">{shown.homeTipsAr.map((t) => <li key={t}>{ar(t)}</li>)}</ul>
             </div>
           )}
           {record.referralAr && <p className="rounded-xl border border-warn bg-warn-soft p-3 font-semibold text-warn">{record.referralAr}</p>}

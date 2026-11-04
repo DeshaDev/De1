@@ -196,10 +196,12 @@ const SKILL_ACTIVITY: Partial<Record<string, ActivityId>> = {
   visualDiscrimination: 'letter-shape-matching',
 };
 
+const arDigits = (v: number) => String(v).replace(/[0-9]/g, (d) => ARABIC_DIGITS[Number(d)]);
+
 export function rulesDraft(facts: PlanFacts): DraftPlan {
   const skills = facts.programme?.skills.length
-    ? facts.programme.skills.map((s) => ({ skill: s.skill, labelAr: s.labelAr, evidence: `تقدير إتقان المستوى ${s.level}: ${s.masteryPercent}٪` }))
-    : (facts.screening?.weakAreas ?? []).map((w) => ({ skill: w.skill, labelAr: w.labelAr, evidence: `المئين في الفحص: ${w.centile}` }));
+    ? facts.programme.skills.map((s) => ({ skill: s.skill, labelAr: s.labelAr, evidence: `تقدير إتقان المستوى ${arDigits(s.level)}: ${arDigits(s.masteryPercent)}٪` }))
+    : (facts.screening?.weakAreas ?? []).map((w) => ({ skill: w.skill, labelAr: w.labelAr, evidence: `المئين في الفحص: ${arDigits(w.centile)}` }));
   const goals = skills.slice(0, 3).map((s) => ({
     skill: s.skill,
     goalAr: `يتقن ${s.labelAr} في المستوى التالي من البرنامج.`,
@@ -214,7 +216,7 @@ export function rulesDraft(facts: PlanFacts): DraftPlan {
   activities.push({ id: 'shared-reading', whyAr: 'القراءة المشتركة تبني المفردات وحب القراءة.', frequency: 'daily' });
   return {
     summaryAr: facts.programme
-      ? `الخطة مبنية على نتيجة الفحص وتقدّم البرنامج التدريبي (${facts.programme.sessionsDone} من ${facts.programme.sessionsPlanned} جلسة).`
+      ? `الخطة مبنية على نتيجة الفحص وتقدّم البرنامج التدريبي (${arDigits(facts.programme.sessionsDone)} من ${arDigits(facts.programme.sessionsPlanned)} جلسة).`
       : 'الخطة مبنية على نتيجة الفحص، وتُحدَّث بعد بدء البرنامج التدريبي.',
     goals,
     activities: Array.from(new Map(activities.map((a) => [a.id, a])).values()).slice(0, 6),
