@@ -106,7 +106,7 @@ export function ParentPortalView({
 
   // Registration Form State
   const [childName, setChildName] = useState('');
-  const [ageYears, setAgeYears] = useState<number>(6);
+  const [ageYears, setAgeYears] = useState<number>(0);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
   const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi'>('gulf');
   const [parentEmail, setParentEmail] = useState('');
@@ -640,7 +640,7 @@ export function ParentPortalView({
                   className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                 />
                 <span className="text-xs text-slate-700 leading-relaxed">
-                  أوافق بصفتي ولي أمر الطفل على إنشاء ملف للأنشطة التعليمية واستكشاف مهارات القراءة وفق سياسة الخصوصية. أعلم أن النتائج استكشافية وليست تشخيصًا أو مقارنة معيارية.
+                  أوافق بصفتي ولي أمر الطفل على إنشاء ملف للأنشطة التعليمية واستكشاف مهارات القراءة وفق سياسة الخصوصية. أعلم أن النتائج استكشافية وليست تشخيصًا أو مقارنة معيارية. هذه الموافقة لا تشمل التسجيل الصوتي؛ ستُطلب موافقة منفصلة قبل استخدام الميكروفون.
                 </span>
               </label>
 
