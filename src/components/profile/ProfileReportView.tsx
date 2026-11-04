@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ArrowRight, Printer, Dumbbell, AlertTriangle, ChevronDown, Info } from 'lucide-react';
-import { BATTERY, DOMAINS, SUBTESTS_BY_ID, SubtestId } from '../../cognitiveProfile/battery';
+import { BATTERY, DOMAINS, SUBTESTS_BY_ID, SubtestId, subtestsForAge } from '../../cognitiveProfile/battery';
 import { ageCautionAr, CognitiveProfile, ScoredSubtest, formatAge } from '../../cognitiveProfile/scoring';
-import { FLAG_TEXT_AR, SUBTEST_GUIDANCE } from '../../cognitiveProfile/guidance';
+import { FLAG_TEXT_AR, READING_MEASURE_NOTE_AR, SUBTEST_GUIDANCE, WORD_NONWORD_NOTE_AR, readingMeasureLineAr } from '../../cognitiveProfile/guidance';
+import { SPELL_ERROR_TEXT_AR } from '../../cognitiveProfile/readingTasks';
 import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession, type ScreeningSnapshot } from '../../cognitiveProfile/storage';
 import { BrandMark } from '../ui/BrandMark';
 
@@ -40,6 +41,11 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
         .filter((r) => !r.correct && DIALECT_SENSITIVE_ITEMS[r.itemId]?.dialects.includes(session.dialect!))
         .map((r) => DIALECT_SENSITIVE_ITEMS[r.itemId].pairAr)
     : [];
+  const totalTasks = subtestsForAge(session.ageMonths).length;
+  /** Reading and naming tasks are shown with their raw measures, apart from the percent-correct tasks. */
+  const isMeasureTask = (id: SubtestId) => SUBTESTS_BY_ID[id].domain === 'reading' || SUBTESTS_BY_ID[id].domain === 'naming';
+  const readingScored = BATTERY.filter((t) => isMeasureTask(t.id)).map((t) => scoredById.get(t.id)).filter((x): x is ScoredSubtest => Boolean(x));
+  const spelling = scoredById.get('spelling');
   const testedDate = new Date(session.startedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
@@ -76,7 +82,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             <dt className="bz-muted">لهجة البيت</dt>
             <dd className="text-ink font-semibold">{session.dialect ? DIALECT_LABELS_AR[session.dialect] : 'لم تُحدَّد'}</dd>
             <dt className="bz-muted">المهام المكتملة</dt>
-            <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من ٩</dd>
+            <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من {toArabicDigits(totalTasks)}</dd>
           </dl>
         </header>
 
@@ -105,7 +111,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             <section className="bz-card p-6 space-y-2" aria-labelledby="previous-title">
               <h2 id="previous-title" className="bz-h3">سجل فحص سابق</h2>
               <p className="bz-small text-ink-2">
-                يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}، وأُكمل فيه {toArabicDigits(previous.completedSubtests)} من ٩ مهام.
+                يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}، وأُكمل فيه {toArabicDigits(previous.completedSubtests)} مهام.
               </p>
               <p className="text-xs text-ink-2">
                 لا تعرض المنصة حاليًا مقارنة معيارية أو فرقًا في المئينات بين الجلسات؛ فالجدول المرجعي مؤقت ولم يُقنّن. يجب تفسير كل نتيجة بوصفها أداءً داخل المهمة في ذلك اليوم.
@@ -113,15 +119,51 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </section>
           )}
 
+          {readingScored.length > 0 && (
+            <section aria-labelledby="reading-title" className="space-y-4">
+              <div className="pb-4 border-b border-line">
+                <h2 id="reading-title" className="bz-h3" style={{ fontSize: 22 }}>القراءة والإملاء والتسمية السريعة</h2>
+                <p className="bz-small bz-muted mt-1">{READING_MEASURE_NOTE_AR}</p>
+              </div>
+              <ul className="grid md:grid-cols-2 gap-3">
+                {readingScored.map((scored) => (
+                  <li key={scored.subtestId} className="rounded-2xl border border-line p-4">
+                    <p className="font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</p>
+                    <p className="bz-small text-ink-2 mt-1 bz-num">{readingMeasureLineAr(scored.subtestId, scored)}</p>
+                    {scored.flags.includes('discontinued') && <p className="text-[12px] text-muted mt-1">{FLAG_TEXT_AR.discontinued}</p>}
+                  </li>
+                ))}
+              </ul>
+              {scoredById.get('wordReading') && scoredById.get('nonwordReading') && (
+                <p className="rounded-xl bg-soft p-4 bz-small text-ink-2">
+                  <strong className="text-ink">
+                    كلمات حقيقية {toArabicDigits(scoredById.get('wordReading')!.percent)}٪ · كلمات مصنوعة {toArabicDigits(scoredById.get('nonwordReading')!.percent)}٪.
+                  </strong>{' '}
+                  {WORD_NONWORD_NOTE_AR}
+                </p>
+              )}
+              {spelling?.measures?.spellingErrors && spelling.measures.spellingErrors.length > 0 && (
+                <div className="rounded-xl border border-line p-4 bz-small text-ink-2">
+                  <p className="font-semibold text-ink">أخطاء الإملاء حسب النوع</p>
+                  <ul className="mt-2 space-y-1">
+                    {spelling.measures.spellingErrors.map((e) => (
+                      <li key={e.kind}>{SPELL_ERROR_TEXT_AR[e.kind]}: <span className="bz-num">{toArabicDigits(e.count)}</span> {e.count === 1 ? 'كلمة' : 'كلمات'}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )}
+
           <section aria-labelledby="tasks-title">
             <div className="pb-4 border-b border-line">
-              <h2 id="tasks-title" className="bz-h3" style={{ fontSize: 22 }}>نتائج المهام المكتملة</h2>
+              <h2 id="tasks-title" className="bz-h3" style={{ fontSize: 22 }}>{readingScored.length > 0 ? 'المهارات السابقة للقراءة' : 'نتائج المهام المكتملة'}</h2>
               <p className="bz-small bz-muted mt-1">النسبة = عدد الإجابات الصحيحة ÷ إجمالي بنود المهمة. لا تقارن النسب بين مهام مختلفة باعتبارها مقياسًا واحدًا.</p>
             </div>
             <div className="divide-y divide-line">
               {(Object.keys(DOMAINS) as Array<keyof typeof DOMAINS>).map((domainId) => {
                 const domain = DOMAINS[domainId];
-                const members = BATTERY.filter((item) => item.domain === domainId);
+                const members = BATTERY.filter((item) => item.domain === domainId && !isMeasureTask(item.id));
                 const scoredMembers = members.map((item) => ({ item, scored: scoredById.get(item.id) })).filter((entry) => entry.scored);
                 if (scoredMembers.length === 0) return null;
                 return (
@@ -169,7 +211,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                     >
                       <span className="flex flex-wrap items-center gap-3">
                         <span className="font-semibold text-ink">{SUBTESTS_BY_ID[id].skillNameAr}</span>
-                        <span className="bz-badge bz-badge-neutral">{toArabicDigits(scored.percent)}٪ داخل المهمة</span>
+                        <span className="bz-badge bz-badge-neutral">{readingMeasureLineAr(id, scored) ?? `${toArabicDigits(scored.percent)}٪ داخل المهمة`}</span>
                       </span>
                       <ChevronDown className={`w-5 h-5 text-muted transition-transform no-print ${isOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -208,7 +250,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                     <th className="px-3 py-2.5 text-right font-semibold">المهمة</th>
                     <th className="px-3 py-2.5 font-semibold">الصحيح / الإجمالي</th>
                     <th className="px-3 py-2.5 font-semibold">النسبة داخل المهمة</th>
-                    <th className="px-3 py-2.5 font-semibold">وسيط الاستجابة</th>
+                    <th className="px-3 py-2.5 font-semibold">الزمن</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,7 +259,15 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                       <td className="px-3 py-2.5 text-right font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</td>
                       <td className="px-3 py-2.5">{toArabicDigits(`${scored.correct}/${scored.total}`)}</td>
                       <td className="px-3 py-2.5">{toArabicDigits(scored.percent)}٪</td>
-                      <td className="px-3 py-2.5">{scored.medianRtMs ? `${toArabicDigits((scored.medianRtMs / 1000).toFixed(1))} ث` : '—'}</td>
+                      <td className="px-3 py-2.5">
+                        {scored.measures
+                          ? scored.measures.seconds !== null
+                            ? `${toArabicDigits(scored.measures.seconds)} ث${scored.measures.correctPerMinute !== undefined ? ` · ${toArabicDigits(scored.measures.correctPerMinute)}/د` : ''}`
+                            : '—'
+                          : scored.medianRtMs
+                            ? `${toArabicDigits((scored.medianRtMs / 1000).toFixed(1))} ث`
+                            : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

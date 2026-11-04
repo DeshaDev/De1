@@ -133,7 +133,7 @@ test('parent registration limits the screening age range and requires explicit g
   await expect(page.getByText('تم استلام طلبكم بنجاح!')).toBeVisible();
 });
 
-test('cognitive battery: setup, nine-game map, and training program entry', async ({ page }) => {
+test('cognitive battery: setup, game map with the reading sitting first at six, and training program entry', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
@@ -144,12 +144,89 @@ test('cognitive battery: setup, nine-game map, and training program entry', asyn
     await page.getByLabel(label).check();
   }
   await start.click();
-  for (const game of ['نوافذ القلعة', 'بيوت الحيوانات', 'ببغاء الحديقة', 'أصدقاء الفضاء', 'كلمات تتشابه', 'مختبر الأصوات', 'الأذن الذهبية', 'عين الصقر', 'صندوق الحروف']) {
+  for (const game of [
+    'قارئ الكلمات', 'كلمات من كوكب آخر', 'قصة سامي', 'سباق الصور', 'سباق الحروف',
+    'نوافذ القلعة', 'بيوت الحيوانات', 'ببغاء الحديقة', 'أصدقاء الفضاء', 'كلمات تتشابه', 'مختبر الأصوات',
+    'الأذن الذهبية', 'عين الصقر', 'صندوق الحروف', 'الكاتب الصغير',
+  ]) {
     await expect(page.getByText(game, { exact: true })).toBeVisible();
   }
+  await expect(page.getByText('أُنجزت ٠ من ١٥ مهام')).toBeVisible();
   await expect(page.getByRole('button', { name: 'النتيجة والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
+});
+
+test('reading tasks: adult-marked words, rapid naming, passage and dictation reach the report', async ({ page }) => {
+  test.setTimeout(120_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
+  await page.getByLabel('السنوات').selectOption('7');
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
+  await page.getByRole('button', { name: 'بدء الفحص' }).click();
+
+  // Word reading: one practice word, then the adult marks each word until the discontinue rule (5 wrong in a row).
+  await page.getByText('قارئ الكلمات', { exact: true }).click();
+  await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
+  await page.getByRole('button', { name: 'صحيح' }).click();
+  await page.getByRole('button', { name: 'هيا بنا' }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'صحيح' }).click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'خطأ أو لم يقرأ' }).click();
+  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
+
+  // Rapid naming of pictures: names check, then the timed grid with one error.
+  await page.getByText('سباق الصور', { exact: true }).click();
+  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+  await page.getByRole('button', { name: 'يعرف الأسماء، التالي' }).click();
+  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+  await page.getByRole('button', { name: /خطأ/ }).click();
+  await page.getByRole('button', { name: 'انتهى' }).click();
+  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
+
+  // Passage: mark one misread word, the child stops early, tap the last word read.
+  await page.getByText('قصة سامي', { exact: true }).click();
+  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+  await page.getByRole('button', { name: /ابدأ \(دقيقة واحدة\)/ }).click();
+  await page.getByRole('button', { name: 'سَامِي' }).first().click();
+  await page.getByRole('button', { name: 'توقف الطفل قبل النهاية' }).click();
+  await page.getByRole('button', { name: /آخر كلمة: السُّوقِ/ }).click();
+  await page.getByRole('button', { name: 'حفظ' }).click();
+  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
+
+  await page.getByRole('button', { name: 'النتيجة والتقرير' }).click();
+  await expect(page.getByRole('heading', { name: 'القراءة والإملاء والتسمية السريعة' })).toBeVisible();
+  await expect(page.getByText(/٣ من ١٦ صحيحة/).first()).toBeVisible();
+  await expect(page.getByText(/لـ٤٠ صورة · خطأ واحد/).first()).toBeVisible();
+  await expect(page.getByText(/الدقة ٨٣٪: ٥ صحيحة من ٦ مقروءة/).first()).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
+test('dictation: letter tiles, delete, and a scored answer', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
+  await page.getByLabel('السنوات').selectOption('7');
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
+  await page.getByRole('button', { name: 'بدء الفحص' }).click();
+  await page.getByText('الكاتب الصغير', { exact: true }).click();
+  await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
+  // Practice word «دار»: type it with one slip corrected.
+  for (const letter of ['د', 'ا', 'ب']) await page.getByRole('button', { name: `حرف ${letter}`, exact: true }).click();
+  await page.getByRole('button', { name: 'امسح حرفًا' }).click();
+  await page.getByRole('button', { name: 'حرف ر', exact: true }).click();
+  await expect(page.getByLabel('ما كُتب: دار')).toBeVisible();
+  await page.getByRole('button', { name: 'تَمّ' }).click();
+  await page.getByRole('button', { name: 'هيا بنا' }).click();
+  // First scored word «باب».
+  for (const letter of ['ب', 'ا', 'ب']) await page.getByRole('button', { name: `حرف ${letter}`, exact: true }).click();
+  await page.getByRole('button', { name: 'تَمّ' }).click();
+  await expect(page.getByLabel('لم يُكتب شيء بعد')).toBeVisible();
 });
 
 test('guided reader shows one sentence at a time and walks through the micro-steps', async ({ page }) => {

@@ -4,7 +4,8 @@
  * educational needs; it never states a diagnosis.
  */
 import type { SubtestId } from './battery';
-import type { ProfilePattern, RiskLevel } from './scoring';
+import type { ProfilePattern, ReadingMeasures, RiskLevel } from './scoring';
+import { SPELL_ERROR_TEXT_AR } from './readingTasks';
 
 export interface SubtestGuidance {
   measuresAr: string;
@@ -167,6 +168,92 @@ export const SUBTEST_GUIDANCE: Record<SubtestId, SubtestGuidance> = {
     ],
     strengthUseAr: 'معرفته بالحروف متقدمة؛ انتقل إلى قراءة المقاطع والكلمات القصيرة المشكولة.',
   },
+  ranObjects: {
+    measuresAr: 'سرعة تسمية صور مألوفة متكررة في شبكة، بالثواني، وعدد الأخطاء.',
+    whyItMattersAr: 'التسمية السريعة من أقوى المنبئات بطلاقة القراءة في اللغات المختلفة، ومنها العربية، وتسهم في التنبؤ بالقراءة بشكل مستقل عن الوعي الصوتي (Norton & Wolf, 2012). الأطفال الذين يجمعون بطء التسمية وضعف الوعي الصوتي يواجهون عادة صعوبة أكبر (فرضية العجز المزدوج، Wolf & Bowers, 1999).',
+    weaknessMeaningAr: 'بطء التسمية يعني أن استرجاع الأسماء لم يصبح آليًا بعد. لا يعني ذلك ضعف الذكاء أو المفردات، لكنه قد يجعل القراءة بطيئة حتى عندما تكون دقيقة.',
+    strategiesAr: [
+      'أعطِ الطفل وقتًا إضافيًا في القراءة والإجابة الشفهية، ولا تقارن سرعته بزملائه علنًا.',
+      'ركّز على الدقة أولًا، ثم أضف قراءة متكررة لنص قصير مألوف لبناء الطلاقة.',
+      'درّب على الكلمات الشائعة حتى يقرأها الطفل دفعة واحدة دون تهجئة.',
+    ],
+    homeActivitiesAr: [
+      'لعبة «سمِّ بسرعة» بخمس بطاقات صور مألوفة، مع تشجيع على تحسين زمنه هو، لا على منافسة غيره.',
+      'قراءة القصة القصيرة نفسها مرتين أو ثلاثًا في الأسبوع.',
+    ],
+    strengthUseAr: 'تسميته سريعة وآلية؛ هذا يدعم طلاقة القراءة متى ثبتت مهارات الحروف.',
+  },
+  ranLetters: {
+    measuresAr: 'سرعة تسمية خمسة حروف مألوفة متكررة في شبكة، بالثواني، وعدد الأخطاء.',
+    whyItMattersAr: 'تسمية الحروف السريعة ترتبط بطلاقة قراءة الكلمات أكثر من تسمية الصور، لأنها تستدعي الربط الآلي بين الشكل المكتوب واسمه أو صوته (Araújo et al., 2015).',
+    weaknessMeaningAr: 'إذا كانت الدقة جيدة والزمن طويلًا، فالحروف معروفة لكن استرجاعها لم يصبح آليًا. إذا كثرت الأخطاء، فالمشكلة في معرفة الحروف نفسها أولًا.',
+    strategiesAr: [
+      'مراجعة يومية قصيرة لبطاقات الحروف المتعلَّمة بسرعة متزايدة.',
+      'قراءة مقاطع مكوّنة من حروف معروفة (مَا، مِي، مُو) حتى تصبح آلية.',
+      'لا تضف حروفًا جديدة قبل أن يسمّي الطفل الحروف الحالية دون تردد.',
+    ],
+    homeActivitiesAr: [
+      'ورقة بخمسة حروف مكررة يسمّيها الطفل مرة كل يوم، ويسجّل زمنه ليرى تحسّنه.',
+    ],
+    strengthUseAr: 'يسترجع الحروف بسرعة؛ انتقل إلى قراءة كلمات أطول ونصوص قصيرة.',
+  },
+  wordReading: {
+    measuresAr: 'قراءة كلمات حقيقية مشكولة متدرجة الصعوبة، بعدد الصحيح والكلمات الصحيحة في الدقيقة.',
+    whyItMattersAr: 'صعوبة القراءة الدقيقة أو الطليقة للكلمات هي جوهر تعريف عسر القراءة (Lyon, Shaywitz & Shaywitz, 2003). لذلك تُقاس مباشرة متى بدأ تعليم القراءة.',
+    weaknessMeaningAr: 'الطفل يقرأ عددًا أقل من الكلمات المتوقعة لصفّه، أو يقرؤها ببطء. قارن بقراءة الكلمات المصنوعة: إذا ضعفت الاثنتان معًا فالأرجح أن فك الترميز هو الصعوبة.',
+    strategiesAr: [
+      'تعليم صريح ومنظّم لفك الترميز: الحرف وصوته، ثم المقطع، ثم الكلمة.',
+      'نصوص مشكولة بالكامل بمستوى يقرأ فيه الطفل ٩ كلمات من كل ١٠ بلا مساعدة.',
+      'قراءة متكررة لكلمات الدرس حتى تصبح آلية.',
+    ],
+    homeActivitiesAr: [
+      'اقرأ مع الطفل كل يوم ١٠ دقائق: يقرأ هو جملة وتقرأ أنت جملة.',
+      'بطاقات كلمات من كتابه المدرسي يقرؤها مرة كل يوم.',
+    ],
+    strengthUseAr: 'يقرأ الكلمات بدقة؛ ركّز على الطلاقة والفهم ونصوص أطول.',
+  },
+  nonwordReading: {
+    measuresAr: 'قراءة كلمات مصنوعة لا معنى لها، فلا يمكن قراءتها من الذاكرة، بعدد الصحيح والصحيح في الدقيقة.',
+    whyItMattersAr: 'ضعف قراءة الكلمات غير الحقيقية من أثبت العلامات لدى الأطفال ذوي عسر القراءة، لأنه يكشف صعوبة تحويل الحروف إلى أصوات ودمجها (Rack, Snowling & Olson, 1992).',
+    weaknessMeaningAr: 'إذا قرأ الطفل الكلمات الحقيقية أفضل بكثير من المصنوعة، فهو يعتمد على حفظ شكل الكلمات المألوفة أكثر من فك الترميز، وسيتعثر في كل كلمة جديدة.',
+    strategiesAr: [
+      'تمارين تركيب المقاطع والكلمات من الحروف (بَ + ا + بْ = بَاب) يوميًا.',
+      'استخدم كلمات جديدة أو مصنوعة في التدريب أحيانًا، حتى لا يعتمد الطفل على التخمين من المعنى.',
+      'علّم الطفل أن يقرأ الكلمة حرفًا حرفًا ثم يدمجها، بدل التخمين من أولها.',
+    ],
+    homeActivitiesAr: [
+      'لعبة «كلمات من كوكب آخر»: اكتب مقاطع مشكولة واطلب قراءتها، ثم اخترعا معًا معنى مضحكًا لها.',
+    ],
+    strengthUseAr: 'يفك ترميز الكلمات الجديدة بدقة؛ هذا أساس قوي للقراءة المستقلة.',
+  },
+  oralReading: {
+    measuresAr: 'قراءة قصة قصيرة مشكولة جهرًا لمدة دقيقة: نسبة الكلمات الصحيحة من المقروءة، والكلمات الصحيحة في الدقيقة.',
+    whyItMattersAr: 'قراءة النص المتصل تجمع فك الترميز والطلاقة، وعدد الكلمات الصحيحة في الدقيقة من أكثر مقاييس متابعة القراءة استخدامًا في المدارس.',
+    weaknessMeaningAr: 'دقة أقل من ٩٠٪ تعني أن النص صعب على الطفل الآن. دقة جيدة مع قلة الكلمات في الدقيقة تعني أن القراءة صحيحة لكنها لم تصبح طليقة بعد.',
+    strategiesAr: [
+      'اختر نصوصًا يقرأ فيها الطفل ٩٥٪ من الكلمات صحيحة للقراءة المستقلة.',
+      'القراءة المتكررة: النص نفسه ٣ مرات مع تغذية راجعة، ثم يسجّل الطفل زمنه.',
+      'نموذج القراءة: اقرأ الجملة أولًا بطلاقة ثم يعيدها الطفل.',
+    ],
+    homeActivitiesAr: [
+      'قراءة مسموعة كل يوم لقصة قصيرة من مستواه، وإعادتها في اليوم التالي.',
+    ],
+    strengthUseAr: 'قراءته للنص دقيقة وطليقة؛ وسّع إلى نصوص أطول وأسئلة فهم.',
+  },
+  spelling: {
+    measuresAr: 'كتابة كلمات مسموعة بلمس الحروف: عدد الكلمات الصحيحة، ونسبة الحروف الصحيحة، وأنواع الأخطاء.',
+    whyItMattersAr: 'صعوبة الإملاء جزء من تعريف عسر القراءة، وتستمر غالبًا بعد تحسّن القراءة. الإملاء يكشف ما يعرفه الطفل عن ربط الصوت بالحرف وعن قواعد الكتابة مثل المد والتاء المربوطة.',
+    weaknessMeaningAr: 'انظر إلى نوع الخطأ: حذف حروف المد يدل على صعوبة في تمييز الحركة القصيرة من الطويلة؛ أما أخطاء التاء المربوطة واللام الشمسية فهي قواعد كتابة تُعلَّم صراحة.',
+    strategiesAr: [
+      'اطلب من الطفل أن يقول الكلمة ببطء ويمدّ صوت المد قبل كتابتها.',
+      'علّم قواعد الكتابة صراحة بأمثلة: التاء المربوطة، واللام الشمسية، والألف المقصورة.',
+      'صحّح بالشرح لا بالنسخ المتكرر: لماذا تُكتب الكلمة هكذا؟',
+    ],
+    homeActivitiesAr: [
+      'إملاء قصير من ٣ كلمات كل يوم من كلمات كتابه، مع مقارنة ما كتب بالنموذج.',
+    ],
+    strengthUseAr: 'إملاؤه دقيق؛ انتقل إلى كتابة جمل قصيرة.',
+  },
 };
 
 export const RISK_META: Record<RiskLevel, { labelAr: string; color: string; bg: string; summaryAr: string }> = {
@@ -235,6 +322,10 @@ export const FLAG_TEXT_AR: Record<string, string> = {
   slowResponses: 'زمن الاستجابة أبطأ بوضوح من المتوقع لعمره؛ قد يدل على بطء في سرعة المعالجة.',
 };
 
+/** Raw reading results: what each figure means, without comparison to other children. */
+export const READING_MEASURE_NOTE_AR =
+  'مهام القراءة والتسمية تُعرض بأرقامها الخام: عدد الصحيح، والكلمات الصحيحة في الدقيقة، والزمن بالثواني. لا توجد بعد قيم مرجعية عربية مقننة لها، فلا تُقارن بأعمار أو بأطفال آخرين. أفيد مقارنة هي بين مهام الطفل نفسه (الكلمات الحقيقية مقابل المصنوعة) وبين فحصه الآن وفحصه بعد البرنامج.';
+
 export function nextStepsAr(risk: RiskLevel, pattern: ProfilePattern): string[] {
   const steps: string[] = [];
   if (pattern === 'general') {
@@ -297,3 +388,41 @@ export const PARENT_RESULT: Record<RiskLevel, { titleAr: string; textAr: string;
   },
 };
 
+
+const arNum = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]).replace('.', '٫');
+
+/**
+ * One line with the raw results of a reading or naming task, for the report and the summary card.
+ * Returns null for the other tasks, which are reported as correct answers out of the total.
+ */
+export function readingMeasureLineAr(
+  subtestId: SubtestId,
+  scored: { correct?: number; total?: number; percent: number; measures?: ReadingMeasures }
+): string | null {
+  const m = scored.measures;
+  if (!m) return null;
+  const of = scored.correct !== undefined && scored.total !== undefined ? `${arNum(scored.correct)} من ${arNum(scored.total)}` : `${arNum(scored.percent)}٪`;
+  switch (subtestId) {
+    case 'ranObjects':
+    case 'ranLetters': {
+      const errors = m.errors ?? 0;
+      const errorsText = errors === 0 ? 'دون أخطاء' : errors === 1 ? 'خطأ واحد' : errors === 2 ? 'خطآن' : `${arNum(errors)} أخطاء`;
+      return `${m.seconds !== null ? `${arNum(m.seconds)} ثانية` : '—'} لـ${arNum(m.attempted)} ${subtestId === 'ranObjects' ? 'صورة' : 'حرفًا'} · ${errorsText}`;
+    }
+    case 'wordReading':
+    case 'nonwordReading':
+      return `${of} صحيحة · ${arNum(m.correctPerMinute ?? 0)} كلمة صحيحة في الدقيقة`;
+    case 'oralReading':
+      return `الدقة ${arNum(scored.percent)}٪: ${arNum(scored.correct ?? 0)} صحيحة من ${arNum(m.attempted)} مقروءة · ${arNum(m.correctPerMinute ?? 0)} كلمة صحيحة في الدقيقة`;
+    case 'spelling': {
+      const top = m.spellingErrors?.[0];
+      return `${of} كلمة صحيحة · ${arNum(m.letterPercent ?? 0)}٪ من الحروف صحيحة${top ? ` · أكثر الأخطاء: ${SPELL_ERROR_TEXT_AR[top.kind]}` : ''}`;
+    }
+    default:
+      return null;
+  }
+}
+
+/** How to read the real-word / made-up-word pair, shown with the child's own two numbers. */
+export const WORD_NONWORD_NOTE_AR =
+  'قارن السطرين: الكلمات المصنوعة لا تُقرأ من الذاكرة. إذا قرأ الطفل الكلمات الحقيقية أفضل بكثير من المصنوعة، فهو يعتمد على حفظ الكلمات المألوفة أكثر من فك الترميز. إذا ضعف الاثنان معًا، فالتعليم الصريح لفك الترميز هو البداية.';

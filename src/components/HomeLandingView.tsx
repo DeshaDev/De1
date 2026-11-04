@@ -163,7 +163,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <span className="text-brand">ومساعدته على التعلّم بثقة.</span>
             </h1>
             <p className="bz-lead mt-6 max-w-[38rem]">
-              تسع ألعاب قصيرة تستكشف أداء الطفل في مهارات ترتبط بتعلّم القراءة: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. يعرض التقرير ما سجّله الطفل داخل كل نشاط وأفكارًا للممارسة. النتائج استكشافية وليست مقارنة معيارية أو تشخيصًا.
+              ألعاب قصيرة تستكشف أداء الطفل في مهارات ترتبط بتعلّم القراءة: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف، والتسمية السريعة. ومن السادسة يقرأ الطفل أيضًا كلمات حقيقية وكلمات مصنوعة وقصة قصيرة، ويكتب كلمات مسموعة. يعرض التقرير ما سجّله الطفل داخل كل نشاط وأفكارًا للممارسة. النتائج استكشافية وليست مقارنة معيارية أو تشخيصًا.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
@@ -178,7 +178,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <dl className="mt-10 grid grid-cols-3 max-w-[30rem] gap-6">
               {[
                 { k: `${ar(TOTAL_BATTERY_MINUTES)} دقيقة`, v: 'مدة الفحص' },
-                { k: `${ar(BATTERY.length)} ألعاب`, v: 'في ٥ مجالات' },
+                { k: `${ar(BATTERY.length)} مهمة`, v: 'في ٧ مجالات' },
                 { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'برنامج تدريبي' },
               ].map((s) => (
                 <div key={s.v} className="border-r-2 border-brand-soft pr-4">
@@ -259,7 +259,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 icon: Gamepad2,
                 title: 'افحص',
                 meta: `${ar(TOTAL_BATTERY_MINUTES)} دقيقة · بحضور بالغ`,
-                body: 'يلعب الطفل تسع ألعاب قصيرة بتعليمات مسموعة. كل لعبة تبدأ بتدريب، ثم بنود الفحص دون تصحيح.',
+                body: 'يلعب الطفل ألعابًا قصيرة بتعليمات مسموعة، ومن السادسة يقرأ ويكتب أيضًا. كل لعبة تبدأ بتدريب، ثم بنود الفحص دون تصحيح.',
               },
               {
                 icon: FileBarChart,
@@ -294,8 +294,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
           <div className="bz-section-head mb-0">
             <span className="bz-eyebrow">فحص مؤشرات عسر القراءة</span>
-            <h2 className="bz-h2">تسع ألعاب، خمسة مجالات، صورة واضحة</h2>
-            <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية.</p>
+            <h2 className="bz-h2">المهارات السابقة للقراءة، والقراءة نفسها</h2>
+            <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية. ومن السادسة تُقاس القراءة مباشرة: الدقة والسرعة وفك الترميز والإملاء.</p>
           </div>
           <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={() => onNavigateTab('parent-portal')}>
             جرّب الألعاب <ArrowLeft size={17} aria-hidden="true" />

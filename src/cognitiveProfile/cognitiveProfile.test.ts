@@ -33,15 +33,22 @@ const choiceItems = (id: SubtestId): ChoiceItem[] => {
   return s.kind === 'choice' ? [...s.practice, ...s.items] : [];
 };
 
-test('battery has nine subtests covering five domains in a fixed order', () => {
-  assert.equal(BATTERY.length, 9);
-  assert.deepEqual(BATTERY.map((s) => s.order), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  assert.equal(new Set(BATTERY.map((s) => s.domain)).size, 5);
+test('battery: nine precursor subtests in five domains, plus six direct reading and naming measures', () => {
+  assert.equal(BATTERY.length, 15);
+  assert.deepEqual(BATTERY.map((s) => s.order), Array.from({ length: 15 }, (_, i) => i + 1));
+  const precursor = BATTERY.filter((s) => s.domain !== 'reading' && s.domain !== 'naming');
+  assert.equal(precursor.length, 9);
+  assert.equal(new Set(precursor.map((s) => s.domain)).size, 5);
   for (const s of BATTERY) {
     assert.ok(scoredItemCount(s) >= 8, `${s.id} needs enough scored items for a stable score`);
-    assert.ok(REFERENCE_TABLE.rows[s.id].length === AGE_BANDS.length, `${s.id} reference row per age band`);
+    assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 3, `${s.id} needs teaching strategies`);
+  }
+  for (const s of precursor) {
+    assert.ok(REFERENCE_TABLE.rows[s.id]?.length === AGE_BANDS.length, `${s.id} reference row per age band`);
     assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 4, `${s.id} needs teaching strategies`);
   }
+  // The reading measures are reported as raw results until they are normed.
+  for (const s of BATTERY.filter((t) => !precursor.includes(t))) assert.equal(REFERENCE_TABLE.rows[s.id], undefined, s.id);
 });
 
 test('every choice item has a unique set of options containing the correct answer', () => {
@@ -140,7 +147,7 @@ function profileFor(percents: Partial<Record<SubtestId, number>>, ageMonths: num
 }
 
 const AT_MEAN_6Y = Object.fromEntries(
-  BATTERY.map((s) => [s.id, REFERENCE_TABLE.rows[s.id][2][0]])
+  BATTERY.filter((s) => REFERENCE_TABLE.rows[s.id]).map((s) => [s.id, REFERENCE_TABLE.rows[s.id]![2][0]])
 ) as Record<SubtestId, number>;
 
 test('a child scoring at the age expectation lands in the average band with low risk', () => {
@@ -154,7 +161,7 @@ test('a child scoring at the age expectation lands in the average band with low 
 test('the same raw score is interpreted relative to age', () => {
   const young = scoreSubtest(resultWithPercent('letterSound', 50), 54);
   const older = scoreSubtest(resultWithPercent('letterSound', 50), 90);
-  assert.ok(young.centile > older.centile);
+  assert.ok(young.centile! > older.centile!);
   assert.ok(older.band === 'severe' || older.band === 'below');
 });
 
@@ -186,7 +193,10 @@ test('letter knowledge does not raise risk before age five', () => {
 test('risk is withheld when too few core subtests were completed', () => {
   const profile = profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 78);
   assert.equal(profile.risk, 'insufficient');
-  assert.equal(profile.missing.length, 6);
+  // From six the reading measures are part of the battery too: 15 tasks in all.
+  assert.equal(profile.missing.length, 12);
+  // Before six: the nine precursor tasks and rapid naming of pictures.
+  assert.equal(profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 54).missing.length, 7);
 });
 
 test('validity flags: near-chance and discontinued results are flagged', () => {

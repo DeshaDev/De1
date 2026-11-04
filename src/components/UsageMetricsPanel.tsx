@@ -50,7 +50,7 @@ export function UsageMetricsPanel() {
     ? [
         { label: 'زيارات', value: t.visit },
         { label: 'بدء الفحص', value: t.battery_started },
-        { label: 'إكمال الألعاب التسع', value: t.battery_completed },
+        { label: 'إكمال كل مهام الفحص', value: t.battery_completed },
         { label: 'عرض التقرير', value: t.report_viewed },
         { label: 'بدء البرنامج التدريبي', value: t.training_started },
       ]

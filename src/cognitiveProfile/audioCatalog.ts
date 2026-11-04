@@ -64,6 +64,13 @@ export function buildAudioCatalog(): CatalogEntry[] {
       for (const item of [...s.practice, ...s.items]) addSegments(map, item.audio, `${s.id}.${item.id}`);
     } else if (s.kind === 'span') {
       for (const t of [...s.practice, ...s.trials]) for (const id of [...t.sequence, ...t.choices]) add(map, lex(id).word, `${s.id}.${t.id}`);
+    } else if (s.kind === 'readList') {
+      // Only practice items are spoken (to model the reading); scored items are never read to the child.
+      for (const item of s.practice) add(map, item.text, `${s.id}.${item.id}`);
+    } else if (s.kind === 'spelling') {
+      for (const item of [...s.practice, ...s.items]) add(map, item.spoken, `${s.id}.${item.id}`);
+    } else if (s.kind === 'ran') {
+      for (const sym of s.symbols) add(map, sym.nameAr, `${s.id}.names`);
     } else if (s.kind === 'pal') {
       for (const c of s.creatures) {
         add(map, palWhere(c.name), `${s.id}.where`);

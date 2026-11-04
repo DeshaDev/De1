@@ -23,7 +23,7 @@ interface DyslexiaScreeningHubProps {
 }
 
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
-  { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: '٩ ألعاب · ٤–٨ سنوات', icon: Brain },
+  { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
   { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'أداة تكميلية · من الصف الأول', icon: BookOpen },
   { id: 'cognitive-screening', label: 'التسمية السريعة', hint: 'التسمية السريعة والكلمات غير الحقيقية · أداة تكميلية', icon: Timer },
@@ -59,7 +59,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
             </h1>
             <p className="bz-body mt-2">
               {subTab === 'battery'
-                ? `تسع ألعاب قصيرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة) ترسم ملفًا معرفيًا للطفل مقارنةً بأقرانه في العمر، ثم تقترح استراتيجيات وبرنامجًا تدريبيًا.`
+                ? `ألعاب قصيرة للمهارات السابقة للقراءة والتسمية السريعة، ومن السادسة مهام قراءة وإملاء مباشرة (حتى نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
                 : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب فحص مؤشرات عسر القراءة لا بديلًا عنه.'}
             </p>
           </div>

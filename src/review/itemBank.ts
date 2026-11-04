@@ -22,7 +22,7 @@ export const SECTION_META: Record<ReviewSection, { titleAr: string; questionAr: 
   },
   battery: {
     titleAr: 'بنود الفحص',
-    questionAr: 'هل للبند إجابة واحدة صحيحة فقط؟ هل يقيس المهارة المكتوبة؟ هل الصور والكلمات والتعليمات واضحة لطفل من ٤ إلى ٨ سنوات؟',
+    questionAr: 'هل للبند إجابة واحدة صحيحة فقط؟ هل يقيس المهارة المكتوبة؟ هل الصور والكلمات والتعليمات واضحة لطفل من ٤ إلى ٨ سنوات؟ في مهام القراءة: هل الكلمة مناسبة لصفها، والتشكيل صحيح، والكلمة المصنوعة ليست كلمة حقيقية؟',
   },
   training: {
     titleAr: 'تمارين البرنامج التدريبي',
@@ -213,6 +213,59 @@ export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { sta
           flagsAr: [],
         })
       );
+    } else if (s.kind === 'readList') {
+      const madeUp = s.id === 'nonwordReading';
+      [...s.practice.map((it) => ({ it, kind: 'تدريبية' })), ...s.items.map((it) => ({ it, kind: 'محتسبة' }))].forEach(({ it, kind }) =>
+        units.push({
+          id: `battery.${s.id}.${it.id}`,
+          section: 'battery',
+          titleAr: title,
+          subtitleAr: `كلمة ${kind} ${it.id} · المستوى ${ar(it.level)}`,
+          fields: [
+            { labelAr: madeUp ? 'الكلمة المصنوعة' : 'الكلمة', text: it.text, ...(kind === 'تدريبية' ? { audio: it.text } : {}) },
+            { labelAr: 'البنية', text: it.structureAr },
+          ],
+          flagsAr: madeUp ? ['للتحقق — تأكّد أنها ليست كلمة في الفصحى ولا في لهجات الأطفال المستهدفين، ولا تشبه كلمة شائعة أو غير لائقة.'] : [],
+        })
+      );
+    } else if (s.kind === 'spelling') {
+      [...s.practice, ...s.items].forEach((it) =>
+        units.push({
+          id: `battery.${s.id}.${it.id}`,
+          section: 'battery',
+          titleAr: title,
+          subtitleAr: `كلمة إملاء ${it.id} · المستوى ${ar(it.level)}`,
+          fields: [
+            { labelAr: 'الكلمة المسموعة', text: it.spoken, audio: it.spoken },
+            { labelAr: 'الكتابة الصحيحة', text: it.answer, correct: true },
+            { labelAr: 'البنية', text: it.structureAr },
+          ],
+          flagsAr: [],
+        })
+      );
+    } else if (s.kind === 'passage') {
+      units.push({
+        id: `battery.${s.id}.text`,
+        section: 'battery',
+        titleAr: title,
+        subtitleAr: `${s.titleAr} · ${ar(s.words.length)} كلمة`,
+        fields: [{ labelAr: 'النص', text: s.words.join(' ') }],
+        flagsAr: [],
+      });
+    } else if (s.kind === 'ran') {
+      units.push({
+        id: `battery.${s.id}.symbols`,
+        section: 'battery',
+        titleAr: title,
+        subtitleAr: 'الرموز الخمسة (كل رمز ٨ مرات في الشبكة)',
+        fields: s.symbols.map((sym) => ({
+          labelAr: 'رمز',
+          text: sym.nameAr,
+          audio: sym.nameAr,
+          ...(s.display === 'picture' ? { picture: LEXICON[sym.value].emoji } : {}),
+        })),
+        flagsAr: [],
+      });
     } else if (s.kind === 'pal') {
       units.push({
         id: `battery.${s.id}.creatures`,

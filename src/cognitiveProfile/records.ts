@@ -4,8 +4,9 @@
  * recomputes the profile itself so a client can never write its own centiles or risk level.
  */
 import { z } from 'zod';
-import { BATTERY, SUBTESTS_BY_ID, SubtestId } from './battery';
-import { REFERENCE_TABLE, buildProfile, type Band, type ProfilePattern, type RiskLevel, type SubtestResult } from './scoring';
+import { BATTERY, SubtestId, scoredItemIds, subtestsForAge } from './battery';
+import { REFERENCE_TABLE, buildProfile, type Band, type ProfilePattern, type ReadingMeasures, type RiskLevel, type SubtestResult } from './scoring';
+import { SPELL_KEYBOARD, SPELL_MAX_LETTERS } from './readingTasks';
 import { SKILLS, type SkillId, type TrainingProgress } from './training';
 import type { HomeDialect } from './storage';
 
@@ -14,12 +15,14 @@ export interface CognitiveBatterySummary {
   referenceStatus: 'provisional' | 'normed';
   ageBandLabelAr: string;
   completedSubtests: number;
+  /** Tasks given at this child's age (older summaries lack it: nine). */
+  totalSubtests?: number;
   risk: RiskLevel;
   pattern: ProfilePattern;
   strengths: SubtestId[];
   weaknesses: SubtestId[];
   domains: Array<{ domain: string; centile: number; band: Band }>;
-  subtests: Array<{ subtestId: SubtestId; centile: number; band: Band; percent: number }>;
+  subtests: Array<{ subtestId: SubtestId; centile: number | null; band: Band | null; percent: number; correct?: number; total?: number; measures?: ReadingMeasures }>;
 }
 
 export interface StoredCognitiveBattery {
@@ -36,18 +39,8 @@ export interface StoredTrainingProgress extends TrainingProgress {
   updatedAt: string;
 }
 
-/** Every response id a subtest can legitimately produce (scored items only). */
-function validItemIds(id: SubtestId): Set<string> {
-  const s = SUBTESTS_BY_ID[id];
-  const ids = new Set<string>();
-  if (s.kind === 'choice') s.items.forEach((i) => ids.add(i.id));
-  if (s.kind === 'span') s.trials.forEach((t) => ids.add(t.id));
-  if (s.kind === 'association') s.blocks.forEach((b) => b.residents.forEach((r) => ids.add(`${b.id}-${r}`)));
-  if (s.kind === 'pal') s.blocks.forEach((b) => b.order.forEach((c) => ids.add(`${b.id}-${c}`)));
-  return ids;
-}
-
-const VALID_IDS: Record<string, Set<string>> = Object.fromEntries(BATTERY.map((s) => [s.id, validItemIds(s.id)]));
+const VALID_IDS: Record<string, Set<string>> = Object.fromEntries(BATTERY.map((s) => [s.id, new Set(scoredItemIds(s))]));
+const SPELL_LETTERS = new Set(SPELL_KEYBOARD);
 const SUBTEST_IDS = BATTERY.map((s) => s.id) as [SubtestId, ...SubtestId[]];
 const isoDate = z.string().max(40).refine((v) => Number.isFinite(Date.parse(v)), 'تاريخ غير صالح');
 
@@ -58,6 +51,11 @@ const ItemResponseSchema = z
     rtMs: z.number().finite().min(0).max(600_000),
     replays: z.number().int().min(0).max(50),
     partialCredit: z.number().int().min(0).max(10).optional(),
+    typed: z
+      .string()
+      .max(SPELL_MAX_LETTERS * 2)
+      .refine((v) => Array.from(v).length <= SPELL_MAX_LETTERS && Array.from(v).every((c) => SPELL_LETTERS.has(c)), 'حروف غير صالحة')
+      .optional(),
   })
   .strict();
 
@@ -69,6 +67,8 @@ const SubtestResultSchema = z
     completedAt: isoDate,
     maxSpan: z.number().int().min(0).max(10).optional(),
     blockScores: z.array(z.number().int().min(0).max(10)).max(10).optional(),
+    durationMs: z.number().finite().min(0).max(900_000).optional(),
+    errorCount: z.number().int().min(0).max(60).optional(),
   })
   .strict();
 
@@ -185,11 +185,20 @@ export function summarizeBattery(
     referenceStatus: profile.referenceStatus,
     ageBandLabelAr: profile.ageBandLabelAr,
     completedSubtests: profile.subtests.length,
+    totalSubtests: subtestsForAge(ageMonths).length,
     risk: profile.risk,
     pattern: profile.pattern,
     strengths: profile.strengths,
     weaknesses: profile.weaknesses,
     domains: profile.domains.map((d) => ({ domain: d.domain, centile: d.centile, band: d.band })),
-    subtests: profile.subtests.map((s) => ({ subtestId: s.subtestId, centile: s.centile, band: s.band, percent: s.percent })),
+    subtests: profile.subtests.map((s) => ({
+      subtestId: s.subtestId,
+      centile: s.centile,
+      band: s.band,
+      percent: s.percent,
+      correct: s.correct,
+      total: s.total,
+      ...(s.measures ? { measures: s.measures } : {}),
+    })),
   };
 }
