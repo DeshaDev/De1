@@ -53,8 +53,13 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
   const [record, setRecord] = useState<IndividualPlanRecord | null>(student.individualPlan ?? null);
   const [note, setNote] = useState<{ text: string; errors: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
 
   const generate = async () => {
+    if (!ageIsSupported) {
+      setNote({ text: 'اقتراحات الممارسة المرتبطة بالفحص الحالي مخصصة للأطفال من ٤ إلى ٨ سنوات. لن ننشئ خطة آلية لطفل خارج هذا النطاق.', errors: [] });
+      return;
+    }
     setBusy(true);
     const facts = planFactsFromRecord(student, progress);
     let next: IndividualPlanRecord;
@@ -117,7 +122,7 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
           )}
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
-          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" disabled={busy} onClick={generate}>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" disabled={busy || !ageIsSupported} onClick={generate}>
             <Sparkles size={15} /> {record ? 'إنشاء اقتراح جديد' : 'اقترح أنشطة للممارسة'}
           </button>
           {record && (
@@ -161,7 +166,9 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
 
       {!record && (
         <p className="bz-small text-ink-2">
-          تُنشأ هذه الاقتراحات آليًا من نتائج المهام وبيانات الممارسة المتاحة. لا يحتاج كل طفل إلى مراجعة أو اعتماد يدوي؛ ويمكن للأسرة اختيار ما يلائم الطفل وتجاهل أي نشاط غير مناسب.
+          {ageIsSupported
+            ? 'تُنشأ هذه الاقتراحات آليًا من نتائج المهام وبيانات الممارسة المتاحة. لا يحتاج كل طفل إلى مراجعة أو اعتماد يدوي؛ ويمكن للأسرة اختيار ما يلائم الطفل وتجاهل أي نشاط غير مناسب.'
+            : 'هذا المسار مخصص حاليًا للأعمار من ٤ إلى ٨ سنوات فقط. يمكن للأسرة استخدام أدوات القراءة الميسّرة والأنشطة العامة دون إنشاء اقتراح مرتبط بالفحص.'}
         </p>
       )}
 
