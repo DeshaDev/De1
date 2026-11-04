@@ -13,11 +13,11 @@ import {
   ACTIVITY_IDS,
   DraftPlanSchema,
   PlanFactsSchema,
-  planPrompt,
   referralFor,
   rulesDraft,
   validateDraftPlan,
 } from './src/cognitiveProfile/individualPlan';
+import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   UsageEventSchema,
@@ -1108,6 +1108,40 @@ function aiRateLimiter(
   history.push(now);
   aiRateLimitBuckets.set(clientIp, history);
   next();
+}
+
+// ---------------------------------------------------------------------------
+// Individual-plan agent: model choice, cost caps and cache
+// ---------------------------------------------------------------------------
+const AI_PLAN_DAILY_LIMIT = Math.max(0, Number(process.env.AI_PLAN_DAILY_LIMIT ?? 300) || 0);
+const AI_PLAN_PER_ACCOUNT_DAILY = Math.max(0, Number(process.env.AI_PLAN_PER_ACCOUNT_DAILY ?? 20) || 0);
+const planUsage = { day: '', total: 0, byAccount: new Map<string, number>() };
+const planDraftCache = new Map<string, { payload: Record<string, unknown>; expiresAt: number }>();
+const DEFAULT_PLAN_MODEL = 'gemini-3.8-flash';
+let resolvedPlanModel: { id: string; at: number } | null = null;
+
+/**
+ * The model for the plan agent: GEMINI_PLAN_MODEL if set; otherwise the strongest model the key can
+ * use, from the live models list (newest Pro, then newest Flash), re-checked every 6 hours.
+ */
+async function resolvePlanModel(ai: GoogleGenAI): Promise<string> {
+  const configured = process.env.GEMINI_PLAN_MODEL?.trim();
+  if (configured) return configured;
+  if (resolvedPlanModel && Date.now() - resolvedPlanModel.at < 6 * 3600 * 1000) return resolvedPlanModel.id;
+  let id = DEFAULT_PLAN_MODEL;
+  try {
+    const names: string[] = [];
+    const pager = await ai.models.list();
+    for await (const m of pager) {
+      const actions = (m as { supportedActions?: string[] }).supportedActions ?? [];
+      if (m.name && (actions.length === 0 || actions.includes('generateContent'))) names.push(m.name);
+    }
+    id = pickBestModel(names) ?? DEFAULT_PLAN_MODEL;
+  } catch {
+    // Keep the default; the next request tries again after the cache period.
+  }
+  resolvedPlanModel = { id, at: Date.now() };
+  return id;
 }
 
 function getGenAIClient(): GoogleGenAI | null {
@@ -2834,65 +2868,103 @@ async function startServer() {
     const facts = parsed.data;
     const generatedAt = new Date().toISOString();
     const referralAr = referralFor(facts);
-    const fallback = (noteAr: string, validationErrors: string[] = []) =>
-      res.json({ status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr, facts, generatedAt, noteAr, validationErrors });
+    const fallback = (noteAr: string, validationErrors: string[] = [], agent: unknown = null) =>
+      res.json({ status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr, facts, generatedAt, noteAr, validationErrors, agent });
 
     const ai = getGenAIClient();
     if (!ai) {
       fallback('النموذج اللغوي غير مهيأ على الخادم؛ هذه مسودة مبنية على قواعد ثابتة من البيانات نفسها.');
       return;
     }
-    let lastErrors: string[] = [];
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: planPrompt(facts),
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.3,
-            responseSchema: {
+    const model = await resolvePlanModel(ai);
+
+    // Same facts and model: return the earlier draft without a new (paid) call.
+    const cacheKey = crypto.createHash('sha256').update(`${model}|${JSON.stringify(facts)}`).digest('hex');
+    const cached = planDraftCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.json({ ...cached.payload, cached: true });
+      return;
+    }
+
+    // Cost caps: per server per day, and per account per day.
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const day = new Date().toISOString().slice(0, 10);
+    if (planUsage.day !== day) {
+      planUsage.day = day;
+      planUsage.total = 0;
+      planUsage.byAccount.clear();
+    }
+    const accountKey = session?.sessionId || req.ip || 'anonymous';
+    const accountCount = planUsage.byAccount.get(accountKey) ?? 0;
+    if (planUsage.total >= AI_PLAN_DAILY_LIMIT || accountCount >= AI_PLAN_PER_ACCOUNT_DAILY) {
+      fallback('بلغ استخدام النموذج اللغوي حده اليومي المضبوط على الخادم؛ هذه مسودة مبنية على قواعد ثابتة.');
+      return;
+    }
+    planUsage.total += 1;
+    planUsage.byAccount.set(accountKey, accountCount + 1);
+
+    const shapeSchema = {
+      analysis: {
+        type: Type.OBJECT,
+        properties: {
+          priorities: {
+            type: Type.ARRAY,
+            items: { type: Type.OBJECT, properties: { skill: { type: Type.STRING }, reasonAr: { type: Type.STRING } }, required: ['skill', 'reasonAr'] },
+          },
+        },
+        required: ['priorities'],
+      },
+      plan: {
+        type: Type.OBJECT,
+        properties: {
+          summaryAr: { type: Type.STRING },
+          goals: {
+            type: Type.ARRAY,
+            items: { type: Type.OBJECT, properties: { skill: { type: Type.STRING }, goalAr: { type: Type.STRING }, evidenceAr: { type: Type.STRING } }, required: ['skill', 'goalAr', 'evidenceAr'] },
+          },
+          activities: {
+            type: Type.ARRAY,
+            items: {
               type: Type.OBJECT,
               properties: {
-                summaryAr: { type: Type.STRING },
-                goals: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: { skill: { type: Type.STRING }, goalAr: { type: Type.STRING }, evidenceAr: { type: Type.STRING } },
-                    required: ['skill', 'goalAr', 'evidenceAr'],
-                  },
-                },
-                activities: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      id: { type: Type.STRING, enum: [...ACTIVITY_IDS] },
-                      whyAr: { type: Type.STRING },
-                      frequency: { type: Type.STRING, enum: ['daily', 'most-days', 'weekly'] },
-                    },
-                    required: ['id', 'whyAr', 'frequency'],
-                  },
-                },
-                homeTipsAr: { type: Type.ARRAY, items: { type: Type.STRING } },
+                id: { type: Type.STRING, enum: [...ACTIVITY_IDS] },
+                whyAr: { type: Type.STRING },
+                frequency: { type: Type.STRING, enum: ['daily', 'most-days', 'weekly'] },
               },
-              required: ['summaryAr', 'goals', 'activities', 'homeTipsAr'],
+              required: ['id', 'whyAr', 'frequency'],
             },
           },
+          homeTipsAr: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['summaryAr', 'goals', 'activities', 'homeTipsAr'],
+      },
+    };
+
+    try {
+      const result = await runPlanAgent(facts, async (messages, shape) => {
+        const response = await ai.models.generateContent({
+          model,
+          contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+          config: { responseMimeType: 'application/json', temperature: 0.3, responseSchema: shapeSchema[shape] },
         });
-        const json = JSON.parse(response.text || '{}');
-        const checked = validateDraftPlan(json, facts);
-        if (checked.ok && checked.plan) {
-          res.json({ status: 'draft', source: 'model', plan: checked.plan, referralAr, facts, generatedAt, validationErrors: [] });
-          return;
-        }
-        lastErrors = checked.errors;
-      } catch {
-        lastErrors = ['تعذر الحصول على رد صالح من النموذج.'];
+        return {
+          text: response.text || '',
+          inputTokens: response.usageMetadata?.promptTokenCount,
+          outputTokens: response.usageMetadata?.candidatesTokenCount,
+        };
+      });
+      const agent = { model, trace: result.trace, priorities: result.priorities };
+      if (!result.plan) {
+        fallback('لم تجتز مسودة الوكيل قيود التحقق بعد محاولات التصحيح؛ هذه مسودة مبنية على قواعد ثابتة.', result.errors, agent);
+        return;
       }
+      const payload = { status: 'draft', source: 'model', plan: result.plan, referralAr, facts, generatedAt, validationErrors: [], agent };
+      if (planDraftCache.size >= 1000) planDraftCache.delete(planDraftCache.keys().next().value as string);
+      planDraftCache.set(cacheKey, { payload, expiresAt: Date.now() + 30 * 24 * 3600 * 1000 });
+      res.json(payload);
+    } catch {
+      fallback('تعذر الوصول إلى النموذج اللغوي؛ هذه مسودة مبنية على قواعد ثابتة.');
     }
-    fallback('رُفضت مسودة النموذج لأنها خالفت القيود؛ هذه مسودة مبنية على قواعد ثابتة.', lastErrors);
   });
 
   /** A teacher or specialist approves (and may edit) a plan; the approver comes from the session. */

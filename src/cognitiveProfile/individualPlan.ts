@@ -90,6 +90,8 @@ export interface IndividualPlanRecord {
   approvedAt?: string;
   approvedBy?: string;
   editedByReviewer?: boolean;
+  /** The agent's model and steps, when a language model drafted the plan. */
+  agent?: { model: string; trace: Array<{ step: string; ok: boolean; noteAr: string; inputTokens?: number; outputTokens?: number }> } | null;
 }
 
 // ---------------------------------------------------------------------------

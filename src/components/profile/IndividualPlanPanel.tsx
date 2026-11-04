@@ -70,8 +70,22 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
       });
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
-      next = { status: 'draft', source: data.source, plan: data.plan, referralAr: data.referralAr ?? null, facts: data.facts, generatedAt: data.generatedAt };
-      setNote(data.noteAr ? { text: data.noteAr, errors: data.validationErrors ?? [] } : null);
+      next = {
+        status: 'draft',
+        source: data.source,
+        plan: data.plan,
+        referralAr: data.referralAr ?? null,
+        facts: data.facts,
+        generatedAt: data.generatedAt,
+        agent: data.agent ? { model: String(data.agent.model), trace: Array.isArray(data.agent.trace) ? data.agent.trace : [] } : null,
+      };
+      setNote(
+        data.noteAr
+          ? { text: data.noteAr, errors: data.validationErrors ?? [] }
+          : data.cached
+            ? { text: 'لم تتغير بيانات الطفل منذ آخر مسودة؛ أُعيدت المسودة نفسها دون استدعاء جديد للنموذج.', errors: [] }
+            : null
+      );
     } catch {
       // No server (e.g. static hosting) or no access: the same rules-based draft, built here.
       next = { status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr: referralFor(facts), facts, generatedAt: new Date().toISOString() };
@@ -128,7 +142,7 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
                 <span className="font-semibold text-warn">مسودة — لا تُعتمد إلا بعد مراجعة معلم أو أخصائي</span>
               )}
               <span className="block text-ink-2">
-                {record.source === 'model' ? 'كتبها نموذج لغوي من بيانات الطفل فقط، وتحققت منها قواعد آلية (لا أرقام من خارج البيانات، ولا لغة تشخيصية).' : 'مبنية على قواعد ثابتة من بيانات الطفل.'}
+                {record.source === 'model' ? 'كتبها وكيل ذكي (نموذج لغوي) من بيانات الطفل فقط: حلّل البيانات، وكتب، وتحقق بأداة آلية، وصحّح أخطاءه (لا أرقام من خارج البيانات، ولا لغة تشخيصية).' : 'مبنية على قواعد ثابتة من بيانات الطفل.'}
               </span>
             </p>
           )}
@@ -155,6 +169,23 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
             </details>
           )}
         </div>
+      )}
+
+      {record?.agent && record.agent.trace.length > 0 && (
+        <details className="rounded-xl border border-line p-3 text-xs text-ink-2">
+          <summary className="cursor-pointer font-semibold text-ink">خطوات الوكيل الذكي ({record.agent.model})</summary>
+          <ol className="mt-2 space-y-1 list-decimal pr-5">
+            {record.agent.trace.map((t, i) => (
+              <li key={i}>
+                <span className={t.ok ? 'text-emerald-700' : 'text-warn'}>{t.ok ? '✓' : '✗'}</span>{' '}
+                {{ analysis: 'تحليل', draft: 'كتابة', verify: 'تحقق', revise: 'تصحيح' }[t.step] ?? t.step}: {t.noteAr}
+              </li>
+            ))}
+          </ol>
+          <p className="mt-1">
+            الكلمات المعالجة (للتكلفة): {ar(record.agent.trace.reduce((n, t) => n + (t.inputTokens ?? 0) + (t.outputTokens ?? 0), 0))} وحدة.
+          </p>
+        </details>
       )}
 
       {!record && <p className="bz-small text-ink-2">تُكتب الخطة من نتيجة الفحص وتقدّم البرنامج وتحليل القراءة الجهرية، ثم يراجعها المعلم أو الأخصائي ويعتمدها.</p>}
