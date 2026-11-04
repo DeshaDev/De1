@@ -15,6 +15,7 @@ import {
   TrainingProgress,
   TrainingTask,
   applyProbeEvidence,
+  applyReadingTargets,
   buildTrainingPlan,
   chanceOf,
   createProgress,
@@ -45,6 +46,7 @@ import {
   type ProbeRecord,
 } from '../../cognitiveProfile/progressProbe';
 import ProgressChart from './ProgressChart';
+import { takePendingReadingTargets } from '../ReadingErrorPanel';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
@@ -131,7 +133,7 @@ interface Props {
   student?: StudentRecord;
   /** Show a back button (only when the user came here from the games map or the report). */
   showBack?: boolean;
-  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader') => void;
+  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
 }
 
 export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
@@ -167,7 +169,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   const startProgram = (plan: TrainingPlan) => {
     trackUsage('training_started');
-    persist(createProgress(plan, 1, skillBandsFromProfile(profile)));
+    const created = createProgress(plan, 1, skillBandsFromProfile(profile));
+    // Exercises saved from an oral reading before the programme existed are added now.
+    const pending = takePendingReadingTargets(studentId);
+    persist(pending ? applyReadingTargets(created, pending).progress : created);
   };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
@@ -225,7 +230,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     setRun({
       skills,
       skillIndex,
-      tasks: generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8),
+      tasks: generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets),
       taskIndex: 0,
       correct: 0,
       phase: 'intro',
@@ -253,7 +258,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       // The model moved the child to another level: the rest of the block is generated at that level.
       seed.current += 7919;
       const remaining = run.tasks.length - run.taskIndex - 1;
-      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining)];
+      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining, updated.targets)];
     }
     const finishedSkill = change === 'mastered';
     if (run.taskIndex + 1 < tasks.length && !finishedSkill) {
@@ -532,6 +537,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         )}
       </section>
 
+      {progress.targets && (progress.targets.soundPairs.length > 0 || progress.targets.letters.length > 0) && (
+        <p className="rounded-2xl border border-line bg-brand-tint px-4 py-3 text-sm text-ink">
+          تمارين موجّهة لأخطاء القراءة الجهرية:
+          {progress.targets.soundPairs.length > 0 && <> أصوات {progress.targets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
+          {progress.targets.letters.length > 0 && <> حروف {progress.targets.letters.join(' ')}.</>}
+          {' '}نصف تمارين هذه المهارات تركّز عليها.
+        </p>
+      )}
+
       <div className="grid md:grid-cols-3 gap-4">
         {progress.plan.focus.map((s) => {
           const level = (progress.levels[s] ?? 1) as Level;
@@ -571,6 +585,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <div className="flex flex-wrap gap-2">
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
+            {(student?.ageYears ?? 0) >= 6 && (
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
+            )}
           </div>
         </section>
       )}

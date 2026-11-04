@@ -150,8 +150,29 @@ export async function authenticatedFetch(
 ): Promise<Response> {
   const session = await ensureBaseeraSession();
   const headers = new Headers(init.headers || {});
-  if (session?.token) headers.set('Authorization', `Bearer ${session.token}`);
+  let usedParentToken = false;
+  if (session?.token) {
+    headers.set('Authorization', `Bearer ${session.token}`);
+  } else {
+    // Family accounts: the current Supabase access token, which the server verifies with Supabase.
+    const parentToken = await parentAccessToken();
+    if (parentToken) {
+      headers.set('Authorization', `Bearer ${parentToken}`);
+      usedParentToken = true;
+    }
+  }
   const response = await fetch(input, { ...init, headers });
-  if (response.status === 401) clearBaseeraSession();
+  if (response.status === 401 && !usedParentToken) clearBaseeraSession();
   return response;
+}
+
+async function parentAccessToken(): Promise<string | null> {
+  try {
+    const { supabase, isSupabaseConfigured } = await import('./supabaseClient');
+    if (!isSupabaseConfigured()) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -234,7 +234,21 @@ export interface TrainingProgress {
   probes?: ProbeRecord[];
   /** Knowledge-tracing state per skill and level (see knowledgeTracing.ts). Absent in older records. */
   bkt?: BktStates;
+  /** Sounds and letters to practise more often, from the child's oral-reading errors. */
+  targets?: TrainingTargets;
 }
+
+export interface TrainingTargets {
+  /** Confusable sound pairs the child mixed up while reading (only pairs the exercises can voice). */
+  soundPairs: Array<[string, string]>;
+  /** Letters the child confused while reading. */
+  letters: string[];
+  /** When and from which reading passage the targets came. */
+  source?: { passageId: string; analysedAt: string };
+}
+
+/** Half of the relevant items practise the child's own confusions; the rest keep the skill broad. */
+const TARGET_SHARE = 0.5;
 
 const BAND_ORDER: Band[] = ['severe', 'below', 'average', 'strength'];
 
@@ -552,7 +566,7 @@ const MINIMAL_PAIRS: Array<[string, string]> = [
   ['sword', 'summer'],
 ];
 
-function discriminationTask(random: () => number, level: Level, n: number): ChoiceItem {
+function discriminationTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem {
   if (level === 3 && random() < 0.35) {
     const pair = pick(MINIMAL_PAIRS, random);
     const target = pick(pair, random);
@@ -566,7 +580,8 @@ function discriminationTask(random: () => number, level: Level, n: number): Choi
       tag: 'minimalPair',
     };
   }
-  const pairs = level === 1 ? DISTANT_PHONEME_PAIRS : CONFUSABLE_PHONEME_PAIRS;
+  const ownPairs = level === 1 ? [] : (targets?.soundPairs ?? []).filter(([x, y]) => CONFUSABLE_PHONEME_PAIRS.some(([p, q]) => (p === x && q === y) || (p === y && q === x)));
+  const pairs = level === 1 ? DISTANT_PHONEME_PAIRS : ownPairs.length > 0 && random() < TARGET_SHARE ? ownPairs : CONFUSABLE_PHONEME_PAIRS;
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
   const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
   const same = random() < 0.3;
@@ -594,9 +609,10 @@ const LETTER_SET_2 = ['ت', 'د', 'ف', 'ك', 'ع', 'ح'];
 const ALL_LETTERS = 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي'.split(' ');
 const SHORT_VOWEL = { a: 'َ', i: 'ِ', u: 'ُ' } as const;
 
-function letterSoundTask(random: () => number, level: Level, n: number): ChoiceItem {
+function letterSoundTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem {
   const set = level === 1 ? LETTER_SET_1 : level === 2 ? LETTER_SET_2 : ALL_LETTERS.filter((l) => l !== 'ا');
-  const letter = pick(set, random);
+  const own = (targets?.letters ?? []).filter((l) => set.includes(l));
+  const letter = own.length > 0 && random() < TARGET_SHARE ? pick(own, random) : pick(set, random);
   const close = level === 3 ? confusableWith(letter).filter((l) => ALL_LETTERS.includes(l)) : [];
   const farPool = (level === 3 ? ALL_LETTERS : set).filter((l) => l !== letter && !close.includes(l));
   const distractors = [...shuffleWith(close, random), ...shuffleWith(farPool, random)].slice(0, 3);
@@ -626,9 +642,11 @@ function swapOneLetter(word: string, random: () => number): string | null {
   return null;
 }
 
-function visualDiscriminationTask(random: () => number, level: Level, n: number): ChoiceItem | null {
+function visualDiscriminationTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem | null {
   if (level === 1 || level === 2) {
-    const group = pick(CONFUSABLE_LETTER_GROUPS.filter((g) => (level === 2 ? g.length >= 3 : true)), random);
+    const eligible = CONFUSABLE_LETTER_GROUPS.filter((g) => (level === 2 ? g.length >= 3 : true));
+    const own = eligible.filter((g) => (targets?.letters ?? []).some((l) => g.includes(l)));
+    const group = pick(own.length > 0 && random() < TARGET_SHARE ? own : eligible, random);
     const nonConnecting = ['د', 'ذ', 'ر', 'ز'];
     const extraGroups = CONFUSABLE_LETTER_GROUPS.filter(
       (g) => g !== group && (level === 1 || !g.some((l) => nonConnecting.includes(l)))
@@ -679,7 +697,7 @@ function spanTask(random: () => number, level: Level, n: number): SpanTrial {
   return { id: `tr-span-${n}`, sequence, choices: shuffleWith(pool, random) };
 }
 
-export function generateSession(skill: SkillId, level: Level, seed: number): TrainingTask[] {
+export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets): TrainingTask[] {
   let a = seed >>> 0;
   const random = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -697,7 +715,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
     }));
   }
 
-  const generator: Record<string, (r: () => number, l: Level, n: number) => ChoiceItem | null> = {
+  const generator: Record<string, (r: () => number, l: Level, n: number, t?: TrainingTargets) => ChoiceItem | null> = {
     rhyme: rhymeTask,
     soundPosition: soundPositionTask,
     blending: blendingTask,
@@ -708,7 +726,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
   const tasks: TrainingTask[] = [];
   const seen = new Set<string>();
   for (let n = 0; tasks.length < ITEMS_PER_SESSION && n < ITEMS_PER_SESSION * 6; n += 1) {
-    const item = generator[skill](random, level, n);
+    const item = generator[skill](random, level, n, targets);
     if (!item) continue;
     const pictureIds = [item.stimulus, ...item.options.map((o) => o.visual)].flatMap((v) =>
       v && v.type === 'emoji' ? Object.values(LEXICON).filter((e) => e.emoji === v.value).map((e) => e.id) : []
@@ -723,11 +741,11 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
 }
 
 /** `count` practice items for one skill and level (more or fewer than one standard block). */
-export function generateItems(skill: SkillId, level: Level, seed: number, count: number): TrainingTask[] {
+export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets): TrainingTask[] {
   const out: TrainingTask[] = [];
   const seen = new Set<string>();
   for (let k = 0; out.length < count && k < 8; k++) {
-    for (const task of generateSession(skill, level, seed + k * 104_729)) {
+    for (const task of generateSession(skill, level, seed + k * 104_729, targets)) {
       if (out.length >= count) break;
       const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
       if (seen.has(signature)) continue;
@@ -740,4 +758,39 @@ export function generateItems(skill: SkillId, level: Level, seed: number, count:
     }
   }
   return out;
+}
+
+/**
+ * Add what an oral reading revealed to the running programme: the recommended skills join the
+ * focus (up to 3 skills, memory never), with knowledge-tracing states, and the child's own
+ * confusions become practice targets.
+ */
+export function applyReadingTargets(
+  progress: TrainingProgress,
+  rec: { skills: SkillId[]; soundPairs: Array<[string, string]>; letters: string[]; passageId: string; analysedAt: string }
+): { progress: TrainingProgress; added: SkillId[] } {
+  const p = ensureBkt(progress);
+  const focus = [...p.plan.focus];
+  const added: SkillId[] = [];
+  for (const skill of rec.skills) {
+    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || focus.length >= MAX_FOCUS_SKILLS) continue;
+    focus.push(skill);
+    added.push(skill);
+  }
+  const ordered = focus.sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
+  const bkt = { ...p.bkt, ...initialStates(added, {}, Object.fromEntries(added.map((s) => [s, 1])) as Record<string, BktLevel>) };
+  const levels = { ...p.levels, ...Object.fromEntries(added.map((s) => [s, 1 as Level])) };
+  const rationaleAr = added.length > 0
+    ? [...p.plan.rationaleAr, `أُضيفت من تحليل القراءة الجهرية: ${added.map((s) => SKILLS[s].nameAr).join('، ')}.`].slice(-10)
+    : p.plan.rationaleAr;
+  return {
+    progress: {
+      ...p,
+      plan: { ...p.plan, focus: ordered, rationaleAr },
+      levels,
+      bkt,
+      targets: { soundPairs: rec.soundPairs.slice(0, 6), letters: rec.letters.slice(0, 10), source: { passageId: rec.passageId, analysedAt: rec.analysedAt } },
+    },
+    added,
+  };
 }

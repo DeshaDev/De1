@@ -1006,6 +1006,68 @@ function requireBaseeraAuth(requiredScope: BaseeraScope) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Family (parent) accounts: Supabase sign-in, verified on the server.
+// A parent never gets a school session or student-record scopes; only `ai:analyze` for
+// their own child's oral reading and individual plan, behind the same AI rate limit.
+// ---------------------------------------------------------------------------
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const isSupabaseVerificationConfigured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
+const parentTokenCache = new Map<string, { session: VerifiedBaseeraSession; expiresAt: number }>();
+const PARENT_TOKEN_CACHE_MS = 5 * 60 * 1000;
+
+async function verifySupabaseParent(rawHeader: string): Promise<VerifiedBaseeraSession | null> {
+  if (!isSupabaseVerificationConfigured()) return null;
+  const token = rawHeader.replace(/^Bearer\s+/i, '').trim();
+  // Supabase access tokens are JWTs (three base64url parts); anything else is not ours to check.
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token) || token.length > 4096) return null;
+  const cacheKey = crypto.createHash('sha256').update(token).digest('hex');
+  const cached = parentTokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.session;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const user = (await res.json().catch(() => null)) as { id?: string; email?: string } | null;
+    if (!user?.id || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
+    const session = {
+      token: '',
+      role: 'parent',
+      accountName: user.email || 'ولي أمر',
+      tenantId: `parent_${user.id.slice(0, 8)}`,
+      tenantDisplayNameAr: 'حساب ولي الأمر',
+      sessionId: `parent-${user.id.replace(/-/g, '').slice(0, 24)}`,
+      scopes: ['ai:analyze'],
+    } as unknown as VerifiedBaseeraSession;
+    if (parentTokenCache.size >= 500) parentTokenCache.delete(parentTokenCache.keys().next().value as string);
+    parentTokenCache.set(cacheKey, { session, expiresAt: Date.now() + PARENT_TOKEN_CACHE_MS });
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+/** School sessions as before; otherwise a verified parent account, rate limited. */
+function requireAiAccess() {
+  const school = requireBaseeraAuth('ai:analyze');
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const rawHeader = (req.headers.authorization as string) || '';
+    const schoolSession = isBaseeraAuthConfigured() ? verifyBaseeraSessionToken(rawHeader, BASEERA_SESSION_SECRET) : null;
+    if (!schoolSession) {
+      const parent = await verifySupabaseParent(rawHeader);
+      if (parent) {
+        (req as any).baseeraSession = parent;
+        aiRateLimiter(req, res, next);
+        return;
+      }
+    }
+    school(req, res, next);
+  };
+}
+
 // Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
 function aiRateLimiter(
   req: express.Request,
@@ -2882,7 +2944,7 @@ async function startServer() {
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
-  app.post('/api/ai/pronunciation-assessment', requireBaseeraAuth('ai:analyze'), async (req, res) => {
+  app.post('/api/ai/pronunciation-assessment', requireAiAccess(), async (req, res) => {
     const body = req.body || {};
     const {
       referenceText,

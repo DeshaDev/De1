@@ -161,6 +161,14 @@ export const TrainingProgressUploadSchema = z
       )
       .refine((r) => Object.keys(r).length <= 30, 'حالات كثيرة')
       .optional(),
+    targets: z
+      .object({
+        soundPairs: z.array(z.tuple([z.string().length(1), z.string().length(1)])).max(6),
+        letters: z.array(z.string().length(1)).max(10),
+        source: z.object({ passageId: z.string().max(80), analysedAt: isoDate }).strict().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

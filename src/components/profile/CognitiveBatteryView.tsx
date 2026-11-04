@@ -472,7 +472,7 @@ interface Props {
   /** Called with the server copy after results are saved to the school record. */
   onRecordUpdated?: (student: StudentRecord) => void;
   /** Open an optional extra activity (practice games or the reader). */
-  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader') => void;
+  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
   onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
 }
