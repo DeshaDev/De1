@@ -165,8 +165,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               تسع ألعاب قصيرة تستكشف أداء الطفل في مهارات ترتبط بتعلّم القراءة: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. يعرض التقرير ما سجّله الطفل داخل كل نشاط وأفكارًا للممارسة. النتائج استكشافية وليست مقارنة معيارية أو تشخيصًا.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
-                ابدأ فحص مؤشرات عسر القراءة
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
+                سجّل طفلك وابدأ الفحص
                 <ArrowLeft size={18} aria-hidden="true" />
               </button>
               <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => scrollTo('sample-report')}>
@@ -296,7 +296,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <h2 className="bz-h2">تسع ألعاب، خمسة مجالات، صورة واضحة</h2>
             <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية.</p>
           </div>
-          <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={() => onNavigateTab('dyslexia-lab')}>
+          <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={() => onNavigateTab('parent-portal')}>
             جرّب الألعاب <ArrowLeft size={17} aria-hidden="true" />
           </button>
         </div>
@@ -443,7 +443,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <h3 className="bz-h3 mt-5">الأسر</h3>
               <p className="bz-body mt-2 flex-1">افهم سبب تعثّر طفلك بلغة واضحة، واحصل على أنشطة منزلية قصيرة وبرنامج يومي يتابع تقدّمه.</p>
               <div className="mt-6 grid gap-2">
-                <button type="button" className="bz-btn bz-btn-primary" onClick={() => onNavigateTab('dyslexia-lab')}>ابدأ الفحص</button>
+                <button type="button" className="bz-btn bz-btn-primary" onClick={() => onNavigateTab('parent-portal')}>ابدأ الفحص</button>
                 <button type="button" className="bz-btn bz-btn-ghost" onClick={() => onNavigateTab('parent-portal')}>
                   سجّل طفلك وابدأ الفحص
                 </button>
@@ -532,8 +532,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             أكمل الأنشطة على فترات قصيرة، ثم راجع النتائج الوصفية والأفكار المقترحة للممارسة.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
-              ابدأ فحص مؤشرات عسر القراءة <ArrowLeft size={18} aria-hidden="true" />
+            <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
+              سجّل طفلك وابدأ الفحص <ArrowLeft size={18} aria-hidden="true" />
             </button>
             <button type="button" className="bz-btn bz-btn-outline-light bz-btn-lg" onClick={() => onNavigateTab('remediation-gym')}>
               صالة التدريب
