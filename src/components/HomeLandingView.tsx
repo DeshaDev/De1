@@ -16,7 +16,6 @@ import {
   Lock,
   Stethoscope,
   Timer,
-  UserPlus,
   Users,
   X,
 } from 'lucide-react';
@@ -29,7 +28,6 @@ import {
   SKILLS,
   FOCUS_SKILLS,
 } from '../cognitiveProfile/training';
-import { BAND_META, BandLegend, CentileTrack, bandOf } from './profile/CentileTrack';
 
 export type AppTabId =
   | 'home'
@@ -50,20 +48,6 @@ export type AppTabId =
 interface HomeLandingViewProps {
   students: StudentRecord[];
   activeStudent: StudentRecord;
-  onStartMockUserJourney: (
-    name: string,
-    grade: number,
-    roleLabel: string,
-    guardianConsent?: {
-      guardianName: string;
-      guardianRelationship: string;
-      guardianConsentGiven: boolean;
-      guardianAudioConsentGiven: boolean;
-      guardianConsentRecordedAt: string;
-      guardianConsentSource: string;
-    },
-    targetTab?: AppTabId
-  ) => void;
   onSelectExistingDemoJourney: (studentId: string, targetTab: AppTabId) => void;
   onNavigateTab: (tab: AppTabId) => void;
   onSelectStudentReport: (studentId: string) => void;
@@ -71,61 +55,46 @@ interface HomeLandingViewProps {
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
-/** Illustrative profile of a hypothetical child, used only on this page. */
+/** Illustrative task-level results, not age norms or risk classifications. */
 const SAMPLE_PROFILE = [
-  { domain: 'visualMemory', centile: 64 },
-  { domain: 'auditoryMemory', centile: 17 },
-  { domain: 'phonological', centile: 4 },
-  { domain: 'perceptual', centile: 41 },
-  { domain: 'alphabetic', centile: 12 },
+  { domain: 'phonological', correct: 7, total: 10 },
+  { domain: 'auditoryMemory', correct: 5, total: 10 },
+  { domain: 'visualMemory', correct: 8, total: 10 },
 ] as const;
 
 function SampleProfileCard({ compact = false }: { compact?: boolean }) {
   return (
     <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
-      <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-line">
-        <div>
-          <p className="bz-small bz-muted">نتيجة الفحص · نموذج توضيحي</p>
-          <p className="font-display font-bold text-ink text-lg mt-0.5">سارة · ٦ سنوات و٤ أشهر</p>
-        </div>
-        <span className="bz-badge bz-badge-risk">مؤشر خطر مرتفع</span>
+      <div className="px-5 pt-5 pb-4 border-b border-line">
+        <p className="bz-small bz-muted">مثال افتراضي · أداء داخل الأنشطة فقط</p>
+        <p className="font-display font-bold text-ink text-lg mt-0.5">ملف مهارات القراءة</p>
+        <p className="bz-small text-ink-2 mt-1">لا يمثل مقارنة معيارية أو مؤشر خطورة.</p>
       </div>
-      <div className="px-5 py-4 space-y-3.5">
+      <div className="px-5 py-4 space-y-4">
         {SAMPLE_PROFILE.map((row) => {
-          const band = bandOf(row.centile);
+          const percent = Math.round((row.correct / row.total) * 100);
           return (
-            <div key={row.domain} className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-center gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-ink leading-tight truncate">{DOMAINS[row.domain].nameAr.replace(' والتعلّم الترابطي', '')}</p>
-                {!compact && <p className="text-[12px] text-muted leading-tight mt-0.5">{BAND_META[band].labelAr}</p>}
+            <div key={row.domain} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] font-semibold text-ink truncate">{DOMAINS[row.domain].nameAr}</p>
+                <span className="bz-small text-ink-2 whitespace-nowrap">{ar(row.correct)}/{ar(row.total)} صحيحة</span>
               </div>
-              <CentileTrack centile={row.centile} size={compact ? 'sm' : 'md'} label={DOMAINS[row.domain].nameAr} />
+              <div className="h-2.5 rounded-full overflow-hidden bg-soft" role="img" aria-label={DOMAINS[row.domain].nameAr}>
+                <span className="block h-full rounded-full bg-brand" style={{ width: percent + '%' }} />
+              </div>
             </div>
           );
         })}
       </div>
-      <div className="px-5 py-3.5 bg-soft border-t border-line flex flex-wrap items-center justify-between gap-2">
-        <span className="bz-small text-ink-2">
-          <strong className="text-ink">النمط:</strong> صوتي-سمعي
-        </span>
-        <span className="bz-small text-brand font-semibold">خطة {ar(PROGRAM_SESSIONS)} جلسة جاهزة</span>
-      </div>
+      {!compact && (
+        <div className="px-5 py-3.5 bg-soft border-t border-line">
+          <p className="bz-small text-ink-2">النسبة تصف الإجابات داخل المهمة المعروضة فقط، ولا تحدد مستوى الطفل مقارنةً بأقرانه.</p>
+        </div>
+      )}
     </div>
   );
 }
-
-export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
-  onStartMockUserJourney,
-  onNavigateTab,
-}) => {
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [newLearnerName, setNewLearnerName] = useState('');
-  const [newLearnerGrade, setNewLearnerGrade] = useState<number>(1);
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianRelationship, setGuardianRelationship] = useState('ولي أمر');
-  const [institutionalRef, setInstitutionalRef] = useState('');
-  const [guardianConsentChecked, setGuardianConsentChecked] = useState(false);
-  const [guardianAudioConsentChecked, setGuardianAudioConsentChecked] = useState(false);
+export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab }) => {
 
   const [showSchoolDemoModal, setShowSchoolDemoModal] = useState(false);
   const [schoolName, setSchoolName] = useState('');
@@ -138,34 +107,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
   const [isSubmittingDemo, setIsSubmittingDemo] = useState(false);
   const [demoSubmitError, setDemoSubmitError] = useState('');
   const [demoSubmitSuccess, setDemoSubmitSuccess] = useState(false);
-
-  const handleLaunchCleanLearner = () => {
-    const clean = newLearnerName.trim();
-    if (!clean || !guardianConsentChecked) return;
-
-    const consentSource =
-      guardianRelationship === 'معلم / أخصائي مدرسي'
-        ? `إقرار تفويض مدرسي (${guardianName.trim() || 'معلم مصرح'} - مرجع التفويض: ${institutionalRef.trim() || 'تفويض مدرسي رسمي معتمد'})`
-        : guardianRelationship === 'وصي قانوني'
-        ? `إقرار وصي قانوني (${guardianName.trim() || 'الوصي القانوني'})`
-        : `إقرار ولي أمر (${guardianName.trim() || 'ولي الأمر'} - الأب/الأم)`;
-
-    onStartMockUserJourney(
-      clean,
-      newLearnerGrade,
-      'متعلّم جديد',
-      {
-        guardianName: guardianName.trim() || 'ولي أمر الطالب',
-        guardianRelationship: guardianRelationship.trim() || 'ولي أمر',
-        guardianConsentGiven: true,
-        guardianAudioConsentGiven: guardianAudioConsentChecked,
-        guardianConsentRecordedAt: new Date().toISOString(),
-        guardianConsentSource: consentSource,
-      },
-      'sprint'
-    );
-    setShowOnboardingModal(false);
-  };
 
   const handleSchoolDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,11 +158,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div>
             <span className="bz-eyebrow">فحص مبكر وتدريب موجّه · من ٤ إلى ٨ سنوات</span>
             <h1 className="bz-display mt-5" style={{ fontSize: 'clamp(32px, 3.6vw, 50px)' }}>
-              اكتشف مبكرًا ما يعيق طفلك عن القراءة،{' '}
-              <span className="text-brand">ودرّبه على ما يحتاجه بالضبط.</span>
+              خطوة مبكرة لفهم مهارات القراءة لدى طفلك،{' '}
+              <span className="text-brand">ومساعدته على التعلّم بثقة.</span>
             </h1>
             <p className="bz-lead mt-6 max-w-[38rem]">
-              تسع ألعاب قصيرة ترسم ملفًا معرفيًا لطفلك مقارنةً بأقرانه في العمر: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. ثم تبني له هَيَّا نَقْرَأْ برنامجًا تدريبيًا عربيًا من {ar(PROGRAM_SESSIONS)} جلسة قصيرة يتكيّف مع تقدّمه، ويقيس هذا التقدّم في كل جلسة.
+              تسع ألعاب قصيرة تستكشف أداء الطفل في مهارات ترتبط بتعلّم القراءة: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. يعرض التقرير ما سجّله الطفل داخل كل نشاط وأفكارًا للممارسة. النتائج استكشافية وليست مقارنة معيارية أو تشخيصًا.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
@@ -256,7 +197,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                   <Dumbbell size={18} />
                 </span>
                 <span>
-                  <span className="block text-[13px] font-semibold text-ink">الجلسة ٣ من ٣٢</span>
+                  <span className="block text-[13px] font-semibold text-ink">الجلسة ٣ من ٢٠</span>
                   <span className="block text-[12px] text-muted">الوعي الصوتي · المستوى ٢</span>
                 </span>
               </div>
@@ -271,7 +212,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <span className="bz-eyebrow">لماذا هَيَّا نَقْرَأْ؟</span>
           <h2 className="bz-h2">صعوبة القراءة تُكتشف عادةً متأخرة، بعد أن يفقد الطفل ثقته بنفسه.</h2>
           <p className="bz-lead">
-            يعاني بين ٥٪ و١٠٪ من الأطفال صعوبةً محددة في تعلّم القراءة وفق معظم التقديرات، وأثر التدخل يكون أكبر كلما بدأ مبكرًا. لكن الأدوات المتاحة بالعربية قليلة، ومعظمها مترجم.
+            قد تمر صعوبات تعلّم القراءة دون ملاحظة في سنوات الدراسة الأولى. وتحتاج الأسرة إلى فهم ما يستطيع الطفل أداءه الآن، وما المهارات التي تستحق مزيدًا من الممارسة، دون إطلاق أحكام مبكرة.
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
@@ -279,7 +220,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             {
               icon: Timer,
               title: 'قبل أن يتعثّر في الصف',
-              body: 'نقيس المهارات التي تسبق القراءة وتتنبأ بها، فتبدأ المتابعة من عمر أربع سنوات، قبل أن يظهر التعثّر في القراءة.',
+              body: 'نستكشف بعض المهارات الأساسية المرتبطة بتعلّم القراءة، مع مراعاة أن نتائج الأطفال في عمر ما قبل المدرسة تحتاج إلى تفسير حذر.',
             },
             {
               icon: Languages,
@@ -323,7 +264,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 icon: FileBarChart,
                 title: 'افهم',
                 meta: 'تقرير فوري',
-                body: 'ملف بياني يقارن الطفل بعمره، ومؤشر خطر مبكر، ونمط الصعوبة، وما تعنيه كل نتيجة للمعلم والأسرة.',
+                body: 'ملف أداء وصفي يوضح الإجابات الصحيحة في كل نشاط، وملاحظات التنفيذ، وأفكارًا للممارسة.',
               },
               {
                 icon: Dumbbell,
@@ -384,15 +325,15 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div className="lg:sticky lg:top-28">
             <div className="bz-section-head">
               <span className="bz-eyebrow">التقرير</span>
-              <h2 className="bz-h2">تقرير يفهمه المعلم والأسرة، ويجد فيه الأخصائي التفاصيل</h2>
-              <p className="bz-lead">يظهر أداء الطفل في كل مهارة مقارنةً بأقرانه في العمر، مع تفسير واضح لما تعنيه النتيجة. المقارنة تقديرية حتى تكتمل دراسة التقنين على أطفال عرب.</p>
+              <h2 className="bz-h2">ملخص واضح لأداء الطفل، مع تفاصيل تساعد الأسرة على اختيار أنشطة للممارسة</h2>
+              <p className="bz-lead">يعرض التقرير عدد الإجابات الصحيحة ونسبتها داخل كل نشاط، وأزمنة الاستجابة وملاحظات التنفيذ. لا تعرض النسخة الحالية مئينات أو تصنيفات خطورة؛ فالمعايير العمرية لم تُقنّن بعد على عينة عربية مستقلة.</p>
             </div>
             <ul className="space-y-4">
               {[
-                ['مؤشر خطر مبكر', 'مرتفع أو متوسط أو منخفض، مبني على المهارات الأكثر ارتباطًا بتعلّم القراءة.'],
-                ['نمط الصعوبة', 'صوتي-سمعي، أو بصري، أو مختلط، أو انخفاض عام يستدعي تقييمًا أشمل.'],
-                ['لكل ضعف: ماذا نفعل؟', 'استراتيجيات صفية وأنشطة منزلية محددة، وجدول درجات تفصيلي للأخصائي.'],
-                ['مؤشرات صلاحية التطبيق', 'تنبيه تلقائي عند إجابات متسرعة أو قريبة من التخمين.'],
+                ['نتيجة كل نشاط', 'عدد الإجابات الصحيحة من إجمالي البنود والنسبة داخل المهمة.'],
+                ['ملاحظات التنفيذ', 'أزمنة الاستجابة وإعادة الاستماع والتوقف المبكر عند وجودها.'],
+                ['أفكار للممارسة', 'أنشطة تعليمية مرتبطة بالمهارة دون وصف الطفل بتصنيف أو تشخيص.'],
+                ['حدود واضحة', 'لا مئينات ولا مقارنة معيارية قبل اكتمال التقنين.'],
               ].map(([t, b]) => (
                 <li key={t} className="flex gap-3">
                   <CheckCircle2 size={20} className="text-brand shrink-0 mt-1" aria-hidden="true" />
@@ -407,13 +348,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
 
           <div className="space-y-4">
             <SampleProfileCard />
-            <div className="bz-card p-5">
-              <BandLegend />
-            </div>
             <article className="bz-card overflow-hidden">
               <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
                 <h3 className="bz-h3">الوعي الصوتي</h3>
-                <span className={BAND_META.severe.badge}>ضعف واضح</span>
+                <span className="bz-badge bz-badge-neutral">مثال للممارسة</span>
               </div>
               <div className="px-5 py-4 grid sm:grid-cols-2 gap-5">
                 <div>
@@ -433,7 +371,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
                 </div>
               </div>
             </article>
-            <p className="bz-small bz-muted px-1">بيانات افتراضية لأغراض التوضيح فقط.</p>
+            <p className="bz-small bz-muted px-1">المثال افتراضي؛ النسب ليست معيارًا عمريًا ولا تصنيفًا لمستوى الطفل.</p>
           </div>
         </div>
       </section>
@@ -506,8 +444,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <p className="bz-body mt-2 flex-1">افهم سبب تعثّر طفلك بلغة واضحة، واحصل على أنشطة منزلية قصيرة وبرنامج يومي يتابع تقدّمه.</p>
               <div className="mt-6 grid gap-2">
                 <button type="button" className="bz-btn bz-btn-primary" onClick={() => onNavigateTab('dyslexia-lab')}>ابدأ الفحص</button>
-                <button type="button" className="bz-btn bz-btn-ghost" onClick={() => setShowOnboardingModal(true)}>
-                  <UserPlus size={17} aria-hidden="true" /> ابدأ التدريب كمتعلّم جديد
+                <button type="button" className="bz-btn bz-btn-ghost" onClick={() => onNavigateTab('parent-portal')}>
+                  سجّل طفلك وابدأ الفحص
                 </button>
               </div>
             </article>
@@ -535,7 +473,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <article className="bz-card bz-card-pad flex flex-col">
               <span className="grid place-items-center w-11 h-11 rounded-xl bg-info-soft text-info" aria-hidden="true"><Stethoscope size={22} /></span>
               <h3 className="bz-h3 mt-5">الأخصائيون</h3>
-              <p className="bz-body mt-2 flex-1">درجات خام ومئينات تقديرية وأزمنة استجابة لكل اختبار، ومؤشرات صلاحية التطبيق، وأدوات تكميلية للقراءة الجهرية.</p>
+              <p className="bz-body mt-2 flex-1">درجات خام ونسب أداء داخل المهام، وأزمنة استجابة وملاحظات سياقية، وأدوات تكميلية للقراءة الجهرية.</p>
               <div className="mt-6 grid gap-2">
                 <button type="button" className="bz-btn bz-btn-secondary" onClick={() => onNavigateTab('reading-lab')}>
                   <BookOpen size={17} aria-hidden="true" /> رحلة القراءة والطلاقة
@@ -561,10 +499,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              { icon: ClipboardCheck, t: 'تطبيق معياري', b: 'بنود ثابتة بترتيب ثابت، وقواعد إيقاف، وتدريب قبل كل اختبار، وتسجيل أزمنة الاستجابة.' },
+              { icon: ClipboardCheck, t: 'إجراءات تنفيذ موحّدة', b: 'تعليمات ثابتة، وتدريب قبل كل مهمة، وقواعد إيقاف، وتسجيل أزمنة الاستجابة.' },
               { icon: FlaskConical, t: 'منهج تعليم منظّم', b: 'برنامج صريح ومتدرّج يتبع مبادئ التعليم المنظّم للقراءة.' },
               { icon: EyeOff, t: 'بلا كاميرا', b: 'لا تتبع للعين ولا تصوير. يعمل الفحص بالصوت واللمس فقط.' },
-              { icon: Lock, t: 'خصوصية الطفل أولًا', b: 'موافقة ولي الأمر قبل البدء، وتقليل البيانات، وحفظ النتائج على الجهاز ما لم تسجّل المدرسة الدخول.' },
+              { icon: Lock, t: 'خصوصية الطفل أولًا', b: 'تقليل البيانات، وموافقة مستقلة للصوت، وشرح مزودي الخدمات وطرق معالجة البيانات في سياسة الخصوصية.' },
             ].map((x) => (
               <div key={x.t} className="bz-card p-5">
                 <x.icon size={22} className="text-brand" aria-hidden="true" />
@@ -575,7 +513,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="sm:col-span-2 rounded-2xl p-5 bg-sun-soft border border-line flex gap-3">
               <GraduationCap size={22} className="text-sun-strong shrink-0 mt-0.5" aria-hidden="true" />
               <p className="bz-small text-ink-2">
-                <strong className="text-ink">مرحلة التحقق العلمي:</strong> المقارنة العمرية الحالية مبنية على جدول مرجعي مؤقت يُعلَن في كل تقرير، إلى أن تكتمل دراسة التقنين على عينة عربية (٥٠٠ طفل فأكثر) مع قياس الثبات والصدق التنبؤي.
+                <strong className="text-ink">مرحلة التحقق العلمي:</strong> لا تعرض النسخة الحالية مئينات أو تصنيفات خطورة؛ وأي مقارنة عمرية مستقبلية تتطلب دراسة تقنين مستقلة، مع قياس الثبات والصدق التنبؤي.
               </p>
             </div>
           </div>
@@ -588,10 +526,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           <div aria-hidden="true" className="absolute -top-24 -left-24 w-72 h-72 rounded-full" style={{ background: 'rgba(242,169,59,.18)' }} />
           <div aria-hidden="true" className="absolute -bottom-28 -right-20 w-80 h-80 rounded-full" style={{ background: 'rgba(255,255,255,.06)' }} />
           <h2 className="relative font-display font-bold text-[clamp(26px,3.2vw,40px)] leading-snug" style={{ color: '#FFFFFF' }}>
-            نصف ساعة اليوم قد توفّر على طفلك سنوات من التعثّر.
+            ابدأ بخطوة هادئة لفهم مهارات القراءة لدى طفلك.
           </h2>
           <p className="relative mt-4 text-[17px] leading-relaxed max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,.82)' }}>
-            ابدأ الفحص الآن، واحصل على النتيجة وخطة التدريب فور انتهاء الألعاب.
+            أكمل الأنشطة على فترات قصيرة، ثم راجع النتائج الوصفية والأفكار المقترحة للممارسة.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
@@ -603,93 +541,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
           </div>
         </div>
       </section>
-
-      {/* ================= MODAL: NEW LEARNER ================= */}
-      {showOnboardingModal && (
-        <div className="bz-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowOnboardingModal(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="bz-modal space-y-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand"><UserPlus size={22} /></span>
-                <div>
-                  <h3 id="onboarding-title" className="bz-h3">بدء رحلة متعلم جديد</h3>
-                  <p className="bz-small bz-muted">ملف تدريبي جديد للصفوف من ١ إلى ٤</p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowOnboardingModal(false)} aria-label="إغلاق" className="bz-icon-btn"><X size={18} /></button>
-            </div>
-
-            <label className="bz-field">
-              <span className="bz-label">اسم الطفل المستعار أو اللقب</span>
-              <input type="text" value={newLearnerName} onChange={(e) => setNewLearnerName(e.target.value)} placeholder="مثال: سارة أو أحمد" className="bz-input" required />
-              <span className="bz-hint">لا تستخدم الاسم الكامل الحقيقي للطفل، حمايةً لخصوصيته.</span>
-            </label>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              <label className="bz-field">
-                <span className="bz-label">اسم ولي الأمر أو المعلم</span>
-                <input type="text" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="اختياري" className="bz-input" />
-              </label>
-              <label className="bz-field">
-                <span className="bz-label">الصفة</span>
-                <select value={guardianRelationship} onChange={(e) => setGuardianRelationship(e.target.value)} className="bz-input">
-                  <option value="ولي أمر">ولي أمر (الأب / الأم)</option>
-                  <option value="وصي قانوني">وصي قانوني</option>
-                  <option value="معلم / أخصائي مدرسي">معلم / أخصائي مدرسي</option>
-                </select>
-              </label>
-            </div>
-
-            {guardianRelationship === 'معلم / أخصائي مدرسي' && (
-              <label className="bz-field">
-                <span className="bz-label">مرجع التفويض المدرسي</span>
-                <input type="text" value={institutionalRef} onChange={(e) => setInstitutionalRef(e.target.value)} placeholder="مثال: كتاب تفويض الإدارة رقم 2026/41" className="bz-input" />
-              </label>
-            )}
-
-            <div className="bz-field">
-              <span className="bz-label">الصف الدراسي</span>
-              <div className="bz-segment w-full grid grid-cols-4">
-                {[1, 2, 3, 4].map((grade) => (
-                  <button key={grade} type="button" onClick={() => setNewLearnerGrade(grade)} aria-pressed={newLearnerGrade === grade} className="justify-center">
-                    الصف {ar(grade)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="bz-check">
-                <input type="checkbox" checked={guardianConsentChecked} onChange={(e) => setGuardianConsentChecked(e.target.checked)} />
-                <span className="bz-small text-ink-2">
-                  <strong className="text-ink">مطلوب · </strong>
-                  {guardianRelationship === 'معلم / أخصائي مدرسي' ? (
-                    <>أقر بصفتي معلماً أو أخصائياً مخولاً بوجود تفويض من إدارة المدرسة وموافقة مسبقة من ولي أمر الطالب على استخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
-                  ) : guardianRelationship === 'وصي قانوني' ? (
-                    <>أقر بصفتي الوصي القانوني على الطالب بالموافقة على إنشاء ملف تدريبي واستخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
-                  ) : (
-                    <>أقر بصفتي ولي أمر الطالب (الأب / الأم) بالموافقة على إنشاء ملف تدريبي للطفل واستخدام منصة هَيَّا نَقْرَأْ وفق سياسة الخصوصية.</>
-                  )}
-                </span>
-              </label>
-              <label className="bz-check">
-                <input type="checkbox" checked={guardianAudioConsentChecked} onChange={(e) => setGuardianAudioConsentChecked(e.target.checked)} />
-                <span className="bz-small text-ink-2">
-                  <strong className="text-ink">اختياري · </strong>
-                  أوافق على معالجة قراءة الطفل صوتيًا عبر التعرف الآلي على الكلام في أنشطة القراءة الجهرية. يمكن استخدام المنصة كاملة دون أي تسجيل صوتي.
-                </span>
-              </label>
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <button type="button" onClick={handleLaunchCleanLearner} disabled={!guardianConsentChecked || newLearnerName.trim().length < 2} className="bz-btn bz-btn-primary flex-1">
-                انطلق في تدريب اليوم <ArrowLeft size={18} />
-              </button>
-              <button type="button" onClick={() => setShowOnboardingModal(false)} className="bz-btn bz-btn-ghost">إلغاء</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ================= MODAL: SCHOOL PILOT REQUEST ================= */}
       {showSchoolDemoModal && (
