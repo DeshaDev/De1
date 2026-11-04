@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Printer, Sparkles } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
-import { SUBTESTS_BY_ID } from '../../cognitiveProfile/battery';
+import { scoredItemCount, SUBTESTS_BY_ID, type SubtestId } from '../../cognitiveProfile/battery';
 import { PROGRAM_SESSIONS, SKILLS, SUBTEST_TO_SKILLS, masteryEstimate, sessionsCompleted, type SkillId, type TrainingProgress } from '../../cognitiveProfile/training';
 import { summarizeProbes } from '../../cognitiveProfile/progressProbe';
 import {
@@ -19,14 +19,21 @@ const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣�
 
 /** Build AI-plan inputs from task-level results, never provisional centiles or risk bands. */
 export function planFactsFromRecord(student: StudentRecord, progress: TrainingProgress | null): PlanFacts {
-  const summary = student.cognitiveBattery?.summary ?? null;
-  const results = (summary?.subtests ?? []).map((scored) => ({
-    skill: (SUBTEST_TO_SKILLS[scored.subtestId]?.[0] ?? scored.subtestId) as string,
-    labelAr: SUBTESTS_BY_ID[scored.subtestId].skillNameAr,
-    correct: scored.correct,
-    total: scored.total,
-    percent: scored.percent,
-  }));
+  const battery = student.cognitiveBattery ?? null;
+  const summary = battery?.summary ?? null;
+  const results = Object.entries(battery?.results ?? {}).flatMap(([rawId, result]) => {
+    if (!result) return [];
+    const subtestId = rawId as SubtestId;
+    const total = scoredItemCount(SUBTESTS_BY_ID[subtestId]);
+    const correct = result.responses.filter((response) => response.correct).length;
+    return [{
+      skill: (SUBTEST_TO_SKILLS[subtestId]?.[0] ?? subtestId) as string,
+      labelAr: SUBTESTS_BY_ID[subtestId].skillNameAr,
+      correct,
+      total,
+      percent: Math.round((correct / total) * 100),
+    }];
+  });
   const probe = progress ? summarizeProbes(progress.probes ?? []) : null;
   return buildPlanFacts({
     ageYears: student.ageYears,
@@ -47,6 +54,8 @@ interface Props {
   student: StudentRecord;
   progress: TrainingProgress | null;
   onRecordUpdated?: (student: StudentRecord) => void;
+  /** Retained as an ignored compatibility prop for the existing program-page caller. */
+  canApprove?: boolean;
 }
 
 export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Props) {
