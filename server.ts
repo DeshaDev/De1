@@ -2633,7 +2633,6 @@ async function startServer() {
       studentName: 'الطالب',
       gradeLevel,
       effectiveWords: cleanWords,
-      targetsTeacherReviewed: false,
       targetsAIValidated: hasAIValidatedTargets,
       targetsMathValidated: hasAIValidatedMathTargets,
       mathTargets: uniqueMathTargets,
@@ -2649,6 +2648,7 @@ async function startServer() {
         : 'curated-grade-banded',
       targetWordsUsed: hasAIValidatedTargets ? cleanWords : [],
       targetWordsAreAIValidated: hasAIValidatedTargets,
+      targetWordsAreTeacherReviewed: false,
       mathTargetsUsed: hasAIValidatedMathTargets ? uniqueMathTargets : [],
       session: sessionPlan,
     });
