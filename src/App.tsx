@@ -1695,7 +1695,6 @@ export default function App() {
               <IndividualPlanPanel
                 student={selectedStudent}
                 progress={selectedStudent.trainingProgress ?? null}
-                canApprove={baseeraSession?.role === 'school_admin' || baseeraSession?.role === 'platform_admin'}
                 onRecordUpdated={(updated) => {
                   setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
                   if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);
