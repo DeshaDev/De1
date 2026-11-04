@@ -97,10 +97,10 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
   const shown = record?.plan ?? null;
 
   return (
-    <section className="bz-card p-6 space-y-4 print-report-root" aria-labelledby={\`plan-\${student.id}\`}>
+    <section className="bz-card p-6 space-y-4 print-report-root" aria-labelledby={`plan-${student.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id={\`plan-\${student.id}\`} className="bz-h3 flex items-center gap-2"><FileText size={20} aria-hidden="true" /> اقتراحات الممارسة التعليمية</h2>
+          <h2 id={`plan-${student.id}`} className="bz-h3 flex items-center gap-2"><FileText size={20} aria-hidden="true" /> اقتراحات الممارسة التعليمية</h2>
           {record && (
             <p className="bz-small mt-1">
               {record.status === 'approved' && record.approvedBy ? (
