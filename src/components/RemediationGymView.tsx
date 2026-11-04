@@ -161,7 +161,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       studentName: activeStudent.name,
       gradeLevel: activeStudent.gradeLevel,
       effectiveWords: observedTargetWords.length > 0 ? observedTargetWords : ['سَمَكَةٌ', 'مَدْرَسَةٌ', 'كِتَابٌ'],
-      targetsTeacherReviewed: false,
     });
   }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, observedTargetWords]);
 
