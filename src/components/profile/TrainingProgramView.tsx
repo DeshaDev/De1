@@ -47,6 +47,7 @@ import {
 } from '../../cognitiveProfile/progressProbe';
 import ProgressChart from './ProgressChart';
 import { takePendingReadingTargets } from '../ReadingErrorPanel';
+import IndividualPlanPanel from './IndividualPlanPanel';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
@@ -591,6 +592,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           </div>
         </section>
       )}
+
+      {student && <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />}
 
       <ProgramRules />
 

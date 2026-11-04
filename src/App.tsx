@@ -62,6 +62,7 @@ const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHu
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
 import { TrainingProgressPanel } from './components/profile/TrainingProgressPanel';
+import IndividualPlanPanel from './components/profile/IndividualPlanPanel';
 import { trackUsage } from './utils/usageTracking';
 const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
@@ -1799,6 +1800,17 @@ export default function App() {
             )}
             {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
               <TrainingProgressPanel student={selectedStudent} />
+            )}
+            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
+              <IndividualPlanPanel
+                student={selectedStudent}
+                progress={selectedStudent.trainingProgress ?? null}
+                canApprove={baseeraSession?.role === 'school_admin' || baseeraSession?.role === 'platform_admin'}
+                onRecordUpdated={(updated) => {
+                  setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+                  if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);
+                }}
+              />
             )}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">

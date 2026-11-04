@@ -757,6 +757,56 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.ok(!verifyDelJson.requests.some((r) => r.id === targetLead.id));
   });
 
+  it('drafts an individual plan only from sent facts, falls back to rules without a model, and records the approver from the session', async () => {
+    const facts = {
+      ageYears: 6,
+      screening: { risk: 'high', completedGames: 9, weakAreas: [{ skill: 'rhyme', labelAr: 'الوعي بالقافية', centile: 8 }], strongAreas: [] },
+      programme: null,
+      reading: null,
+    };
+    const anonymous = await fetch(`${baseUrl}/api/ai/individual-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ facts }),
+    });
+    assert.equal(anonymous.status, 401);
+
+    const admin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const educator = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);
+    const auth = (token: string, method: string, body: unknown) => ({
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const bad = await fetch(`${baseUrl}/api/ai/individual-plan`, auth(admin.token, 'POST', { facts: { ...facts, childName: 'سارة' } }));
+    assert.equal(bad.status, 400, 'unknown fields such as a name are rejected');
+
+    const draftRes = await fetch(`${baseUrl}/api/ai/individual-plan`, auth(admin.token, 'POST', { facts }));
+    assert.equal(draftRes.status, 200);
+    const draft = (await draftRes.json()) as { status: string; source: string; plan: unknown; referralAr: string | null };
+    assert.equal(draft.status, 'draft');
+    assert.equal(draft.source, 'rules', 'no model configured in tests: rules-based draft');
+    assert.match(draft.referralAr ?? '', /أخصائي/, 'high risk always recommends a specialist (by rule)');
+
+    const created = await fetch(`${baseUrl}/api/students`, auth(admin.token, 'POST', {
+      id: 'stu-plan-1', name: 'طالب الخطة', gradeLevel: 1, ageYears: 6, schoolName: 'مدرسة أ', ...buildPlausibleReadingEvidence(),
+    }));
+    assert.equal(created.status, 201);
+    const body = { plan: draft.plan, facts, source: draft.source, generatedAt: new Date().toISOString() };
+    const readonly = await fetch(`${baseUrl}/api/students/stu-plan-1/individual-plan`, auth(educator.token, 'PUT', body));
+    assert.equal(readonly.status, 403, 'read-only accounts cannot approve');
+    const tampered = await fetch(`${baseUrl}/api/students/stu-plan-1/individual-plan`, auth(admin.token, 'PUT', {
+      ...body,
+      plan: { ...(draft.plan as Record<string, unknown>), summaryAr: 'الطفل مصاب بعسر القراءة وسيتحسن خلال ٩٩ يومًا.' },
+    }));
+    assert.equal(tampered.status, 400, 'edited text must still pass the guardrails');
+    const approved = await fetch(`${baseUrl}/api/students/stu-plan-1/individual-plan`, auth(admin.token, 'PUT', { ...body, approvedBy: 'someone else' }));
+    assert.equal(approved.status, 200);
+    const saved = (await approved.json()) as { student: { individualPlan: { status: string; approvedBy: string } } };
+    assert.equal(saved.student.individualPlan.status, 'approved');
+    assert.equal(saved.student.individualPlan.approvedBy, 'مختبر النظام', 'approver comes from the signed-in session');
+  });
+
   it('stores cognitive battery responses, recomputes the profile on the server, and enforces role, tenant and item checks', async () => {
     const admin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const educator = await loginWithCode(SCHOOL_A_EDUCATOR_CODE);

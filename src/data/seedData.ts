@@ -1,5 +1,6 @@
 import type { StoredCognitiveBattery, StoredTrainingProgress } from '../cognitiveProfile/records';
 import type { ScreeningSnapshot } from '../cognitiveProfile/storage';
+import type { IndividualPlanRecord } from '../cognitiveProfile/individualPlan';
 import {
   SubitizingTrialResult,
   NumberLineTrialResult,
@@ -96,6 +97,8 @@ export interface StudentRecord {
   cognitiveBattery?: StoredCognitiveBattery | null;
   /** Guided training programme state, synced from the device. */
   trainingProgress?: StoredTrainingProgress | null;
+  /** Individual plan: a draft until a teacher or specialist approves it (see cognitiveProfile/individualPlan.ts). */
+  individualPlan?: IndividualPlanRecord | null;
   /** Set by the server from the signed session; never trusted from client input. */
   tenantId?: string;
   name: string;

@@ -9,6 +9,15 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
+import {
+  ACTIVITY_IDS,
+  DraftPlanSchema,
+  PlanFactsSchema,
+  planPrompt,
+  referralFor,
+  rulesDraft,
+  validateDraftPlan,
+} from './src/cognitiveProfile/individualPlan';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   UsageEventSchema,
@@ -85,6 +94,7 @@ export interface BaseeraAuditLogEntry {
     | 'student.report.update'
     | 'student.cognitive.update'
     | 'student.training.update'
+    | 'student.plan.approve'
     | 'student.profile.patch'
     | 'student.delete'
     | 'lead.create'
@@ -2810,6 +2820,123 @@ async function startServer() {
 
   // The former IEP generator produced unsupported, sometimes fabricated risk statements.
   // Keep the endpoint explicitly retired so stale clients cannot generate misleading plans.
+  /**
+   * Individual plan draft from a language model, using only the facts sent (no names). The draft is
+   * validated in code (numbers, language, skills, activity catalogue); a rejected or unavailable model
+   * gives a rules-based draft. Referral advice comes from rules. Approval is a separate endpoint.
+   */
+  app.post('/api/ai/individual-plan', requireAiAccess(), async (req, res) => {
+    const parsed = PlanFactsSchema.safeParse(req.body?.facts);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'بيانات الخطة غير صالحة.', issues: parsed.error.issues.slice(0, 5).map((i) => i.path.join('.')) });
+      return;
+    }
+    const facts = parsed.data;
+    const generatedAt = new Date().toISOString();
+    const referralAr = referralFor(facts);
+    const fallback = (noteAr: string, validationErrors: string[] = []) =>
+      res.json({ status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr, facts, generatedAt, noteAr, validationErrors });
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      fallback('النموذج اللغوي غير مهيأ على الخادم؛ هذه مسودة مبنية على قواعد ثابتة من البيانات نفسها.');
+      return;
+    }
+    let lastErrors: string[] = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: planPrompt(facts),
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.3,
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summaryAr: { type: Type.STRING },
+                goals: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: { skill: { type: Type.STRING }, goalAr: { type: Type.STRING }, evidenceAr: { type: Type.STRING } },
+                    required: ['skill', 'goalAr', 'evidenceAr'],
+                  },
+                },
+                activities: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      id: { type: Type.STRING, enum: [...ACTIVITY_IDS] },
+                      whyAr: { type: Type.STRING },
+                      frequency: { type: Type.STRING, enum: ['daily', 'most-days', 'weekly'] },
+                    },
+                    required: ['id', 'whyAr', 'frequency'],
+                  },
+                },
+                homeTipsAr: { type: Type.ARRAY, items: { type: Type.STRING } },
+              },
+              required: ['summaryAr', 'goals', 'activities', 'homeTipsAr'],
+            },
+          },
+        });
+        const json = JSON.parse(response.text || '{}');
+        const checked = validateDraftPlan(json, facts);
+        if (checked.ok && checked.plan) {
+          res.json({ status: 'draft', source: 'model', plan: checked.plan, referralAr, facts, generatedAt, validationErrors: [] });
+          return;
+        }
+        lastErrors = checked.errors;
+      } catch {
+        lastErrors = ['تعذر الحصول على رد صالح من النموذج.'];
+      }
+    }
+    fallback('رُفضت مسودة النموذج لأنها خالفت القيود؛ هذه مسودة مبنية على قواعد ثابتة.', lastErrors);
+  });
+
+  /** A teacher or specialist approves (and may edit) a plan; the approver comes from the session. */
+  app.put('/api/students/:id/individual-plan', requireBaseeraAuth('students:write'), (req, res) => {
+    const found = findConsentedStudent(req, res);
+    if (!found) return;
+    const body = req.body || {};
+    const plan = DraftPlanSchema.safeParse(body.plan);
+    const facts = PlanFactsSchema.safeParse(body.facts);
+    if (!plan.success || !facts.success || (body.source !== 'model' && body.source !== 'rules')) {
+      res.status(400).json({ error: 'بيانات الخطة غير صالحة.' });
+      return;
+    }
+    // Edits by the reviewer must still respect the language rules.
+    const checked = validateDraftPlan(plan.data, facts.data);
+    if (!checked.ok) {
+      res.status(400).json({ error: 'الخطة المعدّلة تخالف القيود.', validationErrors: checked.errors });
+      return;
+    }
+    const updatedRecord: StudentRecord = {
+      ...studentsDb[found.idx],
+      individualPlan: {
+        status: 'approved',
+        source: body.source,
+        plan: plan.data,
+        referralAr: referralFor(facts.data),
+        facts: facts.data,
+        generatedAt: typeof body.generatedAt === 'string' && Number.isFinite(Date.parse(body.generatedAt)) ? body.generatedAt : new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: found.session.accountName,
+        editedByReviewer: body.editedByReviewer === true,
+      },
+    };
+    const nextRecords = [...studentsDb];
+    nextRecords[found.idx] = updatedRecord;
+    const committed = commitStudentMutationWithAudit(studentsDb, nextRecords, found.session, 'student.plan.approve', updatedRecord.id, ['individualPlan']);
+    if (!committed.ok) {
+      res.status(503).json({ error: 'تعذر حفظ الخطة في التخزين المشفر.' });
+      return;
+    }
+    studentsDb = committed.students;
+    res.status(200).json({ student: updatedRecord, persisted: true });
+  });
+
   app.post('/api/ai/generate-iep', requireBaseeraAuth('ai:analyze'), (_req, res) => {
     res.status(410).json({
       code: 'IEP_GENERATOR_RETIRED',
