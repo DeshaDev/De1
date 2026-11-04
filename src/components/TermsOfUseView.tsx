@@ -79,7 +79,7 @@ export const TermsOfUseView: React.FC = () => (
     <TermsSection icon={FileText} title="٦. تحديث الشروط والتواصل">
       <p>قد تُحدّث الشروط عند تغيير الخدمة أو المتطلبات القانونية، ويُعرض تاريخ آخر تحديث أعلى هذه الصفحة.</p>
       <p><strong>الصور:</strong> صور الألعاب والتمارين من مجموعة <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noreferrer" className="font-bold underline text-teal-800">Twemoji</a>، وهي مرخّصة بموجب <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="font-bold underline text-teal-800">CC BY ٤٫٠</a>.</p>
-      <p><strong>الجهة المطوّرة:</strong> هَيَّا نَقْرَأْ، منتج قيد التطوير ضمن مشروع بصيرة للتقنيات التعليمية. يجب استكمال اسم الكيان القانوني وعنوانه المسجل وبيانات التواصل الرسمية في النسخة النهائية قبل الإطلاق. لأي استفسارات قانونية أو تنظيمية، يمكن التواصل عبر البريد الإلكتروني الرسمي: <a href="mailto:legal@baseera-edu.com" className="font-bold underline text-teal-800">legal@baseera-edu.com</a> أو فريق الخصوصية على: <a href="mailto:privacy@baseera-edu.com" className="font-bold underline text-teal-800">privacy@baseera-edu.com</a>.</p>
+      <p><strong>الجهة المطوّرة:</strong> هَيَّا نَقْرَأْ، منتج قيد التطوير ضمن مشروع بصيرة للتقنيات التعليمية. يجب استكمال اسم الكيان القانوني وعنوانه المسجل وقنوات التواصل الفعلية لطلبات الخصوصية في النسخة النهائية قبل الإطلاق. لا تستخدم هذه النسخة لاستقبال بيانات أطفال حقيقية.</p>
     </TermsSection>
   </main>
 );
