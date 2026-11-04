@@ -271,7 +271,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 icon: Dumbbell,
                 title: 'درّب',
                 meta: `${ar(PROGRAM_SESSIONS)} جلسة · ${ar(SESSIONS_PER_WEEK)} جلسات أسبوعيًا`,
-                body: 'برنامج يركّز على المهارات الأضعف، ويرفع المستوى عند الإتقان أو يخفضه وينبّه المعلم عند التعثّر.',
+                body: 'يقترح مستوى مبدئيًا للممارسة من أنشطة الطفل، ويعرض للأسرة ملاحظات تساعدها على اختيار أنشطة مناسبة. هذه الاقتراحات تعليمية وليست حكمًا على قدرات الطفل.',
               },
             ].map((step, i) => (
               <li key={step.title} className="relative text-center px-2">
@@ -385,7 +385,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <span className="bz-eyebrow">البرنامج التدريبي الموجّه</span>
               <h2 className="bz-h2">تدريب قصير كل يوم، يتقدّم بقدر ما يتقن الطفل</h2>
               <p className="bz-lead">
-                يختار البرنامج حتى ثلاث مهارات من أضعف نتائج الفحص، ويرتّبها نمائيًا. كل مهارة لها ثلاثة مستويات، والتمارين تُوَلَّد جديدة في كل جلسة ولا تكرر بنود الفحص.
+                يختار مسار الممارسة حتى ثلاث مهارات للتركيز استنادًا إلى نتائج الأنشطة المتاحة. تُعرض هذه الاختيارات بوصفها اقتراحات أولية للممارسة، لا ترتيبًا معياريًا لمستوى الطفل.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -495,7 +495,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <span className="bz-eyebrow">المنهجية والثقة</span>
             <h2 className="bz-h2">مبنية على أسس علمية، وشفافة في حدودها</h2>
             <p className="bz-lead">
-              نعلن بوضوح ما تقيسه هَيَّا نَقْرَأْ وما لا تقيسه. الفحص أداة فرز مبكر توجّه التدريب والإحالة، وليس تشخيصًا طبيًا.
+              نوضح ما تقيسه هَيَّا نَقْرَأْ وما لا تقيسه. الأنشطة استكشافية وتساعد الأسرة على ملاحظة أداء الطفل داخلها، ولا تشخّص عسر القراءة أو تحدد الحاجة إلى الإحالة بمفردها.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
