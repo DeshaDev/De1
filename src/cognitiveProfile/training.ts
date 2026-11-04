@@ -236,6 +236,8 @@ export interface TrainingProgress {
   bkt?: BktStates;
   /** Sounds and letters to practise more often, from the child's oral-reading errors. */
   targets?: TrainingTargets;
+  /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
+  lessonsSeen?: string[];
 }
 
 export interface TrainingTargets {

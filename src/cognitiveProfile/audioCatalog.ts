@@ -4,6 +4,7 @@
  * A unit test regenerates fresh training sessions and checks they never speak a text that
  * is missing from this catalogue.
  */
+import { curriculumPhrases } from './curriculum';
 import { BATTERY, type AudioSegment } from './battery';
 import { lex } from './lexicon';
 import { PHRASES, palThis, palWhere, palYes } from './phrases';
@@ -71,6 +72,8 @@ export function buildAudioCatalog(): CatalogEntry[] {
       }
     }
   }
+
+  for (const phrase of curriculumPhrases()) add(map, phrase, 'curriculum');
 
   for (const skill of Object.keys(SKILLS) as SkillId[]) {
     for (const level of [1, 2, 3] as Level[]) {

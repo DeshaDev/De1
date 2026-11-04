@@ -213,8 +213,8 @@ test('every training session opens with the daily progress probe (no feedback, f
   await expect(page.getByRole('heading', { name: /التقدّم من جلسة إلى جلسة/ })).toBeVisible();
   await expect(page.getByText(/من ٢٠/).first()).toBeVisible();
   await page.getByRole('button', { name: /ابدأ جلسة اليوم/ }).click();
-  await expect(page.getByText('مقياس التقدّم اليومي')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'أسئلة قصيرة قبل التدريب' })).toBeVisible();
+  await expect(page.getByText('مقياس التقدّم الأسبوعي')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'مقياس الأسبوع، ثم وقت التعلّم' })).toBeVisible();
   await page.getByRole('button', { name: /^ابدأ$/ }).click();
   await expect(page.getByText(/^١ من ١٢$/)).toBeVisible();
   expect(pageErrors).toEqual([]);
