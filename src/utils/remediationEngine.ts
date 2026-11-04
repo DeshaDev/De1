@@ -144,7 +144,6 @@ export function generateAdaptiveRemediationPlan(params: {
   studentName: string;
   gradeLevel: number;
   effectiveWords: string[];
-  targetsTeacherReviewed?: boolean;
   targetsAIValidated?: boolean;
   targetsMathValidated?: boolean;
   mathTargets?: Array<{ targetNumber: number; min: number; max: number }>;
@@ -152,7 +151,6 @@ export function generateAdaptiveRemediationPlan(params: {
   const {
     gradeLevel,
     effectiveWords,
-    targetsTeacherReviewed = false,
     targetsAIValidated = false,
     targetsMathValidated = false,
     mathTargets = [],
@@ -372,7 +370,7 @@ export function generateAdaptiveRemediationPlan(params: {
   const normalizeBandWord = (value: string) => normalizeArabic(value);
   const offset = gradeLevel % 2 === 0 ? 4 : 0;
   const gradeSyllables = syllableBank[band].slice(offset, offset + 8);
-  const hasTrustedReadingTargets = targetsTeacherReviewed || targetsAIValidated;
+  const hasTrustedReadingTargets = targetsAIValidated;
   const reviewed = hasTrustedReadingTargets
     ? effectiveWords
         .map((word) => syllableBank[band].find((drill) => normalizeBandWord(drill.targetWord) === normalizeBandWord(word)))
@@ -425,9 +423,7 @@ export function generateAdaptiveRemediationPlan(params: {
         ? `أنشطة قراءة للصف ${gradeLevel} اختيرت من نتائج التقييم الصوتي الآلي في تسجيل مكتمل، مع الاقتصار على كلمات موجودة في بنك مضبوط. هذه المؤشرات وصفية ولا تشخّص عسر القراءة.`
         : targetsMathValidated && cleanMathTargets.length > 0
           ? `أنشطة حساب للصف ${gradeLevel} اختيرت من محاولات عددية موثقة آليًا وأعداد أخطأ الطالب في تحديدها. هذه مؤشرات تعليمية وصفية ولا تشخّص عسر الحساب.`
-          : targetsTeacherReviewed && effectiveWords.length > 0
-            ? `أنشطة تعليمية للصف ${gradeLevel}. الكلمات المستهدفة بالتحليل الذكي مطابقة لبنك تدريبي مضبوط؛ لا تثبت النتائج وجود اضطراب ولا تمثل اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`
-            : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب الصف، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
+          : `أنشطة تدريب عامة للصف ${gradeLevel} مختارة بحسب الصف، وتشمل أمثلة للحروف والمقاطع وخط الأعداد. الكلمات أمثلة تعليمية وليست أخطاء مرصودة لدى هذا الطفل. الخطة ليست اختبارًا معياريًا أو بروتوكول علاج معتمدًا.`,
     phonicsDrills,
     syllableDrills,
     pacerPassage,
