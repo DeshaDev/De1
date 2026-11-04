@@ -99,6 +99,10 @@ export const CognitiveBatteryUploadSchema = z
 
 const SKILL_IDS = Object.keys(SKILLS) as [SkillId, ...SkillId[]];
 const LevelSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+const ProbeScoreSchema = z
+  .object({ correct: z.number().int().min(0).max(60), total: z.number().int().min(1).max(60) })
+  .strict()
+  .refine((s) => s.correct <= s.total, 'نتيجة مقياس غير منطقية');
 
 export const TrainingProgressUploadSchema = z
   .object({
@@ -127,6 +131,44 @@ export const TrainingProgressUploadSchema = z
       )
       .max(400),
     supportFlags: z.array(z.enum(SKILL_IDS)).max(8),
+    probes: z
+      .array(
+        z
+          .object({
+            date: isoDate,
+            session: z.number().int().min(1).max(500),
+            correct: z.number().int().min(0).max(60),
+            total: z.number().int().min(1).max(60),
+            bySkill: z.partialRecord(z.enum(SKILL_IDS), ProbeScoreSchema),
+            comparison: ProbeScoreSchema.extend({ skill: z.enum(SKILL_IDS) }).strict().optional(),
+          })
+          .strict()
+          .refine((p) => p.correct <= p.total, 'نتيجة مقياس غير منطقية')
+      )
+      .max(200)
+      .optional(),
+    bkt: z
+      .record(
+        z.string().regex(/^[a-zA-Z]+:[123]$/),
+        z
+          .object({
+            p: z.number().min(0).max(1),
+            n: z.number().int().min(0).max(5000),
+            c: z.number().int().min(0).max(5000),
+            seq: z.string().max(300).regex(/^[01]*$/),
+          })
+          .strict()
+      )
+      .refine((r) => Object.keys(r).length <= 30, 'حالات كثيرة')
+      .optional(),
+    targets: z
+      .object({
+        soundPairs: z.array(z.tuple([z.string().length(1), z.string().length(1)])).max(6),
+        letters: z.array(z.string().length(1)).max(10),
+        source: z.object({ passageId: z.string().max(80), analysedAt: isoDate }).strict().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

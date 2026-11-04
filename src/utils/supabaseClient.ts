@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
 import type { StudentRecord } from '../data/seedData';
+import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
+import { summarizeProbes } from '../cognitiveProfile/progressProbe';
 
 // Vite client-side environment variables
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -182,13 +184,13 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
       id: student.id,
       user_id: userId,
       name: student.name,
-      grade: student.grade || 'غير محدد',
-      age: student.age || null,
+      grade: Number.isFinite(student.gradeLevel) ? String(student.gradeLevel) : 'غير محدد',
+      age: Number.isFinite(student.ageYears) ? student.ageYears : null,
       dialect: student.dialect || student.dialectCode || 'faseeh',
       guardian_consent: student.guardianConsentGiven === true,
       guardian_consent_source: student.guardianConsentSource || null,
       guardian_consent_recorded_at: student.guardianConsentRecordedAt || null,
-      notes: student.clinicalNotes || null,
+      notes: student.parentNotes || null,
       raw_data: student,
       updated_at: new Date().toISOString(),
     });
@@ -200,6 +202,46 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
     return true;
   } catch (err) {
     console.warn('Supabase sync exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Mirror the guided programme, including every daily progress probe, to the training_progress
+ * table (one row per child), so progress can be queried and reported from the database.
+ * The child's row in `students` must exist first (it is written when the child is registered).
+ */
+export async function syncTrainingProgressToSupabase(student: StudentRecord, userId: string): Promise<boolean> {
+  const progress = student.trainingProgress;
+  if (!isSupabaseConfigured() || !userId || !progress) return false;
+  const sessions = new Set(progress.history.map((h) => h.date.slice(0, 10))).size;
+  const probes = progress.probes ?? [];
+  try {
+    const { error } = await supabase.from('training_progress').upsert({
+      id: `${student.id}:guided-program`,
+      student_id: student.id,
+      user_id: userId,
+      station: 'guided-program',
+      progress_percent: Math.min(100, Math.round((sessions / PROGRAM_SESSIONS) * 100)),
+      completed_milestones: progress.mastered,
+      details: {
+        plan: progress.plan,
+        levels: progress.levels,
+        supportFlags: progress.supportFlags,
+        sessionsCompleted: sessions,
+        history: progress.history.slice(-400),
+        probes: probes.slice(-200),
+        probeSummary: summarizeProbes(probes),
+      },
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.warn('Failed to sync training progress to Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Supabase training sync exception:', err);
     return false;
   }
 }
@@ -222,24 +264,11 @@ export async function fetchStudentsFromSupabase(userId: string): Promise<Student
       return [];
     }
 
-    return data.map((row: any) => {
-      if (row.raw_data && typeof row.raw_data === 'object') {
-        return row.raw_data as StudentRecord;
-      }
-      return {
-        id: row.id,
-        name: row.name,
-        grade: row.grade,
-        age: row.age,
-        dialect: row.dialect,
-        guardianConsentGiven: row.guardian_consent,
-        guardianConsentSource: row.guardian_consent_source,
-        guardianConsentRecordedAt: row.guardian_consent_recorded_at,
-        clinicalNotes: row.notes,
-        sessionStatus: 'completed',
-        lastScreenedDate: row.updated_at,
-      } as StudentRecord;
-    });
+    // Every row this app writes carries the full record in raw_data. A row without it (e.g. added
+    // by hand in the dashboard) lacks fields the screens need, so it is skipped instead of guessed.
+    return data
+      .filter((row: any) => row.raw_data && typeof row.raw_data === 'object')
+      .map((row: any) => row.raw_data as StudentRecord);
   } catch (err) {
     console.warn('Failed to load students from Supabase:', err);
     return [];

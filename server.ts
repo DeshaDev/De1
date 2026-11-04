@@ -9,6 +9,15 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
+import {
+  ACTIVITY_IDS,
+  DraftPlanSchema,
+  PlanFactsSchema,
+  referralFor,
+  rulesDraft,
+  validateDraftPlan,
+} from './src/cognitiveProfile/individualPlan';
+import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import {
   UsageEventSchema,
@@ -85,6 +94,7 @@ export interface BaseeraAuditLogEntry {
     | 'student.report.update'
     | 'student.cognitive.update'
     | 'student.training.update'
+    | 'student.plan.approve'
     | 'student.profile.patch'
     | 'student.delete'
     | 'lead.create'
@@ -1006,6 +1016,68 @@ function requireBaseeraAuth(requiredScope: BaseeraScope) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Family (parent) accounts: Supabase sign-in, verified on the server.
+// A parent never gets a school session or student-record scopes; only `ai:analyze` for
+// their own child's oral reading and individual plan, behind the same AI rate limit.
+// ---------------------------------------------------------------------------
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const isSupabaseVerificationConfigured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
+const parentTokenCache = new Map<string, { session: VerifiedBaseeraSession; expiresAt: number }>();
+const PARENT_TOKEN_CACHE_MS = 5 * 60 * 1000;
+
+async function verifySupabaseParent(rawHeader: string): Promise<VerifiedBaseeraSession | null> {
+  if (!isSupabaseVerificationConfigured()) return null;
+  const token = rawHeader.replace(/^Bearer\s+/i, '').trim();
+  // Supabase access tokens are JWTs (three base64url parts); anything else is not ours to check.
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token) || token.length > 4096) return null;
+  const cacheKey = crypto.createHash('sha256').update(token).digest('hex');
+  const cached = parentTokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.session;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const user = (await res.json().catch(() => null)) as { id?: string; email?: string } | null;
+    if (!user?.id || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
+    const session = {
+      token: '',
+      role: 'parent',
+      accountName: user.email || 'ولي أمر',
+      tenantId: `parent_${user.id.slice(0, 8)}`,
+      tenantDisplayNameAr: 'حساب ولي الأمر',
+      sessionId: `parent-${user.id.replace(/-/g, '').slice(0, 24)}`,
+      scopes: ['ai:analyze'],
+    } as unknown as VerifiedBaseeraSession;
+    if (parentTokenCache.size >= 500) parentTokenCache.delete(parentTokenCache.keys().next().value as string);
+    parentTokenCache.set(cacheKey, { session, expiresAt: Date.now() + PARENT_TOKEN_CACHE_MS });
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+/** School sessions as before; otherwise a verified parent account, rate limited. */
+function requireAiAccess() {
+  const school = requireBaseeraAuth('ai:analyze');
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const rawHeader = (req.headers.authorization as string) || '';
+    const schoolSession = isBaseeraAuthConfigured() ? verifyBaseeraSessionToken(rawHeader, BASEERA_SESSION_SECRET) : null;
+    if (!schoolSession) {
+      const parent = await verifySupabaseParent(rawHeader);
+      if (parent) {
+        (req as any).baseeraSession = parent;
+        aiRateLimiter(req, res, next);
+        return;
+      }
+    }
+    school(req, res, next);
+  };
+}
+
 // Sliding-window rate limiter to protect external AI endpoints (/api/ai/*)
 function aiRateLimiter(
   req: express.Request,
@@ -1036,6 +1108,40 @@ function aiRateLimiter(
   history.push(now);
   aiRateLimitBuckets.set(clientIp, history);
   next();
+}
+
+// ---------------------------------------------------------------------------
+// Individual-plan agent: model choice, cost caps and cache
+// ---------------------------------------------------------------------------
+const AI_PLAN_DAILY_LIMIT = Math.max(0, Number(process.env.AI_PLAN_DAILY_LIMIT ?? 300) || 0);
+const AI_PLAN_PER_ACCOUNT_DAILY = Math.max(0, Number(process.env.AI_PLAN_PER_ACCOUNT_DAILY ?? 20) || 0);
+const planUsage = { day: '', total: 0, byAccount: new Map<string, number>() };
+const planDraftCache = new Map<string, { payload: Record<string, unknown>; expiresAt: number }>();
+const DEFAULT_PLAN_MODEL = 'gemini-3.8-flash';
+let resolvedPlanModel: { id: string; at: number } | null = null;
+
+/**
+ * The model for the plan agent: GEMINI_PLAN_MODEL if set; otherwise the strongest model the key can
+ * use, from the live models list (newest Pro, then newest Flash), re-checked every 6 hours.
+ */
+async function resolvePlanModel(ai: GoogleGenAI): Promise<string> {
+  const configured = process.env.GEMINI_PLAN_MODEL?.trim();
+  if (configured) return configured;
+  if (resolvedPlanModel && Date.now() - resolvedPlanModel.at < 6 * 3600 * 1000) return resolvedPlanModel.id;
+  let id = DEFAULT_PLAN_MODEL;
+  try {
+    const names: string[] = [];
+    const pager = await ai.models.list();
+    for await (const m of pager) {
+      const actions = (m as { supportedActions?: string[] }).supportedActions ?? [];
+      if (m.name && (actions.length === 0 || actions.includes('generateContent'))) names.push(m.name);
+    }
+    id = pickBestModel(names) ?? DEFAULT_PLAN_MODEL;
+  } catch {
+    // Keep the default; the next request tries again after the cache period.
+  }
+  resolvedPlanModel = { id, at: Date.now() };
+  return id;
 }
 
 function getGenAIClient(): GoogleGenAI | null {
@@ -2748,6 +2854,161 @@ async function startServer() {
 
   // The former IEP generator produced unsupported, sometimes fabricated risk statements.
   // Keep the endpoint explicitly retired so stale clients cannot generate misleading plans.
+  /**
+   * Individual plan draft from a language model, using only the facts sent (no names). The draft is
+   * validated in code (numbers, language, skills, activity catalogue); a rejected or unavailable model
+   * gives a rules-based draft. Referral advice comes from rules. Approval is a separate endpoint.
+   */
+  app.post('/api/ai/individual-plan', requireAiAccess(), async (req, res) => {
+    const parsed = PlanFactsSchema.safeParse(req.body?.facts);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'بيانات الخطة غير صالحة.', issues: parsed.error.issues.slice(0, 5).map((i) => i.path.join('.')) });
+      return;
+    }
+    const facts = parsed.data;
+    const generatedAt = new Date().toISOString();
+    const referralAr = referralFor(facts);
+    const fallback = (noteAr: string, validationErrors: string[] = [], agent: unknown = null) =>
+      res.json({ status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr, facts, generatedAt, noteAr, validationErrors, agent });
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      fallback('النموذج اللغوي غير مهيأ على الخادم؛ هذه مسودة مبنية على قواعد ثابتة من البيانات نفسها.');
+      return;
+    }
+    const model = await resolvePlanModel(ai);
+
+    // Same facts and model: return the earlier draft without a new (paid) call.
+    const cacheKey = crypto.createHash('sha256').update(`${model}|${JSON.stringify(facts)}`).digest('hex');
+    const cached = planDraftCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.json({ ...cached.payload, cached: true });
+      return;
+    }
+
+    // Cost caps: per server per day, and per account per day.
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const day = new Date().toISOString().slice(0, 10);
+    if (planUsage.day !== day) {
+      planUsage.day = day;
+      planUsage.total = 0;
+      planUsage.byAccount.clear();
+    }
+    const accountKey = session?.sessionId || req.ip || 'anonymous';
+    const accountCount = planUsage.byAccount.get(accountKey) ?? 0;
+    if (planUsage.total >= AI_PLAN_DAILY_LIMIT || accountCount >= AI_PLAN_PER_ACCOUNT_DAILY) {
+      fallback('بلغ استخدام النموذج اللغوي حده اليومي المضبوط على الخادم؛ هذه مسودة مبنية على قواعد ثابتة.');
+      return;
+    }
+    planUsage.total += 1;
+    planUsage.byAccount.set(accountKey, accountCount + 1);
+
+    const shapeSchema = {
+      analysis: {
+        type: Type.OBJECT,
+        properties: {
+          priorities: {
+            type: Type.ARRAY,
+            items: { type: Type.OBJECT, properties: { skill: { type: Type.STRING }, reasonAr: { type: Type.STRING } }, required: ['skill', 'reasonAr'] },
+          },
+        },
+        required: ['priorities'],
+      },
+      plan: {
+        type: Type.OBJECT,
+        properties: {
+          summaryAr: { type: Type.STRING },
+          goals: {
+            type: Type.ARRAY,
+            items: { type: Type.OBJECT, properties: { skill: { type: Type.STRING }, goalAr: { type: Type.STRING }, evidenceAr: { type: Type.STRING } }, required: ['skill', 'goalAr', 'evidenceAr'] },
+          },
+          activities: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING, enum: [...ACTIVITY_IDS] },
+                whyAr: { type: Type.STRING },
+                frequency: { type: Type.STRING, enum: ['daily', 'most-days', 'weekly'] },
+              },
+              required: ['id', 'whyAr', 'frequency'],
+            },
+          },
+          homeTipsAr: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['summaryAr', 'goals', 'activities', 'homeTipsAr'],
+      },
+    };
+
+    try {
+      const result = await runPlanAgent(facts, async (messages, shape) => {
+        const response = await ai.models.generateContent({
+          model,
+          contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+          config: { responseMimeType: 'application/json', temperature: 0.3, responseSchema: shapeSchema[shape] },
+        });
+        return {
+          text: response.text || '',
+          inputTokens: response.usageMetadata?.promptTokenCount,
+          outputTokens: response.usageMetadata?.candidatesTokenCount,
+        };
+      });
+      const agent = { model, trace: result.trace, priorities: result.priorities };
+      if (!result.plan) {
+        fallback('لم تجتز مسودة الوكيل قيود التحقق بعد محاولات التصحيح؛ هذه مسودة مبنية على قواعد ثابتة.', result.errors, agent);
+        return;
+      }
+      const payload = { status: 'draft', source: 'model', plan: result.plan, referralAr, facts, generatedAt, validationErrors: [], agent };
+      if (planDraftCache.size >= 1000) planDraftCache.delete(planDraftCache.keys().next().value as string);
+      planDraftCache.set(cacheKey, { payload, expiresAt: Date.now() + 30 * 24 * 3600 * 1000 });
+      res.json(payload);
+    } catch {
+      fallback('تعذر الوصول إلى النموذج اللغوي؛ هذه مسودة مبنية على قواعد ثابتة.');
+    }
+  });
+
+  /** A teacher or specialist approves (and may edit) a plan; the approver comes from the session. */
+  app.put('/api/students/:id/individual-plan', requireBaseeraAuth('students:write'), (req, res) => {
+    const found = findConsentedStudent(req, res);
+    if (!found) return;
+    const body = req.body || {};
+    const plan = DraftPlanSchema.safeParse(body.plan);
+    const facts = PlanFactsSchema.safeParse(body.facts);
+    if (!plan.success || !facts.success || (body.source !== 'model' && body.source !== 'rules')) {
+      res.status(400).json({ error: 'بيانات الخطة غير صالحة.' });
+      return;
+    }
+    // Edits by the reviewer must still respect the language rules.
+    const checked = validateDraftPlan(plan.data, facts.data);
+    if (!checked.ok) {
+      res.status(400).json({ error: 'الخطة المعدّلة تخالف القيود.', validationErrors: checked.errors });
+      return;
+    }
+    const updatedRecord: StudentRecord = {
+      ...studentsDb[found.idx],
+      individualPlan: {
+        status: 'approved',
+        source: body.source,
+        plan: plan.data,
+        referralAr: referralFor(facts.data),
+        facts: facts.data,
+        generatedAt: typeof body.generatedAt === 'string' && Number.isFinite(Date.parse(body.generatedAt)) ? body.generatedAt : new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: found.session.accountName,
+        editedByReviewer: body.editedByReviewer === true,
+      },
+    };
+    const nextRecords = [...studentsDb];
+    nextRecords[found.idx] = updatedRecord;
+    const committed = commitStudentMutationWithAudit(studentsDb, nextRecords, found.session, 'student.plan.approve', updatedRecord.id, ['individualPlan']);
+    if (!committed.ok) {
+      res.status(503).json({ error: 'تعذر حفظ الخطة في التخزين المشفر.' });
+      return;
+    }
+    studentsDb = committed.students;
+    res.status(200).json({ student: updatedRecord, persisted: true });
+  });
+
   app.post('/api/ai/generate-iep', requireBaseeraAuth('ai:analyze'), (_req, res) => {
     res.status(410).json({
       code: 'IEP_GENERATOR_RETIRED',
@@ -2882,7 +3143,7 @@ async function startServer() {
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
-  app.post('/api/ai/pronunciation-assessment', requireBaseeraAuth('ai:analyze'), async (req, res) => {
+  app.post('/api/ai/pronunciation-assessment', requireAiAccess(), async (req, res) => {
     const body = req.body || {};
     const {
       referenceText,

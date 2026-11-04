@@ -59,7 +59,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await audit(page, 'sample-report', findings);
     await page.goto('/');
 
-    await nav(page, mobile ? /^الفحص$/ : /الفحص الشامل/, mobile);
+    await nav(page, mobile ? /^الفحص$/ : /فحص مؤشرات عسر القراءة/, mobile);
     await audit(page, 'battery-setup', findings);
     await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
     for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
@@ -72,7 +72,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await nav(page, mobile ? /^البرنامج$/ : /البرنامج التدريبي/, mobile);
     await audit(page, 'training-program', findings);
 
-    await nav(page, mobile ? /^التدريب$/ : /صالة التدريب/, mobile);
+    await page.locator('.baseera-footer').getByRole('button', { name: /صالة التدريب/ }).click();
     await audit(page, 'gym-today', findings);
     await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
     for (const station of ['صائد الحروف', 'تركيب المقاطع', 'قصص الأبطال', 'تحدي الدقائق الخمس', 'طلاقة القراءة']) {
@@ -80,7 +80,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
       await audit(page, `gym-${station}`, findings);
     }
 
-    await nav(page, mobile ? /^القارئ$/ : /القارئ الميسّر/, mobile);
+    await page.locator('.baseera-footer').getByRole('button', { name: /القارئ الميسّر/ }).click();
     await audit(page, 'reader-pick', findings);
     await page.getByRole('button', { name: /ابدأ القراءة/ }).click();
     await audit(page, 'reader-session', findings);

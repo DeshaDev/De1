@@ -67,10 +67,10 @@ export function syncBatteryToSchool(session: BatterySession, student?: StudentRe
 }
 
 export function syncTrainingToSchool(studentId: string, progress: TrainingProgress, student?: StudentRecord): Promise<StudentRecord | null> {
-  const { plan, levels, mastered, history, supportFlags } = progress;
+  const { plan, levels, mastered, history, supportFlags, probes = [], bkt, targets } = progress;
   return put(
     `/api/students/${encodeURIComponent(studentId)}/training-progress`,
-    { plan, levels, mastered, history: history.slice(-400), supportFlags },
+    { plan, levels, mastered, history: history.slice(-400), supportFlags, probes: probes.slice(-200), ...(bkt ? { bkt } : {}), ...(targets ? { targets } : {}) },
     student
   );
 }

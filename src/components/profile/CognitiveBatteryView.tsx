@@ -39,16 +39,28 @@ import {
   BatterySession,
   clearBatterySession,
   loadBatterySession,
+  loadScreeningHistory,
+  saveScreeningHistory,
+  type ScreeningSnapshot,
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
+import { summarizeBattery } from '../../cognitiveProfile/records';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
 import TrainingProgramView from './TrainingProgramView';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
+
+/**
+ * The nine games in three sittings of about 10-12 minutes, so a young child is never asked for
+ * half an hour of attention at once. Progress is saved after every game, so each sitting can be
+ * on a different day.
+ */
+const SITTINGS: Subtest[][] = [BATTERY.slice(0, 3), BATTERY.slice(3, 6), BATTERY.slice(6, 9)];
+const sittingMinutes = (games: Subtest[]) => games.reduce((n, s) => n + s.minutes, 0);
 
 // ---------------------------------------------------------------------------
 // Subtest runner
@@ -459,11 +471,13 @@ interface Props {
   onFocusModeChange?: (focused: boolean) => void;
   /** Called with the server copy after results are saved to the school record. */
   onRecordUpdated?: (student: StudentRecord) => void;
+  /** Open an optional extra activity (practice games or the reader). */
+  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
   onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
 }
 
-export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner }: Props) {
+export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
@@ -471,7 +485,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [session, setSession] = useState<BatterySession | null>(loadInitial);
 
   const pushToSchool = (s: BatterySession) => {
-    if (!syncEnabled) return;
+    if (!syncEnabled) {
+      // Family accounts and devices without a school: keep the result in the child's record too,
+      // so the app can save it to the family's database. The summary is computed on this device.
+      if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
+        onRecordUpdated?.({
+          ...activeStudent,
+          cognitiveBattery: {
+            ageMonths: s.ageMonths,
+            examinerName: s.examinerName,
+            startedAt: s.startedAt,
+            dialect: s.dialect,
+            updatedAt: new Date().toISOString(),
+            results: s.results,
+            summary: summarizeBattery(s.results, s.ageMonths),
+          },
+        });
+      }
+      return;
+    }
     setSyncState('saving');
     syncBatteryToSchool(s, activeStudent)
       .then((student) => {
@@ -506,8 +538,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   );
 
   const completed = session ? BATTERY.filter((s) => session.results[s.id]) : [];
+  const localHistory = loadScreeningHistory(activeStudent.id);
+  const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
   const nextSubtest = BATTERY.find((s) => !session?.results[s.id]);
   const remainingMinutes = BATTERY.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
+  const nextSitting = nextSubtest ? SITTINGS.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
+  /** The child just completed a whole sitting: a natural place to stop for today. */
+  const sittingJustFinished =
+    nextSitting > 0 && SITTINGS[nextSitting].every((g) => !session?.results[g.id]) && SITTINGS[nextSitting - 1].every((g) => session?.results[g.id]);
 
   const saveResult = (result: SubtestResult) => {
     if (!session) return;
@@ -534,6 +572,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         onRecordUpdated={onRecordUpdated}
         student={activeStudent}
         showBack={initialView !== 'training'}
+        onOpenExtra={onOpenExtra}
       />
     );
   }
@@ -577,6 +616,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <ProfileReportView
         profile={profile}
         session={session}
+        previous={previousScreenings[previousScreenings.length - 1] ?? null}
         onBack={() => setView({ name: 'map' })}
         onStartTraining={() => setView({ name: 'training' })}
       />
@@ -597,6 +637,13 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / BATTERY.length) * 100}%` }} /></div>
             {remainingMinutes > 0 && <span className="bz-small bz-muted shrink-0">بقي نحو {toArabicDigits(remainingMinutes)} دقيقة</span>}
           </div>
+          {nextSitting >= 0 && (
+            <p className="bz-small text-ink-2 mt-3">
+              {sittingJustFinished
+                ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ٣. يمكن إكمال الجلسة التالية الآن أو في يوم آخر؛ التقدّم محفوظ.`
+                : `جلسة اليوم: الجلسة ${toArabicDigits(nextSitting + 1)} من ٣ (٣ ألعاب، نحو ${toArabicDigits(sittingMinutes(SITTINGS[nextSitting]))} دقيقة). يمكن التوقف بعدها وإكمال الباقي في يوم آخر.`}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {nextSubtest && (
@@ -605,13 +652,20 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             </button>
           )}
           <button type="button" disabled={!profile} onClick={() => setView({ name: 'report' })} className="bz-btn bz-btn-secondary bz-btn-lg">
-            <FileBarChart className="w-5 h-5" /> الملف المعرفي والتقرير
+            <FileBarChart className="w-5 h-5" /> النتيجة والتقرير
           </button>
         </div>
       </section>
 
+      {SITTINGS.map((games, sitting) => (
+        <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">
+          <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
+            الجلسة {toArabicDigits(sitting + 1)}
+            <span className="bz-small bz-muted font-normal">نحو {toArabicDigits(sittingMinutes(games))} دقيقة</span>
+            {games.every((g) => session.results[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
+          </h3>
       <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {BATTERY.map((s) => {
+        {games.map((s) => {
           const done = Boolean(session.results[s.id]);
           const isNext = nextSubtest?.id === s.id;
           const domain = DOMAINS[s.domain];
@@ -646,6 +700,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           );
         })}
       </ol>
+        </section>
+      ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => setView({ name: 'training' })} className="bz-link">
@@ -654,7 +710,19 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('بدء فحص جديد سيحذف نتائج هذا الفحص من هذا الجهاز، وتُستبدل نسخة سجل المدرسة عند حفظ أول لعبة. متابعة؟')) {
+            if (window.confirm('سيُحفظ ملخص هذا الفحص للمقارنة، ثم يبدأ فحص جديد. متابعة؟')) {
+              if (profile && profile.risk !== 'insufficient') {
+                const snapshot: ScreeningSnapshot = {
+                  completedAt: new Date().toISOString(),
+                  ageMonths: profile.ageMonths,
+                  risk: profile.risk,
+                  completedSubtests: profile.subtests.length,
+                  domains: profile.domains.map((d) => ({ domain: d.domain, centile: d.centile })),
+                };
+                const history = [...previousScreenings, snapshot].slice(-10);
+                saveScreeningHistory(activeStudent.id, history);
+                if (!activeStudent.isDemoRecord) onRecordUpdated?.({ ...activeStudent, screeningHistory: history });
+              }
               clearBatterySession(activeStudent.id);
               setSession(null);
               setView({ name: 'setup' });

@@ -23,7 +23,7 @@ interface DyslexiaScreeningHubProps {
 }
 
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
-  { id: 'battery', label: 'الفحص الشامل', hint: '٩ ألعاب · ٤–٨ سنوات', icon: Brain },
+  { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: '٩ ألعاب · ٤–٨ سنوات', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
   { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'أداة تكميلية · من الصف الأول', icon: BookOpen },
   { id: 'cognitive-screening', label: 'التسمية السريعة', hint: 'التسمية السريعة والكلمات غير الحقيقية · أداة تكميلية', icon: Timer },
@@ -55,18 +55,18 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           <div className="max-w-3xl">
             <span className="bz-eyebrow">{subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من الصف الأول إلى السادس'}</span>
             <h1 className="bz-h2 mt-2">
-              {subTab === 'battery' ? 'الفحص المعرفي الشامل لمهارات القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
+              {subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
             </h1>
             <p className="bz-body mt-2">
               {subTab === 'battery'
                 ? `تسع ألعاب قصيرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة) ترسم ملفًا معرفيًا للطفل مقارنةً بأقرانه في العمر، ثم تقترح استراتيجيات وبرنامجًا تدريبيًا.`
-                : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب الفحص الشامل لا بديلًا عنه.'}
+                : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب فحص مؤشرات عسر القراءة لا بديلًا عنه.'}
             </p>
           </div>
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
             {subTab !== 'battery' && (
               <button type="button" className="bz-link" onClick={() => setSubTab('battery')}>
-                العودة إلى الفحص الشامل
+                العودة إلى فحص مؤشرات عسر القراءة
               </button>
             )}
             {subTab === 'battery' && <span className="bz-muted">أدوات تكميلية للأخصائي:</span>}
@@ -104,6 +104,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           onFocusModeChange={setFocused}
           onRecordUpdated={onStudentUpdated}
           onCreateLearner={onCreateLearner}
+          onOpenExtra={(tab) => onNavigateTab(tab)}
         />
       )}
 

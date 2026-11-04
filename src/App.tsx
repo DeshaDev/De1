@@ -26,7 +26,6 @@ import {
   Clock,
   RefreshCw,
   Target,
-  Dumbbell,
   Heart,
   Baby,
   UserPlus,
@@ -54,6 +53,7 @@ import {
   isSupabaseConfigured,
   fetchStudentsFromSupabase,
   syncStudentToSupabase,
+  syncTrainingProgressToSupabase,
 } from './utils/supabaseClient';
 import { AssessmentProvider } from './contexts/AssessmentContext';
 const ReaderPage = lazy(() => import('./components/reader/ReaderPage').then((m) => ({ default: m.ReaderPage })));
@@ -61,6 +61,8 @@ const RemediationGymView = lazy(() => import('./components/RemediationGymView'))
 const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHub'));
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
+import { TrainingProgressPanel } from './components/profile/TrainingProgressPanel';
+import IndividualPlanPanel from './components/profile/IndividualPlanPanel';
 import { trackUsage } from './utils/usageTracking';
 const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
@@ -315,7 +317,7 @@ export default function App() {
         setSupabaseUser(user);
         const parentSession: BaseeraSessionInfo = {
           token: session?.access_token || `local-${user.id}`,
-          role: 'clinician',
+          role: 'parent',
           accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
           tenantId: `parent_${user.id.slice(0, 8)}`,
           tenantDisplayNameAr: 'حساب ولي الأمر',
@@ -809,14 +811,25 @@ export default function App() {
       guardianConsentRecordedAt: recordedAt,
       guardianConsentSource: `موافقة ولي الأمر المسجلة عبر بوابة الأسرة (${recordedAt.split('T')[0]})`,
       guardianAudioConsentGiven: true,
-      clinicalNotes: child.notes || undefined,
+      parentNotes: child.notes || undefined,
       speechRecognitionUsed: false,
       wpm: 0,
+      dyslexiaRiskScore: null,
+      readingHeuristicIndicator: null,
       readingRiskLevel: 'unassessed',
       readingRiskLabelAr: 'جاهز لبدء الفحص المنزلي.',
       problematicWords: [],
       comprehensionScore: 0,
       dyscalculiaAssessed: false,
+      subitizingAccuracy: null,
+      avgSubitizingMs: null,
+      numberLinePAE: null,
+      transcodingAccuracy: null,
+      reversalErrorCount: null,
+      dyscalculiaRiskScore: null,
+      mathHeuristicIndicator: null,
+      mathRiskLevel: 'unassessed',
+      mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
       learningReport: {
         learningSummary: `ملف جديد للطفل «${child.name}»؛ تظهر المؤشرات فور إكمال أول تمرين أو فحص.`,
         ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع العين.',
@@ -1194,12 +1207,11 @@ export default function App() {
 
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
+              // One journey: register the child (header button), screen, then train.
+              // Practice games and the reader are optional extras inside the programme and the footer.
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'parent-portal', label: 'بوابة ولي الأمر', icon: Heart },
-              { id: 'dyslexia-lab', label: 'الفحص الشامل', icon: Brain },
+              { id: 'dyslexia-lab', label: 'فحص مؤشرات عسر القراءة', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
-              { id: 'remediation-gym', label: 'صالة التدريب', icon: Dumbbell },
-              { id: 'adaptive-reader', label: 'القارئ الميسّر', icon: BookOpen },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -1241,7 +1253,7 @@ export default function App() {
               className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold"
               onClick={() => setActiveTab('parent-portal')}
             >
-              <span className="whitespace-nowrap">تسجيل طفل</span>
+              <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي' : 'تسجيل طفل'}</span>
             </button>
           </div>
         </div>
@@ -1283,11 +1295,9 @@ export default function App() {
       <nav className="baseera-mobile-nav" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
-          { id: 'parent-portal', label: 'ولي الأمر', icon: Heart },
+          { id: 'parent-portal', label: 'طفلي', icon: Heart },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
-          { id: 'remediation-gym', label: 'التدريب', icon: Dumbbell },
-          { id: 'adaptive-reader', label: 'القارئ', icon: BookOpen },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1561,7 +1571,7 @@ export default function App() {
                       </p>
                       {baseeraSession && schoolRosterEmpty && (
                         <p className="mt-3 rounded-xl bg-sun-soft p-3 text-xs leading-relaxed text-ink-2">
-                          لا يوجد طلاب في سجل المدرسة بعد. الصفوف أدناه أمثلة توضيحية وسجل هذا الجهاز، ولا تُحفظ في سجل المدرسة. أضف طالبًا من الصفحة الرئيسية أو أجرِ له الفحص الشامل ليظهر هنا.
+                          لا يوجد طلاب في سجل المدرسة بعد. الصفوف أدناه أمثلة توضيحية وسجل هذا الجهاز، ولا تُحفظ في سجل المدرسة. أضف طالبًا من الصفحة الرئيسية أو أجرِ له فحص مؤشرات عسر القراءة ليظهر هنا.
                         </p>
                       )}
                     </div>
@@ -1657,7 +1667,7 @@ export default function App() {
                             <th className="py-3 px-3">الفهم</th>
                             <th className="py-3 px-3 hidden md:table-cell">دقة القراءة</th>
                             <th className="py-3 px-3 hidden md:table-cell">طريقة القياس</th>
-                            <th className="py-3 px-4">الفحص المعرفي</th>
+                            <th className="py-3 px-4">فحص المؤشرات</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -1787,6 +1797,20 @@ export default function App() {
             {/* SUB-VIEW 3: LEARNING PERFORMANCE SUMMARY & SUPPORT PLAN */}
             {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
               <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
+            )}
+            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
+              <TrainingProgressPanel student={selectedStudent} />
+            )}
+            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
+              <IndividualPlanPanel
+                student={selectedStudent}
+                progress={selectedStudent.trainingProgress ?? null}
+                canApprove={baseeraSession?.role === 'school_admin' || baseeraSession?.role === 'platform_admin'}
+                onRecordUpdated={(updated) => {
+                  setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+                  if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);
+                }}
+              />
             )}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -1941,7 +1965,7 @@ export default function App() {
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {selectedStudent.sessionStatus === 'completed'
                           ? 'تمرين يومي قصير لربط الحروف بحركاتها القصيرة، ثم قراءة نصوص مشكولة في القارئ الميسّر، مع تحدي الدقائق الخمس لبناء الطلاقة.'
-                          : 'تظهر التوصيات بعد أول نشاط قراءة أو بعد الفحص المعرفي الشامل.'}
+                          : 'تظهر التوصيات بعد أول نشاط قراءة أو بعد فحص مؤشرات عسر القراءة.'}
                       </p>
                     </div>
                   </div>
@@ -2161,7 +2185,9 @@ export default function App() {
             onStudentUpdated={(updated) => {
               setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
               if (supabaseUser) {
-                void syncStudentToSupabase(updated, supabaseUser.id);
+                void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
+                  if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
+                });
               }
             }}
             onCompleteCognitiveScreening={(cogData) => {
@@ -2242,10 +2268,10 @@ export default function App() {
           <div className="baseera-footer-col">
             <h2>المنصة</h2>
             <ul>
-              <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>الفحص المعرفي الشامل</button></li>
+              <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مؤشرات عسر القراءة</button></li>
               <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
-              <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>صالة التدريب</button></li>
-              <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر</button></li>
+              <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>ألعاب إضافية (صالة التدريب)</button></li>
+              <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر (لمن يقرأ)</button></li>
             </ul>
           </div>
           <div className="baseera-footer-col">

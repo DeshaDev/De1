@@ -6,6 +6,21 @@
  * consecutive sessions at or above the mastery criterion. Training items are generated fresh
  * for every session from the lexicon, so the child never practises the scored test items.
  */
+import type { ProbeRecord } from './progressProbe';
+import type { Band } from './scoring';
+import {
+  MIN_ATTEMPTS_FOR_MASTERY,
+  STEP_BACK_BELOW,
+  STEP_BACK_MIN_ATTEMPTS,
+  SUPPORT_MIN_ATTEMPTS,
+  bktKey,
+  initialStates,
+  isMastered,
+  observe,
+  priorFor,
+  type BktLevel,
+  type BktStates,
+} from './knowledgeTracing';
 import {
   AudioSegment,
   ChoiceItem,
@@ -131,11 +146,18 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   letterSound: ['letterSound'],
 };
 
-export const MASTERY_PERCENT = 80;
-export const STEP_BACK_PERCENT = 50;
-export const PROGRAM_WEEKS = 8;
-export const SESSIONS_PER_WEEK = 4;
+/**
+ * Programme dose: 20 sessions, 5 a week (about 4 weeks), 15 minutes of training plus a 2-minute
+ * progress probe, about 5.7 hours in all. In the National Reading Panel meta-analysis, phonemic
+ * awareness instruction had its largest effects at 5 to 18 hours in total; longer programmes were
+ * less effective (Ehri et al., 2001, Reading Research Quarterly 36(3), 250-287).
+ */
+export const PROGRAM_SESSIONS = 20;
+export const SESSIONS_PER_WEEK = 5;
+export const PROGRAM_WEEKS = PROGRAM_SESSIONS / SESSIONS_PER_WEEK;
 export const MINUTES_PER_SESSION = 15;
+/** Missed days are normal; reassessment is offered at the latest two weeks after the planned end. */
+const LATEST_REASSESSMENT_DAYS = (PROGRAM_WEEKS + 2) * 7;
 const MAX_FOCUS_SKILLS = 3;
 
 /**
@@ -208,39 +230,101 @@ export interface TrainingProgress {
   history: SessionRecord[];
   /** Skills that dropped back a level and may need adult support. */
   supportFlags: SkillId[];
+  /** One fixed-difficulty progress probe per session (see progressProbe.ts). Absent in older records. */
+  probes?: ProbeRecord[];
+  /** Knowledge-tracing state per skill and level (see knowledgeTracing.ts). Absent in older records. */
+  bkt?: BktStates;
+  /** Sounds and letters to practise more often, from the child's oral-reading errors. */
+  targets?: TrainingTargets;
 }
 
-export function createProgress(plan: TrainingPlan, startLevel: Level = 1): TrainingProgress {
+export interface TrainingTargets {
+  /** Confusable sound pairs the child mixed up while reading (only pairs the exercises can voice). */
+  soundPairs: Array<[string, string]>;
+  /** Letters the child confused while reading. */
+  letters: string[];
+  /** When and from which reading passage the targets came. */
+  source?: { passageId: string; analysedAt: string };
+}
+
+/** Half of the relevant items practise the child's own confusions; the rest keep the skill broad. */
+const TARGET_SHARE = 0.5;
+
+const BAND_ORDER: Band[] = ['severe', 'below', 'average', 'strength'];
+
+/** The screening band behind each trainable skill (the weakest subtest that feeds it). */
+export function skillBandsFromProfile(profile: Pick<CognitiveProfile, 'subtests'> | null | undefined): Partial<Record<SkillId, Band>> {
+  const bands: Partial<Record<SkillId, Band>> = {};
+  for (const s of profile?.subtests ?? []) {
+    for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
+      const current = bands[skill];
+      if (!current || BAND_ORDER.indexOf(s.band) < BAND_ORDER.indexOf(current)) bands[skill] = s.band;
+    }
+  }
+  return bands;
+}
+
+export function createProgress(plan: TrainingPlan, startLevel: Level = 1, bands: Partial<Record<SkillId, Band>> = {}): TrainingProgress {
+  const levels = Object.fromEntries(plan.focus.map((s) => [s, plan.preventive ? 2 : startLevel])) as Record<string, Level>;
   return {
     plan,
-    levels: Object.fromEntries(plan.focus.map((s) => [s, plan.preventive ? 2 : startLevel])),
+    levels,
     mastered: [],
     history: [],
     supportFlags: [],
+    probes: [],
+    bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>),
   };
+}
+
+/** Older progress records have no knowledge-tracing state: rebuild a neutral one from their levels. */
+export function ensureBkt(progress: TrainingProgress): TrainingProgress & { bkt: BktStates } {
+  if (progress.bkt) return progress as TrainingProgress & { bkt: BktStates };
+  const bkt: BktStates = {};
+  for (const skill of progress.plan.focus) {
+    const current = (progress.levels[skill] ?? 1) as BktLevel;
+    const done = progress.mastered.includes(skill);
+    for (const level of [1, 2, 3] as BktLevel[]) {
+      const known = done || level < current;
+      bkt[bktKey(skill, level)] = known ? { p: 0.95, n: MIN_ATTEMPTS_FOR_MASTERY, c: MIN_ATTEMPTS_FOR_MASTERY, seq: '' } : { p: priorFor(undefined, level), n: 0, c: 0, seq: '' };
+    }
+  }
+  return { ...progress, bkt };
+}
+
+/** The model's current estimate for a skill: the level being practised and P(mastered) there. */
+export function masteryEstimate(progress: TrainingProgress, skill: SkillId): { level: Level; p: number } {
+  const p = ensureBkt(progress);
+  const level = (p.levels[skill] ?? 1) as Level;
+  const state = p.bkt[bktKey(skill, p.mastered.includes(skill) ? 3 : level)];
+  return { level, p: state?.p ?? 0 };
 }
 
 export type LevelChange = 'up' | 'down' | 'mastered' | 'stay';
 
-export function applySession(
+/**
+ * One practice answer (with feedback). The knowledge-tracing model updates P(mastered) for the
+ * skill's current level and decides: move up at P >= 0.95 (after at least 5 answers), step back
+ * a level when P stays below 0.2 after 8 answers, or flag adult support at level 1.
+ */
+export function recordAnswer(
   progress: TrainingProgress,
   skill: SkillId,
-  correct: number,
-  total: number,
-  now = new Date()
+  correct: boolean,
+  guess: number
 ): { progress: TrainingProgress; change: LevelChange } {
-  const level = (progress.levels[skill] ?? 1) as Level;
-  const record: SessionRecord = { date: now.toISOString(), skill, level, correct, total };
-  const history = [...progress.history, record];
-  const atLevel = history.filter((h) => h.skill === skill && h.level === level).slice(-2);
-  const pct = (h: SessionRecord) => (h.total === 0 ? 0 : (h.correct / h.total) * 100);
-
+  const p = ensureBkt(progress);
+  const level = (p.levels[skill] ?? 1) as BktLevel;
+  const key = bktKey(skill, level);
+  const state = observe(p.bkt[key] ?? { p: priorFor(undefined, level), n: 0, c: 0, seq: '' }, correct, guess, true);
+  const bkt: BktStates = { ...p.bkt, [key]: state };
+  const levels = { ...p.levels };
+  const mastered = [...p.mastered];
+  let supportFlags = [...p.supportFlags];
   let change: LevelChange = 'stay';
-  const levels = { ...progress.levels };
-  let mastered = [...progress.mastered];
-  let supportFlags = progress.supportFlags.filter((s) => s !== skill);
 
-  if (atLevel.length === 2 && atLevel.every((h) => pct(h) >= MASTERY_PERCENT)) {
+  if (isMastered(state)) {
+    supportFlags = supportFlags.filter((s) => s !== skill);
     if (level < 3) {
       levels[skill] = (level + 1) as Level;
       change = 'up';
@@ -248,15 +332,80 @@ export function applySession(
       mastered.push(skill);
       change = 'mastered';
     }
-  } else if (atLevel.length === 2 && atLevel.every((h) => pct(h) < STEP_BACK_PERCENT)) {
-    if (level > 1) {
-      levels[skill] = (level - 1) as Level;
-      change = 'down';
-    }
-    supportFlags = [...supportFlags, skill];
+  } else if (level > 1 && state.n >= STEP_BACK_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW) {
+    levels[skill] = (level - 1) as Level;
+    // The easier level was assumed secure; this evidence says it is not, so it must be re-earned.
+    const lower = bktKey(skill, (level - 1) as BktLevel);
+    bkt[lower] = { ...bkt[lower], p: Math.min(bkt[lower]?.p ?? 0.5, 0.6), n: 0 };
+    bkt[key] = { ...state, n: 0 };
+    if (!supportFlags.includes(skill)) supportFlags.push(skill);
+    change = 'down';
+  } else if (level === 1 && state.n >= SUPPORT_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW && !supportFlags.includes(skill)) {
+    supportFlags.push(skill);
   }
+  return { progress: { ...p, bkt, levels, mastered, supportFlags }, change };
+}
 
-  return { progress: { plan: progress.plan, levels, mastered, history, supportFlags }, change };
+/** Log one block of practice for the session history (sessions count and teacher table). */
+export function recordSkillBlock(progress: TrainingProgress, skill: SkillId, level: Level, correct: number, total: number, now = new Date()): TrainingProgress {
+  return { ...progress, history: [...progress.history, { date: now.toISOString(), skill, level, correct, total }] };
+}
+
+/**
+ * Probe answers are evidence without learning: they update the level-2 estimate of each trained
+ * skill. A child still at level 1 who has clearly mastered level 2 on the probe moves up.
+ */
+export function applyProbeEvidence(
+  progress: TrainingProgress,
+  answers: Array<{ skill: SkillId; correct: boolean; guess: number }>
+): { progress: TrainingProgress; promoted: SkillId[] } {
+  const p = ensureBkt(progress);
+  const bkt: BktStates = { ...p.bkt };
+  const levels = { ...p.levels };
+  for (const a of answers) {
+    if (!p.plan.focus.includes(a.skill)) continue;
+    const key = bktKey(a.skill, 2);
+    bkt[key] = observe(bkt[key] ?? { p: priorFor(undefined, 2), n: 0, c: 0, seq: '' }, a.correct, a.guess, false);
+  }
+  const promoted: SkillId[] = [];
+  for (const skill of p.plan.focus) {
+    if ((levels[skill] ?? 1) === 1 && isMastered(bkt[bktKey(skill, 2)])) {
+      levels[skill] = 2;
+      bkt[bktKey(skill, 1)] = { ...bkt[bktKey(skill, 1)], p: Math.max(bkt[bktKey(skill, 1)]?.p ?? 0, 0.95) };
+      promoted.push(skill);
+    }
+  }
+  return { progress: { ...p, bkt, levels }, promoted };
+}
+
+/**
+ * Compatibility for callers that only know a block score: replays the block as answers
+ * (correct and wrong answers spread evenly) at chance level `guess`, then logs it.
+ */
+export function applySession(
+  progress: TrainingProgress,
+  skill: SkillId,
+  correct: number,
+  total: number,
+  now = new Date(),
+  guess = 1 / 3
+): { progress: TrainingProgress; change: LevelChange } {
+  const level = (progress.levels[skill] ?? 1) as Level;
+  let current = progress;
+  let change: LevelChange = 'stay';
+  for (let i = 0; i < total; i++) {
+    const isCorrect = Math.floor(((i + 1) * correct) / total) > Math.floor((i * correct) / total);
+    const r = recordAnswer(current, skill, isCorrect, guess);
+    current = r.progress;
+    if (r.change !== 'stay') change = r.change;
+  }
+  return { progress: recordSkillBlock(current, skill, level, correct, total, now), change };
+}
+
+/** Chance of answering an item right by guessing: the "guess" parameter of the model. */
+export function chanceOf(task: TrainingTask): number {
+  if (task.kind === 'choice') return 1 / Math.max(2, task.item.options.length);
+  return 0.05;
 }
 
 export function sessionsCompleted(progress: TrainingProgress): number {
@@ -266,7 +415,7 @@ export function sessionsCompleted(progress: TrainingProgress): number {
 export function isReassessmentDue(progress: TrainingProgress, now = new Date()): boolean {
   const days = (now.getTime() - new Date(progress.plan.createdAt).getTime()) / 86_400_000;
   const allMastered = progress.plan.focus.every((s) => progress.mastered.includes(s));
-  return allMastered || days >= PROGRAM_WEEKS * 7 || sessionsCompleted(progress) >= PROGRAM_WEEKS * SESSIONS_PER_WEEK;
+  return allMastered || days >= LATEST_REASSESSMENT_DAYS || sessionsCompleted(progress) >= PROGRAM_SESSIONS;
 }
 
 // ---------------------------------------------------------------------------
@@ -417,7 +566,7 @@ const MINIMAL_PAIRS: Array<[string, string]> = [
   ['sword', 'summer'],
 ];
 
-function discriminationTask(random: () => number, level: Level, n: number): ChoiceItem {
+function discriminationTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem {
   if (level === 3 && random() < 0.35) {
     const pair = pick(MINIMAL_PAIRS, random);
     const target = pick(pair, random);
@@ -431,7 +580,8 @@ function discriminationTask(random: () => number, level: Level, n: number): Choi
       tag: 'minimalPair',
     };
   }
-  const pairs = level === 1 ? DISTANT_PHONEME_PAIRS : CONFUSABLE_PHONEME_PAIRS;
+  const ownPairs = level === 1 ? [] : (targets?.soundPairs ?? []).filter(([x, y]) => CONFUSABLE_PHONEME_PAIRS.some(([p, q]) => (p === x && q === y) || (p === y && q === x)));
+  const pairs = level === 1 ? DISTANT_PHONEME_PAIRS : ownPairs.length > 0 && random() < TARGET_SHARE ? ownPairs : CONFUSABLE_PHONEME_PAIRS;
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
   const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
   const same = random() < 0.3;
@@ -459,9 +609,10 @@ const LETTER_SET_2 = ['ت', 'د', 'ف', 'ك', 'ع', 'ح'];
 const ALL_LETTERS = 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي'.split(' ');
 const SHORT_VOWEL = { a: 'َ', i: 'ِ', u: 'ُ' } as const;
 
-function letterSoundTask(random: () => number, level: Level, n: number): ChoiceItem {
+function letterSoundTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem {
   const set = level === 1 ? LETTER_SET_1 : level === 2 ? LETTER_SET_2 : ALL_LETTERS.filter((l) => l !== 'ا');
-  const letter = pick(set, random);
+  const own = (targets?.letters ?? []).filter((l) => set.includes(l));
+  const letter = own.length > 0 && random() < TARGET_SHARE ? pick(own, random) : pick(set, random);
   const close = level === 3 ? confusableWith(letter).filter((l) => ALL_LETTERS.includes(l)) : [];
   const farPool = (level === 3 ? ALL_LETTERS : set).filter((l) => l !== letter && !close.includes(l));
   const distractors = [...shuffleWith(close, random), ...shuffleWith(farPool, random)].slice(0, 3);
@@ -491,9 +642,11 @@ function swapOneLetter(word: string, random: () => number): string | null {
   return null;
 }
 
-function visualDiscriminationTask(random: () => number, level: Level, n: number): ChoiceItem | null {
+function visualDiscriminationTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem | null {
   if (level === 1 || level === 2) {
-    const group = pick(CONFUSABLE_LETTER_GROUPS.filter((g) => (level === 2 ? g.length >= 3 : true)), random);
+    const eligible = CONFUSABLE_LETTER_GROUPS.filter((g) => (level === 2 ? g.length >= 3 : true));
+    const own = eligible.filter((g) => (targets?.letters ?? []).some((l) => g.includes(l)));
+    const group = pick(own.length > 0 && random() < TARGET_SHARE ? own : eligible, random);
     const nonConnecting = ['د', 'ذ', 'ر', 'ز'];
     const extraGroups = CONFUSABLE_LETTER_GROUPS.filter(
       (g) => g !== group && (level === 1 || !g.some((l) => nonConnecting.includes(l)))
@@ -544,7 +697,7 @@ function spanTask(random: () => number, level: Level, n: number): SpanTrial {
   return { id: `tr-span-${n}`, sequence, choices: shuffleWith(pool, random) };
 }
 
-export function generateSession(skill: SkillId, level: Level, seed: number): TrainingTask[] {
+export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets): TrainingTask[] {
   let a = seed >>> 0;
   const random = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -562,7 +715,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
     }));
   }
 
-  const generator: Record<string, (r: () => number, l: Level, n: number) => ChoiceItem | null> = {
+  const generator: Record<string, (r: () => number, l: Level, n: number, t?: TrainingTargets) => ChoiceItem | null> = {
     rhyme: rhymeTask,
     soundPosition: soundPositionTask,
     blending: blendingTask,
@@ -573,7 +726,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
   const tasks: TrainingTask[] = [];
   const seen = new Set<string>();
   for (let n = 0; tasks.length < ITEMS_PER_SESSION && n < ITEMS_PER_SESSION * 6; n += 1) {
-    const item = generator[skill](random, level, n);
+    const item = generator[skill](random, level, n, targets);
     if (!item) continue;
     const pictureIds = [item.stimulus, ...item.options.map((o) => o.visual)].flatMap((v) =>
       v && v.type === 'emoji' ? Object.values(LEXICON).filter((e) => e.emoji === v.value).map((e) => e.id) : []
@@ -585,4 +738,59 @@ export function generateSession(skill: SkillId, level: Level, seed: number): Tra
     tasks.push({ kind: 'choice', item: { ...item, id: `${item.id}-${tasks.length}` } });
   }
   return tasks;
+}
+
+/** `count` practice items for one skill and level (more or fewer than one standard block). */
+export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets): TrainingTask[] {
+  const out: TrainingTask[] = [];
+  const seen = new Set<string>();
+  for (let k = 0; out.length < count && k < 8; k++) {
+    for (const task of generateSession(skill, level, seed + k * 104_729, targets)) {
+      if (out.length >= count) break;
+      const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+      out.push(
+        task.kind === 'choice'
+          ? { ...task, item: { ...task.item, id: `${task.item.id}-b${k}` } }
+          : { ...task, trial: { ...task.trial, id: `${task.trial.id}-b${k}` } }
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * Add what an oral reading revealed to the running programme: the recommended skills join the
+ * focus (up to 3 skills, memory never), with knowledge-tracing states, and the child's own
+ * confusions become practice targets.
+ */
+export function applyReadingTargets(
+  progress: TrainingProgress,
+  rec: { skills: SkillId[]; soundPairs: Array<[string, string]>; letters: string[]; passageId: string; analysedAt: string }
+): { progress: TrainingProgress; added: SkillId[] } {
+  const p = ensureBkt(progress);
+  const focus = [...p.plan.focus];
+  const added: SkillId[] = [];
+  for (const skill of rec.skills) {
+    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || focus.length >= MAX_FOCUS_SKILLS) continue;
+    focus.push(skill);
+    added.push(skill);
+  }
+  const ordered = focus.sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
+  const bkt = { ...p.bkt, ...initialStates(added, {}, Object.fromEntries(added.map((s) => [s, 1])) as Record<string, BktLevel>) };
+  const levels = { ...p.levels, ...Object.fromEntries(added.map((s) => [s, 1 as Level])) };
+  const rationaleAr = added.length > 0
+    ? [...p.plan.rationaleAr, `أُضيفت من تحليل القراءة الجهرية: ${added.map((s) => SKILLS[s].nameAr).join('، ')}.`].slice(-10)
+    : p.plan.rationaleAr;
+  return {
+    progress: {
+      ...p,
+      plan: { ...p.plan, focus: ordered, rationaleAr },
+      levels,
+      bkt,
+      targets: { soundPairs: rec.soundPairs.slice(0, 6), letters: rec.letters.slice(0, 10), source: { passageId: rec.passageId, analysedAt: rec.analysedAt } },
+    },
+    added,
+  };
 }

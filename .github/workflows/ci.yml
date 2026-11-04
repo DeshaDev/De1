@@ -76,7 +76,7 @@ jobs:
             if curl --fail --silent http://127.0.0.1:4317/ -o /tmp/baseera-docker-response.html; then break; fi
             sleep 1
           done
-          grep -q 'بصيرة' /tmp/baseera-docker-response.html
+          grep -q 'هَيَّا نَقْرَأْ' /tmp/baseera-docker-response.html
 
       - name: Smoke-test production server entry point
         run: node scripts/production-smoke-test.mjs

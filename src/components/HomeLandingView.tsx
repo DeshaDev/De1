@@ -23,13 +23,11 @@ import {
 import { StudentRecord } from '../data/seedData';
 import { BATTERY, DOMAINS, TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 import {
-  MASTERY_PERCENT,
   MINUTES_PER_SESSION,
-  PROGRAM_WEEKS,
+  PROGRAM_SESSIONS,
   SESSIONS_PER_WEEK,
   SKILLS,
   FOCUS_SKILLS,
-  STEP_BACK_PERCENT,
 } from '../cognitiveProfile/training';
 import { BAND_META, BandLegend, CentileTrack, bandOf } from './profile/CentileTrack';
 
@@ -87,7 +85,7 @@ function SampleProfileCard({ compact = false }: { compact?: boolean }) {
     <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
       <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-line">
         <div>
-          <p className="bz-small bz-muted">الملف المعرفي · نموذج توضيحي</p>
+          <p className="bz-small bz-muted">نتيجة الفحص · نموذج توضيحي</p>
           <p className="font-display font-bold text-ink text-lg mt-0.5">سارة · ٦ سنوات و٤ أشهر</p>
         </div>
         <span className="bz-badge bz-badge-risk">مؤشر خطر مرتفع</span>
@@ -110,7 +108,7 @@ function SampleProfileCard({ compact = false }: { compact?: boolean }) {
         <span className="bz-small text-ink-2">
           <strong className="text-ink">النمط:</strong> صوتي-سمعي
         </span>
-        <span className="bz-small text-brand font-semibold">خطة ٨ أسابيع جاهزة</span>
+        <span className="bz-small text-brand font-semibold">خطة {ar(PROGRAM_SESSIONS)} جلسة جاهزة</span>
       </div>
     </div>
   );
@@ -223,11 +221,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               <span className="text-brand">ودرّبه على ما يحتاجه بالضبط.</span>
             </h1>
             <p className="bz-lead mt-6 max-w-[38rem]">
-              تسع ألعاب قصيرة ترسم ملفًا معرفيًا لطفلك مقارنةً بأقرانه في العمر: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. ثم تبني له هَيَّا نَقْرَأْ برنامجًا تدريبيًا عربيًا لثمانية أسابيع يتكيّف مع تقدّمه.
+              تسع ألعاب قصيرة ترسم ملفًا معرفيًا لطفلك مقارنةً بأقرانه في العمر: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف. ثم تبني له هَيَّا نَقْرَأْ برنامجًا تدريبيًا عربيًا من {ar(PROGRAM_SESSIONS)} جلسة قصيرة يتكيّف مع تقدّمه، ويقيس هذا التقدّم في كل جلسة.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
-                ابدأ الفحص الشامل
+                ابدأ فحص مؤشرات عسر القراءة
                 <ArrowLeft size={18} aria-hidden="true" />
               </button>
               <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => scrollTo('sample-report')}>
@@ -239,7 +237,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {[
                 { k: `${ar(TOTAL_BATTERY_MINUTES)} دقيقة`, v: 'مدة الفحص' },
                 { k: `${ar(BATTERY.length)} ألعاب`, v: 'في ٥ مجالات' },
-                { k: `${ar(PROGRAM_WEEKS)} أسابيع`, v: 'برنامج تدريبي' },
+                { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'برنامج تدريبي' },
               ].map((s) => (
                 <div key={s.v} className="border-r-2 border-brand-soft pr-4">
                   <dt className="sr-only">{s.v}</dt>
@@ -330,7 +328,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {
                 icon: Dumbbell,
                 title: 'درّب',
-                meta: `${ar(PROGRAM_WEEKS)} أسابيع · ${ar(SESSIONS_PER_WEEK)} جلسات أسبوعيًا`,
+                meta: `${ar(PROGRAM_SESSIONS)} جلسة · ${ar(SESSIONS_PER_WEEK)} جلسات أسبوعيًا`,
                 body: 'برنامج يركّز على المهارات الأضعف، ويرفع المستوى عند الإتقان أو يخفضه وينبّه المعلم عند التعثّر.',
               },
             ].map((step, i) => (
@@ -353,7 +351,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
       <section className="bz-container py-16 sm:py-24">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
           <div className="bz-section-head mb-0">
-            <span className="bz-eyebrow">الفحص المعرفي الشامل</span>
+            <span className="bz-eyebrow">فحص مؤشرات عسر القراءة</span>
             <h2 className="bz-h2">تسع ألعاب، خمسة مجالات، صورة واضحة</h2>
             <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية.</p>
           </div>
@@ -455,7 +453,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
               {[
                 { k: `${ar(MINUTES_PER_SESSION)} دقيقة`, v: 'للجلسة' },
                 { k: `${ar(SESSIONS_PER_WEEK)} جلسات`, v: 'أسبوعيًا' },
-                { k: `${ar(PROGRAM_WEEKS)} أسابيع`, v: 'ثم إعادة فحص' },
+                { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'ثم إعادة فحص' },
               ].map((s) => (
                 <div key={s.v} className="bz-card-quiet p-4">
                   <p className="font-display font-bold text-ink text-xl">{s.k}</p>
@@ -480,11 +478,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             <div className="mt-6 grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl p-4 bg-brand-tint border border-line">
                 <p className="font-semibold text-brand-strong">يتقدّم مستوى</p>
-                <p className="bz-small text-ink-2 mt-1">عند {ar(MASTERY_PERCENT)}٪ فأكثر في جلستين متتاليتين.</p>
+                <p className="bz-small text-ink-2 mt-1">حين يقدّر نموذج تتبّع المعرفة أن احتمال إتقانه المستوى بلغ ٩٥٪، بعد ٥ إجابات على الأقل.</p>
               </div>
               <div className="rounded-xl p-4 bg-sun-soft border border-line">
                 <p className="font-semibold text-sun-strong">يعود مستوى وينبّه المعلم</p>
-                <p className="bz-small text-ink-2 mt-1">عند أقل من {ar(STEP_BACK_PERCENT)}٪ في جلستين متتاليتين.</p>
+                <p className="bz-small text-ink-2 mt-1">حين يبقى احتمال الإتقان أقل من ٢٠٪ بعد ٨ إجابات.</p>
               </div>
             </div>
             <p className="mt-6 bz-small bz-muted">
@@ -593,11 +591,11 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({
             نصف ساعة اليوم قد توفّر على طفلك سنوات من التعثّر.
           </h2>
           <p className="relative mt-4 text-[17px] leading-relaxed max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,.82)' }}>
-            ابدأ الفحص الآن، واحصل على الملف المعرفي وخطة التدريب فور انتهاء الألعاب.
+            ابدأ الفحص الآن، واحصل على النتيجة وخطة التدريب فور انتهاء الألعاب.
           </p>
           <div className="relative mt-8 flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('dyslexia-lab')}>
-              ابدأ الفحص الشامل <ArrowLeft size={18} aria-hidden="true" />
+              ابدأ فحص مؤشرات عسر القراءة <ArrowLeft size={18} aria-hidden="true" />
             </button>
             <button type="button" className="bz-btn bz-btn-outline-light bz-btn-lg" onClick={() => onNavigateTab('remediation-gym')}>
               صالة التدريب

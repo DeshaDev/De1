@@ -34,6 +34,7 @@ import {
 } from '../data/seedData';
 import { useAssessment } from '../contexts/AssessmentContext';
 import { authenticatedFetch } from '../utils/apiAuth';
+import ReadingErrorPanel from './ReadingErrorPanel';
 import {
   ArabicDialectCode,
   ARABIC_DIALECT_PROFILES,
@@ -1527,6 +1528,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </p>
               </div>
             </div>
+
+            {azureAssessmentComplete && aiAssessmentReceipt && activeStudent && (
+              <div className="pt-6">
+                <ReadingErrorPanel words={verifiedWords} passageId={passage.id} studentId={activeStudent.id} />
+              </div>
+            )}
 
             {/* Confirm & Next Button */}
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
