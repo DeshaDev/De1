@@ -103,7 +103,7 @@ export function ParentPortalView({
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
-  const [consentChecked, setConsentChecked] = useState(true);
+  const [consentChecked, setConsentChecked] = useState(false);
   const [formError, setFormError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,9 +123,8 @@ export function ParentPortalView({
     setFormError('');
 
     const cleanName = childName.trim();
-    const nameParts = cleanName.split(/\s+/).filter(Boolean);
-    if (nameParts.length < 2) {
-      setFormError('يرجى إدخال اسم الطفل الثنائي بشكل صحيح (الاسم الأول واسم العائلة).');
+    if (cleanName.length < 2) {
+      setFormError('أدخل اسمًا مستعارًا أو لقبًا للطفل لا يقل عن حرفين.');
       return;
     }
 
@@ -141,8 +140,12 @@ export function ParentPortalView({
       }
     }
 
+    if (!Number.isInteger(ageYears) || ageYears < 4 || ageYears > 8) {
+      setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
+      return;
+    }
     if (!consentChecked) {
-      setFormError('يرجى تأكيد موافقة ولي الأمر لمتابعة إنشاء الملف والبدء.');
+      setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
       return;
     }
 
@@ -162,6 +165,7 @@ export function ParentPortalView({
         setChildName('');
         setParentNotes('');
         setParentPassword('');
+        setConsentChecked(false);
         setShowAddForm(false);
         onSelectStudent(newId, 'dyslexia-lab');
       }
@@ -276,7 +280,7 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>خصوصية تامة وأمان عائلي:</strong> جميع بيانات الأطفال والتقارير تُحفظ مشفرة في قاعدة بياناتك الخاصة، ولا تُشارك مع أي طرف ثالث. التقييم يتم عبر ألعاب تفاعلية ممتعة ومبسطة.
+            <strong>الخصوصية ومعالجة البيانات:</strong> قد تُحفظ بيانات الطفل على الجهاز أو في حساب الأسرة أو سجل المؤسسة بحسب طريقة الاستخدام. تستخدم بعض الميزات الاختيارية مزودي خدمات تقنيين؛ وتوضح سياسة الخصوصية أنواع البيانات ومزودي المعالجة. لا تُستخدم البيانات للإعلانات.
           </div>
         </div>
 
@@ -464,27 +468,27 @@ export function ParentPortalView({
                 </div>
               )}
 
-              {/* Child Name (Two-part name) */}
+              {/* Child pseudonym: avoid unnecessary personal identifiers. */}
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-700">اسم الطفل الثنائي *</span>
+                <span className="text-xs font-bold text-slate-700">اسم الطفل المستعار أو اللقب *</span>
                 <input
                   type="text"
                   required
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  placeholder="مثال: سلطان العتيبي"
+                  placeholder="مثال: سارة"
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
                 />
               </label>
 
-              {/* Age Selection (Expanded to 12+) */}
+              {/* Age selection: current battery is designed for ages 4–8. */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Calendar size={14} className="text-slate-400" />
                   <span>عمر الطفل بالسنوات *</span>
                 </span>
-                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
-                  {[4, 5, 6, 7, 8, 9, 10, 11, 12].map((age) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {[4, 5, 6, 7, 8].map((age) => (
                     <button
                       key={age}
                       type="button"
@@ -495,27 +499,24 @@ export function ParentPortalView({
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      {age >= 12 ? '12+ سنة' : `${age} سنوات`}
+                      {toArabicNum(age)} سنوات
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Grade Selection (Expanded to Grade 6+) */}
+              {/* Grade options aligned to current screening age range. */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <BookOpen size={14} className="text-slate-400" />
                   <span>المرحلة الدراسية الحالية *</span>
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { val: 0, label: 'تمهيدي / روضة' },
                     { val: 1, label: 'الصف الأول' },
                     { val: 2, label: 'الصف الثاني' },
                     { val: 3, label: 'الصف الثالث' },
-                    { val: 4, label: 'الصف الرابع' },
-                    { val: 5, label: 'الصف الخامس' },
-                    { val: 6, label: 'الصف السادس+' },
                   ].map((g) => (
                     <button
                       key={g.val}
@@ -537,7 +538,7 @@ export function ParentPortalView({
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
                 <p className="text-[11px] text-slate-500">
-                  تساعد المحرك التكيفي على استبعاد الفروق الصوتية اللهجية الطبيعية (مثل الذال والزاي، والقاف والجيم).
+                  تساعد معرفة اللهجة المنزلية على تفسير الفروق الصوتية بحذر، ولا تعني أن كل اختلاف في النطق خطأ.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
@@ -598,7 +599,7 @@ export function ParentPortalView({
                     </label>
                   </div>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    تُحفظ نتائج فحص طفلك تلقائياً في حسابك المشفر، لتتمكن من الرجوع للتقرير والبرنامج التدريبي في أي وقت من هاتفك أو حاسوبك.
+                    قد تُحفظ نتائج الطفل في حساب الأسرة للرجوع إليها لاحقًا. راجع سياسة الخصوصية لمعرفة مواقع التخزين ومزودي المعالجة وفترات الاحتفاظ.
                   </p>
                 </div>
               )}
@@ -610,13 +611,13 @@ export function ParentPortalView({
                   <span>ملاحظات خاصة عن الطفل (اختياري)</span>
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  تُساعد الوكيل الذكي ونموذج التقييم على تخصيص الفحص ومطابقة تمارين القراءة مع التحديات التي يواجهها طفلك تحديداً.
+                  ملاحظات عامة اختيارية. لا تكتب معلومات طبية أو تفاصيل تعريفية لا تحتاجها المنصة.
                 </p>
                 <input
                   type="text"
                   value={parentNotes}
                   onChange={(e) => setParentNotes(e.target.value)}
-                  placeholder="مثال: يخلط بين الحروف المتشابهة، يتردد عند قراءة الحركات..."
+                  placeholder="مثال: يفضّل الاستماع إلى الكلمة قبل قراءتها..."
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-normal text-slate-800 text-sm"
                 />
               </label>
@@ -630,7 +631,7 @@ export function ParentPortalView({
                   className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                 />
                 <span className="text-xs text-slate-700 leading-relaxed">
-                  أوافق بصفتي ولي أمر الطفل على إجراء فحص مؤشرات عسر القراءة عبر المنصة (فحص مبدئي وليس تشخيصًا)، وبناء البرنامج التدريبي المخصص له وفق سياسة الخصوصية.
+                  أوافق بصفتي ولي أمر الطفل على إنشاء ملف للأنشطة التعليمية واستكشاف مهارات القراءة وفق سياسة الخصوصية. أعلم أن النتائج استكشافية وليست تشخيصًا أو مقارنة معيارية.
                 </span>
               </label>
 
