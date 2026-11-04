@@ -591,121 +591,6 @@ export default function App() {
     }
   };
 
-  const handleStartMockUserJourney = (
-    name: string,
-    grade: number,
-    roleLabel: string,
-    guardianConsent?: {
-      guardianName: string;
-      guardianRelationship: string;
-      guardianConsentGiven: boolean;
-      guardianAudioConsentGiven: boolean;
-      guardianConsentRecordedAt: string;
-      guardianConsentSource: string;
-    },
-    targetTab?: ActiveTab
-  ) => {
-    if (baseeraSession?.role === 'educator_readonly') {
-      setAiStatusBanner('رمزك يمنح صلاحية القراءة فقط. لا يمكنك إنشاء ملفات طلاب أو حفظ نتائج جديدة.');
-      return;
-    }
-    const cleanName = name.trim().replace(/\s+/g, ' ');
-    if (!cleanName) {
-      setAiStatusBanner('أدخل اسمًا مستعارًا أو تجريبيًا للمتابعة. لا تستخدم بيانات طفل حقيقية في هذه النسخة.');
-      return;
-    }
-
-    const consentGiven = guardianConsent?.guardianConsentGiven === true;
-    const consentRecordedAt = consentGiven
-      ? guardianConsent?.guardianConsentRecordedAt
-      : undefined;
-    const consentSource = consentGiven
-      ? (guardianConsent?.guardianConsentSource || `إقرار ولي الأمر (${guardianConsent?.guardianName || 'ولي الأمر'} - ${guardianConsent?.guardianRelationship || 'الوصي'})`)
-      : undefined;
-    const audioConsentGiven = guardianConsent?.guardianAudioConsentGiven === true;
-
-    const existing = students.find(
-      (student) =>
-        !student.isDemoRecord &&
-        student.name.trim().replace(/\\s+/g, ' ') === cleanName.replace(/\\s+/g, ' ')
-    );
-    if (existing) {
-      if (existing.sessionStatus === 'completed') {
-        const resumedRecord: StudentRecord = {
-          ...existing,
-          sessionStatus: 'in_progress',
-          sessionCompletedAt: undefined,
-          sessionRoleLabel: roleLabel,
-          assessmentHistory: [...(existing.assessmentHistory || []), snapshotCompletedSession(existing)],
-          guardianConsentGiven: consentGiven,
-          guardianConsentRecordedAt: consentRecordedAt,
-          guardianConsentSource: consentSource,
-          guardianName: guardianConsent?.guardianName,
-          guardianRelationship: guardianConsent?.guardianRelationship,
-          guardianAudioConsentGiven: audioConsentGiven,
-          guardianAudioConsentRecordedAt: audioConsentGiven ? consentRecordedAt : undefined,
-          speechRecognitionUsed: audioConsentGiven,
-          lastScreenedDate: '',
-        };
-        setStudents((prev) => prev.map((student) => student.id === existing.id ? resumedRecord : student));
-      }
-      setSelectedStudentId(existing.id);
-    } else {
-      const newStudent: StudentRecord = {
-        id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
-        name: cleanName,
-        isDemoRecord: false,
-        sessionStatus: 'in_progress',
-        sessionRoleLabel: roleLabel,
-        assessmentHistory: [],
-        gradeLevel: grade,
-        ageYears: grade + 6,
-        schoolName: 'مدرستي',
-        lastScreenedDate: '—',
-        passageId: ARABIC_READING_PASSAGES.find((passage) => passage.gradeLevel === grade)?.id || ARABIC_READING_PASSAGES[0].id,
-        guardianConsentGiven: consentGiven,
-        guardianConsentRecordedAt: consentRecordedAt,
-        guardianConsentSource: consentSource,
-        guardianName: guardianConsent?.guardianName,
-        guardianRelationship: guardianConsent?.guardianRelationship,
-        guardianAudioConsentGiven: audioConsentGiven,
-        guardianAudioConsentRecordedAt: audioConsentGiven ? consentRecordedAt : undefined,
-        speechRecognitionUsed: audioConsentGiven,
-        wpm: 0,
-        dyslexiaRiskScore: null,
-        readingHeuristicIndicator: null,
-        readingRiskLevel: 'unassessed',
-        readingRiskLabelAr: 'لم تبدأ جلسة القراءة بعد.',
-        problematicWords: [],
-        comprehensionScore: 0,
-        dyscalculiaAssessed: false,
-        subitizingAccuracy: null,
-        avgSubitizingMs: null,
-        numberLinePAE: null,
-        transcodingAccuracy: null,
-        reversalErrorCount: null,
-        dyscalculiaRiskScore: null,
-        mathHeuristicIndicator: null,
-        mathRiskLevel: 'unassessed',
-        mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
-        learningReport: {
-          learningSummary: 'جلسة جديدة قيد البدء؛ تظهر التوصيات والمؤشرات التربوية بعد إكمال أول تمرين.',
-          ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبع العين.',
-          orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام القراءة وتوفر تفريغ صوتي فعلي.',
-          dyscalculiaSpatialAnalysis: 'غير منطبق؛ يركز المسار الحالي على مهارات القراءة والوعي الصوتي.',
-          interventionExercises: [],
-          classroomAccommodations: [],
-        },
-      };
-      setStudents((prev) => [newStudent, ...prev]);
-      setSelectedStudentId(newStudent.id);
-    }
-    setActiveTab(targetTab || 'remediation-gym');
-    setAiStatusBanner(
-      `بدأت رحلة تدريبية جديدة للمتعلم «${cleanName}» (الصف ${grade}).`
-    );
-  };
-
   /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
   const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string }): string | null => {
     if (baseeraSession?.role === 'educator_readonly') return null;
@@ -728,7 +613,7 @@ export default function App() {
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianConsentSource: `إقرار الفاحص (${input.examinerName.trim() || 'الفاحص'}) بموافقة ولي الأمر في شاشة إعداد الفحص`,
+      guardianConsentSource: `إقرار ذاتي من مستخدم شاشة الفحص (${input.examinerName.trim() || 'غير محدد'})؛ لم تتحقق المنصة من هوية ولي الأمر أو صحة التفويض`,
       guardianAudioConsentGiven: false,
       speechRecognitionUsed: false,
       wpm: 0,
@@ -775,6 +660,12 @@ export default function App() {
     parentEmail?: string;
     parentPassword?: string;
   }): Promise<string | null> => {
+    if (!Number.isInteger(child.ageYears) || child.ageYears < 4 || child.ageYears > 8) {
+      throw new Error('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
+    }
+    if (!Number.isInteger(child.gradeLevel) || child.gradeLevel < 0 || child.gradeLevel > 3) {
+      throw new Error('اختر المرحلة من الروضة حتى الصف الثالث.');
+    }
     let currentUser = supabaseUser;
 
     if (!currentUser && child.parentEmail && child.parentPassword) {
@@ -809,8 +700,8 @@ export default function App() {
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianConsentSource: `موافقة ولي الأمر المسجلة عبر بوابة الأسرة (${recordedAt.split('T')[0]})`,
-      guardianAudioConsentGiven: true,
+      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})؛ لم تتحقق المنصة من هوية ولي الأمر أو صحة التفويض`,
+      guardianAudioConsentGiven: false,
       parentNotes: child.notes || undefined,
       speechRecognitionUsed: false,
       wpm: 0,
@@ -1323,7 +1214,6 @@ export default function App() {
             <HomeLandingView
               students={students}
               activeStudent={selectedStudent}
-              onStartMockUserJourney={handleStartMockUserJourney}
               onSelectExistingDemoJourney={handleSelectExistingDemoJourney}
               onNavigateTab={(tab) => setActiveTab(tab)}
               onSelectStudentReport={(studentId) => {
@@ -1805,7 +1695,6 @@ export default function App() {
               <IndividualPlanPanel
                 student={selectedStudent}
                 progress={selectedStudent.trainingProgress ?? null}
-                canApprove={baseeraSession?.role === 'school_admin' || baseeraSession?.role === 'platform_admin'}
                 onRecordUpdated={(updated) => {
                   setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
                   if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);

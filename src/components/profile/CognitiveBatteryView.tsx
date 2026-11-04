@@ -297,7 +297,8 @@ function needsOwnRecord(student: StudentRecord): boolean {
 }
 
 function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: BatterySession) => void }) {
-  const defaultYears = student.ageYears >= 4 && student.ageYears <= 8 ? student.ageYears : 6;
+  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
+  const defaultYears = ageIsSupported ? student.ageYears : 6;
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
@@ -305,6 +306,16 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
   const [dialect, setDialect] = useState<HomeDialect | ''>('');
   const [checks, setChecks] = useState({ consent: false, quiet: false, headphones: false, ready: false });
   const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
+
+  if (!ageIsSupported) {
+    return (
+      <section className="bz-card bz-card-pad max-w-2xl mx-auto space-y-3" dir="rtl" role="alert">
+        <h2 className="bz-h3">هذا الفحص غير متاح لهذا العمر</h2>
+        <p className="bz-body">البطارية الحالية مصممة للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
+        <p className="bz-small bz-muted">يمكن استخدام القارئ الميسّر والأنشطة التعليمية العامة، أو تصحيح العمر المسجل إذا كان غير دقيق.</p>
+      </section>
+    );
+  }
 
   return (
     <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 items-start" dir="rtl">
@@ -334,7 +345,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
                 </select>
               </label>
             </div>
-            <span className="bz-hint">تُقارن نتائج الطفل بأقرانه في العمر نفسه، لذلك تهمّ دقة الأشهر.</span>
+            <span className="bz-hint">يساعد العمر الدقيق على وصف ظروف أداء الطفل بحذر. النتائج الحالية وصفية داخل الأنشطة وليست مقارنة معيارية بالأقران.</span>
             {ageCautionAr(years * 12 + months) && (
               <p className="rounded-xl bg-warn-soft p-3 bz-small text-ink-2">{ageCautionAr(years * 12 + months)}</p>
             )}
@@ -382,7 +393,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               <input type="checkbox" checked={checks.consent} onChange={(e) => setChecks({ ...checks, consent: e.target.checked })} />
               <span className="text-ink-2">
                 <span className="font-semibold text-ink">موافقة ولي الأمر</span>
-                <span className="block bz-small bz-muted">أقر بموافقة ولي أمر الطفل على إجراء الفحص وحفظ نتائجه على هذا الجهاز.</span>
+                <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
           </div>
@@ -413,7 +424,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
           <h2 className="bz-h3">كيف يسير الفحص؟</h2>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
-              `تسع ألعاب قصيرة، مدتها الكلية نحو ${toArabicDigits(TOTAL_BATTERY_MINUTES)} دقيقة. يمكن تقسيمها على جلستين (١–٥ ثم ٦–٩).`,
+              `تسع ألعاب قصيرة، مدتها الكلية نحو ${toArabicDigits(TOTAL_BATTERY_MINUTES)} دقيقة. تُقسّم إلى ثلاث جلسات قصيرة، في كل منها ثلاث ألعاب تقريبًا.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
               'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',

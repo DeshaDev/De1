@@ -305,7 +305,7 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
 
   if (normalizedRaw.assessmentModality === 'eye_voice') {
     normalizedRaw.assessmentModality =
-      normalized.oralReadingAssessed === true || normalized.teacherVerified === true
+      normalized.oralReadingAssessed === true
         ? 'voice_only'
         : 'reading_only';
   }
@@ -317,7 +317,7 @@ function sanitizeStudentRecord(s: StudentRecord): StudentRecord {
       for (const key of cameraFieldNames) delete snapshot[key];
       if (snapshot.assessmentModality === 'eye_voice') {
         snapshot.assessmentModality =
-          snapshot.teacherVerified === true ? 'voice_only' : 'reading_only';
+          snapshot.oralReadingAssessed === true ? 'voice_only' : 'reading_only';
       }
       snapshot.dyslexiaRiskScore = null;
       snapshot.readingHeuristicIndicator = null;
@@ -2572,8 +2572,8 @@ async function startServer() {
       : undefined;
     const gradeLevel = storedStudent?.gradeLevel ?? requestedGrade;
 
-    // Use only target words derived from a completed server-verified audio assessment or
-    // an explicitly legacy-reviewed session. The child never needs a teacher to unlock adaptation.
+    // Target words are accepted only from a completed, server-verified AI audio assessment.
+    // Legacy human-reviewed records do not unlock or alter the current adaptive path.
     const hasAIValidatedAlignment = Boolean(
       storedStudent &&
       storedStudent.sessionStatus === 'completed' &&
@@ -2582,13 +2582,7 @@ async function startServer() {
       storedStudent.evidenceProvenance === 'server-verified-audio' &&
       Array.isArray(storedStudent.verifiedWordsAlignment)
     );
-    const hasLegacyTeacherAlignment = Boolean(
-      storedStudent &&
-      storedStudent.sessionStatus === 'completed' &&
-      storedStudent.teacherVerified === true &&
-      Array.isArray(storedStudent.verifiedWordsAlignment)
-    );
-    const sourceAlignment = hasAIValidatedAlignment || hasLegacyTeacherAlignment
+    const sourceAlignment = hasAIValidatedAlignment
       ? storedStudent?.verifiedWordsAlignment
       : [];
     const cleanWords = (sourceAlignment || [])
@@ -2599,7 +2593,6 @@ async function startServer() {
       .map((word: string) => word.normalize('NFC').replace(/[^\u0600-\u06FF\u064B-\u065F\u0670ـ\s]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40))
       .filter(Boolean);
     const hasAIValidatedTargets = hasAIValidatedAlignment && cleanWords.length > 0;
-    const hasTeacherReviewedTargets = hasLegacyTeacherAlignment && cleanWords.length > 0;
 
     // Turn incorrect number-line/transcoding trials into concrete educational practice
     // targets; these are item-level observations, not dyscalculia classifications.
@@ -2640,7 +2633,6 @@ async function startServer() {
       studentName: 'الطالب',
       gradeLevel,
       effectiveWords: cleanWords,
-      targetsTeacherReviewed: hasTeacherReviewedTargets,
       targetsAIValidated: hasAIValidatedTargets,
       targetsMathValidated: hasAIValidatedMathTargets,
       mathTargets: uniqueMathTargets,
@@ -2654,9 +2646,9 @@ async function startServer() {
       source: hasAIValidatedTargets || hasAIValidatedMathTargets
         ? 'curated-adaptive-from-validated-ai-evidence'
         : 'curated-grade-banded',
-      targetWordsUsed: hasAIValidatedTargets || hasTeacherReviewedTargets ? cleanWords : [],
+      targetWordsUsed: hasAIValidatedTargets ? cleanWords : [],
       targetWordsAreAIValidated: hasAIValidatedTargets,
-      targetWordsAreTeacherReviewed: hasTeacherReviewedTargets,
+      targetWordsAreTeacherReviewed: false,
       mathTargetsUsed: hasAIValidatedMathTargets ? uniqueMathTargets : [],
       session: sessionPlan,
     });
@@ -2967,46 +2959,13 @@ async function startServer() {
     }
   });
 
-  /** A teacher or specialist approves (and may edit) a plan; the approver comes from the session. */
-  app.put('/api/students/:id/individual-plan', requireBaseeraAuth('students:write'), (req, res) => {
-    const found = findConsentedStudent(req, res);
-    if (!found) return;
-    const body = req.body || {};
-    const plan = DraftPlanSchema.safeParse(body.plan);
-    const facts = PlanFactsSchema.safeParse(body.facts);
-    if (!plan.success || !facts.success || (body.source !== 'model' && body.source !== 'rules')) {
-      res.status(400).json({ error: 'بيانات الخطة غير صالحة.' });
-      return;
-    }
-    // Edits by the reviewer must still respect the language rules.
-    const checked = validateDraftPlan(plan.data, facts.data);
-    if (!checked.ok) {
-      res.status(400).json({ error: 'الخطة المعدّلة تخالف القيود.', validationErrors: checked.errors });
-      return;
-    }
-    const updatedRecord: StudentRecord = {
-      ...studentsDb[found.idx],
-      individualPlan: {
-        status: 'approved',
-        source: body.source,
-        plan: plan.data,
-        referralAr: referralFor(facts.data),
-        facts: facts.data,
-        generatedAt: typeof body.generatedAt === 'string' && Number.isFinite(Date.parse(body.generatedAt)) ? body.generatedAt : new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        approvedBy: found.session.accountName,
-        editedByReviewer: body.editedByReviewer === true,
-      },
-    };
-    const nextRecords = [...studentsDb];
-    nextRecords[found.idx] = updatedRecord;
-    const committed = commitStudentMutationWithAudit(studentsDb, nextRecords, found.session, 'student.plan.approve', updatedRecord.id, ['individualPlan']);
-    if (!committed.ok) {
-      res.status(503).json({ error: 'تعذر حفظ الخطة في التخزين المشفر.' });
-      return;
-    }
-    studentsDb = committed.students;
-    res.status(200).json({ student: updatedRecord, persisted: true });
+  // Per-child teacher approval was retired: plan suggestions are generated and validated
+  // automatically. Human review belongs to product/content governance before release, not each learner.
+  app.put('/api/students/:id/individual-plan', (_req, res) => {
+    res.status(410).json({
+      code: 'PER_CHILD_PLAN_APPROVAL_RETIRED',
+      error: 'تم إيقاف اعتماد الخطة يدويًا لكل طفل. تُعرض اقتراحات الممارسة بعد التحقق الآلي، ولا تُعد قرارًا تشخيصيًا.',
+    });
   });
 
   app.post('/api/ai/generate-iep', requireBaseeraAuth('ai:analyze'), (_req, res) => {

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { CheckCircle2, FileText, Printer, Sparkles } from 'lucide-react';
+import { FileText, Printer, Sparkles } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
-import { SUBTESTS_BY_ID } from '../../cognitiveProfile/battery';
+import { scoredItemCount, SUBTESTS_BY_ID, type SubtestId } from '../../cognitiveProfile/battery';
 import { PROGRAM_SESSIONS, SKILLS, SUBTEST_TO_SKILLS, masteryEstimate, sessionsCompleted, type SkillId, type TrainingProgress } from '../../cognitiveProfile/training';
 import { summarizeProbes } from '../../cognitiveProfile/progressProbe';
 import {
   ACTIVITY_CATALOG,
   FREQUENCIES,
   buildPlanFacts,
-  referralFor,
   rulesDraft,
   validateDraftPlan,
-  type DraftPlan,
   type IndividualPlanRecord,
   type PlanFacts,
 } from '../../cognitiveProfile/individualPlan';
@@ -19,22 +17,32 @@ import { authenticatedFetch } from '../../utils/apiAuth';
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
-/** Facts for the plan, from the child's stored results only. */
+/** Build AI-plan inputs from task-level results, never provisional centiles or risk bands. */
 export function planFactsFromRecord(student: StudentRecord, progress: TrainingProgress | null): PlanFacts {
-  const summary = student.cognitiveBattery?.summary ?? null;
-  const weak = (summary?.subtests ?? [])
-    .filter((s) => s.band === 'severe' || s.band === 'below')
-    .map((s) => ({ skill: (SUBTEST_TO_SKILLS[s.subtestId]?.[0] ?? s.subtestId) as string, labelAr: SUBTESTS_BY_ID[s.subtestId].skillNameAr, centile: s.centile }));
-  const strong = (summary?.subtests ?? []).filter((s) => s.band === 'strength').map((s) => ({ labelAr: SUBTESTS_BY_ID[s.subtestId].skillNameAr, centile: s.centile }));
+  const battery = student.cognitiveBattery ?? null;
+  const summary = battery?.summary ?? null;
+  const results = Object.entries(battery?.results ?? {}).flatMap(([rawId, result]) => {
+    if (!result) return [];
+    const subtestId = rawId as SubtestId;
+    const total = scoredItemCount(SUBTESTS_BY_ID[subtestId]);
+    const correct = result.responses.filter((response) => response.correct).length;
+    return [{
+      skill: (SUBTEST_TO_SKILLS[subtestId]?.[0] ?? subtestId) as string,
+      labelAr: SUBTESTS_BY_ID[subtestId].skillNameAr,
+      correct,
+      total,
+      percent: Math.round((correct / total) * 100),
+    }];
+  });
   const probe = progress ? summarizeProbes(progress.probes ?? []) : null;
   return buildPlanFacts({
     ageYears: student.ageYears,
-    screening: summary ? { risk: summary.risk, completedGames: summary.completedSubtests, weak, strong } : null,
+    screening: summary ? { completedGames: summary.completedSubtests, results } : null,
     programme: progress
       ? {
           sessionsDone: sessionsCompleted(progress),
           sessionsPlanned: PROGRAM_SESSIONS,
-          skills: progress.plan.focus.map((skill: SkillId) => ({ skill, level: masteryEstimate(progress, skill).level, p: masteryEstimate(progress, skill).p })),
+          skills: progress.plan.focus.map((skill: SkillId) => ({ skill, level: masteryEstimate(progress, skill).level })),
           probe: probe ? { baseline: probe.baseline, latest: probe.latest, sessions: probe.count, reliable: probe.reliable } : null,
         }
       : null,
@@ -45,21 +53,23 @@ export function planFactsFromRecord(student: StudentRecord, progress: TrainingPr
 interface Props {
   student: StudentRecord;
   progress: TrainingProgress | null;
-  /** A school account that can write this record may approve (the server records who approved). */
-  canApprove: boolean;
   onRecordUpdated?: (student: StudentRecord) => void;
+  /** Retained as an ignored compatibility prop for the existing program-page caller. */
+  canApprove?: boolean;
 }
 
-export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpdated }: Props) {
+export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Props) {
   const [record, setRecord] = useState<IndividualPlanRecord | null>(student.individualPlan ?? null);
   const [note, setNote] = useState<{ text: string; errors: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<DraftPlan | null>(null);
-  const [error, setError] = useState('');
+  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
 
   const generate = async () => {
+    if (!ageIsSupported) {
+      setNote({ text: 'اقتراحات الممارسة المرتبطة بالفحص الحالي مخصصة للأطفال من ٤ إلى ٨ سنوات. لن ننشئ خطة آلية لطفل خارج هذا النطاق.', errors: [] });
+      return;
+    }
     setBusy(true);
-    setError('');
     const facts = planFactsFromRecord(student, progress);
     let next: IndividualPlanRecord;
     try {
@@ -70,86 +80,59 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
       });
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
+      const checked = validateDraftPlan(data.plan, data.facts);
+      if (!checked.ok || !checked.plan) throw new Error('تعذر التحقق من مخرجات الاقتراح الآلي.');
       next = {
         status: 'draft',
-        source: data.source,
-        plan: data.plan,
-        referralAr: data.referralAr ?? null,
+        source: data.source === 'model' ? 'model' : 'rules',
+        plan: checked.plan,
+        referralAr: null,
         facts: data.facts,
-        generatedAt: data.generatedAt,
+        generatedAt: typeof data.generatedAt === 'string' ? data.generatedAt : new Date().toISOString(),
         agent: data.agent ? { model: String(data.agent.model), trace: Array.isArray(data.agent.trace) ? data.agent.trace : [] } : null,
       };
       setNote(
         data.noteAr
-          ? { text: data.noteAr, errors: data.validationErrors ?? [] }
+          ? { text: data.noteAr, errors: Array.isArray(data.validationErrors) ? data.validationErrors : [] }
           : data.cached
-            ? { text: 'لم تتغير بيانات الطفل منذ آخر مسودة؛ أُعيدت المسودة نفسها دون استدعاء جديد للنموذج.', errors: [] }
+            ? { text: 'لم تتغير بيانات الطفل منذ آخر اقتراح؛ أُعيد الاقتراح نفسه دون استدعاء جديد للنموذج.', errors: [] }
             : null
       );
     } catch {
-      // No server (e.g. static hosting) or no access: the same rules-based draft, built here.
-      next = { status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr: referralFor(facts), facts, generatedAt: new Date().toISOString() };
-      setNote({ text: 'خدمة النموذج اللغوي غير متاحة الآن؛ هذه مسودة مبنية على قواعد ثابتة من بيانات الطفل.', errors: [] });
-    }
-    setRecord(next);
-    setBusy(false);
-    if (!student.isDemoRecord) onRecordUpdated?.({ ...student, individualPlan: next });
-  };
-
-  const approve = async () => {
-    if (!record) return;
-    const plan = editing ?? record.plan;
-    const checked = validateDraftPlan(plan, record.facts);
-    if (!checked.ok) {
-      setError(`لا يمكن الاعتماد: ${checked.errors.join('، ')}`);
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const res = await authenticatedFetch(`/api/students/${encodeURIComponent(student.id)}/individual-plan`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, facts: record.facts, source: record.source, generatedAt: record.generatedAt, editedByReviewer: editing !== null }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.student) throw new Error(data?.error || 'تعذر الاعتماد.');
-      setRecord(data.student.individualPlan);
-      setEditing(null);
-      onRecordUpdated?.(data.student);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذر الاعتماد.');
+      next = { status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr: null, facts, generatedAt: new Date().toISOString() };
+      setNote({ text: 'خدمة النموذج اللغوي غير متاحة أو لم تجتز المخرجات الفحص الآلي؛ عُرض اقتراح مبني على قواعد ثابتة من نتائج المهام.', errors: [] });
     } finally {
       setBusy(false);
     }
+    setRecord(next);
+    if (!student.isDemoRecord) onRecordUpdated?.({ ...student, individualPlan: next });
   };
 
-  const shown = editing ?? record?.plan ?? null;
+  const shown = record?.plan ?? null;
 
   return (
     <section className="bz-card p-6 space-y-4 print-report-root" aria-labelledby={`plan-${student.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id={`plan-${student.id}`} className="bz-h3 flex items-center gap-2"><FileText size={20} aria-hidden="true" /> الخطة التعليمية الفردية</h2>
+          <h2 id={`plan-${student.id}`} className="bz-h3 flex items-center gap-2"><FileText size={20} aria-hidden="true" /> اقتراحات الممارسة التعليمية</h2>
           {record && (
             <p className="bz-small mt-1">
               {record.status === 'approved' ? (
-                <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                  <CheckCircle2 size={15} /> معتمدة من {record.approvedBy} في {new Date(record.approvedAt!).toLocaleDateString('ar-EG')}
-                  {record.editedByReviewer ? ' (بعد تعديله)' : ''}
-                </span>
+                <span className="font-semibold text-ink-2">اقتراح محفوظ من إصدار سابق</span>
               ) : (
-                <span className="font-semibold text-warn">مسودة — لا تُعتمد إلا بعد مراجعة معلم أو أخصائي</span>
+                <span className="font-semibold text-brand">اقتراح مولّد آليًا · لا يتطلب اعتمادًا يدويًا</span>
               )}
               <span className="block text-ink-2">
-                {record.source === 'model' ? 'كتبها وكيل ذكي (نموذج لغوي) من بيانات الطفل فقط: حلّل البيانات، وكتب، وتحقق بأداة آلية، وصحّح أخطاءه (لا أرقام من خارج البيانات، ولا لغة تشخيصية).' : 'مبنية على قواعد ثابتة من بيانات الطفل.'}
+                {record.source === 'model'
+                  ? 'صاغه نموذج لغوي من ملخصات أداء محدودة، ثم اجتاز تحققًا آليًا من البنية والأرقام واللغة. قد يخطئ النموذج.'
+                  : 'اقتراح مبني على قواعد ثابتة من نتائج المهام المتاحة.'}
               </span>
             </p>
           )}
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
-          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" disabled={busy} onClick={generate}>
-            <Sparkles size={15} /> {record ? 'مسودة جديدة' : 'اقترح خطة فردية'}
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" disabled={busy || !ageIsSupported} onClick={generate}>
+            <Sparkles size={15} /> {record ? 'إنشاء اقتراح جديد' : 'اقترح أنشطة للممارسة'}
           </button>
           {record && (
             <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={() => window.print()}>
@@ -159,12 +142,14 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
         </div>
       </div>
 
+      {busy && <p role="status" className="bz-small text-ink-2">يجري إعداد الاقتراح والتحقق من مخرجاته…</p>}
+
       {note && (
         <div className="rounded-xl bg-soft p-3 text-xs text-ink-2">
           <p>{note.text}</p>
           {note.errors.length > 0 && (
             <details className="mt-1">
-              <summary>لماذا رُفضت مسودة النموذج؟</summary>
+              <summary>تفاصيل التحقق الآلي</summary>
               <ul className="list-disc pr-5">{note.errors.map((e) => <li key={e}>{e}</li>)}</ul>
             </details>
           )}
@@ -173,87 +158,67 @@ export function IndividualPlanPanel({ student, progress, canApprove, onRecordUpd
 
       {record?.agent && record.agent.trace.length > 0 && (
         <details className="rounded-xl border border-line p-3 text-xs text-ink-2">
-          <summary className="cursor-pointer font-semibold text-ink">خطوات الوكيل الذكي ({record.agent.model})</summary>
+          <summary className="cursor-pointer font-semibold text-ink">خطوات التوليد والتحقق ({record.agent.model})</summary>
           <ol className="mt-2 space-y-1 list-decimal pr-5">
             {record.agent.trace.map((t, i) => (
               <li key={i}>
                 <span className={t.ok ? 'text-emerald-700' : 'text-warn'}>{t.ok ? '✓' : '✗'}</span>{' '}
-                {{ analysis: 'تحليل', draft: 'كتابة', verify: 'تحقق', revise: 'تصحيح' }[t.step] ?? t.step}: {t.noteAr}
+                {{ analysis: 'تحليل', draft: 'صياغة', verify: 'تحقق', revise: 'تصحيح' }[t.step] ?? t.step}: {t.noteAr}
               </li>
             ))}
           </ol>
           <p className="mt-1">
-            الكلمات المعالجة (للتكلفة): {ar(record.agent.trace.reduce((n, t) => n + (t.inputTokens ?? 0) + (t.outputTokens ?? 0), 0))} وحدة.
+            وحدات المعالجة التقديرية للتكلفة: {ar(record.agent.trace.reduce((n, t) => n + (t.inputTokens ?? 0) + (t.outputTokens ?? 0), 0))}.
           </p>
         </details>
       )}
 
-      {!record && <p className="bz-small text-ink-2">تُكتب الخطة من نتيجة الفحص وتقدّم البرنامج وتحليل القراءة الجهرية، ثم يراجعها المعلم أو الأخصائي ويعتمدها.</p>}
+      {!record && (
+        <p className="bz-small text-ink-2">
+          {ageIsSupported
+            ? 'تُنشأ هذه الاقتراحات آليًا من نتائج المهام وبيانات الممارسة المتاحة. لا يحتاج كل طفل إلى مراجعة أو اعتماد يدوي؛ ويمكن للأسرة اختيار ما يلائم الطفل وتجاهل أي نشاط غير مناسب.'
+            : 'هذا المسار مخصص حاليًا للأعمار من ٤ إلى ٨ سنوات فقط. يمكن للأسرة استخدام أدوات القراءة الميسّرة والأنشطة العامة دون إنشاء اقتراح مرتبط بالفحص.'}
+        </p>
+      )}
 
       {shown && record && (
         <div className="space-y-4 text-sm text-ink">
-          {editing ? (
-            <textarea className="w-full rounded-xl border border-line p-3" rows={3} value={editing.summaryAr} onChange={(e) => setEditing({ ...editing, summaryAr: e.target.value })} aria-label="ملخص الخطة" />
-          ) : (
-            <p className="leading-relaxed">{ar(shown.summaryAr)}</p>
-          )}
+          <p className="leading-relaxed">{ar(shown.summaryAr)}</p>
           <div>
-            <h3 className="font-semibold">الأهداف</h3>
+            <h3 className="font-semibold">أهداف ممارسة مقترحة</h3>
             <ol className="mt-2 space-y-2 list-decimal pr-5">
-              {shown.goals.map((g, i) => (
+              {shown.goals.map((goal, i) => (
                 <li key={i}>
-                  {editing ? (
-                    <textarea
-                      className="w-full rounded-lg border border-line p-2"
-                      rows={2}
-                      value={g.goalAr}
-                      aria-label={`الهدف ${ar(i + 1)}`}
-                      onChange={(e) => setEditing({ ...editing, goals: editing.goals.map((x, j) => (j === i ? { ...x, goalAr: e.target.value } : x)) })}
-                    />
-                  ) : (
-                    <span className="font-semibold">{ar(g.goalAr)}</span>
-                  )}
+                  <span className="font-semibold">{ar(goal.goalAr)}</span>
                   <span className="block text-xs text-ink-2">
-                    {SKILLS[g.skill as SkillId]?.nameAr ?? g.skill} · الدليل: {ar(g.evidenceAr)}
+                    {SKILLS[goal.skill as SkillId]?.nameAr ?? goal.skill} · ملاحظة من البيانات: {ar(goal.evidenceAr)}
                   </span>
                 </li>
               ))}
             </ol>
           </div>
           <div>
-            <h3 className="font-semibold">الأنشطة</h3>
+            <h3 className="font-semibold">أنشطة يمكن اختيارها</h3>
             <ul className="mt-2 space-y-1.5">
-              {shown.activities.map((a) => (
-                <li key={a.id} className="rounded-lg bg-soft px-3 py-2">
-                  <span className="font-semibold">{ACTIVITY_CATALOG[a.id]}</span> · {FREQUENCIES[a.frequency]}
-                  <span className="block text-xs text-ink-2">{ar(a.whyAr)}</span>
+              {shown.activities.map((activity) => (
+                <li key={activity.id} className="rounded-lg bg-soft px-3 py-2">
+                  <span className="font-semibold">{ACTIVITY_CATALOG[activity.id]}</span> · {FREQUENCIES[activity.frequency]}
+                  <span className="block text-xs text-ink-2">{ar(activity.whyAr)}</span>
                 </li>
               ))}
             </ul>
           </div>
           {shown.homeTipsAr.length > 0 && (
             <div>
-              <h3 className="font-semibold">نصائح للبيت</h3>
-              <ul className="mt-1 list-disc pr-5 space-y-1">{shown.homeTipsAr.map((t) => <li key={t}>{ar(t)}</li>)}</ul>
+              <h3 className="font-semibold">أفكار بسيطة للبيت</h3>
+              <ul className="mt-1 list-disc pr-5 space-y-1">{shown.homeTipsAr.map((tip) => <li key={tip}>{ar(tip)}</li>)}</ul>
             </div>
           )}
-          {record.referralAr && <p className="rounded-xl border border-warn bg-warn-soft p-3 font-semibold text-warn">{record.referralAr}</p>}
-          <p className="text-xs text-ink-2">هذه خطة تعليمية مبنية على نتائج فحص مبدئي وتدريب، وليست تشخيصًا.</p>
+          <p className="text-xs text-ink-2">
+            هذه أفكار ممارسة تعليمية استرشادية وليست تشخيصًا أو وصفة علاجية. النسب والأرقام - إن ظهرت - تصف أنشطة المنصة فقط، ولا تثبت مستوى الطفل مقارنةً بأقرانه أو تحسن قراءته خارجها.
+          </p>
         </div>
       )}
-
-      {canApprove && record && record.status === 'draft' && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          {!editing && <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => setEditing(record.plan)}>تعديل قبل الاعتماد</button>}
-          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" disabled={busy} onClick={approve}>
-            <CheckCircle2 size={15} /> اعتماد الخطة
-          </button>
-        </div>
-      )}
-      {!canApprove && record?.status === 'draft' && (
-        <p className="text-xs text-ink-2">اطبع المسودة واعرضها على معلم الطفل أو أخصائي؛ الاعتماد يكون من حساب المدرسة.</p>
-      )}
-      {error && <p role="alert" className="text-sm text-warn">{error}</p>}
     </section>
   );
 }

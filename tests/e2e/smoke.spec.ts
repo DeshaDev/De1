@@ -92,7 +92,7 @@ test('curriculum provides interactive feedback and fits a narrow mobile viewport
   expect(pageErrors).toEqual([]);
 });
 
-test('parental consent onboarding enforces consent before launch and school demo modal submits honestly', async ({ page }) => {
+test('parent registration limits the screening age range and requires explicit guardian consent', async ({ page }) => {
   await page.route('**/api/school-demo-request', (route) => {
     route.fulfill({
       status: 201,
@@ -104,37 +104,31 @@ test('parental consent onboarding enforces consent before launch and school demo
     });
   });
 
+  await page.goto('/parent');
+  await expect(page.getByRole('heading', { name: 'تسجيل طفل للتقييم الفوري والبدء المباشر' })).toBeVisible();
+
+  await expect(page.getByRole('button', { name: /٤ سنوات/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /٨ سنوات/ })).toBeVisible();
+  for (const age of [/٩ سنوات/, /١٠ سنوات/, /١١ سنوات/, /١٢ سنوات/]) {
+    await expect(page.getByRole('button', { name: age })).toHaveCount(0);
+  }
+
+  await page.getByLabel(/اسم الطفل المستعار أو اللقب/).fill('سارة');
+  await page.getByRole('button', { name: /٦ سنوات/ }).click();
+  await page.getByPlaceholder('parent@example.com').fill('parent@example.test');
+  await page.locator('input[type="password"]').first().fill('safe-test-password');
+  const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
+  await expect(guardianConsent).not.toBeChecked();
+  await page.getByRole('button', { name: /حفظ وبدء فحص القراءة الآن/ }).click();
+  await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
+
   await page.goto('/');
-
-  // 1. Open new learner modal from hero
-  await page.getByRole('button', { name: /كمتعلّم جديد|تجربة المتعلّم/ }).first().click();
-  await expect(page.getByRole('heading', { name: 'بدء رحلة متعلم جديد' })).toBeVisible();
-
-  // Button should be disabled when consent is not given and name is empty
-  const launchBtn = page.getByRole('button', { name: /انطلق في تدريب اليوم/ });
-  await expect(launchBtn).toBeDisabled();
-
-  // Enter learner alias
-  await page.getByPlaceholder(/مثال: سارة أو أحمد/).fill('سارة');
-  // Still disabled because consent is unchecked
-  await expect(launchBtn).toBeDisabled();
-
-  // Check mandatory consent
-  await page.locator('label').filter({ hasText: /أقر بصفتي ولي أمر/ }).locator('input[type="checkbox"]').check();
-  await expect(launchBtn).toBeEnabled();
-
-  // Close modal
-  await page.getByRole('button', { name: 'إلغاء' }).click();
-
-  // 2. School demo request modal
   await page.getByRole('button', { name: /طلب تجربة مدرسة/ }).click();
   await expect(page.getByRole('heading', { name: 'طلب تجربة مدرسية وشراكة تجريبية' })).toBeVisible();
-
   await page.getByPlaceholder(/مثال: مدرسة قطر الابتدائية/).fill('مدرسة الوكرة النموذجية');
   await page.getByPlaceholder(/مثال: أ. مريم السليطي/).fill('أ. خالد المهندي');
   await page.getByPlaceholder(/name@school.edu.qa/).fill('khalid@alwakra-school.edu.qa');
   await page.getByPlaceholder(/\+974 5500 0000/).fill('+974 55112233');
-
   await page.getByRole('button', { name: 'إرسال طلب التجربة' }).click();
   await expect(page.getByText('تم استلام طلبكم بنجاح!')).toBeVisible();
 });
