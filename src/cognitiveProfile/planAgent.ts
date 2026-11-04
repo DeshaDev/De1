@@ -114,7 +114,7 @@ function parseJson(text: string): unknown {
 export async function runPlanAgent(facts: PlanFacts, generate: Generate, options: { maxRevisions?: number } = {}): Promise<AgentResult> {
   const maxRevisions = options.maxRevisions ?? 2;
   const trace: AgentStep[] = [];
-  const allowedSkills = new Set<string>([...(facts.screening?.weakAreas.map((w) => w.skill) ?? []), ...(facts.programme?.skills.map((s) => s.skill) ?? [])]);
+  const allowedSkills = new Set<string>([...(facts.screening?.results.map((r) => r.skill) ?? []), ...(facts.programme?.skills.map((s) => s.skill) ?? [])]);
 
   // 1. Analyse
   const analysisMessages: AgentMessage[] = [{ role: 'user', text: analysisPrompt(facts) }];

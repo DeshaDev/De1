@@ -5,15 +5,15 @@ import { buildPlanFacts } from './individualPlan';
 
 const facts = buildPlanFacts({
   ageYears: 6,
-  screening: { risk: 'moderate', completedGames: 9, weak: [{ skill: 'rhyme', labelAr: 'الوعي بالقافية', centile: 12 }], strong: [] },
-  programme: { sessionsDone: 7, sessionsPlanned: 20, skills: [{ skill: 'rhyme', level: 2, p: 0.64 }], probe: null },
+  screening: { completedGames: 9, results: [{ skill: 'rhyme', labelAr: 'الوعي بالقافية', correct: 7, total: 10, percent: 70 }] },
+  programme: { sessionsDone: 7, sessionsPlanned: 20, skills: [{ skill: 'rhyme', level: 2 }], probe: null },
   reading: null,
 });
 
 const plan = (summaryAr: string) =>
   JSON.stringify({
     summaryAr,
-    goals: [{ skill: 'rhyme', goalAr: 'يميّز الكلمات المتشابهة في آخرها.', evidenceAr: 'المئين ١٢ في الفحص.' }],
+    goals: [{ skill: 'rhyme', goalAr: 'يميّز الكلمات المتشابهة في آخرها.', evidenceAr: 'سُجّلت ٧ إجابات صحيحة من ١٠ داخل المهمة.' }],
     activities: [{ id: 'home-rhyme', whyAr: 'يقوّي القافية في البيت.', frequency: 'most-days' }],
     homeTipsAr: ['جلسات قصيرة ومنتظمة.'],
   });
