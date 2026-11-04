@@ -114,6 +114,7 @@ test('parent registration limits the screening age range and requires explicit g
   }
 
   await page.getByLabel(/اسم الطفل المستعار أو اللقب/).fill('سارة');
+  await page.getByRole('button', { name: /٦ سنوات/ }).click();
   await page.getByPlaceholder('parent@example.com').fill('parent@example.test');
   await page.locator('input[type="password"]').first().fill('safe-test-password');
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
