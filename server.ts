@@ -2967,46 +2967,13 @@ async function startServer() {
     }
   });
 
-  /** A teacher or specialist approves (and may edit) a plan; the approver comes from the session. */
-  app.put('/api/students/:id/individual-plan', requireBaseeraAuth('students:write'), (req, res) => {
-    const found = findConsentedStudent(req, res);
-    if (!found) return;
-    const body = req.body || {};
-    const plan = DraftPlanSchema.safeParse(body.plan);
-    const facts = PlanFactsSchema.safeParse(body.facts);
-    if (!plan.success || !facts.success || (body.source !== 'model' && body.source !== 'rules')) {
-      res.status(400).json({ error: 'بيانات الخطة غير صالحة.' });
-      return;
-    }
-    // Edits by the reviewer must still respect the language rules.
-    const checked = validateDraftPlan(plan.data, facts.data);
-    if (!checked.ok) {
-      res.status(400).json({ error: 'الخطة المعدّلة تخالف القيود.', validationErrors: checked.errors });
-      return;
-    }
-    const updatedRecord: StudentRecord = {
-      ...studentsDb[found.idx],
-      individualPlan: {
-        status: 'approved',
-        source: body.source,
-        plan: plan.data,
-        referralAr: referralFor(facts.data),
-        facts: facts.data,
-        generatedAt: typeof body.generatedAt === 'string' && Number.isFinite(Date.parse(body.generatedAt)) ? body.generatedAt : new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        approvedBy: found.session.accountName,
-        editedByReviewer: body.editedByReviewer === true,
-      },
-    };
-    const nextRecords = [...studentsDb];
-    nextRecords[found.idx] = updatedRecord;
-    const committed = commitStudentMutationWithAudit(studentsDb, nextRecords, found.session, 'student.plan.approve', updatedRecord.id, ['individualPlan']);
-    if (!committed.ok) {
-      res.status(503).json({ error: 'تعذر حفظ الخطة في التخزين المشفر.' });
-      return;
-    }
-    studentsDb = committed.students;
-    res.status(200).json({ student: updatedRecord, persisted: true });
+  // Per-child teacher approval was retired: plan suggestions are generated and validated
+  // automatically. Human review belongs to product/content governance before release, not each learner.
+  app.put('/api/students/:id/individual-plan', (_req, res) => {
+    res.status(410).json({
+      code: 'PER_CHILD_PLAN_APPROVAL_RETIRED',
+      error: 'تم إيقاف اعتماد الخطة يدويًا لكل طفل. تُعرض اقتراحات الممارسة بعد التحقق الآلي، ولا تُعد قرارًا تشخيصيًا.',
+    });
   });
 
   app.post('/api/ai/generate-iep', requireBaseeraAuth('ai:analyze'), (_req, res) => {
