@@ -393,7 +393,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               <input type="checkbox" checked={checks.consent} onChange={(e) => setChecks({ ...checks, consent: e.target.checked })} />
               <span className="text-ink-2">
                 <span className="font-semibold text-ink">موافقة ولي الأمر</span>
-                <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها على هذا الجهاز. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
+                <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
           </div>
