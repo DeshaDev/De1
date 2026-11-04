@@ -103,10 +103,10 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
           <h2 id={`plan-${student.id}`} className="bz-h3 flex items-center gap-2"><FileText size={20} aria-hidden="true" /> اقتراحات الممارسة التعليمية</h2>
           {record && (
             <p className="bz-small mt-1">
-              {record.status === 'approved' && record.approvedBy ? (
-                <span className="font-semibold text-ink-2">سجل سابق من إصدار أقدم · {record.approvedBy}</span>
+              {record.status === 'approved' ? (
+                <span className="font-semibold text-ink-2">اقتراح محفوظ من إصدار سابق</span>
               ) : (
-                <span className="font-semibold text-brand">اقتراح مولّد آليًا · لا يتطلب اعتماد معلم لكل طفل</span>
+                <span className="font-semibold text-brand">اقتراح مولّد آليًا · لا يتطلب اعتمادًا يدويًا</span>
               )}
               <span className="block text-ink-2">
                 {record.source === 'model'
