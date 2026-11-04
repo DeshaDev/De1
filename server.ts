@@ -1,3 +1,4 @@
+import { formatArabicTextWithPhonemes } from './src/utils/arabicPhonemeBank';
 import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -2809,7 +2810,8 @@ async function startServer() {
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
-        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="${prosodyPitch}">${escaped}</prosody></voice></speak>`;
+        const formattedBody = formatArabicTextWithPhonemes(escaped);
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="${prosodyPitch}">${formattedBody}</prosody></voice></speak>`;
 
         const endpoint = `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
         const azureRes = await fetch(endpoint, {
