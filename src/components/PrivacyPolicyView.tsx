@@ -10,7 +10,6 @@ import {
   FileText,
   ExternalLink,
   EyeOff,
-  Mail,
   Zap,
 } from 'lucide-react';
 
@@ -204,22 +203,9 @@ export const PrivacyPolicyView: React.FC = () => (
           <strong>٤. طلبات الحذف والنسخ الاحتياطية:</strong> عند إرسال طلب حذف عبر البريد الرسمي، يراجع الفريق نطاق الطلب ويتعامل مع البيانات الموجودة في مخزن التطبيق النشط. إذا استُخدمت الاستضافة المهيأة في هذا المستودع على <a href="https://render.com/docs/disks" target="_blank" rel="noreferrer" className="underline text-teal-800">Render</a>، فتوثق إنشاء لقطات يومية للقرص الدائم والاحتفاظ بها لمدة سبعة أيام؛ ولا يتيح التطبيق حذف سجل منفرد من تلك اللقطات. لذلك لا نَعِد بمحو النسخ الاحتياطية خلال ١٤ يوم عمل، ويجب اعتماد إجراءات التعامل مع اللقطات والبيانات لدى مزودي الخدمات قبل استخدام بيانات أطفال حقيقية.
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
-        <div className="flex items-center gap-2">
-          <Mail size={16} className="text-teal-700 shrink-0" />
-          <span>مسؤول الخصوصية:</span>
-          <a href="mailto:privacy@baseera-edu.com" className="text-teal-800 underline font-mono">
-            privacy@baseera-edu.com
-          </a>
-        </div>
-        <span className="hidden sm:inline text-slate-300">|</span>
-        <div className="flex items-center gap-2">
-          <Mail size={16} className="text-teal-700 shrink-0" />
-          <span>المراجعة القانونية:</span>
-          <a href="mailto:legal@baseera-edu.com" className="text-teal-800 underline font-mono">
-            legal@baseera-edu.com
-          </a>
-        </div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-950">
+        <strong>قنوات التواصل الرسمية لم تُعتمد بعد:</strong>
+        يجب إضافة اسم الكيان القانوني وعنوانه وقناة فعّالة لطلبات الوصول والتصحيح والحذف قبل إتاحة الخدمة للعائلات. لا تستخدم هذه النسخة لاستقبال بيانات أطفال حقيقية.
       </div>
     </PolicySection>
 
