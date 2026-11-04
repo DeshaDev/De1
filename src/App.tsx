@@ -700,7 +700,7 @@ export default function App() {
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianConsentSource: `موافقة ولي الأمر المسجلة عبر بوابة الأسرة (${recordedAt.split('T')[0]})`,
+      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})؛ لم تتحقق المنصة من هوية ولي الأمر أو صحة التفويض`,
       guardianAudioConsentGiven: false,
       parentNotes: child.notes || undefined,
       speechRecognitionUsed: false,
