@@ -29,11 +29,20 @@ interface NextStep {
   stageAr: string;
   actionAr: string;
   progressAr: string | null;
-  tab: 'dyslexia-lab' | 'guided-program';
+  tab: 'dyslexia-lab' | 'guided-program' | 'dashboard';
 }
 
 /** The one thing a parent should do next for this child: screening, then the programme. */
 function nextStepFor(child: StudentRecord): NextStep {
+  const isInScreeningAgeRange = Number.isInteger(child.ageYears) && child.ageYears >= 4 && child.ageYears <= 8;
+  if (!isInScreeningAgeRange) {
+    return {
+      stageAr: 'خارج نطاق الفحص الحالي',
+      actionAr: 'عرض الملف والأنشطة الميسّرة',
+      progressAr: 'البطارية الحالية مخصصة للأطفال من ٤ إلى ٨ سنوات؛ لن نغيّر العمر تلقائيًا لتجاوز هذا النطاق.',
+      tab: 'dashboard',
+    };
+  }
   const battery = loadBatterySession(child.id)?.results ?? child.cognitiveBattery?.results ?? {};
   const done = BATTERY.filter((s) => battery[s.id]).length;
   const training = loadTrainingProgress(child.id) ?? child.trainingProgress ?? null;
