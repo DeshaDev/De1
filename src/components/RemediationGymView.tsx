@@ -126,12 +126,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
 
 
-  // Only teacher-reviewed or server-verified audio words from a completed, non-demo session can be presented as observed targets.
+  // Only AI-validated audio evidence from a completed, non-demo session is used as an observed target.
   const observedTargetWords = useMemo(() => {
     const isVerified =
-      activeStudent.teacherVerified === true ||
-      (activeStudent.aiAssessmentVerified === true &&
-        activeStudent.evidenceProvenance === 'server-verified-audio');
+      activeStudent.aiAssessmentVerified === true &&
+      activeStudent.aiAssessmentSource === 'azure_pronunciation_assessment' &&
+      activeStudent.evidenceProvenance === 'server-verified-audio';
 
     if (
       activeStudent.sessionStatus !== 'completed' ||
@@ -149,8 +149,8 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   }, [
     activeStudent.id,
     activeStudent.sessionStatus,
-    activeStudent.teacherVerified,
     activeStudent.aiAssessmentVerified,
+    activeStudent.aiAssessmentSource,
     activeStudent.evidenceProvenance,
     activeStudent.verifiedWordsAlignment,
   ]);
@@ -161,7 +161,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       studentName: activeStudent.name,
       gradeLevel: activeStudent.gradeLevel,
       effectiveWords: observedTargetWords.length > 0 ? observedTargetWords : ['سَمَكَةٌ', 'مَدْرَسَةٌ', 'كِتَابٌ'],
-      targetsTeacherReviewed: observedTargetWords.length > 0,
+      targetsTeacherReviewed: false,
     });
   }, [activeStudent.id, activeStudent.name, activeStudent.gradeLevel, observedTargetWords]);
 
