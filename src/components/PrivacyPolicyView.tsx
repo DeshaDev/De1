@@ -137,7 +137,7 @@ export const PrivacyPolicyView: React.FC = () => (
             </tr>
             <tr>
               <td className="px-3 py-3 font-bold text-slate-900">الموافقة والسجلات التقنية</td>
-              <td className="px-3 py-3">إقرار ولي الأمر أو المعلم، توقيته ومصدره، وسجلات الأمان المشفرة</td>
+              <td className="px-3 py-3">إقرار ولي الأمر الذاتي، وتوقيته ومصدره المعلن، وسجلات الأمان التقنية</td>
               <td className="px-3 py-3">توثيق الإقرار الذاتي ووقت تسجيله ومصدره، ومساندة سجل التدقيق والتحقق من الصلاحيات</td>
             </tr>
           </tbody>
