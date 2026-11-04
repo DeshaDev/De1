@@ -144,6 +144,14 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   auditoryDiscrimination: ['discrimination'],
   visualDiscrimination: ['visualDiscrimination'],
   letterSound: ['letterSound'],
+  // The reading measures have no reference values, so they never mark a weakness on their own;
+  // the mapping says which practice they relate to.
+  ranObjects: [],
+  ranLetters: [],
+  wordReading: ['letterSound', 'blending'],
+  nonwordReading: ['letterSound', 'blending'],
+  oralReading: [],
+  spelling: ['letterSound', 'soundPosition'],
 };
 
 /**
@@ -236,6 +244,8 @@ export interface TrainingProgress {
   bkt?: BktStates;
   /** Sounds and letters to practise more often, from the child's oral-reading errors. */
   targets?: TrainingTargets;
+  /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
+  lessonsSeen?: string[];
 }
 
 export interface TrainingTargets {
@@ -258,7 +268,7 @@ export function skillBandsFromProfile(profile: Pick<CognitiveProfile, 'subtests'
   for (const s of profile?.subtests ?? []) {
     for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
       const current = bands[skill];
-      if (!current || BAND_ORDER.indexOf(s.band) < BAND_ORDER.indexOf(current)) bands[skill] = s.band;
+      if (s.band && (!current || BAND_ORDER.indexOf(s.band) < BAND_ORDER.indexOf(current))) bands[skill] = s.band;
     }
   }
   return bands;

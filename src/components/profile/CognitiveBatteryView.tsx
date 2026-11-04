@@ -15,15 +15,17 @@ import {
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import {
-  BATTERY,
   ChoiceSubtest,
   DOMAINS,
   SUBTESTS_BY_ID,
   Subtest,
   SubtestId,
-  TOTAL_BATTERY_MINUTES,
+  minutesForAge,
   scoredItemCount,
+  sittingsForAge,
+  subtestsForAge,
 } from '../../cognitiveProfile/battery';
+import { READING_MIN_AGE_MONTHS } from '../../cognitiveProfile/readingTasks';
 import {
   ItemResponse,
   SubtestResult,
@@ -45,6 +47,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
+import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
@@ -55,11 +58,10 @@ import TrainingProgramView from './TrainingProgramView';
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
 /**
- * The nine games in three sittings of about 10-12 minutes, so a young child is never asked for
- * half an hour of attention at once. Progress is saved after every game, so each sitting can be
- * on a different day.
+ * The games in short sittings of about 10-15 minutes (three before six, four from six with the
+ * reading sitting first), so a young child is never asked for half an hour of attention at once.
+ * Progress is saved after every game, so each sitting can be on a different day.
  */
-const SITTINGS: Subtest[][] = [BATTERY.slice(0, 3), BATTERY.slice(3, 6), BATTERY.slice(6, 9)];
 const sittingMinutes = (games: Subtest[]) => games.reduce((n, s) => n + s.minutes, 0);
 
 // ---------------------------------------------------------------------------
@@ -87,7 +89,15 @@ function SubtestRunner({
   }, [subtest.id]);
 
   const practiceCount =
-    subtest.kind === 'choice' || subtest.kind === 'span' || subtest.kind === 'association' ? subtest.practice.length : 0;
+    subtest.kind === 'choice' ||
+    subtest.kind === 'span' ||
+    subtest.kind === 'association' ||
+    subtest.kind === 'readList' ||
+    subtest.kind === 'spelling'
+      ? subtest.practice.length
+      : 0;
+  /** Rapid naming, the passage and paired learning run their own short lead-in instead of practice items. */
+  const noPractice = subtest.kind === 'pal' || subtest.kind === 'ran' || subtest.kind === 'passage';
   const total = scoredItemCount(subtest);
 
   const finish = (discontinued: boolean, extra: Partial<SubtestResult> = {}) => {
@@ -116,7 +126,7 @@ function SubtestRunner({
 
   const recordAndAdvance = (newResponses: ItemResponse[]) => {
     responses.current = [...responses.current, ...newResponses];
-    if (subtest.kind === 'choice') {
+    if (subtest.kind === 'choice' || subtest.kind === 'readList' || subtest.kind === 'spelling') {
       if (shouldDiscontinue(responses.current, subtest.discontinueAfter)) return finish(true);
       if (index + 1 >= subtest.items.length) return finish(false);
     } else if (subtest.kind === 'span') {
@@ -157,11 +167,11 @@ function SubtestRunner({
         )}
       </div>
 
-      {(stage === 'test' || stage === 'practice') && (
+      {(stage === 'practice' || (stage === 'test' && !noPractice)) && (
         <div className="px-4 sm:px-6 pt-4">
           <div className="flex items-center justify-between text-[12px] font-semibold text-muted mb-1.5">
             <span>{stage === 'practice' ? 'تدريب مع تصحيح' : 'اللعبة'}</span>
-            {stage === 'test' && <span className="bz-num">{toArabicDigits(answered)} / {toArabicDigits(total)}</span>}
+            {stage === 'test' && !noPractice && <span className="bz-num">{toArabicDigits(answered)} / {toArabicDigits(total)}</span>}
           </div>
           <div className="bz-progress">
             <span
@@ -187,7 +197,7 @@ function SubtestRunner({
               type="button"
               onClick={() => {
                 stopSpeech();
-                if (subtest.kind === 'pal') setStage('test');
+                if (noPractice) setStage('test');
                 else {
                   setIndex(0);
                   setStage('practice');
@@ -195,7 +205,7 @@ function SubtestRunner({
               }}
               className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
             >
-              <Play className="w-6 h-6" /> {subtest.kind === 'pal' ? 'ابدأ' : 'لنتدرّب أولًا'}
+              <Play className="w-6 h-6" /> {noPractice ? 'ابدأ' : 'لنتدرّب أولًا'}
             </button>
             <div className="w-full text-right">
               <button
@@ -224,6 +234,12 @@ function SubtestRunner({
         )}
         {stage === 'practice' && subtest.kind === 'association' && (
           <AssociationPlayer key={`p-${index}`} block={subtest.practice[index]} showFeedback onDone={nextPractice} />
+        )}
+        {stage === 'practice' && subtest.kind === 'readList' && (
+          <ReadAloudPlayer key={`p-${index}`} item={subtest.practice[index]} practice hesitationSec={subtest.hesitationSec} onDone={nextPractice} />
+        )}
+        {stage === 'practice' && subtest.kind === 'spelling' && (
+          <SpellingPlayer key={`p-${index}`} item={subtest.practice[index]} practice onDone={nextPractice} />
         )}
 
         {stage === 'transition' && (
@@ -258,6 +274,37 @@ function SubtestRunner({
         )}
         {stage === 'test' && subtest.kind === 'association' && (
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
+        )}
+        {stage === 'test' && subtest.kind === 'readList' && (
+          <ReadAloudPlayer
+            key={`t-${index}`}
+            item={subtest.items[index]}
+            practice={false}
+            hesitationSec={subtest.hesitationSec}
+            onDone={(r) => recordAndAdvance([r])}
+          />
+        )}
+        {stage === 'test' && subtest.kind === 'spelling' && (
+          <SpellingPlayer key={`t-${index}`} item={subtest.items[index]} practice={false} onDone={(r) => recordAndAdvance([r])} />
+        )}
+        {stage === 'test' && subtest.kind === 'ran' && (
+          <RanPlayer
+            symbols={subtest.symbols}
+            grid={subtest.grid}
+            display={subtest.display}
+            onDone={(durationMs, errorCount) => finish(false, { durationMs, errorCount })}
+          />
+        )}
+        {stage === 'test' && subtest.kind === 'passage' && (
+          <PassagePlayer
+            title={subtest.titleAr}
+            words={subtest.words}
+            timeLimitSec={subtest.timeLimitSec}
+            onDone={(rs, durationMs) => {
+              responses.current = rs;
+              finish(false, { durationMs });
+            }}
+          />
         )}
         {stage === 'test' && subtest.kind === 'pal' && (
           <PalPlayer
@@ -424,9 +471,10 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
           <h2 className="bz-h3">كيف يسير الفحص؟</h2>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
-              `تسع ألعاب قصيرة، مدتها الكلية نحو ${toArabicDigits(TOTAL_BATTERY_MINUTES)} دقيقة. تُقسّم إلى ثلاث جلسات قصيرة، في كل منها ثلاث ألعاب تقريبًا.`,
+              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
+              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة.',
+              'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة. في مهام القراءة والتسمية يقرأ الطفل بصوت عالٍ، ويضغط البالغ «صحيح» أو «خطأ».',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
@@ -548,22 +596,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     [session]
   );
 
-  const completed = session ? BATTERY.filter((s) => session.results[s.id]) : [];
+  const ageTasks = session ? subtestsForAge(session.ageMonths) : [];
+  const sittings = session ? sittingsForAge(session.ageMonths) : [];
+  const completed = ageTasks.filter((s) => session?.results[s.id]);
   const localHistory = loadScreeningHistory(activeStudent.id);
   const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
-  const nextSubtest = BATTERY.find((s) => !session?.results[s.id]);
-  const remainingMinutes = BATTERY.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
-  const nextSitting = nextSubtest ? SITTINGS.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
+  const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
+  const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
+  const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
   /** The child just completed a whole sitting: a natural place to stop for today. */
   const sittingJustFinished =
-    nextSitting > 0 && SITTINGS[nextSitting].every((g) => !session?.results[g.id]) && SITTINGS[nextSitting - 1].every((g) => session?.results[g.id]);
+    nextSitting > 0 && sittings[nextSitting].every((g) => !session?.results[g.id]) && sittings[nextSitting - 1].every((g) => session?.results[g.id]);
 
   const saveResult = (result: SubtestResult) => {
     if (!session) return;
     const updated = { ...session, results: { ...session.results, [result.subtestId]: result } };
     trackUsage('subtest_completed', { subtestId: result.subtestId, discontinued: result.discontinued });
-    const wasComplete = BATTERY.every((s) => session.results[s.id]);
-    if (!wasComplete && BATTERY.every((s) => updated.results[s.id])) trackUsage('battery_completed');
+    const tasks = subtestsForAge(session.ageMonths);
+    const wasComplete = tasks.every((s) => session.results[s.id]);
+    if (!wasComplete && tasks.every((s) => updated.results[s.id])) trackUsage('battery_completed');
     setSession(updated);
     saveBatterySession(updated);
     pushToSchool(updated);
@@ -642,17 +693,17 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
           <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
-            {completed.length === BATTERY.length ? 'اكتملت الألعاب التسع' : `أُنجزت ${toArabicDigits(completed.length)} من ٩ ألعاب`}
+            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `أُنجزت ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)} مهام`}
           </h2>
           <div className="mt-4 flex items-center gap-3 max-w-md">
-            <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / BATTERY.length) * 100}%` }} /></div>
+            <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / Math.max(1, ageTasks.length)) * 100}%` }} /></div>
             {remainingMinutes > 0 && <span className="bz-small bz-muted shrink-0">بقي نحو {toArabicDigits(remainingMinutes)} دقيقة</span>}
           </div>
           {nextSitting >= 0 && (
             <p className="bz-small text-ink-2 mt-3">
               {sittingJustFinished
-                ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ٣. يمكن إكمال الجلسة التالية الآن أو في يوم آخر؛ التقدّم محفوظ.`
-                : `جلسة اليوم: الجلسة ${toArabicDigits(nextSitting + 1)} من ٣ (٣ ألعاب، نحو ${toArabicDigits(sittingMinutes(SITTINGS[nextSitting]))} دقيقة). يمكن التوقف بعدها وإكمال الباقي في يوم آخر.`}
+                ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ${toArabicDigits(sittings.length)}. يمكن إكمال الجلسة التالية الآن أو في يوم آخر؛ التقدّم محفوظ.`
+                : `جلسة اليوم: الجلسة ${toArabicDigits(nextSitting + 1)} من ${toArabicDigits(sittings.length)} (${toArabicDigits(sittings[nextSitting].length)} مهام، نحو ${toArabicDigits(sittingMinutes(sittings[nextSitting]))} دقيقة). يمكن التوقف بعدها وإكمال الباقي في يوم آخر.`}
             </p>
           )}
         </div>
@@ -668,10 +719,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         </div>
       </section>
 
-      {SITTINGS.map((games, sitting) => (
+      {sittings.map((games, sitting) => (
         <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">
           <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
             الجلسة {toArabicDigits(sitting + 1)}
+            {games.some((g) => g.domain === 'reading') && sitting === 0 && <span className="bz-small text-brand font-semibold">القراءة</span>}
             <span className="bz-small bz-muted font-normal">نحو {toArabicDigits(sittingMinutes(games))} دقيقة</span>
             {games.every((g) => session.results[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
           </h3>
@@ -695,7 +747,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                   ) : isNext ? (
                     <span className="bz-badge bz-badge-sun">التالية</span>
                   ) : (
-                    <span className="bz-small bz-muted bz-num">{toArabicDigits(s.order)} / ٩</span>
+                    <span className="bz-small bz-muted bz-num">{toArabicDigits(ageTasks.indexOf(s) + 1)} / {toArabicDigits(ageTasks.length)}</span>
                   )}
                 </div>
                 <div className="w-full">

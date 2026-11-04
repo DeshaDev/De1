@@ -7,7 +7,8 @@
  * the report must say so; once an Arabic norming study supplies means and SDs, replacing
  * REFERENCE_TABLE upgrades every report without code changes elsewhere.
  */
-import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, scoredItemCount } from './battery';
+import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, appliesAtAge, scoredItemCount } from './battery';
+import { letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
 
 export interface ItemResponse {
   itemId: string;
@@ -16,6 +17,8 @@ export interface ItemResponse {
   replays: number;
   /** For span tasks: number of positions recalled in the right place. */
   partialCredit?: number;
+  /** For dictation: the letters the child typed (no vowel marks). */
+  typed?: string;
 }
 
 export interface SubtestResult {
@@ -28,6 +31,27 @@ export interface SubtestResult {
   maxSpan?: number;
   /** For paired-associate learning: correct answers per learning block. */
   blockScores?: number[];
+  /** For rapid naming and the passage: time from start to the last item named or read. */
+  durationMs?: number;
+  /** For rapid naming: items named wrongly or skipped, as counted by the adult. */
+  errorCount?: number;
+}
+
+/** Raw reading and naming measures. They have no reference values yet and are reported as they are. */
+export interface ReadingMeasures {
+  /** Items (words, grid cells) attempted. */
+  attempted: number;
+  /** Seconds for the task, or for the items read. */
+  seconds: number | null;
+  /** Correct words per minute (word lists and passage). */
+  correctPerMinute?: number;
+  /** Items named per second (rapid naming). */
+  itemsPerSecond?: number;
+  errors?: number;
+  /** Mean letter-level accuracy over the words attempted, 0–100 (dictation). */
+  letterPercent?: number;
+  /** Kinds of spelling error, with how many words showed each. */
+  spellingErrors?: Array<{ kind: SpellErrorKind; count: number }>;
 }
 
 export type Band = 'severe' | 'below' | 'average' | 'strength';
@@ -37,11 +61,13 @@ export interface ScoredSubtest {
   correct: number;
   total: number;
   percent: number;
-  z: number;
-  centile: number;
-  band: Band;
+  /** Null for tasks with no reference values (the reading and naming measures). */
+  z: number | null;
+  centile: number | null;
+  band: Band | null;
   medianRtMs: number | null;
   flags: string[];
+  measures?: ReadingMeasures;
 }
 
 export interface DomainScore {
@@ -96,7 +122,8 @@ export interface ReferenceTable {
   version: string;
   status: ReferenceStatus;
   sourceAr: string;
-  rows: Record<SubtestId, ReferenceRow>;
+  /** Tasks without a row are reported as raw measures only. */
+  rows: Partial<Record<SubtestId, ReferenceRow>>;
 }
 
 export const REFERENCE_TABLE: ReferenceTable = {
@@ -138,7 +165,7 @@ export function ageCautionAr(ageMonths: number): string | null {
   if (ageMonths < 60)
     return 'في عمر أربع سنوات لا يُتوقَّع من الطفل أن يقرأ، والفحص لا يطلب منه القراءة؛ يقيس المهارات التي تسبقها (الأصوات والذاكرة والتمييز). لكن نتائج هذا العمر أقل ثباتًا، فاعتبرها مؤشرًا أوليًا وأعد الفحص بعد ستة أشهر قبل أي استنتاج.';
   if (ageMonths >= 96)
-    return 'في عمر ثماني سنوات يكون الطفل قد تلقّى غالبًا سنتين من تعليم القراءة، فتقلّ دلالة المهارات السابقة للقراءة وحدها. أضف تقييمًا مباشرًا للقراءة (قراءة نص وفهمه، والتسمية السريعة) وراجع أخصائيًا عند الاشتباه.';
+    return 'في عمر ثماني سنوات يكون الطفل قد تلقّى غالبًا سنتين من تعليم القراءة، فتقلّ دلالة المهارات السابقة للقراءة وحدها. لذلك تعطي مهام القراءة المباشرة (الكلمات، والكلمات المصنوعة، والقصة، والإملاء، والتسمية السريعة) في هذا العمر الصورة الأوضح. راجع أخصائيًا عند الاشتباه.';
   return null;
 }
 
@@ -187,16 +214,89 @@ export function scoreSubtest(
   table: ReferenceTable = REFERENCE_TABLE
 ): ScoredSubtest {
   const subtest = SUBTESTS_BY_ID[result.subtestId];
-  // Items not reached because of the discontinue rule count as incorrect.
+  const { index } = ageBandIndex(ageMonths);
+  const flags: string[] = [];
+  if (result.discontinued) flags.push('discontinued');
+
+  // Reading and naming measures: raw counts, rates and times.
+  if (subtest.kind === 'ran') {
+    const total = scoredItemCount(subtest);
+    const errors = Math.min(total, result.errorCount ?? 0);
+    const correct = total - errors;
+    const durationMs = result.durationMs ?? 0;
+    return {
+      subtestId: result.subtestId,
+      correct,
+      total,
+      percent: Math.round((correct / total) * 100),
+      z: null,
+      centile: null,
+      band: null,
+      medianRtMs: null,
+      flags,
+      measures: { attempted: total, seconds: durationMs ? Math.round(durationMs / 100) / 10 : null, itemsPerSecond: ranRate(total, durationMs), errors },
+    };
+  }
+  if (subtest.kind === 'passage') {
+    const attempted = result.responses.length;
+    const correct = result.responses.filter((r) => r.correct).length;
+    const durationMs = result.durationMs ?? 0;
+    return {
+      subtestId: result.subtestId,
+      correct,
+      total: attempted,
+      percent: attempted ? Math.round((correct / attempted) * 100) : 0,
+      z: null,
+      centile: null,
+      band: null,
+      medianRtMs: null,
+      flags,
+      measures: {
+        attempted,
+        seconds: durationMs ? Math.round(durationMs / 1000) : null,
+        correctPerMinute: perMinute(correct, durationMs),
+        errors: attempted - correct,
+      },
+    };
+  }
+  if (subtest.kind === 'readList' || subtest.kind === 'spelling') {
+    // Items not reached because of the discontinue rule count as incorrect, as in the other tasks.
+    const total = scoredItemCount(subtest);
+    const correct = result.responses.filter((r) => r.correct).length;
+    const timeMs = result.responses.reduce((sum, r) => sum + r.rtMs, 0);
+    const measures: ReadingMeasures = { attempted: result.responses.length, seconds: timeMs ? Math.round(timeMs / 1000) : null };
+    if (subtest.kind === 'readList') measures.correctPerMinute = perMinute(correct, timeMs);
+    if (subtest.kind === 'spelling') {
+      const answers = new Map(subtest.items.map((i) => [i.id, i.answer]));
+      const scored = result.responses.filter((r) => answers.has(r.itemId));
+      measures.letterPercent = scored.length
+        ? Math.round((scored.reduce((sum, r) => sum + letterAccuracy(r.typed ?? '', answers.get(r.itemId)!), 0) / scored.length) * 100)
+        : 0;
+      const counts = new Map<SpellErrorKind, number>();
+      for (const r of scored) for (const k of spellingErrorKinds(r.typed ?? '', answers.get(r.itemId)!)) counts.set(k, (counts.get(k) ?? 0) + 1);
+      measures.spellingErrors = [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count);
+    }
+    return {
+      subtestId: result.subtestId,
+      correct,
+      total,
+      percent: Math.round((correct / total) * 100),
+      z: null,
+      centile: null,
+      band: null,
+      medianRtMs: null,
+      flags,
+      measures,
+    };
+  }
+
   const total = scoredItemCount(subtest);
   const correct = result.responses.filter((r) => r.correct).length;
   const percent = Math.round((correct / total) * 100);
-  const { index } = ageBandIndex(ageMonths);
-  const [mean, sd] = table.rows[result.subtestId][index];
-  const z = Number(((percent - mean) / sd).toFixed(2));
-  const centile = centileFromZ(z);
+  const row = table.rows[result.subtestId];
+  const z = row ? Number(((percent - row[index][0]) / row[index][1]).toFixed(2)) : null;
+  const centile = z === null ? null : centileFromZ(z);
 
-  const flags: string[] = [];
   const answered = result.responses.length;
   const chancePercent = subtest.chance * 100;
   if (subtest.chance > 0 && answered >= total / 2 && percent <= chancePercent + 10) {
@@ -207,7 +307,6 @@ export function scoreSubtest(
   if (rts.length >= 4 && fastCount / rts.length > 0.4) flags.push('fastGuessing');
   const replays = result.responses.reduce((sum, r) => sum + r.replays, 0);
   if (answered > 0 && replays / answered > 0.5) flags.push('manyReplays');
-  if (result.discontinued) flags.push('discontinued');
 
   const medianRtMs = subtest.kind === 'choice' ? median(rts) : null;
   if (medianRtMs !== null && medianRtMs > SLOW_RT_THRESHOLD_MS[index]) flags.push('slowResponses');
@@ -219,7 +318,7 @@ export function scoreSubtest(
     percent,
     z,
     centile,
-    band: bandFromCentile(centile),
+    band: centile === null ? null : bandFromCentile(centile),
     medianRtMs,
     flags,
   };
@@ -248,15 +347,17 @@ export function buildProfile(
   const subtests = BATTERY.filter((s) => results[s.id]).map((s) =>
     scoreSubtest(results[s.id] as SubtestResult, ageMonths, table)
   );
-  const byId = new Map(subtests.map((s) => [s.subtestId, s]));
-  const missing = BATTERY.filter((s) => !results[s.id]).map((s) => s.id);
+  // Domain centiles, risk and the strength/weakness lists use only tasks with reference values.
+  const referenced = subtests.filter((s): s is ScoredSubtest & { z: number; centile: number; band: Band } => s.z !== null);
+  const byId = new Map(referenced.map((s) => [s.subtestId, s]));
+  const missing = BATTERY.filter((s) => appliesAtAge(s, ageMonths) && !results[s.id]).map((s) => s.id);
 
   const domainIds = Array.from(new Set(BATTERY.map((s) => s.domain)));
   const domains: DomainScore[] = domainIds
     .map((domain) => {
       const members = BATTERY.filter((s) => s.domain === domain && byId.has(s.id)).map((s) => s.id);
       if (members.length === 0) return null;
-      const meanZ = members.reduce((sum, id) => sum + (byId.get(id) as ScoredSubtest).z, 0) / members.length;
+      const meanZ = members.reduce((sum, id) => sum + byId.get(id)!.z, 0) / members.length;
       const centile = centileFromZ(meanZ);
       return { domain, centile, band: bandFromCentile(centile), subtests: members };
     })
@@ -265,13 +366,13 @@ export function buildProfile(
   const coreIds = CORE_PHONOLOGICAL_SUBTESTS.filter(
     (id) => id !== 'letterSound' || ageMonths >= LETTER_SOUND_RISK_MIN_AGE_MONTHS
   );
-  const coreScored = coreIds.map((id) => byId.get(id)).filter((s): s is ScoredSubtest => Boolean(s));
+  const coreScored = coreIds.map((id) => byId.get(id)).filter((s) => s !== undefined);
   const isWeak = (s: ScoredSubtest) => s.band === 'severe' || s.band === 'below';
   const coreWeakCount = coreScored.filter(isWeak).length;
   const coreSevereCount = coreScored.filter((s) => s.band === 'severe').length;
-  const visualScored = VISUAL_SUBTESTS.map((id) => byId.get(id)).filter((s): s is ScoredSubtest => Boolean(s));
+  const visualScored = VISUAL_SUBTESTS.map((id) => byId.get(id)).filter((s) => s !== undefined);
   const visualWeakCount = visualScored.filter(isWeak).length;
-  const allWeakCount = subtests.filter(isWeak).length;
+  const allWeakCount = referenced.filter(isWeak).length;
 
   let risk: RiskLevel;
   if (coreScored.length < 4) risk = 'insufficient';
@@ -280,13 +381,13 @@ export function buildProfile(
   else risk = 'low';
 
   let pattern: ProfilePattern = 'none';
-  if (subtests.length >= 7 && allWeakCount >= subtests.length - 2) pattern = 'general';
+  if (referenced.length >= 7 && allWeakCount >= referenced.length - 2) pattern = 'general';
   else if (coreWeakCount >= 1 && visualWeakCount >= 2) pattern = 'mixed';
   else if (coreWeakCount >= 1) pattern = 'phonological';
   else if (visualWeakCount >= 1) pattern = 'visual';
 
-  const weaknesses = [...subtests].filter(isWeak).sort((a, b) => a.z - b.z).map((s) => s.subtestId);
-  const strengths = subtests.filter((s) => s.band === 'strength').map((s) => s.subtestId);
+  const weaknesses = [...referenced].filter(isWeak).sort((a, b) => a.z - b.z).map((s) => s.subtestId);
+  const strengths = referenced.filter((s) => s.band === 'strength').map((s) => s.subtestId);
 
   return {
     ageMonths,

@@ -1,10 +1,12 @@
 /**
- * Baseera Cognitive Profile Battery (بطارية بصيرة للملف المعرفي القرائي).
+ * The screening battery of «هَيَّا نَقْرَأْ» (فحص مؤشرات عسر القراءة).
  *
- * Nine short, game-like subtests for children aged 4:0–8:11 that profile the cognitive
- * skills known to predict early reading difficulty: visual and auditory memory, paired
- * sound–symbol learning, phonological awareness, auditory and visual discrimination, and
- * letter–sound knowledge. The construct coverage follows the published literature on
+ * Short, game-like tasks for children aged 4:0–8:11. Nine profile the cognitive skills known
+ * to predict early reading difficulty: visual and auditory memory, paired sound–symbol
+ * learning, phonological awareness, auditory and visual discrimination, and letter–sound
+ * knowledge. Rapid naming is given at every age. From six, when reading has been taught,
+ * the child also reads real and made-up words and a short passage aloud, and writes dictated
+ * words (see readingTasks.ts). The construct coverage follows the published literature on
  * computerised early screening (for example CoPS-style batteries); the Arabic items,
  * games and scoring rules here are original to Baseera.
  *
@@ -12,6 +14,27 @@
  * Practice items give feedback; scored items do not.
  */
 import { lex } from './lexicon';
+import {
+  NONWORD_ITEMS,
+  NONWORD_PRACTICE,
+  PASSAGE_TIME_LIMIT_SEC,
+  PASSAGE_TITLE,
+  PASSAGE_WORDS,
+  RAN_GRID_SIZE,
+  RAN_LETTERS,
+  RAN_LETTER_GRID,
+  RAN_OBJECTS,
+  RAN_OBJECT_GRID,
+  READING_MIN_AGE_MONTHS,
+  SPELL_ITEMS,
+  SPELL_PRACTICE,
+  WORD_ITEMS,
+  WORD_PRACTICE,
+  passageWordId,
+  type RanSymbol,
+  type ReadItem,
+  type SpellItem,
+} from './readingTasks';
 
 export type SubtestId =
   | 'visualSequential'
@@ -22,14 +45,22 @@ export type SubtestId =
   | 'phonological'
   | 'auditoryDiscrimination'
   | 'visualDiscrimination'
-  | 'letterSound';
+  | 'letterSound'
+  | 'ranObjects'
+  | 'ranLetters'
+  | 'wordReading'
+  | 'nonwordReading'
+  | 'oralReading'
+  | 'spelling';
 
 export type DomainId =
   | 'visualMemory'
   | 'auditoryMemory'
   | 'phonological'
   | 'perceptual'
-  | 'alphabetic';
+  | 'alphabetic'
+  | 'naming'
+  | 'reading';
 
 export type Visual =
   | { type: 'emoji'; value: string; label: string }
@@ -103,6 +134,10 @@ interface SubtestBase {
   introAudio: string;
   /** Probability of a correct answer by guessing (0–1) for one scored item. */
   chance: number;
+  /** Youngest age (months) the task is given at; absent = every age the battery covers. */
+  minAgeMonths?: number;
+  /** The adult scores each item while the child reads or names aloud. */
+  adultScored?: boolean;
 }
 
 export interface ChoiceSubtest extends SubtestBase {
@@ -132,7 +167,49 @@ export interface PalSubtest extends SubtestBase {
   blocks: PalBlock[];
 }
 
-export type Subtest = ChoiceSubtest | SpanSubtest | AssociationSubtest | PalSubtest;
+/** Rapid automatized naming: name a fixed grid of familiar symbols as fast as possible. */
+export interface RanSubtest extends SubtestBase {
+  kind: 'ran';
+  display: 'picture' | 'letter';
+  symbols: RanSymbol[];
+  grid: string[];
+}
+
+/** A graded list read aloud one item at a time; the adult marks each item. */
+export interface ReadListSubtest extends SubtestBase {
+  kind: 'readList';
+  practice: ReadItem[];
+  items: ReadItem[];
+  discontinueAfter: number;
+  /** Seconds without an attempt after which the adult marks the item wrong and moves on. */
+  hesitationSec: number;
+}
+
+/** A short passage read aloud for a fixed time; the adult marks misread words. */
+export interface PassageSubtest extends SubtestBase {
+  kind: 'passage';
+  titleAr: string;
+  words: string[];
+  timeLimitSec: number;
+}
+
+/** Dictation on letter tiles, scored automatically. */
+export interface SpellingSubtest extends SubtestBase {
+  kind: 'spelling';
+  practice: SpellItem[];
+  items: SpellItem[];
+  discontinueAfter: number;
+}
+
+export type Subtest =
+  | ChoiceSubtest
+  | SpanSubtest
+  | AssociationSubtest
+  | PalSubtest
+  | RanSubtest
+  | ReadListSubtest
+  | PassageSubtest
+  | SpellingSubtest;
 
 export const DOMAINS: Record<DomainId, { nameAr: string; descriptionAr: string; color: string }> = {
   visualMemory: {
@@ -159,6 +236,16 @@ export const DOMAINS: Record<DomainId, { nameAr: string; descriptionAr: string; 
     nameAr: 'المعرفة الأبجدية',
     descriptionAr: 'معرفة صوت الحرف المكتوب؛ الجسر المباشر من المهارات المعرفية إلى القراءة.',
     color: '#B4415A',
+  },
+  naming: {
+    nameAr: 'سرعة التسمية',
+    descriptionAr: 'سرعة استرجاع أسماء أشياء أو حروف مألوفة متتابعة؛ تنبئ بطلاقة القراءة بشكل مستقل عن الوعي الصوتي.',
+    color: '#7A5A00',
+  },
+  reading: {
+    nameAr: 'القراءة والإملاء',
+    descriptionAr: 'قراءة كلمات حقيقية وكلمات مصنوعة ونص قصير جهرًا، وكتابة كلمات مسموعة؛ القياس المباشر لما يتعلّمه الطفل في الصف.',
+    color: '#1F5F99',
   },
 };
 
@@ -630,16 +717,134 @@ export const BATTERY: Subtest[] = [
       letterSoundItem('ls-12', 'نَ', 'ن', ['ب', 'ن', 'ت', 'ي']),
     ],
   },
+  {
+    id: 'ranObjects',
+    order: 10,
+    kind: 'ran',
+    display: 'picture',
+    domain: 'naming',
+    gameNameAr: 'سباق الصور',
+    skillNameAr: 'التسمية السريعة للصور',
+    icon: '🏁',
+    minutes: 2,
+    chance: 0,
+    adultScored: true,
+    examinerNoteAr:
+      'يسمّي الطفل الصور الخمس أولًا للتأكد من معرفته أسماءها (يُقبل أي اسم يستخدمه، مثل «كورة» أو «كُرَة»). بعدها اضغط «ابدأ» ويسمّي الطفل الصور الأربعين بأسرع ما يستطيع، صفًا صفًا من اليمين إلى اليسار، دون أن يشير بإصبعه. اضغط «خطأ» عند كل صورة يسمّيها خطأً أو يتخطاها، ولا تحسب ما يصححه بنفسه. اضغط «انتهى» فور نطقه آخر صورة.',
+    introAudio:
+      'سَتَرَى صُوَرًا كَثِيرَةً. قُلْ اسْمَ كُلِّ صُورَةٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنْ أَوَّلِ السَّطْرِ إِلَى آخِرِهِ.',
+    symbols: RAN_OBJECTS,
+    grid: RAN_OBJECT_GRID,
+  },
+  {
+    id: 'ranLetters',
+    order: 11,
+    kind: 'ran',
+    display: 'letter',
+    domain: 'naming',
+    gameNameAr: 'سباق الحروف',
+    skillNameAr: 'التسمية السريعة للحروف',
+    icon: '🔤',
+    minutes: 2,
+    chance: 0,
+    minAgeMonths: READING_MIN_AGE_MONTHS,
+    adultScored: true,
+    examinerNoteAr:
+      'مثل سباق الصور، بخمسة حروف مألوفة. يُقبل اسم الحرف («ميم») أو صوته («مَ»)، بشرط أن يلتزم الطفل بطريقة واحدة. اضغط «خطأ» عند كل حرف خاطئ أو متخطّى، و«انتهى» فور آخر حرف.',
+    introAudio: 'وَالآنَ حُرُوفٌ. قُلْ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ.',
+    symbols: RAN_LETTERS,
+    grid: RAN_LETTER_GRID,
+  },
+  {
+    id: 'wordReading',
+    order: 12,
+    kind: 'readList',
+    domain: 'reading',
+    gameNameAr: 'قارئ الكلمات',
+    skillNameAr: 'قراءة كلمات حقيقية',
+    icon: '📗',
+    minutes: 3,
+    chance: 0,
+    minAgeMonths: READING_MIN_AGE_MONTHS,
+    adultScored: true,
+    discontinueAfter: 5,
+    hesitationSec: 5,
+    examinerNoteAr:
+      'تظهر كلمة واحدة مشكولة، ويقرؤها الطفل جهرًا. اضغط «صحيح» إذا قرأها كلها صحيحة (يُقبل نطق اللهجة للحروف مثل ج وق، ولا يُشترط إعراب الآخر)، و«خطأ» إذا أخطأ أو لم يبدأ خلال ٥ ثوانٍ. التصحيح الذاتي الفوري صحيح. لا تقرأ الكلمة للطفل ولا تلمّح. يتوقف النشاط بعد ٥ أخطاء متتالية.',
+    introAudio: 'سَتَظْهَرُ كَلِمَاتٌ. اقْرَأْ كُلَّ كَلِمَةٍ بِصَوْتٍ عَالٍ.',
+    practice: WORD_PRACTICE,
+    items: WORD_ITEMS,
+  },
+  {
+    id: 'nonwordReading',
+    order: 13,
+    kind: 'readList',
+    domain: 'reading',
+    gameNameAr: 'كلمات من كوكب آخر',
+    skillNameAr: 'فك ترميز كلمات غير حقيقية',
+    icon: '🪐',
+    minutes: 3,
+    chance: 0,
+    minAgeMonths: READING_MIN_AGE_MONTHS,
+    adultScored: true,
+    discontinueAfter: 5,
+    hesitationSec: 5,
+    examinerNoteAr:
+      'كلمات مصنوعة ليس لها معنى، فلا يستطيع الطفل قراءتها من الذاكرة؛ تقيس فك الترميز وحده. «صحيح» فقط إذا نطق كل حرف وحركة كما كُتب. إذا قرأها كلمة حقيقية تشبهها (مثل «فَزَعْ» بدل «فَزَب») فهي خطأ. التصحيح الذاتي الفوري صحيح. يتوقف النشاط بعد ٥ أخطاء متتالية.',
+    introAudio:
+      'هَذِهِ كَلِمَاتٌ مِنْ كَوْكَبٍ آخَرَ، لَيْسَ لَهَا مَعْنًى. اقْرَأْهَا كَمَا هِيَ مَكْتُوبَةٌ بِالضَّبْطِ.',
+    practice: NONWORD_PRACTICE,
+    items: NONWORD_ITEMS,
+  },
+  {
+    id: 'oralReading',
+    order: 14,
+    kind: 'passage',
+    domain: 'reading',
+    gameNameAr: 'قصة سامي',
+    skillNameAr: 'دقة القراءة الجهرية وطلاقتها',
+    icon: '📖',
+    minutes: 3,
+    chance: 0,
+    minAgeMonths: READING_MIN_AGE_MONTHS,
+    adultScored: true,
+    examinerNoteAr:
+      'يقرأ الطفل القصة جهرًا دقيقة واحدة. اضغط «ابدأ» حين ينطق أول كلمة. المس كل كلمة يخطئ فيها أو يتخطاها أو يتوقف عندها أكثر من ٣ ثوانٍ (عندها اقرأها له وتابع). التصحيح الذاتي صحيح، ولا يُشترط إعراب أواخر الكلمات. إذا أنهى القصة قبل الدقيقة فاضغط «انتهى»، وإلا يتوقف المؤقت وتلمس آخر كلمة قرأها.',
+    introAudio: 'اقْرَأْ هَذِهِ القِصَّةَ بِصَوْتٍ عَالٍ، كَمَا تَقْرَأُ فِي الصَّفِّ.',
+    titleAr: PASSAGE_TITLE,
+    words: PASSAGE_WORDS,
+    timeLimitSec: PASSAGE_TIME_LIMIT_SEC,
+  },
+  {
+    id: 'spelling',
+    order: 15,
+    kind: 'spelling',
+    domain: 'reading',
+    gameNameAr: 'الكاتب الصغير',
+    skillNameAr: 'الإملاء (كتابة كلمات مسموعة)',
+    icon: '✍️',
+    minutes: 5,
+    chance: 0,
+    minAgeMonths: READING_MIN_AGE_MONTHS,
+    discontinueAfter: 4,
+    examinerNoteAr:
+      'يسمع الطفل كلمة ويكتبها بلمس الحروف، دون تشكيل. لا تتهجّ الكلمة له ولا تشر إلى الحروف. يمكنه إعادة الاستماع ومسح حرف. يُحسب للكلمة صحيحة أو خطأ، ويُحسب أيضًا عدد الحروف الصحيحة لأن الخطأ القريب يختلف عن البعيد. يتوقف النشاط بعد ٤ كلمات خاطئة متتالية.',
+    introAudio: 'سَتَسْمَعُ كَلِمَةً. اكْتُبْهَا بِلَمْسِ الحُرُوفِ، ثُمَّ اضْغَطْ: تَمَّ.',
+    practice: SPELL_PRACTICE,
+    items: SPELL_ITEMS,
+  },
 ];
 
 export const SUBTESTS_BY_ID: Record<SubtestId, Subtest> = Object.fromEntries(
   BATTERY.map((s) => [s.id, s])
 ) as Record<SubtestId, Subtest>;
 
-/** Number of scored units (items, trials or queries) in a subtest. */
+/** Number of scored units (items, trials, queries, grid cells or passage words) in a subtest. */
 export function scoredItemCount(subtest: Subtest): number {
   switch (subtest.kind) {
     case 'choice':
+    case 'readList':
+    case 'spelling':
       return subtest.items.length;
     case 'span':
       return subtest.trials.length;
@@ -647,7 +852,61 @@ export function scoredItemCount(subtest: Subtest): number {
       return subtest.blocks.reduce((sum, b) => sum + b.queryOrder.length, 0);
     case 'pal':
       return subtest.blocks.reduce((sum, b) => sum + b.order.length, 0);
+    case 'ran':
+      return RAN_GRID_SIZE;
+    case 'passage':
+      return subtest.words.length;
   }
 }
 
+/** Ids of every scored response a subtest can produce. */
+export function scoredItemIds(subtest: Subtest): string[] {
+  switch (subtest.kind) {
+    case 'choice':
+    case 'readList':
+    case 'spelling':
+      return subtest.items.map((i) => i.id);
+    case 'span':
+      return subtest.trials.map((t) => t.id);
+    case 'association':
+      return subtest.blocks.flatMap((b) => b.residents.map((r) => `${b.id}-${r}`));
+    case 'pal':
+      return subtest.blocks.flatMap((b) => b.order.map((c) => `${b.id}-${c}`));
+    case 'ran':
+      return [];
+    case 'passage':
+      return subtest.words.map((_, i) => passageWordId(i));
+  }
+}
+
+export const appliesAtAge = (subtest: Subtest, ageMonths: number) => ageMonths >= (subtest.minAgeMonths ?? 0);
+
+/**
+ * The battery in short sittings of about 10–15 minutes, for this child's age. From six, when
+ * reading instruction has begun, the direct reading measures come first: they answer the parent's
+ * question most directly, and a child who stops after one sitting has still been asked to read.
+ */
+export function sittingsForAge(ageMonths: number): Subtest[][] {
+  const ids: SubtestId[][] =
+    ageMonths >= READING_MIN_AGE_MONTHS
+      ? [
+          ['wordReading', 'nonwordReading', 'oralReading', 'ranObjects', 'ranLetters'],
+          ['visualSequential', 'visualAssociative', 'auditorySequential'],
+          ['pairedAssociate', 'rhyme', 'phonological'],
+          ['auditoryDiscrimination', 'visualDiscrimination', 'letterSound', 'spelling'],
+        ]
+      : [
+          ['visualSequential', 'visualAssociative', 'auditorySequential'],
+          ['pairedAssociate', 'rhyme', 'phonological'],
+          ['auditoryDiscrimination', 'visualDiscrimination', 'letterSound', 'ranObjects'],
+        ];
+  return ids.map((sitting) => sitting.map((id) => SUBTESTS_BY_ID[id]).filter((s) => appliesAtAge(s, ageMonths)));
+}
+
+/** Every task this child is given, in the order they are given. */
+export const subtestsForAge = (ageMonths: number): Subtest[] => sittingsForAge(ageMonths).flat();
+
+export const minutesForAge = (ageMonths: number) => subtestsForAge(ageMonths).reduce((sum, s) => sum + s.minutes, 0);
+
+/** Minutes for the full battery at the oldest ages (every task). */
 export const TOTAL_BATTERY_MINUTES = BATTERY.reduce((sum, s) => sum + s.minutes, 0);

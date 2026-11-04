@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, Brain } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import { SUBTESTS_BY_ID } from '../../cognitiveProfile/battery';
+import { readingMeasureLineAr } from '../../cognitiveProfile/guidance';
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
@@ -9,7 +10,7 @@ const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣�
 export function BatteryRiskBadge({ student }: { student: StudentRecord }) {
   const summary = student.cognitiveBattery?.summary;
   if (!summary) return <span className="bz-small bz-muted">لم يُفحص بعد</span>;
-  return <span className="bz-badge bz-badge-neutral">نتائج وصفية · {ar(summary.completedSubtests)}/٩</span>;
+  return <span className="bz-badge bz-badge-neutral">نتائج وصفية · {ar(summary.completedSubtests)}/{ar(summary.totalSubtests ?? 9)}</span>;
 }
 
 /** Task-level performance summary. It intentionally omits provisional centiles and risk bands. */
@@ -44,7 +45,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
         <div>
           <p className="bz-small text-brand font-semibold">نتائج وصفية · آخر تحديث {updated}</p>
           <h2 id={`battery-summary-${student.id}`} className="bz-h3 mt-1">
-            أُكملت {ar(summary.completedSubtests)} من ٩ مهام
+            أُكملت {ar(summary.completedSubtests)} من {ar(summary.totalSubtests ?? 9)} مهام
           </h2>
         </div>
         <span className="bz-badge bz-badge-neutral">لا توجد مقارنة معيارية</span>
@@ -55,9 +56,9 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
             <li key={scored.subtestId} className="rounded-xl border border-line p-3">
               <div className="flex items-start justify-between gap-2">
                 <span className="bz-small font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</span>
-                <strong className="bz-small bz-num text-ink">{ar(scored.percent)}٪</strong>
+                {!scored.measures && <strong className="bz-small bz-num text-ink">{ar(scored.percent)}٪</strong>}
               </div>
-              <p className="bz-small text-ink-2 mt-1">إجابات صحيحة داخل المهمة فقط</p>
+              <p className="bz-small text-ink-2 mt-1 bz-num">{readingMeasureLineAr(scored.subtestId, scored) ?? 'إجابات صحيحة داخل المهمة فقط'}</p>
             </li>
           ))}
         </ul>

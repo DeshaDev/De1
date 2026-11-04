@@ -11,6 +11,9 @@ export const PHRASES = {
   testStarts: "رَائِعْ! الآنَ نَبْدَأُ اللُّعْبَةَ. لَنْ أُخْبِرَكَ إِنْ كَانَتْ إِجَابَتُكَ صَحِيحَةً؛ فَقَطْ حَاوِلْ أَفْضَلَ مَا تَسْتَطِيعُ.",
   soundCheck: "مَرْحَبًا! هَلْ تَسْمَعُنِي جَيِّدًا؟",
   levelUp: "أَحْسَنْتَ! انْتَقَلْتَ إِلَى مُسْتَوًى جَدِيدٍ.",
+  writeWord: "اكْتُبْ هَذِهِ الكَلِمَةَ:",
+  readItLikeThis: "تُقْرَأُ هَكَذَا:",
+  writtenLikeThis: "تُكْتَبُ هَكَذَا.",
 } as const;
 
 /** Paired-associate learning ("space friends") phrases, built from the creature names. */

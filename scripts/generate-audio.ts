@@ -9,7 +9,9 @@
  *   npx tsx scripts/generate-audio.ts            # generate missing clips, then QA all
  *   npx tsx scripts/generate-audio.ts --force    # regenerate everything
  *   npx tsx scripts/generate-audio.ts --qa-only  # re-run the QA on existing clips
- * Options: AUDIO_VOICE (default ar-SA-ZariyahNeural), AUDIO_RATE (default -8%).
+ * Options: AUDIO_VOICE (default ar-SA-ZariyahNeural), AUDIO_RATE (default -12%),
+ *   AUDIO_MIN_GAP_MS (starting gap between Azure requests, default 250; it adapts to 429s).
+ * Progress is saved after every clip, so an interrupted run resumes where it stopped.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +20,7 @@ import { formatArabicTextWithPhonemes, getArabicPhonemeIpa } from '../src/utils/
 
 const KEY = process.env.AZURE_SPEECH_KEY?.trim();
 const REGION = process.env.AZURE_SPEECH_REGION?.trim();
-const VOICE = process.env.AUDIO_VOICE?.trim() || 'ar-EG-SalmaNeural';
+const VOICE = process.env.AUDIO_VOICE?.trim() || 'ar-SA-ZariyahNeural';
 const RATE = process.env.AUDIO_RATE?.trim() || '-12%';
 const SHORT_RATE = '-15%'; // isolated syllables and sounds are spoken more slowly
 const OUT_DIR = path.resolve('public/audio/v1');
@@ -57,14 +59,60 @@ const escapeXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const isShort = (text: string) => text.replace(/[ً-ْٰ\s.؟?!،,…]/g, '').length <= 3;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+class RateLimited extends Error {
+  constructor(label: string, readonly retryAfterMs: number | null) {
+    super(`${label} rate limited`);
+  }
+}
+
+/** Seconds (or an HTTP date) from a Retry-After header, in milliseconds. */
+function retryAfterMs(res: Response): number | null {
+  const v = res.headers.get('retry-after');
+  if (!v) return null;
+  const secs = Number(v);
+  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+  const at = Date.parse(v);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : null;
+}
+
+/**
+ * Adaptive pacing so a free (F0) or standard (S0) Azure key both finish without tripping
+ * the rate limit: the gap between requests doubles after every 429 and shrinks slowly
+ * after a run of successes. AUDIO_MIN_GAP_MS sets the starting gap.
+ */
+const pace = {
+  gap: Number(process.env.AUDIO_MIN_GAP_MS ?? 250),
+  min: 150,
+  max: 6000,
+  last: 0,
+  ok: 0,
+};
+async function paced<T>(fn: () => Promise<T>): Promise<T> {
+  const wait = pace.last + pace.gap - Date.now();
+  if (wait > 0) await sleep(wait);
+  pace.last = Date.now();
+  return fn();
+}
+
 async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await fn();
+      const result = await paced(fn);
+      if (++pace.ok >= 40) {
+        pace.ok = 0;
+        pace.gap = Math.max(pace.min, Math.round(pace.gap * 0.85));
+      }
+      return result;
     } catch (err) {
-      if (attempt >= 5) throw err;
-      const wait = 1000 * 2 ** attempt;
-      console.warn(`  retry ${label} in ${wait}ms (${(err as Error).message})`);
+      if (attempt >= 10) throw err;
+      pace.ok = 0;
+      let wait = Math.min(60_000, 1000 * 2 ** attempt);
+      if (err instanceof RateLimited) {
+        pace.gap = Math.min(pace.max, pace.gap * 2);
+        if (err.retryAfterMs !== null) wait = Math.max(err.retryAfterMs, 1000);
+      }
+      wait += Math.round(Math.random() * 500);
+      console.warn(`  retry ${label} in ${wait}ms, gap now ${pace.gap}ms (${(err as Error).message})`);
       await sleep(wait);
     }
   }
@@ -85,7 +133,8 @@ async function synthesize(text: string, format: string): Promise<Buffer> {
     },
     body: ssml,
   });
-  if (res.status === 429 || res.status >= 500) throw new Error(`TTS HTTP ${res.status}`);
+  if (res.status === 429) throw new RateLimited('TTS', retryAfterMs(res));
+  if (res.status >= 500) throw new Error(`TTS HTTP ${res.status}`);
   if (!res.ok) throw new Error(`TTS HTTP ${res.status}: ${await res.text()}`);
   return Buffer.from(await res.arrayBuffer());
 }
@@ -133,7 +182,8 @@ async function qaClip(text: string): Promise<QaResult> {
         body: new Uint8Array(wav),
       }
     );
-    if (r.status === 429 || r.status >= 500) throw new Error(`STT HTTP ${r.status}`);
+    if (r.status === 429) throw new RateLimited('STT', retryAfterMs(r));
+    if (r.status >= 500) throw new Error(`STT HTTP ${r.status}`);
     return r;
   }, 'qa-stt');
   const payload: any = res.ok ? await res.json() : null;
@@ -203,25 +253,42 @@ async function main() {
   }
 
   let generated = 0;
-  for (const [i, entry] of catalog.entries()) {
-    const file = `${entry.key}.mp3`;
-    const exists = manifest.clips[entry.key] && fs.existsSync(path.join(OUT_DIR, file));
-    if (!QA_ONLY && (FORCE || !exists)) {
-      const mp3 = await withRetry(() => synthesize(entry.text, 'audio-24khz-48kbitrate-mono-mp3'), entry.key);
-      fs.writeFileSync(path.join(OUT_DIR, file), mp3);
-      manifest.clips[entry.key] = { file, text: entry.text, voice: VOICE, rate: isShort(entry.text) ? SHORT_RATE : RATE, bytes: mp3.length };
-      generated++;
+  const save = () => fs.writeFileSync(MANIFEST, JSON.stringify(manifest));
+  const stop = (signal: string) => {
+    console.warn(`${signal}: saving progress (${generated} new clips) before exit.`);
+    save();
+    writeReport(manifest, catalog);
+    process.exit(1);
+  };
+  process.on('SIGTERM', () => stop('SIGTERM'));
+  process.on('SIGINT', () => stop('SIGINT'));
+  try {
+    for (const [i, entry] of catalog.entries()) {
+      const file = `${entry.key}.mp3`;
+      const exists = manifest.clips[entry.key] && fs.existsSync(path.join(OUT_DIR, file));
+      let changed = false;
+      if (!QA_ONLY && (FORCE || !exists)) {
+        const mp3 = await withRetry(() => synthesize(entry.text, 'audio-24khz-48kbitrate-mono-mp3'), entry.key);
+        fs.writeFileSync(path.join(OUT_DIR, file), mp3);
+        manifest.clips[entry.key] = { file, text: entry.text, voice: VOICE, rate: isShort(entry.text) ? SHORT_RATE : RATE, bytes: mp3.length };
+        generated++;
+        changed = true;
+      }
+      if (manifest.clips[entry.key] && (FORCE || QA_ONLY || !manifest.clips[entry.key].qa)) {
+        manifest.clips[entry.key].qa = await qaClip(entry.text);
+        changed = true;
+      }
+      if (changed) save();
+      if ((i + 1) % 25 === 0) console.log(`${i + 1}/${catalog.length} (gap ${pace.gap}ms)`);
     }
-    if (manifest.clips[entry.key] && (FORCE || QA_ONLY || !manifest.clips[entry.key].qa)) {
-      manifest.clips[entry.key].qa = await qaClip(entry.text);
-    }
-    if ((i + 1) % 25 === 0) {
-      console.log(`${i + 1}/${catalog.length}`);
-      fs.writeFileSync(MANIFEST, JSON.stringify(manifest));
-    }
+  } catch (err) {
+    // Keep what was made; the next run in "missing" mode continues from here.
+    save();
+    writeReport(manifest, catalog);
+    throw err;
   }
   manifest.generatedAt = new Date().toISOString();
-  fs.writeFileSync(MANIFEST, JSON.stringify(manifest));
+  save();
   writeReport(manifest, catalog);
   const qa = Object.values(manifest.clips).map((c) => c.qa?.status);
   console.log(

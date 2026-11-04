@@ -177,19 +177,19 @@ const arDigits = (v: number) => String(Math.abs(v)).replace(/[0-9]/g, (d) => '٠
 /** Arabic counted noun: ١ نقطة، ٢ نقطتان، ٣–١٠ نقاط، ١١+ نقطة. */
 function counted(n: number, one: string, two: string, plural: string): string {
   const v = Math.abs(n);
-  if (v === 1) return `${one} واحدة`;
+  if (v === 1) return `${one} ${one === 'قياس' ? 'واحد' : 'واحدة'}`;
   if (v === 2) return two;
   return `${arDigits(v)} ${v >= 3 && v <= 10 ? plural : one}`;
 }
 const points = (n: number) => counted(n, 'نقطة', 'نقطتين', 'نقاط');
-const sessions = (n: number) => counted(n, 'جلسة', 'جلستين', 'جلسات');
+const measures = (n: number) => counted(n, 'قياس', 'قياسين', 'قياسات');
 
 /** One plain sentence for parents and teachers. Never claims more than the data shows. */
 export function describeProgressAr(summary: ProbeSummary | null): string {
-  if (!summary) return 'يبدأ قياس التقدّم مع أول جلسة: مقياس قصير ثابت الصعوبة في بداية كل جلسة.';
-  if (summary.count === 1) return `نتيجة البداية: ${arDigits(summary.baseline)}٪. تظهر المقارنة من الجلسة الثانية.`;
+  if (!summary) return 'يبدأ قياس التقدّم مع أول جلسة: مقياس قصير ثابت الصعوبة، يُعاد مرة كل أسبوع.';
+  if (summary.count === 1) return `نتيجة البداية: ${arDigits(summary.baseline)}٪. تظهر المقارنة في مقياس الأسبوع القادم، وتقدير الإتقان أدناه يتحدّث بعد كل إجابة.`;
   if (!summary.reliable) {
-    return `من ${arDigits(summary.baseline)}٪ في البداية إلى ${arDigits(summary.latest)}٪ في آخر جلسة. النتائج تتذبذب من يوم لآخر، ويصبح الاتجاه موثوقًا بعد ${sessions(RELIABLE_TREND_PROBES)}.`;
+    return `من ${arDigits(summary.baseline)}٪ في البداية إلى ${arDigits(summary.latest)}٪ في آخر جلسة. النتائج تتذبذب من يوم لآخر، ويصبح الاتجاه موثوقًا بعد ${measures(RELIABLE_TREND_PROBES)}.`;
   }
   const direction =
     summary.change > 0 ? `تحسّن بمقدار ${points(summary.change)}` : summary.change < 0 ? `انخفاض بمقدار ${points(summary.change)}` : 'ثبات';
@@ -199,5 +199,5 @@ export function describeProgressAr(summary: ProbeSummary | null): string {
     const how = c > 0 ? `ارتفعت ${points(c)}` : c < 0 ? `انخفضت ${points(c)}` : 'لم تتغير';
     comparison = ` للمقارنة: مهارة «${SKILLS[summary.comparisonSkill].nameAr}» التي لا يتدرّب عليها الطفل ${how}.`;
   }
-  return `${direction} في المهارات المدرَّبة بين أول ثلاث جلسات وآخر ثلاث (${sessions(summary.count)} مقيسة).${comparison}`;
+  return `${direction} في المهارات المدرَّبة بين أول ثلاثة قياسات وآخر ثلاثة (${measures(summary.count)}).${comparison}`;
 }

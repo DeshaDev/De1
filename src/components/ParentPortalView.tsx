@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
-import { BATTERY } from '../cognitiveProfile/battery';
+import { subtestsForAge } from '../cognitiveProfile/battery';
 import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
 import { summarizeProbes } from '../cognitiveProfile/progressProbe';
 import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/storage';
@@ -43,17 +43,19 @@ function nextStepFor(child: StudentRecord): NextStep {
       tab: 'dashboard',
     };
   }
-  const battery = loadBatterySession(child.id)?.results ?? child.cognitiveBattery?.results ?? {};
-  const done = BATTERY.filter((s) => battery[s.id]).length;
+  const stored = loadBatterySession(child.id) ?? child.cognitiveBattery ?? null;
+  const battery = stored?.results ?? {};
+  const tasks = subtestsForAge(stored?.ageMonths ?? child.ageYears * 12);
+  const done = tasks.filter((s) => battery[s.id]).length;
   const training = loadTrainingProgress(child.id) ?? child.trainingProgress ?? null;
   if (done === 0) {
     return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مؤشرات عسر القراءة', progressAr: null, tab: 'dyslexia-lab' };
   }
-  if (done < BATTERY.length && !training) {
+  if (done < tasks.length && !training) {
     return {
       stageAr: 'الفحص قيد التنفيذ',
       actionAr: 'أكمل الفحص',
-      progressAr: `أنهى ${toArabicNum(done)} من ${toArabicNum(BATTERY.length)} ألعاب. يمكن إكمالها على أكثر من جلسة.`,
+      progressAr: `أنهى ${toArabicNum(done)} من ${toArabicNum(tasks.length)} مهام. يمكن إكمالها على أكثر من جلسة.`,
       tab: 'dyslexia-lab',
     };
   }
