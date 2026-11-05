@@ -52,60 +52,37 @@ export const supabase: SupabaseClient = isSupabaseConfigured()
 /**
  * Sign in or sign up with Email and Password
  */
+/**
+ * Sign up with a real Supabase account. A local placeholder must never be returned as an
+ * authenticated parent because child records contain private educational information.
+ */
 export async function signUpWithEmail(
   email: string,
   password: string,
   fullName?: string
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
-  
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('خدمة الحسابات السحابية غير مهيأة. لم يُنشأ حساب ولم تُحفظ بيانات الطفل؛ يرجى ضبط إعدادات Supabase أولًا.');
+  }
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || !password) {
+    throw new Error('يرجى إدخال بريد إلكتروني صحيح وكلمة مرور.');
   }
 
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        data: {
-          full_name: fullName || cleanEmail.split('@')[0],
-        },
-      },
-    });
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: { data: { full_name: fullName || cleanEmail.split('@')[0] } },
+  });
 
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return signInWithEmail(cleanEmail, password);
-      }
-      throw error;
+  if (error) {
+    if (/already registered|user already exists/i.test(error.message)) {
+      return signInWithEmail(cleanEmail, password);
     }
-
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-
-    return { user: data.user, session: data.session };
-  } catch (err: any) {
-    console.warn('Supabase signUp error, using local fallback:', err);
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+    throw error;
   }
+  if (!data.user) throw new Error('لم يؤكد مزود الحساب إنشاء المستخدم. لم يُنشأ ملف طفل.');
+  return { user: data.user, session: data.session };
 }
 
 export async function signInWithEmail(
@@ -113,32 +90,21 @@ export async function signInWithEmail(
   password: string
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
-
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('خدمة الحسابات السحابية غير مهيأة؛ لا يمكن تسجيل الدخول إلى حساب حقيقي.');
+  }
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || !password) {
+    throw new Error('يرجى إدخال بريد إلكتروني صحيح وكلمة المرور.');
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password,
   });
-
-  if (error) {
-    throw error;
+  if (error) throw error;
+  if (!data.user || !data.session?.access_token) {
+    throw new Error('لم يكتمل تسجيل الدخول. قد يحتاج الحساب إلى تأكيد البريد الإلكتروني أولًا.');
   }
-
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: data.user?.user_metadata?.full_name }));
-  }
-
   return { user: data.user, session: data.session };
 }
 

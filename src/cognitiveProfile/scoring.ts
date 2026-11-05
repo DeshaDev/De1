@@ -7,7 +7,7 @@
  * the report must say so; once an Arabic norming study supplies means and SDs, replacing
  * REFERENCE_TABLE upgrades every report without code changes elsewhere.
  */
-import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, appliesAtAge, scoredItemCount } from './battery';
+import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, scoredItemCount, subtestsForAge } from './battery';
 import { letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
 
 export interface ItemResponse {
@@ -344,18 +344,20 @@ export function buildProfile(
   table: ReferenceTable = REFERENCE_TABLE
 ): CognitiveProfile {
   const { index, outOfRange } = ageBandIndex(ageMonths);
-  const subtests = BATTERY.filter((s) => results[s.id]).map((s) =>
+  const activeTasks = subtestsForAge(ageMonths);
+  // Ignore legacy examiner-scored results: they are not part of the active AI-only workflow.
+  const subtests = activeTasks.filter((s) => results[s.id]).map((s) =>
     scoreSubtest(results[s.id] as SubtestResult, ageMonths, table)
   );
   // Domain centiles, risk and the strength/weakness lists use only tasks with reference values.
   const referenced = subtests.filter((s): s is ScoredSubtest & { z: number; centile: number; band: Band } => s.z !== null);
   const byId = new Map(referenced.map((s) => [s.subtestId, s]));
-  const missing = BATTERY.filter((s) => appliesAtAge(s, ageMonths) && !results[s.id]).map((s) => s.id);
+  const missing = activeTasks.filter((s) => !results[s.id]).map((s) => s.id);
 
-  const domainIds = Array.from(new Set(BATTERY.map((s) => s.domain)));
+  const domainIds = Array.from(new Set(activeTasks.map((s) => s.domain)));
   const domains: DomainScore[] = domainIds
     .map((domain) => {
-      const members = BATTERY.filter((s) => s.domain === domain && byId.has(s.id)).map((s) => s.id);
+      const members = activeTasks.filter((s) => s.domain === domain && byId.has(s.id)).map((s) => s.id);
       if (members.length === 0) return null;
       const meanZ = members.reduce((sum, id) => sum + byId.get(id)!.z, 0) / members.length;
       const centile = centileFromZ(meanZ);

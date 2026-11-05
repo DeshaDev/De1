@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Printer, Sparkles } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
-import { scoredItemCount, SUBTESTS_BY_ID, type SubtestId } from '../../cognitiveProfile/battery';
+import { scoredItemCount, SUBTESTS_BY_ID, subtestsForAge, type SubtestId } from '../../cognitiveProfile/battery';
 import { PROGRAM_SESSIONS, SKILLS, SUBTEST_TO_SKILLS, masteryEstimate, sessionsCompleted, type SkillId, type TrainingProgress } from '../../cognitiveProfile/training';
 import { summarizeProbes } from '../../cognitiveProfile/progressProbe';
 import {
@@ -21,8 +21,9 @@ const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣�
 export function planFactsFromRecord(student: StudentRecord, progress: TrainingProgress | null): PlanFacts {
   const battery = student.cognitiveBattery ?? null;
   const summary = battery?.summary ?? null;
+  const activeTaskIds = new Set(battery ? subtestsForAge(battery.ageMonths).map((task) => task.id) : []);
   const results = Object.entries(battery?.results ?? {}).flatMap(([rawId, result]) => {
-    if (!result) return [];
+    if (!result || !activeTaskIds.has(rawId as SubtestId)) return [];
     const subtestId = rawId as SubtestId;
     const total = scoredItemCount(SUBTESTS_BY_ID[subtestId]);
     const correct = result.responses.filter((response) => response.correct).length;
@@ -37,7 +38,7 @@ export function planFactsFromRecord(student: StudentRecord, progress: TrainingPr
   const probe = progress ? summarizeProbes(progress.probes ?? []) : null;
   return buildPlanFacts({
     ageYears: student.ageYears,
-    screening: summary ? { completedGames: summary.completedSubtests, results } : null,
+    screening: summary ? { completedGames: results.length, results } : null,
     programme: progress
       ? {
           sessionsDone: sessionsCompleted(progress),

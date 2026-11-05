@@ -43,6 +43,7 @@ import {
   loadBatterySession,
   loadScreeningHistory,
   saveScreeningHistory,
+  sanitizeScreeningHistory,
   type ScreeningSnapshot,
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
@@ -408,7 +409,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
             <span className="bz-hint">بعض اللهجات تدمج أصواتًا مثل ث/س وذ/ز؛ نستخدم اللهجة لتفسير هذه البنود بإنصاف.</span>
           </label>
           <label className="bz-field">
-            <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
+            <span className="bz-label">اسم المرافق <span className="bz-muted font-normal">(اختياري)</span></span>
             <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
           </label>
         </div>
@@ -471,10 +472,10 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
           <h2 className="bz-h3">كيف يسير الفحص؟</h2>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
-              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
-              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
+              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} مهام نشطة مستقلة التصحيح في ${toArabicDigits(sittingsForAge(READING_MIN_AGE_MONTHS - 1).length)} جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
+              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهام نشطة في ${toArabicDigits(sittingsForAge(READING_MIN_AGE_MONTHS).length)} جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، وتشمل الإملاء المصحح آليًا.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة. في مهام القراءة والتسمية يقرأ الطفل بصوت عالٍ، ويضغط البالغ «صحيح» أو «خطأ».',
+              'وجود ولي الأمر أو المرافق لضمان راحة الطفل واتباع التعليمات فقط؛ لا يُطلب منه تقدير صحة القراءة أو التسمية أو إدخال درجات يدوية. المهام التي تتطلب حكمًا بشريًا على النطق مستبعدة من البطارية النشطة حتى يكتمل لها تصحيح صوتي آلي موثوق.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
@@ -600,7 +601,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const sittings = session ? sittingsForAge(session.ageMonths) : [];
   const completed = ageTasks.filter((s) => session?.results[s.id]);
   const localHistory = loadScreeningHistory(activeStudent.id);
-  const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
+  const previousScreenings = localHistory.length > 0 ? localHistory : sanitizeScreeningHistory(activeStudent.screeningHistory);
   const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
   const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
   const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
@@ -774,13 +775,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           type="button"
           onClick={() => {
             if (window.confirm('سيُحفظ ملخص هذا الفحص للمقارنة، ثم يبدأ فحص جديد. متابعة؟')) {
-              if (profile && profile.risk !== 'insufficient') {
+              if (profile && profile.subtests.length > 0) {
                 const snapshot: ScreeningSnapshot = {
                   completedAt: new Date().toISOString(),
                   ageMonths: profile.ageMonths,
-                  risk: profile.risk,
                   completedSubtests: profile.subtests.length,
-                  domains: profile.domains.map((d) => ({ domain: d.domain, centile: d.centile })),
                 };
                 const history = [...previousScreenings, snapshot].slice(-10);
                 saveScreeningHistory(activeStudent.id, history);

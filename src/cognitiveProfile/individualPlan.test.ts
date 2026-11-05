@@ -45,6 +45,29 @@ describe('individual plan guardrails', () => {
     assert.equal(validateDraftPlan(rulesDraft(noProgramme), noProgramme).ok, true);
   });
 
+  it('preserves all 15 battery results in AI-plan facts and rejects a 16th', () => {
+    const results = Array.from({ length: 15 }, (_, index) => ({
+      skill: `skill-${index + 1}`,
+      labelAr: `المهارة ${index + 1}`,
+      correct: index,
+      total: 20,
+      percent: index * 5,
+    }));
+    const fullFacts = buildPlanFacts({
+      ageYears: 8,
+      screening: { completedGames: 15, results },
+      programme: null,
+      reading: null,
+    });
+    assert.equal(fullFacts.screening?.results.length, 15);
+    assert.equal(PlanFactsSchema.safeParse(fullFacts).success, true);
+    const tooMany = {
+      ...fullFacts,
+      screening: { completedGames: 16, results: [...results, results[0]] },
+    };
+    assert.equal(PlanFactsSchema.safeParse(tooMany).success, false);
+  });
+
   it('does not derive automatic referrals from provisional screening scores', () => {
     assert.equal(referralFor(facts), null);
   });

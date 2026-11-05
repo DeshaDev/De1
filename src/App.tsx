@@ -313,17 +313,17 @@ export default function App() {
     setSupabaseAuthLoading(true);
     try {
       const { user, session } = await signInWithEmail(email, pass);
-      if (user) {
+      if (user && session?.access_token) {
         setSupabaseUser(user);
         const parentSession: BaseeraSessionInfo = {
-          token: session?.access_token || `local-${user.id}`,
+          token: session.access_token,
           role: 'parent',
           accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
           tenantId: `parent_${user.id.slice(0, 8)}`,
           tenantDisplayNameAr: 'حساب ولي الأمر',
           sessionId: user.id.replace(/-/g, '').slice(0, 32),
           scopes: ['students:read', 'students:write'],
-          expiresAt: Date.now() + 86400000 * 30,
+          expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + 60 * 60 * 1000,
         };
         setBaseeraSession(parentSession);
         setAiStatusBanner(`مرحباً بك! تم تسجيل الدخول بنجاح.`);
@@ -338,7 +338,7 @@ export default function App() {
         return { success: true };
       }
       setSupabaseAuthLoading(false);
-      return { success: false, error: 'تعذر التحقق من الحساب.' };
+      return { success: false, error: 'لم يكتمل تسجيل الدخول إلى الحساب السحابي.' };
     } catch (err: any) {
       setSupabaseAuthLoading(false);
       const msg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البريد وكلمة المرور.';
@@ -668,16 +668,31 @@ export default function App() {
     }
     let currentUser = supabaseUser;
 
-    if (!currentUser && child.parentEmail && child.parentPassword) {
-      try {
-        const { user } = await signUpWithEmail(child.parentEmail, child.parentPassword);
-        if (user) {
-          currentUser = user;
-          setSupabaseUser(user);
-        }
-      } catch (e) {
-        console.warn('Parent auto-signup notice:', e);
+    if (!isSupabaseConfigured()) {
+      throw new Error('الحسابات السحابية غير مهيأة. لم يتم إنشاء ملف الطفل أو حفظ بياناته؛ يرجى ضبط Supabase قبل التسجيل.');
+    }
+
+    if (!currentUser) {
+      if (!child.parentEmail || !child.parentPassword) {
+        throw new Error('سجّل الدخول إلى حساب ولي الأمر أو أدخل البريد وكلمة المرور لإنشاء حساب جديد.');
       }
+      const { user, session } = await signUpWithEmail(child.parentEmail, child.parentPassword);
+      if (!user) throw new Error('تعذر إنشاء حساب ولي الأمر.');
+      if (!session?.access_token) {
+        throw new Error('تم إنشاء الحساب لدى مزود الخدمة، لكن تسجيل الدخول لم يكتمل. أكّد بريدك الإلكتروني ثم سجّل الدخول قبل إنشاء ملف الطفل.');
+      }
+      currentUser = user;
+      setSupabaseUser(user);
+      setBaseeraSession({
+        token: session.access_token,
+        role: 'parent',
+        accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
+        tenantId: `parent_${user.id.slice(0, 8)}`,
+        tenantDisplayNameAr: 'حساب ولي الأمر',
+        sessionId: user.id.replace(/-/g, '').slice(0, 32),
+        scopes: ['students:read', 'students:write'],
+        expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + 60 * 60 * 1000,
+      });
     }
 
     const recordedAt = new Date().toISOString();
@@ -731,14 +746,14 @@ export default function App() {
       },
     };
 
-    setStudents((prev) => [newLearner, ...prev]);
-    setSelectedStudentId(newLearner.id);
-
-    if (currentUser) {
-      void syncStudentToSupabase(newLearner, currentUser.id);
+    const savedToCloud = await syncStudentToSupabase(newLearner, currentUser.id);
+    if (!savedToCloud) {
+      throw new Error('تعذّر حفظ ملف الطفل في حساب الأسرة. لم نعرض التسجيل على أنه مكتمل؛ تحقق من اتصال Supabase وسياسات الوصول ثم أعد المحاولة.');
     }
 
-    setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+    setStudents((prev) => [newLearner, ...prev]);
+    setSelectedStudentId(newLearner.id);
+    setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في حساب الأسرة بنجاح. يمكنك بدء الأنشطة الآن.`);
     return newLearner.id;
   };
 
