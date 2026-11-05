@@ -136,7 +136,7 @@ interface SubtestBase {
   chance: number;
   /** Youngest age (months) the task is given at; absent = every age the battery covers. */
   minAgeMonths?: number;
-  /** The adult scores each item while the child reads or names aloud. */
+  /** Legacy examiner-scored task. Active batteries exclude this until validated AI audio scoring exists. */
   adultScored?: boolean;
 }
 
@@ -882,9 +882,9 @@ export function scoredItemIds(subtest: Subtest): string[] {
 export const appliesAtAge = (subtest: Subtest, ageMonths: number) => ageMonths >= (subtest.minAgeMonths ?? 0);
 
 /**
- * The battery in short sittings of about 10–15 minutes, for this child's age. From six, when
- * reading instruction has begun, the direct reading measures come first: they answer the parent's
- * question most directly, and a child who stops after one sitting has still been asked to read.
+ * Only independently scored tasks are active. Legacy reading/naming tasks that require a person
+ * to judge pronunciation are kept in the catalogue but excluded until validated AI audio scoring
+ * is integrated. The separate Reading Lab reports voice metrics only after a complete AI result.
  */
 export function sittingsForAge(ageMonths: number): Subtest[][] {
   const ids: SubtestId[][] =
@@ -900,7 +900,11 @@ export function sittingsForAge(ageMonths: number): Subtest[][] {
           ['pairedAssociate', 'rhyme', 'phonological'],
           ['auditoryDiscrimination', 'visualDiscrimination', 'letterSound', 'ranObjects'],
         ];
-  return ids.map((sitting) => sitting.map((id) => SUBTESTS_BY_ID[id]).filter((s) => appliesAtAge(s, ageMonths)));
+  return ids
+    .map((sitting) => sitting
+      .map((id) => SUBTESTS_BY_ID[id])
+      .filter((s) => appliesAtAge(s, ageMonths) && s.adultScored !== true))
+    .filter((sitting) => sitting.length > 0);
 }
 
 /** Every task this child is given, in the order they are given. */
