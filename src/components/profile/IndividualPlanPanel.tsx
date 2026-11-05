@@ -38,7 +38,7 @@ export function planFactsFromRecord(student: StudentRecord, progress: TrainingPr
   const probe = progress ? summarizeProbes(progress.probes ?? []) : null;
   return buildPlanFacts({
     ageYears: student.ageYears,
-    screening: summary ? { completedGames: summary.completedSubtests, results } : null,
+    screening: summary ? { completedGames: results.length, results } : null,
     programme: progress
       ? {
           sessionsDone: sessionsCompleted(progress),
