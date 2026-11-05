@@ -41,14 +41,14 @@ export const PlanFactsSchema = z
     ageYears: z.number().int().min(4).max(8),
     screening: z
       .object({
-        completedGames: z.number().int().min(0).max(9),
+        completedGames: z.number().int().min(0).max(15),
         results: z.array(z.object({
           skill: z.string().max(40),
           labelAr: z.string().max(80),
           correct: z.number().int().min(0).max(100),
           total: z.number().int().min(1).max(100),
           percent: z.number().int().min(0).max(100),
-        }).strict()).max(9),
+        }).strict()).max(15),
       })
       .strict()
       .nullable(),
@@ -111,7 +111,7 @@ export function buildPlanFacts(input: {
     screening: input.screening
       ? {
           completedGames: input.screening.completedGames,
-          results: input.screening.results.slice(0, 9).map((r) => ({
+          results: input.screening.results.map((r) => ({
             skill: r.skill,
             labelAr: r.labelAr,
             correct: r.correct,
