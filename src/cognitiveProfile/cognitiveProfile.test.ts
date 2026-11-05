@@ -1,6 +1,6 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { BATTERY, ChoiceItem, SUBTESTS_BY_ID, SubtestId, scoredItemCount } from './battery';
+import { BATTERY, ChoiceItem, SUBTESTS_BY_ID, SubtestId, scoredItemCount, subtestsForAge } from './battery';
 import { LEXICON, lex } from './lexicon';
 import {
   ItemResponse,
@@ -49,6 +49,16 @@ test('battery: nine precursor subtests in five domains, plus six direct reading 
   }
   // The reading measures are reported as raw results until they are normed.
   for (const s of BATTERY.filter((t) => !precursor.includes(t))) assert.equal(REFERENCE_TABLE.rows[s.id], undefined, s.id);
+});
+
+test('active age-specific batteries never require adult judgement for scored answers', () => {
+  assert.equal(subtestsForAge(48).length, 9);
+  assert.equal(subtestsForAge(60).length, 9);
+  assert.equal(subtestsForAge(72).length, 10);
+  assert.equal(subtestsForAge(96).length, 10);
+  for (const ageMonths of [48, 60, 72, 84, 96]) {
+    assert.ok(subtestsForAge(ageMonths).every((task) => task.adultScored !== true), `adult-scored task remained active at ${ageMonths} months`);
+  }
 });
 
 test('every choice item has a unique set of options containing the correct answer', () => {
@@ -193,10 +203,10 @@ test('letter knowledge does not raise risk before age five', () => {
 test('risk is withheld when too few core subtests were completed', () => {
   const profile = profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 78);
   assert.equal(profile.risk, 'insufficient');
-  // From six the reading measures are part of the battery too: 15 tasks in all.
-  assert.equal(profile.missing.length, 12);
-  // Before six: the nine precursor tasks and rapid naming of pictures.
-  assert.equal(profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 54).missing.length, 7);
+  // The active battery excludes legacy tasks that require manual pronunciation scoring.
+  assert.equal(profile.missing.length, 7);
+  // Before six, the active battery contains nine independently scored precursor tasks.
+  assert.equal(profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 54).missing.length, 6);
 });
 
 test('validity flags: near-chance and discontinued results are flagged', () => {
