@@ -81,11 +81,43 @@ export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(
 export interface ScreeningSnapshot {
   completedAt: string;
   ageMonths: number;
-  risk: 'high' | 'moderate' | 'low' | 'insufficient';
   completedSubtests: number;
-  domains: Array<{ domain: string; centile: number }>;
 }
+
+/**
+ * Legacy history may contain provisional risk bands and centiles. Keep only descriptive
+ * session metadata so those unnormed values cannot be re-saved or reintroduced in reports.
+ */
+export function sanitizeScreeningHistory(value: unknown): ScreeningSnapshot[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): ScreeningSnapshot[] => {
+    if (!entry || typeof entry !== 'object') return [];
+    const item = entry as Record<string, unknown>;
+    if (
+      typeof item.completedAt !== 'string' ||
+      !Number.isFinite(Date.parse(item.completedAt)) ||
+      !Number.isInteger(item.ageMonths) ||
+      Number(item.ageMonths) < 48 ||
+      Number(item.ageMonths) > 107 ||
+      !Number.isInteger(item.completedSubtests) ||
+      Number(item.completedSubtests) < 0 ||
+      Number(item.completedSubtests) > 15
+    ) return [];
+    return [{
+      completedAt: item.completedAt,
+      ageMonths: Number(item.ageMonths),
+      completedSubtests: Number(item.completedSubtests),
+    }];
+  }).slice(-10);
+}
+
 const HISTORY_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.history.${studentId}`;
-export const loadScreeningHistory = (studentId: string) => read<ScreeningSnapshot[]>(HISTORY_KEY(studentId)) ?? [];
-export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) => write(HISTORY_KEY(studentId), history.slice(-10));
+export const loadScreeningHistory = (studentId: string): ScreeningSnapshot[] => {
+  const history = sanitizeScreeningHistory(read<unknown>(HISTORY_KEY(studentId)));
+  // Persist the sanitized shape to remove legacy risk and centile fields from local storage.
+  write(HISTORY_KEY(studentId), history);
+  return history;
+};
+export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) =>
+  write(HISTORY_KEY(studentId), sanitizeScreeningHistory(history));
 
