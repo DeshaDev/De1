@@ -43,6 +43,7 @@ import {
   loadBatterySession,
   loadScreeningHistory,
   saveScreeningHistory,
+  sanitizeScreeningHistory,
   type ScreeningSnapshot,
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
@@ -600,7 +601,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const sittings = session ? sittingsForAge(session.ageMonths) : [];
   const completed = ageTasks.filter((s) => session?.results[s.id]);
   const localHistory = loadScreeningHistory(activeStudent.id);
-  const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
+  const previousScreenings = localHistory.length > 0 ? localHistory : sanitizeScreeningHistory(activeStudent.screeningHistory);
   const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
   const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
   const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
@@ -774,13 +775,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           type="button"
           onClick={() => {
             if (window.confirm('سيُحفظ ملخص هذا الفحص للمقارنة، ثم يبدأ فحص جديد. متابعة؟')) {
-              if (profile && profile.risk !== 'insufficient') {
+              if (profile && profile.subtests.length > 0) {
                 const snapshot: ScreeningSnapshot = {
                   completedAt: new Date().toISOString(),
                   ageMonths: profile.ageMonths,
-                  risk: profile.risk,
                   completedSubtests: profile.subtests.length,
-                  domains: profile.domains.map((d) => ({ domain: d.domain, centile: d.centile })),
                 };
                 const history = [...previousScreenings, snapshot].slice(-10);
                 saveScreeningHistory(activeStudent.id, history);
