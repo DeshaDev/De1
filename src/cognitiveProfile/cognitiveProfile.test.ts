@@ -2,6 +2,7 @@ import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BATTERY, ChoiceItem, SUBTESTS_BY_ID, SubtestId, scoredItemCount, subtestsForAge } from './battery';
 import { LEXICON, lex } from './lexicon';
+import { sanitizeScreeningHistory } from './storage';
 import {
   ItemResponse,
   SubtestResult,
@@ -49,6 +50,22 @@ test('battery: nine precursor subtests in five domains, plus six direct reading 
   }
   // The reading measures are reported as raw results until they are normed.
   for (const s of BATTERY.filter((t) => !precursor.includes(t))) assert.equal(REFERENCE_TABLE.rows[s.id], undefined, s.id);
+});
+
+test('legacy screening history is sanitized to descriptive metadata only', () => {
+  const history = sanitizeScreeningHistory([{
+    completedAt: '2026-10-01T10:00:00.000Z',
+    ageMonths: 78,
+    completedSubtests: 9,
+    risk: 'high',
+    domains: [{ domain: 'phonological', centile: 2 }],
+  }]);
+  assert.deepEqual(history, [{
+    completedAt: '2026-10-01T10:00:00.000Z',
+    ageMonths: 78,
+    completedSubtests: 9,
+  }]);
+  assert.equal(sanitizeScreeningHistory([{ completedAt: 'invalid', ageMonths: 78, completedSubtests: 9 }]).length, 0);
 });
 
 test('active age-specific batteries never require adult judgement for scored answers', () => {
