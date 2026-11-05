@@ -695,7 +695,7 @@ export default function App() {
       });
     }
 
-    const recordedAt = new Date().toISOString();    const recordedAt = new Date().toISOString();
+    const recordedAt = new Date().toISOString();
     const newLearner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: child.name,
