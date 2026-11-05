@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { PlanFactsSchema, buildPlanFacts, planPrompt, referralFor, rulesDraft, validateDraftPlan, type DraftPlan, type PlanFacts } from './individualPlan';
+import { MAX_SCREENING_TASKS, PlanFactsSchema, buildPlanFacts, planPrompt, referralFor, rulesDraft, validateDraftPlan, type DraftPlan, type PlanFacts } from './individualPlan';
 
 const facts: PlanFacts = buildPlanFacts({
   ageYears: 6,
@@ -20,6 +20,33 @@ describe('individual plan guardrails', () => {
   it('accepts a draft whose numbers all come from the facts', () => {
     const v = validateDraftPlan(good, facts);
     assert.equal(v.ok, true, v.errors.join(' | '));
+  });
+
+  it('preserves all 15 tasks in the current screening battery', () => {
+    const results = Array.from({ length: MAX_SCREENING_TASKS }, (_, index) => ({
+      skill: `task-${index + 1}`,
+      labelAr: `المهمة ${index + 1}`,
+      correct: index % 11,
+      total: 10,
+      percent: (index % 11) * 10,
+    }));
+    const fullBattery = buildPlanFacts({
+      ageYears: 7,
+      screening: { completedGames: MAX_SCREENING_TASKS, results },
+      programme: null,
+      reading: null,
+    });
+
+    assert.equal(fullBattery.screening?.completedGames, MAX_SCREENING_TASKS);
+    assert.equal(fullBattery.screening?.results.length, MAX_SCREENING_TASKS);
+    assert.equal(PlanFactsSchema.safeParse(fullBattery).success, true);
+    assert.equal(
+      PlanFactsSchema.safeParse({
+        ...fullBattery,
+        screening: { ...fullBattery.screening!, completedGames: MAX_SCREENING_TASKS + 1 },
+      }).success,
+      false
+    );
   });
 
   it('rejects a number that is not in the data', () => {
