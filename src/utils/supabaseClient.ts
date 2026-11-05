@@ -58,54 +58,43 @@ export async function signUpWithEmail(
   fullName?: string
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
-  
+
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('تسجيل حساب الأسرة غير متاح حاليًا لأن الاتصال الآمن بقاعدة البيانات غير مهيأ. لم يُنشأ حساب محلي بديل.');
   }
 
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        data: {
-          full_name: fullName || cleanEmail.split('@')[0],
-        },
-      },
-    });
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: {
+      data: { full_name: fullName || cleanEmail.split('@')[0] },
+    },
+  });
 
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return signInWithEmail(cleanEmail, password);
-      }
-      throw error;
+  if (error) {
+    if (error.message.toLowerCase().includes('already registered')) {
+      return signInWithEmail(cleanEmail, password);
     }
-
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-
-    return { user: data.user, session: data.session };
-  } catch (err: any) {
-    console.warn('Supabase signUp error, using local fallback:', err);
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+    throw error;
   }
+  if (!data.user) {
+    throw new Error('لم يؤكد مزود الحساب إنشاء مستخدم. لم يُنشأ ملف الطفل.');
+  }
+  if (!data.session?.access_token) {
+    throw new Error('لم تصدر جلسة دخول بعد إنشاء الحساب. قد يتطلب الأمر تأكيد البريد الإلكتروني؛ أكّد بريدك ثم سجّل الدخول. لم يُنشأ ملف الطفل بعد.');
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('hn_parent_account', JSON.stringify({
+        email: cleanEmail,
+        name: fullName || data.user.user_metadata?.full_name,
+      }));
+    } catch {
+      // Account authentication does not depend on this optional UI convenience value.
+    }
+  }
+  return { user: data.user, session: data.session };
 }
 
 export async function signInWithEmail(
@@ -115,30 +104,28 @@ export async function signInWithEmail(
   const cleanEmail = email.trim().toLowerCase();
 
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('تسجيل دخول الأسرة غير متاح حاليًا لأن الاتصال الآمن بقاعدة البيانات غير مهيأ. لا يوجد حساب محلي بديل.');
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password,
   });
-
-  if (error) {
-    throw error;
+  if (error) throw error;
+  if (!data.user || !data.session?.access_token) {
+    throw new Error('لم يصدر مزود الحساب جلسة دخول موثوقة. لم يتم تسجيل الدخول.');
   }
 
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: data.user?.user_metadata?.full_name }));
+    try {
+      localStorage.setItem('hn_parent_account', JSON.stringify({
+        email: cleanEmail,
+        name: data.user.user_metadata?.full_name,
+      }));
+    } catch {
+      // Account authentication does not depend on this optional UI convenience value.
+    }
   }
-
   return { user: data.user, session: data.session };
 }
 

@@ -313,18 +313,22 @@ export default function App() {
     setSupabaseAuthLoading(true);
     try {
       const { user, session } = await signInWithEmail(email, pass);
-      if (user) {
-        setSupabaseUser(user);
-        const parentSession: BaseeraSessionInfo = {
-          token: session?.access_token || `local-${user.id}`,
-          role: 'parent',
-          accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
-          tenantId: `parent_${user.id.slice(0, 8)}`,
-          tenantDisplayNameAr: 'حساب ولي الأمر',
-          sessionId: user.id.replace(/-/g, '').slice(0, 32),
-          scopes: ['students:read', 'students:write'],
-          expiresAt: Date.now() + 86400000 * 30,
-        };
+      if (!user || !session?.access_token) {
+        throw new Error('لم تصدر جلسة دخول موثوقة من مزود الحساب.');
+      }
+      setSupabaseUser(user);
+      const parentSession: BaseeraSessionInfo = {
+        token: session.access_token,
+        role: 'parent',
+        accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
+        tenantId: `parent_${user.id.slice(0, 8)}`,
+        tenantDisplayNameAr: 'حساب ولي الأمر',
+        sessionId: user.id.replace(/-/g, '').slice(0, 32),
+        scopes: ['students:read', 'students:write'],
+        expiresAt: (typeof session.expires_at === 'number'
+          ? session.expires_at
+          : Math.floor(Date.now() / 1000) + (session.expires_in || 3600)) * 1000,
+      };
         setBaseeraSession(parentSession);
         setAiStatusBanner(`مرحباً بك! تم تسجيل الدخول بنجاح.`);
         const cloudStudents = await fetchStudentsFromSupabase(user.id);
@@ -336,9 +340,6 @@ export default function App() {
         }
         setSupabaseAuthLoading(false);
         return { success: true };
-      }
-      setSupabaseAuthLoading(false);
-      return { success: false, error: 'تعذر التحقق من الحساب.' };
     } catch (err: any) {
       setSupabaseAuthLoading(false);
       const msg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البريد وكلمة المرور.';
@@ -666,18 +667,21 @@ export default function App() {
     if (!Number.isInteger(child.gradeLevel) || child.gradeLevel < 0 || child.gradeLevel > 3) {
       throw new Error('اختر المرحلة من الروضة حتى الصف الثالث.');
     }
-    let currentUser = supabaseUser;
+    if (!isSupabaseConfigured()) {
+      throw new Error('تسجيل الأسرة وحفظ ملف الطفل غير متاحين حاليًا؛ لم يتم إنشاء سجل محلي بديل.');
+    }
 
-    if (!currentUser && child.parentEmail && child.parentPassword) {
-      try {
-        const { user } = await signUpWithEmail(child.parentEmail, child.parentPassword);
-        if (user) {
-          currentUser = user;
-          setSupabaseUser(user);
-        }
-      } catch (e) {
-        console.warn('Parent auto-signup notice:', e);
+    let currentUser = supabaseUser;
+    if (!currentUser) {
+      if (!child.parentEmail || !child.parentPassword) {
+        throw new Error('سجّل الدخول أو أدخل بريد ولي الأمر وكلمة المرور لإنشاء حساب محفوظ.');
       }
+      const { user, session } = await signUpWithEmail(child.parentEmail, child.parentPassword);
+      if (!user || !session?.access_token) {
+        throw new Error('لم تكتمل مصادقة حساب ولي الأمر. لم يُنشأ ملف الطفل.');
+      }
+      currentUser = user;
+      setSupabaseUser(user);
     }
 
     const recordedAt = new Date().toISOString();
@@ -731,14 +735,14 @@ export default function App() {
       },
     };
 
-    setStudents((prev) => [newLearner, ...prev]);
-    setSelectedStudentId(newLearner.id);
-
-    if (currentUser) {
-      void syncStudentToSupabase(newLearner, currentUser.id);
+    const persisted = await syncStudentToSupabase(newLearner, currentUser.id);
+    if (!persisted) {
+      throw new Error('تعذر حفظ ملف الطفل في حساب الأسرة. لم نعرض التسجيل على أنه ناجح؛ تحقق من اتصال الحساب وصلاحيات قاعدة البيانات ثم أعد المحاولة.');
     }
 
-    setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+    setStudents((prev) => [newLearner, ...prev]);
+    setSelectedStudentId(newLearner.id);
+    setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في حساب الأسرة بنجاح. يمكنك بدء الأنشطة الآن.`);
     return newLearner.id;
   };
 

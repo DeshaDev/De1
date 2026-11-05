@@ -14,6 +14,8 @@
 import { z } from 'zod';
 import { SKILLS, type SkillId } from './training';
 
+export const MAX_SCREENING_TASKS = 15;
+
 export const ACTIVITY_CATALOG = {
   'programme-session': 'جلسة البرنامج التدريبي اليومية',
   'probe-review': 'مراجعة منحنى مقياس التقدّم مع الطفل',
@@ -41,14 +43,14 @@ export const PlanFactsSchema = z
     ageYears: z.number().int().min(4).max(8),
     screening: z
       .object({
-        completedGames: z.number().int().min(0).max(9),
+        completedGames: z.number().int().min(0).max(MAX_SCREENING_TASKS),
         results: z.array(z.object({
           skill: z.string().max(40),
           labelAr: z.string().max(80),
           correct: z.number().int().min(0).max(100),
           total: z.number().int().min(1).max(100),
           percent: z.number().int().min(0).max(100),
-        }).strict()).max(9),
+        }).strict()).max(MAX_SCREENING_TASKS),
       })
       .strict()
       .nullable(),
@@ -111,7 +113,7 @@ export function buildPlanFacts(input: {
     screening: input.screening
       ? {
           completedGames: input.screening.completedGames,
-          results: input.screening.results.slice(0, 9).map((r) => ({
+          results: input.screening.results.slice(0, MAX_SCREENING_TASKS).map((r) => ({
             skill: r.skill,
             labelAr: r.labelAr,
             correct: r.correct,
