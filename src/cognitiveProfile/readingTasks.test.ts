@@ -150,20 +150,24 @@ describe('scoring of the reading and naming measures', () => {
 });
 
 describe('age rules and sittings', () => {
-  it('before six: precursor tasks and rapid naming of pictures, in three sittings', () => {
+  it('before six: only independently scored precursor tasks, in three sittings', () => {
     const tasks = subtestsForAge(READING_MIN_AGE_MONTHS - 1).map((s) => s.id);
+    assert.equal(tasks.length, 9);
     assert.equal(sittingsForAge(READING_MIN_AGE_MONTHS - 1).length, 3);
-    assert.ok(tasks.includes('ranObjects'));
+    assert.ok(!tasks.includes('ranObjects'));
     for (const id of ['ranLetters', 'wordReading', 'nonwordReading', 'oralReading', 'spelling']) assert.ok(!tasks.includes(id as never), id);
   });
 
-  it('from six: every task once, in four sittings, starting with reading', () => {
+  it('from six: every independently scored task once, in three short sittings', () => {
     const sittings = sittingsForAge(READING_MIN_AGE_MONTHS);
-    assert.equal(sittings.length, 4);
-    assert.deepEqual(sittings[0].map((s) => s.id), ['wordReading', 'nonwordReading', 'oralReading', 'ranObjects', 'ranLetters']);
+    assert.equal(sittings.length, 3);
+    assert.deepEqual(sittings[0].map((s) => s.id), ['visualSequential', 'visualAssociative', 'auditorySequential']);
     const all = sittings.flat().map((s) => s.id);
-    assert.equal(all.length, BATTERY.length);
-    assert.equal(new Set(all).size, BATTERY.length);
+    const active = subtestsForAge(READING_MIN_AGE_MONTHS);
+    assert.equal(all.length, active.length);
+    assert.equal(all.length, 10);
+    assert.equal(new Set(all).size, active.length);
+    assert.ok(sittings.flat().every((task) => task.adultScored !== true));
     for (const sitting of sittings) assert.ok(sitting.reduce((n, s) => n + s.minutes, 0) <= 16, 'short sittings');
   });
 });
