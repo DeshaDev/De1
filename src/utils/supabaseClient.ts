@@ -58,54 +58,28 @@ export async function signUpWithEmail(
   fullName?: string
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
-  
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('خدمة الحسابات غير مهيأة؛ لم يتم إنشاء حساب محلي بديل.');
   }
 
-  try {
-    const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: {
+      data: { full_name: fullName || cleanEmail.split('@')[0] },
+    },
+  });
+
+  if (error) throw error;
+  if (!data.user) throw new Error('لم يؤكد مزود الحساب إنشاء المستخدم.');
+
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('hn_parent_account', JSON.stringify({
       email: cleanEmail,
-      password,
-      options: {
-        data: {
-          full_name: fullName || cleanEmail.split('@')[0],
-        },
-      },
-    });
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return signInWithEmail(cleanEmail, password);
-      }
-      throw error;
-    }
-
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-
-    return { user: data.user, session: data.session };
-  } catch (err: any) {
-    console.warn('Supabase signUp error, using local fallback:', err);
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: fullName || cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: fullName }));
-    }
-    return { user: localUser, session: null };
+      name: fullName || cleanEmail.split('@')[0],
+    }));
   }
+  return { user: data.user, session: data.session };
 }
 
 export async function signInWithEmail(
@@ -113,32 +87,25 @@ export async function signInWithEmail(
   password: string
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
-
   if (!isSupabaseConfigured()) {
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      user_metadata: { full_name: cleanEmail.split('@')[0] },
-    } as unknown as User;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail }));
-    }
-    return { user: localUser, session: null };
+    throw new Error('خدمة الحسابات غير مهيأة؛ لا يمكن تسجيل الدخول دون خادم مصادقة.');
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password,
   });
-
-  if (error) {
-    throw error;
+  if (error) throw error;
+  if (!data.user || !data.session) {
+    throw new Error('لم يُنشأ اتصال مصادقة صالح. تحقق من بريدك الإلكتروني أو أعد المحاولة.');
   }
 
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('hn_parent_account', JSON.stringify({ email: cleanEmail, name: data.user?.user_metadata?.full_name }));
+    localStorage.setItem('hn_parent_account', JSON.stringify({
+      email: cleanEmail,
+      name: data.user.user_metadata?.full_name,
+    }));
   }
-
   return { user: data.user, session: data.session };
 }
 
