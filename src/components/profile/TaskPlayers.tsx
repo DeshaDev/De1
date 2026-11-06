@@ -93,10 +93,21 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const [listening, setListening] = useState(true);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [replays, setReplays] = useState(0);
+  const [hesitating, setHesitating] = useState(false);
   const readyAt = useRef(0);
   const handle = useRef<PlaybackHandle>({ cancelled: false });
+  const hesitationTimer = useRef<number | null>(null);
+
+  const clearHesitation = () => {
+    if (hesitationTimer.current !== null) {
+      window.clearTimeout(hesitationTimer.current);
+      hesitationTimer.current = null;
+    }
+    setHesitating(false);
+  };
 
   const play = async () => {
+    clearHesitation();
     handle.current.cancelled = true;
     stopSpeech();
     const h: PlaybackHandle = { cancelled: false };
@@ -106,14 +117,20 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     if (!h.cancelled) {
       setListening(false);
       readyAt.current = performance.now();
+      // Hesitation prompt: gentle reminder after 6.5 seconds of silence
+      hesitationTimer.current = window.setTimeout(() => {
+        setHesitating(true);
+      }, 6500);
     }
   };
 
   useEffect(() => {
     setFeedback(null);
     setReplays(0);
+    clearHesitation();
     play();
     return () => {
+      clearHesitation();
       handle.current.cancelled = true;
       stopSpeech();
     };
@@ -122,6 +139,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
 
   const choose = async (id: string) => {
     if (feedback || listening) return;
+    clearHesitation();
     const rtMs = Math.round(performance.now() - readyAt.current);
     handle.current.cancelled = true;
     stopSpeech();
@@ -151,21 +169,28 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
           <VisualView visual={item.stimulus} size="lg" />
         </div>
       )}
-      <div className="flex items-center gap-3">
-        <p className="font-child text-lg sm:text-xl font-black text-slate-800 text-center">{item.promptAr}</p>
-        {allowReplay && (
-          <button
-            type="button"
-            onClick={() => {
-              setReplays((r) => r + 1);
-              play();
-            }}
-            disabled={listening || Boolean(feedback)}
-            className="shrink-0 w-11 h-11 rounded-full bg-brand-soft text-brand flex items-center justify-center disabled:opacity-40 cursor-pointer"
-            aria-label="استمع مرة أخرى"
-          >
-            <Volume2 className="w-5 h-5" />
-          </button>
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="flex items-center gap-3">
+          <p className="font-child text-lg sm:text-xl font-black text-slate-800 text-center">{item.promptAr}</p>
+          {allowReplay && (
+            <button
+              type="button"
+              onClick={() => {
+                setReplays((r) => r + 1);
+                play();
+              }}
+              disabled={listening || Boolean(feedback)}
+              className={`shrink-0 w-11 h-11 rounded-full ${
+                hesitating ? 'bg-amber-400 text-slate-900 ring-4 ring-amber-200 animate-bounce' : 'bg-brand-soft text-brand'
+              } flex items-center justify-center disabled:opacity-40 cursor-pointer transition-all`}
+              aria-label="استمع مرة أخرى"
+            >
+              <Volume2 className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+        {hesitating && !feedback && (
+          <span className="bz-badge bz-badge-sun text-xs font-bold animate-pulse">💡 استمع مرة أخرى إذا نسيت!</span>
         )}
       </div>
       <div

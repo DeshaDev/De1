@@ -121,10 +121,19 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
  * "We do / You do": one practice item. A wrong first answer brings an explanation of why the
  * right answer is right, then a second try. Only the first answer is scored.
  */
-export function TeachingChoicePlayer({ item, guided, onDone }: { item: ChoiceItem; guided: boolean; onDone: (firstTryCorrect: boolean) => void }) {
+export function TeachingChoicePlayer({
+  item,
+  guided,
+  onDone,
+}: {
+  item: ChoiceItem;
+  guided: boolean;
+  onDone: (firstTryCorrect: boolean, rtMs?: number) => void;
+}) {
   const [phase, setPhase] = useState<'try' | 'explain' | 'retry'>('try');
   const [replay, setReplay] = useState(0);
   const handle = useRef<PlaybackHandle | null>(null);
+  const firstRtRef = useRef<number | undefined>(undefined);
   const explanation = explainMistake(item);
 
   useEffect(() => {
@@ -149,7 +158,8 @@ export function TeachingChoicePlayer({ item, guided, onDone }: { item: ChoiceIte
           item={item}
           showFeedback
           onDone={(r) => {
-            if (r.correct || !explanation) onDone(r.correct);
+            firstRtRef.current = r.rtMs;
+            if (r.correct || !explanation) onDone(r.correct, r.rtMs);
             else setPhase('explain');
           }}
         />
@@ -178,7 +188,7 @@ export function TeachingChoicePlayer({ item, guided, onDone }: { item: ChoiceIte
           </div>
         </div>
       )}
-      {phase === 'retry' && <ChoicePlayer key={`${item.id}-retry`} item={item} showFeedback onDone={() => onDone(false)} />}
+      {phase === 'retry' && <ChoicePlayer key={`${item.id}-retry`} item={item} showFeedback onDone={() => onDone(false, firstRtRef.current)} />}
     </div>
   );
 }

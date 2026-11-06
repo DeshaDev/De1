@@ -1,6 +1,6 @@
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Zap, Home } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
 import {
   Level,
@@ -10,16 +10,19 @@ import {
   PROGRAM_WEEKS,
   SESSIONS_PER_WEEK,
   SKILLS,
+  SKILL_BADGES,
   SkillId,
   TrainingPlan,
   TrainingProgress,
   TrainingTask,
   applyProbeEvidence,
   applyReadingTargets,
+  awardBadge,
   buildTrainingPlan,
   chanceOf,
   createProgress,
   generateItems,
+  getHomeActivity,
   isReassessmentDue,
   masteryEstimate,
   recordAnswer,
@@ -115,7 +118,16 @@ type Run = {
   /** First-try correct answers this session. */
   stars: number;
   change: LevelChange | null;
-  results: Array<{ skill: SkillId; correct: number; total: number; change: LevelChange; pBefore: number; pAfter: number }>;
+  results: Array<{
+    skill: SkillId;
+    correct: number;
+    total: number;
+    change: LevelChange;
+    pBefore: number;
+    pAfter: number;
+    avgRtMs?: number;
+    automaticCount?: number;
+  }>;
   /** Practice items per skill this session, chosen from the model's mastery estimates. */
   alloc: Record<string, number>;
   /** Level and P(mastered) when the current skill block started. */
@@ -125,6 +137,12 @@ type Run = {
   /** The fixed-difficulty progress probe that opens every session. */
   probe: { items: ProbeItem[]; index: number; answers: boolean[] } | null;
   todayProbe: ProbeRecord | null;
+  /** Response time latencies for current skill block. */
+  latencies: number[];
+  /** Count of fast automatic responses (<= 2500ms) for current skill block. */
+  fastCount: number;
+  /** Mastery badges awarded in today's run. */
+  newBadges: SkillId[];
 };
 
 interface Props {
@@ -204,6 +222,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       beginSkill(0, {
         skills: todaySkills, skillIndex: 0, tasks: [], taskIndex: 0, correct: 0, phase: 'intro', change: null, results: [],
         probe: null, todayProbe: null, alloc, blockStart: null, promoted: [], lesson: null, guided: 0, stars: 0,
+        latencies: [], fastCount: 0, newBadges: [],
       });
       return;
     }
@@ -224,6 +243,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       lesson: null,
       guided: 0,
       stars: 0,
+      latencies: [],
+      fastCount: 0,
+      newBadges: [],
     });
   };
 
@@ -276,14 +298,21 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       alloc: prev?.alloc ?? {},
       blockStart: estimate,
       promoted: prev?.promoted ?? [],
+      latencies: [],
+      fastCount: 0,
+      newBadges: prev?.newBadges ?? [],
     });
   };
 
   /** Every answer updates the knowledge-tracing model; the level can change in the middle of a block. */
-  const onTaskDone = (correct: boolean) => {
+  const onTaskDone = (correct: boolean, rtMs?: number) => {
     if (!run || !progress) return;
     const skill = sessionSkills[run.skillIndex];
     const task = run.tasks[run.taskIndex];
+    const isFast = correct && typeof rtMs === 'number' && rtMs > 0 && rtMs <= 2500;
+    const nextLatencies = typeof rtMs === 'number' && rtMs > 0 ? [...run.latencies, rtMs] : run.latencies;
+    const nextFastCount = run.fastCount + (isFast ? 1 : 0);
+
     const { progress: updated, change } = recordAnswer(progress, skill, correct, chanceOf(task));
     const nextCorrect = run.correct + (correct ? 1 : 0);
     const blockChange: LevelChange =
@@ -303,10 +332,31 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       const lower = `${skill}:${updated.levels[skill] ?? 1}`;
       traced = { ...updated, lessonsSeen: (updated.lessonsSeen ?? []).filter((k) => k !== lower) };
     }
+
+    // Award badge if skill was mastered
+    let nextBadges = run.newBadges;
+    if (change === 'mastered' || updated.mastered.includes(skill)) {
+      const { progress: badgedProgress, newlyAwarded } = awardBadge(traced, skill);
+      traced = badgedProgress;
+      if (newlyAwarded && !nextBadges.includes(skill)) {
+        nextBadges = [...nextBadges, skill];
+      }
+    }
+
     const stars = run.stars + (correct ? 1 : 0);
     if (run.taskIndex + 1 < tasks.length && !finishedSkill) {
       persistLocal(traced);
-      setRun({ ...run, tasks, taskIndex: run.taskIndex + 1, correct: nextCorrect, stars, change: blockChange === 'stay' ? run.change : blockChange });
+      setRun({
+        ...run,
+        tasks,
+        taskIndex: run.taskIndex + 1,
+        correct: nextCorrect,
+        stars,
+        change: blockChange === 'stay' ? run.change : blockChange,
+        latencies: nextLatencies,
+        fastCount: nextFastCount,
+        newBadges: nextBadges,
+      });
       return;
     }
     const answered = run.taskIndex + 1;
@@ -314,6 +364,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     persist(logged);
     if (change === 'up' || change === 'mastered') speak(PHRASES.levelUp);
     const pAfter = masteryEstimate(logged, skill).p;
+    const avgRtMs = nextLatencies.length > 0 ? Math.round(nextLatencies.reduce((a, b) => a + b, 0) / nextLatencies.length) : undefined;
     setRun({
       ...run,
       tasks: tasks.slice(0, answered),
@@ -321,7 +372,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       stars,
       phase: 'result',
       change: blockChange,
-      results: [...run.results, { skill, correct: nextCorrect, total: answered, change: blockChange, pBefore: run.blockStart?.p ?? 0, pAfter }],
+      latencies: [],
+      fastCount: 0,
+      newBadges: nextBadges,
+      results: [
+        ...run.results,
+        {
+          skill,
+          correct: nextCorrect,
+          total: answered,
+          change: blockChange,
+          pBefore: run.blockStart?.p ?? 0,
+          pAfter,
+          avgRtMs,
+          automaticCount: nextFastCount,
+        },
+      ],
     });
   };
 
@@ -424,10 +490,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             </div>
           )}
           {run.phase === 'task' && task.kind === 'choice' && (
-            <TeachingChoicePlayer key={task.item.id} item={task.item} guided={run.taskIndex < run.guided} onDone={(correct) => onTaskDone(correct)} />
+            <TeachingChoicePlayer key={task.item.id} item={task.item} guided={run.taskIndex < run.guided} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
           )}
           {run.phase === 'task' && task.kind === 'span' && (
-            <SpanPlayer key={task.trial.id + run.taskIndex} trial={task.trial} modality={task.modality} showFeedback onDone={(r) => onTaskDone(r.correct)} />
+            <SpanPlayer key={task.trial.id + run.taskIndex} trial={task.trial} modality={task.modality} showFeedback onDone={(r) => onTaskDone(r.correct, r.rtMs)} />
           )}
           {run.phase === 'result' && run.change && (
             <div className="flex flex-col items-center text-center gap-4">
@@ -457,12 +523,56 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <span className="text-7xl" aria-hidden="true">🏆</span>
               <p className="font-child text-2xl font-black text-slate-900">انتهت جلسة اليوم!</p>
               <p className="font-child text-xl text-ink">⭐ {toArabicDigits(run.stars)} نجمة اليوم</p>
+              
+              {run.newBadges.length > 0 && (
+                <div className="w-full space-y-2">
+                  {run.newBadges.map((badgeSkill) => {
+                    const badge = SKILL_BADGES[badgeSkill];
+                    return (
+                      <div key={badgeSkill} className="w-full rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-center shadow-md animate-bounce">
+                        <span className="text-5xl block mb-2">{badge.icon}</span>
+                        <p className="font-child text-lg font-black text-amber-900">وسام إتقان جديد: {badge.titleAr}! 🏆</p>
+                        <p className="text-xs text-amber-800 mt-1">{badge.descriptionAr}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {run.todayProbe && <TodayProbeCard today={run.todayProbe} probes={progress.probes ?? []} />}
               {run.promoted.length > 0 && (
                 <p className="w-full rounded-xl bg-brand-tint px-4 py-2.5 text-sm text-right">
                   أظهر مقياس اليوم إتقان المستوى الثاني في: {run.promoted.map((s) => SKILLS[s].nameAr).join('، ')}، فانتقل إليه مباشرة.
                 </p>
               )}
+
+              {/* Fluency and automaticity metric */}
+              {(() => {
+                const totalItems = run.results.reduce((acc, r) => acc + r.total, 0);
+                const totalFast = run.results.reduce((acc, r) => acc + (r.automaticCount ?? 0), 0);
+                const autoPct = totalItems > 0 ? Math.round((totalFast / totalItems) * 100) : 0;
+                return totalItems > 0 ? (
+                  <div className="w-full rounded-2xl border border-line bg-card p-4 text-right">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm flex items-center gap-1.5 text-slate-800">
+                        <Zap className="w-4 h-4 text-amber-500" /> مؤشر التلقائية والطلاقة (Automaticity)
+                      </span>
+                      <span className="font-black text-amber-600">{toArabicDigits(autoPct)}٪</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-slate-100 mt-2 overflow-hidden">
+                      <span className="absolute inset-y-0 right-0 rounded-full bg-amber-500" style={{ width: `${autoPct}%` }} />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">
+                      {autoPct >= 70
+                        ? 'استجابات سريعة وتلقائية تدل على تمكّن وثقة ذهنية عالية ⚡'
+                        : autoPct >= 40
+                        ? 'دقة جيدة مع استغراق وقت للتفكير والتهجئة 🎯'
+                        : 'يحتاج مزيداً من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
+                    </p>
+                  </div>
+                ) : null;
+              })()}
+
               <ul className="w-full space-y-2">
                 {run.results.map((r) => (
                   <li key={r.skill} className="rounded-xl bg-soft px-4 py-2.5 text-sm text-right">
@@ -474,6 +584,29 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   </li>
                 ))}
               </ul>
+
+              {/* Actionable home bridge activity */}
+              {(() => {
+                const primarySkill = run.results[0]?.skill ?? todaySkills[0];
+                if (!primarySkill) return null;
+                const homeAct = getHomeActivity(primarySkill, progress.targets);
+                return (
+                  <div className="w-full rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-right">
+                    <p className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                      <Home className="w-4 h-4 text-emerald-600" /> {homeAct.titleAr}
+                    </p>
+                    <p className="text-xs text-emerald-800 mt-1 leading-relaxed">{homeAct.activityAr}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {homeAct.exampleWords.map((w) => (
+                        <span key={w} className="px-2.5 py-1 rounded-lg bg-white text-emerald-900 text-xs font-bold shadow-xs">
+                          {w}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <button type="button" onClick={() => setRun(null)} className="bz-btn bz-btn-primary bz-btn-lg">
                 العودة إلى البرنامج
               </button>
@@ -599,6 +732,44 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         {probes.length === 0 && comparison && (
           <p className="text-xs text-slate-500">سيقيس المقياس أيضًا مهارة «{SKILLS[comparison].nameAr}» دون تدريب عليها، للمقارنة.</p>
         )}
+      </section>
+
+      {/* لوحة أوسمة الإتقان وجواز الإنجاز */}
+      <section className="bz-card p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-slate-900 flex items-center gap-2">
+            <Award className="w-4 h-4 text-amber-500" /> لوحة أوسمة الإتقان وجواز الإنجاز
+          </h3>
+          <span className="text-xs font-bold text-slate-500">
+            {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)} أوسمة
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+          {progress.plan.focus.map((s) => {
+            const badge = SKILL_BADGES[s];
+            const isEarned = (progress.badges ?? []).includes(s) || progress.mastered.includes(s);
+            return (
+              <div
+                key={s}
+                className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
+                  isEarned
+                    ? 'border-amber-300 bg-amber-50/70 shadow-xs'
+                    : 'border-slate-200 bg-slate-50/50 opacity-60'
+                }`}
+              >
+                <span className="text-3xl shrink-0" aria-hidden="true">
+                  {badge.icon}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-child text-sm font-black text-slate-900 truncate">{badge.titleAr}</p>
+                  <p className="text-[11px] font-bold text-slate-500">
+                    {isEarned ? <span className="text-emerald-700">مكتسب 🏆</span> : <span>قيد التدريب ⭐</span>}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {progress.targets && (progress.targets.soundPairs.length > 0 || progress.targets.letters.length > 0) && (

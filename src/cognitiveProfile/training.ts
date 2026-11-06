@@ -122,6 +122,73 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
   },
 };
 
+export interface MasteryBadge {
+  id: SkillId;
+  skill: SkillId;
+  titleAr: string;
+  icon: string;
+  descriptionAr: string;
+}
+
+export const SKILL_BADGES: Record<SkillId, MasteryBadge> = {
+  rhyme: {
+    id: 'rhyme',
+    skill: 'rhyme',
+    titleAr: 'سفير القافية',
+    icon: '🎵',
+    descriptionAr: 'يميز إيقاعات وأواخر الكلمات ببراعة وسرعة.',
+  },
+  soundPosition: {
+    id: 'soundPosition',
+    skill: 'soundPosition',
+    titleAr: 'صقر الأصوات',
+    icon: '🔊',
+    descriptionAr: 'يصطاد الصوت الأول والأخير في الكلمة بدقة تامة.',
+  },
+  blending: {
+    id: 'blending',
+    skill: 'blending',
+    titleAr: 'عبقري المقاطع',
+    icon: '🧩',
+    descriptionAr: 'يركّب المقاطع المسموعة بسلاسة لبناء الكلمات.',
+  },
+  discrimination: {
+    id: 'discrimination',
+    skill: 'discrimination',
+    titleAr: 'بطل التمييز السمعي',
+    icon: '👂',
+    descriptionAr: 'يفرّق بذكاء بين أصوات الحروف المتقاربة في المخرج.',
+  },
+  letterSound: {
+    id: 'letterSound',
+    skill: 'letterSound',
+    titleAr: 'فارس الحروف',
+    icon: '✏️',
+    descriptionAr: 'يربط شكل الحرف بصوته وحركاته بانسيابية وثقة.',
+  },
+  visualDiscrimination: {
+    id: 'visualDiscrimination',
+    skill: 'visualDiscrimination',
+    titleAr: 'عين الصقر البصرية',
+    icon: '🦅',
+    descriptionAr: 'يلاحظ الفروق الدقيقة بين نقاط الحروف ورسمها دون تردد.',
+  },
+  auditoryMemory: {
+    id: 'auditoryMemory',
+    skill: 'auditoryMemory',
+    titleAr: 'حارس الذاكرة السمعية',
+    icon: '🦜',
+    descriptionAr: 'يسترجع تسلسل الكلمات المسموعة بالترتيب الصحيح.',
+  },
+  visualMemory: {
+    id: 'visualMemory',
+    skill: 'visualMemory',
+    titleAr: 'مهندس الذاكرة البصرية',
+    icon: '🏰',
+    descriptionAr: 'يتذكر ترتيب الأشكال والرموز بدقة ممتازة.',
+  },
+};
+
 /** Developmental order used to sequence focus skills inside a session. */
 const SKILL_ORDER: SkillId[] = [
   'discrimination',
@@ -246,6 +313,8 @@ export interface TrainingProgress {
   targets?: TrainingTargets;
   /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
   lessonsSeen?: string[];
+  /** Earned mastery badge skill ids. */
+  badges?: string[];
 }
 
 export interface TrainingTargets {
@@ -283,8 +352,86 @@ export function createProgress(plan: TrainingPlan, startLevel: Level = 1, bands:
     history: [],
     supportFlags: [],
     probes: [],
+    badges: [],
     bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>),
   };
+}
+
+/** Award a mastery badge for a skill if not already earned. */
+export function awardBadge(progress: TrainingProgress, skill: SkillId): { progress: TrainingProgress; newlyAwarded: boolean } {
+  const currentBadges = progress.badges ?? [];
+  if (currentBadges.includes(skill)) {
+    return { progress, newlyAwarded: false };
+  }
+  return {
+    progress: {
+      ...progress,
+      badges: [...currentBadges, skill],
+    },
+    newlyAwarded: true,
+  };
+}
+
+export interface HomeActivity {
+  titleAr: string;
+  activityAr: string;
+  exampleWords: string[];
+}
+
+/** 1-minute actionable home activity connecting the session's training with daily family life. */
+export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): HomeActivity {
+  switch (skill) {
+    case 'rhyme':
+      return {
+        titleAr: 'لعبة صيد القوافي في المنزل 🎵',
+        activityAr: 'اطلب من طفلك أن يجد في البيت أو محيطه كلمات تتناغم مع كلمة تختارها مثل (باب / كتاب / سحاب) واحتفلوا بالإيقاع المتشابه.',
+        exampleWords: ['بَاب', 'كِتَاب', 'سَحَاب'],
+      };
+    case 'soundPosition':
+      return {
+        titleAr: 'لعبة الصوت الأول والأخير السريع 🔊',
+        activityAr: 'أشر إلى أشياء حولكم في الغرفة واطلب من طفلك استخراج الصوت الأول أو الأخير فوراً بصوته الصافي (مثل: سَـرير / كُـرسي).',
+        exampleWords: ['سَرِير', 'كُرْسِي', 'طَاوِلَة'],
+      };
+    case 'blending':
+      return {
+        titleAr: 'لعبة التصفيق المقطعي 🧩',
+        activityAr: 'انطق الكلمة مقطعة مع التصفيق (طَـ ... بَق) واطلب من طفلك أن يقفز ويقول الكلمة مجمعة كاملة (طَبَق!).',
+        exampleWords: ['طَبَق', 'قَلَم', 'كِتَاب'],
+      };
+    case 'discrimination':
+      if (targets?.soundPairs && targets.soundPairs.length > 0) {
+        const pair = targets.soundPairs[0];
+        return {
+          titleAr: `تحدي التمييز الصوتي (${pair.join(' / ')}) 👂`,
+          activityAr: `ضع يد طفلك أمام فمه ليميز الفارق الحركي؛ مثلاً الهواء الصافر الخفيف في حرف (${pair[0]}) مقابل الامتلاء والتفخيم في حرف (${pair[1]}).`,
+          exampleWords: pair[0] === 'س' ? ['سَيْف', 'صَيْف', 'سَبِيل', 'صَبْر'] : ['تِين', 'طِين', 'دَار', 'ضَار'],
+        };
+      }
+      return {
+        titleAr: 'لعبة الأذن الذكية والأصوات المتقاربة 👂',
+        activityAr: 'انطق كلمتين واسأل طفلك: هل سمعت نفس الصوت أم صوتاً مختلفاً؟ (مثل: تين / طين).',
+        exampleWords: ['تِين', 'طِين', 'دَار', 'ضَار'],
+      };
+    case 'letterSound':
+      return {
+        titleAr: 'الرسم بالهواء والأصابع ✏️',
+        activityAr: 'ارسم الحرف بإصبعك على كف طفلك أو في الهواء واطلب منه نطق صوته الصافي بحركته (مَ / مُ / مِ) مع ذكر كلمة تبدأ به.',
+        exampleWords: ['مَوْز', 'بَاب', 'رَمْل'],
+      };
+    case 'visualDiscrimination':
+      return {
+        titleAr: 'لعبة النقطة الخفية وشكل الحرف 🦅',
+        activityAr: 'اكتب حروفاً متشابهة رسماً واسأل طفلك كالمحقق: أين هربت النقطة في الباء (تحت)؟ وكم نقطة في التاء (اثنتان فوق)؟',
+        exampleWords: ['بَيْت', 'تِين', 'ثَوْب'],
+      };
+    default:
+      return {
+        titleAr: 'دقيقة تشجيع قرائي ممتعة ⭐',
+        activityAr: 'اقرأ مع طفلك لافتة أو عنوان قصة ودعه يشير إلى الكلمات التي يعرف أصوات حروفها.',
+        exampleWords: ['نُور', 'قَمَر', 'شَمْس'],
+      };
+  }
 }
 
 /** Older progress records have no knowledge-tracing state: rebuild a neutral one from their levels. */
