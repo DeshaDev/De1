@@ -16,7 +16,7 @@ import {
   REFERENCE_TABLE,
   AGE_BANDS,
 } from './scoring';
-import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META, nextStepsAr } from './guidance';
+import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META, nextStepsAr, readingMeasureLineAr } from './guidance';
 import {
   SKILLS,
   SkillId,
@@ -175,6 +175,17 @@ test('the same raw score remains descriptive at every age until Arabic norms exi
   assert.equal(older.centile, null);
   assert.equal(young.band, null);
   assert.equal(older.band, null);
+});
+
+test('oral reading scores stay unavailable until a verified automated assessment exists', () => {
+  const words = scoreSubtest(resultWithPercent('wordReading', 80), 78);
+  const passage = scoreSubtest(resultWithPercent('oralReading', 80), 78);
+  assert.equal(words.scoreAvailable, false);
+  assert.equal(words.total, 0);
+  assert.equal(words.centile, null);
+  assert.equal(passage.scoreAvailable, false);
+  assert.equal(passage.total, 0);
+  assert.equal(readingMeasureLineAr('wordReading', words), 'لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة؛ لم تُحتسب الدقة أو الأخطاء.');
 });
 
 test('letter knowledge is reported without age-based risk classification', () => {
