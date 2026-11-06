@@ -33,9 +33,6 @@ export interface SubtestResult {
   durationMs?: number;
   /** For rapid naming: errors confirmed by the word-level speech model. */
   errorCount?: number;
-  attemptedCount?: number;
-  assessmentSource?: 'azure';
-  aiAssessmentReceipt?: string;
 }
 
 /** Raw reading and naming measures. They have no reference values yet and are reported as they are. */
@@ -209,63 +206,37 @@ export function scoreSubtest(
   const flags: string[] = [];
   if (result.discontinued) flags.push('discontinued');
 
-  // Reading and naming measures: raw counts, rates and times.
-  if (subtest.kind === 'ran') {
-    const total = result.assessmentSource === 'azure'
-      ? Math.max(0, Math.min(scoredItemCount(subtest), result.attemptedCount ?? 0))
-      : 0;
-    const errors = Math.min(total, result.errorCount ?? 0);
-    const correct = total - errors;
-    const durationMs = result.durationMs ?? 0;
-    return {
-      subtestId: result.subtestId, correct, total,
-      percent: total ? Math.round((correct / total) * 100) : 0,
-      z: null, centile: null, band: null, medianRtMs: null, flags,
-      scoreAvailable: total > 0,
-      measures: { attempted: total, seconds: durationMs ? Math.round(durationMs / 100) / 10 : null, itemsPerSecond: ranRate(total, durationMs), errors },
-    };
-  }
-  if (subtest.kind === 'passage') {
-    const responses = result.assessmentSource === 'azure' ? result.responses : [];
-    const attempted = responses.length;
-    const correct = responses.filter((r) => r.correct).length;
-    const durationMs = result.durationMs ?? 0;
+  // Speech-based reading and naming are withheld until a verified, server-backed
+  // assessment flow exists. Never trust a client-provided "azure" flag or manual counts.
+  if (subtest.kind === 'ran' || subtest.kind === 'passage' || subtest.kind === 'readList') {
     return {
       subtestId: result.subtestId,
-      correct,
-      total: attempted,
-      percent: attempted ? Math.round((correct / attempted) * 100) : 0,
+      correct: 0,
+      total: 0,
+      percent: 0,
       z: null,
       centile: null,
       band: null,
       medianRtMs: null,
       flags,
-      scoreAvailable: attempted > 0,
-      measures: {
-        attempted,
-        seconds: durationMs ? Math.round(durationMs / 1000) : null,
-        correctPerMinute: perMinute(correct, durationMs),
-        errors: attempted - correct,
-      },
+      scoreAvailable: false,
+      measures: { attempted: 0, seconds: null },
     };
   }
-  if (subtest.kind === 'readList' || subtest.kind === 'spelling') {
-    const responses = subtest.kind === 'readList' && result.assessmentSource !== 'azure' ? [] : result.responses;
-    const total = subtest.kind === 'readList' ? responses.length : scoredItemCount(subtest);
+  if (subtest.kind === 'spelling') {
+    const responses = result.responses;
+    const total = scoredItemCount(subtest);
     const correct = responses.filter((r) => r.correct).length;
-    const timeMs = subtest.kind === 'readList' ? (result.durationMs ?? 0) : responses.reduce((sum, r) => sum + r.rtMs, 0);
+    const timeMs = responses.reduce((sum, r) => sum + r.rtMs, 0);
     const measures: ReadingMeasures = { attempted: responses.length, seconds: timeMs ? Math.round(timeMs / 1000) : null };
-    if (subtest.kind === 'readList') measures.correctPerMinute = perMinute(correct, timeMs);
-    if (subtest.kind === 'spelling') {
-      const answers = new Map(subtest.items.map((i) => [i.id, i.answer]));
-      const scored = responses.filter((r) => answers.has(r.itemId));
-      measures.letterPercent = scored.length
-        ? Math.round((scored.reduce((sum, r) => sum + letterAccuracy(r.typed ?? '', answers.get(r.itemId)!), 0) / scored.length) * 100)
-        : 0;
-      const counts = new Map<SpellErrorKind, number>();
-      for (const r of scored) for (const k of spellingErrorKinds(r.typed ?? '', answers.get(r.itemId)!)) counts.set(k, (counts.get(k) ?? 0) + 1);
-      measures.spellingErrors = [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count);
-    }
+    const answers = new Map(subtest.items.map((i) => [i.id, i.answer]));
+    const scored = responses.filter((r) => answers.has(r.itemId));
+    measures.letterPercent = scored.length
+      ? Math.round((scored.reduce((sum, r) => sum + letterAccuracy(r.typed ?? '', answers.get(r.itemId)!), 0) / scored.length) * 100)
+      : 0;
+    const counts = new Map<SpellErrorKind, number>();
+    for (const r of scored) for (const k of spellingErrorKinds(r.typed ?? '', answers.get(r.itemId)!)) counts.set(k, (counts.get(k) ?? 0) + 1);
+    measures.spellingErrors = [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count);
     return {
       subtestId: result.subtestId,
       correct,
@@ -276,7 +247,7 @@ export function scoreSubtest(
       band: null,
       medianRtMs: null,
       flags,
-      scoreAvailable: subtest.kind !== 'readList' || responses.length > 0,
+      scoreAvailable: true,
       measures,
     };
   }
