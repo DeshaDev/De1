@@ -397,7 +397,7 @@ const arNum = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢
  */
 export function readingMeasureLineAr(
   subtestId: SubtestId,
-  scored: { correct?: number; total?: number; percent: number; measures?: ReadingMeasures }
+  scored: { correct?: number; total?: number; percent: number; scoreAvailable?: boolean; measures?: ReadingMeasures }
 ): string | null {
   const m = scored.measures;
   if (!m) return null;
