@@ -92,12 +92,11 @@ function SubtestRunner({
     subtest.kind === 'choice' ||
     subtest.kind === 'span' ||
     subtest.kind === 'association' ||
-    subtest.kind === 'readList' ||
     subtest.kind === 'spelling'
       ? subtest.practice.length
       : 0;
   /** Rapid naming, the passage and paired learning run their own short lead-in instead of practice items. */
-  const noPractice = subtest.kind === 'pal' || subtest.kind === 'ran' || subtest.kind === 'passage';
+  const noPractice = subtest.kind === 'pal' || subtest.kind === 'ran' || subtest.kind === 'passage' || subtest.kind === 'readList';
   const total = scoredItemCount(subtest);
 
   const finish = (discontinued: boolean, extra: Partial<SubtestResult> = {}) => {
@@ -234,9 +233,6 @@ function SubtestRunner({
         )}
         {stage === 'practice' && subtest.kind === 'association' && (
           <AssociationPlayer key={`p-${index}`} block={subtest.practice[index]} showFeedback onDone={nextPractice} />
-        )}
-        {stage === 'practice' && subtest.kind === 'readList' && (
-          <ReadAloudPlayer key={`p-${index}`} item={subtest.practice[index]} practice hesitationSec={subtest.hesitationSec} onDone={nextPractice} />
         )}
         {stage === 'practice' && subtest.kind === 'spelling' && (
           <SpellingPlayer key={`p-${index}`} item={subtest.practice[index]} practice onDone={nextPractice} />
