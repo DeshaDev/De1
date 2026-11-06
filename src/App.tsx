@@ -316,32 +316,29 @@ export default function App() {
       if (!user || !session?.access_token) {
         throw new Error('لم يتم إنشاء جلسة مصادقة صالحة. تحقق من بيانات الدخول وإعدادات الحساب.');
       }
-      {
-        setSupabaseUser(user);
-        const parentSession: BaseeraSessionInfo = {
-          token: session.access_token,
-          role: 'parent',
-          accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
-          tenantId: `parent_${user.id.slice(0, 8)}`,
-          tenantDisplayNameAr: 'حساب ولي الأمر',
-          sessionId: user.id.replace(/-/g, '').slice(0, 32),
-          scopes: ['students:read', 'students:write'],
-          expiresAt: Date.now() + 86400000 * 30,
-        };
-        setBaseeraSession(parentSession);
-        setAiStatusBanner(`مرحباً بك! تم تسجيل الدخول بنجاح.`);
-        const cloudStudents = await fetchStudentsFromSupabase(user.id);
-        if (cloudStudents.length > 0) {
-          setStudents((prev) => {
-            const ids = new Set(cloudStudents.map((s) => s.id));
-            return [...cloudStudents, ...prev.filter((p) => !ids.has(p.id))];
-          });
-        }
-        setSupabaseAuthLoading(false);
-        return { success: true };
+
+      setSupabaseUser(user);
+      const parentSession: BaseeraSessionInfo = {
+        token: session.access_token,
+        role: 'parent',
+        accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
+        tenantId: `parent_${user.id.slice(0, 8)}`,
+        tenantDisplayNameAr: 'حساب ولي الأمر',
+        sessionId: user.id.replace(/-/g, '').slice(0, 32),
+        scopes: ['students:read', 'students:write'],
+        expiresAt: (session.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
+      };
+      setBaseeraSession(parentSession);
+      setAiStatusBanner('مرحباً بك! تم تسجيل الدخول بنجاح.');
+      const cloudStudents = await fetchStudentsFromSupabase(user.id);
+      if (cloudStudents.length > 0) {
+        setStudents((prev) => {
+          const ids = new Set(cloudStudents.map((s) => s.id));
+          return [...cloudStudents, ...prev.filter((p) => !ids.has(p.id))];
+        });
       }
       setSupabaseAuthLoading(false);
-      return { success: false, error: 'تعذر التحقق من الحساب.' };
+      return { success: true };
     } catch (err: any) {
       setSupabaseAuthLoading(false);
       const msg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البريد وكلمة المرور.';
