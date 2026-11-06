@@ -313,10 +313,13 @@ export default function App() {
     setSupabaseAuthLoading(true);
     try {
       const { user, session } = await signInWithEmail(email, pass);
-      if (user) {
+      if (!user || !session?.access_token) {
+        throw new Error('لم يتم إنشاء جلسة مصادقة صالحة. تحقق من بيانات الدخول وإعدادات الحساب.');
+      }
+      {
         setSupabaseUser(user);
         const parentSession: BaseeraSessionInfo = {
-          token: session?.access_token || `local-${user.id}`,
+          token: session.access_token,
           role: 'parent',
           accountName: user.user_metadata?.full_name || user.email || 'ولي أمر',
           tenantId: `parent_${user.id.slice(0, 8)}`,
@@ -668,16 +671,16 @@ export default function App() {
     }
     let currentUser = supabaseUser;
 
-    if (!currentUser && child.parentEmail && child.parentPassword) {
-      try {
-        const { user } = await signUpWithEmail(child.parentEmail, child.parentPassword);
-        if (user) {
-          currentUser = user;
-          setSupabaseUser(user);
-        }
-      } catch (e) {
-        console.warn('Parent auto-signup notice:', e);
+    if (!currentUser) {
+      if (!child.parentEmail || !child.parentPassword) {
+        throw new Error('سجّل دخول ولي الأمر أو أنشئ حسابًا موثّقًا قبل حفظ ملف الطفل.');
       }
+      const { user, session } = await signUpWithEmail(child.parentEmail, child.parentPassword);
+      if (!user || !session?.access_token) {
+        throw new Error('أُرسل طلب إنشاء الحساب، لكن لم تُنشأ جلسة دخول بعد. تحقق من بريدك الإلكتروني ثم سجّل الدخول.');
+      }
+      currentUser = user;
+      setSupabaseUser(user);
     }
 
     const recordedAt = new Date().toISOString();
