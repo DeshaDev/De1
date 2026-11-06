@@ -16,7 +16,7 @@ import {
   REFERENCE_TABLE,
   AGE_BANDS,
 } from './scoring';
-import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META, nextStepsAr } from './guidance';
+import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META, nextStepsAr, readingMeasureLineAr } from './guidance';
 import {
   SKILLS,
   SkillId,
@@ -43,12 +43,12 @@ test('battery: nine precursor subtests in five domains, plus six direct reading 
     assert.ok(scoredItemCount(s) >= 8, `${s.id} needs enough scored items for a stable score`);
     assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 3, `${s.id} needs teaching strategies`);
   }
-  for (const s of precursor) {
-    assert.ok(REFERENCE_TABLE.rows[s.id]?.length === AGE_BANDS.length, `${s.id} reference row per age band`);
-    assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 4, `${s.id} needs teaching strategies`);
+  assert.equal(REFERENCE_TABLE.status, 'disabled');
+  assert.equal(Object.keys(REFERENCE_TABLE.rows).length, 0);
+  for (const s of precursor) assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 4, `${s.id} needs teaching strategies`);
+  for (const s of BATTERY.filter((t) => t.domain === 'reading' || t.domain === 'naming')) {
+    assert.equal(REFERENCE_TABLE.rows[s.id], undefined, s.id);
   }
-  // The reading measures are reported as raw results until they are normed.
-  for (const s of BATTERY.filter((t) => !precursor.includes(t))) assert.equal(REFERENCE_TABLE.rows[s.id], undefined, s.id);
 });
 
 test('every choice item has a unique set of options containing the correct answer', () => {
@@ -146,56 +146,63 @@ function profileFor(percents: Partial<Record<SubtestId, number>>, ageMonths: num
   return buildProfile(results, ageMonths);
 }
 
-const AT_MEAN_6Y = Object.fromEntries(
-  BATTERY.filter((s) => REFERENCE_TABLE.rows[s.id]).map((s) => [s.id, REFERENCE_TABLE.rows[s.id]![2][0]])
-) as Record<SubtestId, number>;
+const AT_MEAN_6Y = {} as Record<SubtestId, number>;
 
-test('a child scoring at the age expectation lands in the average band with low risk', () => {
-  const profile = profileFor(AT_MEAN_6Y, 78);
-  assert.equal(profile.subtests.length, 9);
-  for (const s of profile.subtests) assert.equal(s.band, 'average', s.subtestId);
-  assert.equal(profile.risk, 'low');
+test('profile reports raw task results without age norms or risk classifications', () => {
+  const profile = profileFor({ rhyme: 75, phonological: 60, letterSound: 45 }, 78);
+  assert.equal(profile.referenceStatus, 'disabled');
+  assert.equal(profile.subtests.length, 3);
+  for (const s of profile.subtests) {
+    assert.equal(s.centile, null);
+    assert.equal(s.band, null);
+    assert.equal(s.z, null);
+  }
+  assert.deepEqual(profile.domains, []);
+  assert.equal(profile.risk, 'insufficient');
   assert.equal(profile.pattern, 'none');
+  assert.deepEqual(profile.strengths, []);
+  assert.deepEqual(profile.weaknesses, []);
+  assert.equal(profile.coreWeakCount, 0);
+  assert.equal(profile.coreSevereCount, 0);
 });
 
-test('the same raw score is interpreted relative to age', () => {
+test('the same raw score remains descriptive at every age until Arabic norms exist', () => {
   const young = scoreSubtest(resultWithPercent('letterSound', 50), 54);
   const older = scoreSubtest(resultWithPercent('letterSound', 50), 90);
-  assert.ok(young.centile! > older.centile!);
-  assert.ok(older.band === 'severe' || older.band === 'below');
+  assert.equal(young.percent, older.percent);
+  assert.equal(young.correct, older.correct);
+  assert.equal(young.centile, null);
+  assert.equal(older.centile, null);
+  assert.equal(young.band, null);
+  assert.equal(older.band, null);
 });
 
-test('phonological weakness with intact visual skills gives a high-risk phonological pattern', () => {
-  const profile = profileFor({ ...AT_MEAN_6Y, rhyme: 25, phonological: 17, pairedAssociate: 25 }, 78);
-  assert.equal(profile.risk, 'high');
-  assert.equal(profile.pattern, 'phonological');
-  assert.deepEqual([...profile.weaknesses].sort(), ['pairedAssociate', 'phonological', 'rhyme']);
+test('oral reading scores stay unavailable until a verified automated assessment exists', () => {
+  const words = scoreSubtest(resultWithPercent('wordReading', 80), 78);
+  const passage = scoreSubtest(resultWithPercent('oralReading', 80), 78);
+  assert.equal(words.scoreAvailable, false);
+  assert.equal(words.total, 0);
+  assert.equal(words.centile, null);
+  assert.equal(passage.scoreAvailable, false);
+  assert.equal(passage.total, 0);
+  assert.equal(readingMeasureLineAr('wordReading', words), 'لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة؛ لم تُحتسب الدقة أو الأخطاء.');
 });
 
-test('a single core weakness gives moderate risk', () => {
-  const profile = profileFor({ ...AT_MEAN_6Y, rhyme: 38 }, 78);
-  assert.equal(profile.risk, 'moderate');
+test('letter knowledge is reported without age-based risk classification', () => {
+  const profile = profileFor({ letterSound: 0 }, 52);
+  const letterScore = profile.subtests.find((s) => s.subtestId === 'letterSound');
+  assert.ok(letterScore);
+  assert.equal(letterScore!.percent, 0);
+  assert.equal(letterScore!.band, null);
+  assert.equal(profile.risk, 'insufficient');
+  assert.deepEqual(profile.weaknesses, []);
 });
 
-test('low scores everywhere are reported as a general pattern, not a dyslexia pattern', () => {
-  const all = Object.fromEntries(BATTERY.map((s) => [s.id, 8])) as Record<SubtestId, number>;
-  const profile = profileFor(all, 80);
-  assert.equal(profile.pattern, 'general');
-  assert.ok(nextStepsAr(profile.risk, profile.pattern).some((s) => s.includes('سمع')));
-});
-
-test('letter knowledge does not raise risk before age five', () => {
-  const profile = profileFor({ ...AT_MEAN_6Y, letterSound: 0 }, 52);
-  assert.equal(profile.subtests.find((s) => s.subtestId === 'letterSound')!.band !== undefined, true);
-  assert.equal(profile.coreWeakCount, profile.subtests.filter((s) => s.subtestId !== 'letterSound' && (s.band === 'below' || s.band === 'severe') && ['rhyme', 'phonological', 'auditorySequential', 'pairedAssociate', 'auditoryDiscrimination'].includes(s.subtestId)).length);
-});
-
-test('risk is withheld when too few core subtests were completed', () => {
+test('missing tasks are identified without generating a risk classification', () => {
   const profile = profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 78);
   assert.equal(profile.risk, 'insufficient');
-  // From six the reading measures are part of the battery too: 15 tasks in all.
+  assert.equal(profile.referenceStatus, 'disabled');
   assert.equal(profile.missing.length, 12);
-  // Before six: the nine precursor tasks and rapid naming of pictures.
   assert.equal(profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 54).missing.length, 7);
 });
 
@@ -232,14 +239,11 @@ test('Arabic age formatting agrees with the number', () => {
   assert.equal(formatAge(95), '7 سنوات و11 شهرًا');
 });
 
-test('training plan targets the weakest skills in developmental order', () => {
-  const profile = profileFor({ ...AT_MEAN_6Y, letterSound: 20, auditoryDiscrimination: 30, phonological: 25 }, 78);
+test('training uses its existing preventive path when screening cannot validly rank weaknesses', () => {
+  const profile = profileFor({ letterSound: 20, auditoryDiscrimination: 30, phonological: 25 }, 78);
   const plan = buildTrainingPlan(profile);
-  assert.equal(plan.preventive, false);
-  assert.equal(plan.focus.length, 3);
-  assert.equal(plan.focus[0], 'discrimination');
-  const preventive = buildTrainingPlan(profileFor(AT_MEAN_6Y, 78));
-  assert.equal(preventive.preventive, true);
+  assert.equal(plan.preventive, true);
+  assert.deepEqual(plan.focus, ['blending', 'letterSound']);
 });
 
 test('every training skill and level generates valid, varied items', () => {

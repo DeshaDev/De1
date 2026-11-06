@@ -397,10 +397,13 @@ const arNum = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢
  */
 export function readingMeasureLineAr(
   subtestId: SubtestId,
-  scored: { correct?: number; total?: number; percent: number; measures?: ReadingMeasures }
+  scored: { correct?: number; total?: number; percent: number; scoreAvailable?: boolean; measures?: ReadingMeasures }
 ): string | null {
   const m = scored.measures;
   if (!m) return null;
+  if (scored.scoreAvailable === false) {
+    return 'لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة؛ لم تُحتسب الدقة أو الأخطاء.';
+  }
   const of = scored.correct !== undefined && scored.total !== undefined ? `${arNum(scored.correct)} من ${arNum(scored.total)}` : `${arNum(scored.percent)}٪`;
   switch (subtestId) {
     case 'ranObjects':

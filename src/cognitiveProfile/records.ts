@@ -5,14 +5,14 @@
  */
 import { z } from 'zod';
 import { BATTERY, SubtestId, scoredItemIds, subtestsForAge } from './battery';
-import { REFERENCE_TABLE, buildProfile, type Band, type ProfilePattern, type ReadingMeasures, type RiskLevel, type SubtestResult } from './scoring';
+import { REFERENCE_TABLE, buildProfile, type Band, type ProfilePattern, type ReadingMeasures, type RiskLevel, type SubtestResult, type ReferenceStatus } from './scoring';
 import { SPELL_KEYBOARD, SPELL_MAX_LETTERS } from './readingTasks';
 import { SKILLS, type SkillId, type TrainingProgress } from './training';
 import type { HomeDialect } from './storage';
 
 export interface CognitiveBatterySummary {
   referenceVersion: string;
-  referenceStatus: 'provisional' | 'normed';
+  referenceStatus: ReferenceStatus;
   ageBandLabelAr: string;
   completedSubtests: number;
   /** Tasks given at this child's age (older summaries lack it: nine). */
