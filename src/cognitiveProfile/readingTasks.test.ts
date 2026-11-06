@@ -95,8 +95,8 @@ describe('spelling analysis', () => {
 });
 
 describe('scoring of the reading and naming measures', () => {
-  it('rapid naming: seconds, errors and items per second; no centile', () => {
-    const scored = scoreSubtest({ subtestId: 'ranObjects', responses: [], discontinued: false, completedAt: now, durationMs: 42_000, errorCount: 2 }, 78);
+  it('rapid naming: seconds, errors and items per second only when an automated assessment is supplied', () => {
+    const scored = scoreSubtest({ subtestId: 'ranObjects', responses: [], discontinued: false, completedAt: now, durationMs: 42_000, errorCount: 2, attemptedCount: 40, assessmentSource: 'azure' }, 78);
     assert.equal(scored.measures?.seconds, 42);
     assert.equal(scored.measures?.errors, 2);
     assert.equal(scored.measures?.itemsPerSecond, 0.95);
@@ -106,19 +106,20 @@ describe('scoring of the reading and naming measures', () => {
 
   it('passage: accuracy over the words read, and correct words per minute', () => {
     const responses = Array.from({ length: 30 }, (_, i) => ({ itemId: passageWordId(i), correct: i % 10 !== 0, rtMs: 0, replays: 0 }));
-    const scored = scoreSubtest({ subtestId: 'oralReading', responses, discontinued: false, completedAt: now, durationMs: 60_000 }, 84);
+    const scored = scoreSubtest({ subtestId: 'oralReading', responses, discontinued: false, completedAt: now, durationMs: 60_000, assessmentSource: 'azure' }, 84);
     assert.equal(scored.total, 30);
     assert.equal(scored.correct, 27);
     assert.equal(scored.percent, 90);
     assert.equal(scored.measures?.correctPerMinute, 27);
   });
 
-  it('word lists: unreached items count as wrong, rate uses the time spent reading', () => {
+  it('word lists: report only assessed items and use the time spent reading', () => {
     const responses = WORD_ITEMS.slice(0, 8).map((w, i) => ({ itemId: w.id, correct: i < 3, rtMs: 3000, replays: 0 }));
-    const scored = scoreSubtest({ subtestId: 'wordReading', responses, discontinued: true, completedAt: now }, 84);
-    assert.equal(scored.total, WORD_ITEMS.length);
+    const scored = scoreSubtest({ subtestId: 'wordReading', responses, discontinued: true, completedAt: now, assessmentSource: 'azure' }, 84);
+    assert.equal(scored.total, responses.length);
     assert.equal(scored.correct, 3);
     assert.equal(scored.measures?.correctPerMinute, perMinute(3, 24_000));
+    assert.equal(scored.scoreAvailable, true);
     assert.ok(scored.flags.includes('discontinued'));
   });
 
@@ -137,7 +138,21 @@ describe('scoring of the reading and naming measures', () => {
     assert.ok(scored.measures?.spellingErrors?.some((e) => e.kind === 'taaMarbuta'));
   });
 
-  it('reading results never create a risk level, a domain centile or a weakness', () => {
+  it('does not turn a manual rapid-naming count into an available score', () => {
+    const scored = scoreSubtest({
+      subtestId: 'ranObjects',
+      responses: [],
+      discontinued: false,
+      completedAt: now,
+      durationMs: 42_000,
+      errorCount: 2,
+    }, 78);
+    assert.equal(scored.scoreAvailable, false);
+    assert.equal(scored.total, 0);
+    assert.equal(scored.measures?.errors, 0);
+  });
+
+  it('reading results without an automated assessment remain unavailable and never create risk classifications', () => {
     const results: Partial<Record<string, SubtestResult>> = {
       ranObjects: { subtestId: 'ranObjects', responses: [], discontinued: false, completedAt: now, durationMs: 90_000, errorCount: 10 },
       nonwordReading: { subtestId: 'nonwordReading', responses: NONWORD_ITEMS.slice(0, 5).map((w) => ({ itemId: w.id, correct: false, rtMs: 5000, replays: 0 })), discontinued: true, completedAt: now },
