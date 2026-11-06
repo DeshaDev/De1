@@ -157,8 +157,8 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
 });
 
-test('reading tasks: adult-marked words, rapid naming, passage and dictation reach the report', async ({ page }) => {
-  test.setTimeout(120_000);
+test('speech reading and naming tasks never accept manual correction or emit unverified scores', async ({ page }) => {
+  test.setTimeout(90_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.addInitScript(() => window.localStorage.clear());
@@ -169,39 +169,21 @@ test('reading tasks: adult-marked words, rapid naming, passage and dictation rea
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
   await page.getByRole('button', { name: 'بدء الفحص' }).click();
 
-  // Word reading: one practice word, then the adult marks each word until the discontinue rule (5 wrong in a row).
-  await page.getByText('قارئ الكلمات', { exact: true }).click();
-  await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
-  await page.getByRole('button', { name: 'صحيح' }).click();
-  await page.getByRole('button', { name: 'هيا بنا' }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'صحيح' }).click();
-  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'خطأ أو لم يقرأ' }).click();
-  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
-
-  // Rapid naming of pictures: names check, then the timed grid with one error.
-  await page.getByText('سباق الصور', { exact: true }).click();
-  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-  await page.getByRole('button', { name: 'يعرف الأسماء، التالي' }).click();
-  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-  await page.getByRole('button', { name: /خطأ/ }).click();
-  await page.getByRole('button', { name: 'انتهى' }).click();
-  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
-
-  // Passage: mark one misread word, the child stops early, tap the last word read.
-  await page.getByText('قصة سامي', { exact: true }).click();
-  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-  await page.getByRole('button', { name: /ابدأ \(دقيقة واحدة\)/ }).click();
-  await page.getByRole('button', { name: 'سَامِي' }).first().click();
-  await page.getByRole('button', { name: 'توقف الطفل قبل النهاية' }).click();
-  await page.getByRole('button', { name: /آخر كلمة: السُّوقِ/ }).click();
-  await page.getByRole('button', { name: 'حفظ' }).click();
-  await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
+  for (const task of ['قارئ الكلمات', 'سباق الصور', 'قصة سامي']) {
+    await page.getByText(task, { exact: true }).click();
+    await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'التقييم الصوتي الآلي غير متاح لهذه المهمة بعد' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'حفظ المهمة دون درجة' }).click();
+    await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
+  }
 
   await page.getByRole('button', { name: 'النتيجة والتقرير' }).click();
   await expect(page.getByRole('heading', { name: 'القراءة والإملاء والتسمية السريعة' })).toBeVisible();
-  await expect(page.getByText(/٣ من ١٦ صحيحة/).first()).toBeVisible();
-  await expect(page.getByText(/لـ٤٠ صورة · خطأ واحد/).first()).toBeVisible();
-  await expect(page.getByText(/الدقة ٨٣٪: ٥ صحيحة من ٦ مقروءة/).first()).toBeVisible();
+  await expect(page.getByText(/لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة/)).toHaveCount(3);
+  await expect(page.getByText(/٣ من ١٦ صحيحة/)).toHaveCount(0);
+  await expect(page.getByText(/الدقة ٨٣٪/)).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 
