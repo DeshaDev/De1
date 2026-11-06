@@ -401,6 +401,9 @@ export function readingMeasureLineAr(
 ): string | null {
   const m = scored.measures;
   if (!m) return null;
+  if (scored.scoreAvailable === false) {
+    return 'لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة؛ لم تُحتسب الدقة أو الأخطاء.';
+  }
   const of = scored.correct !== undefined && scored.total !== undefined ? `${arNum(scored.correct)} من ${arNum(scored.total)}` : `${arNum(scored.percent)}٪`;
   switch (subtestId) {
     case 'ranObjects':
