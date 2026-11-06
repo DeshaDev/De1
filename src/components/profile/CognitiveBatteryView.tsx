@@ -47,7 +47,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
-import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
+import { SpellingPlayer } from './ReadingPlayers';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
@@ -275,36 +275,24 @@ function SubtestRunner({
         {stage === 'test' && subtest.kind === 'association' && (
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
         )}
-        {stage === 'test' && subtest.kind === 'readList' && (
-          <ReadAloudPlayer
-            key={`t-${index}`}
-            item={subtest.items[index]}
-            practice={false}
-            hesitationSec={subtest.hesitationSec}
-            onDone={(r) => recordAndAdvance([r])}
-          />
+        {stage === 'test' && (subtest.kind === 'readList' || subtest.kind === 'ran' || subtest.kind === 'passage') && (
+          <section className="w-full max-w-xl rounded-2xl border border-line bg-soft p-6 text-center space-y-4" role="status" dir="rtl">
+            <span className="text-4xl" aria-hidden="true">🎧</span>
+            <h3 className="font-child text-xl font-bold text-ink">التقييم الصوتي الآلي غير متاح لهذه المهمة بعد</h3>
+            <p className="bz-small text-ink-2 leading-7">
+              لن نطلب من شخص آخر تصحيح قراءة الطفل أو عدّ أخطائه. لا تُحتسب هذه المهمة درجةً إلى أن يكتمل ربط التسجيل بالتقييم الآلي والتحقق من النتيجة على الخادم.
+            </p>
+            <button
+              type="button"
+              className="bz-btn bz-btn-primary bz-btn-lg"
+              onClick={() => finish(false)}
+            >
+              حفظ المهمة دون درجة
+            </button>
+          </section>
         )}
         {stage === 'test' && subtest.kind === 'spelling' && (
           <SpellingPlayer key={`t-${index}`} item={subtest.items[index]} practice={false} onDone={(r) => recordAndAdvance([r])} />
-        )}
-        {stage === 'test' && subtest.kind === 'ran' && (
-          <RanPlayer
-            symbols={subtest.symbols}
-            grid={subtest.grid}
-            display={subtest.display}
-            onDone={(durationMs, errorCount) => finish(false, { durationMs, errorCount })}
-          />
-        )}
-        {stage === 'test' && subtest.kind === 'passage' && (
-          <PassagePlayer
-            title={subtest.titleAr}
-            words={subtest.words}
-            timeLimitSec={subtest.timeLimitSec}
-            onDone={(rs, durationMs) => {
-              responses.current = rs;
-              finish(false, { durationMs });
-            }}
-          />
         )}
         {stage === 'test' && subtest.kind === 'pal' && (
           <PalPlayer
@@ -474,7 +462,7 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
               `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
               `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس بالغ بجانب الطفل دون أن يساعده في الإجابة. في مهام القراءة والتسمية يقرأ الطفل بصوت عالٍ، ويضغط البالغ «صحيح» أو «خطأ».',
+              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. مهام القراءة والتسمية لا تنتج درجة حتى يتوفر التقييم الصوتي الآلي الموثّق.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
