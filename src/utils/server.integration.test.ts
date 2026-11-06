@@ -829,11 +829,11 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
 
     const saved = await fetch(route, json(admin.token, 'PUT', upload));
     assert.equal(saved.status, 200, await saved.clone().text());
-    const savedBody = (await saved.json()) as { student: { cognitiveBattery: { summary: { completedSubtests: number; referenceStatus: string; subtests: Array<{ centile: number }> } } } };
+    const savedBody = (await saved.json()) as { student: { cognitiveBattery: { summary: { completedSubtests: number; referenceStatus: string; subtests: Array<{ centile: number | null }> } } } };
     const summary = savedBody.student.cognitiveBattery.summary;
     assert.equal(summary.completedSubtests, 1);
-    assert.equal(summary.referenceStatus, 'provisional');
-    assert.ok(summary.subtests[0].centile >= 1 && summary.subtests[0].centile <= 99);
+    assert.equal(summary.referenceStatus, 'disabled');
+    assert.equal(summary.subtests[0].centile, null);
 
     // A client-supplied summary is rejected rather than stored.
     const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
