@@ -134,7 +134,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                   </li>
                 ))}
               </ul>
-              {scoredById.get('wordReading') && scoredById.get('nonwordReading') && (
+              {scoredById.get('wordReading')?.scoreAvailable && scoredById.get('nonwordReading')?.scoreAvailable && (
                 <p className="rounded-xl bg-soft p-4 bz-small text-ink-2">
                   <strong className="text-ink">
                     كلمات حقيقية {toArabicDigits(scoredById.get('wordReading')!.percent)}٪ · كلمات مصنوعة {toArabicDigits(scoredById.get('nonwordReading')!.percent)}٪.
@@ -257,10 +257,10 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                   {profile.subtests.map((scored) => (
                     <tr key={scored.subtestId} className="border-t border-line text-center bz-num">
                       <td className="px-3 py-2.5 text-right font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</td>
-                      <td className="px-3 py-2.5">{toArabicDigits(`${scored.correct}/${scored.total}`)}</td>
-                      <td className="px-3 py-2.5">{toArabicDigits(scored.percent)}٪</td>
+                      <td className="px-3 py-2.5">{scored.scoreAvailable === false ? '—' : toArabicDigits(`${scored.correct}/${scored.total}`)}</td>
+                      <td className="px-3 py-2.5">{scored.scoreAvailable === false ? '—' : `${toArabicDigits(scored.percent)}٪`}</td>
                       <td className="px-3 py-2.5">
-                        {scored.measures
+                        {scored.scoreAvailable === false ? '—' : scored.measures
                           ? scored.measures.seconds !== null
                             ? `${toArabicDigits(scored.measures.seconds)} ث${scored.measures.correctPerMinute !== undefined ? ` · ${toArabicDigits(scored.measures.correctPerMinute)}/د` : ''}`
                             : '—'
