@@ -37,6 +37,11 @@ export interface BatterySession {
   startedAt: string;
   /** Home dialect, used to interpret dialect-sensitive sound contrasts (optional). */
   dialect?: HomeDialect;
+  guardianConsentGiven?: boolean;
+  guardianAudioConsentGiven?: boolean;
+  guardianConsentRecordedAt?: string;
+  guardianAudioConsentRecordedAt?: string;
+  speechLocale?: 'ar-EG' | 'ar-SA';
   results: Partial<Record<SubtestId, SubtestResult>>;
 }
 
@@ -86,6 +91,15 @@ export interface ScreeningSnapshot {
   domains: Array<{ domain: string; centile: number }>;
 }
 const HISTORY_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.history.${studentId}`;
-export const loadScreeningHistory = (studentId: string) => read<ScreeningSnapshot[]>(HISTORY_KEY(studentId)) ?? [];
-export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) => write(HISTORY_KEY(studentId), history.slice(-10));
+export function sanitizeScreeningHistory(history: ScreeningSnapshot[]): ScreeningSnapshot[] {
+  return history.map((snapshot) => ({ ...snapshot, risk: 'insufficient', domains: [] }));
+}
+export const loadScreeningHistory = (studentId: string): ScreeningSnapshot[] => {
+  const stored = read<ScreeningSnapshot[]>(HISTORY_KEY(studentId)) ?? [];
+  const safe = sanitizeScreeningHistory(stored);
+  if (JSON.stringify(stored) !== JSON.stringify(safe)) write(HISTORY_KEY(studentId), safe);
+  return safe;
+};
+export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) =>
+  write(HISTORY_KEY(studentId), sanitizeScreeningHistory(history).slice(-10));
 
