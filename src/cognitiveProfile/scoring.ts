@@ -33,8 +33,11 @@ export interface SubtestResult {
   blockScores?: number[];
   /** For rapid naming and the passage: time from start to the last item named or read. */
   durationMs?: number;
-  /** For rapid naming: items named wrongly or skipped, as counted by the adult. */
+  /** For rapid naming: errors confirmed by the word-level speech model. */
   errorCount?: number;
+  attemptedCount?: number;
+  assessmentSource?: 'azure';
+  aiAssessmentReceipt?: string;
 }
 
 /** Raw reading and naming measures. They have no reference values yet and are reported as they are. */
@@ -67,6 +70,7 @@ export interface ScoredSubtest {
   band: Band | null;
   medianRtMs: number | null;
   flags: string[];
+  scoreAvailable?: boolean;
   measures?: ReadingMeasures;
 }
 
