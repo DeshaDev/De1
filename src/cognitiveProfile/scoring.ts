@@ -1,11 +1,9 @@
 /**
  * Scoring for the Baseera cognitive profile battery.
  *
- * Raw score → percent correct → z-score against the reference for the child's age band →
- * centile → band. The reference table is versioned and carries its own status. While the
- * status is 'provisional', every centile is an estimate against expert-set expectations and
- * the report must say so; once an Arabic norming study supplies means and SDs, replacing
- * REFERENCE_TABLE upgrades every report without code changes elsewhere.
+ * Task scores are descriptive only. Team-set reference values were never normed on an
+ * independent Arabic child sample, so age comparisons and derived classifications are disabled
+ * until an Arabic standardization study is completed.
  */
 import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, appliesAtAge, scoredItemCount } from './battery';
 import { letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
@@ -103,7 +101,7 @@ export interface CognitiveProfile {
 // ---------------------------------------------------------------------------
 // Reference table
 // ---------------------------------------------------------------------------
-export type ReferenceStatus = 'provisional' | 'normed';
+export type ReferenceStatus = 'disabled' | 'normed';
 
 interface AgeBand {
   minMonths: number;
@@ -131,21 +129,10 @@ export interface ReferenceTable {
 }
 
 export const REFERENCE_TABLE: ReferenceTable = {
-  version: 'provisional-2026.10',
-  status: 'provisional',
-  sourceAr:
-    'توقعات مرحلية مؤقتة وضعها فريق بصيرة استرشادًا بمسارات النمو المنشورة في الوعي الصوتي والذاكرة العاملة ومعرفة الحروف لدى الأطفال، إلى حين اكتمال دراسة التقنين على عينة عربية (انظر docs/SCIENTIFIC_VALIDATION_PLAN_AR.md).',
-  rows: {
-    visualSequential: [[30, 15], [40, 15], [50, 15], [58, 15], [65, 14]],
-    visualAssociative: [[45, 18], [55, 17], [65, 16], [72, 15], [78, 13]],
-    auditorySequential: [[25, 14], [35, 15], [45, 15], [53, 15], [60, 14]],
-    pairedAssociate: [[45, 20], [55, 20], [66, 18], [75, 16], [82, 14]],
-    rhyme: [[50, 20], [62, 19], [75, 17], [84, 13], [89, 10]],
-    phonological: [[40, 18], [52, 18], [66, 17], [78, 15], [85, 12]],
-    auditoryDiscrimination: [[65, 15], [72, 14], [80, 12], [86, 10], [90, 8]],
-    visualDiscrimination: [[60, 18], [72, 16], [82, 13], [89, 10], [93, 7]],
-    letterSound: [[20, 18], [45, 25], [75, 20], [90, 10], [95, 6]],
-  },
+  version: 'disabled-pending-arabic-norming',
+  status: 'disabled',
+  sourceAr: 'القيم المرجعية المرحلية معطلة؛ لم تُستمد من عينة عربية مستقلة.',
+  rows: {},
 };
 
 /** Median response time (ms) above which processing is flagged as slow, by age band. */
@@ -224,26 +211,24 @@ export function scoreSubtest(
 
   // Reading and naming measures: raw counts, rates and times.
   if (subtest.kind === 'ran') {
-    const total = scoredItemCount(subtest);
+    const total = result.assessmentSource === 'azure'
+      ? Math.max(0, Math.min(scoredItemCount(subtest), result.attemptedCount ?? 0))
+      : 0;
     const errors = Math.min(total, result.errorCount ?? 0);
     const correct = total - errors;
     const durationMs = result.durationMs ?? 0;
     return {
-      subtestId: result.subtestId,
-      correct,
-      total,
-      percent: Math.round((correct / total) * 100),
-      z: null,
-      centile: null,
-      band: null,
-      medianRtMs: null,
-      flags,
+      subtestId: result.subtestId, correct, total,
+      percent: total ? Math.round((correct / total) * 100) : 0,
+      z: null, centile: null, band: null, medianRtMs: null, flags,
+      scoreAvailable: total > 0,
       measures: { attempted: total, seconds: durationMs ? Math.round(durationMs / 100) / 10 : null, itemsPerSecond: ranRate(total, durationMs), errors },
     };
   }
   if (subtest.kind === 'passage') {
-    const attempted = result.responses.length;
-    const correct = result.responses.filter((r) => r.correct).length;
+    const responses = result.assessmentSource === 'azure' ? result.responses : [];
+    const attempted = responses.length;
+    const correct = responses.filter((r) => r.correct).length;
     const durationMs = result.durationMs ?? 0;
     return {
       subtestId: result.subtestId,
@@ -255,6 +240,7 @@ export function scoreSubtest(
       band: null,
       medianRtMs: null,
       flags,
+      scoreAvailable: attempted > 0,
       measures: {
         attempted,
         seconds: durationMs ? Math.round(durationMs / 1000) : null,
@@ -264,15 +250,15 @@ export function scoreSubtest(
     };
   }
   if (subtest.kind === 'readList' || subtest.kind === 'spelling') {
-    // Items not reached because of the discontinue rule count as incorrect, as in the other tasks.
-    const total = scoredItemCount(subtest);
-    const correct = result.responses.filter((r) => r.correct).length;
-    const timeMs = result.responses.reduce((sum, r) => sum + r.rtMs, 0);
-    const measures: ReadingMeasures = { attempted: result.responses.length, seconds: timeMs ? Math.round(timeMs / 1000) : null };
+    const responses = subtest.kind === 'readList' && result.assessmentSource !== 'azure' ? [] : result.responses;
+    const total = subtest.kind === 'readList' ? responses.length : scoredItemCount(subtest);
+    const correct = responses.filter((r) => r.correct).length;
+    const timeMs = subtest.kind === 'readList' ? (result.durationMs ?? 0) : responses.reduce((sum, r) => sum + r.rtMs, 0);
+    const measures: ReadingMeasures = { attempted: responses.length, seconds: timeMs ? Math.round(timeMs / 1000) : null };
     if (subtest.kind === 'readList') measures.correctPerMinute = perMinute(correct, timeMs);
     if (subtest.kind === 'spelling') {
       const answers = new Map(subtest.items.map((i) => [i.id, i.answer]));
-      const scored = result.responses.filter((r) => answers.has(r.itemId));
+      const scored = responses.filter((r) => answers.has(r.itemId));
       measures.letterPercent = scored.length
         ? Math.round((scored.reduce((sum, r) => sum + letterAccuracy(r.typed ?? '', answers.get(r.itemId)!), 0) / scored.length) * 100)
         : 0;
@@ -284,7 +270,7 @@ export function scoreSubtest(
       subtestId: result.subtestId,
       correct,
       total,
-      percent: Math.round((correct / total) * 100),
+      percent: total ? Math.round((correct / total) * 100) : 0,
       z: null,
       centile: null,
       band: null,
@@ -297,9 +283,9 @@ export function scoreSubtest(
   const total = scoredItemCount(subtest);
   const correct = result.responses.filter((r) => r.correct).length;
   const percent = Math.round((correct / total) * 100);
-  const row = table.rows[result.subtestId];
-  const z = row ? Number(((percent - row[index][0]) / row[index][1]).toFixed(2)) : null;
-  const centile = z === null ? null : centileFromZ(z);
+  void table;
+  const z = null;
+  const centile = null;
 
   const answered = result.responses.length;
   const chancePercent = subtest.chance * 100;
@@ -348,65 +334,25 @@ export function buildProfile(
   table: ReferenceTable = REFERENCE_TABLE
 ): CognitiveProfile {
   const { index, outOfRange } = ageBandIndex(ageMonths);
+  void table;
   const subtests = BATTERY.filter((s) => results[s.id]).map((s) =>
-    scoreSubtest(results[s.id] as SubtestResult, ageMonths, table)
+    scoreSubtest(results[s.id] as SubtestResult, ageMonths)
   );
-  // Domain centiles, risk and the strength/weakness lists use only tasks with reference values.
-  const referenced = subtests.filter((s): s is ScoredSubtest & { z: number; centile: number; band: Band } => s.z !== null);
-  const byId = new Map(referenced.map((s) => [s.subtestId, s]));
   const missing = BATTERY.filter((s) => appliesAtAge(s, ageMonths) && !results[s.id]).map((s) => s.id);
-
-  const domainIds = Array.from(new Set(BATTERY.map((s) => s.domain)));
-  const domains: DomainScore[] = domainIds
-    .map((domain) => {
-      const members = BATTERY.filter((s) => s.domain === domain && byId.has(s.id)).map((s) => s.id);
-      if (members.length === 0) return null;
-      const meanZ = members.reduce((sum, id) => sum + byId.get(id)!.z, 0) / members.length;
-      const centile = centileFromZ(meanZ);
-      return { domain, centile, band: bandFromCentile(centile), subtests: members };
-    })
-    .filter((d): d is DomainScore => d !== null);
-
-  const coreIds = CORE_PHONOLOGICAL_SUBTESTS.filter(
-    (id) => id !== 'letterSound' || ageMonths >= LETTER_SOUND_RISK_MIN_AGE_MONTHS
-  );
-  const coreScored = coreIds.map((id) => byId.get(id)).filter((s) => s !== undefined);
-  const isWeak = (s: ScoredSubtest) => s.band === 'severe' || s.band === 'below';
-  const coreWeakCount = coreScored.filter(isWeak).length;
-  const coreSevereCount = coreScored.filter((s) => s.band === 'severe').length;
-  const visualScored = VISUAL_SUBTESTS.map((id) => byId.get(id)).filter((s) => s !== undefined);
-  const visualWeakCount = visualScored.filter(isWeak).length;
-  const allWeakCount = referenced.filter(isWeak).length;
-
-  let risk: RiskLevel;
-  if (coreScored.length < 4) risk = 'insufficient';
-  else if ((coreSevereCount >= 1 && coreWeakCount >= 2) || coreWeakCount >= 3) risk = 'high';
-  else if (coreWeakCount >= 1) risk = 'moderate';
-  else risk = 'low';
-
-  let pattern: ProfilePattern = 'none';
-  if (referenced.length >= 7 && allWeakCount >= referenced.length - 2) pattern = 'general';
-  else if (coreWeakCount >= 1 && visualWeakCount >= 2) pattern = 'mixed';
-  else if (coreWeakCount >= 1) pattern = 'phonological';
-  else if (visualWeakCount >= 1) pattern = 'visual';
-
-  const weaknesses = [...referenced].filter(isWeak).sort((a, b) => a.z - b.z).map((s) => s.subtestId);
-  const strengths = referenced.filter((s) => s.band === 'strength').map((s) => s.subtestId);
-
   return {
     ageMonths,
     ageBandLabelAr: AGE_BANDS[index].labelAr,
     ageOutOfRange: outOfRange,
-    referenceStatus: table.status,
+    referenceStatus: 'disabled',
     subtests,
-    domains,
-    risk,
-    pattern,
-    strengths,
-    weaknesses,
+    domains: [],
+    risk: 'insufficient',
+    pattern: 'none',
+    strengths: [],
+    weaknesses: [],
     missing,
-    coreWeakCount,
-    coreSevereCount,
+    coreWeakCount: 0,
+    coreSevereCount: 0,
   };
 }
 
