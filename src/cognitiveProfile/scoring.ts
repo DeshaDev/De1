@@ -276,6 +276,7 @@ export function scoreSubtest(
       band: null,
       medianRtMs: null,
       flags,
+      scoreAvailable: subtest.kind !== 'readList' || responses.length > 0,
       measures,
     };
   }
