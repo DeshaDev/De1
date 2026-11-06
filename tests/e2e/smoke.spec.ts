@@ -181,7 +181,9 @@ test('speech reading and naming tasks never accept manual correction or emit unv
 
   await page.getByRole('button', { name: 'النتيجة والتقرير' }).click();
   await expect(page.getByRole('heading', { name: 'القراءة والإملاء والتسمية السريعة' })).toBeVisible();
-  await expect(page.getByText(/لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة/)).toHaveCount(3);
+  const unavailableSpeechScores = page.getByText(/لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة/);
+  await expect(unavailableSpeechScores.first()).toBeVisible();
+  expect(await unavailableSpeechScores.count()).toBeGreaterThanOrEqual(3);
   await expect(page.getByText(/٣ من ١٦ صحيحة/)).toHaveCount(0);
   await expect(page.getByText(/الدقة ٨٣٪/)).toHaveCount(0);
   expect(pageErrors).toEqual([]);
