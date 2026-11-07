@@ -256,9 +256,22 @@ export function PassagePlayer({
         {phase === 'error' && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
             <p className="bz-small text-amber-950">{errorMessage}</p>
-            <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
-              حفظ المهمة دون درجة
-            </button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary"
+                onClick={() => {
+                  finalizingRef.current = false;
+                  setErrorMessage('');
+                  setPhase('ready');
+                }}
+              >
+                إعادة التسجيل والمحاولة
+              </button>
+              <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
+                حفظ المهمة دون درجة
+              </button>
+            </div>
           </div>
         )}
 
@@ -455,7 +468,22 @@ export function RanPlayer({
           {phase === 'error' && (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
               <p className="bz-small text-amber-950">{errorMessage}</p>
-              <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>حفظ المهمة دون درجة</button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary"
+                  onClick={() => {
+                    finalizingRef.current = false;
+                    setErrorMessage('');
+                    setPhase('ready');
+                  }}
+                >
+                  إعادة التسجيل والمحاولة
+                </button>
+                <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
+                  حفظ المهمة دون درجة
+                </button>
+              </div>
             </div>
           )}
         </div>
