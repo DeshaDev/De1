@@ -2235,7 +2235,7 @@ async function startServer() {
     const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const parentUserId = session?.parentUserId;
     const authorization = String(req.headers.authorization || '');
-    if (session?.role !== 'parent' || !parentUserId || !authorization.startsWith('Bearer ')) {
+    if (String(session?.role) !== 'parent' || !parentUserId || !authorization.startsWith('Bearer ')) {
       res.status(403).json({ error: 'هذا المسار مخصص لحساب ولي الأمر الموثّق.' });
       return;
     }
