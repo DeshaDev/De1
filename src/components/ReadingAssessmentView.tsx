@@ -258,6 +258,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Move to the reading stage immediately; the passage effect scrolls it into view.
   const handleStartReading = () => {
+    // Consent is checked both in the launch control and here, so no alternate
+    // caller can silently start microphone capture without the session-specific opt-in.
+    if (readingMode === 'oral_audio' && (!guardianConsentChecked || !audioConsentChecked)) {
+      setPronunciationAssessmentError('يلزم تسجيل موافقة ولي الأمر والموافقة المنفصلة على معالجة الصوت قبل تشغيل الميكروفون.');
+      return;
+    }
     isReadingActiveRef.current = true;
     audioRecordingStartedRef.current = false;
     setReadingSeconds(0);
@@ -778,7 +784,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       oralAccuracyPercent: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? measuredAccuracyPercent : undefined,
       teacherVerified: false,
       assessmentModality: readingMode === 'oral_audio' ? 'voice_only' : 'reading_only',
-      spokenTranscript: readingMode === 'oral_audio' ? (spokenTranscriptRef.current || spokenTranscript).trim() : undefined,
+      spokenTranscript: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt
+        ? (spokenTranscriptRef.current || spokenTranscript).trim()
+        : undefined,
       comprehensionScore: scorePercent,
       correctAnswersCount: correctCount,
       totalQuestionsCount: questions.length,
@@ -990,7 +998,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     />
                     <span className="leading-relaxed">
                       <span className="text-emerald-700 font-bold ml-1">إذن منفصل للصوت:</span>
-                      أوافق على تسجيل صوت الطفل أثناء القراءة وتحليله آليًا للتعرّف على الكلمات.
+                      أوافق على تسجيل صوت الطفل أثناء القراءة وإرسال التسجيل إلى خدمة Azure Speech لتحليله آليًا مقابل النص المرجعي. لن تُحتسب درجة عند تعذر التقييم أو عدم حسم الكلمات.
                     </span>
                   </label>
                 )}
@@ -1003,11 +1011,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   onClick={() => {
                     if (!guardianConsentChecked) return;
                     if (readingMode === 'oral_audio' && !audioConsentChecked) {
-                      setReadingMode('timed_silent');
+                      setPronunciationAssessmentError('يلزم تفعيل الموافقة المنفصلة على تسجيل صوت الطفل وتحليله قبل بدء القراءة الجهرية.');
+                      return;
                     }
                     handleStartReading();
                   }}
-                  disabled={!guardianConsentChecked}
+                  disabled={!guardianConsentChecked || (readingMode === 'oral_audio' && !audioConsentChecked)}
                   className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
                 >
                   
