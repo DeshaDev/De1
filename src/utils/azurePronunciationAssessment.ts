@@ -79,7 +79,7 @@ export function normalizeAzureWordResults(records: unknown[]): AzureRawWord[] {
     const assessment = record.PronunciationAssessment || record.pronunciationAssessment || {};
     return [{
       word: record.Word.trim(),
-      errorType: String(assessment.ErrorType || assessment.errorType || record.ErrorType || 'None'),
+      errorType: String(assessment.ErrorType || assessment.errorType || record.ErrorType || 'Unconfirmed'),
       accuracyScore: safeScore(assessment.AccuracyScore ?? assessment.accuracyScore ?? record.AccuracyScore),
     }];
   });
