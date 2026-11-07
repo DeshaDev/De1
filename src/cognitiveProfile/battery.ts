@@ -873,7 +873,7 @@ export function scoredItemIds(subtest: Subtest): string[] {
     case 'pal':
       return subtest.blocks.flatMap((b) => b.order.map((c) => `${b.id}-${c}`));
     case 'ran':
-      return [];
+      return Array.from({ length: RAN_GRID_SIZE }, (_, index) => `ran-${index + 1}`);
     case 'passage':
       return subtest.words.map((_, i) => passageWordId(i));
   }
