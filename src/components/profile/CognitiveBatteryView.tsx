@@ -361,9 +361,14 @@ function SetupView({
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
-  const [examiner, setExaminer] = useState('');
-  const [dialect, setDialect] = useState<HomeDialect | ''>('');
-  const [checks, setChecks] = useState({ consent: false, quiet: false, headphones: false, ready: false });
+  const [examiner, setExaminer] = useState(supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر');
+  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || 'gulf');
+  const [checks, setChecks] = useState({
+    consent: Boolean(student.guardianConsentGiven),
+    quiet: true,
+    headphones: true,
+    ready: true,
+  });
   const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
 
   if (!supabaseUser) {
@@ -610,7 +615,28 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [trainingRunning, setTrainingRunning] = useState(false);
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
-  const loadInitial = () => loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
+  const loadInitial = (): BatterySession | null => {
+    const existing = loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
+    if (existing) return existing;
+
+    // If activeStudent has already been registered with valid name and age (from Parent Portal or school roster)
+    const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
+    if (!activeStudent.isDemoRecord && activeStudent.name && isValidAge && activeStudent.name !== 'طفلك') {
+      const initialSession: BatterySession = {
+        studentId: activeStudent.id,
+        childName: activeStudent.name,
+        ageMonths: activeStudent.ageYears * 12,
+        examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
+        startedAt: new Date().toISOString(),
+        dialect: (activeStudent.dialectCode as HomeDialect) || 'gulf',
+        results: {},
+      };
+      saveBatterySession(initialSession);
+      return initialSession;
+    }
+
+    return null;
+  };
   const [session, setSession] = useState<BatterySession | null>(loadInitial);
 
   const pushToSchool = (s: BatterySession) => {
