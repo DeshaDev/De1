@@ -175,17 +175,17 @@ export interface RanSubtest extends SubtestBase {
   grid: string[];
 }
 
-/** A graded list read aloud one item at a time; the adult marks each item. */
+/** A graded list read aloud one item at a time; unavailable until server-side audio scoring is wired. */
 export interface ReadListSubtest extends SubtestBase {
   kind: 'readList';
   practice: ReadItem[];
   items: ReadItem[];
   discontinueAfter: number;
-  /** Seconds without an attempt after which the adult marks the item wrong and moves on. */
+  /** Maximum silent interval used by a future server-verified audio task. */
   hesitationSec: number;
 }
 
-/** A short passage read aloud for a fixed time; the adult marks misread words. */
+/** A short passage read aloud for a fixed time; requires server-verified word alignment. */
 export interface PassageSubtest extends SubtestBase {
   kind: 'passage';
   titleAr: string;
@@ -728,9 +728,9 @@ export const BATTERY: Subtest[] = [
     icon: '🏁',
     minutes: 2,
     chance: 0,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
-      'يسمّي الطفل الصور الخمس أولًا للتأكد من معرفته أسماءها (يُقبل أي اسم يستخدمه، مثل «كورة» أو «كُرَة»). بعدها اضغط «ابدأ» ويسمّي الطفل الصور الأربعين بأسرع ما يستطيع، صفًا صفًا من اليمين إلى اليسار، دون أن يشير بإصبعه. اضغط «خطأ» عند كل صورة يسمّيها خطأً أو يتخطاها، ولا تحسب ما يصححه بنفسه. اضغط «انتهى» فور نطقه آخر صورة.',
+      'هذه المهمة غير متاحة للتقييم حاليًا؛ لن تُحتسب سرعة التسمية أو أخطاؤها حتى يُربط الصوت المسجل بمحرك خادمي موثّق خاص ببنود المهمة. لا تُدخل نتائج يدوية.',
     introAudio:
       'سَتَرَى صُوَرًا كَثِيرَةً. قُلْ اسْمَ كُلِّ صُورَةٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنْ أَوَّلِ السَّطْرِ إِلَى آخِرِهِ.',
     symbols: RAN_OBJECTS,
@@ -748,9 +748,9 @@ export const BATTERY: Subtest[] = [
     minutes: 2,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
-      'مثل سباق الصور، بخمسة حروف مألوفة. يُقبل اسم الحرف («ميم») أو صوته («مَ»)، بشرط أن يلتزم الطفل بطريقة واحدة. اضغط «خطأ» عند كل حرف خاطئ أو متخطّى، و«انتهى» فور آخر حرف.',
+      'هذه المهمة غير متاحة للتقييم حاليًا؛ لن تُحتسب سرعة التسمية أو أخطاؤها حتى يُربط الصوت المسجل بمحرك خادمي موثّق خاص ببنود المهمة. لا تُدخل نتائج يدوية.',
     introAudio: 'وَالآنَ حُرُوفٌ. قُلْ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ.',
     symbols: RAN_LETTERS,
     grid: RAN_LETTER_GRID,
@@ -766,11 +766,11 @@ export const BATTERY: Subtest[] = [
     minutes: 3,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     discontinueAfter: 5,
     hesitationSec: 5,
     examinerNoteAr:
-      'تظهر كلمة واحدة مشكولة، ويقرؤها الطفل جهرًا. اضغط «صحيح» إذا قرأها كلها صحيحة (يُقبل نطق اللهجة للحروف مثل ج وق، ولا يُشترط إعراب الآخر)، و«خطأ» إذا أخطأ أو لم يبدأ خلال ٥ ثوانٍ. التصحيح الذاتي الفوري صحيح. لا تقرأ الكلمة للطفل ولا تلمّح. يتوقف النشاط بعد ٥ أخطاء متتالية.',
+      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل صحة الكلمة أو خطؤها أو زمن التوقف دون تسجيل صوتي وتحليل خادمي موثّق. لا تستخدم تصحيحًا يدويًا.',
     introAudio: 'سَتَظْهَرُ كَلِمَاتٌ. اقْرَأْ كُلَّ كَلِمَةٍ بِصَوْتٍ عَالٍ.',
     practice: WORD_PRACTICE,
     items: WORD_ITEMS,
@@ -786,11 +786,11 @@ export const BATTERY: Subtest[] = [
     minutes: 3,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     discontinueAfter: 5,
     hesitationSec: 5,
     examinerNoteAr:
-      'كلمات مصنوعة ليس لها معنى، فلا يستطيع الطفل قراءتها من الذاكرة؛ تقيس فك الترميز وحده. «صحيح» فقط إذا نطق كل حرف وحركة كما كُتب. إذا قرأها كلمة حقيقية تشبهها (مثل «فَزَعْ» بدل «فَزَب») فهي خطأ. التصحيح الذاتي الفوري صحيح. يتوقف النشاط بعد ٥ أخطاء متتالية.',
+      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل صحة الكلمة المصنوعة أو خطؤها دون تسجيل صوتي وتحليل خادمي موثّق. لا تستخدم تصحيحًا يدويًا.',
     introAudio:
       'هَذِهِ كَلِمَاتٌ مِنْ كَوْكَبٍ آخَرَ، لَيْسَ لَهَا مَعْنًى. اقْرَأْهَا كَمَا هِيَ مَكْتُوبَةٌ بِالضَّبْطِ.',
     practice: NONWORD_PRACTICE,
@@ -807,9 +807,9 @@ export const BATTERY: Subtest[] = [
     minutes: 3,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
-      'يقرأ الطفل القصة جهرًا دقيقة واحدة. اضغط «ابدأ» حين ينطق أول كلمة. المس كل كلمة يخطئ فيها أو يتخطاها أو يتوقف عندها أكثر من ٣ ثوانٍ (عندها اقرأها له وتابع). التصحيح الذاتي صحيح، ولا يُشترط إعراب أواخر الكلمات. إذا أنهى القصة قبل الدقيقة فاضغط «انتهى»، وإلا يتوقف المؤقت وتلمس آخر كلمة قرأها.',
+      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل دقة القراءة أو طلاقتها دون تقييم خادمي موثّق للصوت والكلمات. لا تضع علامات يدويًا على كلمات الطفل.',
     introAudio: 'اقْرَأْ هَذِهِ القِصَّةَ بِصَوْتٍ عَالٍ، كَمَا تَقْرَأُ فِي الصَّفِّ.',
     titleAr: PASSAGE_TITLE,
     words: PASSAGE_WORDS,
