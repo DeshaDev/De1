@@ -77,7 +77,11 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  jwt_role text := COALESCE(current_setting('request.jwt.claim.role', true), '');
+  jwt_role text := COALESCE(
+    NULLIF(current_setting('request.jwt.claim.role', true), ''),
+    NULLIF(NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', ''),
+    ''
+  );
   proposed_evidence jsonb;
 BEGIN
   -- The backend uses the server-only service_role key only after it has independently
