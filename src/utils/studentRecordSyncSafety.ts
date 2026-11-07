@@ -90,13 +90,24 @@ export function prepareStudentRecordForGenericSupabaseSync(
   // The database consent columns are authoritative once a row exists. A generic
   // upsert cannot change or recreate a prior consent by altering raw_data.
   if (existing) {
-    safe.guardianConsentGiven = existing.guardian_consent === true;
-    safe.guardianConsentRecordedAt =
-      existing.guardian_consent_recorded_at || raw?.guardianConsentRecordedAt || undefined;
-    if (raw && Object.prototype.hasOwnProperty.call(raw, 'guardianConsentSource')) {
+    // A parent may withdraw consent through the generic profile flow, but a stale
+    // browser snapshot must never turn a database revocation back into consent.
+    const consentRemainsActive =
+      existing.guardian_consent === true && incoming.guardianConsentGiven !== false;
+    safe.guardianConsentGiven = consentRemainsActive;
+    safe.guardianConsentRecordedAt = consentRemainsActive
+      ? existing.guardian_consent_recorded_at || raw?.guardianConsentRecordedAt || undefined
+      : undefined;
+
+    if (consentRemainsActive && raw && Object.prototype.hasOwnProperty.call(raw, 'guardianConsentSource')) {
       safe.guardianConsentSource = raw.guardianConsentSource;
     } else {
       delete safe.guardianConsentSource;
+    }
+
+    if (!consentRemainsActive) {
+      safe.guardianAudioConsentGiven = false;
+      delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
     }
   }
 
