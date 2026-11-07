@@ -1,6 +1,5 @@
 /**
- * Players for the direct reading measures: word lists read aloud and marked by the adult,
- * the one-minute passage, rapid automatized naming, and dictation on letter tiles.
+ * Players for direct reading practice, verified cloud-audio passage/RAN tasks, and dictation.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Delete, Mic, Timer, Volume2 } from 'lucide-react';
@@ -38,73 +37,6 @@ function useElapsed(running: boolean) {
 // ---------------------------------------------------------------------------
 // Word list read aloud with AI Voice Evaluation & Microphone
 // ---------------------------------------------------------------------------
-export function normalizeArabicWord(text: string): string {
-  if (!text) return '';
-  return text
-    .normalize('NFC')
-    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .replace(/[.,/#!$%^&*;:{}=\-_~()؟،«»"']/g, ' ')
-    .trim();
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const d: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) d[i][0] = i;
-  for (let j = 0; j <= n; j++) d[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
-    }
-  }
-  return d[m][n];
-}
-
-export function checkArabicWordMatch(spoken: string, target: string): boolean {
-  if (!spoken || !target) return false;
-  const nt = normalizeArabicWord(target);
-  if (!nt) return false;
-  const words = normalizeArabicWord(spoken).split(/\s+/).filter(Boolean);
-  for (const w of words) {
-    // Exact grapheme match only:
-    // In reading assessment, words must match the exact graphemes of the target word.
-    // Tolerating loose distance (like Levenshtein <= 1) falsely accepted
-    // erroneous words (e.g. بات or بابو for باب).
-    if (w === nt) return true;
-  }
-  return false;
-}
-// ---------------------------------------------------------------------------
-// Intelligent Child RAN Synonyms & Dialect Mapping
-// ---------------------------------------------------------------------------
-export const RAN_SYNONYMS: Record<string, string[]> = {
-  // Picture IDs
-  sun: ['شمس', 'الشمس', 'شموسة', 'شموسه', 'شمسية', 'الشمسيه'],
-  house: ['بيت', 'البيت', 'منزل', 'المنزل', 'دار', 'الدار', 'حوش', 'الحوش', 'بيتنا', 'سكن'],
-  ball: ['كرة', 'كره', 'كورة', 'كوره', 'الكرة', 'الكره', 'الكورة', 'طابة', 'طابه', 'الطابة', 'فوتبول', 'كرة قدم', 'كورة قدم'],
-  door: ['باب', 'الباب', 'بوابة', 'بوابه', 'البوابة'],
-  key: ['مفتاح', 'المفتاح', 'ساروت', 'الساروت', 'مفاتيح', 'مفتاحك'],
-  // Letter IDs
-  'م': ['ميم', 'الميم', 'م', 'ما', 'مو', 'مي', 'ام', 'أم', 'حرف الميم', 'حرف ميم'],
-  'ل': ['لام', 'اللام', 'ل', 'لا', 'لو', 'لي', 'ال', 'إل', 'حرف اللام', 'حرف لام'],
-  'س': ['سين', 'السين', 'س', 'سا', 'سو', 'سي', 'اس', 'إس', 'حرف السين', 'حرف سين'],
-  'د': ['دال', 'الدال', 'د', 'دا', 'دو', 'دي', 'اد', 'إد', 'حرف الدال', 'حرف دال'],
-  'ب': ['باء', 'الباء', 'ب', 'با', 'بو', 'بي', 'اب', 'إب', 'حرف الباء', 'حرف باء', 'به'],
-};
-
-export function matchRanSymbol(spokenWord: string, symbolId: string): boolean {
-  const normSpoken = normalizeArabicWord(spokenWord);
-  if (!normSpoken) return false;
-  const list = RAN_SYNONYMS[symbolId] || [symbolId];
-  return list.some((syn) => normSpoken === normalizeArabicWord(syn));
-}
-
-
 export function ReadAloudPlayer({
   item,
   practice,
