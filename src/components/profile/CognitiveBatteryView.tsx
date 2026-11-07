@@ -116,7 +116,7 @@ function SubtestRunner({
       ...extra,
     });
     setStage('done');
-    speak(PHRASES.gameOver);
+    if (!requiresVerifiedAudio) speak(PHRASES.gameOver);
   };
 
   const startTest = () => {
