@@ -384,7 +384,7 @@ function SetupView({
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState(supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر');
-  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || 'gulf');
+  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || '');
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
     audioConsent: false,
