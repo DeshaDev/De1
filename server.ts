@@ -20,6 +20,7 @@ import {
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import { applyRanNameVariants, getCognitiveAudioTaskDefinition, type CognitiveAudioTaskId } from './src/cognitiveProfile/cognitiveAudioTasks';
+import type { CognitiveAudioAssessmentEvidence } from './src/cognitiveProfile/scoring';
 import {
   UsageEventSchema,
   emptyUsageStore,
@@ -1190,7 +1191,7 @@ async function startServer() {
     studentId: string;
     taskId: CognitiveAudioTaskId;
     expiresAt: number;
-    assessment: Record<string, unknown>;
+    assessment: CognitiveAudioAssessmentEvidence;
   }>();
 
   const pruneAudioAssessmentReceipts = () => {
@@ -2170,13 +2171,7 @@ async function startServer() {
           return;
         }
         const definition = getCognitiveAudioTaskDefinition(taskId);
-        const assessment = stored.assessment as {
-          words: Array<{ word: string; errorType: string }>;
-          durationSeconds: number;
-          omissionsCount: number;
-          substitutionsCount: number;
-          insertionsCount: number;
-        };
+        const assessment = stored.assessment;
         if (
           !definition ||
           assessment.words.length !== definition.itemIds.length ||
@@ -2198,7 +2193,7 @@ async function startServer() {
           })),
           durationMs: Math.round(assessment.durationSeconds * 1000),
           errorCount: assessment.omissionsCount + assessment.substitutionsCount + assessment.insertionsCount,
-          audioAssessment: stored.assessment as typeof incomingResult.audioAssessment,
+          audioAssessment: stored.assessment,
           audioAssessmentReceipt: receipt,
         };
       }
