@@ -77,7 +77,6 @@ interface Props {
   onProceedToMathLab?: () => void;
   onNavigateTab?: (tab: string) => void;
   /** A signed-in school administrator account is required to certify human-reviewed WCPM in the stored record. */
-  canVerifyAsTeacher?: boolean;
 }
 
 export const ReadingAssessmentView: React.FC<Props> = ({
@@ -1024,11 +1023,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* Collapsible Teacher / Specialist Drawer */}
+              {/* Reading mode and dialect options; no manual scoring controls. */}
               <details className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-right text-xs text-slate-600 space-y-3">
                 <summary className="cursor-pointer font-bold text-slate-700 hover:text-slate-900 select-none flex items-center justify-between">
-                  <span>خيارات الأخصائي: طريقة القراءة واللهجة</span>
-                  <span className="text-slate-400">تعديل</span>
+                  <span>خيارات القراءة: طريقة القراءة واللهجة</span>
+                  <span className="text-slate-400">إعدادات</span>
                 </summary>
                 <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -1315,7 +1314,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {wordStats.errors}
                 </div>
                 <span className="text-[10px] text-amber-600">
-                  تصنيفات تحتاج إلى مراجعة
+                  اختلافات محتملة في المطابقة
                 </span>
               </div>
 
@@ -1338,7 +1337,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                     <Volume2 className="w-4 h-4 text-indigo-700" />
-                    تسجيل قراءة الطالب الحي (استمع للمقطع لمراجعة وتدقيق النطق):
+                    تسجيل صوت القراءة (للاستماع فقط؛ لا يتيح تعديل التصنيف الآلي):
                   </span>
                   <span className="text-[10px] text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full font-mono">
                     {finalDurationSec} ثانية
@@ -1763,7 +1762,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <div className="bg-white/95 p-3.5 rounded-xl border border-teal-100 shadow-2xs">
                   <strong className="text-teal-900 block mb-1">كيف نتابع التغير؟</strong>
-                  قارن جلسات متشابهة عند استخدام النص نفسه وظروف قراءة قريبة، وراجع دقة مطابقة الكلمات بشريًا عند الحاجة. لا تعرض بصيرة حاليًا نطاقًا معياريًا عربيًا مقننًا بحسب الصف.
+                  قارن جلسات متشابهة عند استخدام النص نفسه وظروف قراءة قريبة. لا يتيح التقرير تصحيح التصنيفات يدويًا، ولا تعرض بصيرة حاليًا نطاقًا معياريًا عربيًا مقننًا بحسب الصف.
                 </div>
               </div>
             </div>
@@ -1774,10 +1773,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-amber-600" />
-                    <span>سجل الكلمات التي أشار التقييم الصوتي إلى مراجعتها</span>
+                    <span>الاختلافات التي رصدها محرك التقييم الصوتي</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    يعرض هذا الجزء اختلافات أشار إليها التقييم الصوتي المكتمل. قد تتأثر المطابقة بالنطق واللهجة، لذا تُستخدم اقتراحًا للممارسة لا حكمًا تشخيصيًا.
+                    يعرض هذا الجزء اختلافات أشار إليها التقييم الصوتي المكتمل. قد تتأثر المطابقة بالنطق واللهجة؛ استخدم النتيجة كمؤشر وصفي للممارسة فقط، دون تعديل يدوي أو استنتاج تشخيصي.
                   </p>
                 </div>
               </div>
@@ -1841,18 +1840,18 @@ export const ReadingAssessmentView: React.FC<Props> = ({
             </div>
 
             {/* =================================================================
-                WORD-BY-WORD READING DIAGNOSTIC CANVAS
-                Where the parent & teacher see exactly what words had errors!
+                WORD-BY-WORD AUTOMATED ALIGNMENT VIEW
+                Automated word-level alignment; no manual review or override.
                 ================================================================= */}
             <div className="mb-8 p-6 md:p-8 rounded-3xl bg-white border border-slate-200 shadow-sm text-right">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
                 <div>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-teal-600" />
-                    <span>مراجعة مطابقة كلمات النص والتفريغ الصوتي</span>
+                    <span>مطابقة كلمات النص والتفريغ الصوتي</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    مقارنة آلية أولية لكل كلمة. قد يكون الاختلاف ناتجًا عن التعرف الصوتي أو اللهجة؛ استمع إلى التسجيل قبل اعتماد أي تصنيف.
+                    مطابقة آلية على مستوى الكلمات. قد يعكس الاختلاف نطقًا لهجيًا أو خطأً من محرك التعرف؛ التصنيفات وصفية ولا تُعدّ تشخيصًا، ولا تُعدّل يدويًا.
                   </p>
                 </div>
 
@@ -1865,7 +1864,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     🟠 اختلاف محتمل: {summaryStats.errors}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-950 font-bold border border-rose-300">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل يحتاج مراجعة: {summaryStats.omitted}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل: {summaryStats.omitted}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آلياً: {summaryStats.unconfirmed}
