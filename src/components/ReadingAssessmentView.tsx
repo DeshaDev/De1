@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import {
   StudentRecord,
+  INITIAL_STUDENTS,
   ARABIC_READING_PASSAGES,
   ReadingPassage,
 } from '../data/seedData';
