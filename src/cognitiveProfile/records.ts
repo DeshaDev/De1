@@ -61,7 +61,7 @@ const ItemResponseSchema = z
 
 const CognitiveAudioAssessmentSchema = z
   .object({
-    taskId: z.enum(['oralReading', 'ranObjects', 'ranLetters']),
+    taskId: z.enum(['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading']),
     sourceModel: z.literal('azure_pronunciation_assessment'),
     assessmentComplete: z.literal(true),
     assessmentReceipt: z.string().regex(/^[a-f0-9]{64}$/),
@@ -115,7 +115,7 @@ export const CognitiveBatteryUploadSchema = z
         ctx.addIssue({ code: 'custom', message: `مفتاح الاختبار ${key} لا يطابق محتواه.` });
         continue;
       }
-      const speechTask = ['oralReading', 'ranObjects', 'ranLetters'].includes(key);
+      const speechTask = ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'].includes(key);
       if (!speechTask && (result.audioAssessment || result.audioAssessmentReceipt)) {
         ctx.addIssue({ code: 'custom', message: `إيصال صوتي غير مسموح في ${key}.` });
       }
