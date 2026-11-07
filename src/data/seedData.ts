@@ -56,6 +56,9 @@ export interface StudentAssessmentSnapshot {
   /** Reading modality is retained so history never conflates silent WPM with oral WCPM. */
   assessmentModality?: 'voice_only' | 'reading_only';
   wcpm?: number | null;
+  /** True only when the audio result was verified by the server-issued Azure receipt. */
+  aiAssessmentVerified?: boolean;
+  evidenceProvenance?: 'client-reported' | 'server-verified-audio' | 'demo-synthetic';
   teacherVerified?: boolean;
   wpm: number;
   comprehensionScore: number;
