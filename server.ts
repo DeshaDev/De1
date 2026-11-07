@@ -3520,6 +3520,30 @@ async function startServer() {
       return;
     }
 
+    // School sessions must reference a real child in the same signed tenant. Parent
+    // sessions were checked against Supabase ownership above. Never send a demo,
+    // unknown or cross-tenant child's audio to Azure.
+    if (String(assessmentSession.role) !== 'parent') {
+      const ownedStudent = studentsDb.find((student) =>
+        student.id === studentId && student.tenantId === assessmentSession.tenantId
+      );
+      if (!ownedStudent || ownedStudent.isDemoRecord) {
+        res.status(404).json({
+          code: 'COGNITIVE_AUDIO_STUDENT_NOT_FOUND',
+          error: 'لم يُعثر على ملف طفل حقيقي ضمن حساب المدرسة الحالي؛ لم يُرسل الصوت للتحليل.',
+        });
+        return;
+      }
+      const storedGuardianConsent = validateExplicitGuardianConsent(ownedStudent.guardianConsentGiven);
+      if (!storedGuardianConsent.valid || !ownedStudent.guardianConsentRecordedAt) {
+        res.status(403).json({
+          code: 'GUARDIAN_CONSENT_NOT_STORED',
+          error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+        });
+        return;
+      }
+    }
+
     // Expired receipts are pruned before each assessment; the raw audio is never retained by this receipt store.
     const now = Date.now();
     for (const [key, value] of cognitiveAudioAssessmentReceipts) {
