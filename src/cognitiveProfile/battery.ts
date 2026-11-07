@@ -728,7 +728,7 @@ export const BATTERY: Subtest[] = [
     icon: '🏁',
     minutes: 2,
     chance: 0,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
       'يتعرف الطفل على الصور الخمس أولًا، ثم يسمّي عناصر الشبكة الأربعين من اليمين إلى اليسار بأسرع ما يستطيع، دون الإشارة إليها. يُحلل التسجيل لاحقًا عبر Azure؛ لا يضغط البالغ أزرار خطأ أو يصحح أسماء الطفل. إذا لم يكتمل التحليل، تُحفظ المهمة دون درجة.',
     introAudio:
@@ -748,7 +748,7 @@ export const BATTERY: Subtest[] = [
     minutes: 2,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
       'يتعرف الطفل على الحروف الخمسة أولًا، ثم يسمّي عناصر الشبكة الأربعين من اليمين إلى اليسار بأسرع ما يستطيع. يُحلل التسجيل لاحقًا عبر Azure؛ لا يحدد البالغ الحروف الخاطئة ولا يعدّها. إذا لم يكتمل التحليل، تُحفظ المهمة دون درجة.',
     introAudio: 'وَالآنَ حُرُوفٌ. قُلْ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ.',
@@ -807,7 +807,7 @@ export const BATTERY: Subtest[] = [
     minutes: 3,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,
-    adultScored: true,
+    adultScored: false,
     examinerNoteAr:
       'يسجل الطفل قراءته للقصة كاملة، ثم يحلل Azure التسجيل مقابل النص المرجعي. لا يعلّم ولي الأمر أو المعلم الكلمات ولا يصحح القراءة. إذا تعذر حسم جميع الكلمات، تُحفظ المهمة دون درجة.',
     introAudio: 'اقْرَأْ هَذِهِ القِصَّةَ بِصَوْتٍ عَالٍ، كَمَا تَقْرَأُ فِي الصَّفِّ.',
