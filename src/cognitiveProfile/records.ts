@@ -87,6 +87,13 @@ export const CognitiveBatteryUploadSchema = z
         ctx.addIssue({ code: 'custom', message: `مفتاح الاختبار ${key} لا يطابق محتواه.` });
         continue;
       }
+      const task = BATTERY.find((item) => item.id === key);
+      if (task && (task.kind === 'readList' || task.kind === 'passage' || task.kind === 'ran')) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `لا يُقبل رفع نتيجة ${key}؛ هذه المهمة تحتاج إيصال تقييم صوتي خادمي مرتبطاً بالتسجيل وبنود المهمة.`,
+        });
+      }
       const allowed = VALID_IDS[key];
       const seen = new Set<string>();
       for (const r of result.responses) {
