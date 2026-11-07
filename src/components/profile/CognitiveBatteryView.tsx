@@ -387,11 +387,12 @@ function SetupView({
   const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || 'gulf');
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
+    audioConsent: false,
     quiet: true,
     headphones: true,
     ready: true,
   });
-  const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
+  const allChecked = checks.consent && checks.audioConsent && checks.quiet && checks.headphones && checks.ready;
 
   if (!supabaseUser) {
     return (
@@ -495,7 +496,13 @@ function SetupView({
                 <option key={d} value={d}>{DIALECT_LABELS_AR[d]}</option>
               ))}
             </select>
-            <span className="bz-hint">بعض اللهجات تدمج أصواتًا مثل ث/س وذ/ز؛ نستخدم اللهجة لتفسير هذه البنود بإنصاف.</span>
+            <span className="bz-hint">
+              {dialect === 'egyptian'
+                ? 'سيُستخدم نموذج Azure ar-EG للتقييم الصوتي.'
+                : dialect === 'gulf'
+                  ? 'سيُستخدم نموذج Azure ar-SA للتقييم الصوتي.'
+                  : 'لا يدعم التقييم الصوتي الآلي اللهجة المختارة حاليًا؛ ستُحفظ مهام الصوت دون درجة، ولن نستبدل اللهجة بنموذج آخر.'}
+            </span>
           </label>
           <label className="bz-field">
             <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
@@ -533,6 +540,15 @@ function SetupView({
                 <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
+            <label className="bz-check sm:col-span-2">
+              <input type="checkbox" checked={checks.audioConsent} onChange={(e) => setChecks({ ...checks, audioConsent: e.target.checked })} />
+              <span className="text-ink-2">
+                <span className="font-semibold text-ink">موافقة منفصلة على تسجيل الصوت ومعالجته</span>
+                <span className="block bz-small bz-muted">
+                  أوافق على تسجيل صوت الطفل أثناء قصة القراءة ومهمة التسمية السريعة، وإرسال التسجيل إلى Microsoft Azure Speech لتحليله مقابل عناصر المهمة. لا يحفظ تطبيق هيا نقرأ ملف التسجيل ضمن سجل الطفل؛ ويُرسل للتحليل ولا يُضمّن في الإيصال المحفوظ. هذه موافقة ذاتية، ويمكنني رفضها ومتابعة الأنشطة التي لا تحتاج إلى تقييم صوتي.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
 
@@ -547,6 +563,11 @@ function SetupView({
               examinerName: examiner.trim(),
               startedAt: new Date().toISOString(),
               ...(dialect ? { dialect } : {}),
+              guardianConsentGiven: true,
+              guardianAudioConsentGiven: true,
+              guardianConsentRecordedAt: new Date().toISOString(),
+              guardianAudioConsentRecordedAt: new Date().toISOString(),
+              ...(dialect === 'egyptian' ? { speechLocale: 'ar-EG' as const } : dialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
               results: {},
             })
           }
@@ -786,6 +807,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <SubtestRunner
         key={view.id}
         subtest={SUBTESTS_BY_ID[view.id]}
+        audioSession={session}
         onFinish={saveResult}
         onExit={() => setView({ name: 'map' })}
       />
