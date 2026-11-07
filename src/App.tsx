@@ -1106,7 +1106,7 @@ export default function App() {
           guardianConsentSource: selectedStudent.guardianConsentSource,
           guardianAudioConsentGiven: selectedStudent.guardianAudioConsentGiven === true,
           guardianAudioConsentRecordedAt: selectedStudent.guardianAudioConsentRecordedAt,
-          speechRecognitionUsed: selectedStudent.speechRecognitionUsed === true,
+          speechRecognitionUsed: hasVerifiedOralAudio(selectedStudent) && selectedStudent.speechRecognitionUsed === true,
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           comprehensionScore: selectedStudent.comprehensionScore,
@@ -1822,7 +1822,7 @@ export default function App() {
                                   {stu.sessionStatus === 'completed' ? toArabicNum(stu.comprehensionScore) + '٪' : '—'}
                                 </td>
                                 <td className="py-3.5 px-3 hidden md:table-cell bz-num text-slate-700">
-                                  {stu.sessionStatus === 'completed' && typeof stu.oralAccuracyPercent === 'number' ? toArabicNum(stu.oralAccuracyPercent) + '٪' : '—'}
+                                  {stu.sessionStatus === 'completed' && hasVerifiedOralAudio(stu) && typeof stu.oralAccuracyPercent === 'number' ? toArabicNum(stu.oralAccuracyPercent) + '٪' : '—'}
                                 </td>
                                 <td className="py-3.5 px-3 hidden md:table-cell">
                                   <span className="baseera-evidence-status">
