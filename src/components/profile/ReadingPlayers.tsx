@@ -280,7 +280,7 @@ function RanCell({ symbol, display, size }: { symbol: RanSymbol; display: 'pictu
     );
   }
   return (
-    <span className={size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} font-black text-ink leading-none" style={READING_FONT} aria-hidden="true">
+    <span className={`${size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} font-black text-ink leading-none`} style={READING_FONT} aria-hidden="true">
       {symbol.value}
     </span>
   );
