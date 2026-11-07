@@ -392,7 +392,7 @@ function SetupView({
     headphones: true,
     ready: true,
   });
-  const allChecked = checks.consent && checks.audioConsent && checks.quiet && checks.headphones && checks.ready;
+  const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
 
   if (!supabaseUser) {
     return (
@@ -545,7 +545,7 @@ function SetupView({
               <span className="text-ink-2">
                 <span className="font-semibold text-ink">موافقة منفصلة على تسجيل الصوت ومعالجته</span>
                 <span className="block bz-small bz-muted">
-                  أوافق على تسجيل صوت الطفل أثناء قصة القراءة ومهمة التسمية السريعة، وإرسال التسجيل إلى Microsoft Azure Speech لتحليله مقابل عناصر المهمة. لا يحفظ تطبيق هيا نقرأ ملف التسجيل ضمن سجل الطفل؛ ويُرسل للتحليل ولا يُضمّن في الإيصال المحفوظ. هذه موافقة ذاتية، ويمكنني رفضها ومتابعة الأنشطة التي لا تحتاج إلى تقييم صوتي.
+                  أوافق على تسجيل صوت الطفل أثناء قصة القراءة ومهمة التسمية السريعة، وإرسال التسجيل إلى Microsoft Azure Speech لتحليله مقابل عناصر المهمة. لا يحفظ تطبيق هيا نقرأ ملف التسجيل الصوتي ضمن سجل الطفل؛ وقد يُحفظ التفريغ النصي وملخص الكلمات في نتيجة المهمة. يمكنني رفض الموافقة ومتابعة الأنشطة الأخرى دون تقييم صوتي.
                 </span>
               </span>
             </label>
@@ -563,10 +563,10 @@ function SetupView({
               examinerName: examiner.trim(),
               startedAt: new Date().toISOString(),
               ...(dialect ? { dialect } : {}),
-              guardianConsentGiven: true,
-              guardianAudioConsentGiven: true,
+              guardianConsentGiven: checks.consent,
               guardianConsentRecordedAt: new Date().toISOString(),
-              guardianAudioConsentRecordedAt: new Date().toISOString(),
+              guardianAudioConsentGiven: checks.audioConsent,
+              ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
               ...(dialect === 'egyptian' ? { speechLocale: 'ar-EG' as const } : dialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
               results: {},
             })
@@ -664,7 +664,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
 
     // If activeStudent has already been registered with valid name and age (from Parent Portal or school roster)
     const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
-    if (!activeStudent.isDemoRecord && activeStudent.name && isValidAge && activeStudent.name !== 'طفلك') {
+    if (
+      !activeStudent.isDemoRecord &&
+      activeStudent.name &&
+      isValidAge &&
+      activeStudent.name !== 'طفلك' &&
+      activeStudent.guardianConsentGiven === true &&
+      activeStudent.guardianAudioConsentGiven === true
+    ) {
       const initialSession: BatterySession = {
         studentId: activeStudent.id,
         childName: activeStudent.name,
