@@ -561,11 +561,53 @@ export default function App() {
       ...prev.filter((student) => student.id !== completedRecord.id),
     ]);
     setSelectedStudentId(completedRecord.id);
+    setActiveTab('dashboard');
+    setDashboardSubView('report');
+
+    const hasVoiceEvidence =
+      completedRecord.assessmentModality === 'voice_only' ||
+      completedRecord.audioRecordingStarted === true ||
+      completedRecord.speechRecognitionUsed === true ||
+      Boolean(completedRecord.aiAssessmentReceipt);
+
+    // Family oral-reading sessions must pass through the server receipt validator.
+    // Never write Azure-derived fields directly from the browser into Supabase raw_data.
+    if (supabaseUser && !baseeraSession && hasVoiceEvidence) {
+      setAiStatusBanner('يجري التحقق من إيصال التقييم الصوتي وملكية ملف الطفل قبل حفظ جلسة القراءة في حساب الأسرة…');
+      void authenticatedFetch(
+        `/api/parent/students/${encodeURIComponent(completedRecord.id)}/reading-session`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sessionPayloadFromRecord(completedRecord)),
+        }
+      ).then(async (response) => {
+        const payload = await response.json().catch(() => null) as
+          | { student?: StudentRecord; error?: string }
+          | null;
+        if (!response.ok || !payload?.student) {
+          throw new Error(payload?.error || `family reading save failed: ${response.status}`);
+        }
+        setStudents((prev) => prev.map((student) =>
+          student.id === completedRecord.id ? { ...student, ...payload.student! } : student
+        ));
+        setAiStatusBanner('تم حفظ جلسة القراءة في حساب الأسرة بعد التحقق الخادمي من الموافقة وإيصال الصوت.');
+      }).catch(() => {
+        setAiStatusBanner('تعذر التحقق أو حفظ جلسة القراءة الصوتية بأمان؛ بقيت النتيجة محلية ولم تُعتمد سحابيًا.');
+      });
+      return;
+    }
+
+    if (supabaseUser && !baseeraSession) {
+      void syncStudentToSupabase(completedRecord, supabaseUser.id).catch(() => {
+        setAiStatusBanner('تعذر حفظ جلسة القراءة الصامتة في حساب الأسرة؛ بقيت على هذا الجهاز.');
+      });
+      return;
+    }
     if (supabaseUser) {
       void syncStudentToSupabase(completedRecord, supabaseUser.id);
     }
-    setActiveTab('dashboard');
-    setDashboardSubView('report');
+
     if (!baseeraSession) {
       setPendingServerRecord(completedRecord);
       setAiStatusBanner('اكتملت الجلسة على هذا الجهاز فقط؛ لم تُحفظ في الخادم. سجّل الدخول لحفظها بأمان في سجل المدرسة.');
