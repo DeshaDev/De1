@@ -192,25 +192,22 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   await expect(page.getByLabel(/موافقة منفصلة على تسجيل الصوت/)).not.toBeChecked();
   await page.getByRole('button', { name: 'بدء الفحص' }).click();
 
-  for (const task of ['قارئ الكلمات', 'سباق الصور', 'قصة سامي']) {
+  for (const task of ['قارئ الكلمات', 'كلمات من كوكب آخر', 'سباق الصور', 'قصة سامي']) {
     await page.getByText(task, { exact: true }).click();
-    if (task === 'قارئ الكلمات') {
+    if (task === 'قارئ الكلمات' || task === 'كلمات من كوكب آخر') {
       await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
       await page.getByRole('button', { name: 'أكملت المحاولة' }).click();
       await page.getByRole('button', { name: 'هيا بنا' }).click();
-      await expect(page.getByRole('heading', { name: 'التقييم الصوتي لهذه القائمة غير متاح بعد' })).toBeVisible();
-    } else {
-      await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-    }
-
-    if (task === 'قارئ الكلمات') {
+      await expect(page.getByRole('heading', { name: task })).toBeVisible();
       await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
-      await page.getByRole('button', { name: 'حفظ المهمة كاملة دون درجة' }).click();
+      await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
     } else if (task === 'سباق الصور') {
+      await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
       await page.getByRole('button', { name: 'الرموز مألوفة — ابدأ السباق' }).click();
       await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
     } else {
+      await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
       await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
     }
 
@@ -221,7 +218,7 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   await expect(page.getByRole('heading', { name: 'القراءة والإملاء والتسمية السريعة' })).toBeVisible();
   const unavailableSpeechScores = page.getByText(/لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة/);
   await expect(unavailableSpeechScores.first()).toBeVisible();
-  expect(await unavailableSpeechScores.count()).toBeGreaterThanOrEqual(3);
+  expect(await unavailableSpeechScores.count()).toBeGreaterThanOrEqual(5);
   await expect(page.getByText(/٣ من ١٦ صحيحة/)).toHaveCount(0);
   await expect(page.getByText(/الدقة ٨٣٪/)).toHaveCount(0);
   expect(pageErrors).toEqual([]);
