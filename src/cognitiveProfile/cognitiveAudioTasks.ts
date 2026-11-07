@@ -98,6 +98,8 @@ export function isAcceptedRanName(spoken: string | null | undefined, symbolId: s
 }
 
 /** Accept a curated spoken alias only when Azure's returned word alignment identifies it at this position. */
+const MIN_RAN_ALIAS_ACCURACY_SCORE = 60;
+
 export function applyRanNameVariants(
   result: AzureAudioAssessmentResult,
   task: CognitiveAudioTaskDefinition,
@@ -106,7 +108,20 @@ export function applyRanNameVariants(
   if (!task.symbolIds || task.symbolIds.length !== result.words.length) return result;
 
   const words = result.words.map((word, index) => {
-    if (!isAcceptedRanName(word.spokenWord, task.symbolIds![index])) return word;
+    const acceptedAlias = isAcceptedRanName(word.spokenWord, task.symbolIds![index]);
+    const hasReliablePronunciationScore =
+      typeof word.accuracyScore === 'number' &&
+      Number.isFinite(word.accuracyScore) &&
+      word.accuracyScore >= MIN_RAN_ALIAS_ACCURACY_SCORE;
+    const statusCanBeTreatedAsAnAlias =
+      word.errorType === 'None' ||
+      word.errorType === 'Substitution' ||
+      word.errorType === 'DialectVariant';
+
+    // A transcript alias may explain a word-level substitution, but it must never
+    // erase a low Azure pronunciation score, an explicit mispronunciation, or an
+    // unresolved word. Recognition text alone is not evidence of correct speech.
+    if (!acceptedAlias || !hasReliablePronunciationScore || !statusCanBeTreatedAsAnAlias) return word;
     return {
       ...word,
       errorType: 'DialectVariant' as const,
