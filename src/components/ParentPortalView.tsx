@@ -118,7 +118,7 @@ export function ParentPortalView({
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi'>('gulf');
+  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | ''>('');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -189,6 +189,10 @@ export function ParentPortalView({
       setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
       return;
     }
+    if (!dialectCode) {
+      setFormError('اختر اللهجة الأساسية في المنزل؛ لن نفترض لهجة للطفل.');
+      return;
+    }
     if (!consentChecked) {
       setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
       return;
@@ -210,6 +214,7 @@ export function ParentPortalView({
         setChildName('');
         setParentNotes('');
         setParentPassword('');
+        setDialectCode('');
         setConsentChecked(false);
         setShowAddForm(false);
         onSelectStudent(newId, 'dyslexia-lab');
