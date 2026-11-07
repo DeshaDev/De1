@@ -31,6 +31,18 @@ const HAS_MARKS = /[ً-ْ]/;
 const now = new Date('2026-11-04T10:00:00Z').toISOString();
 
 describe('reading items', () => {
+  it('preserves the explicitly selected standard Arabic dialect without assigning an Azure speech locale', () => {
+    const { DIALECT_LABELS_AR } = require('./storage') as typeof import('./storage');
+    assert.equal(DIALECT_LABELS_AR.msa, 'فصحى معيارية');
+    const parsed = CognitiveBatteryUploadSchema.safeParse({
+      ageMonths: 84,
+      examinerName: '',
+      startedAt: now,
+      dialect: 'msa',
+      results: {},
+    });
+    assert.equal(parsed.success, true);
+  });
   it('every word, made-up word and passage word is fully vowelled, ids are unique, and lists get harder', () => {
     for (const list of [WORD_ITEMS, NONWORD_ITEMS]) {
       const levels = list.map((i) => i.level);
