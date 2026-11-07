@@ -119,8 +119,19 @@ export const CognitiveBatteryUploadSchema = z
       if (!speechTask && (result.audioAssessment || result.audioAssessmentReceipt)) {
         ctx.addIssue({ code: 'custom', message: `إيصال صوتي غير مسموح في ${key}.` });
       }
+      if (Boolean(result.audioAssessment) !== Boolean(result.audioAssessmentReceipt)) {
+        ctx.addIssue({ code: 'custom', message: `يجب إرسال نتيجة الصوت وإيصالها معًا في ${key}.` });
+      }
       if (result.audioAssessment && result.audioAssessment.taskId !== result.subtestId) {
         ctx.addIssue({ code: 'custom', message: `مهمة الإيصال الصوتي لا تطابق ${key}.` });
+      }
+      if (
+        result.audioAssessment &&
+        (result.audioAssessment.assessmentReceipt !== result.audioAssessmentReceipt ||
+          result.audioAssessment.words.some((word) => word.errorType === 'Unconfirmed' || word.errorType === 'Insertion') ||
+          result.audioAssessment.words.length !== (VALID_IDS[key]?.size ?? 0))
+      ) {
+        ctx.addIssue({ code: 'custom', message: `نتيجة الصوت غير مكتملة أو لا تطابق البنود في ${key}.` });
       }
       const allowed = VALID_IDS[key];
       const seen = new Set<string>();
