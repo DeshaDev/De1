@@ -7,6 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 import { SUBTESTS_BY_ID } from '../cognitiveProfile/battery';
+import { PASSAGE_WORDS, passageWordId } from '../cognitiveProfile/readingTasks';
 
 const PLATFORM_ADMIN_CODE = 'ee7c3523458b091f0923ac7815de4231b578cde09852341a';
 const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
@@ -889,6 +890,66 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(summary.completedSubtests, 1);
     assert.equal(summary.referenceStatus, 'disabled');
     assert.equal(summary.subtests[0].centile, null);
+
+    // Manual response arrays and timings from the browser never become a speech score.
+    const manualSpeech = {
+      subtestId: 'oralReading',
+      responses: PASSAGE_WORDS.map((_, index) => ({
+        itemId: passageWordId(index),
+        correct: true,
+        rtMs: 0,
+        replays: 0,
+      })),
+      discontinued: false,
+      completedAt: '2026-10-01T09:01:00.000Z',
+      durationMs: 12_000,
+    };
+    const manualSpeechResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, oralReading: manualSpeech },
+    }));
+    assert.equal(manualSpeechResponse.status, 200, await manualSpeechResponse.clone().text());
+    const manualSpeechBody = (await manualSpeechResponse.json()) as {
+      student: { cognitiveBattery: { summary: { subtests: Array<{ subtestId: string; total: number; measures?: { attempted: number; seconds: number | null } }> } } };
+    };
+    const withheldSpeech = manualSpeechBody.student.cognitiveBattery.summary.subtests.find((item) => item.subtestId === 'oralReading');
+    assert.equal(withheldSpeech?.total, 0);
+    assert.equal(withheldSpeech?.measures?.attempted, 0);
+    assert.equal(withheldSpeech?.measures?.seconds, null);
+
+    // A syntactically valid but invented browser receipt is rejected by the server-side receipt store.
+    const fakeReceipt = 'a'.repeat(64);
+    const forgedAudio = {
+      ...manualSpeech,
+      audioAssessmentReceipt: fakeReceipt,
+      audioAssessment: {
+        taskId: 'oralReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: fakeReceipt,
+        transcript: PASSAGE_WORDS.join(' '),
+        durationSeconds: 20,
+        wordAccuracyPercent: 100,
+        wordsCorrectPerMinute: PASSAGE_WORDS.length * 3,
+        wordsPerMinute: PASSAGE_WORDS.length * 3,
+        correctWordsCount: PASSAGE_WORDS.length,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: PASSAGE_WORDS.map((word) => ({
+          word,
+          errorType: 'None',
+          accuracyScore: 99,
+          spokenWord: word,
+        })),
+      },
+    };
+    const forgedAudioResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, oralReading: forgedAudio },
+    }));
+    assert.equal(forgedAudioResponse.status, 409);
+    assert.equal(((await forgedAudioResponse.json()) as { code: string }).code, 'COGNITIVE_AUDIO_RECEIPT_INVALID');
 
     // A client-supplied summary is rejected rather than stored.
     const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
