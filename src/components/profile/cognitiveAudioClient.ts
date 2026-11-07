@@ -1,7 +1,5 @@
-import type {
-  CognitiveAudioAssessmentEvidence,
-  SubtestId,
-} from '../../cognitiveProfile/scoring';
+import type { CognitiveAudioAssessmentEvidence } from '../../cognitiveProfile/scoring';
+import type { SubtestId } from '../../cognitiveProfile/battery';
 import type { RecordedWavAudio } from './audioRecording';
 import { authenticatedFetch } from '../../utils/apiAuth';
 
