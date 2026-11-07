@@ -566,7 +566,9 @@ function SetupView({
               startedAt: new Date().toISOString(),
               ...(dialect ? { dialect } : {}),
               guardianConsentGiven: checks.consent,
-              guardianConsentRecordedAt: new Date().toISOString(),
+              guardianConsentRecordedAt: student.guardianConsentGiven === true && student.guardianConsentRecordedAt
+                ? student.guardianConsentRecordedAt
+                : new Date().toISOString(),
               guardianAudioConsentGiven: checks.audioConsent,
               ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
               ...(dialect === 'egyptian' ? { speechLocale: 'ar-EG' as const } : dialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
