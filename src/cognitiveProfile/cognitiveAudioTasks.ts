@@ -84,7 +84,8 @@ export function isAcceptedRanName(spoken: string | null | undefined, symbolId: s
 /** Accept a curated spoken alias only when Azure's returned word alignment identifies it at this position. */
 export function applyRanNameVariants(
   result: AzureAudioAssessmentResult,
-  task: CognitiveAudioTaskDefinition
+  task: CognitiveAudioTaskDefinition,
+  durationSeconds: number
 ): AzureAudioAssessmentResult {
   if (!task.symbolIds || task.symbolIds.length !== result.words.length) return result;
 
@@ -107,7 +108,7 @@ export function applyRanNameVariants(
     word.errorType === 'Substitution' || word.errorType === 'Mispronunciation'
   ).length;
   const omissionsCount = words.filter((word) => word.errorType === 'Omission').length;
-  const seconds = Math.max(1, result.wordsPerMinute === null ? 1 : 60 * task.referenceWords.length / Math.max(1, result.wordsPerMinute));
+  const safeDurationSeconds = Math.max(1, durationSeconds);
 
   return {
     ...result,
@@ -117,7 +118,7 @@ export function applyRanNameVariants(
     substitutionsCount,
     omissionsCount,
     wordAccuracyPercent: complete ? Math.round((correctWordsCount / words.length) * 100) : null,
-    wordsCorrectPerMinute: complete ? Math.round((correctWordsCount / Math.max(1, result.wordsPerMinute ?? 0)) * (result.wordsPerMinute ?? 0)) : null,
+    wordsCorrectPerMinute: complete ? Math.round((correctWordsCount * 60) / safeDurationSeconds) : null,
     wordsPerMinute: result.wordsPerMinute,
   };
 }
