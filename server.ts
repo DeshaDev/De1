@@ -2136,6 +2136,20 @@ async function startServer() {
         });
         return;
       }
+      const hasAudioReceipt = Object.values(parsed.data.results).some((result) => Boolean(result.audioAssessmentReceipt));
+      const audioConsentRecordedAt = parsed.data.guardianAudioConsentRecordedAt;
+      const audioConsentValid =
+        parsed.data.guardianAudioConsentGiven === true &&
+        typeof audioConsentRecordedAt === 'string' &&
+        Number.isFinite(Date.parse(audioConsentRecordedAt)) &&
+        Date.parse(audioConsentRecordedAt) <= Date.now() + 5 * 60 * 1000;
+      if (hasAudioReceipt && !audioConsentValid) {
+        res.status(403).json({
+          code: 'AUDIO_CONSENT_REQUIRED',
+          error: 'لا يمكن حفظ تقييم صوتي دون موافقة منفصلة ومؤرخة على معالجة الصوت.',
+        });
+        return;
+      }
       const incomingResults = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
       const results = { ...incomingResults } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
       for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
@@ -2200,6 +2214,10 @@ async function startServer() {
       }
       const updatedRecord: StudentRecord = {
         ...studentsDb[found.idx],
+        ...(audioConsentValid ? {
+          guardianAudioConsentGiven: true,
+          guardianAudioConsentRecordedAt: audioConsentRecordedAt,
+        } : {}),
         cognitiveBattery: {
           ageMonths: parsed.data.ageMonths,
           examinerName: parsed.data.examinerName.trim(),
