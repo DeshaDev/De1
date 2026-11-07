@@ -178,6 +178,9 @@ export function ReadListAudioPlayer({
       const recording = await recordingRef.current.stop();
       recordingRef.current = null;
       const assessment = await assessCognitiveAudio({ taskId, session: audioSession, recording });
+      if (assessment.words.length !== items.length) {
+        throw new Error('INVALID_VERIFIED_AUDIO_RESPONSE');
+      }
       const responses = assessment.words.map((word, index) => ({
         itemId: items[index].id,
         correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
