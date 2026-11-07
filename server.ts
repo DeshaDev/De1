@@ -3749,7 +3749,11 @@ async function startServer() {
         return;
       }
       const storedGuardianConsent = validateExplicitGuardianConsent(ownedStudent.guardianConsentGiven);
-      if (!storedGuardianConsent.valid || !ownedStudent.guardianConsentRecordedAt) {
+      if (
+        !storedGuardianConsent.valid ||
+        !ownedStudent.guardianConsentRecordedAt ||
+        body.guardianConsentRecordedAt !== ownedStudent.guardianConsentRecordedAt
+      ) {
         res.status(403).json({
           code: 'GUARDIAN_CONSENT_NOT_STORED',
           error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل؛ لم يُرسل الصوت للتحليل.',
