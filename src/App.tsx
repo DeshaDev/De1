@@ -276,9 +276,9 @@ export default function App() {
   const [supabaseError, setSupabaseError] = useState<string>('');
 
   // Active tab setter with strict authentication guard for screening and training
-  const setActiveTab = (tab: ActiveTab) => {
+  const setActiveTab = (tab: ActiveTab, bypassAuthCheck = false) => {
     const isProtected = ['dyslexia-lab', 'guided-program', 'reading-lab', 'cognitive-lab'].includes(tab);
-    if (isProtected && !supabaseUser && !baseeraSession) {
+    if (isProtected && !supabaseUser && !baseeraSession && !bypassAuthCheck) {
       setActiveTabState('parent-portal');
       const newPath = tabToUrlPath('parent-portal');
       if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
@@ -287,6 +287,7 @@ export default function App() {
       setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
       return;
     }
+    setAiStatusBanner('');
     setActiveTabState(tab);
     const newPath = tabToUrlPath(tab);
     if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
@@ -701,19 +702,22 @@ export default function App() {
       if (!child.parentEmail || !child.parentPassword) {
         throw new Error('سجّل دخول ولي الأمر أو أنشئ حسابًا موثّقًا قبل حفظ ملف الطفل.');
       }
+      let authSession: any = null;
       try {
-        const { user } = await signUpWithEmail(child.parentEmail, child.parentPassword);
-        if (user) {
-          currentUser = user;
-          setSupabaseUser(user);
+        const res = await signUpWithEmail(child.parentEmail, child.parentPassword);
+        if (res.user) {
+          currentUser = res.user;
+          authSession = res.session;
+          setSupabaseUser(res.user);
         }
       } catch (signUpErr: any) {
         // If user already registered in Supabase, sign in instead of failing
         try {
-          const { user } = await signInWithEmail(child.parentEmail, child.parentPassword);
-          if (user) {
-            currentUser = user;
-            setSupabaseUser(user);
+          const res = await signInWithEmail(child.parentEmail, child.parentPassword);
+          if (res.user) {
+            currentUser = res.user;
+            authSession = res.session;
+            setSupabaseUser(res.user);
           } else {
             throw signUpErr;
           }
@@ -724,6 +728,18 @@ export default function App() {
       if (!currentUser) {
         throw new Error('أُرسل طلب إنشاء الحساب، لكن لم تُنشأ جلسة دخول بعد. تحقق من بريدك الإلكتروني ثم سجّل الدخول.');
       }
+
+      const parentSession: BaseeraSessionInfo = {
+        token: authSession?.access_token || `parent-${currentUser.id}`,
+        role: 'parent',
+        accountName: currentUser.user_metadata?.full_name || currentUser.email || 'حساب الأسرة',
+        tenantId: `parent_${currentUser.id.slice(0, 8)}`,
+        tenantDisplayNameAr: 'حساب الأسرة',
+        sessionId: currentUser.id.replace(/-/g, '').slice(0, 32),
+        scopes: ['students:read', 'students:write'],
+        expiresAt: Date.now() + 86400000 * 30,
+      };
+      setBaseeraSession(parentSession);
     }
 
     const recordedAt = new Date().toISOString();
@@ -1344,7 +1360,7 @@ export default function App() {
         })}
       </nav>
 
-      <main id="main-content" className={'baseera-main flex-1' + (activeTab === 'home' ? ' is-home' : '')}>
+      <main id="main-content" className={'baseera-main flex-1 flex flex-col min-h-[calc(100vh-64px)]' + (activeTab === 'home' ? ' is-home' : '')}>
         <Suspense fallback={<div className="py-24 text-center bz-muted" role="status">جارٍ التحميل…</div>}>
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
@@ -1365,7 +1381,7 @@ export default function App() {
           {/* VIEW: PARENT PORTAL & CHILD REGISTRATION */}
           {activeTab === 'parent-portal' && (
             <ParentPortalView
-              supabaseUser={supabaseUser}
+              supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
               authLoading={supabaseAuthLoading}
               students={students}
               onSignInWithEmail={handleEmailSignIn}
@@ -1386,7 +1402,7 @@ export default function App() {
               onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
                 setSelectedStudentId(studentId);
-                setActiveTab(targetTab);
+                setActiveTab(targetTab, true);
               }}
               onNavigateHome={() => setActiveTab('home')}
             />
@@ -2196,7 +2212,7 @@ export default function App() {
         {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
           !supabaseUser && !baseeraSession ? (
             <ParentPortalView
-              supabaseUser={supabaseUser}
+              supabaseUser={null}
               authLoading={supabaseAuthLoading}
               students={students}
               onSignInWithEmail={handleEmailSignIn}
@@ -2217,7 +2233,7 @@ export default function App() {
               onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
                 setSelectedStudentId(studentId);
-                setActiveTab(targetTab);
+                setActiveTab(targetTab, true);
               }}
               onNavigateHome={() => setActiveTab('home')}
             />
@@ -2227,7 +2243,7 @@ export default function App() {
               activeStudent={selectedStudent}
               onSelectStudent={setSelectedStudentId}
               onNavigateTab={(tab) => setActiveTab(tab)}
-              supabaseUser={supabaseUser}
+              supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
               initialSubTab={
                 activeTab === 'cognitive-lab'
                   ? 'cognitive-screening'
@@ -2317,42 +2333,44 @@ export default function App() {
         </Suspense>
       </main>
 
-      <footer className="baseera-footer">
-        <div className="baseera-footer-inner">
-          <div className="baseera-footer-brand">
-            <span className="baseera-brand"><BrandLockup tagline={false} /></span>
-            <p>فحص معرفي مبكر لمهارات ما قبل القراءة، وبرنامج تدريبي عربي يتكيّف مع تقدّم الطفل — للأسر والمدارس والأخصائيين.</p>
+      {['home', 'privacy', 'terms', 'content-review'].includes(activeTab) && (
+        <footer className="baseera-footer">
+          <div className="baseera-footer-inner">
+            <div className="baseera-footer-brand">
+              <span className="baseera-brand"><BrandLockup tagline={false} /></span>
+              <p>فحص معرفي مبكر لمهارات ما قبل القراءة، وبرنامج تدريبي عربي يتكيّف مع تقدّم الطفل — للأسر والمدارس والأخصائيين.</p>
+            </div>
+            <div className="baseera-footer-col">
+              <h2>المنصة</h2>
+              <ul>
+                <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مؤشرات عسر القراءة</button></li>
+                <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
+                <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>ألعاب إضافية (صالة التدريب)</button></li>
+                <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر (لمن يقرأ)</button></li>
+              </ul>
+            </div>
+            <div className="baseera-footer-col">
+              <h2>للمدارس والأخصائيين</h2>
+              <ul>
+                <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
+                <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
+                <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
+              </ul>
+            </div>
+            <div className="baseera-footer-col">
+              <h2>الثقة والخصوصية</h2>
+              <ul>
+                <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
+                <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
+              </ul>
+            </div>
+            <p className="baseera-footer-note">
+              <span>© ٢٠٢٦ هَيَّا نَقْرَأْ</span>
+              <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. التشخيص يتم لدى مختص مؤهل.</span>
+            </p>
           </div>
-          <div className="baseera-footer-col">
-            <h2>المنصة</h2>
-            <ul>
-              <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مؤشرات عسر القراءة</button></li>
-              <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
-              <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>ألعاب إضافية (صالة التدريب)</button></li>
-              <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر (لمن يقرأ)</button></li>
-            </ul>
-          </div>
-          <div className="baseera-footer-col">
-            <h2>للمدارس والأخصائيين</h2>
-            <ul>
-              <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
-              <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
-              <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
-            </ul>
-          </div>
-          <div className="baseera-footer-col">
-            <h2>الثقة والخصوصية</h2>
-            <ul>
-              <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
-              <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
-            </ul>
-          </div>
-          <p className="baseera-footer-note">
-            <span>© ٢٠٢٦ هَيَّا نَقْرَأْ</span>
-            <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. التشخيص يتم لدى مختص مؤهل.</span>
-          </p>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
     </AssessmentProvider>
   );

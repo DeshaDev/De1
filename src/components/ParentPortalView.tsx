@@ -65,7 +65,8 @@ function nextStepFor(child: StudentRecord): NextStep {
   if (!training) {
     return { stageAr: 'اكتمل الفحص', actionAr: 'ابدأ البرنامج التدريبي', progressAr: 'النتيجة جاهزة، والبرنامج مبني عليها.', tab: 'guided-program' };
   }
-  const sessions = new Set(training.history.map((h) => h.date.slice(0, 10))).size;
+  const historyList = Array.isArray(training.history) ? training.history : [];
+  const sessions = new Set(historyList.filter((h) => h && h.date).map((h) => h.date.slice(0, 10))).size;
   const summary = summarizeProbes(training.probes ?? []);
   const trend = summary && summary.count >= 2 ? ` · مقياس التقدّم: ${toArabicNum(summary.baseline)}٪ في البداية، ${toArabicNum(summary.latest)}٪ في آخر جلسة` : '';
   return {
