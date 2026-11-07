@@ -163,13 +163,7 @@ export default function App() {
   const [activeTab, setActiveTabState] = useState<ActiveTab>(initialRoute.tab);
   const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(initialRoute.showLogin || false);
 
-  const setActiveTab = (tab: ActiveTab) => {
-    setActiveTabState(tab);
-    const newPath = tabToUrlPath(tab);
-    if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
-      window.history.pushState(null, '', newPath);
-    }
-  };
+
 
   useEffect(() => {
     const handlePopState = () => {
@@ -280,6 +274,38 @@ export default function App() {
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(false);
   const [supabaseError, setSupabaseError] = useState<string>('');
+
+  // Active tab setter with strict authentication guard for screening and training
+  const setActiveTab = (tab: ActiveTab) => {
+    const isProtected = ['dyslexia-lab', 'guided-program', 'reading-lab', 'cognitive-lab'].includes(tab);
+    if (isProtected && !supabaseUser && !baseeraSession) {
+      setActiveTabState('parent-portal');
+      const newPath = tabToUrlPath('parent-portal');
+      if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
+        window.history.pushState(null, '', newPath);
+      }
+      setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
+      return;
+    }
+    setActiveTabState(tab);
+    const newPath = tabToUrlPath(tab);
+    if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
+  };
+
+  // Route guard: if browser loads directly into a screening or training URL while unauthenticated
+  useEffect(() => {
+    const isProtected = ['dyslexia-lab', 'guided-program', 'reading-lab', 'cognitive-lab'].includes(activeTab);
+    if (isProtected && !supabaseUser && !baseeraSession) {
+      setActiveTabState('parent-portal');
+      const newPath = tabToUrlPath('parent-portal');
+      if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
+        window.history.pushState(null, '', newPath);
+      }
+      setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
+    }
+  }, [activeTab, supabaseUser, baseeraSession]);
 
   useEffect(() => {
     const unsubscribe = onSupabaseAuthChange((user, session) => {
@@ -2168,40 +2194,69 @@ export default function App() {
 
         {/* UNIFIED DYSLEXIA SCREENING & DIAGNOSTIC HUB (All Reading Tests in One Creative Hub) */}
         {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
-          <DyslexiaScreeningHub
-            students={students}
-            activeStudent={selectedStudent}
-            onSelectStudent={setSelectedStudentId}
-            onNavigateTab={(tab) => setActiveTab(tab)}
-            supabaseUser={supabaseUser}
-            initialSubTab={
-              activeTab === 'cognitive-lab'
-                ? 'cognitive-screening'
-                : activeTab === 'reading-lab'
-                  ? 'oral-reading'
-                  : activeTab === 'guided-program'
-                    ? 'training'
-                    : 'battery'
-            }
-            onCompleteOralSession={handleCompleteNewSession}
-            onCreateLearner={handleCreateBatteryLearner}
-            onStudentUpdated={(updated) => {
-              setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
-              if (supabaseUser) {
-                void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
-                  if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
-                });
+          !supabaseUser && !baseeraSession ? (
+            <ParentPortalView
+              supabaseUser={supabaseUser}
+              authLoading={supabaseAuthLoading}
+              students={students}
+              onSignInWithEmail={handleEmailSignIn}
+              onSignOut={async () => {
+                if (supabaseUser) {
+                  try {
+                    await signOutSupabase();
+                  } catch (e) {
+                    console.error(e);
+                  }
+                  setSupabaseUser(null);
+                }
+                await logoutBaseeraSession();
+                setBaseeraSession(null);
+                setAiStatusBanner('تم تسجيل الخروج بنجاح.');
+              }}
+              onRegisterChild={handleRegisterChildByParent}
+              onLinkLocalChild={handleLinkLocalChild}
+              onSelectStudent={(studentId, targetTab) => {
+                setSelectedStudentId(studentId);
+                setActiveTab(targetTab);
+              }}
+              onNavigateHome={() => setActiveTab('home')}
+            />
+          ) : (
+            <DyslexiaScreeningHub
+              students={students}
+              activeStudent={selectedStudent}
+              onSelectStudent={setSelectedStudentId}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              supabaseUser={supabaseUser}
+              initialSubTab={
+                activeTab === 'cognitive-lab'
+                  ? 'cognitive-screening'
+                  : activeTab === 'reading-lab'
+                    ? 'oral-reading'
+                    : activeTab === 'guided-program'
+                      ? 'training'
+                      : 'battery'
               }
-            }}
-            onCompleteCognitiveScreening={(cogData) => {
-              setStudents(prev => prev.map(student =>
-                student.id === selectedStudent.id
-                  ? { ...student, cognitiveResults: cogData }
-                  : student
-              ));
-              setActiveTab('dashboard');
-            }}
-          />
+              onCompleteOralSession={handleCompleteNewSession}
+              onCreateLearner={handleCreateBatteryLearner}
+              onStudentUpdated={(updated) => {
+                setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
+                if (supabaseUser) {
+                  void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
+                    if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
+                  });
+                }
+              }}
+              onCompleteCognitiveScreening={(cogData) => {
+                setStudents(prev => prev.map(student =>
+                  student.id === selectedStudent.id
+                    ? { ...student, cognitiveResults: cogData }
+                    : student
+                ));
+                setActiveTab('dashboard');
+              }}
+            />
+          )
         )}
 
         {/* NEW: ADAPTIVE REPORTS */}

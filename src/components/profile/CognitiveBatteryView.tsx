@@ -366,6 +366,29 @@ function SetupView({
   const [checks, setChecks] = useState({ consent: false, quiet: false, headphones: false, ready: false });
   const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
 
+  if (!supabaseUser) {
+    return (
+      <section className="bz-card bz-card-pad max-w-xl mx-auto space-y-5 text-center py-10" dir="rtl">
+        <div className="w-16 h-16 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
+          <Cloud className="w-8 h-8" />
+        </div>
+        <h2 className="bz-h3 text-slate-900 font-extrabold">تسجيل حساب الأسرة مطلوب لبدء الفحص</h2>
+        <p className="bz-body text-slate-600 max-w-md mx-auto">
+          لحفظ ملف طفلك ونتائج فحص مؤشرات عسر القراءة وخطة التدريب في قاعدة البيانات السحابية بشكل دائم، يلزم تسجيل حساب الأسرة أولاً.
+        </p>
+        {onNavigateTab && (
+          <button
+            type="button"
+            onClick={() => onNavigateTab('parent-portal')}
+            className="bz-btn bz-btn-primary bz-btn-lg mx-auto"
+          >
+            تسجيل طفل وحساب جديد للبدء فوراً ←
+          </button>
+        )}
+      </section>
+    );
+  }
+
   if (!ageIsSupported) {
     return (
       <section className="bz-card bz-card-pad max-w-2xl mx-auto space-y-3" dir="rtl" role="alert">
