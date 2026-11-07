@@ -167,15 +167,27 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   await page.getByLabel('السنوات').selectOption('7');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
+  // Deliberately decline audio consent: the non-audio battery must remain usable.
+  await expect(page.getByLabel(/موافقة منفصلة على تسجيل الصوت/)).not.toBeChecked();
   await page.getByRole('button', { name: 'بدء الفحص' }).click();
 
   for (const task of ['قارئ الكلمات', 'سباق الصور', 'قصة سامي']) {
     await page.getByText(task, { exact: true }).click();
     await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'التقييم الصوتي الآلي غير متاح لهذه المهمة بعد' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'حفظ المهمة دون درجة' }).click();
+
+    if (task === 'قارئ الكلمات') {
+      await page.getByRole('button', { name: 'أكملت المحاولة' }).click();
+      await expect(page.getByRole('heading', { name: 'التقييم الصوتي لهذه القائمة غير متاح بعد' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
+      await page.getByRole('button', { name: 'متابعة دون احتساب درجة' }).click();
+    } else if (task === 'سباق الصور') {
+      await page.getByRole('button', { name: 'الرموز مألوفة — ابدأ السباق' }).click();
+      await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
+    } else {
+      await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
+    }
+
     await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
   }
 
@@ -188,7 +200,6 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   await expect(page.getByText(/الدقة ٨٣٪/)).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
-
 test('dictation: letter tiles, delete, and a scored answer', async ({ page }) => {
   test.setTimeout(90_000);
   await page.addInitScript(() => window.localStorage.clear());
