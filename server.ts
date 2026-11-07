@@ -2174,6 +2174,20 @@ async function startServer() {
           };
           continue;
         }
+
+        // The same battery is uploaded after each subtest. A prior receipt has already
+        // been consumed after persistence, so accept it again only as an exact reference
+        // to the server-stored result; never trust the browser's replacement payload.
+        const previousResult = studentsDb[found.idx].cognitiveBattery?.results?.[taskId];
+        if (
+          typeof receipt === 'string' &&
+          previousResult?.audioAssessmentReceipt === receipt &&
+          previousResult.audioAssessment
+        ) {
+          results[taskId] = previousResult;
+          continue;
+        }
+
         const stored = typeof receipt === 'string' ? cognitiveAudioAssessmentReceipts.get(receipt) : undefined;
         if (
           typeof receipt !== 'string' ||
@@ -2531,6 +2545,18 @@ async function startServer() {
           audioAssessment: undefined,
           audioAssessmentReceipt: undefined,
         };
+        continue;
+      }
+
+      // Repeated uploads may include a task whose receipt was consumed by an earlier
+      // successful save. Reuse only the exact previously persisted server result.
+      const previousResult = current.cognitiveBattery?.results?.[taskId];
+      if (
+        typeof receipt === 'string' &&
+        previousResult?.audioAssessmentReceipt === receipt &&
+        previousResult.audioAssessment
+      ) {
+        results[taskId] = previousResult;
         continue;
       }
 
