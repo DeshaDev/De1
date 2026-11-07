@@ -20,7 +20,7 @@ export interface ItemResponse {
 }
 
 export interface CognitiveAudioAssessmentEvidence {
-  taskId: 'oralReading' | 'ranObjects' | 'ranLetters';
+  taskId: 'oralReading' | 'ranObjects' | 'ranLetters' | 'wordReading' | 'nonwordReading';
   sourceModel: 'azure_pronunciation_assessment';
   assessmentComplete: true;
   assessmentReceipt: string;
