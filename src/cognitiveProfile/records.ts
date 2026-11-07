@@ -22,7 +22,7 @@ export interface CognitiveBatterySummary {
   strengths: SubtestId[];
   weaknesses: SubtestId[];
   domains: Array<{ domain: string; centile: number; band: Band }>;
-  subtests: Array<{ subtestId: SubtestId; centile: number | null; band: Band | null; percent: number; correct?: number; total?: number; measures?: ReadingMeasures }>;
+  subtests: Array<{ subtestId: SubtestId; centile: number | null; band: Band | null; percent: number; scoreAvailable?: boolean; correct?: number; total?: number; measures?: ReadingMeasures }>;
 }
 
 export interface StoredCognitiveBattery {
@@ -231,7 +231,7 @@ export function summarizeBattery(
     referenceVersion: REFERENCE_TABLE.version,
     referenceStatus: profile.referenceStatus,
     ageBandLabelAr: profile.ageBandLabelAr,
-    completedSubtests: profile.subtests.length,
+    completedSubtests: profile.subtests.filter((subtest) => subtest.scoreAvailable !== false).length,
     totalSubtests: subtestsForAge(ageMonths).length,
     risk: profile.risk,
     pattern: profile.pattern,
@@ -243,6 +243,7 @@ export function summarizeBattery(
       centile: s.centile,
       band: s.band,
       percent: s.percent,
+      scoreAvailable: s.scoreAvailable !== false,
       correct: s.correct,
       total: s.total,
       ...(s.measures ? { measures: s.measures } : {}),
