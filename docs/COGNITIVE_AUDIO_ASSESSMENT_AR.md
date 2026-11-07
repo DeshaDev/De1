@@ -42,6 +42,12 @@
 
 ضع AZURE_SPEECH_KEY وAZURE_SPEECH_REGION في أسرار بيئة الخادم فقط. إذا غاب أي منهما، يعيد endpoint 503 AZURE_SPEECH_NOT_CONFIGURED ولا يستخدم بديلًا محليًا.
 
+للحفظ الأسري الآمن، أضف SUPABASE_SERVICE_ROLE_KEY إلى أسرار الخادم فقط (دون بادئة VITE_). لا يرسل هذا المفتاح إلى المتصفح. إذا لم يكن مضبوطًا، يفشل حفظ نتيجة الصوت السحابية بأمان وتبقى النتيجة محلية.
+
+قبل تفعيل الحفظ الصوتي في مشروع Supabase، نفّذ مرة واحدة الترحيل:
+supabase/migrations/20261107_guard_student_assessment_evidence.sql
+أو استخدم النسخة المضمّنة في supabase/schema.sql عند إنشاء قاعدة جديدة. يضيف الترحيل trigger يرفض من جلسات authenticated أي إدخال أو تعديل مباشر لحقول التقييم داخل students.raw_data؛ تكتب هذه الحقول فقط عبر endpoint الخادم بعد التحقق من المالك والموافقة وإيصال التقييم. لا يكفي نشر الشفرة وحدها لتطبيق RLS على قاعدة Supabase قائمة؛ يجب تنفيذ SQL على المشروع الفعلي والتحقق من نتيجة التنفيذ.
+
 نقطة النهاية:
 POST /api/ai/cognitive-audio-assessment
 
