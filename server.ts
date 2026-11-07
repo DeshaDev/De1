@@ -1025,6 +1025,7 @@ function requireBaseeraAuth(requiredScope: BaseeraScope) {
 // ---------------------------------------------------------------------------
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
 const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const isSupabaseVerificationConfigured = () => SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.length > 20;
 const parentTokenCache = new Map<string, { session: VerifiedBaseeraSession; expiresAt: number }>();
 const PARENT_TOKEN_CACHE_MS = 5 * 60 * 1000;
@@ -2393,14 +2394,21 @@ async function startServer() {
       policyVersion: current.policyVersion || '2026.1',
     };
 
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      res.status(503).json({
+        code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
+        error: 'الحفظ الصوتي الآمن غير مهيأ في الخادم؛ بقيت النتيجة محلية ولم تُكتب إلى قاعدة البيانات.',
+      });
+      return;
+    }
     try {
       const updateUrl =
         `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}`;
       const updateResponse = await fetch(updateUrl, {
         method: 'PATCH',
         headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: authorization,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
