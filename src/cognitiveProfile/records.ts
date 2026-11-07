@@ -59,6 +59,32 @@ const ItemResponseSchema = z
   })
   .strict();
 
+const CognitiveAudioAssessmentSchema = z
+  .object({
+    taskId: z.enum(['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading']),
+    sourceModel: z.literal('azure_pronunciation_assessment'),
+    assessmentComplete: z.literal(true),
+    assessmentReceipt: z.string().regex(/^[a-f0-9]{64}$/),
+    transcript: z.string().max(10_000),
+    durationSeconds: z.number().finite().min(1).max(88),
+    wordAccuracyPercent: z.number().min(0).max(100),
+    wordsCorrectPerMinute: z.number().min(0).max(600),
+    wordsPerMinute: z.number().min(0).max(600),
+    correctWordsCount: z.number().int().min(0).max(60),
+    substitutionsCount: z.number().int().min(0).max(60),
+    omissionsCount: z.number().int().min(0).max(60),
+    insertionsCount: z.number().int().min(0).max(60),
+    words: z.array(
+      z.object({
+        word: z.string().min(1).max(100),
+        errorType: z.enum(['None', 'Omission', 'Mispronunciation', 'Substitution', 'DialectVariant', 'Unconfirmed', 'Insertion']),
+        accuracyScore: z.number().min(0).max(100).nullable(),
+        spokenWord: z.string().max(100).nullable(),
+      }).strict()
+    ).min(1).max(60),
+  })
+  .strict();
+
 const SubtestResultSchema = z
   .object({
     subtestId: z.enum(SUBTEST_IDS),
@@ -69,6 +95,8 @@ const SubtestResultSchema = z
     blockScores: z.array(z.number().int().min(0).max(10)).max(10).optional(),
     durationMs: z.number().finite().min(0).max(900_000).optional(),
     errorCount: z.number().int().min(0).max(60).optional(),
+    audioAssessment: CognitiveAudioAssessmentSchema.optional(),
+    audioAssessmentReceipt: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   })
   .strict();
 
@@ -87,12 +115,23 @@ export const CognitiveBatteryUploadSchema = z
         ctx.addIssue({ code: 'custom', message: `مفتاح الاختبار ${key} لا يطابق محتواه.` });
         continue;
       }
-      const task = BATTERY.find((item) => item.id === key);
-      if (task && (task.kind === 'readList' || task.kind === 'passage' || task.kind === 'ran')) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `لا يُقبل رفع نتيجة ${key}؛ هذه المهمة تحتاج إيصال تقييم صوتي خادمي مرتبطاً بالتسجيل وبنود المهمة.`,
-        });
+      const speechTask = ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'].includes(key);
+      if (!speechTask && (result.audioAssessment || result.audioAssessmentReceipt)) {
+        ctx.addIssue({ code: 'custom', message: `إيصال صوتي غير مسموح في ${key}.` });
+      }
+      if (Boolean(result.audioAssessment) !== Boolean(result.audioAssessmentReceipt)) {
+        ctx.addIssue({ code: 'custom', message: `يجب إرسال نتيجة الصوت وإيصالها معًا في ${key}.` });
+      }
+      if (result.audioAssessment && result.audioAssessment.taskId !== result.subtestId) {
+        ctx.addIssue({ code: 'custom', message: `مهمة الإيصال الصوتي لا تطابق ${key}.` });
+      }
+      if (
+        result.audioAssessment &&
+        (result.audioAssessment.assessmentReceipt !== result.audioAssessmentReceipt ||
+          result.audioAssessment.words.some((word) => word.errorType === 'Unconfirmed' || word.errorType === 'Insertion') ||
+          result.audioAssessment.words.length !== (VALID_IDS[key]?.size ?? 0))
+      ) {
+        ctx.addIssue({ code: 'custom', message: `نتيجة الصوت غير مكتملة أو لا تطابق البنود في ${key}.` });
       }
       const allowed = VALID_IDS[key];
       const seen = new Set<string>();
