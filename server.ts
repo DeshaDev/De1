@@ -2229,6 +2229,196 @@ async function startServer() {
     }
   );
 
+  // Family-account battery persistence. It repeats the receipt verification used by the
+  // school endpoint so a browser cannot write forged voice evidence directly into raw_data.
+  app.put('/api/parent/students/:id/cognitive-battery', requireAiAccess(), async (req, res) => {
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const parentUserId = session?.parentUserId;
+    const authorization = String(req.headers.authorization || '');
+    if (session?.role !== 'parent' || !parentUserId || !authorization.startsWith('Bearer ')) {
+      res.status(403).json({ error: 'هذا المسار مخصص لحساب ولي الأمر الموثّق.' });
+      return;
+    }
+
+    const studentId = String(req.params.id || '');
+    if (!/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId)) {
+      res.status(400).json({ error: 'معرّف ملف الطفل غير صالح.' });
+      return;
+    }
+
+    const body = req.body || {};
+    const parsed = CognitiveBatteryUploadSchema.safeParse({
+      ageMonths: body.ageMonths,
+      examinerName: body.examinerName,
+      startedAt: body.startedAt,
+      dialect: body.dialect,
+      results: body.results,
+    });
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'بيانات الفحص غير صالحة.',
+        issues: parsed.error.issues.slice(0, 10).map((issue) => issue.message),
+      });
+      return;
+    }
+
+    const validConsentTimestamp = (value: unknown): boolean => {
+      if (typeof value !== 'string') return false;
+      const timestamp = Date.parse(value);
+      return Number.isFinite(timestamp) && timestamp <= Date.now() + 5 * 60 * 1000;
+    };
+
+    let rows: any[];
+    try {
+      const ownerUrl =
+        `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=raw_data&limit=1`;
+      const ownerResponse = await fetch(ownerUrl, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: authorization,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!ownerResponse.ok) {
+        res.status(503).json({ error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات.' });
+        return;
+      }
+      const payload = await ownerResponse.json().catch(() => null);
+      if (!Array.isArray(payload) || payload.length !== 1 || !payload[0]?.raw_data || typeof payload[0].raw_data !== 'object') {
+        res.status(404).json({ error: 'ملف الطفل غير موجود في حساب الأسرة الحالي.' });
+        return;
+      }
+      rows = payload;
+    } catch {
+      res.status(503).json({ error: 'تعذر الوصول إلى ملف الطفل؛ لم تُحفظ النتائج.' });
+      return;
+    }
+
+    const current = rows[0].raw_data as StudentRecord;
+    const guardianConsent = validateExplicitGuardianConsent(current.guardianConsentGiven);
+    if (!guardianConsent.valid || !current.guardianConsentRecordedAt) {
+      res.status(403).json({ error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل.' });
+      return;
+    }
+
+    const results = { ...parsed.data.results } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+    for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
+      const incoming = results[taskId];
+      if (!incoming) continue;
+      const receipt = incoming.audioAssessmentReceipt;
+      const suppliedAssessment = incoming.audioAssessment;
+      if (!receipt && !suppliedAssessment) {
+        results[taskId] = {
+          ...incoming,
+          responses: [],
+          durationMs: undefined,
+          errorCount: undefined,
+          audioAssessment: undefined,
+          audioAssessmentReceipt: undefined,
+        };
+        continue;
+      }
+
+      const stored = typeof receipt === 'string' ? cognitiveAudioAssessmentReceipts.get(receipt) : undefined;
+      if (
+        !stored ||
+        stored.expiresAt <= Date.now() ||
+        stored.sessionId !== session.sessionId ||
+        stored.tenantId !== session.tenantId ||
+        stored.studentId !== studentId ||
+        stored.taskId !== taskId ||
+        suppliedAssessment?.assessmentReceipt !== receipt
+      ) {
+        res.status(409).json({
+          code: 'COGNITIVE_AUDIO_RECEIPT_INVALID',
+          error: 'إيصال تقييم الصوت منتهي الصلاحية أو لا يخص هذا الطفل وهذه الجلسة. أعد تسجيل المهمة.',
+        });
+        return;
+      }
+
+      const definition = getCognitiveAudioTaskDefinition(taskId);
+      const assessment = stored.assessment;
+      if (
+        !definition ||
+        assessment.words.length !== definition.itemIds.length ||
+        assessment.words.some((word, index) => word.word !== definition.referenceWords[index])
+      ) {
+        res.status(409).json({
+          code: 'COGNITIVE_AUDIO_RECEIPT_MISMATCH',
+          error: 'نتيجة الصوت لا تطابق بنود المهمة المرجعية؛ لم تُحفظ الدرجة.',
+        });
+        return;
+      }
+
+      results[taskId] = {
+        ...incoming,
+        responses: definition.itemIds.map((itemId, index) => ({
+          itemId,
+          correct: ['None', 'DialectVariant'].includes(assessment.words[index].errorType),
+          rtMs: 0,
+          replays: 0,
+        })),
+        durationMs: Math.round(assessment.durationSeconds * 1000),
+        errorCount: assessment.omissionsCount + assessment.substitutionsCount + assessment.insertionsCount,
+        audioAssessment: stored.assessment,
+        audioAssessmentReceipt: receipt,
+      };
+    }
+
+    const audioConsentGiven = body.guardianAudioConsentGiven === true;
+    const audioConsentAt = audioConsentGiven && validConsentTimestamp(body.guardianAudioConsentRecordedAt)
+      ? String(body.guardianAudioConsentRecordedAt)
+      : undefined;
+    const updatedStudent: StudentRecord = {
+      ...current,
+      guardianAudioConsentGiven: audioConsentGiven,
+      guardianAudioConsentRecordedAt: audioConsentAt,
+      cognitiveBattery: {
+        ageMonths: parsed.data.ageMonths,
+        examinerName: parsed.data.examinerName.trim(),
+        startedAt: parsed.data.startedAt,
+        dialect: parsed.data.dialect,
+        updatedAt: new Date().toISOString(),
+        results,
+        summary: summarizeBattery(results, parsed.data.ageMonths),
+      },
+    };
+
+    try {
+      const updateUrl =
+        `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}`;
+      const updateResponse = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: authorization,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          raw_data: updatedStudent,
+          guardian_consent: true,
+          guardian_consent_recorded_at: current.guardianConsentRecordedAt,
+          updated_at: new Date().toISOString(),
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!updateResponse.ok) {
+        res.status(503).json({ error: 'تعذر حفظ نتائج الفحص في سجل الأسرة السحابي.' });
+        return;
+      }
+      const updatedRows = await updateResponse.json().catch(() => null);
+      if (!Array.isArray(updatedRows) || updatedRows.length !== 1) {
+        res.status(503).json({ error: 'لم يؤكد مخزن الأسرة حفظ سجل الطفل.' });
+        return;
+      }
+      res.status(200).json({ student: updatedStudent, persisted: true });
+    } catch {
+      res.status(503).json({ error: 'تعذر الاتصال بمخزن الأسرة؛ بقيت النتائج محلية.' });
+    }
+  });
+
   app.put(
     '/api/students/:id/training-progress',
     requireBaseeraAuth('students:write'),
