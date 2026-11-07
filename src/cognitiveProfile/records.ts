@@ -106,6 +106,8 @@ export const CognitiveBatteryUploadSchema = z
     examinerName: z.string().max(80).default(''),
     startedAt: isoDate,
     dialect: z.enum(['gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other']).optional(),
+    guardianAudioConsentGiven: z.boolean().optional(),
+    guardianAudioConsentRecordedAt: isoDate.optional(),
     results: z.record(z.string(), SubtestResultSchema),
   })
   .strict()
