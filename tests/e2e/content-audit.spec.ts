@@ -99,6 +99,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
       await audit(page, `gym-${station}`, findings);
     }
 
+    await page.goto('/');
     await page.locator('.baseera-footer').getByRole('button', { name: /القارئ الميسّر/ }).click();
     await audit(page, 'reader-pick', findings);
     await page.getByRole('button', { name: /ابدأ القراءة/ }).click();
