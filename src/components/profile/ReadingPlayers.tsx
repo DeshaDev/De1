@@ -2,7 +2,7 @@
  * Players for direct reading practice, verified cloud-audio passage/RAN tasks, and dictation.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Delete, Mic, Timer, Volume2 } from 'lucide-react';
+import { Check, Delete, Mic, Volume2 } from 'lucide-react';
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import { lex } from '../../cognitiveProfile/lexicon';
 import type { ItemResponse } from '../../cognitiveProfile/scoring';
