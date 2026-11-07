@@ -39,6 +39,25 @@ const TEST_ENV = {
   }),
 };
 
+function makeSilentWavBase64(durationSeconds = 1): string {
+  const dataBytes = Math.round(durationSeconds * 32_000);
+  const wav = Buffer.alloc(44 + dataBytes);
+  wav.write('RIFF', 0, 'ascii');
+  wav.writeUInt32LE(36 + dataBytes, 4);
+  wav.write('WAVE', 8, 'ascii');
+  wav.write('fmt ', 12, 'ascii');
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(16_000, 24);
+  wav.writeUInt32LE(32_000, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write('data', 36, 'ascii');
+  wav.writeUInt32LE(dataBytes, 40);
+  return wav.toString('base64');
+}
+
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
@@ -277,8 +296,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const common = {
       taskId: 'oralReading',
       studentId: 'student-audio-consent-test',
-      audioWavBase64: 'A'.repeat(120),
-      durationSeconds: 20,
+      audioWavBase64: makeSilentWavBase64(1),
+      durationSeconds: 1,
       language: 'ar-SA',
       guardianConsentGiven: true,
       guardianConsentRecordedAt: timestamp,
