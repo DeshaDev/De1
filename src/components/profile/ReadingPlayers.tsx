@@ -3,7 +3,7 @@
  * the one-minute passage, rapid automatized naming, and dictation on letter tiles.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Delete, Mic, MicOff, RotateCcw, Sparkles, Timer, Volume2, X } from 'lucide-react';
+import { Award, BookOpen, Check, ChevronDown, ChevronUp, Delete, Mic, MicOff, Play, RotateCcw, Sparkles, Timer, Volume2, X } from 'lucide-react';
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import { lex } from '../../cognitiveProfile/lexicon';
 import type { ItemResponse } from '../../cognitiveProfile/scoring';
@@ -46,12 +46,12 @@ function useElapsed(running: boolean) {
 // ---------------------------------------------------------------------------
 // Word list read aloud with AI Voice Evaluation & Microphone
 // ---------------------------------------------------------------------------
-function normalizeArabicWord(text: string): string {
+export function normalizeArabicWord(text: string): string {
   if (!text) return '';
   return text
     .normalize('NFC')
     .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
-    .replace(/[أإآءئؤ]/g, 'ا')
+    .replace(/[أإآ]/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
     .replace(/[.,/#!$%^&*;:{}=\-_~()؟،«»"']/g, ' ')
@@ -87,6 +87,31 @@ export function checkArabicWordMatch(spoken: string, target: string): boolean {
   }
   return false;
 }
+// ---------------------------------------------------------------------------
+// Intelligent Child RAN Synonyms & Dialect Mapping
+// ---------------------------------------------------------------------------
+export const RAN_SYNONYMS: Record<string, string[]> = {
+  // Picture IDs
+  sun: ['شمس', 'الشمس', 'شموسة', 'شموسه', 'شمسية', 'الشمسيه'],
+  house: ['بيت', 'البيت', 'منزل', 'المنزل', 'دار', 'الدار', 'حوش', 'الحوش', 'بيتنا', 'سكن'],
+  ball: ['كرة', 'كره', 'كورة', 'كوره', 'الكرة', 'الكره', 'الكورة', 'طابة', 'طابه', 'الطابة', 'فوتبول', 'كرة قدم', 'كورة قدم'],
+  door: ['باب', 'الباب', 'بوابة', 'بوابه', 'البوابة'],
+  key: ['مفتاح', 'المفتاح', 'ساروت', 'الساروت', 'مفاتيح', 'مفتاحك'],
+  // Letter IDs
+  'م': ['ميم', 'الميم', 'م', 'ما', 'مو', 'مي', 'ام', 'أم', 'حرف الميم', 'حرف ميم'],
+  'ل': ['لام', 'اللام', 'ل', 'لا', 'لو', 'لي', 'ال', 'إل', 'حرف اللام', 'حرف لام'],
+  'س': ['سين', 'السين', 'س', 'سا', 'سو', 'سي', 'اس', 'إس', 'حرف السين', 'حرف سين'],
+  'د': ['دال', 'الدال', 'د', 'دا', 'دو', 'دي', 'اد', 'إد', 'حرف الدال', 'حرف دال'],
+  'ب': ['باء', 'الباء', 'ب', 'با', 'بو', 'بي', 'اب', 'إب', 'حرف الباء', 'حرف باء', 'به'],
+};
+
+export function matchRanSymbol(spokenWord: string, symbolId: string): boolean {
+  const normSpoken = normalizeArabicWord(spokenWord);
+  if (!normSpoken) return false;
+  const list = RAN_SYNONYMS[symbolId] || [symbolId];
+  return list.some((syn) => normSpoken === normalizeArabicWord(syn));
+}
+
 
 export function ReadAloudPlayer({
   item,
@@ -371,6 +396,9 @@ export function ReadAloudPlayer({
 // ---------------------------------------------------------------------------
 // One-minute passage
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// One-minute passage with AI Voice Evaluation & Real-time Tracking
+// ---------------------------------------------------------------------------
 type PassagePhase = 'ready' | 'reading' | 'last';
 
 export function PassagePlayer({
@@ -386,18 +414,195 @@ export function PassagePlayer({
 }) {
   const [phase, setPhase] = useState<PassagePhase>('ready');
   const [errors, setErrors] = useState<Set<number>>(new Set());
+  const [cursor, setCursor] = useState<number>(0);
   const [last, setLast] = useState<number | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [hasMicSupport, setHasMicSupport] = useState(true);
+  const [showManual, setShowManual] = useState(false);
+
   const startedAt = useRef(0);
   const duration = useRef(0);
+  const recognitionRef = useRef<any>(null);
+  const cursorRef = useRef(0);
+  const errorsRef = useRef<Set<number>>(new Set());
+  const phaseRef = useRef<PassagePhase>('ready');
+  const finishedRef = useRef(false);
+
+  phaseRef.current = phase;
+  cursorRef.current = cursor;
+  errorsRef.current = errors;
+
   const now = useElapsed(phase === 'reading');
   const elapsedSec = phase === 'reading' ? Math.min(timeLimitSec, (now - startedAt.current) / 1000) : duration.current / 1000;
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSpeech = Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+      setHasMicSupport(hasSpeech);
+    }
+  }, []);
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopRecognition();
+    };
+  }, []);
+
+  const finish = (lastIndex: number) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    stopRecognition();
+    const effectiveDuration = duration.current || (performance.now() - startedAt.current);
+    const responses = words.slice(0, lastIndex + 1).map((_, i) => ({
+      itemId: passageWordId(i),
+      correct: !errorsRef.current.has(i),
+      rtMs: 0,
+      replays: 0,
+    }));
+    onDone(responses, Math.round(effectiveDuration));
+  };
 
   useEffect(() => {
     if (phase === 'reading' && elapsedSec >= timeLimitSec) {
       duration.current = timeLimitSec * 1000;
       setPhase('last');
+      stopRecognition();
+      setLast(Math.max(0, cursorRef.current - 1));
     }
   }, [phase, elapsedSec, timeLimitSec]);
+
+  // Handle words speech recognition
+  const handleSpokenWord = (spokenToken: string) => {
+    const spoken = normalizeArabicWord(spokenToken);
+    if (!spoken) return;
+
+    const curr = cursorRef.current;
+    if (curr >= words.length) return;
+
+    const normTarget = normalizeArabicWord(words[curr]);
+
+    // Exact match on current word
+    if (spoken === normTarget) {
+      const next = curr + 1;
+      cursorRef.current = next;
+      setCursor(next);
+      if (next >= words.length) {
+        duration.current = performance.now() - startedAt.current;
+        stopRecognition();
+        setPhase('last');
+        setLast(words.length - 1);
+      }
+      return;
+    }
+
+    // Forward lookahead (1 to 3 words) to gracefully accept child skips
+    for (let ahead = 1; ahead <= 3 && curr + ahead < words.length; ahead++) {
+      if (spoken === normalizeArabicWord(words[curr + ahead])) {
+        // Words in between were skipped
+        for (let sk = curr; sk < curr + ahead; sk++) {
+          errorsRef.current.add(sk);
+        }
+        setErrors(new Set(errorsRef.current));
+        const next = curr + ahead + 1;
+        cursorRef.current = next;
+        setCursor(next);
+        if (next >= words.length) {
+          duration.current = performance.now() - startedAt.current;
+          stopRecognition();
+          setPhase('last');
+          setLast(words.length - 1);
+        }
+        return;
+      }
+    }
+  };
+
+  const startListening = () => {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      setHasMicSupport(false);
+      setShowManual(true);
+      return;
+    }
+
+    try {
+      stopRecognition();
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let text = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          text += ' ' + (event.results[i][0]?.transcript || '');
+        }
+        const clean = text.trim();
+        if (!clean) return;
+        setTranscript(clean);
+
+        const tokens = clean.split(/\s+/).filter(Boolean);
+        for (const t of tokens) {
+          handleSpokenWord(t);
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        if (e.error === 'not-allowed') {
+          setIsListening(false);
+          setShowManual(true);
+        }
+      };
+
+      recognition.onend = () => {
+        if (phaseRef.current === 'reading' && !finishedRef.current) {
+          try {
+            recognition.start();
+          } catch {
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch {
+      setIsListening(false);
+      setShowManual(true);
+    }
+  };
+
+  const startReading = () => {
+    stopSpeech();
+    startedAt.current = performance.now();
+    setPhase('reading');
+    setCursor(0);
+    cursorRef.current = 0;
+    setErrors(new Set());
+    errorsRef.current = new Set();
+    startListening();
+  };
 
   const toggle = (i: number) => {
     if (phase === 'reading') {
@@ -405,39 +610,76 @@ export function PassagePlayer({
         const next = new Set(prev);
         if (next.has(i)) next.delete(i);
         else next.add(i);
+        errorsRef.current = next;
         return next;
       });
-    } else if (phase === 'last') setLast(i);
-  };
-
-  const finish = (lastIndex: number) => {
-    const responses = words.slice(0, lastIndex + 1).map((_, i) => ({ itemId: passageWordId(i), correct: !errors.has(i), rtMs: 0, replays: 0 }));
-    onDone(responses, Math.round(duration.current));
+    } else if (phase === 'last') {
+      setLast(i);
+    }
   };
 
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
-      {phase === 'ready' ? (
-        <div className="text-center space-y-3 max-w-md">
-          <span className="text-6xl" aria-hidden="true">📖</span>
-          <p className="bz-body">ستظهر القصة عند الضغط على «ابدأ». اضغط حين ينطق الطفل أول كلمة.</p>
+      {phase === 'ready' && (
+        <div className="w-full max-w-xl bg-card border-4 border-line rounded-[2rem] p-6 sm:p-8 text-center space-y-4 shadow-sm">
+          <span className="text-6xl inline-block" aria-hidden="true">📖</span>
+          <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
+          <p className="text-base sm:text-lg text-ink-2 font-medium">
+            اقرأ القصة الجميلة بصوتك الواضح! الذكاء الاصطناعي سيستمع لقراءتك ويضيء كل كلمة تقرؤها باللون الأخضر الجميل ✨
+          </p>
+          <button
+            type="button"
+            onClick={startReading}
+            className="w-full py-4 px-6 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
+          >
+            <Mic className="w-6 h-6 animate-pulse" />
+            <span>🎙️ ابدأ القراءة بصوتك الآن (دقيقة واحدة)</span>
+          </button>
         </div>
-      ) : (
-        <article className="w-full max-w-3xl rounded-[1.5rem] border-4 border-line bg-card p-5 sm:p-8">
-          <h3 className="text-center text-3xl font-bold text-ink mb-4" style={READING_FONT} lang="ar">{title}</h3>
-          <p className="text-[26px] sm:text-4xl leading-[2.1] text-ink text-start" style={READING_FONT} lang="ar">
+      )}
+
+      {phase !== 'ready' && (
+        <article className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
+            {phase === 'reading' && (
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                  isListening ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-700'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-rose-600' : 'bg-slate-400'}`} />
+                  {isListening ? 'الذكاء الاصطناعي يستمع...' : 'الميكروفون متوقف'}
+                </span>
+                <span className="bz-num font-bold text-base px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
+                  ⏱️ {ar(Math.max(0, Math.ceil(timeLimitSec - elapsedSec)))} ث
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Passage Words with AI Word Tracking */}
+          <div className="text-[26px] sm:text-[34px] leading-[2.3] text-ink text-start select-none" style={READING_FONT} lang="ar">
             {words.map((w, i) => {
               const isError = errors.has(i);
+              const isRead = phase === 'reading' && i < cursor;
+              const isCurrent = phase === 'reading' && i === cursor;
               const afterLast = phase === 'last' && last !== null && i > last;
               return (
                 <React.Fragment key={i}>
                   <button
                     type="button"
                     onClick={() => toggle(i)}
-                    className={`rounded-lg px-0.5 cursor-pointer ${isError ? 'bg-rose-100 text-rose-800 line-through decoration-2' : ''} ${
-                      last === i ? 'ring-4 ring-[color:var(--brand)]' : ''
+                    className={`rounded-xl px-1.5 py-0.5 mx-0.5 transition-all duration-200 cursor-pointer ${
+                      isError
+                        ? 'bg-rose-100 text-rose-800 line-through decoration-2 font-bold'
+                        : isRead
+                        ? 'bg-emerald-100 text-emerald-950 font-bold border-b-2 border-emerald-500 shadow-sm'
+                        : isCurrent
+                        ? 'ring-4 ring-teal-400 bg-teal-50 text-teal-950 font-black animate-pulse shadow-md'
+                        : last === i
+                        ? 'ring-4 ring-teal-500 bg-teal-50'
+                        : ''
                     } ${afterLast ? 'opacity-30' : ''}`}
-                    aria-pressed={phase === 'reading' ? isError : last === i}
                     aria-label={phase === 'last' ? `آخر كلمة: ${w}` : isError ? `${w}: خطأ` : w}
                   >
                     {w}
@@ -445,70 +687,109 @@ export function PassagePlayer({
                 </React.Fragment>
               );
             })}
-          </p>
+          </div>
+
+          {/* Heard Caption */}
+          {transcript && phase === 'reading' && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center text-sm">
+              <span className="text-slate-500 font-semibold ms-1">🗣️ سمعتُ من البطل:</span>
+              <strong className="text-slate-800" style={READING_FONT}>«{transcript}»</strong>
+            </div>
+          )}
+
+          {phase === 'last' && (
+            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 text-center space-y-2">
+              <Sparkles className="w-8 h-8 text-emerald-600 mx-auto animate-bounce" />
+              <p className="font-child text-xl font-bold text-emerald-900">
+                🎉 رائع جداً! تم الانتهاء من فحص القراءة بنجاح!
+              </p>
+              <p className="text-sm text-emerald-800">
+                يمكن لولي الأمر أو المعلم مراجعة الكلمات والضغط على الكلمة الأخيرة إذا لزم الأمر، ثم الضغط على حفظ.
+              </p>
+            </div>
+          )}
         </article>
       )}
 
-      <AdultPanel>
-        {phase === 'ready' && (
-          <button
-            type="button"
-            className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
-            onClick={() => {
-              stopSpeech();
-              startedAt.current = performance.now();
-              setPhase('reading');
-            }}
-          >
-            <Timer className="w-5 h-5" /> ابدأ (دقيقة واحدة)
-          </button>
-        )}
-        {phase === 'reading' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between bz-small">
-              <span className="text-ink-2">المس الكلمة التي يخطئ فيها أو يتخطاها. المسها مرة ثانية لإلغاء العلامة.</span>
-              <strong className="bz-num text-ink shrink-0 ms-3">{ar(Math.max(0, Math.ceil(timeLimitSec - elapsedSec)))} ث</strong>
-            </div>
-            <div className="bz-progress"><span style={{ width: `${(elapsedSec / timeLimitSec) * 100}%` }} /></div>
-            <div className="grid sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="bz-btn bz-btn-primary"
-                onClick={() => {
-                  duration.current = performance.now() - startedAt.current;
-                  finish(words.length - 1);
-                }}
-              >
-                <Check className="w-4 h-4" /> قرأ القصة كلها
-              </button>
-              <button
-                type="button"
-                className="bz-btn bz-btn-secondary"
-                onClick={() => {
-                  duration.current = performance.now() - startedAt.current;
-                  setPhase('last');
-                }}
-              >
-                توقف الطفل قبل النهاية
-              </button>
-            </div>
+      {/* Adult Manual Controls */}
+      <div className="w-full max-w-xl flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => setShowManual((prev) => !prev)}
+          className="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1.5 py-1.5 transition cursor-pointer"
+        >
+          {showManual ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <span>{showManual ? 'إخفاء لوحة التحكم اليدوي' : 'أو تحكم وتصحيح يدوي من ولي الأمر / المعلم'}</span>
+        </button>
+
+        {showManual && (
+          <div className="w-full mt-3">
+            <AdultPanel>
+              {phase === 'ready' && (
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
+                  onClick={startReading}
+                >
+                  <Timer className="w-5 h-5" /> ابدأ القراءة يدوياً (دقيقة واحدة)
+                </button>
+              )}
+              {phase === 'reading' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bz-small">
+                    <span className="text-ink-2">المس الكلمة التي يخطئ فيها أو يتخطاها الطفل. المسها ثانية للإلغاء.</span>
+                    <strong className="bz-num text-ink shrink-0 ms-3">{ar(Math.max(0, Math.ceil(timeLimitSec - elapsedSec)))} ث</strong>
+                  </div>
+                  <div className="bz-progress"><span style={{ width: `${(elapsedSec / timeLimitSec) * 100}%` }} /></div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="bz-btn bz-btn-primary"
+                      onClick={() => {
+                        duration.current = performance.now() - startedAt.current;
+                        finish(words.length - 1);
+                      }}
+                    >
+                      <Check className="w-4 h-4" /> قرأ القصة كلها
+                    </button>
+                    <button
+                      type="button"
+                      className="bz-btn bz-btn-secondary"
+                      onClick={() => {
+                        duration.current = performance.now() - startedAt.current;
+                        setPhase('last');
+                        stopRecognition();
+                        setLast(Math.max(0, cursor - 1));
+                      }}
+                    >
+                      توقف الطفل قبل النهاية
+                    </button>
+                  </div>
+                </div>
+              )}
+              {phase === 'last' && (
+                <div className="space-y-3">
+                  <p className="bz-small text-ink-2">المس آخر كلمة قرأها الطفل إذا اختلفت عن المحددة، ثم احفظ.</p>
+                  <button
+                    type="button"
+                    className="bz-btn bz-btn-primary bz-btn-block"
+                    disabled={last === null && cursor === 0}
+                    onClick={() => finish(last !== null ? last : Math.max(0, cursor - 1))}
+                  >
+                    <Check className="w-4 h-4" /> حفظ النتيجة
+                  </button>
+                </div>
+              )}
+            </AdultPanel>
           </div>
         )}
-        {phase === 'last' && (
-          <div className="space-y-3">
-            <p className="bz-small text-ink-2">انتهى الوقت. المس آخر كلمة قرأها الطفل، ثم احفظ.</p>
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-block" disabled={last === null} onClick={() => last !== null && finish(last)}>
-              <Check className="w-4 h-4" /> حفظ
-            </button>
-          </div>
-        )}
-      </AdultPanel>
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Rapid automatized naming
+// Rapid automatized naming (RAN) with AI Voice Evaluation
 // ---------------------------------------------------------------------------
 function RanCell({ symbol, display, size }: { symbol: RanSymbol; display: 'picture' | 'letter'; size: 'sm' | 'lg' }) {
   if (display === 'picture') {
@@ -540,34 +821,249 @@ export function RanPlayer({
 }) {
   const [phase, setPhase] = useState<RanPhase>('names');
   const [errors, setErrors] = useState(0);
+  const [cursor, setCursor] = useState(0);
+  const [recognizedInNames, setRecognizedInNames] = useState<Set<string>>(new Set());
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [hasMicSupport, setHasMicSupport] = useState(true);
+  const [showManual, setShowManual] = useState(false);
+
   const startedAt = useRef(0);
-  const now = useElapsed(phase === 'running');
-  const byId = new Map(symbols.map((s) => [s.id, s]));
+  const recognitionRef = useRef<any>(null);
+  const cursorRef = useRef(0);
+  const phaseRef = useRef<RanPhase>('names');
+  const recognizedNamesRef = useRef<Set<string>>(new Set());
+  const finishedRef = useRef(false);
   const handle = useRef<PlaybackHandle>({ cancelled: false });
 
-  useEffect(() => () => {
-    handle.current.cancelled = true;
-    stopSpeech();
+  phaseRef.current = phase;
+  cursorRef.current = cursor;
+  recognizedNamesRef.current = recognizedInNames;
+
+  const now = useElapsed(phase === 'running');
+  const byId = new Map(symbols.map((s) => [s.id, s]));
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSpeech = Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+      setHasMicSupport(hasSpeech);
+    }
+    return () => {
+      handle.current.cancelled = true;
+      stopSpeech();
+      stopRecognition();
+    };
   }, []);
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  };
+
+  const startListening = () => {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      setHasMicSupport(false);
+      setShowManual(true);
+      return;
+    }
+
+    try {
+      stopRecognition();
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let text = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          text += ' ' + (event.results[i][0]?.transcript || '');
+        }
+        const clean = text.trim();
+        if (!clean) return;
+        setTranscript(clean);
+        const tokens = clean.split(/\s+/).filter(Boolean);
+
+        if (phaseRef.current === 'names') {
+          // Check recognition for the 5 symbols
+          for (const s of symbols) {
+            if (recognizedNamesRef.current.has(s.id)) continue;
+            if (tokens.some((t) => matchRanSymbol(t, s.id))) {
+              setRecognizedInNames((prev) => {
+                const next = new Set(prev);
+                next.add(s.id);
+                recognizedNamesRef.current = next;
+                return next;
+              });
+            }
+          }
+        } else if (phaseRef.current === 'running') {
+          // Track grid progression
+          for (const t of tokens) {
+            const curr = cursorRef.current;
+            if (curr >= grid.length) break;
+            const targetId = grid[curr];
+
+            if (matchRanSymbol(t, targetId)) {
+              const next = curr + 1;
+              cursorRef.current = next;
+              setCursor(next);
+              if (next >= grid.length) {
+                finishSprint();
+                return;
+              }
+            } else if (curr + 1 < grid.length && matchRanSymbol(t, grid[curr + 1])) {
+              // Skipped 1 item
+              setErrors((e) => e + 1);
+              const next = curr + 2;
+              cursorRef.current = next;
+              setCursor(next);
+              if (next >= grid.length) {
+                finishSprint();
+                return;
+              }
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        if (e.error === 'not-allowed') {
+          setIsListening(false);
+          setShowManual(true);
+        }
+      };
+
+      recognition.onend = () => {
+        if ((phaseRef.current === 'names' || phaseRef.current === 'running') && !finishedRef.current) {
+          try {
+            recognition.start();
+          } catch {
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch {
+      setIsListening(false);
+      setShowManual(true);
+    }
+  };
+
+  useEffect(() => {
+    if (phase === 'names' || phase === 'running') {
+      startListening();
+    } else {
+      stopRecognition();
+    }
+    return () => {
+      stopRecognition();
+    };
+  }, [phase]);
+
+  const finishSprint = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    stopRecognition();
+    const durationMs = Math.round(performance.now() - startedAt.current);
+    onDone(durationMs, errors);
+  };
 
   const rows: string[][] = [];
   for (let i = 0; i < grid.length; i += RAN_COLUMNS) rows.push(grid.slice(i, i + RAN_COLUMNS));
 
+  const allNamesRecognized = recognizedInNames.size === symbols.length;
+
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
+      {/* Phase 1: Name Familiarity with AI Voice Check */}
       {phase === 'names' && (
-        <>
-          <p className="font-child text-xl font-black text-ink text-center">{display === 'picture' ? 'ما اسم كل صورة؟' : 'ما اسم كل حرف؟'}</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {symbols.map((s) => (
-              <div key={s.id} className="grid place-items-center w-24 h-24 rounded-3xl border-[3px] border-line bg-card">
-                <RanCell symbol={s} display={display} size="lg" />
-              </div>
-            ))}
+        <div className="w-full max-w-2xl flex flex-col items-center gap-5">
+          <div className="text-center space-y-2">
+            <p className="font-child text-2xl font-black text-ink">
+              {display === 'picture' ? 'ما اسم كل صورة؟' : 'ما اسم كل حرف؟'}
+            </p>
+            <p className="text-sm text-ink-2 font-medium">
+              🎙️ انطق اسم كل {display === 'picture' ? 'صورة' : 'حرف'} بصوتك! الذكاء الاصطناعي يتعرف على صوتك تلقائياً ويضع علامة ✅
+            </p>
           </div>
+
+          {/* Symbols Cards with Checkmark Badge */}
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            {symbols.map((s) => {
+              const isChecked = recognizedInNames.has(s.id);
+              return (
+                <div
+                  key={s.id}
+                  className={`relative grid place-items-center w-24 h-24 sm:w-28 sm:h-28 rounded-3xl border-4 transition-all duration-300 ${
+                    isChecked
+                      ? 'border-emerald-500 bg-emerald-50 shadow-md scale-105'
+                      : 'border-line bg-card hover:border-slate-300'
+                  }`}
+                >
+                  <RanCell symbol={s} display={display} size="lg" />
+                  {isChecked && (
+                    <div className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md animate-bounce">
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* AI Listening Indicator & Live Heard */}
+          <div className="w-full max-w-md flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={isListening ? stopRecognition : startListening}
+              className={`w-full py-3 px-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow transition-all cursor-pointer ${
+                isListening
+                  ? 'bg-rose-500 text-white animate-pulse'
+                  : 'bg-teal-600 hover:bg-teal-700 text-white'
+              }`}
+            >
+              <Mic className="w-5 h-5" />
+              <span>{isListening ? '🔴 الذكاء الاصطناعي يستمع... سمِّ العناصر الآن!' : '🎙️ اضغط هنا لتسمية العناصر بالصوت'}</span>
+            </button>
+
+            {transcript && (
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-center text-xs text-slate-600">
+                <span>🗣️ سمعتُ: </span>
+                <strong className="text-slate-900" style={READING_FONT}>«{transcript}»</strong>
+              </div>
+            )}
+
+            {allNamesRecognized && (
+              <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50 border border-emerald-300 px-4 py-2 rounded-xl text-sm font-bold animate-pulse">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <span>رائع جداً! تعرّف الطفل على جميع العناصر بنجاح ✨</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action / Adult Panel */}
           <AdultPanel>
             <p className="bz-small text-ink-2 mb-3">
-              اطلب من الطفل تسمية الخمسة. إذا لم يعرف اسمًا فقله له: يمكنك سماع الأسماء بالزر. يُقبل أي اسم مألوف له.
+              اطلب من الطفل تسمية الخمسة. يُقبل أي اسم أو صوت مألوف له، أو اضغط «استمع» لسماعها بصوت المعلمة.
             </p>
             <div className="grid sm:grid-cols-2 gap-2">
               <button
@@ -583,71 +1079,127 @@ export function RanPlayer({
               >
                 <Volume2 className="w-4 h-4" /> استمع للأسماء
               </button>
-              <button type="button" className="bz-btn bz-btn-primary" onClick={() => setPhase('ready')}>
-                يعرف الأسماء، التالي
+              <button
+                type="button"
+                className={`bz-btn ${allNamesRecognized ? 'bz-btn-primary font-bold shadow-lg' : 'bz-btn-primary'}`}
+                onClick={() => setPhase('ready')}
+              >
+                {allNamesRecognized ? '🚀 جاهز، انتقل للسباق!' : 'يعرف الأسماء، التالي'}
               </button>
             </div>
           </AdultPanel>
-        </>
+        </div>
       )}
 
+      {/* Grid Display for Sprint */}
       {phase !== 'names' && (
         <div
-          className="grid gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-[1.5rem] border-4 border-line bg-card"
+          className="grid gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-[2rem] border-4 border-line bg-card shadow-sm"
           style={{ gridTemplateColumns: `repeat(${RAN_COLUMNS}, minmax(0, 1fr))`, filter: phase === 'ready' ? 'blur(10px)' : undefined }}
           aria-hidden={phase === 'ready'}
         >
           {rows.flatMap((row, r) =>
-            row.map((id, c) => (
-              <div key={`${r}-${c}`} className="grid place-items-center w-12 h-12 sm:w-16 sm:h-16">
-                <RanCell symbol={byId.get(id)!} display={display} size="sm" />
-              </div>
-            ))
+            row.map((id, c) => {
+              const idx = r * RAN_COLUMNS + c;
+              const isPast = idx < cursor;
+              const isCurrent = phase === 'running' && idx === cursor;
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  className={`grid place-items-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl transition-all duration-150 ${
+                    isCurrent
+                      ? 'ring-4 ring-amber-400 bg-amber-50 shadow-md scale-110 z-10 animate-pulse'
+                      : isPast
+                      ? 'bg-emerald-50/80 border border-emerald-300 opacity-90'
+                      : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <RanCell symbol={byId.get(id)!} display={display} size="sm" />
+                </div>
+              );
+            })
           )}
         </div>
       )}
 
+      {/* Phase 2: Ready Sprint */}
       {phase === 'ready' && (
-        <AdultPanel>
-          <p className="bz-small text-ink-2 mb-3">
-            قل للطفل: «سمِّ كل {display === 'picture' ? 'الصور' : 'الحروف'} بأسرع ما تستطيع، من اليمين إلى اليسار، سطرًا سطرًا». ثم اضغط «ابدأ» وقل «ابدأ».
-          </p>
-          <button
-            type="button"
-            className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block"
-            onClick={() => {
-              startedAt.current = performance.now();
-              setErrors(0);
-              setPhase('running');
-            }}
-          >
-            <Timer className="w-5 h-5" /> ابدأ
-          </button>
-        </AdultPanel>
-      )}
-
-      {phase === 'running' && (
-        <AdultPanel>
-          <div className="flex items-center justify-between bz-small mb-3">
-            <span className="text-ink-2">اضغط «خطأ» لكل اسم خاطئ أو متخطّى، و«انتهى» فور آخر اسم.</span>
-            <strong className="bz-num text-ink shrink-0 ms-3">{ar(Math.floor((now - startedAt.current) / 1000))} ث</strong>
-          </div>
-          <div className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => setErrors((e) => e + 1)}>
-              <X className="w-5 h-5" /> خطأ ({ar(errors)})
-            </button>
+        <div className="w-full max-w-xl">
+          <AdultPanel>
+            <p className="bz-small text-ink-2 mb-3">
+              قل للطفل: «سمِّ كل ${display === 'picture' ? 'الصور' : 'الحروف'} بأسرع ما تستطيع، من اليمين إلى اليسار، سطرًا سطرًا». ثم اضغط «ابدأ السباق».
+            </p>
             <button
               type="button"
-              className="bz-btn bz-btn-primary bz-btn-lg"
-              onClick={() => onDone(Math.round(performance.now() - startedAt.current), errors)}
+              className="bz-btn bz-btn-primary bz-btn-lg bz-btn-block font-bold"
+              onClick={() => {
+                startedAt.current = performance.now();
+                setErrors(0);
+                setCursor(0);
+                cursorRef.current = 0;
+                setPhase('running');
+              }}
             >
-              <Check className="w-5 h-5" /> انتهى
+              <Timer className="w-5 h-5" /> 🚀 ابدأ السباق (الميكروفون والذكاء الاصطناعي جاهزان)
             </button>
-            <button type="button" className="bz-btn bz-btn-ghost" onClick={() => setPhase('ready')} aria-label="ابدأ من جديد" title="ابدأ من جديد">
-              <RotateCcw className="w-4 h-4" />
-            </button>
+          </AdultPanel>
+        </div>
+      )}
+
+      {/* Phase 3: Sprint Running */}
+      {phase === 'running' && (
+        <div className="w-full max-w-xl space-y-3">
+          {/* Live Audio / Timer Bar */}
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-sm font-semibold">
+            <span className="flex items-center gap-1.5 text-rose-700 animate-pulse">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+              الذكاء الاصطناعي يتابع التسمية...
+            </span>
+            <span className="text-slate-700">
+              المكتمل: {ar(cursor)} / {ar(grid.length)}
+            </span>
+            <strong className="bz-num text-ink text-base">
+              ⏱️ {ar(Math.floor((now - startedAt.current) / 1000))} ث
+            </strong>
           </div>
-        </AdultPanel>
+
+          {transcript && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 text-center text-xs text-slate-600">
+              <span>🗣️ سمعتُ: </span>
+              <strong className="text-slate-900" style={READING_FONT}>«{transcript}»</strong>
+            </div>
+          )}
+
+          <AdultPanel>
+            <div className="flex items-center justify-between bz-small mb-3">
+              <span className="text-ink-2">الذكاء الاصطناعي يتابع التقدم تلقائياً. يمكنك الضغط على «خطأ» إذا لزم، و«انتهى» فور آخر اسم.</span>
+            </div>
+            <div className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => setErrors((e) => e + 1)}>
+                <X className="w-5 h-5" /> خطأ ({ar(errors)})
+              </button>
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary bz-btn-lg"
+                onClick={finishSprint}
+              >
+                <Check className="w-5 h-5" /> انتهى
+              </button>
+              <button
+                type="button"
+                className="bz-btn bz-btn-ghost"
+                onClick={() => {
+                  stopRecognition();
+                  setPhase('ready');
+                }}
+                aria-label="ابدأ من جديد"
+                title="ابدأ من جديد"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+          </AdultPanel>
+        </div>
       )}
     </div>
   );
