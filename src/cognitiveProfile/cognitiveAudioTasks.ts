@@ -1,0 +1,123 @@
+import {
+  PASSAGE_WORDS,
+  RAN_LETTER_GRID,
+  RAN_LETTERS,
+  RAN_OBJECT_GRID,
+  RAN_OBJECTS,
+  passageWordId,
+} from './readingTasks';
+import type { AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
+
+export type CognitiveAudioTaskId = 'oralReading' | 'ranObjects' | 'ranLetters';
+
+export interface CognitiveAudioTaskDefinition {
+  taskId: CognitiveAudioTaskId;
+  referenceWords: string[];
+  itemIds: string[];
+  symbolIds?: string[];
+}
+
+/** The server derives these targets from the checked-in task bank; the browser never supplies them. */
+export function getCognitiveAudioTaskDefinition(taskId: unknown): CognitiveAudioTaskDefinition | null {
+  if (taskId === 'oralReading') {
+    return {
+      taskId,
+      referenceWords: [...PASSAGE_WORDS],
+      itemIds: PASSAGE_WORDS.map((_, index) => passageWordId(index)),
+    };
+  }
+
+  if (taskId === 'ranObjects' || taskId === 'ranLetters') {
+    const symbols = taskId === 'ranObjects' ? RAN_OBJECTS : RAN_LETTERS;
+    const grid = taskId === 'ranObjects' ? RAN_OBJECT_GRID : RAN_LETTER_GRID;
+    const byId = new Map(symbols.map((symbol) => [symbol.id, symbol]));
+    const ordered = grid.map((id) => byId.get(id)).filter((symbol) => Boolean(symbol));
+    if (ordered.length !== grid.length || grid.length !== 40) return null;
+    return {
+      taskId,
+      referenceWords: ordered.map((symbol) => symbol!.nameAr),
+      itemIds: ordered.map((_, index) => `ran-${index + 1}`),
+      symbolIds: [...grid],
+    };
+  }
+
+  return null;
+}
+
+function normalizeArabicToken(value: string): string {
+  return value
+    .normalize('NFC')
+    .replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[.,!?،؟؛:"«»()[\\]{}]/g, '')
+    .replace(/\\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Small, explicit naming variants for the five checked-in RAN symbols.
+ * These affect only word matching; they do not alter task order or speed.
+ */
+const RAN_NAME_VARIANTS: Record<string, string[]> = {
+  sun: ['شمس', 'الشمس', 'شموسه'],
+  house: ['بيت', 'البيت', 'منزل', 'المنزل', 'دار', 'الدار', 'حوش', 'الحوش'],
+  ball: ['كره', 'الكُره', 'الكوره', 'الكوره', 'طابه', 'الطابه'],
+  door: ['باب', 'الباب', 'بوابه', 'البوابه'],
+  key: ['مفتاح', 'المفتاح', 'ساروت', 'الساروت'],
+  'م': ['ميم', 'الميم', 'م', 'ما', 'مو', 'مي', 'حرف الميم'],
+  'ل': ['لام', 'اللام', 'ل', 'لا', 'لو', 'لي', 'حرف اللام'],
+  'س': ['سين', 'السين', 'س', 'سا', 'سو', 'سي', 'حرف السين'],
+  'د': ['دال', 'الدال', 'د', 'دا', 'دو', 'دي', 'حرف الدال'],
+  'ب': ['باء', 'الباء', 'ب', 'با', 'بو', 'بي', 'حرف الباء'],
+};
+
+export function isAcceptedRanName(spoken: string | null | undefined, symbolId: string): boolean {
+  if (!spoken) return false;
+  const actual = normalizeArabicToken(spoken);
+  if (!actual) return false;
+  const allowed = RAN_NAME_VARIANTS[symbolId];
+  return Boolean(allowed?.some((candidate) => normalizeArabicToken(candidate) === actual));
+}
+
+/** Accept a curated spoken alias only when Azure's returned word alignment identifies it at this position. */
+export function applyRanNameVariants(
+  result: AzureAudioAssessmentResult,
+  task: CognitiveAudioTaskDefinition
+): AzureAudioAssessmentResult {
+  if (!task.symbolIds || task.symbolIds.length !== result.words.length) return result;
+
+  const words = result.words.map((word, index) => {
+    if (!isAcceptedRanName(word.spokenWord, task.symbolIds![index])) return word;
+    return {
+      ...word,
+      errorType: 'DialectVariant' as const,
+      notesAr: 'اسم بديل مقبول لهذا الرمز في قائمة الأسماء العربية.',
+    };
+  });
+
+  const complete = words.every((word) =>
+    word.errorType !== 'Unconfirmed' && word.errorType !== 'Insertion'
+  );
+  const correctWordsCount = words.filter((word) =>
+    word.errorType === 'None' || word.errorType === 'DialectVariant'
+  ).length;
+  const substitutionsCount = words.filter((word) =>
+    word.errorType === 'Substitution' || word.errorType === 'Mispronunciation'
+  ).length;
+  const omissionsCount = words.filter((word) => word.errorType === 'Omission').length;
+  const seconds = Math.max(1, result.wordsPerMinute === null ? 1 : 60 * task.referenceWords.length / Math.max(1, result.wordsPerMinute));
+
+  return {
+    ...result,
+    words,
+    assessmentComplete: complete,
+    correctWordsCount,
+    substitutionsCount,
+    omissionsCount,
+    wordAccuracyPercent: complete ? Math.round((correctWordsCount / words.length) * 100) : null,
+    wordsCorrectPerMinute: complete ? Math.round((correctWordsCount / Math.max(1, result.wordsPerMinute ?? 0)) * (result.wordsPerMinute ?? 0)) : null,
+    wordsPerMinute: result.wordsPerMinute,
+  };
+}
