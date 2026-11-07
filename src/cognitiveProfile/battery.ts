@@ -175,17 +175,17 @@ export interface RanSubtest extends SubtestBase {
   grid: string[];
 }
 
-/** A graded list read aloud one item at a time; unavailable until server-side audio scoring is wired. */
+/** A graded list read aloud once and evaluated from a complete, receipted server audio assessment. */
 export interface ReadListSubtest extends SubtestBase {
   kind: 'readList';
   practice: ReadItem[];
   items: ReadItem[];
   discontinueAfter: number;
-  /** Maximum silent interval used by a future server-verified audio task. */
+  /** Maximum silence allowance for the future live interaction; not used to mark a response manually. */
   hesitationSec: number;
 }
 
-/** A short passage read aloud for a fixed time; requires server-verified word alignment. */
+/** A short passage read aloud for a fixed time and evaluated by server-verified word alignment. */
 export interface PassageSubtest extends SubtestBase {
   kind: 'passage';
   titleAr: string;
@@ -730,7 +730,7 @@ export const BATTERY: Subtest[] = [
     chance: 0,
     adultScored: false,
     examinerNoteAr:
-      'هذه المهمة غير متاحة للتقييم حاليًا؛ لن تُحتسب سرعة التسمية أو أخطاؤها حتى يُربط الصوت المسجل بمحرك خادمي موثّق خاص ببنود المهمة. لا تُدخل نتائج يدوية.',
+      'يتعرف الطفل على الصور الخمس أولًا، ثم يسمّي عناصر الشبكة الأربعين من اليمين إلى اليسار بأسرع ما يستطيع، دون الإشارة إليها. يُحلل التسجيل لاحقًا عبر Azure؛ لا يضغط البالغ أزرار خطأ أو يصحح أسماء الطفل. إذا لم يكتمل التحليل، تُحفظ المهمة دون درجة.',
     introAudio:
       'سَتَرَى صُوَرًا كَثِيرَةً. قُلْ اسْمَ كُلِّ صُورَةٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنْ أَوَّلِ السَّطْرِ إِلَى آخِرِهِ.',
     symbols: RAN_OBJECTS,
@@ -750,7 +750,7 @@ export const BATTERY: Subtest[] = [
     minAgeMonths: READING_MIN_AGE_MONTHS,
     adultScored: false,
     examinerNoteAr:
-      'هذه المهمة غير متاحة للتقييم حاليًا؛ لن تُحتسب سرعة التسمية أو أخطاؤها حتى يُربط الصوت المسجل بمحرك خادمي موثّق خاص ببنود المهمة. لا تُدخل نتائج يدوية.',
+      'يتعرف الطفل على الحروف الخمسة أولًا، ثم يسمّي عناصر الشبكة الأربعين من اليمين إلى اليسار بأسرع ما يستطيع. يُحلل التسجيل لاحقًا عبر Azure؛ لا يحدد البالغ الحروف الخاطئة ولا يعدّها. إذا لم يكتمل التحليل، تُحفظ المهمة دون درجة.',
     introAudio: 'وَالآنَ حُرُوفٌ. قُلْ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ.',
     symbols: RAN_LETTERS,
     grid: RAN_LETTER_GRID,
@@ -770,7 +770,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 5,
     hesitationSec: 5,
     examinerNoteAr:
-      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل صحة الكلمة أو خطؤها أو زمن التوقف دون تسجيل صوتي وتحليل خادمي موثّق. لا تستخدم تصحيحًا يدويًا.',
+      'يسجل الطفل قراءته للكلمات الحقيقية بالترتيب. يرسل التسجيل إلى Azure لمقارنته بالكلمات المرجعية كلمةً بكلمة؛ لا يحدد ولي الأمر أو المعلم الصحيح والخطأ. إذا لم يحسم التحليل جميع الكلمات، تُحفظ القائمة دون درجة.',
     introAudio: 'سَتَظْهَرُ كَلِمَاتٌ. اقْرَأْ كُلَّ كَلِمَةٍ بِصَوْتٍ عَالٍ.',
     practice: WORD_PRACTICE,
     items: WORD_ITEMS,
@@ -790,7 +790,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 5,
     hesitationSec: 5,
     examinerNoteAr:
-      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل صحة الكلمة المصنوعة أو خطؤها دون تسجيل صوتي وتحليل خادمي موثّق. لا تستخدم تصحيحًا يدويًا.',
+      'يسجل الطفل قراءة الكلمات المصنوعة كما تظهر، دون أن يحوّلها البالغ إلى كلمات مألوفة أو يصححها. يقارن Azure التسجيل بالتسلسل المرجعي؛ وإذا بقيت كلمة غير محسومة، تُحفظ القائمة كاملة دون درجة.',
     introAudio:
       'هَذِهِ كَلِمَاتٌ مِنْ كَوْكَبٍ آخَرَ، لَيْسَ لَهَا مَعْنًى. اقْرَأْهَا كَمَا هِيَ مَكْتُوبَةٌ بِالضَّبْطِ.',
     practice: NONWORD_PRACTICE,
@@ -809,7 +809,7 @@ export const BATTERY: Subtest[] = [
     minAgeMonths: READING_MIN_AGE_MONTHS,
     adultScored: false,
     examinerNoteAr:
-      'هذه المهمة غير متاحة للتقييم الصوتي حاليًا. لن تُسجّل دقة القراءة أو طلاقتها دون تقييم خادمي موثّق للصوت والكلمات. لا تضع علامات يدويًا على كلمات الطفل.',
+      'يسجل الطفل قراءته للقصة كاملة، ثم يحلل Azure التسجيل مقابل النص المرجعي. لا يعلّم ولي الأمر أو المعلم الكلمات ولا يصحح القراءة. إذا تعذر حسم جميع الكلمات، تُحفظ المهمة دون درجة.',
     introAudio: 'اقْرَأْ هَذِهِ القِصَّةَ بِصَوْتٍ عَالٍ، كَمَا تَقْرَأُ فِي الصَّفِّ.',
     titleAr: PASSAGE_TITLE,
     words: PASSAGE_WORDS,
@@ -873,7 +873,7 @@ export function scoredItemIds(subtest: Subtest): string[] {
     case 'pal':
       return subtest.blocks.flatMap((b) => b.order.map((c) => `${b.id}-${c}`));
     case 'ran':
-      return [];
+      return Array.from({ length: RAN_GRID_SIZE }, (_, index) => `ran-${index + 1}`);
     case 'passage':
       return subtest.words.map((_, i) => passageWordId(i));
   }
