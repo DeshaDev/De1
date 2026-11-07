@@ -1,14 +1,17 @@
 import {
   PASSAGE_WORDS,
+  WORD_ITEMS,
+  NONWORD_ITEMS,
   RAN_LETTER_GRID,
   RAN_LETTERS,
   RAN_OBJECT_GRID,
   RAN_OBJECTS,
   passageWordId,
 } from './readingTasks';
+import { SUBTESTS_BY_ID } from './battery';
 import type { AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
 
-export type CognitiveAudioTaskId = 'oralReading' | 'ranObjects' | 'ranLetters';
+export type CognitiveAudioTaskId = 'oralReading' | 'ranObjects' | 'ranLetters' | 'wordReading' | 'nonwordReading';
 
 export interface CognitiveAudioTaskDefinition {
   taskId: CognitiveAudioTaskId;
@@ -24,6 +27,21 @@ export function getCognitiveAudioTaskDefinition(taskId: unknown): CognitiveAudio
       taskId,
       referenceWords: [...PASSAGE_WORDS],
       itemIds: PASSAGE_WORDS.map((_, index) => passageWordId(index)),
+    };
+  }
+
+  if (taskId === 'wordReading' || taskId === 'nonwordReading') {
+    const subtest = SUBTESTS_BY_ID[taskId];
+    if (subtest.kind !== 'readList') return null;
+    const expectedItems = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+    if (
+      subtest.items.length !== expectedItems.length ||
+      subtest.items.some((item, index) => item.id !== expectedItems[index].id || item.text !== expectedItems[index].text)
+    ) return null;
+    return {
+      taskId,
+      referenceWords: subtest.items.map((item) => item.text),
+      itemIds: subtest.items.map((item) => item.id),
     };
   }
 
