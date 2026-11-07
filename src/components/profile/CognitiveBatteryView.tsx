@@ -705,16 +705,15 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
         onRecordUpdated?.({
           ...activeStudent,
+          guardianConsentGiven: s.guardianConsentGiven === true,
+          guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+          guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
+          guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
           cognitiveBattery: {
             ageMonths: s.ageMonths,
             examinerName: s.examinerName,
             startedAt: s.startedAt,
             dialect: s.dialect,
-            guardianConsentGiven: s.guardianConsentGiven === true,
-            guardianConsentRecordedAt: s.guardianConsentRecordedAt,
-            guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
-            guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
-            speechLocale: s.speechLocale,
             updatedAt: new Date().toISOString(),
             results: s.results,
             summary: summarizeBattery(s.results, s.ageMonths),
