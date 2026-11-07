@@ -7,6 +7,22 @@
  *  - no runtime errors.
  */
 import { test, expect, type Page } from '@playwright/test';
+async function installSchoolTestSession(page: Page) {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('baseera_session_v1', JSON.stringify({
+      token: 'playwright-test-session',
+      role: 'school_admin',
+      accountName: 'مسؤول الاختبار',
+      tenantId: 'school_a',
+      tenantDisplayNameAr: 'مدرسة الاختبار',
+      sessionId: 'a'.repeat(32),
+      scopes: ['students:read', 'students:write', 'ai:analyze'],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    }));
+  });
+}
+
 
 /** Latin tokens that are allowed: brand/vendor/standard names and contact addresses. */
 const ALLOWED_LATIN = new Set([
@@ -50,6 +66,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     const findings: Finding[] = [];
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
+    await installSchoolTestSession(page);
     await page.addInitScript(() => window.localStorage.clear());
 
     await page.goto('/');
