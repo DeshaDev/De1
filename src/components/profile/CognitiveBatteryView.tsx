@@ -50,6 +50,7 @@ import {
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
+import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
@@ -73,10 +74,12 @@ type Stage = 'intro' | 'practice' | 'transition' | 'test' | 'done';
 
 function SubtestRunner({
   subtest,
+  audioSession,
   onFinish,
   onExit,
 }: {
   subtest: Subtest;
+  audioSession: CognitiveAudioSessionContext;
   onFinish: (result: SubtestResult) => void;
   onExit: () => void;
 }) {
@@ -278,20 +281,35 @@ function SubtestRunner({
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
         )}
         {stage === 'test' && subtest.kind === 'readList' && (
-          <ReadAloudPlayer
-            key={`t-${index}`}
-            item={subtest.items[index]}
-            practice={false}
-            hesitationSec={subtest.hesitationSec}
-            onDone={(r) => recordAndAdvance([r])}
-          />
+          <div className="w-full max-w-xl text-center space-y-4" dir="rtl">
+            <div className="bz-card-quiet rounded-2xl p-5 space-y-2">
+              <span className="text-4xl" aria-hidden="true">🎙️</span>
+              <h3 className="font-child text-xl font-bold text-ink">التقييم الصوتي لهذه القائمة غير متاح بعد</h3>
+              <p className="bz-small text-ink-2">
+                لن نطلب من ولي الأمر أو المعلم تحديد صحة الكلمات أو عدّ الأخطاء. يمكنك متابعة الفحص دون درجة لهذه المهمة.
+              </p>
+            </div>
+            <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => recordAndAdvance([])}>
+              متابعة دون احتساب درجة
+            </button>
+          </div>
         )}
         {stage === 'test' && subtest.kind === 'ran' && (
           <RanPlayer
             symbols={subtest.symbols}
             grid={subtest.grid}
             display={subtest.display}
-            onDone={(durationMs, errorCount) => finish(false, { durationMs, errorCount })}
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
+              responses.current = rs;
+              finish(false, {
+                durationMs,
+                errorCount: audioAssessment
+                  ? audioAssessment.substitutionsCount + audioAssessment.omissionsCount + audioAssessment.insertionsCount
+                  : undefined,
+                ...(audioAssessment ? { audioAssessment, audioAssessmentReceipt: audioAssessment.assessmentReceipt } : {}),
+              });
+            }}
           />
         )}
         {stage === 'test' && subtest.kind === 'passage' && (
@@ -299,9 +317,13 @@ function SubtestRunner({
             title={subtest.titleAr}
             words={subtest.words}
             timeLimitSec={subtest.timeLimitSec}
-            onDone={(rs, durationMs) => {
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
               responses.current = rs;
-              finish(false, { durationMs });
+              finish(false, {
+                durationMs,
+                ...(audioAssessment ? { audioAssessment, audioAssessmentReceipt: audioAssessment.assessmentReceipt } : {}),
+              });
             }}
           />
         )}
