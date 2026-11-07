@@ -86,6 +86,7 @@ function SubtestRunner({
   const [stage, setStage] = useState<Stage>('intro');
   const [index, setIndex] = useState(0);
   const [showNote, setShowNote] = useState(false);
+  const [voiceUnscored, setVoiceUnscored] = useState(false);
   const responses = useRef<ItemResponse[]>([]);
 
   useEffect(() => {
@@ -107,6 +108,10 @@ function SubtestRunner({
 
   const finish = (discontinued: boolean, extra: Partial<SubtestResult> = {}) => {
     stopSpeech();
+    const isSpeechTask = subtest.kind === 'readList' || subtest.kind === 'passage' || subtest.kind === 'ran';
+    const hasVerifiedAudio = Boolean(extra.audioAssessment && extra.audioAssessmentReceipt);
+    const skippedVoiceScore = isSpeechTask && !hasVerifiedAudio;
+    setVoiceUnscored(skippedVoiceScore);
     onFinish({
       subtestId: subtest.id,
       responses: responses.current,
@@ -115,7 +120,7 @@ function SubtestRunner({
       ...extra,
     });
     setStage('done');
-    speak(PHRASES.gameOver);
+    if (!skippedVoiceScore) speak(PHRASES.gameOver);
   };
 
   const startTest = () => {
@@ -347,8 +352,22 @@ function SubtestRunner({
 
         {stage === 'done' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
-            <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+            {voiceUnscored ? (
+              <>
+                <span className="grid place-items-center w-24 h-24 rounded-full bg-amber-50 text-amber-700" aria-hidden="true">
+                  <AlertTriangle className="w-12 h-12" />
+                </span>
+                <p className="font-child text-2xl font-bold text-ink">تم إنهاء المهمة دون درجة صوتية</p>
+                <p className="bz-small text-ink-2 max-w-lg">
+                  لم تُحتسب دقة القراءة أو الأخطاء أو السرعة؛ لأن التسجيل لم يحصل على تقييم صوتي خادمي مكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
+                <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+              </>
+            )}
             <button
               type="button"
               onClick={onExit}
