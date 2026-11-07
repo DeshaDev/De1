@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
 import type { StudentRecord } from '../data/seedData';
+import { prepareStudentRecordForGenericSupabaseSync } from './studentRecordSyncSafety';
 import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
 import { summarizeProbes } from '../cognitiveProfile/progressProbe';
 
@@ -147,18 +148,41 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
   if (!isSupabaseConfigured() || !userId) return false;
 
   try {
+    // Generic profile sync is not allowed to write assessment evidence. First read
+    // the same user's stored row, then preserve its server-owned assessment fields.
+    const { data: existing, error: readError } = await supabase
+      .from('students')
+      .select('raw_data,guardian_consent,guardian_consent_recorded_at')
+      .eq('id', student.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (readError) {
+      console.warn('Failed to read existing student before safe sync:', readError.message);
+      return false;
+    }
+
+    const safeStudent = prepareStudentRecordForGenericSupabaseSync(
+      student,
+      existing as {
+        raw_data?: Partial<StudentRecord> | null;
+        guardian_consent?: boolean | null;
+        guardian_consent_recorded_at?: string | null;
+      } | null
+    );
+
     const { error } = await supabase.from('students').upsert({
-      id: student.id,
+      id: safeStudent.id,
       user_id: userId,
-      name: student.name,
-      grade: Number.isFinite(student.gradeLevel) ? String(student.gradeLevel) : 'غير محدد',
-      age: Number.isFinite(student.ageYears) ? student.ageYears : null,
-      dialect: student.dialect || student.dialectCode || 'faseeh',
-      guardian_consent: student.guardianConsentGiven === true,
-      guardian_consent_source: student.guardianConsentSource || null,
-      guardian_consent_recorded_at: student.guardianConsentRecordedAt || null,
-      notes: student.parentNotes || null,
-      raw_data: student,
+      name: safeStudent.name,
+      grade: Number.isFinite(safeStudent.gradeLevel) ? String(safeStudent.gradeLevel) : 'غير محدد',
+      age: Number.isFinite(safeStudent.ageYears) ? safeStudent.ageYears : null,
+      dialect: safeStudent.dialect || safeStudent.dialectCode || 'faseeh',
+      guardian_consent: safeStudent.guardianConsentGiven === true,
+      guardian_consent_source: safeStudent.guardianConsentSource || null,
+      guardian_consent_recorded_at: safeStudent.guardianConsentRecordedAt || null,
+      notes: safeStudent.parentNotes || null,
+      raw_data: safeStudent,
       updated_at: new Date().toISOString(),
     });
 
