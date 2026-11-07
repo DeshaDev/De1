@@ -12,7 +12,7 @@ export interface CognitiveAudioSessionContext {
   speechLocale?: 'ar-EG' | 'ar-SA';
 }
 
-export type CognitiveAudioTaskId = Extract<SubtestId, 'oralReading' | 'ranObjects' | 'ranLetters'>;
+export type CognitiveAudioTaskId = Extract<SubtestId, 'oralReading' | 'ranObjects' | 'ranLetters' | 'wordReading' | 'nonwordReading'>;
 
 export async function assessCognitiveAudio(args: {
   taskId: CognitiveAudioTaskId;
