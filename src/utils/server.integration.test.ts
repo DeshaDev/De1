@@ -365,6 +365,34 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(((await noAzure.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
   });
 
+  it('does not allow school or anonymous sessions to use family battery persistence', async () => {
+    const url = `${baseUrl}/api/parent/students/stu-family-only/cognitive-battery`;
+    const body = {
+      ageMonths: 84,
+      examinerName: '',
+      startedAt: new Date().toISOString(),
+      guardianAudioConsentGiven: false,
+      results: {},
+    };
+    const anonymous = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assert.equal(anonymous.status, 401);
+
+    const school = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const schoolAttempt = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    assert.equal(schoolAttempt.status, 403);
+  });
+
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
     const schoolAAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
     const schoolBAdmin = await loginWithCode(SCHOOL_B_ADMIN_CODE);
