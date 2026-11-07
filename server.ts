@@ -3374,7 +3374,7 @@ async function startServer() {
       return;
     }
 
-    if (assessmentSession.role === 'parent') {
+    if (String(assessmentSession.role) === 'parent') {
       const parentUserId = assessmentSession.parentUserId;
       const authorization = String(req.headers.authorization || '');
       if (!parentUserId || !authorization.startsWith('Bearer ')) {
