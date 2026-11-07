@@ -17,6 +17,8 @@ const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368
 const TEST_ENV = {
   ...process.env,
   GEMINI_API_KEY: '', // Keep integration tests deterministic and prevent external model calls.
+  AZURE_SPEECH_KEY: '', // Audio endpoint fails closed without external credentials.
+  AZURE_SPEECH_REGION: '',
   NODE_ENV: 'production',
   TRUST_PROXY_HOPS: '0',
   BASEERA_STORE_ENCRYPTION_KEY:
@@ -236,6 +238,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       '/api/ai/generate-iep',
       '/api/ai/tts',
       '/api/ai/pronunciation-assessment',
+      '/api/ai/cognitive-audio-assessment',
     ];
 
     for (const route of cloudRoutes) {
@@ -260,6 +263,58 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const retiredPayload = (await retiredIep.json()) as { code: string; baselineSummary?: string };
     assert.equal(retiredPayload.code, 'IEP_GENERATOR_RETIRED');
     assert.equal(retiredPayload.baselineSummary, undefined);
+  });
+
+  it('requires explicit audio consent and fails closed when Azure credentials are absent for cognitive audio', async () => {
+    const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const url = `${baseUrl}/api/ai/cognitive-audio-assessment`;
+    const authorization = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.token}`,
+    };
+    const timestamp = new Date().toISOString();
+    const common = {
+      taskId: 'oralReading',
+      studentId: 'student-audio-consent-test',
+      audioWavBase64: 'A'.repeat(120),
+      durationSeconds: 20,
+      language: 'ar-SA',
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: timestamp,
+    };
+
+    const missingAudioConsent = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({ ...common, guardianAudioConsentGiven: false }),
+    });
+    assert.equal(missingAudioConsent.status, 403);
+    assert.equal(((await missingAudioConsent.json()) as { code: string }).code, 'AUDIO_CONSENT_REQUIRED');
+
+    const invalidTask = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        taskId: 'browserSuppliedText',
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(invalidTask.status, 400);
+    assert.equal(((await invalidTask.json()) as { code: string }).code, 'UNSUPPORTED_COGNITIVE_AUDIO_TASK');
+
+    const noAzure = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(noAzure.status, 503);
+    assert.equal(((await noAzure.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
