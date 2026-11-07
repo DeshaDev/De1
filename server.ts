@@ -2176,6 +2176,7 @@ async function startServer() {
         }
         const stored = typeof receipt === 'string' ? cognitiveAudioAssessmentReceipts.get(receipt) : undefined;
         if (
+          typeof receipt !== 'string' ||
           !stored ||
           stored.expiresAt <= Date.now() ||
           stored.sessionId !== found.session.sessionId ||
@@ -2535,6 +2536,7 @@ async function startServer() {
 
       const stored = typeof receipt === 'string' ? cognitiveAudioAssessmentReceipts.get(receipt) : undefined;
       if (
+        typeof receipt !== 'string' ||
         !stored ||
         stored.expiresAt <= Date.now() ||
         cognitiveAudioAssessmentReceiptsInFlight.has(receipt) ||
