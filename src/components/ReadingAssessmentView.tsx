@@ -642,7 +642,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           errorMessage = 'التقييم الصوتي الآلي المعتمد متاح حالياً للمصرية والسعودية/الخليجية والفصحى. اختر إحداها أو تابع دون درجة نطق.';
         } else {
           reason = 'service_unavailable';
-          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك المتابعة ومراجعة الكلمات يدوياً دون توقف.';
+          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك متابعة أسئلة الفهم دون درجة صوتية؛ ولا تُصحَّح الكلمات يدويًا.';
         }
 
         setAudioFailureReason(reason);
@@ -804,9 +804,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     const answersArray: number[] = questions.map((_, idx) => selectedAnswers[idx] as number);
 
     const cleanTranscript = (spokenTranscriptRef.current || spokenTranscript || '').trim();
-    const hasAudioCaptured =
+    const verifiedAudioAssessment =
       readingMode === 'oral_audio' &&
-      cleanTranscript.length > 0;
+      azureAssessmentComplete &&
+      Boolean(aiAssessmentReceipt);
 
     const audioConsentGranted = readingMode === 'oral_audio' && audioConsentChecked;
     const effectiveAudioConsentRecordedAt = audioConsentGranted
@@ -839,9 +840,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       aiAssessmentVerified: readingMode === 'oral_audio' && azureAssessmentComplete && Boolean(aiAssessmentReceipt),
       aiAssessmentSource: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? 'azure_pronunciation_assessment' : undefined,
       aiAssessmentReceipt: readingMode === 'oral_audio' && azureAssessmentComplete && aiAssessmentReceipt ? aiAssessmentReceipt : undefined,
-      verifiedWordsAlignment: readingMode === 'oral_audio' ? verifiedWords : undefined,
-      spokenTranscript: readingMode === 'oral_audio' ? cleanTranscript : undefined,
-      speechRecognitionUsed: hasAudioCaptured,
+      verifiedWordsAlignment: verifiedAudioAssessment ? verifiedWords : undefined,
+      spokenTranscript: verifiedAudioAssessment ? cleanTranscript : undefined,
+      speechRecognitionUsed: verifiedAudioAssessment,
       audioRecordingStarted,
       sessionStatus: 'completed',
       sessionCompletedAt: nowIso,
@@ -942,7 +943,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   جاهزون للقراءة
                 </h1>
                 <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
-                  يقرأ الطفل بصوته الطبيعي. في القراءة الجهرية يطابق النظام التسجيل مع النص ويقترح كلمات للمراجعة، وقد يخطئ أو يتأثر باللهجة؛ فلا تُعتمد النتيجة الآلية وحدها حكمًا على قدرة الطفل.
+                  يقرأ الطفل بصوته الطبيعي. في القراءة الجهرية يحلل النظام التسجيل مقابل النص ويعرض الكلمات التي حسمها أو لم يحسمها؛ لا تُستكمل النتائج بتصحيح بشري، ولا تُعدّ مؤشرًا تشخيصيًا.
                 </p>
               </div>
 
@@ -969,7 +970,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                   />
                   <span className="font-bold leading-relaxed">
-                    يوافق ولي الأمر أو المعلم على إجراء القراءة وحفظ نتائجها.
+                    يوافق ولي الأمر أو الوصي القانوني على إجراء القراءة وحفظ نتائجها.
                   </span>
                 </label>
 
@@ -1243,8 +1244,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       )}
 
       {/* =====================================================================
-          STAGE 2.5: TEACHER & SPECIALIST HUMAN-IN-THE-LOOP VERIFICATION
-          (التعرف الآلي على الكلام ومراجعة المعلم)
+          STAGE 2.5: SERVER-VERIFIED AUTOMATED SPEECH ASSESSMENT
+          (التقييم الصوتي الآلي الموثّق على الخادم)
           ===================================================================== */}
       {stage === 'verification' && (
         <div className="max-w-4xl w-full mx-auto p-4 md:p-8 pt-8">
@@ -1370,7 +1371,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           إذن الميكروفون مرفوض في المتصفح
                         </strong>
                         <p>
-                          لم تمنح المتصفح صلاحية استخدام الميكروفون. للتقييم الصوتي، اضغط على أيقونة القفل أو الميكروفون في شريط العنوان أعلى المتصفح، اختر «سماح/Allow»، ثم انقر «إعادة المحاولة». يمكنك الاستمرار حالياً وتأكيد الكلمات المقروءة يدوياً.
+                          لم تمنح المتصفح صلاحية استخدام الميكروفون. للتقييم الصوتي، اضغط على أيقونة القفل أو الميكروفون في شريط العنوان أعلى المتصفح، اختر «سماح/Allow»، ثم انقر «إعادة المحاولة». ويمكنك متابعة أسئلة الفهم دون درجة صوتية.
                         </p>
                       </>
                     )}
@@ -1390,7 +1391,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           محرك التحليل الصوتي السحابي غير متاح حالياً
                         </strong>
                         <p>
-                          تعذر الاتصال بخدمة التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. لا تقلق؛ يمكنك مواصلة الجلسة، مراجعة الكلمات يدوياً، واستكمال أسئلة الفهم بصورة طبيعية.
+                          تعذر الاتصال بخدمة التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك إعادة المحاولة أو متابعة أسئلة الفهم دون درجة صوتية. لا تُستخدم معاينة المتصفح ولا التصحيح اليدوي بدلًا من المحرك.
                         </p>
                       </>
                     )}
@@ -1400,7 +1401,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           تنبيه اللهجة المختارة
                         </strong>
                         <p>
-                          محرك التحليل الصوتي الآلي يدعم حالياً اللهجة المصرية والسعودية/الخليجية والفصحى المعيارية. يمكن للمعلّم أو ولي الأمر تأكيد الكلمات المقروءة يدوياً للمتابعة.
+                          محرك التحليل الصوتي الآلي يدعم حالياً اللهجة المصرية والسعودية/الخليجية والفصحى المعيارية. اختر لهجة مدعومة أو تابع دون درجة صوتية؛ لا يوجد تأكيد يدوي للكلمات.
                         </p>
                       </>
                     )}
@@ -1410,7 +1411,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           تنبيه التسجيل الصوتي
                         </strong>
                         <p>
-                          لم يتوفر التقاط صوتي في هذه الجلسة. يمكنك إعادة القراءة بالميكروفون أو فحص الكلمات وتأكيدها للمتابعة.
+                          لم يتوفر التقاط صوتي في هذه الجلسة. يمكنك إعادة القراءة بالميكروفون أو متابعة أسئلة الفهم دون درجة صوتية.
                         </p>
                       </>
                     )}
@@ -1425,10 +1426,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Volume2 className="w-4 h-4 text-teal-600" />
-                    <span>ما التقطه التعرف الآلي على الكلام أثناء قراءتك:</span>
+                    <span>معاينة التفريغ النصي (للعرض فقط، ولا تدخل في الدرجة):</span>
                   </span>
                   <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                    {azureAssessmentMode || 'التفريغ الصوتي الفعلي'}
+                    {azureAssessmentComplete && aiAssessmentReceipt && azureAssessmentMode ? azureAssessmentMode : 'معاينة المتصفح فقط — غير معتمدة للتقييم'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-800 leading-relaxed font-sans bg-white p-3.5 rounded-xl border border-slate-200 font-medium">
@@ -1524,7 +1525,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </strong>
                 <p className="text-xs text-slate-700 leading-relaxed">
                   {azureAssessmentMode || 'يقيّم الخادم التسجيل الصوتي الحقيقي، ولا يحوّل تفريغ المتصفح إلى درجة نطق.'}
-                  {' '}النتائج وصفية وليست تشخيصًا. قد تحتاج الكلمات غير المحسومة إلى مراجعة معلّم أو أخصائي قبل اتخاذ قرار تعليمي مهم.
+                  {' '}النتائج وصفية وليست تشخيصًا. الكلمات غير المحسومة لا تُصنّف ولا تدخل في الدرجة؛ أعد التسجيل للحصول على نتيجة مكتملة بدلًا من استكمالها بتصحيح بشري.
                 </p>
               </div>
             </div>
