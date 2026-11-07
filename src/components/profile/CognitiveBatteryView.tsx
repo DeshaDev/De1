@@ -49,7 +49,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
-import { SpellingPlayer } from './ReadingPlayers';
+import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
@@ -94,11 +94,12 @@ function SubtestRunner({
     subtest.kind === 'choice' ||
     subtest.kind === 'span' ||
     subtest.kind === 'association' ||
+    subtest.kind === 'readList' ||
     subtest.kind === 'spelling'
       ? subtest.practice.length
       : 0;
   /** Rapid naming, the passage and paired learning run their own short lead-in instead of practice items. */
-  const noPractice = subtest.kind === 'pal' || subtest.kind === 'ran' || subtest.kind === 'passage' || subtest.kind === 'readList';
+  const noPractice = subtest.kind === 'pal' || subtest.kind === 'ran' || subtest.kind === 'passage';
   const total = scoredItemCount(subtest);
 
   const finish = (discontinued: boolean, extra: Partial<SubtestResult> = {}) => {
@@ -236,6 +237,9 @@ function SubtestRunner({
         {stage === 'practice' && subtest.kind === 'association' && (
           <AssociationPlayer key={`p-${index}`} block={subtest.practice[index]} showFeedback onDone={nextPractice} />
         )}
+        {stage === 'practice' && subtest.kind === 'readList' && (
+          <ReadAloudPlayer key={`p-${index}`} item={subtest.practice[index]} practice hesitationSec={subtest.hesitationSec} onDone={nextPractice} />
+        )}
         {stage === 'practice' && subtest.kind === 'spelling' && (
           <SpellingPlayer key={`p-${index}`} item={subtest.practice[index]} practice onDone={nextPractice} />
         )}
@@ -273,21 +277,33 @@ function SubtestRunner({
         {stage === 'test' && subtest.kind === 'association' && (
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
         )}
-        {stage === 'test' && (subtest.kind === 'readList' || subtest.kind === 'ran' || subtest.kind === 'passage') && (
-          <section className="w-full max-w-xl rounded-2xl border border-line bg-soft p-6 text-center space-y-4" role="status" dir="rtl">
-            <span className="text-4xl" aria-hidden="true">🎧</span>
-            <h3 className="font-child text-xl font-bold text-ink">التقييم الصوتي الآلي غير متاح لهذه المهمة بعد</h3>
-            <p className="bz-small text-ink-2 leading-7">
-              لن نطلب من شخص آخر تصحيح قراءة الطفل أو عدّ أخطائه. لا تُحتسب هذه المهمة درجةً إلى أن يكتمل ربط التسجيل بالتقييم الآلي والتحقق من النتيجة على الخادم.
-            </p>
-            <button
-              type="button"
-              className="bz-btn bz-btn-primary bz-btn-lg"
-              onClick={() => finish(false)}
-            >
-              حفظ المهمة دون درجة
-            </button>
-          </section>
+        {stage === 'test' && subtest.kind === 'readList' && (
+          <ReadAloudPlayer
+            key={`t-${index}`}
+            item={subtest.items[index]}
+            practice={false}
+            hesitationSec={subtest.hesitationSec}
+            onDone={(r) => recordAndAdvance([r])}
+          />
+        )}
+        {stage === 'test' && subtest.kind === 'ran' && (
+          <RanPlayer
+            symbols={subtest.symbols}
+            grid={subtest.grid}
+            display={subtest.display}
+            onDone={(durationMs, errorCount) => finish(false, { durationMs, errorCount })}
+          />
+        )}
+        {stage === 'test' && subtest.kind === 'passage' && (
+          <PassagePlayer
+            title={subtest.titleAr}
+            words={subtest.words}
+            timeLimitSec={subtest.timeLimitSec}
+            onDone={(rs, durationMs) => {
+              responses.current = rs;
+              finish(false, { durationMs });
+            }}
+          />
         )}
         {stage === 'test' && subtest.kind === 'spelling' && (
           <SpellingPlayer key={`t-${index}`} item={subtest.items[index]} practice={false} onDone={(r) => recordAndAdvance([r])} />

@@ -10,6 +10,20 @@
 
 import { authenticatedFetch } from './apiAuth';
 import { formatArabicTextWithPhonemes, getArabicPhonemeIpa } from './arabicPhonemeBank';
+import { audioKey } from '../cognitiveProfile/audioCatalog';
+
+let manifestCache: { clips: Record<string, { file: string }> } | null = null;
+async function getAudioManifest(): Promise<{ clips: Record<string, { file: string }> } | null> {
+  if (manifestCache) return manifestCache;
+  try {
+    const res = await fetch('/audio/v1/manifest.json', { cache: 'force-cache' });
+    if (res.ok) {
+      manifestCache = await res.json();
+      return manifestCache;
+    }
+  } catch {}
+  return null;
+}
 
 const audioMemoryCache = new Map<string, string>();
 const MAX_AUDIO_CACHE_ENTRIES = 50;
@@ -163,6 +177,22 @@ export async function playNaturalArabicAudio(
       console.warn('[NaturalSpeech] Cached audio play failed, refreshing:', e);
     }
   }
+
+  // 1.5. Check pre-recorded studio-quality Azure Neural clips (public/audio/v1/)
+  try {
+    const manifest = await getAudioManifest();
+    const clip = manifest?.clips?.[audioKey(preparedText)];
+    if (clip?.file) {
+      const audioUrl = `/audio/v1/${clip.file}`;
+      cacheAudio(cacheKey, audioUrl);
+      const audio = new Audio(audioUrl);
+      currentActiveAudio = audio;
+      if (options.onEnd) audio.onended = () => options.onEnd?.();
+      let playSucceeded = false;
+      await audio.play().then(() => { playSucceeded = true; }).catch(() => {});
+      if (playSucceeded) return;
+    }
+  } catch {}
 
   // 2. Fetch studio-quality neural Arabic audio from Baseera server (if backend is running)
   try {
