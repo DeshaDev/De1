@@ -1,5 +1,22 @@
 import { expect, test } from '@playwright/test';
 
+async function installSchoolTestSession(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('baseera_session_v1', JSON.stringify({
+      token: 'playwright-test-session',
+      role: 'school_admin',
+      accountName: 'مسؤول الاختبار',
+      tenantId: 'school_a',
+      tenantDisplayNameAr: 'مدرسة الاختبار',
+      sessionId: 'a'.repeat(32),
+      scopes: ['students:read', 'students:write', 'ai:analyze'],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    }));
+  });
+}
+
+
 const toAr = (n: number) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
 test('homepage renders in Arabic RTL', async ({ page }) => {
@@ -10,6 +27,7 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
 });
 
 test('reading view opens from primary navigation', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.goto('/');
   await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
   await expect(page.getByRole('heading', { name: 'قراءة نص وفهمه', exact: true })).toBeVisible();
@@ -17,6 +35,7 @@ test('reading view opens from primary navigation', async ({ page }) => {
 });
 
 test('screening, accessible-reader, and training views open from primary navigation', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.goto('/');
 
   // 1. Reading screening / diagnostic hub
@@ -105,7 +124,7 @@ test('parent registration limits the screening age range and requires explicit g
   });
 
   await page.goto('/parent');
-  await expect(page.getByRole('heading', { name: 'تسجيل طفل للتقييم الفوري والبدء المباشر' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'تسجيل طفل وإنشاء حساب عائلي سحابي' })).toBeVisible();
 
   await expect(page.getByRole('button', { name: /٤ سنوات/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /٨ سنوات/ })).toBeVisible();
@@ -119,7 +138,7 @@ test('parent registration limits the screening age range and requires explicit g
   await page.locator('input[type="password"]').first().fill('safe-test-password');
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
   await expect(guardianConsent).not.toBeChecked();
-  await page.getByRole('button', { name: /حفظ وبدء فحص القراءة الآن/ }).click();
+  await page.getByRole('button', { name: /حفظ الطفل في السحابة وبدء الفحص/ }).click();
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
 
   await page.goto('/');
@@ -134,6 +153,7 @@ test('parent registration limits the screening age range and requires explicit g
 });
 
 test('cognitive battery: setup, game map with the reading sitting first at six, and training program entry', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
@@ -158,6 +178,7 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
 });
 
 test('speech reading and naming tasks never accept manual correction or emit unverified scores', async ({ page }) => {
+  await installSchoolTestSession(page);
   test.setTimeout(90_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -206,6 +227,7 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   expect(pageErrors).toEqual([]);
 });
 test('dictation: letter tiles, delete, and a scored answer', async ({ page }) => {
+  await installSchoolTestSession(page);
   test.setTimeout(90_000);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
@@ -275,6 +297,7 @@ test('content review page lists every unit and records a decision', async ({ pag
 });
 
 test('every training session opens with the daily progress probe (no feedback, fixed difficulty)', async ({ page }) => {
+  await installSchoolTestSession(page);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.addInitScript(() => window.localStorage.clear());
