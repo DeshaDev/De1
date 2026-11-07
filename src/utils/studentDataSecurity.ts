@@ -67,6 +67,8 @@ export interface VerifiedBaseeraSession {
   tenantDisplayNameAr: string;
   /** Unique server-recognized session ID used for logout revocation. */
   sessionId: string;
+  /** Verified Supabase account owner for family sessions; absent on school sessions. */
+  parentUserId?: string;
   scopes: BaseeraScope[];
   issuedAt: number;
   expiresAt: number;
