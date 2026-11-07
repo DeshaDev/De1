@@ -1050,6 +1050,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     };
     const forgedAudioResponse = await fetch(route, json(admin.token, 'PUT', {
       ...upload,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: '2026-10-01T08:40:00.000Z',
       results: { ...results, oralReading: forgedAudio },
     }));
     assert.equal(forgedAudioResponse.status, 409);
@@ -1087,6 +1089,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     };
     const forgedNonwordResponse = await fetch(route, json(admin.token, 'PUT', {
       ...upload,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: '2026-10-01T08:40:00.000Z',
       results: { ...results, nonwordReading: forgedNonwordAudio },
     }));
     assert.equal(forgedNonwordResponse.status, 409);
