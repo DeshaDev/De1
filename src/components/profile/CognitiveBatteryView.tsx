@@ -810,7 +810,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           trackUsage('battery_started');
           // Never record a real child's results under a demo record.
           if (needsOwnRecord(activeStudent) && onCreateLearner) {
-            const newId = onCreateLearner({ name: s.childName, ageYears: Math.floor(s.ageMonths / 12), examinerName: s.examinerName });
+            const newId = onCreateLearner({
+              name: s.childName,
+              ageYears: Math.floor(s.ageMonths / 12),
+              examinerName: s.examinerName,
+              guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+            });
             if (newId) {
               saveBatterySession({ ...s, studentId: newId });
               return; // the host selects the new learner and this view reloads their session
