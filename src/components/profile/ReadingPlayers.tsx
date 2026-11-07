@@ -271,6 +271,21 @@ export function PassagePlayer({
   );
 }
 
+function RanCell({ symbol, display, size }: { symbol: RanSymbol; display: 'picture' | 'letter'; size: 'sm' | 'lg' }) {
+  if (display === 'picture') {
+    return (
+      <span className={size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} aria-hidden="true">
+        <Pic emoji={lex(symbol.value).emoji} />
+      </span>
+    );
+  }
+  return (
+    <span className={size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} font-black text-ink leading-none" style={READING_FONT} aria-hidden="true">
+      {symbol.value}
+    </span>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Rapid automatized naming: captured audio, fixed server-side grid and no manual scoring
 // ---------------------------------------------------------------------------
