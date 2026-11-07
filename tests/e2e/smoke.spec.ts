@@ -192,7 +192,7 @@ test('speech reading and naming tasks never accept manual correction or emit unv
   await expect(page.getByLabel(/موافقة منفصلة على تسجيل الصوت/)).not.toBeChecked();
   await page.getByRole('button', { name: 'بدء الفحص' }).click();
 
-  for (const task of ['قارئ الكلمات', 'كلمات من كوكب آخر', 'سباق الصور', 'قصة سامي']) {
+  for (const task of ['قارئ الكلمات', 'كلمات من كوكب آخر', 'سباق الصور', 'سباق الحروف', 'قصة سامي']) {
     await page.getByText(task, { exact: true }).click();
     if (task === 'قارئ الكلمات' || task === 'كلمات من كوكب آخر') {
       await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
@@ -202,7 +202,7 @@ test('speech reading and naming tasks never accept manual correction or emit unv
       await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
       await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
-    } else if (task === 'سباق الصور') {
+    } else if (task === 'سباق الصور' || task === 'سباق الحروف') {
       await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
       await page.getByRole('button', { name: 'الرموز مألوفة — ابدأ السباق' }).click();
       await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
