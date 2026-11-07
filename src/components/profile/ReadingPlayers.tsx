@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, Delete, Mic, Volume2 } from 'lucide-react';
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import { lex } from '../../cognitiveProfile/lexicon';
-import type { ItemResponse } from '../../cognitiveProfile/scoring';
+import type { CognitiveAudioAssessmentEvidence, ItemResponse } from '../../cognitiveProfile/scoring';
 import {
   RAN_COLUMNS,
   SPELL_KEYBOARD,
