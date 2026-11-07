@@ -200,16 +200,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   // Match the server's technical ceiling so an incomplete, implausibly fast session
   // cannot be stored as if the entire reference passage had been read.
   const minimumReadingDurationSeconds = Math.ceil((passage.words.length * 60) / 300);
-  // Normalized spoken words set for real-time live word highlighting
-  const spokenWordsNormalizedSet = useMemo(() => {
-    if (!spokenTranscript) return new Set<string>();
-    const tokens = spokenTranscript
-      .replace(/[.,!?،؟؛:"«»()[\]]/g, ' ')
-      .split(/\s+/)
-      .map(w => w.replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[إأآا]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim())
-      .filter(Boolean);
-    return new Set(tokens);
-  }, [spokenTranscript]);
+
 
 
   // When stage or introStep changes, scroll directly to the desired active content, never the header or footer
@@ -584,7 +575,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               ) {
                 const mappedWords = result.words.map((item: any, idx: number) => {
                   const errorType = String(item.errorType || 'Unconfirmed');
+                  const hasWordScore = typeof item.accuracyScore === 'number' &&
+                    Number.isFinite(item.accuracyScore) &&
+                    item.accuracyScore >= 0 &&
+                    item.accuracyScore <= 100;
                   const status =
+                    !hasWordScore ? 'unconfirmed' :
                     errorType === 'None' ? 'correct' :
                     errorType === 'DialectVariant' ? 'dialect_variant' :
                     errorType === 'Omission' ? 'omitted' :
@@ -605,7 +601,16 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   Number.isFinite(result.wordAccuracyPercent) &&
                   mappedWords.every((word: { status: string }) => word.status !== 'unconfirmed');
 
-                setVerifiedWords(mappedWords);
+                // Incomplete/provider-unresolved output is never painted green or classified.
+                // Keep the reference words visible, but mark every word unconfirmed until
+                // the server returns a complete assessment with its receipt.
+                setVerifiedWords(assessmentComplete
+                  ? mappedWords
+                  : mappedWords.map((word: { word: string }) => ({
+                      word: word.word,
+                      status: 'unconfirmed' as const,
+                      spokenWord: null,
+                    })));
                 setAiAssessmentReceipt(assessmentComplete ? receipt : null);
                 setSpokenTranscript(result.transcript.trim());
                 spokenTranscriptRef.current = result.transcript.trim();
@@ -1153,7 +1158,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-sm text-emerald-300">
-                        تسجيل صوتي وتعرّف آلي على الكلام
+                        تسجيل صوت الطفل — المعاينة النصية أولية
                       </span>
                       <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
@@ -1161,7 +1166,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 mt-0.5">
-                      النظام يستمع لقراءتك ويسجلها الآن — اقرأ الكلمات بصوت واضح ومسموع
+                      يجري حفظ التسجيل. نص المتصفح الظاهر أدناه للمعاينة فقط؛ لا يثبت صحة الكلمات ولا يدخل في الدرجة.
                     </p>
                   </div>
                 </div>
@@ -1174,7 +1179,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   <span className="w-1 bg-teal-300 rounded-full animate-pulse h-6" style={{ animationDelay: '0.45s' }}></span>
                   <span className="w-1 bg-emerald-400 rounded-full animate-pulse h-3" style={{ animationDelay: '0.2s' }}></span>
                   <span className="text-[11px] font-mono text-emerald-300 font-bold mr-2">
-                    {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة مُلتقطة
+                    {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة في المعاينة
                   </span>
                 </div>
               </div>
@@ -1183,7 +1188,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
                 <span className="text-teal-400 font-bold shrink-0">معاينة التعرف الصوتي في المتصفح (للعرض فقط):</span>
                 <span className="text-slate-200 font-mono truncate max-w-xl">
-                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع، ستظهر الكلمات الملتقطة هنا فوراً...'}
+                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع؛ ستظهر معاينة أولية لا تدخل في التقييم...'}
                 </span>
               </div>
             </div>
