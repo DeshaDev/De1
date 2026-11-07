@@ -3420,6 +3420,51 @@ async function startServer() {
       });
       return;
     }
+
+    // Never trust a browser-supplied duration for WPM/RAN speed. Derive it from
+    // the actual PCM payload and verify the complete WAV header and data length.
+    let wavBuffer: Buffer;
+    let durationSeconds: number;
+    try {
+      const suppliedBase64 = body.audioWavBase64;
+      wavBuffer = Buffer.from(suppliedBase64, 'base64');
+      const validWav =
+        wavBuffer.toString('base64') === suppliedBase64 &&
+        wavBuffer.length >= 44 &&
+        wavBuffer.toString('ascii', 0, 4) === 'RIFF' &&
+        wavBuffer.toString('ascii', 8, 12) === 'WAVE' &&
+        wavBuffer.toString('ascii', 12, 16) === 'fmt ' &&
+        wavBuffer.readUInt32LE(16) === 16 &&
+        wavBuffer.readUInt16LE(20) === 1 &&
+        wavBuffer.readUInt16LE(22) === 1 &&
+        wavBuffer.readUInt32LE(24) === 16_000 &&
+        wavBuffer.readUInt32LE(28) === 32_000 &&
+        wavBuffer.readUInt16LE(32) === 2 &&
+        wavBuffer.readUInt16LE(34) === 16 &&
+        wavBuffer.toString('ascii', 36, 40) === 'data';
+      if (!validWav) throw new Error('INVALID_WAV_HEADER');
+
+      const dataBytes = wavBuffer.readUInt32LE(40);
+      if (dataBytes < 32_000 || dataBytes % 2 !== 0 || dataBytes !== wavBuffer.length - 44) {
+        throw new Error('INVALID_WAV_DATA_LENGTH');
+      }
+      durationSeconds = dataBytes / 32_000;
+      if (
+        !Number.isFinite(durationSeconds) ||
+        durationSeconds < 1 ||
+        durationSeconds > 88 ||
+        Math.abs(Number(body.durationSeconds) - durationSeconds) > 0.75
+      ) {
+        throw new Error('INVALID_AUDIO_DURATION');
+      }
+    } catch {
+      res.status(400).json({
+        code: 'INVALID_COGNITIVE_AUDIO_INPUT',
+        error: 'بنية ملف WAV أو مدته الفعلية غير صالحة؛ لم نحتسب زمنًا مرسلًا من المتصفح.',
+      });
+      return;
+    }
+
     if (!process.env.AZURE_SPEECH_KEY?.trim() || !process.env.AZURE_SPEECH_REGION?.trim()) {
       res.status(503).json({
         code: 'AZURE_SPEECH_NOT_CONFIGURED',
@@ -3440,7 +3485,6 @@ async function startServer() {
     }
 
     try {
-      const durationSeconds = Number(body.durationSeconds);
       let result = await assessReadingAudioWithAzure({
         referenceText: task.referenceWords.join(' '),
         referenceWords: task.referenceWords,
