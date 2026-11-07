@@ -2256,6 +2256,51 @@ export default function App() {
               onCompleteOralSession={handleCompleteNewSession}
               onCreateLearner={handleCreateBatteryLearner}
               onStudentUpdated={(updated) => {
+                const existing = students.find((student) => student.id === updated.id);
+                const batteryChanged = Boolean(
+                  supabaseUser &&
+                  !baseeraSession &&
+                  updated.cognitiveBattery &&
+                  JSON.stringify(updated.cognitiveBattery) !== JSON.stringify(existing?.cognitiveBattery)
+                );
+
+                // Family cognitive-battery records must pass through the server so Azure
+                // receipts are checked before any voice score enters Supabase raw_data.
+                if (batteryChanged && updated.cognitiveBattery) {
+                  void authenticatedFetch(
+                    `/api/parent/students/${encodeURIComponent(updated.id)}/cognitive-battery`,
+                    {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ageMonths: updated.cognitiveBattery.ageMonths,
+                        examinerName: updated.cognitiveBattery.examinerName,
+                        startedAt: updated.cognitiveBattery.startedAt,
+                        dialect: updated.cognitiveBattery.dialect,
+                        guardianAudioConsentGiven: updated.guardianAudioConsentGiven === true,
+                        guardianAudioConsentRecordedAt: updated.guardianAudioConsentRecordedAt,
+                        results: updated.cognitiveBattery.results,
+                      }),
+                    }
+                  ).then(async (response) => {
+                    const payload = await response.json().catch(() => null) as
+                      | { student?: StudentRecord; error?: string }
+                      | null;
+                    if (!response.ok || !payload?.student) {
+                      throw new Error(payload?.error || `family battery save failed: ${response.status}`);
+                    }
+                    setStudents((prev) => prev.map((student) =>
+                      student.id === updated.id ? { ...student, ...payload.student! } : student
+                    ));
+                    if (updated.trainingProgress) {
+                      void syncTrainingProgressToSupabase(payload.student, supabaseUser!.id);
+                    }
+                  }).catch(() => {
+                    setAiStatusBanner('تعذر حفظ نتائج الفحص الصوتي بأمان في حساب الأسرة؛ بقيت النتائج على هذا الجهاز ولم تُعتمد سحابيًا.');
+                  });
+                  return;
+                }
+
                 setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
                 if (supabaseUser) {
                   void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
