@@ -56,6 +56,12 @@ describe('trusted cognitive audio task definitions', () => {
     assert.deepEqual(nonwords.itemIds, NONWORD_ITEMS.map((item) => item.id));
   });
 
+  it('keeps taa marbuta and alif maqsura distinct while accepting explicit ball aliases', () => {
+    assert.equal(isAcceptedRanName('كرة', 'ball'), true);
+    assert.equal(isAcceptedRanName('طابة', 'ball'), true);
+    assert.equal(isAcceptedRanName('هدى', 'ball'), false);
+  });
+
   it('does not let the browser supply a custom or unknown task reference', () => {
     assert.equal(getCognitiveAudioTaskDefinition('customTextFromClient'), null);
     assert.equal(getCognitiveAudioTaskDefinition('otherReading'), null);
