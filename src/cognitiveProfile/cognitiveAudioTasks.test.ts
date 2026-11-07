@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PASSAGE_WORDS,
+  WORD_ITEMS,
+  NONWORD_ITEMS,
   RAN_LETTER_GRID,
   RAN_OBJECT_GRID,
 } from './readingTasks';
@@ -43,8 +45,19 @@ describe('trusted cognitive audio task definitions', () => {
     assert.equal(isAcceptedRanName('غير معروف', 'ball'), false);
   });
 
+  it('derives real-word and nonword references from the fixed reading bank', () => {
+    const realWords = getCognitiveAudioTaskDefinition('wordReading');
+    const nonwords = getCognitiveAudioTaskDefinition('nonwordReading');
+    assert.ok(realWords);
+    assert.ok(nonwords);
+    assert.deepEqual(realWords.referenceWords, WORD_ITEMS.map((item) => item.text));
+    assert.deepEqual(realWords.itemIds, WORD_ITEMS.map((item) => item.id));
+    assert.deepEqual(nonwords.referenceWords, NONWORD_ITEMS.map((item) => item.text));
+    assert.deepEqual(nonwords.itemIds, NONWORD_ITEMS.map((item) => item.id));
+  });
+
   it('does not let the browser supply a custom or unknown task reference', () => {
     assert.equal(getCognitiveAudioTaskDefinition('customTextFromClient'), null);
-    assert.equal(getCognitiveAudioTaskDefinition('wordReading'), null);
+    assert.equal(getCognitiveAudioTaskDefinition('otherReading'), null);
   });
 });
