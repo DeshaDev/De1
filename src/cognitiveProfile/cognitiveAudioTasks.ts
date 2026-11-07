@@ -30,7 +30,7 @@ export function getCognitiveAudioTaskDefinition(taskId: unknown): CognitiveAudio
   if (taskId === 'ranObjects' || taskId === 'ranLetters') {
     const symbols = taskId === 'ranObjects' ? RAN_OBJECTS : RAN_LETTERS;
     const grid = taskId === 'ranObjects' ? RAN_OBJECT_GRID : RAN_LETTER_GRID;
-    const byId = new Map(symbols.map((symbol) => [symbol.id, symbol]));
+    const byId = new Map<string, (typeof symbols)[number]>(symbols.map((symbol): [string, (typeof symbols)[number]] => [symbol.id, symbol]));
     const ordered = grid.map((id) => byId.get(id)).filter((symbol) => Boolean(symbol));
     if (ordered.length !== grid.length || grid.length !== 40) return null;
     return {
