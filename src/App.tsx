@@ -604,9 +604,6 @@ export default function App() {
       });
       return;
     }
-    if (supabaseUser) {
-      void syncStudentToSupabase(completedRecord, supabaseUser.id);
-    }
 
     if (!baseeraSession) {
       setPendingServerRecord(completedRecord);
@@ -2367,7 +2364,7 @@ export default function App() {
                 }
 
                 setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
-                if (supabaseUser) {
+                if (supabaseUser && !baseeraSession) {
                   void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
                     if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
                   });
