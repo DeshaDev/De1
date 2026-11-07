@@ -49,7 +49,7 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
-import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
+import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
@@ -281,18 +281,22 @@ function SubtestRunner({
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
         )}
         {stage === 'test' && subtest.kind === 'readList' && (
-          <div className="w-full max-w-xl text-center space-y-4" dir="rtl">
-            <div className="bz-card-quiet rounded-2xl p-5 space-y-2">
-              <span className="text-4xl" aria-hidden="true">🎙️</span>
-              <h3 className="font-child text-xl font-bold text-ink">التقييم الصوتي لهذه القائمة غير متاح بعد</h3>
-              <p className="bz-small text-ink-2">
-                لن نطلب من ولي الأمر أو المعلم تحديد صحة الكلمات أو عدّ الأخطاء. يمكنك متابعة الفحص دون درجة لهذه المهمة.
-              </p>
-            </div>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => finish(false)}>
-              حفظ المهمة كاملة دون درجة
-            </button>
-          </div>
+          <ReadListAudioPlayer
+            title={subtest.gameNameAr}
+            items={subtest.items}
+            taskId={subtest.id === 'wordReading' ? 'wordReading' : 'nonwordReading'}
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
+              responses.current = rs;
+              finish(false, {
+                durationMs,
+                ...(audioAssessment ? {
+                  audioAssessment,
+                  audioAssessmentReceipt: audioAssessment.assessmentReceipt,
+                } : {}),
+              });
+            }}
+          />
         )}
         {stage === 'test' && subtest.kind === 'ran' && (
           <RanPlayer
