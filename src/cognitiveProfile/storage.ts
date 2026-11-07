@@ -6,9 +6,10 @@ import type { SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
 import type { TrainingProgress } from './training';
 
-export type HomeDialect = 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
+export type HomeDialect = 'msa' | 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
 
 export const DIALECT_LABELS_AR: Record<HomeDialect, string> = {
+  msa: 'فصحى معيارية',
   gulf: 'خليجية',
   levantine: 'شامية',
   egyptian: 'مصرية',
