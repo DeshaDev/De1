@@ -19,6 +19,28 @@ export interface ItemResponse {
   typed?: string;
 }
 
+export interface CognitiveAudioAssessmentEvidence {
+  taskId: 'oralReading' | 'ranObjects' | 'ranLetters' | 'wordReading' | 'nonwordReading';
+  sourceModel: 'azure_pronunciation_assessment';
+  assessmentComplete: true;
+  assessmentReceipt: string;
+  transcript: string;
+  durationSeconds: number;
+  wordAccuracyPercent: number;
+  wordsCorrectPerMinute: number;
+  wordsPerMinute: number;
+  correctWordsCount: number;
+  substitutionsCount: number;
+  omissionsCount: number;
+  insertionsCount: number;
+  words: Array<{
+    word: string;
+    errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' | 'Unconfirmed' | 'Insertion';
+    accuracyScore: number | null;
+    spokenWord: string | null;
+  }>;
+}
+
 export interface SubtestResult {
   subtestId: SubtestId;
   responses: ItemResponse[];
@@ -33,6 +55,9 @@ export interface SubtestResult {
   durationMs?: number;
   /** For rapid naming: errors confirmed by the word-level speech model. */
   errorCount?: number;
+  /** Raw output returned by the authenticated Azure audio endpoint. The server revalidates its receipt on cloud sync. */
+  audioAssessment?: CognitiveAudioAssessmentEvidence;
+  audioAssessmentReceipt?: string;
 }
 
 /** Raw reading and naming measures. They have no reference values yet and are reported as they are. */
@@ -206,21 +231,66 @@ export function scoreSubtest(
   const flags: string[] = [];
   if (result.discontinued) flags.push('discontinued');
 
-  // Speech-based reading and naming are withheld until a verified, server-backed
-  // assessment flow exists. Never trust a client-provided "azure" flag or manual counts.
+  // Speech-based tasks are scored only from a complete Azure result carrying a
+  // server-issued receipt. Browser transcripts, manual marks and client counts are ignored.
   if (subtest.kind === 'ran' || subtest.kind === 'passage' || subtest.kind === 'readList') {
+    const evidence = result.audioAssessment;
+    const expectedTask = result.subtestId;
+    const receiptValid = typeof evidence?.assessmentReceipt === 'string' && /^[a-f0-9]{64}$/.test(evidence.assessmentReceipt);
+    const expectedTotal = scoredItemCount(subtest);
+    const resolved = Boolean(
+      evidence &&
+      evidence.taskId === expectedTask &&
+      evidence.sourceModel === 'azure_pronunciation_assessment' &&
+      evidence.assessmentComplete === true &&
+      receiptValid &&
+      evidence.words.length === expectedTotal &&
+      evidence.words.every((word) => word.errorType !== 'Unconfirmed' && word.errorType !== 'Insertion') &&
+      evidence.durationSeconds >= 1 &&
+      evidence.durationSeconds <= 88
+    );
+    if (!resolved || !evidence) {
+      return {
+        subtestId: result.subtestId,
+        correct: 0,
+        total: 0,
+        percent: 0,
+        z: null,
+        centile: null,
+        band: null,
+        medianRtMs: null,
+        flags,
+        scoreAvailable: false,
+        measures: { attempted: 0, seconds: null },
+      };
+    }
+
+    const correct = evidence.words.filter((word) =>
+      word.errorType === 'None' || word.errorType === 'DialectVariant'
+    ).length;
+    const total = evidence.words.length;
+    const seconds = Math.max(1, Math.round(evidence.durationSeconds));
+    const errors = evidence.substitutionsCount + evidence.omissionsCount + evidence.insertionsCount;
+    const measures: ReadingMeasures = {
+      attempted: total,
+      seconds,
+      errors,
+      ...(subtest.kind === 'ran'
+        ? { itemsPerSecond: Math.round((total / evidence.durationSeconds) * 100) / 100 }
+        : { correctPerMinute: evidence.wordsCorrectPerMinute }),
+    };
     return {
       subtestId: result.subtestId,
-      correct: 0,
-      total: 0,
-      percent: 0,
+      correct,
+      total,
+      percent: total ? Math.round((correct / total) * 100) : 0,
       z: null,
       centile: null,
       band: null,
       medianRtMs: null,
       flags,
-      scoreAvailable: false,
-      measures: { attempted: 0, seconds: null },
+      scoreAvailable: true,
+      measures,
     };
   }
   if (subtest.kind === 'spelling') {
