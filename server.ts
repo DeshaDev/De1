@@ -2138,7 +2138,7 @@ async function startServer() {
       }
       const incomingResults = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
       const results = { ...incomingResults } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
-      for (const taskId of ['oralReading', 'ranObjects', 'ranLetters'] as const) {
+      for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
         const incomingResult = results[taskId];
         if (!incomingResult) continue;
         const receipt = incomingResult.audioAssessmentReceipt;
