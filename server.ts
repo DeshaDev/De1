@@ -1053,6 +1053,7 @@ async function verifySupabaseParent(rawHeader: string): Promise<VerifiedBaseeraS
       tenantDisplayNameAr: 'حساب ولي الأمر',
       sessionId: `parent-${user.id.replace(/-/g, '').slice(0, 24)}`,
       scopes: ['ai:analyze'],
+      parentUserId: user.id,
     } as unknown as VerifiedBaseeraSession;
     if (parentTokenCache.size >= 500) parentTokenCache.delete(parentTokenCache.keys().next().value as string);
     parentTokenCache.set(cacheKey, { session, expiresAt: Date.now() + PARENT_TOKEN_CACHE_MS });
@@ -3371,6 +3372,51 @@ async function startServer() {
         error: 'تعذر ربط التسجيل بملف الطفل؛ أعد اختيار الطفل ثم حاول مرة أخرى.',
       });
       return;
+    }
+
+    if (assessmentSession.role === 'parent') {
+      const parentUserId = assessmentSession.parentUserId;
+      const authorization = String(req.headers.authorization || '');
+      if (!parentUserId || !authorization.startsWith('Bearer ')) {
+        res.status(403).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_UNVERIFIED',
+          error: 'تعذر التحقق من ملكية ملف الطفل في حساب الأسرة؛ لم نرسل التسجيل للتحليل.',
+        });
+        return;
+      }
+      try {
+        const ownerUrl =
+          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id&limit=1`;
+        const ownerResponse = await fetch(ownerUrl, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: authorization,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!ownerResponse.ok) {
+          res.status(503).json({
+            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+            error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+        const ownedRows = await ownerResponse.json().catch(() => null);
+        if (!Array.isArray(ownedRows) || !ownedRows.some((row) => row?.id === studentId)) {
+          res.status(404).json({
+            code: 'PARENT_STUDENT_NOT_OWNED',
+            error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+      } catch {
+        res.status(503).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+          error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
+        });
+        return;
+      }
     }
 
     const validConsentTimestamp = (value: unknown): boolean => {
