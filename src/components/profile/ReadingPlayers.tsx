@@ -124,6 +124,178 @@ function audioFailureMessage(error: unknown): string {
   return 'تعذر إكمال التقييم الصوتي عبر الخدمة. يمكنك حفظ المهمة دون درجة وإعادة المحاولة لاحقًا.';
 }
 
+// ---------------------------------------------------------------------------
+// Continuous audio assessment for real-word and made-up-word reading lists
+// ---------------------------------------------------------------------------
+export function ReadListAudioPlayer({
+  title,
+  items,
+  taskId,
+  audioSession,
+  onDone,
+}: {
+  title: string;
+  items: ReadItem[];
+  taskId: Extract<CognitiveAudioTaskId, 'wordReading' | 'nonwordReading'>;
+  audioSession: CognitiveAudioSessionContext;
+  onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
+}) {
+  const [phase, setPhase] = useState<AudioTaskPhase>('ready');
+  const [elapsedNow, setElapsedNow] = useState(() => performance.now());
+  const [errorMessage, setErrorMessage] = useState('');
+  const recordingRef = useRef<WavRecordingController | null>(null);
+  const startAtRef = useRef(0);
+  const startingRef = useRef(false);
+  const finalizingRef = useRef(false);
+  const maxDurationSeconds = 88;
+  const supported = audioSession.guardianConsentGiven === true &&
+    audioSession.guardianAudioConsentGiven === true &&
+    Boolean(audioSession.speechLocale);
+
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const timer = window.setInterval(() => setElapsedNow(performance.now()), 250);
+    return () => window.clearInterval(timer);
+  }, [phase]);
+
+  const elapsedSeconds = phase === 'recording'
+    ? Math.min(maxDurationSeconds, Math.max(0, (elapsedNow - startAtRef.current) / 1000))
+    : 0;
+
+  const saveWithoutScore = () => {
+    if (finalizingRef.current) return;
+    finalizingRef.current = true;
+    recordingRef.current?.cancel();
+    recordingRef.current = null;
+    onDone([], 0);
+  };
+
+  const submitRecording = async () => {
+    if (finalizingRef.current || !recordingRef.current) return;
+    finalizingRef.current = true;
+    setPhase('submitting');
+    try {
+      const recording = await recordingRef.current.stop();
+      recordingRef.current = null;
+      const assessment = await assessCognitiveAudio({ taskId, session: audioSession, recording });
+      const responses = assessment.words.map((word, index) => ({
+        itemId: items[index].id,
+        correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
+        rtMs: 0,
+        replays: 0,
+      }));
+      onDone(responses, Math.round(recording.durationSeconds * 1000), assessment);
+    } catch (error) {
+      setErrorMessage(audioFailureMessage(error));
+      setPhase('error');
+      finalizingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (phase === 'recording' && elapsedSeconds >= maxDurationSeconds) void submitRecording();
+  }, [phase, elapsedSeconds]);
+
+  useEffect(() => () => {
+    recordingRef.current?.cancel();
+    recordingRef.current = null;
+  }, []);
+
+  const startRecording = async () => {
+    if (!supported || startingRef.current || phase !== 'ready') return;
+    startingRef.current = true;
+    setErrorMessage('');
+    try {
+      recordingRef.current = await startWavRecording();
+      startAtRef.current = performance.now();
+      setElapsedNow(startAtRef.current);
+      setPhase('recording');
+    } catch (error) {
+      setErrorMessage(audioFailureMessage(error));
+      setPhase('error');
+    } finally {
+      startingRef.current = false;
+    }
+  };
+
+  return (
+    <div className="w-full flex flex-col items-center gap-5" dir="rtl">
+      <div className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-5">
+        <div className="text-center space-y-2">
+          <span className="text-5xl" aria-hidden="true">📚</span>
+          <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
+          <p className="bz-small text-ink-2">
+            {phase === 'recording'
+              ? 'اقرأ الكلمات بالترتيب وبصوتك الطبيعي. لا تتوقف طويلًا بين الكلمات؛ سيحلل Azure التسجيل كاملًا.'
+              : 'اقرأ الكلمات المعروضة من اليمين إلى اليسار. لا توجد علامات يدوية؛ سيُحلل التسجيل مقابل الكلمات المرجعية.'}
+          </p>
+        </div>
+
+        <ol className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" lang="ar">
+          {items.map((item, index) => (
+            <li key={item.id} className="min-h-16 grid place-items-center rounded-2xl border border-line bg-soft px-2 py-3">
+              <span className="text-[11px] text-muted mb-1">{ar(index + 1)}</span>
+              <span className="text-2xl sm:text-3xl font-bold text-ink text-center" style={READING_FONT}>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+
+        {phase === 'recording' && (
+          <div className="space-y-3 text-center">
+            <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(maxDurationSeconds - elapsedSeconds))} ثانية متبقية</p>
+            <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / maxDurationSeconds * 100)) + '%' }} /></div>
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
+              <Check className="w-5 h-5" /> انتهيت من قراءة القائمة — حلّل التسجيل
+            </button>
+          </div>
+        )}
+
+        {phase === 'submitting' && (
+          <div className="text-center space-y-2" role="status">
+            <span className="text-3xl" aria-hidden="true">🎧</span>
+            <p className="font-bold text-ink">يجري تحليل الكلمات واحدةً تلو الأخرى…</p>
+            <p className="bz-small text-muted">لن تُحتسب أخطاء أو نتيجة حتى تُحسم جميع الكلمات.</p>
+          </div>
+        )}
+
+        {phase === 'error' && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
+            <p className="bz-small text-amber-950">{errorMessage}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary"
+                onClick={() => {
+                  finalizingRef.current = false;
+                  setErrorMessage('');
+                  setPhase('ready');
+                }}
+              >
+                إعادة التسجيل والمحاولة
+              </button>
+              <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
+                حفظ المهمة دون درجة
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'ready' && (
+          <div className="flex flex-wrap justify-center gap-3">
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
+              <Mic className="w-5 h-5" /> ابدأ تسجيل قراءة القائمة
+            </button>
+            {!supported && <p className="w-full text-center bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
+            <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
+              متابعة دون درجة
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PassagePlayer({
   title,
   words,
