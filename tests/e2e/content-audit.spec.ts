@@ -89,7 +89,9 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await nav(page, mobile ? /^البرنامج$/ : /البرنامج التدريبي/, mobile);
     await audit(page, 'training-program', findings);
 
-    await page.locator('.baseera-footer').getByRole('button', { name: /صالة التدريب/ }).click();
+    // The current training route opens the daily curriculum directly; the global
+    // footer is not guaranteed to be mounted while the screening hub is active.
+    await page.goto('/gym');
     await audit(page, 'gym-today', findings);
     await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
     for (const station of ['صائد الحروف', 'تركيب المقاطع', 'قصص الأبطال', 'تحدي الدقائق الخمس', 'طلاقة القراءة']) {
