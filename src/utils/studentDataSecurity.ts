@@ -1329,24 +1329,20 @@ export function validateAndDeriveSessionFromEvidence(
           werPercent: rawOralWer,
           phoneticSubstitutionCount: isAiAssessmentVerified
             ? aiSubstitutionCount
-            : isTeacherVerified ? teacherSubstitutionCount : (oralMetrics?.phoneticSubstitutionCount ?? 0),
+            : (oralMetrics?.phoneticSubstitutionCount ?? 0),
           dialectVariantCount: isAiAssessmentVerified
             ? aiDialectCount
-            : isTeacherVerified ? teacherDialectVariantCount : (oralMetrics?.dialectVariantCount ?? 0),
+            : (oralMetrics?.dialectVariantCount ?? 0),
           omissionCount: isAiAssessmentVerified
             ? aiOmissionCount
-            : isTeacherVerified ? teacherOmissionCount : (oralMetrics?.omittedWordsCount ?? 0),
+            : (oralMetrics?.omittedWordsCount ?? 0),
           misreadWords: isAiAssessmentVerified && validatedAiAlignment
             ? validatedAiAlignment
-                .filter(a => a.status === 'phonetic_substitution' || a.status === 'omitted')
-                .map(a => a.spokenWord ? `${a.word} (نُطقت: ${a.spokenWord})` : a.word)
-            : isTeacherVerified && validatedTeacherAlignment
-              ? validatedTeacherAlignment
-                  .filter(a => a.status === 'phonetic_substitution' || a.status === 'omitted')
-                  .map(a => a.word)
-              : (oralMetrics?.alignment
-                  .filter((a) => a.status === 'phonetic_substitution' || a.status === 'omitted')
-                  .map((a) => a.spokenWord ? `${a.targetWord} (نُطقت: ${a.spokenWord})` : a.targetWord) || []),
+                .filter((a) => a.status === 'phonetic_substitution' || a.status === 'omitted')
+                .map((a) => a.spokenWord ? `${a.word} (نُطقت: ${a.spokenWord})` : a.word)
+            : (oralMetrics?.alignment
+                .filter((a) => a.status === 'phonetic_substitution' || a.status === 'omitted')
+                .map((a) => a.spokenWord ? `${a.targetWord} (نُطقت: ${a.spokenWord})` : a.targetWord) || []),
         }
       : null;
 
