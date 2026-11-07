@@ -2178,8 +2178,10 @@ async function startServer() {
         // The same battery is uploaded after each subtest. A prior receipt has already
         // been consumed after persistence, so accept it again only as an exact reference
         // to the server-stored result; never trust the browser's replacement payload.
-        const previousResult = studentsDb[found.idx].cognitiveBattery?.results?.[taskId];
+        const previousBattery = studentsDb[found.idx].cognitiveBattery;
+        const previousResult = previousBattery?.results?.[taskId];
         if (
+          parsed.data.startedAt === previousBattery?.startedAt &&
           typeof receipt === 'string' &&
           previousResult?.audioAssessmentReceipt === receipt &&
           previousResult.audioAssessment
@@ -2550,8 +2552,10 @@ async function startServer() {
 
       // Repeated uploads may include a task whose receipt was consumed by an earlier
       // successful save. Reuse only the exact previously persisted server result.
-      const previousResult = current.cognitiveBattery?.results?.[taskId];
+      const previousBattery = current.cognitiveBattery;
+      const previousResult = previousBattery?.results?.[taskId];
       if (
+        parsed.data.startedAt === previousBattery?.startedAt &&
         typeof receipt === 'string' &&
         previousResult?.audioAssessmentReceipt === receipt &&
         previousResult.audioAssessment
