@@ -697,6 +697,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           INVALID_WAV_HEADER: 'تعذر قراءة ملف الصوت المحوّل إلى WAV. أعد التسجيل باستخدام ميكروفون ومتصفح مدعومين.',
           UNSUPPORTED_WAV_FORMAT: 'صيغة الصوت المحوّلة غير متوافقة مع خدمة التقييم. أعد التسجيل.',
           INVALID_AUDIO_PAYLOAD: 'ملف التسجيل غير صالح أو كبير أكثر من الحد المسموح؛ أعد التسجيل.',
+          INVALID_AUDIO_DURATION: 'مدة التسجيل الصوتي خارج النطاق المسموح؛ أعد قراءة النص ثم أرسل التسجيل.',
+
           INVALID_ASSESSMENT_INPUT: 'بيانات التسجيل أو النص المرجعي غير مكتملة؛ حدّث الصفحة وأعد المحاولة.',
           AZURE_NO_RECOGNIZED_SPEECH: 'لم يستخرج Azure كلامًا واضحًا من التسجيل. تحقق من مستوى الصوت والميكروفون ثم أعد المحاولة.',
           AZURE_NO_WORD_LEVEL_RESULTS: 'وصل التسجيل لكن خدمة الصوت لم تُرجع نتائج على مستوى الكلمات؛ لم نحتسب أخطاء قراءة.',
@@ -1038,9 +1040,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setGuardianConsentChecked(checked);
-                      if (checked && !guardianConsentRecordedAt) {
-                        setGuardianConsentRecordedAt(new Date().toISOString());
-                      }
+                      setGuardianConsentRecordedAt(checked ? new Date().toISOString() : undefined);
                     }}
                     className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                   />
@@ -1057,9 +1057,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       onChange={(e) => {
                         const checked = e.target.checked;
                         setAudioConsentChecked(checked);
-                        if (checked && !guardianAudioConsentRecordedAt) {
-                          setGuardianAudioConsentRecordedAt(new Date().toISOString());
-                        }
+                        setGuardianAudioConsentRecordedAt(checked ? new Date().toISOString() : undefined);
                       }}
                       className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
