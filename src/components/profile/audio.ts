@@ -66,7 +66,7 @@ export async function speak(text: string): Promise<void> {
         resolve();
       }
     };
-    playNaturalArabicAudio(text, { voice: 'ar-EG-SalmaNeural', rate: '-12%', onEnd: done, onError: done })
+    playNaturalArabicAudio(text, { voice: 'ar-SA-ZariyahNeural', rate: '-10%', onEnd: done, onError: done })
       .then(() => setTimeout(done, estimateMs))
       .catch(done);
   });

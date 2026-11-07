@@ -49,10 +49,10 @@ function cacheAudio(key: string, dataUrl: string): void {
 }
 
 export type ArabicTtsVoice =
-  | 'ar-EG-SalmaNeural'   // المعلمة سلمى: صوت تربوي أمومي دافئ للقصص والجمل
+  | 'ar-SA-ZariyahNeural' // المعلمة زارية: صوت فصحى معيارية نقي ناصع الفصاحة ومخارج الحروف
+  | 'ar-AE-FatimaNeural'  // فاطمة: صوت خليجي فصيح ووقور
   | 'ar-SA-HamedNeural'   // حامد: صوت فصحى أصيل ناصع المخارج للفونيمات والحروف المجردة
-  | 'ar-AE-FatimaNeural'  // فاطمة: صوت خليجي فصيح وهادئ
-  | 'ar-SA-ZariyahNeural' // زارية: صوت سعودي فصيح
+  | 'ar-EG-SalmaNeural'   // سلمى: صوت مصري دافئ
   | 'ar-KW-NouraNeural';  // نورة: صوت كويتي فصيح
 
 export interface NaturalSpeechOptions {
@@ -144,12 +144,10 @@ export async function playNaturalArabicAudio(
   // Determine if this is an isolated letter or phoneme
   const isIsolatedPhoneme =
     Boolean(getArabicPhonemeIpa(preparedText)) ||
-    (preparedText.length <= 4 && !preparedText.includes(' '));
+    (preparedText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').length === 1 && !preparedText.includes(' '));
 
-  // For isolated letters and phonemes, prioritize authentic Classical Fusha voice
-  const voice: ArabicTtsVoice = isIsolatedPhoneme
-    ? 'ar-SA-HamedNeural'
-    : options.voice || 'ar-EG-SalmaNeural';
+  // Default to the highly eloquent Classical Arabic voice (ar-SA-ZariyahNeural)
+  const voice: ArabicTtsVoice = options.voice || (isIsolatedPhoneme ? 'ar-SA-HamedNeural' : 'ar-SA-ZariyahNeural');
 
   const rate = options.rate || '-12%';
   const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+2%');

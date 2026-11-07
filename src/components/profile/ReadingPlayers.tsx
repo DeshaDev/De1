@@ -76,13 +76,14 @@ function levenshtein(a: string, b: string): number {
 export function checkArabicWordMatch(spoken: string, target: string): boolean {
   if (!spoken || !target) return false;
   const nt = normalizeArabicWord(target);
+  if (!nt) return false;
   const words = normalizeArabicWord(spoken).split(/\s+/).filter(Boolean);
   for (const w of words) {
+    // Exact grapheme match only:
+    // In reading assessment, words must match the exact graphemes of the target word.
+    // Tolerating loose distance (like Levenshtein <= 1) falsely accepted
+    // erroneous words (e.g. بات or بابو for باب).
     if (w === nt) return true;
-    if (w === 'ال' + nt) return true;
-    if (nt.startsWith('ال') && w === nt.slice(2)) return true;
-    if (nt.length >= 3 && levenshtein(w, nt) <= 1) return true;
-    if (nt.length === 2 && (w === nt || (Math.abs(w.length - nt.length) <= 1 && (w.includes(nt) || nt.includes(w))))) return true;
   }
   return false;
 }

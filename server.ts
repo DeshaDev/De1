@@ -3010,7 +3010,7 @@ async function startServer() {
                          voice === 'ar-AE-FatimaNeural' ? 'ar-AE-FatimaNeural' :
                          voice === 'ar-KW-NouraNeural' ? 'ar-KW-NouraNeural' :
                          voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
-                         'ar-EG-SalmaNeural';
+                         'ar-SA-ZariyahNeural';
     const prosodyRate = typeof rate === 'string' ? rate : '-12%';
     const prosodyPitch = typeof req.body?.pitch === 'string' ? req.body.pitch : '+2%';
     const cacheKey = `${selectedVoice}_${prosodyRate}_${prosodyPitch}_${cleanText}`;
