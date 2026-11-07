@@ -1199,7 +1199,7 @@ export function validateAndDeriveSessionFromEvidence(
     (correctCompCount / passage.comprehensionQuestions.length) * 100
   );
 
-  // 7. Optional Oral Reading Alignment Derivation & Teacher Verification
+  // 7. Optional oral-reading metrics: complete server-verified Azure assessment only
   const rawDialectCode = (evidenceObj.dialectCode ?? rawBody.dialectCode ?? rawBody.dialect) as ArabicDialectCode | undefined;
   const dialectProfile =
     ARABIC_DIALECT_PROFILES.find(
@@ -1218,58 +1218,26 @@ export function validateAndDeriveSessionFromEvidence(
       ? transcriptInput.trim().slice(0, 4000)
       : '';
 
-  // Legacy human attestations remain distinct from automated assessment provenance.
-  const requestedTeacherVerification = Boolean(rawBody.teacherVerified || evidenceObj.teacherVerified);
-  const isTeacherVerified = requestedTeacherVerification && reviewer?.role === 'school_admin';
-  const rawVerifiedWords = rawBody.verifiedWordsAlignment ?? evidenceObj.verifiedWordsAlignment;
-
-  let validatedTeacherAlignment: Array<{
-    word: string;
-    status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
-  }> | undefined = undefined;
-
-  let teacherCorrectWordsCount = 0;
-  let teacherDialectVariantCount = 0;
-  let teacherSubstitutionCount = 0;
-  let teacherOmissionCount = 0;
-  let teacherWcpm: number | null = null;
-  let teacherAccuracyPercent: number | null = null;
-
-  if (isTeacherVerified) {
-    if (!Array.isArray(rawVerifiedWords) || rawVerifiedWords.length !== passage.words.length) {
-      return {
-        valid: false,
-        statusCode: 400,
-        errorAr: `مصفوفة تدقيق الكلمات غير صالحة؛ يجب أن تحتوي على ${passage.words.length} كلمة مطابقة للنص المرجعي.`,
-      };
-    }
-
-    const validStatuses = new Set(['correct', 'dialect_variant', 'phonetic_substitution', 'omitted']);
-    for (let i = 0; i < passage.words.length; i++) {
-      const item = rawVerifiedWords[i] as any;
-      if (!item || typeof item !== 'object' || item.word !== passage.words[i] || !validStatuses.has(item.status)) {
-        return {
-          valid: false,
-          statusCode: 400,
-          errorAr: `كلمة القراءة عند الفهرس ${i} غير متطابقة مع النص المرجعي (${passage.words[i]}) أو حالتها غير صالحة.`,
-        };
-      }
-      if (item.status === 'correct') teacherCorrectWordsCount++;
-      else if (item.status === 'dialect_variant') teacherDialectVariantCount++;
-      else if (item.status === 'phonetic_substitution') teacherSubstitutionCount++;
-      else if (item.status === 'omitted') teacherOmissionCount++;
-    }
-
-    validatedTeacherAlignment = rawVerifiedWords as Array<{
-      word: string;
-      status: 'correct' | 'dialect_variant' | 'phonetic_substitution' | 'omitted';
-    }>;
-
-    const effectiveTeacherWords = teacherCorrectWordsCount + teacherDialectVariantCount;
-    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
-    teacherWcpm = Math.min(220, Math.max(0, Math.round(effectiveTeacherWords / durationMin)));
-    teacherAccuracyPercent = Math.min(100, Math.max(0, Math.round((effectiveTeacherWords / passage.words.length) * 100)));
+  // Human review and manual word overrides are not part of this product's assessment flow.
+  // A school role must never turn client-supplied word labels into an oral-reading score.
+  const requestedTeacherVerification =
+    rawBody.teacherVerified === true || evidenceObj.teacherVerified === true;
+  if (requestedTeacherVerification) {
+    return {
+      valid: false,
+      statusCode: 400,
+      errorAr: 'التصحيح البشري ووسم الكلمات يدويًا غير مدعومين؛ لا تُقبل مؤشرات القراءة الجهرية إلا من إيصال تقييم صوتي صادر عن الخادم.',
+    };
   }
+  void reviewer;
+  const isTeacherVerified = false;
+  const validatedTeacherAlignment: undefined = undefined;
+  const teacherCorrectWordsCount = 0;
+  const teacherDialectVariantCount = 0;
+  const teacherSubstitutionCount = 0;
+  const teacherOmissionCount = 0;
+  const teacherWcpm: number | null = null;
+  const teacherAccuracyPercent: number | null = null;
 
   // A receipt is validated by the server route and its contents are checked again here.
   // Browser-submitted scores/transcripts alone never qualify as an automated assessment.
@@ -1326,10 +1294,9 @@ export function validateAndDeriveSessionFromEvidence(
     }));
   }
 
-  const oralReadingAssessed = isTeacherVerified || isAiAssessmentVerified;
+  const oralReadingAssessed = isAiAssessmentVerified;
 
-  // Only server-returned, word-level acoustic assessment or a separate explicit reviewer
-  // alignment can create oral metrics. The browser ASR preview is never scored here.
+  // Only server-returned, word-level acoustic assessment can create oral metrics. The browser ASR preview is never scored here.
   const oralMetrics =
     isTeacherVerified && spokenTranscript.length > 0
       ? evaluateOralReadingAlignment(
@@ -1426,10 +1393,6 @@ export function validateAndDeriveSessionFromEvidence(
   let derivedWpm = 0;
   if (isAiAssessmentVerified && automatedAudioAssessment?.wordsPerMinute !== null && automatedAudioAssessment?.wordsPerMinute !== undefined) {
     derivedWpm = Math.min(300, Math.max(0, Math.round(automatedAudioAssessment.wordsPerMinute)));
-  } else if (isTeacherVerified && validatedTeacherAlignment) {
-    const durationMin = Math.max(0.05, readingDurationSeconds / 60);
-    const attemptedWords = teacherCorrectWordsCount + teacherDialectVariantCount + teacherSubstitutionCount;
-    derivedWpm = Math.round((attemptedWords / durationMin));
   } else if (isVoiceOnlyModality) {
     // Keep zero only as the stored numeric sentinel; reports must display this as unavailable without evidence.
     derivedWpm = 0;
@@ -1444,9 +1407,7 @@ export function validateAndDeriveSessionFromEvidence(
   const derivedReadingRiskLevel: 'unassessed' = 'unassessed';
   const derivedReadingRiskLabelAr = isAiAssessmentVerified
     ? 'قُيّمت القراءة الجهرية آليًا من التسجيل الصوتي؛ المؤشرات وصفية ولا تشخّص عسر القراءة.'
-    : isTeacherVerified
-      ? 'الطلاقة الشفوية راجعها مراجع مخوّل؛ لا توجد درجة خطر معيارية.'
-      : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
+    : 'جلسة قراءة وفهم وصفية؛ لم تُحتسب درجة خطر معيارية.';
 
   const learningReport = buildDeterministicLearningReport({
     studentName: studentMeta.name,
@@ -1484,18 +1445,15 @@ export function validateAndDeriveSessionFromEvidence(
       oralWcpm: oralIntegration?.wcpm ?? null,
       oralAccuracyPercent: oralIntegration?.accuracyPercent ?? null,
       oralWerPercent: oralIntegration?.werPercent ?? null,
-      teacherVerified: isTeacherVerified,
-      teacherVerificationTimestamp: isTeacherVerified ? new Date().toISOString() : undefined,
-      teacherVerifierId: isTeacherVerified ? reviewer?.sessionId : undefined,
-      teacherVerifierName: isTeacherVerified ? reviewer?.accountName : undefined,
-      teacherVerifierRole: isTeacherVerified ? 'مراجع مخوّل عبر حساب المدرسة' : undefined,
-      teacherWordOverridesCount:
-        typeof (rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount) === 'number'
-          ? Number(rawBody.teacherWordOverridesCount ?? evidenceObj.teacherWordOverridesCount)
-          : (isTeacherVerified ? 0 : undefined),
+      teacherVerified: false,
+      teacherVerificationTimestamp: undefined,
+      teacherVerifierId: undefined,
+      teacherVerifierName: undefined,
+      teacherVerifierRole: undefined,
+      teacherWordOverridesCount: undefined,
       aiAssessmentVerified: isAiAssessmentVerified,
       aiAssessmentSource: isAiAssessmentVerified ? 'azure_pronunciation_assessment' : undefined,
-      verifiedWordsAlignment: validatedTeacherAlignment ?? validatedAiAlignment,
+      verifiedWordsAlignment: validatedAiAlignment,
       phoneticSubstitutionCount:
         oralIntegration?.phoneticSubstitutionCount ?? 0,
       dialectVariantCount: oralIntegration?.dialectVariantCount ?? 0,
