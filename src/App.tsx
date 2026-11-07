@@ -80,6 +80,11 @@ type ActiveTab = AppTabId;
 
 type DashboardSubView = 'roster' | 'report' | 'demo_requests' | 'metrics';
 
+/** A transcript or legacy human mark is not proof of an automated audio assessment. */
+const hasVerifiedOralAudio = (student: StudentRecord): boolean =>
+  student.aiAssessmentVerified === true &&
+  student.evidenceProvenance === 'server-verified-audio';
+
 function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
   if (typeof window === 'undefined') return { tab: 'home' };
   const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
@@ -430,11 +435,10 @@ export default function App() {
   const selectedReadingRate = (() => {
     if (selectedStudent.sessionStatus !== 'completed') return null;
     if (selectedStudent.assessmentModality === 'voice_only') {
-      const hasOralEvidence =
-        Boolean((selectedStudent.spokenTranscript || '').trim()) ||
-        selectedStudent.teacherVerified === true;
       const oralRate = selectedStudent.wcpm ?? selectedStudent.oralWcpm;
-      return hasOralEvidence && typeof oralRate === 'number' && Number.isFinite(oralRate)
+      return hasVerifiedOralAudio(selectedStudent) &&
+        typeof oralRate === 'number' &&
+        Number.isFinite(oralRate)
         ? oralRate
         : null;
     }
@@ -458,63 +462,68 @@ export default function App() {
     return true;
   });
 
-  const snapshotCompletedSession = (record: StudentRecord) => ({
-    sessionId: `session-${record.id}-${Date.now()}`,
-    completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
-    passageId: record.passageId,
-    assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
-    wcpm: record.wcpm ?? record.oralWcpm ?? null,
-    teacherVerified: record.teacherVerified === true,
-    wpm: record.wpm,
-    comprehensionScore: record.comprehensionScore,
-    problematicWords: [...(record.problematicWords || [])],
-    dyslexiaRiskScore: record.dyslexiaRiskScore,
-    readingHeuristicIndicator: record.readingHeuristicIndicator,
-    readingRiskLevel: record.readingRiskLevel,
-    subitizingAccuracy: record.subitizingAccuracy,
-    numberLinePAE: record.numberLinePAE,
-    transcodingAccuracy: record.transcodingAccuracy,
-    dyscalculiaRiskScore: record.dyscalculiaRiskScore,
-    mathRiskLevel: record.mathRiskLevel,
-  } as StudentAssessmentSnapshot);
+  const snapshotCompletedSession = (record: StudentRecord) => {
+    const verifiedAudio = hasVerifiedOralAudio(record);
+    return {
+      sessionId: `session-${record.id}-${Date.now()}`,
+      completedAt: record.sessionCompletedAt || (Number.isFinite(Date.parse(record.lastScreenedDate)) ? new Date(record.lastScreenedDate).toISOString() : 'unknown'),
+      passageId: record.passageId,
+      assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
+      wcpm: verifiedAudio ? (record.wcpm ?? record.oralWcpm ?? null) : null,
+      teacherVerified: false,
+      wpm: record.wpm,
+      comprehensionScore: record.comprehensionScore,
+      problematicWords: verifiedAudio ? [...(record.problematicWords || [])] : [],
+      dyslexiaRiskScore: record.dyslexiaRiskScore,
+      readingHeuristicIndicator: record.readingHeuristicIndicator,
+      readingRiskLevel: record.readingRiskLevel,
+      subitizingAccuracy: record.subitizingAccuracy,
+      numberLinePAE: record.numberLinePAE,
+      transcodingAccuracy: record.transcodingAccuracy,
+      dyscalculiaRiskScore: record.dyscalculiaRiskScore,
+      mathRiskLevel: record.mathRiskLevel,
+    } as StudentAssessmentSnapshot;
+  };
 
   // Only raw evidence & consent fields are sent to the server; scores and reports are derived server-side.
-  const sessionPayloadFromRecord = (record: StudentRecord) => ({
-    sessionRoleLabel: record.sessionRoleLabel,
-    passageId: record.passageId,
-    dialectCode: record.dialectCode || record.dialect || 'msa',
-    dialectRegionAr: record.dialectRegionAr,
-    assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
-    ...(typeof record.readingDurationSeconds === 'number' && Number.isFinite(record.readingDurationSeconds)
-      ? { readingDurationSeconds: record.readingDurationSeconds }
-      : {}),
-    oralReadingAssessed: record.oralReadingAssessed,
-    spokenTranscript: record.spokenTranscript,
-    wcpm: record.wcpm ?? record.oralWcpm ?? null,
-    oralWcpm: record.oralWcpm ?? record.wcpm ?? null,
-    oralAccuracyPercent: record.oralAccuracyPercent ?? null,
-    teacherVerified: record.teacherVerified === true,
-    ...(typeof record.aiAssessmentReceipt === 'string' ? { aiAssessmentReceipt: record.aiAssessmentReceipt } : {}),
-    teacherVerifierRole: record.teacherVerifierRole,
-    teacherVerificationTimestamp: record.teacherVerificationTimestamp,
-    teacherWordOverridesCount: record.teacherWordOverridesCount,
-    verifiedWordsAlignment: record.verifiedWordsAlignment,
-    phoneticSubstitutionCount: record.phoneticSubstitutionCount,
-    dialectVariantCount: record.dialectVariantCount,
-    omissionCount: record.omissionCount,
-    ...(record.comprehensionAnswers
-      ? { comprehensionAnswers: record.comprehensionAnswers }
-      : {}),
-    dyscalculiaAssessed: record.dyscalculiaAssessed,
-    ...(record.mathTrials ? { mathTrials: record.mathTrials } : {}),
-    guardianConsentGiven: record.guardianConsentGiven === true,
-    guardianConsentRecordedAt: record.guardianConsentRecordedAt,
-    guardianConsentSource: record.guardianConsentSource,
-    guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
-    guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
-    speechRecognitionUsed: record.speechRecognitionUsed === true,
-    audioRecordingStarted: record.audioRecordingStarted === true,
-  });
+  const sessionPayloadFromRecord = (record: StudentRecord) => {
+    const verifiedAudio = hasVerifiedOralAudio(record);
+    return {
+      sessionRoleLabel: record.sessionRoleLabel,
+      passageId: record.passageId,
+      dialectCode: record.dialectCode || record.dialect || 'msa',
+      dialectRegionAr: record.dialectRegionAr,
+      assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
+      ...(typeof record.readingDurationSeconds === 'number' && Number.isFinite(record.readingDurationSeconds)
+        ? { readingDurationSeconds: record.readingDurationSeconds }
+        : {}),
+      oralReadingAssessed: verifiedAudio,
+      spokenTranscript: verifiedAudio ? record.spokenTranscript : '',
+      wcpm: verifiedAudio ? (record.wcpm ?? record.oralWcpm ?? null) : null,
+      oralWcpm: verifiedAudio ? (record.oralWcpm ?? record.wcpm ?? null) : null,
+      oralAccuracyPercent: verifiedAudio ? (record.oralAccuracyPercent ?? null) : null,
+      teacherVerified: false,
+      ...(verifiedAudio && typeof record.aiAssessmentReceipt === 'string'
+        ? { aiAssessmentReceipt: record.aiAssessmentReceipt }
+        : {}),
+      verifiedWordsAlignment: verifiedAudio ? record.verifiedWordsAlignment : undefined,
+      phoneticSubstitutionCount: verifiedAudio ? record.phoneticSubstitutionCount : undefined,
+      dialectVariantCount: verifiedAudio ? record.dialectVariantCount : undefined,
+      omissionCount: verifiedAudio ? record.omissionCount : undefined,
+      ...(record.comprehensionAnswers
+        ? { comprehensionAnswers: record.comprehensionAnswers }
+        : {}),
+      dyscalculiaAssessed: record.dyscalculiaAssessed,
+      ...(record.mathTrials ? { mathTrials: record.mathTrials } : {}),
+      guardianConsentGiven: record.guardianConsentGiven === true,
+      guardianConsentRecordedAt: record.guardianConsentRecordedAt,
+      guardianConsentSource: record.guardianConsentSource,
+      guardianAudioConsentGiven: record.guardianAudioConsentGiven === true,
+      guardianAudioConsentRecordedAt: record.guardianAudioConsentRecordedAt,
+      speechRecognitionUsed: verifiedAudio && record.speechRecognitionUsed === true,
+      audioRecordingStarted: record.audioRecordingStarted === true,
+    };
+  };
 
   const studentCreatePayloadFromRecord = (record: StudentRecord) => ({
     id: record.id,
@@ -1541,11 +1550,9 @@ export default function App() {
                       : selectedReadingRate === null
                         ? 'لم تتوفر بيانات كافية لاحتساب السرعة.'
                         : selectedStudent.assessmentModality === 'voice_only'
-                          ? selectedStudent.teacherVerified === true
-                            ? 'معتمد بمراجعة المعلم ومطابقة القراءة.'
-                            : selectedStudent.aiAssessmentVerified === true && selectedStudent.evidenceProvenance === 'server-verified-audio'
-                              ? 'تقييم صوتي آلي موثق المصدر.'
-                              : 'تحليل صوتي تجريبي مكتمل.'
+                          ? hasVerifiedOralAudio(selectedStudent)
+                            ? 'تقييم صوتي آلي موثق المصدر؛ المؤشرات وصفية وليست تشخيصًا.'
+                            : 'لا توجد نتيجة صوتية موثقة لهذه الجلسة؛ لم يُحتسب معدل قراءة جهرية.'
                           : 'معدل مقاس لزمن إتمام النص؛ لا يقيس دقة الكلمات الفردية ولا يُقارن بمعيار الطلاقة الجهرية.'}
                   </p>
                 </article>
@@ -1556,7 +1563,7 @@ export default function App() {
                 </article>
                 <article className="baseera-summary-card baseera-summary-yellow">
                   <span className="baseera-summary-label">الطلاقة القرائية</span>
-                  <strong>{selectedStudent.oralWcpm ? toArabicNum(selectedStudent.oralWcpm) + ' كلمة/دقيقة' : 'لم تُقَس بعد'}</strong>
+                  <strong>{hasVerifiedOralAudio(selectedStudent) && selectedStudent.oralWcpm != null ? toArabicNum(selectedStudent.oralWcpm) + ' كلمة/دقيقة' : 'لم تُقَس بعد'}</strong>
                   <p>عدد الكلمات الصحيحة في الدقيقة عند القراءة الجهرية.</p>
                   <button type="button" className="baseera-inline-action" onClick={() => setActiveTab('reading-lab')}>قياس القراءة الجهرية <ArrowLeft aria-hidden="true" size={15} /></button>
                 </article>
@@ -1803,7 +1810,7 @@ export default function App() {
                                   {stu.sessionStatus !== 'completed'
                                     ? '—'
                                     : toArabicNum(stu.assessmentModality === 'voice_only'
-                                      ? ((stu.spokenTranscript || '').trim() || stu.teacherVerified === true)
+                                      ? hasVerifiedOralAudio(stu)
                                         ? (stu.wcpm ?? stu.oralWcpm ?? 'غير متاح')
                                         : 'غير متاح'
                                       : (stu.wpm > 0 ? stu.wpm : 'غير متاح'))}
@@ -1819,13 +1826,11 @@ export default function App() {
                                   <span className="baseera-evidence-status">
                                     {stu.sessionStatus !== 'completed'
                                       ? 'لم يُقَس بعد'
-                                      : stu.teacherVerified === true
-                                        ? 'مراجعة واعتماد المعلم'
-                                        : stu.aiAssessmentVerified === true && stu.evidenceProvenance === 'server-verified-audio'
-                                          ? 'تقييم صوتي آلي موثق'
-                                          : stu.oralReadingAssessed === true
-                                            ? 'محاذاة صوتية أولية'
-                                            : 'قراءة موقوتة'}
+                                      : hasVerifiedOralAudio(stu)
+                                        ? 'تقييم صوتي آلي موثق'
+                                        : stu.assessmentModality === 'voice_only'
+                                          ? 'لا توجد درجة صوتية موثقة'
+                                          : 'قراءة موقوتة'}
                                   </span>
                                 </td>
                                 <td className="py-3.5 px-4">
@@ -2040,13 +2045,9 @@ export default function App() {
                         {selectedStudent.sessionStatus !== 'completed'
                           ? 'ستظهر الملاحظات بعد إكمال نشاط القراءة.'
                           : selectedStudent.assessmentModality === 'voice_only'
-                            ? ((selectedStudent.spokenTranscript || '').trim() || selectedStudent.teacherVerified === true || selectedStudent.aiAssessmentVerified === true)
-                              ? selectedStudent.teacherVerified === true
-                                ? 'تمت مراجعة الجلسة واعتمادها من قِبل المعلم. سرعة الكلمات الصحيحة المعتمدة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة.'
-                                : selectedStudent.aiAssessmentVerified === true && selectedStudent.evidenceProvenance === 'server-verified-audio'
-                                  ? 'تمت مطابقة الكلمات بالتحليل الصوتي الآلي الموثق. سرعة الكلمات الصحيحة المقاسة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة (تُعد مؤشراً آلياً قابلاً لمراجعة الأخصائي).'
-                                  : 'تتوفر محاذاة صوتية آلية أولية فقط. تُراجع الكلمات قبل تفسيرها؛ ولا تمثل هذه النتيجة تشخيصًا.'
-                              : 'لا تتوفر بيانات صوتية كافية لاحتساب سرعة القراءة الجهرية.'
+                            ? hasVerifiedOralAudio(selectedStudent)
+                              ? 'اكتمل التحليل الصوتي الآلي الموثق. سرعة الكلمات الصحيحة المقاسة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة. هذه مؤشرات وصفية ولا تشخّص عسر القراءة.'
+                              : 'لم تُحتسب درجة قراءة جهرية؛ لا يُستخدم تفريغ المتصفح أو التصحيح اليدوي لإثبات صحة الكلمات.'
                             : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية مسجلة.'}
                       </p>
                     </div>
@@ -2427,7 +2428,7 @@ export default function App() {
 
         {activeTab === 'adaptive-reader' && (
           <ReaderPage
-            problematicWords={selectedStudent.sessionStatus === 'completed' && (selectedStudent.teacherVerified === true || selectedStudent.aiAssessmentVerified === true) && selectedStudent.evidenceProvenance !== 'demo-synthetic' ? (selectedStudent.problematicWords || []) : []}
+            problematicWords={selectedStudent.sessionStatus === 'completed' && hasVerifiedOralAudio(selectedStudent) ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}
           />
