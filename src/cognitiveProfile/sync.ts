@@ -60,6 +60,8 @@ export function syncBatteryToSchool(session: BatterySession, student?: StudentRe
       examinerName: session.examinerName,
       startedAt: session.startedAt,
       dialect: session.dialect,
+      guardianAudioConsentGiven: session.guardianAudioConsentGiven === true,
+      guardianAudioConsentRecordedAt: session.guardianAudioConsentRecordedAt,
       results: session.results,
     },
     student
