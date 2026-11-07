@@ -1,5 +1,5 @@
 import { toArabicNum } from './utils/arabicDigits';
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import {
   Search,
   Sparkles,
@@ -164,6 +164,9 @@ function tabToUrlPath(tab: ActiveTab): string {
 }
 
 export default function App() {
+  // Family battery updates are serialized per child. Each snapshot may contain
+  // one-use receipts for earlier tasks that are still being saved.
+  const parentBatterySyncQueue = useRef(new Map<string, Promise<void>>());
   const initialRoute = parseRouteFromLocation();
   const [activeTab, setActiveTabState] = useState<ActiveTab>(initialRoute.tab);
   const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(initialRoute.showLogin || false);
@@ -2333,25 +2336,28 @@ export default function App() {
                   JSON.stringify(updated.cognitiveBattery) !== JSON.stringify(existing?.cognitiveBattery)
                 );
 
-                // Family cognitive-battery records must pass through the server so Azure
-                // receipts are checked before any voice score enters Supabase raw_data.
+                // Family cognitive-battery records pass through the receipt-validating server.
+                // Serialize writes per child so two rapid subtest completions cannot race while
+                // the server consumes their one-use Azure receipts.
                 if (batteryChanged && updated.cognitiveBattery) {
-                  void authenticatedFetch(
-                    `/api/parent/students/${encodeURIComponent(updated.id)}/cognitive-battery`,
-                    {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        ageMonths: updated.cognitiveBattery.ageMonths,
-                        examinerName: updated.cognitiveBattery.examinerName,
-                        startedAt: updated.cognitiveBattery.startedAt,
-                        dialect: updated.cognitiveBattery.dialect,
-                        guardianAudioConsentGiven: updated.guardianAudioConsentGiven === true,
-                        guardianAudioConsentRecordedAt: updated.guardianAudioConsentRecordedAt,
-                        results: updated.cognitiveBattery.results,
-                      }),
-                    }
-                  ).then(async (response) => {
+                  const previousSave = parentBatterySyncQueue.current.get(updated.id) ?? Promise.resolve();
+                  const nextSave = previousSave.catch(() => undefined).then(async () => {
+                    const response = await authenticatedFetch(
+                      `/api/parent/students/${encodeURIComponent(updated.id)}/cognitive-battery`,
+                      {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          ageMonths: updated.cognitiveBattery!.ageMonths,
+                          examinerName: updated.cognitiveBattery!.examinerName,
+                          startedAt: updated.cognitiveBattery!.startedAt,
+                          dialect: updated.cognitiveBattery!.dialect,
+                          guardianAudioConsentGiven: updated.guardianAudioConsentGiven === true,
+                          guardianAudioConsentRecordedAt: updated.guardianAudioConsentRecordedAt,
+                          results: updated.cognitiveBattery!.results,
+                        }),
+                      }
+                    );
                     const payload = await response.json().catch(() => null) as
                       | { student?: StudentRecord; error?: string }
                       | null;
@@ -2366,6 +2372,12 @@ export default function App() {
                     }
                   }).catch(() => {
                     setAiStatusBanner('تعذر حفظ نتائج الفحص الصوتي بأمان في حساب الأسرة؛ بقيت النتائج على هذا الجهاز ولم تُعتمد سحابيًا.');
+                  });
+                  parentBatterySyncQueue.current.set(updated.id, nextSave);
+                  void nextSave.finally(() => {
+                    if (parentBatterySyncQueue.current.get(updated.id) === nextSave) {
+                      parentBatterySyncQueue.current.delete(updated.id);
+                    }
                   });
                   return;
                 }
