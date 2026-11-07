@@ -129,3 +129,49 @@ test('Azure omission is confirmed only when the provider explicitly returns an o
   assert.equal(unconfirmed.assessmentComplete, false);
   assert.equal(unconfirmed.wordsCorrectPerMinute, null);
 });
+
+
+test('Azure mapper fails closed when the provider omits an error tag or word score', () => {
+  const noTag = normalizeAzureWordResults([
+    { Word: 'باب', PronunciationAssessment: { AccuracyScore: 99 } },
+  ]);
+  assert.equal(noTag[0].errorType, 'Unconfirmed');
+
+  const noScore = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['باب', 'بيت'],
+    transcript: 'باب بيت',
+    durationSeconds: 4,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'باب', errorType: 'None', accuracyScore: 99 },
+      { word: 'بيت', errorType: 'None', accuracyScore: null },
+    ],
+  });
+  assert.equal(noScore.words[0].errorType, 'None');
+  assert.equal(noScore.words[1].errorType, 'Unconfirmed');
+  assert.equal(noScore.assessmentComplete, false);
+  assert.equal(noScore.wordAccuracyPercent, null);
+  assert.equal(noScore.wordsCorrectPerMinute, null);
+});
+
+test('Arabic provider matching keeps taa marbuta and alif maqsura distinct', async () => {
+  const { normalizeArabicToken } = await import('./azurePronunciationAssessment');
+  assert.notEqual(normalizeArabicToken('مدرسة'), normalizeArabicToken('مدرسه'));
+  assert.notEqual(normalizeArabicToken('هدى'), normalizeArabicToken('هدي'));
+});
+
+test('Azure mapper consumes duplicate omission records only once', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['كلمة', 'كلمة'],
+    transcript: '',
+    durationSeconds: 3,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'كلمة', errorType: 'Omission', accuracyScore: 0 },
+    ],
+  });
+  assert.equal(result.omissionsCount, 1);
+  assert.equal(result.words[0].errorType, 'Omission');
+  assert.equal(result.words[1].errorType, 'Unconfirmed');
+  assert.equal(result.assessmentComplete, false);
+});
