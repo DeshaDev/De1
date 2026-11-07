@@ -14,7 +14,8 @@
  *   (Denckla & Rudel, 1976; Wolf & Bowers, 1999; Norton & Wolf, 2012; Araújo et al., 2015).
  *
  * Administration follows the usual individual tests (TOWRE, DIBELS, the Denckla–Rudel RAN): the
- * child reads aloud and the adult marks each item. Spelling is typed on letter tiles and scored
+ * child reads aloud; the audio tasks are evaluated only from a complete server-verified Azure receipt.
+ * No adult word marking is used. Spelling is typed on letter tiles and scored
  * automatically. None of the items is normed yet: results are reported as raw counts, rates and
  * times, never as percentiles or risk levels.
  */
