@@ -70,6 +70,8 @@ export interface VerifiedBaseeraSession {
   scopes: BaseeraScope[];
   issuedAt: number;
   expiresAt: number;
+  /** Supabase user ID attached only to a server-verified family session. */
+  parentUserId?: string;
 }
 
 const ROLE_SCOPES: Record<BaseeraRole, BaseeraScope[]> = {
