@@ -81,9 +81,9 @@ export function prepareStudentRecordForGenericSupabaseSync(
 
   for (const field of SERVER_CONTROLLED_FIELDS) {
     if (raw && Object.prototype.hasOwnProperty.call(raw, field)) {
-      safe[field] = raw[field];
+      (safe as Record<string, unknown>)[field] = (raw as Record<string, unknown>)[field];
     } else {
-      delete safe[field];
+      delete (safe as Record<string, unknown>)[field];
     }
   }
 
