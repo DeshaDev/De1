@@ -51,7 +51,7 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
 import { trackUsage } from '../../utils/usageTracking';
-import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
+import { SyncState, batterySessionFromRecord, canSyncToSchool, resultsEligibleForPersistence, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
@@ -684,6 +684,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       // Family accounts and devices without a school: keep the result in the child's record too,
       // so the app can save it to the family's database. The summary is computed on this device.
       if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
+        const persistedResults = resultsEligibleForPersistence(s.results);
         onRecordUpdated?.({
           ...activeStudent,
           cognitiveBattery: {
@@ -692,8 +693,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             startedAt: s.startedAt,
             dialect: s.dialect,
             updatedAt: new Date().toISOString(),
-            results: s.results,
-            summary: summarizeBattery(s.results, s.ageMonths),
+            results: persistedResults,
+            summary: summarizeBattery(persistedResults, s.ageMonths),
           },
         });
       }
