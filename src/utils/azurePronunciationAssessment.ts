@@ -161,6 +161,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
   };
 
   const words: AzureAlignedWord[] = referenceWords.map((targetWord, index) => {
+    const alignedWord = aligned.words[index];
     const omissionIndex = enableMiscue
       ? [...unused].find(index => {
           const item = providerWords[index];
@@ -170,17 +171,30 @@ export function mapAzureAssessmentToReferenceWords(args: {
       : undefined;
     if (omissionIndex !== undefined) {
       unused.delete(omissionIndex);
+      // Azure's omission tag conflicts with the transcript if the independent
+      // transcript/reference aligner found any spoken token at this position.
+      // Preserve the conflict as unresolved instead of falsely telling the family
+      // that the child skipped a word that the transcript actually contains.
+      if (alignedWord && alignedWord.errorType !== 'Omission') {
+        unresolved += 1;
+        return {
+          word: targetWord,
+          errorType: 'Unconfirmed',
+          accuracyScore: null,
+          spokenWord: alignedWord.spokenWord ?? null,
+          notesAr: 'تعارض وسم الحذف من Azure مع وجود كلمة في التفريغ النصي؛ لم نُسجّلها حذفًا أو قراءة صحيحة.',
+        };
+      }
       omissions += 1;
       return {
         word: targetWord,
         errorType: 'Omission',
         accuracyScore: 0,
         spokenWord: null,
-        notesAr: 'صنّفه تقييم Azure على أنه حذف في المقارنة بالنص المرجعي.',
+        notesAr: 'صنّفه تقييم Azure على أنه حذف، ولم يظهر له مقابل في التفريغ النصي.',
       };
     }
 
-    const alignedWord = aligned.words[index];
     const scored = findScoredWord(alignedWord?.spokenWord ?? null, targetWord);
     const providerError = canonicalErrorType(scored?.errorType);
     const score = scored?.accuracyScore ?? null;
@@ -200,10 +214,26 @@ export function mapAzureAssessmentToReferenceWords(args: {
       };
     }
 
+    // A low score paired with an explicit "None" or dialect-variant tag is
+    // contradictory provider evidence, not proof of a child mispronunciation.
+    // Do not convert the numeric score alone into an error classification.
+    if (
+      score < 60 &&
+      (providerError === 'None' || providerError === 'DialectVariant')
+    ) {
+      unresolved += 1;
+      return {
+        word: targetWord,
+        errorType: 'Unconfirmed',
+        accuracyScore: score,
+        spokenWord: alignedWord?.spokenWord ?? null,
+        notesAr: 'درجة Azure منخفضة لكنها تتعارض مع وسم عدم وجود خطأ؛ أُبقيت الكلمة غير محسومة بدل تسجيل خطأ نطق.',
+      };
+    }
+
     const providerConfirmsError =
       providerError === 'Mispronunciation' ||
-      providerError === 'Substitution' ||
-      (score !== null && score < 60);
+      providerError === 'Substitution';
 
     if (alignedWord?.errorType === 'Substitution' || alignedWord?.errorType === 'Mispronunciation') {
       if (!providerConfirmsError) {
