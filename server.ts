@@ -1195,6 +1195,9 @@ async function startServer() {
     expiresAt: number;
     assessment: CognitiveAudioAssessmentEvidence;
   }>();
+  // Parent-account persistence awaits Supabase; reserve receipts during that write so
+  // concurrent requests cannot replay the same one-use receipt before it is consumed.
+  const cognitiveAudioAssessmentReceiptsInFlight = new Set<string>();
 
   const pruneAudioAssessmentReceipts = () => {
     const now = Date.now();
@@ -2153,6 +2156,7 @@ async function startServer() {
       }
       const incomingResults = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
       const results = { ...incomingResults } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+      const receiptKeysToConsume = new Set<string>();
       for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
         const incomingResult = results[taskId];
         if (!incomingResult) continue;
@@ -2212,6 +2216,7 @@ async function startServer() {
           audioAssessment: stored.assessment,
           audioAssessmentReceipt: receipt,
         };
+        receiptKeysToConsume.add(receipt);
       }
       const updatedRecord: StudentRecord = {
         ...studentsDb[found.idx],
@@ -2244,6 +2249,8 @@ async function startServer() {
         return;
       }
       studentsDb = committed.students;
+      // A cognitive audio receipt is single-use, but remains available when storage fails.
+      for (const receipt of receiptKeysToConsume) cognitiveAudioAssessmentReceipts.delete(receipt);
       res.status(200).json({ student: updatedRecord, persisted: true });
     }
   );
@@ -2508,6 +2515,7 @@ async function startServer() {
     }
 
     const results = { ...parsed.data.results } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+    const receiptKeysToConsume = new Set<string>();
     for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
       const incoming = results[taskId];
       if (!incoming) continue;
@@ -2529,6 +2537,7 @@ async function startServer() {
       if (
         !stored ||
         stored.expiresAt <= Date.now() ||
+        cognitiveAudioAssessmentReceiptsInFlight.has(receipt) ||
         stored.sessionId !== session.sessionId ||
         stored.tenantId !== session.tenantId ||
         stored.studentId !== studentId ||
@@ -2569,6 +2578,7 @@ async function startServer() {
         audioAssessment: stored.assessment,
         audioAssessmentReceipt: receipt,
       };
+      receiptKeysToConsume.add(receipt);
     }
 
     const audioConsentGiven = body.guardianAudioConsentGiven === true;
@@ -2597,6 +2607,20 @@ async function startServer() {
       });
       return;
     }
+
+    // Reserve atomically before the first awaited write. Failed persistence releases
+    // the reservation without consuming the receipt; successful persistence consumes it.
+    for (const receipt of receiptKeysToConsume) {
+      if (cognitiveAudioAssessmentReceiptsInFlight.has(receipt)) {
+        res.status(409).json({
+          code: 'COGNITIVE_AUDIO_RECEIPT_IN_USE',
+          error: 'يجري حفظ نتيجة هذه المهمة بالفعل؛ أعد المحاولة بعد اكتمال الحفظ.',
+        });
+        return;
+      }
+    }
+    for (const receipt of receiptKeysToConsume) cognitiveAudioAssessmentReceiptsInFlight.add(receipt);
+
     try {
       const updateUrl =
         `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}`;
@@ -2625,9 +2649,12 @@ async function startServer() {
         res.status(503).json({ error: 'لم يؤكد مخزن الأسرة حفظ سجل الطفل.' });
         return;
       }
+      for (const receipt of receiptKeysToConsume) cognitiveAudioAssessmentReceipts.delete(receipt);
       res.status(200).json({ student: updatedStudent, persisted: true });
     } catch {
       res.status(503).json({ error: 'تعذر الاتصال بمخزن الأسرة؛ بقيت النتائج محلية.' });
+    } finally {
+      for (const receipt of receiptKeysToConsume) cognitiveAudioAssessmentReceiptsInFlight.delete(receipt);
     }
   });
 
