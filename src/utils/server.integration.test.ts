@@ -324,6 +324,19 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(invalidTask.status, 400);
     assert.equal(((await invalidTask.json()) as { code: string }).code, 'UNSUPPORTED_COGNITIVE_AUDIO_TASK');
 
+    const forgedDuration = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        durationSeconds: 5,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(forgedDuration.status, 400);
+    assert.equal(((await forgedDuration.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
+
     const noAzure = await fetch(url, {
       method: 'POST',
       headers: authorization,
