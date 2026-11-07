@@ -100,6 +100,19 @@ export function ReadAloudPlayer({
 // ---------------------------------------------------------------------------
 type AudioTaskPhase = 'ready' | 'recording' | 'submitting' | 'error';
 
+function audioAvailabilityMessage(session: CognitiveAudioSessionContext): string {
+  if (session.guardianConsentGiven !== true) {
+    return 'يلزم إقرار ولي الأمر قبل بدء الفحص.';
+  }
+  if (session.guardianAudioConsentGiven !== true) {
+    return 'لم تُمنح موافقة منفصلة على تسجيل صوت الطفل ومعالجته. يمكنك متابعة المهمة دون درجة.';
+  }
+  if (!session.speechLocale) {
+    return 'اختر لهجة الطفل بوضوح. يتوفر التقييم الصوتي حاليًا للمصرية والخليجية فقط؛ لن نفترض لهجة أو نستبدلها تلقائيًا.';
+  }
+  return 'التقييم الصوتي غير متاح حاليًا لهذه الجلسة؛ ستبقى المهمة دون درجة.';
+}
+
 function audioFailureMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : '';
   if (code === 'UNSUPPORTED_SPEECH_DIALECT') return 'التقييم الصوتي غير متاح للهجة المختارة. لم نغيّر اللهجة تلقائيًا.';
@@ -256,9 +269,7 @@ export function PassagePlayer({
             </button>
             {!supported && (
               <p className="w-full text-center bz-small text-amber-800">
-                {audioSession.speechLocale
-                  ? 'لا توجد موافقة صوتية صريحة صالحة لهذه الجلسة؛ أعد بدء الفحص بعد الموافقة.'
-                  : 'النموذج الصوتي لا يدعم اللهجة المحددة حاليًا؛ ستبقى المهمة دون درجة.'}
+                {audioAvailabilityMessage(audioSession)}
               </p>
             )}
             <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
@@ -419,7 +430,7 @@ export function RanPlayer({
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
                 <Mic className="w-5 h-5" /> ابدأ التسجيل والسباق
               </button>
-              {!supported && <p className="bz-small text-amber-800">{audioSession.speechLocale ? 'لا توجد موافقة صوتية منفصلة صالحة.' : 'النموذج الصوتي لا يدعم اللهجة المحددة؛ لن تُحتسب درجة.'}</p>}
+              {!supported && <p className="bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
               <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>متابعة دون درجة</button>
             </div>
           )}
