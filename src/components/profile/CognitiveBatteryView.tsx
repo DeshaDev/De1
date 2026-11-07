@@ -84,11 +84,15 @@ function SubtestRunner({
   const [index, setIndex] = useState(0);
   const [showNote, setShowNote] = useState(false);
   const responses = useRef<ItemResponse[]>([]);
+  // These subtasks still lack a server-verified recording flow bound to their own
+  // reference items. They must not collect browser-recognition or adult-marked scores.
+  const requiresVerifiedAudio = subtest.kind === 'readList' || subtest.kind === 'passage' || subtest.kind === 'ran';
 
   useEffect(() => {
+    if (requiresVerifiedAudio) return () => stopSpeech();
     speak(subtest.introAudio);
     return () => stopSpeech();
-  }, [subtest.id]);
+  }, [subtest.id, requiresVerifiedAudio]);
 
   const practiceCount =
     subtest.kind === 'choice' ||
@@ -184,7 +188,31 @@ function SubtestRunner({
       )}
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
-        {stage === 'intro' && (
+        {requiresVerifiedAudio && stage === 'intro' && (
+          <div className="max-w-xl flex flex-col items-center gap-4 text-center" role="status" aria-live="polite">
+            <span className="grid place-items-center w-20 h-20 rounded-3xl bg-amber-50 text-amber-700" aria-hidden="true">
+              <AlertTriangle className="w-10 h-10" />
+            </span>
+            <h2 className="font-child text-2xl sm:text-3xl font-bold text-ink">
+              هذه المهمة غير متاحة للتقييم الصوتي المعتمد بعد
+            </h2>
+            <p className="bz-body text-ink-2">
+              لن نستخدم تعرّف المتصفح أو تصحيح ولي الأمر أو المعلم لتحديد صحة القراءة أو احتساب الأخطاء.
+              لذلك لن تُسجّل لهذه المهمة درجة، ولن تؤثر في نتيجة الطفل.
+            </p>
+            <p className="bz-small text-muted">
+              سيظل التقييم محجوبًا حتى يُربط تسجيل الطفل بمحرك صوتي خادمي موثّق خاص ببنود هذه المهمة.
+            </p>
+            <button
+              type="button"
+              onClick={() => finish(true)}
+              className="bz-btn bz-btn-secondary bz-btn-lg"
+            >
+              تخطّي دون تسجيل نتيجة
+            </button>
+          </div>
+        )}
+        {!requiresVerifiedAudio && stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
             <span className="grid place-items-center w-36 h-36 rounded-[40px] bg-sun-soft text-8xl animate-bounce-gentle" aria-hidden="true">{subtest.icon}</span>
             <h2 className="font-child text-4xl font-bold text-ink" style={{ fontFamily: 'var(--font-child)' }}>{subtest.gameNameAr}</h2>
@@ -321,8 +349,20 @@ function SubtestRunner({
 
         {stage === 'done' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
-            <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+            {requiresVerifiedAudio ? (
+              <>
+                <span className="grid place-items-center w-24 h-24 rounded-full bg-amber-50 text-amber-700" aria-hidden="true">
+                  <AlertTriangle className="w-12 h-12" />
+                </span>
+                <p className="font-child text-2xl font-bold text-ink">تم تخطّي المهمة دون نتيجة</p>
+                <p className="bz-small text-ink-2">لم يُحتسب أداء صوتي أو خطأ قراءة لهذه المهمة.</p>
+              </>
+            ) : (
+              <>
+                <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
+                <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+              </>
+            )}
             <button
               type="button"
               onClick={onExit}
@@ -828,6 +868,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {games.map((s) => {
           const done = Boolean(session.results[s.id]);
+          const audioUnscored = s.kind === 'readList' || s.kind === 'passage' || s.kind === 'ran';
+          const wasSkippedWithoutAudioScore = audioUnscored && done &&
+            (session.results[s.id]?.responses.length ?? 0) === 0;
           const isNext = nextSubtest?.id === s.id;
           const domain = DOMAINS[s.domain];
           return (
@@ -841,7 +884,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 <div className="flex items-start justify-between gap-3 w-full">
                   <span className="grid place-items-center w-16 h-16 rounded-2xl text-4xl" style={{ background: `color-mix(in srgb, ${domain.color} 12%, var(--card))` }} aria-hidden="true">{s.icon}</span>
                   {done ? (
-                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
+                    wasSkippedWithoutAudioScore ? (
+                      <span className="bz-badge bz-badge-warn"><AlertTriangle className="w-3.5 h-3.5" /> بلا نتيجة صوتية</span>
+                    ) : (
+                      <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
+                    )
                   ) : isNext ? (
                     <span className="bz-badge bz-badge-sun">التالية</span>
                   ) : (
@@ -854,7 +901,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 </div>
                 <div className="mt-auto w-full flex items-center justify-between text-[12px] font-semibold pt-3 border-t border-line">
                   <span style={{ color: domain.color }}>{domain.nameAr}</span>
-                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
+                  <span className="bz-muted">{done ? (wasSkippedWithoutAudioScore ? 'غير مقاسة' : 'إعادة اللعبة') : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
                 </div>
               </button>
             </li>
