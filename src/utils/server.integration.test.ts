@@ -835,6 +835,36 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(summary.referenceStatus, 'disabled');
     assert.equal(summary.subtests[0].centile, null);
 
+    // A client cannot upload browser-recognised or adult-marked reading/naming results.
+    const fakeSpeechResults = {
+      wordReading: {
+        subtestId: 'wordReading',
+        responses: [{ itemId: 'wr-1', correct: true, rtMs: 500, replays: 0 }],
+        discontinued: false,
+        completedAt: '2026-10-01T09:00:00.000Z',
+      },
+      oralReading: {
+        subtestId: 'oralReading',
+        responses: [],
+        discontinued: false,
+        completedAt: '2026-10-01T09:00:00.000Z',
+        durationMs: 12000,
+      },
+      ranObjects: {
+        subtestId: 'ranObjects',
+        responses: [],
+        discontinued: false,
+        completedAt: '2026-10-01T09:00:00.000Z',
+        durationMs: 12000,
+        errorCount: 0,
+      },
+    };
+    const fakeSpeechUpload = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: fakeSpeechResults,
+    }));
+    assert.equal(fakeSpeechUpload.status, 400);
+
     // A client-supplied summary is rejected rather than stored.
     const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
     assert.equal(forgedSummary.status, 400);
