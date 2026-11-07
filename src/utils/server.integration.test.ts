@@ -7,7 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 import { SUBTESTS_BY_ID } from '../cognitiveProfile/battery';
-import { PASSAGE_WORDS, passageWordId } from '../cognitiveProfile/readingTasks';
+import { PASSAGE_WORDS, WORD_ITEMS, NONWORD_ITEMS, passageWordId } from '../cognitiveProfile/readingTasks';
 
 const PLATFORM_ADMIN_CODE = 'ee7c3523458b091f0923ac7815de4231b578cde09852341a';
 const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
@@ -948,6 +948,35 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(withheldSpeech?.total, 0);
     assert.equal(withheldSpeech?.measures?.attempted, 0);
     assert.equal(withheldSpeech?.measures?.seconds, null);
+
+    // Manual marks for both real-word and made-up-word reading lists are stripped as well.
+    for (const taskId of ['wordReading', 'nonwordReading'] as const) {
+      const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+      const manualList = {
+        subtestId: taskId,
+        responses: items.map((item) => ({
+          itemId: item.id,
+          correct: true,
+          rtMs: 0,
+          replays: 0,
+        })),
+        discontinued: false,
+        completedAt: '2026-10-01T09:02:00.000Z',
+        durationMs: 8_000,
+      };
+      const manualListResponse = await fetch(route, json(admin.token, 'PUT', {
+        ...upload,
+        results: { ...results, [taskId]: manualList },
+      }));
+      assert.equal(manualListResponse.status, 200, await manualListResponse.clone().text());
+      const manualListBody = (await manualListResponse.json()) as {
+        student: { cognitiveBattery: { summary: { subtests: Array<{ subtestId: string; total: number; measures?: { attempted: number; seconds: number | null } }> } } };
+      };
+      const withheldList = manualListBody.student.cognitiveBattery.summary.subtests.find((item) => item.subtestId === taskId);
+      assert.equal(withheldList?.total, 0, taskId);
+      assert.equal(withheldList?.measures?.attempted, 0, taskId);
+      assert.equal(withheldList?.measures?.seconds, null, taskId);
+    }
 
     // A syntactically valid but invented browser receipt is rejected by the server-side receipt store.
     const fakeReceipt = 'a'.repeat(64);
