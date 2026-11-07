@@ -313,11 +313,11 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
       try {
         const recognition = new SpeechRecognitionClass();
+        // Browser recognition is preview-only. Do not silently relabel MSA or
+        // an unsupported regional dialect as Saudi Arabic.
         const langCode =
           studentDialect === 'egyptian' ? 'ar-EG' :
-          studentDialect === 'gulf' ? 'ar-SA' :
-          studentDialect === 'levantine' ? 'ar-JO' :
-          studentDialect === 'maghrebi' ? 'ar-MA' : 'ar-SA';
+          studentDialect === 'gulf' ? 'ar-SA' : 'ar';
         recognition.lang = langCode;
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -548,7 +548,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           const locale: 'ar-EG' | 'ar-SA' | null =
             studentDialect === 'egyptian'
               ? 'ar-EG'
-              : studentDialect === 'gulf' || studentDialect === 'msa'
+              : studentDialect === 'gulf'
                 ? 'ar-SA'
                 : null;
 
@@ -642,9 +642,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         if (!recordedAudio || recordedAudio.size === 0) {
           reason = 'empty_audio';
           errorMessage = 'لم يُلتقط تسجيل صوتي صالح (تسجيل فارغ أو مستوى صوت منخفض جداً). تحقق من الميكروفون ثم أعد القراءة.';
-        } else if (studentDialect === 'levantine' || studentDialect === 'maghrebi') {
+        } else if (studentDialect !== 'egyptian' && studentDialect !== 'gulf') {
           reason = 'unsupported_dialect';
-          errorMessage = 'التقييم الصوتي الآلي المعتمد متاح حالياً للمصرية والسعودية/الخليجية والفصحى. اختر إحداها أو تابع دون درجة نطق.';
+          errorMessage = 'التقييم الصوتي الآلي في هذا المسار متاح حاليًا للمصرية والخليجية فقط. الفصحى واللهجات الأخرى تتابع دون درجة نطق، ولم نُحوّلها إلى نموذج آخر.';
         } else {
           reason = 'service_unavailable';
           errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك متابعة أسئلة الفهم دون درجة صوتية؛ ولا تُصحَّح الكلمات يدويًا.';
