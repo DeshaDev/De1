@@ -4,6 +4,7 @@ import { BATTERY, SUBTESTS_BY_ID, scoredItemIds, sittingsForAge, subtestsForAge 
 import { LEXICON } from './lexicon';
 import { buildProfile, scoreSubtest, type SubtestResult } from './scoring';
 import { CognitiveBatteryUploadSchema } from './records';
+import { DIALECT_LABELS_AR } from './storage';
 import {
   NONWORD_ITEMS,
   NONWORD_PRACTICE,
@@ -32,7 +33,6 @@ const now = new Date('2026-11-04T10:00:00Z').toISOString();
 
 describe('reading items', () => {
   it('preserves the explicitly selected standard Arabic dialect without assigning an Azure speech locale', () => {
-    const { DIALECT_LABELS_AR } = require('./storage') as typeof import('./storage');
     assert.equal(DIALECT_LABELS_AR.msa, 'فصحى معيارية');
     const parsed = CognitiveBatteryUploadSchema.safeParse({
       ageMonths: 84,
