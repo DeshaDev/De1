@@ -47,12 +47,12 @@ export function getCognitiveAudioTaskDefinition(taskId: unknown): CognitiveAudio
 function normalizeArabicToken(value: string): string {
   return value
     .normalize('NFC')
-    .replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, '')
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
-    .replace(/[.,!?،؟؛:"«»()[\\]{}]/g, '')
-    .replace(/\\s+/g, ' ')
+    .replace(/[.,!?،؟؛:"«»()[\]{}]/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
