@@ -601,6 +601,7 @@ export default function App() {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: cleanName,
       isDemoRecord: false,
+      parentAccount: supabaseUser ? supabaseUser.id : undefined,
       sessionStatus: 'in_progress',
       sessionRoleLabel: 'فحص معرفي',
       assessmentHistory: [],
@@ -608,7 +609,9 @@ export default function App() {
       trainingProgress: null,
       gradeLevel: Math.max(0, input.ageYears - 6),
       ageYears: input.ageYears,
-      schoolName: 'مدرستي',
+      schoolName: supabaseUser
+        ? `حساب ولي الأمر (${supabaseUser.user_metadata?.full_name || supabaseUser.email || 'الأسرة'})`
+        : 'على هذا الجهاز (محلي)',
       lastScreenedDate: '—',
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
@@ -672,18 +675,36 @@ export default function App() {
       if (!child.parentEmail || !child.parentPassword) {
         throw new Error('سجّل دخول ولي الأمر أو أنشئ حسابًا موثّقًا قبل حفظ ملف الطفل.');
       }
-      const { user, session } = await signUpWithEmail(child.parentEmail, child.parentPassword);
-      if (!user || !session?.access_token) {
+      try {
+        const { user } = await signUpWithEmail(child.parentEmail, child.parentPassword);
+        if (user) {
+          currentUser = user;
+          setSupabaseUser(user);
+        }
+      } catch (signUpErr: any) {
+        // If user already registered in Supabase, sign in instead of failing
+        try {
+          const { user } = await signInWithEmail(child.parentEmail, child.parentPassword);
+          if (user) {
+            currentUser = user;
+            setSupabaseUser(user);
+          } else {
+            throw signUpErr;
+          }
+        } catch {
+          throw signUpErr;
+        }
+      }
+      if (!currentUser) {
         throw new Error('أُرسل طلب إنشاء الحساب، لكن لم تُنشأ جلسة دخول بعد. تحقق من بريدك الإلكتروني ثم سجّل الدخول.');
       }
-      currentUser = user;
-      setSupabaseUser(user);
     }
 
     const recordedAt = new Date().toISOString();
     const newLearner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: child.name,
+      parentAccount: currentUser?.id,
       isDemoRecord: false,
       sessionStatus: 'in_progress',
       sessionRoleLabel: 'ولي الأمر / فحص منزلي',
@@ -735,11 +756,102 @@ export default function App() {
     setSelectedStudentId(newLearner.id);
 
     if (currentUser) {
-      void syncStudentToSupabase(newLearner, currentUser.id);
+      const saved = await syncStudentToSupabase(newLearner, currentUser.id);
+      if (saved) {
+        setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في قاعدة البيانات السحابية بنجاح ☁️`);
+      }
+    } else {
+      setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+    }
+    return newLearner.id;
+  };
+
+  /** Link a locally created child (from guest screening) to a newly created or existing Supabase account */
+  const handleLinkLocalChild = async (
+    childId: string,
+    email: string,
+    pass: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return { success: false, error: 'يرجى إدخال بريد إلكتروني صحيح.' };
+    }
+    if (pass.length < 6) {
+      return { success: false, error: 'كلمة المرور يجب أن لا تقل عن 6 خانات.' };
     }
 
-    setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
-    return newLearner.id;
+    setSupabaseAuthLoading(true);
+    let currentUser: any = null;
+    let authSession: any = null;
+
+    try {
+      const res = await signUpWithEmail(cleanEmail, pass);
+      currentUser = res.user;
+      authSession = res.session;
+    } catch (signUpErr: any) {
+      try {
+        const res = await signInWithEmail(cleanEmail, pass);
+        currentUser = res.user;
+        authSession = res.session;
+      } catch (signInErr: any) {
+        setSupabaseAuthLoading(false);
+        return {
+          success: false,
+          error: signUpErr?.message || signInErr?.message || 'تعذر إنشاء الحساب أو تسجيل الدخول.',
+        };
+      }
+    }
+
+    if (!currentUser) {
+      setSupabaseAuthLoading(false);
+      return { success: false, error: 'تعذر توثيق الحساب. يرجى مراجعة البريد وكلمة المرور.' };
+    }
+
+    setSupabaseUser(currentUser);
+    const parentSession: BaseeraSessionInfo = {
+      token: authSession?.access_token || `session-${currentUser.id}`,
+      role: 'parent',
+      accountName: currentUser.user_metadata?.full_name || currentUser.email || 'ولي أمر',
+      tenantId: `parent_${currentUser.id.slice(0, 8)}`,
+      tenantDisplayNameAr: 'حساب ولي الأمر',
+      sessionId: currentUser.id.replace(/-/g, '').slice(0, 32),
+      scopes: ['students:read', 'students:write'],
+      expiresAt: (authSession?.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
+    };
+    setBaseeraSession(parentSession);
+
+    // Find student, attach parentAccount and sync to Supabase
+    const targetStudent = students.find((s) => s.id === childId);
+    if (targetStudent) {
+      const updatedStudent: StudentRecord = {
+        ...targetStudent,
+        parentAccount: currentUser.id,
+        schoolName: `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`,
+      };
+      setStudents((prev) => prev.map((s) => (s.id === childId ? updatedStudent : s)));
+      setSelectedStudentId(childId);
+      const saved = await syncStudentToSupabase(updatedStudent, currentUser.id);
+      if (saved && updatedStudent.trainingProgress) {
+        await syncTrainingProgressToSupabase(updatedStudent, currentUser.id);
+      }
+    }
+
+    // Load any existing cloud students
+    const cloudStudents = await fetchStudentsFromSupabase(currentUser.id);
+    if (cloudStudents.length > 0) {
+      const mapped = cloudStudents.map((cs) => ({
+        ...cs,
+        parentAccount: cs.parentAccount || currentUser.id,
+      }));
+      setStudents((prev) => {
+        const ids = new Set(mapped.map((s) => s.id));
+        return [...mapped, ...prev.filter((p) => !ids.has(p.id))];
+      });
+    }
+
+    setSupabaseAuthLoading(false);
+    setAiStatusBanner(`تم ربط ملف طفلك بحسابك السحابي بنجاح ☁️ وحفظ بياناته في قاعدة البيانات.`);
+    return { success: true };
   };
 
   const handleSelectExistingDemoJourney = (
@@ -1144,7 +1256,7 @@ export default function App() {
               className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold"
               onClick={() => setActiveTab('parent-portal')}
             >
-              <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي' : 'تسجيل طفل'}</span>
+              <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي 👶' : 'تسجيل طفل / حساب الأسرة 👨‍👩‍👧'}</span>
             </button>
           </div>
         </div>
@@ -1245,6 +1357,7 @@ export default function App() {
                 setAiStatusBanner('تم تسجيل الخروج بنجاح.');
               }}
               onRegisterChild={handleRegisterChildByParent}
+              onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
                 setSelectedStudentId(studentId);
                 setActiveTab(targetTab);
@@ -2060,6 +2173,7 @@ export default function App() {
             activeStudent={selectedStudent}
             onSelectStudent={setSelectedStudentId}
             onNavigateTab={(tab) => setActiveTab(tab)}
+            supabaseUser={supabaseUser}
             initialSubTab={
               activeTab === 'cognitive-lab'
                 ? 'cognitive-screening'

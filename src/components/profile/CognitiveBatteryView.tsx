@@ -12,6 +12,8 @@ import {
   Volume2,
   ChevronDown,
   ArrowLeft as ArrowLeftIcon,
+  Cloud,
+  AlertTriangle,
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import {
@@ -327,7 +329,17 @@ function needsOwnRecord(student: StudentRecord): boolean {
   return student.isDemoRecord === true || student.guardianConsentGiven !== true;
 }
 
-function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: BatterySession) => void }) {
+function SetupView({
+  student,
+  supabaseUser,
+  onStart,
+  onNavigateTab,
+}: {
+  student: StudentRecord;
+  supabaseUser?: any;
+  onStart: (s: BatterySession) => void;
+  onNavigateTab?: (tab: string) => void;
+}) {
   const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
   const defaultYears = ageIsSupported ? student.ageYears : 6;
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
@@ -352,6 +364,34 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
     <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 items-start" dir="rtl">
       <section className="bz-card bz-card-pad space-y-8">
         <div className="space-y-5">
+          {supabaseUser ? (
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 font-bold flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>متصل بحساب الأسرة ({supabaseUser.email}) — سيتم حفظ نتائج الفحص تلقائياً في قاعدة البيانات السحابية ☁️</span>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">وضع الفحص السريع على هذا المتصفح (محلي)</p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    لن يُحفظ ملف الطفل في قاعدة البيانات السحابية إلا بحساب ولي أمر.
+                  </p>
+                </div>
+              </div>
+              {onNavigateTab && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('parent-portal')}
+                  className="bz-btn bz-btn-secondary bz-btn-sm whitespace-nowrap self-start sm:self-center font-bold text-xs"
+                >
+                  تسجيل حساب الأسرة لحفظ النتائج ☁️
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <span className="grid place-items-center w-8 h-8 rounded-full bg-brand text-on-brand font-bold bz-num">١</span>
             <h2 className="bz-h3">بيانات الطفل</h2>
@@ -448,6 +488,11 @@ function SetupView({ student, onStart }: { student: StudentRecord; onStart: (s: 
         >
           <Play className="w-5 h-5" /> بدء الفحص
         </button>
+        {!supabaseUser && (
+          <p className="text-xs text-slate-500 text-center mt-2">
+            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقاً ربطه وحفظه في السحابة من بوابة الأسرة.
+          </p>
+        )}
       </section>
 
       <aside className="space-y-4">
@@ -518,9 +563,11 @@ interface Props {
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
   onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
+  supabaseUser?: any;
+  onNavigateTab?: (tab: string) => void;
 }
 
-export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra }: Props) {
+export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
@@ -627,6 +674,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     return (
       <SetupView
         student={activeStudent}
+        supabaseUser={supabaseUser}
+        onNavigateTab={onNavigateTab}
         onStart={(s) => {
           trackUsage('battery_started');
           // Never record a real child's results under a demo record.
