@@ -3478,6 +3478,7 @@ async function startServer() {
         wavBuffer.toString('base64') === suppliedBase64 &&
         wavBuffer.length >= 44 &&
         wavBuffer.toString('ascii', 0, 4) === 'RIFF' &&
+        wavBuffer.readUInt32LE(4) === wavBuffer.length - 8 &&
         wavBuffer.toString('ascii', 8, 12) === 'WAVE' &&
         wavBuffer.toString('ascii', 12, 16) === 'fmt ' &&
         wavBuffer.readUInt32LE(16) === 16 &&
