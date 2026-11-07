@@ -619,11 +619,11 @@ export default function App() {
   };
 
   /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
-  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string }): string | null => {
+  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }): string | null => {
     if (baseeraSession?.role === 'educator_readonly') return null;
     const cleanName = input.name.trim().replace(/\s+/g, ' ');
     if (cleanName.length < 2) return null;
-    const recordedAt = new Date().toISOString();
+    const recordedAt = input.guardianConsentRecordedAt || new Date().toISOString();
     const learner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: cleanName,
