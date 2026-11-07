@@ -1048,6 +1048,13 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         })),
       },
     };
+    const audioWithoutConsent = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, oralReading: forgedAudio },
+    }));
+    assert.equal(audioWithoutConsent.status, 403);
+    assert.equal(((await audioWithoutConsent.json()) as { code: string }).code, 'AUDIO_CONSENT_REQUIRED');
+
     const forgedAudioResponse = await fetch(route, json(admin.token, 'PUT', {
       ...upload,
       guardianAudioConsentGiven: true,
