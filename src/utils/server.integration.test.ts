@@ -324,6 +324,21 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(invalidTask.status, 400);
     assert.equal(((await invalidTask.json()) as { code: string }).code, 'UNSUPPORTED_COGNITIVE_AUDIO_TASK');
 
+    const malformedWav = Buffer.from(common.audioWavBase64, 'base64');
+    malformedWav.writeUInt32LE(malformedWav.length - 9, 4);
+    const malformedWavResponse = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        audioWavBase64: malformedWav.toString('base64'),
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(malformedWavResponse.status, 400);
+    assert.equal(((await malformedWavResponse.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
+
     const forgedDuration = await fetch(url, {
       method: 'POST',
       headers: authorization,
