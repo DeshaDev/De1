@@ -185,7 +185,7 @@ test('speech reading and naming tasks never accept manual correction or emit unv
     if (task === 'قارئ الكلمات') {
       await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
-      await page.getByRole('button', { name: 'متابعة دون احتساب درجة' }).click();
+      await page.getByRole('button', { name: 'حفظ المهمة كاملة دون درجة' }).click();
     } else if (task === 'سباق الصور') {
       await page.getByRole('button', { name: 'الرموز مألوفة — ابدأ السباق' }).click();
       await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
