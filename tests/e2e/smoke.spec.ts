@@ -1,5 +1,21 @@
 import { expect, test } from '@playwright/test';
 
+async function installSchoolTestSession(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem('baseera_session_v1', JSON.stringify({
+      token: 'playwright-test-session',
+      role: 'school_admin',
+      accountName: 'مسؤول الاختبار',
+      tenantId: 'school_a',
+      tenantDisplayNameAr: 'مدرسة الاختبار',
+      sessionId: 'a'.repeat(32),
+      scopes: ['students:read', 'students:write', 'ai:analyze'],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 60 * 60 * 1000,
+    }));
+  });
+}
+
 const toAr = (n: number) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
 test('homepage renders in Arabic RTL', async ({ page }) => {
@@ -9,14 +25,16 @@ test('homepage renders in Arabic RTL', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'الرئيسية' }).first()).toBeVisible();
 });
 
-test('reading view opens from primary navigation', async ({ page }) => {
+test('oral reading assessment opens from the screening hub footer navigation', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.goto('/');
-  await page.getByRole('button', { name: /رحلة القراءة/ }).last().click();
+  await page.locator('.baseera-footer').getByRole('button', { name: 'فحص القراءة الجهرية', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'قراءة نص وفهمه', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /قراءة نص وفهمه/ })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'قراءة نص وفهمه', exact: true })).toHaveAttribute('aria-current', 'page');
 });
 
 test('screening, accessible-reader, and training views open from primary navigation', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.goto('/');
 
   // 1. Reading screening / diagnostic hub
@@ -134,6 +152,7 @@ test('parent registration limits the screening age range and requires explicit g
 });
 
 test('cognitive battery: setup, game map with the reading sitting first at six, and training program entry', async ({ page }) => {
+  await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
@@ -157,40 +176,36 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
 });
 
-test('speech reading and naming tasks never accept manual correction or emit unverified scores', async ({ page }) => {
+test('voice reading requires separate audio consent and never offers adult word scoring', async ({ page }) => {
   test.setTimeout(90_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   await page.getByLabel('السنوات').selectOption('7');
-  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
+    await page.getByLabel(label).check();
+  }
+  // Audio consent is intentionally left unchecked.
   await page.getByRole('button', { name: 'بدء الفحص' }).click();
 
-  for (const task of ['قارئ الكلمات', 'سباق الصور', 'قصة سامي']) {
-    await page.getByText(task, { exact: true }).click();
-    await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'التقييم الصوتي الآلي غير متاح لهذه المهمة بعد' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'حفظ المهمة دون درجة' }).click();
-    await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
-  }
-
-  await page.getByRole('button', { name: 'النتيجة والتقرير' }).click();
-  await expect(page.getByRole('heading', { name: 'القراءة والإملاء والتسمية السريعة' })).toBeVisible();
-  const unavailableSpeechScores = page.getByText(/لا تتوفر نتيجة صوتية آلية صالحة لهذه المهمة/);
-  await expect(unavailableSpeechScores.first()).toBeVisible();
-  expect(await unavailableSpeechScores.count()).toBeGreaterThanOrEqual(3);
-  await expect(page.getByText(/٣ من ١٦ صحيحة/)).toHaveCount(0);
-  await expect(page.getByText(/الدقة ٨٣٪/)).toHaveCount(0);
+  await page.getByText('قصة سامي', { exact: true }).click();
+  await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'ابدأ تسجيل القراءة' })).toBeDisabled();
+  await expect(page.getByText(/لم تُمنح موافقة منفصلة على تسجيل صوت الطفل/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /صحيح|خطأ/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'متابعة دون درجة' }).click();
+  await expect(page.getByText('تم إنهاء المهمة دون درجة صوتية')).toBeVisible();
+  await expect(page.getByText(/لن تُعامل الكلمات غير المحسومة كأخطاء/)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
 test('dictation: letter tiles, delete, and a scored answer', async ({ page }) => {
   test.setTimeout(90_000);
+  await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
