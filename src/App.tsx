@@ -676,6 +676,29 @@ export default function App() {
     setSelectedStudentId(learner.id);
     if (supabaseUser) {
       void syncStudentToSupabase(learner, supabaseUser.id);
+    } else if (baseeraSession?.role === 'school_admin') {
+      // The server will not send child audio to Azure until this learner exists
+      // in the same tenant with a recorded guardian-consent timestamp.
+      void authenticatedFetch('/api/students/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: learner.id,
+          name: learner.name,
+          gradeLevel: learner.gradeLevel,
+          ageYears: learner.ageYears,
+          schoolName: learner.schoolName,
+          guardianConsentGiven: true,
+          guardianConsentRecordedAt: learner.guardianConsentRecordedAt,
+          guardianConsentSource: learner.guardianConsentSource,
+        }),
+      }).then(async (response) => {
+        if (!response.ok) {
+          setAiStatusBanner('تعذر إنشاء ملف الطفل في سجل المدرسة؛ لن يُرسل صوته للتقييم قبل حفظ السجل والموافقة.');
+        }
+      }).catch(() => {
+        setAiStatusBanner('تعذر الاتصال بسجل المدرسة؛ سيبقى التقييم الصوتي غير متاح حتى حفظ ملف الطفل.');
+      });
     }
     return learner.id;
   };
