@@ -97,7 +97,7 @@ describe('generic Supabase student sync safety', () => {
       wcpm: 999,
       aiAssessmentVerified: false,
       aiAssessmentReceipt: 'c'.repeat(64),
-      guardianConsentGiven: false,
+      guardianConsentGiven: true,
       guardianConsentRecordedAt: '1999-01-01T00:00:00.000Z',
       guardianAudioConsentGiven: false,
       guardianAudioConsentRecordedAt: undefined,
