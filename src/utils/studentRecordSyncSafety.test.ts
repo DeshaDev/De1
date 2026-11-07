@@ -128,9 +128,15 @@ describe('generic Supabase student sync safety', () => {
       guardianConsentGiven: true,
       guardianConsentRecordedAt: consentAt,
       guardianConsentSource: 'old browser value',
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: consentAt,
     });
     const safe = prepareStudentRecordForGenericSupabaseSync(incoming, {
-      raw_data: student({ guardianConsentGiven: false }),
+      raw_data: student({
+        guardianConsentGiven: false,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: consentAt,
+      }),
       guardian_consent: false,
       guardian_consent_recorded_at: null,
     });
@@ -138,5 +144,31 @@ describe('generic Supabase student sync safety', () => {
     assert.equal(safe.guardianConsentGiven, false);
     assert.equal(safe.guardianConsentRecordedAt, undefined);
     assert.equal(safe.guardianConsentSource, undefined);
+    assert.equal(safe.guardianAudioConsentGiven, false);
+    assert.equal(safe.guardianAudioConsentRecordedAt, undefined);
+  });
+
+  it('allows an explicit consent withdrawal without accepting stale timestamps', () => {
+    const incoming = student({
+      guardianConsentGiven: false,
+      guardianConsentRecordedAt: undefined,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: consentAt,
+    });
+    const safe = prepareStudentRecordForGenericSupabaseSync(incoming, {
+      raw_data: student({
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: consentAt,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: consentAt,
+      }),
+      guardian_consent: true,
+      guardian_consent_recorded_at: consentAt,
+    });
+
+    assert.equal(safe.guardianConsentGiven, false);
+    assert.equal(safe.guardianConsentRecordedAt, undefined);
+    assert.equal(safe.guardianAudioConsentGiven, false);
+    assert.equal(safe.guardianAudioConsentRecordedAt, undefined);
   });
 });
