@@ -10,6 +10,22 @@ import type { TrainingProgress } from './training';
 
 export type SyncState = 'local' | 'saving' | 'saved' | 'error';
 
+/**
+ * Keep browser-recognised/adult-marked speech tasks in the device's resumable UI
+ * session only. They are not valid evidence for the trusted student record until
+ * a server-issued audio receipt is supported for each task type.
+ */
+export function resultsEligibleForPersistence(
+  results: BatterySession['results']
+): BatterySession['results'] {
+  return Object.fromEntries(
+    Object.entries(results).filter(([id]) => {
+      const task = BATTERY.find((item) => item.id === id);
+      return task?.kind !== 'readList' && task?.kind !== 'passage' && task?.kind !== 'ran';
+    })
+  ) as BatterySession['results'];
+}
+
 export function canSyncToSchool(student: Pick<StudentRecord, 'isDemoRecord' | 'guardianConsentGiven'>): boolean {
   const session = getStoredBaseeraSession();
   return Boolean(session && session.role === 'school_admin' && !student.isDemoRecord && student.guardianConsentGiven === true);
@@ -56,12 +72,7 @@ async function put(url: string, body: unknown, student?: StudentRecord): Promise
 export function syncBatteryToSchool(session: BatterySession, student?: StudentRecord): Promise<StudentRecord | null> {
   // Do not sync browser-recognised or adult-marked speech tasks. Until each task has a
   // server-verified audio receipt, it is omitted entirely from the trusted school record.
-  const results = Object.fromEntries(
-    Object.entries(session.results).filter(([id]) => {
-      const task = BATTERY.find((item) => item.id === id);
-      return task?.kind !== 'readList' && task?.kind !== 'passage' && task?.kind !== 'ran';
-    })
-  ) as BatterySession['results'];
+  const results = resultsEligibleForPersistence(session.results);
 
   return put(
     `/api/students/${encodeURIComponent(session.studentId)}/cognitive-battery`,
