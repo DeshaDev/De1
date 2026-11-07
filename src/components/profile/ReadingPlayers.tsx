@@ -147,7 +147,7 @@ export function ReadListAudioPlayer({
   const startAtRef = useRef(0);
   const startingRef = useRef(false);
   const finalizingRef = useRef(false);
-  const maxDurationSeconds = 88;
+  const maxDurationSeconds = 86;
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true &&
     Boolean(audioSession.speechLocale);
@@ -557,7 +557,7 @@ export function RanPlayer({
   };
 
   useEffect(() => {
-    if (phase === 'recording' && elapsedSeconds >= 88) void submitRecording();
+    if (phase === 'recording' && elapsedSeconds >= 86) void submitRecording();
   }, [phase, elapsedSeconds]);
 
   useEffect(() => () => {
@@ -614,7 +614,7 @@ export function RanPlayer({
 
           {phase === 'ready' && (
             <div className="text-center space-y-3">
-              <p className="bz-small text-ink-2">سمِّ جميع الرموز بأسرع ما تستطيع، دون الإشارة إليها بإصبعك. يستغرق التسجيل حتى ٨٨ ثانية.</p>
+              <p className="bz-small text-ink-2">سمِّ جميع الرموز بأسرع ما تستطيع، دون الإشارة إليها بإصبعك. يستغرق التسجيل حتى ٨٦ ثانية.</p>
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
                 <Mic className="w-5 h-5" /> ابدأ التسجيل والسباق
               </button>
@@ -626,7 +626,7 @@ export function RanPlayer({
           {phase === 'recording' && (
             <div className="text-center space-y-3">
               <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.floor(elapsedSeconds))} ثانية</p>
-              <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / 88 * 100)) + '%' }} /></div>
+              <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / 86 * 100)) + '%' }} /></div>
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
                 <Check className="w-5 h-5" /> انتهى السباق — حلّل التسجيل
               </button>
