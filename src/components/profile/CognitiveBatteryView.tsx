@@ -289,8 +289,8 @@ function SubtestRunner({
                 لن نطلب من ولي الأمر أو المعلم تحديد صحة الكلمات أو عدّ الأخطاء. يمكنك متابعة الفحص دون درجة لهذه المهمة.
               </p>
             </div>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => recordAndAdvance([])}>
-              متابعة دون احتساب درجة
+            <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => finish(false)}>
+              حفظ المهمة كاملة دون درجة
             </button>
           </div>
         )}
