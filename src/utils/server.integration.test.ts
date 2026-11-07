@@ -365,6 +365,66 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(((await noAzure.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
   });
 
+  it('does not allow school or anonymous sessions to use family oral-reading persistence', async () => {
+    const url = `${baseUrl}/api/parent/students/stu-family-only/reading-session`;
+    const body = {
+      passageId: ARABIC_READING_PASSAGES[0].id,
+      assessmentModality: 'voice_only',
+      readingDurationSeconds: 60,
+      comprehensionAnswers: [0, 1, 2, 0],
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: new Date().toISOString(),
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: new Date().toISOString(),
+      speechRecognitionUsed: true,
+    };
+    const anonymous = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assert.equal(anonymous.status, 401);
+
+    const school = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const schoolAttempt = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    assert.equal(schoolAttempt.status, 403);
+  });
+
+  it('legacy passage audio endpoint rejects unknown or unconsented students before calling Azure', async () => {
+    const school = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const passage = ARABIC_READING_PASSAGES[0];
+    const timestamp = new Date().toISOString();
+    const response = await fetch(`${baseUrl}/api/ai/pronunciation-assessment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify({
+        studentId: 'student-not-owned-by-school',
+        passageId: passage.id,
+        referenceText: passage.words.join(' '),
+        referenceWords: passage.words,
+        audioWavBase64: makeSilentWavBase64(1),
+        durationSeconds: 1,
+        language: 'ar-SA',
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: timestamp,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal(((await response.json()) as { code: string }).code, 'GUARDIAN_CONSENT_NOT_STORED');
+  });
+
   it('does not allow school or anonymous sessions to use family battery persistence', async () => {
     const url = `${baseUrl}/api/parent/students/stu-family-only/cognitive-battery`;
     const body = {
