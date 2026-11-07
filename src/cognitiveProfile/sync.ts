@@ -3,6 +3,7 @@
  * account with write access is signed in. Without one, everything stays on this device.
  */
 import type { StudentRecord } from '../data/seedData';
+import { BATTERY } from './battery';
 import { authenticatedFetch, getStoredBaseeraSession } from '../utils/apiAuth';
 import type { BatterySession } from './storage';
 import type { TrainingProgress } from './training';
@@ -53,6 +54,15 @@ async function put(url: string, body: unknown, student?: StudentRecord): Promise
 }
 
 export function syncBatteryToSchool(session: BatterySession, student?: StudentRecord): Promise<StudentRecord | null> {
+  // Do not sync browser-recognised or adult-marked speech tasks. Until each task has a
+  // server-verified audio receipt, it is omitted entirely from the trusted school record.
+  const results = Object.fromEntries(
+    Object.entries(session.results).filter(([id]) => {
+      const task = BATTERY.find((item) => item.id === id);
+      return task?.kind !== 'readList' && task?.kind !== 'passage' && task?.kind !== 'ran';
+    })
+  ) as BatterySession['results'];
+
   return put(
     `/api/students/${encodeURIComponent(session.studentId)}/cognitive-battery`,
     {
@@ -60,7 +70,7 @@ export function syncBatteryToSchool(session: BatterySession, student?: StudentRe
       examinerName: session.examinerName,
       startedAt: session.startedAt,
       dialect: session.dialect,
-      results: session.results,
+      results,
     },
     student
   );
