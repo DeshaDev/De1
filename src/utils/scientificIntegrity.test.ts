@@ -107,18 +107,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(result.werPercent, null); // Empty transcript must yield null rather than artificial 0%
   });
 
-  await t.test('Teacher Human-in-the-Loop override recalculates WCPM accurately', () => {
-    const elapsedSec = 30; // 0.5 minute
-    let correctWords = 3;
-    let initialWcpm = Math.round((correctWords / elapsedSec) * 60); // 6 WCPM
-    assert.equal(initialWcpm, 6);
 
-    // When teacher verifies and overrides erroneous recognition
-    correctWords = 4;
-    let teacherVerifiedWcpm = Math.round((correctWords / elapsedSec) * 60); // 8 WCPM
-    assert.equal(teacherVerifiedWcpm, 8);
-    assert.ok(teacherVerifiedWcpm > initialWcpm);
-  });
 
   await t.test('Qatar privacy-law readiness: validates explicit guardian consent metadata', () => {
     const compliantStudent: StudentRecord = {
@@ -138,10 +127,10 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       assessmentModality: 'reading_only',
       sessionStatus: 'completed',
       wpm: 68,
-      wcpm: 65,
-      oralWcpm: 65,
-      teacherVerified: true,
-      oralReadingAssessed: true,
+      wcpm: null,
+      oralWcpm: null,
+      teacherVerified: false,
+      oralReadingAssessed: false,
       readingDurationSeconds: 48,
       comprehensionScore: 100,
       passageId: 'passage-grade-3-01',
@@ -152,8 +141,9 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.ok(compliantStudent.guardianRelationship);
     assert.equal(compliantStudent.guardianConsentPeriod, 'عام دراسي 2026/2027');
     assert.equal(compliantStudent.assessmentModality, 'reading_only');
-    assert.equal(compliantStudent.teacherVerified, true);
-    assert.equal(compliantStudent.wcpm, 65);
+    assert.equal(compliantStudent.teacherVerified, false);
+    assert.equal(compliantStudent.oralReadingAssessed, false);
+    assert.equal(compliantStudent.wcpm, null);
   });
 
   await t.test('Camera-Free Evidence Derivation: validates reading-only sessions without synthetic eye data', () => {
@@ -230,58 +220,33 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.equal(unclampedWer.werPercent, 200);
   });
 
-  await t.test('Authoritative Teacher Verification: server calculates WCPM and accuracy strictly from verifiedWordsAlignment', () => {
-    // Construct a teacher verification where the teacher reviewed all 52 passage words
-    const verifiedWords = passage.words.map((w, idx) => ({
-      word: w,
-      // First 30 words correct, next 5 dialect, rest omitted
-      status: (idx < 30 ? 'correct' : (idx < 35 ? 'dialect_variant' : 'omitted')) as
-        | 'correct'
-        | 'dialect_variant'
-        | 'omitted',
-    }));
-
-    const rawPayload = {
+  await t.test('manual word verification is rejected even for a school administrator', () => {
+    const manualPayload = {
       passageId: passage.id,
       assessmentModality: 'reading_only',
-      readingDurationSeconds: 60, // 1 minute
+      readingDurationSeconds: 60,
       comprehensionAnswers: [0, 1, 2, 0],
       guardianConsentGiven: true,
       guardianConsentRecordedAt: new Date().toISOString(),
       guardianConsentSource: 'إقرار ولي الأمر والمدرسة',
-      oralReadingAssessed: true,
-      spokenTranscript: 'تفريغ عشوائي قديم لا يعتمد عليه', // Machine transcript should NOT override teacher!
       teacherVerified: true,
-      teacherVerifierRole: 'المحلل الذكي المعتمد',
       teacherWordOverridesCount: 5,
-      verifiedWordsAlignment: verifiedWords,
+      verifiedWordsAlignment: passage.words.map((word) => ({ word, status: 'correct' as const })),
     };
-
-    const derived = validateAndDeriveSessionFromEvidence(rawPayload, {
+    const result = validateAndDeriveSessionFromEvidence(manualPayload, {
       name: 'عمر شريف',
       gradeLevel: 3,
     }, {
       sessionId: 'review-session-test-001',
       role: 'school_admin',
-      accountName: 'مراجع موثّق للاختبار',
+      accountName: 'مسؤول المدرسة',
     });
-
-    assert.equal(derived.valid, true);
-    assert.ok(derived.derivedFields);
-    assert.equal(derived.derivedFields.teacherVerified, true);
-    // 30 correct + 5 dialect = 35 effective words in 1 minute = 35 WCPM
-    assert.equal(derived.derivedFields.wcpm, 35);
-    assert.equal(derived.derivedFields.oralWcpm, 35);
-    // 35 / 52 = 67% accuracy
-    assert.equal(derived.derivedFields.oralAccuracyPercent, 67);
-    assert.equal(derived.derivedFields.dialectVariantCount, 5);
-    assert.equal(derived.derivedFields.omissionCount, 17);
-    assert.equal(derived.derivedFields.teacherVerifierId, 'review-session-test-001');
-    assert.equal(derived.derivedFields.teacherVerifierName, 'مراجع موثّق للاختبار');
-    assert.equal(derived.derivedFields.teacherVerifierRole, 'مراجع مخوّل عبر حساب المدرسة');
+    assert.equal(result.valid, false);
+    assert.equal(result.statusCode, 400);
+    assert.match(result.errorAr || '', /التصحيح البشري/);
   });
 
-  await t.test('Client-submitted teacherVerified is ignored without an authenticated school administrator reviewer', () => {
+  await t.test('client-submitted teacher verification is rejected without a server audio receipt', () => {
     const rawPayload = {
       passageId: passage.id,
       assessmentModality: 'voice_only',
@@ -302,15 +267,12 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
       gradeLevel: 3,
     });
 
-    assert.equal(derived.valid, true);
-    assert.ok(derived.derivedFields);
-    assert.equal(derived.derivedFields.teacherVerified, false);
-    assert.equal(derived.derivedFields.teacherVerifierId, undefined);
-    assert.equal(derived.derivedFields.wcpm === passage.words.length, false);
-    assert.equal(derived.derivedFields.readingRiskLevel, 'unassessed');
+    assert.equal(derived.valid, false);
+    assert.equal(derived.statusCode, 400);
+    assert.match(derived.errorAr || '', /التصحيح البشري/);
   });
 
-  await t.test('Server Validation: rejects corrupted or mismatched verifiedWordsAlignment', () => {
+  await t.test('server rejects corrupted and mismatched manual word alignments', () => {
     // Array length does not match passage words length
     const invalidLengthPayload = {
       passageId: passage.id,
@@ -331,7 +293,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
 
     assert.equal(derived.valid, false);
     assert.equal(derived.statusCode, 400);
-    assert.ok(derived.errorAr?.includes('مصفوفة تدقيق الكلمات غير صالحة'));
+    assert.ok(derived.errorAr?.includes('التصحيح البشري'));
 
     // Mismatched word at index 0
     const mismatchedWordPayload = {
@@ -356,7 +318,7 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
 
     assert.equal(derived2.valid, false);
     assert.equal(derived2.statusCode, 400);
-    assert.ok(derived2.errorAr?.includes('غير متطابقة مع النص المرجعي'));
+    assert.ok(derived2.errorAr?.includes('التصحيح البشري'));
   });
 
   await t.test('Dialect Propagation: forwards dialectCode (e.g. gulf) and reflects in server derived fields', () => {
