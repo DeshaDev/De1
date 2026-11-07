@@ -38,24 +38,30 @@ export interface AzureRawWord {
 
 const DIACRITICS = /[\u064B-\u065F\u0670\u0640]/g;
 
-function normalizeArabicToken(value: string): string {
+/**
+ * Normalisation for matching provider words to the same Arabic spoken token.
+ * Keep taa marbuta (ة/ه) and alif maqsura (ى/ي) distinct: collapsing them can
+ * turn a real orthographic/phonological difference into a false exact match.
+ */
+export function normalizeArabicToken(value: string): string {
   return value
+    .normalize('NFC')
     .replace(DIACRITICS, '')
     .replace(/[أإآٱ]/g, 'ا')
-    .replace(/ى/g, 'ي')
-    .replace(/ة/g, 'ه')
     .replace(/[.,!?،؟؛:"«»()[\]{}]/g, '')
     .trim();
 }
 
 function canonicalErrorType(value: string | undefined): AzureWordError {
   switch ((value || '').toLowerCase()) {
+    case 'none': return 'None';
     case 'omission': return 'Omission';
     case 'insertion': return 'Insertion';
     case 'mispronunciation': return 'Mispronunciation';
     case 'substitution': return 'Substitution';
     case 'dialectvariant': return 'DialectVariant';
-    default: return 'None';
+    // Unknown/missing provider tags are not evidence of correct pronunciation.
+    default: return 'Unconfirmed';
   }
 }
 
@@ -155,12 +161,15 @@ export function mapAzureAssessmentToReferenceWords(args: {
   };
 
   const words: AzureAlignedWord[] = referenceWords.map((targetWord, index) => {
-    const omission = enableMiscue
-      ? providerWords.find(item =>
-          canonicalErrorType(item.errorType) === 'Omission' &&
-          normalizeArabicToken(item.word) === normalizeArabicToken(targetWord))
+    const omissionIndex = enableMiscue
+      ? [...unused].find(index => {
+          const item = providerWords[index];
+          return canonicalErrorType(item.errorType) === 'Omission' &&
+            normalizeArabicToken(item.word) === normalizeArabicToken(targetWord);
+        })
       : undefined;
-    if (omission) {
+    if (omissionIndex !== undefined) {
+      unused.delete(omissionIndex);
       omissions += 1;
       return {
         word: targetWord,
@@ -176,9 +185,9 @@ export function mapAzureAssessmentToReferenceWords(args: {
     const providerError = canonicalErrorType(scored?.errorType);
     const score = scored?.accuracyScore ?? null;
 
-    // Continuous mode cannot confirm omission/insertion tags. Do not convert the
-    // local alignment engine's unmatched word into a child error.
-    if (!scored || alignedWord?.errorType === 'Omission') {
+    // A missing/unknown Azure tag or missing word-level score cannot confirm either
+    // correctness or an error. Do not let the transcript aligner fill that gap.
+    if (!scored || providerError === 'Unconfirmed' || score === null || alignedWord?.errorType === 'Omission') {
       unresolved += 1;
       return {
         word: targetWord,
