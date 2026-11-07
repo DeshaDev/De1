@@ -3,7 +3,7 @@
  * the one-minute passage, rapid automatized naming, and dictation on letter tiles.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Delete, RotateCcw, Timer, Volume2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Delete, Mic, MicOff, RotateCcw, Sparkles, Timer, Volume2, X } from 'lucide-react';
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import { lex } from '../../cognitiveProfile/lexicon';
 import type { ItemResponse } from '../../cognitiveProfile/scoring';
@@ -44,8 +44,49 @@ function useElapsed(running: boolean) {
 }
 
 // ---------------------------------------------------------------------------
-// Word list read aloud
+// Word list read aloud with AI Voice Evaluation & Microphone
 // ---------------------------------------------------------------------------
+function normalizeArabicWord(text: string): string {
+  if (!text) return '';
+  return text
+    .normalize('NFC')
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[أإآءئؤ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[.,/#!$%^&*;:{}=\-_~()؟،«»"']/g, ' ')
+    .trim();
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const d: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) d[i][0] = i;
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+    }
+  }
+  return d[m][n];
+}
+
+export function checkArabicWordMatch(spoken: string, target: string): boolean {
+  if (!spoken || !target) return false;
+  const nt = normalizeArabicWord(target);
+  const words = normalizeArabicWord(spoken).split(/\s+/).filter(Boolean);
+  for (const w of words) {
+    if (w === nt) return true;
+    if (w === 'ال' + nt) return true;
+    if (nt.startsWith('ال') && w === nt.slice(2)) return true;
+    if (nt.length >= 3 && levenshtein(w, nt) <= 1) return true;
+    if (nt.length === 2 && (w === nt || (Math.abs(w.length - nt.length) <= 1 && (w.includes(nt) || nt.includes(w))))) return true;
+  }
+  return false;
+}
+
 export function ReadAloudPlayer({
   item,
   practice,
@@ -62,13 +103,53 @@ export function ReadAloudPlayer({
   const now = useElapsed(marked === null);
   const waited = (now - shownAt.current) / 1000;
 
+  // Speech Recognition & AI Evaluation States
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [aiState, setAiState] = useState<'idle' | 'listening' | 'correct' | 'try_again' | 'mic_denied'>('idle');
+  const [hasMicSupport, setHasMicSupport] = useState(true);
+  const [isPlayingDemo, setIsPlayingDemo] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+
+  const recognitionRef = useRef<any>(null);
+  const matchedRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSpeech = Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+      setHasMicSupport(hasSpeech);
+    }
+  }, []);
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  };
+
   useEffect(() => {
     shownAt.current = performance.now();
     setMarked(null);
+    setTranscript('');
+    setAiState('idle');
+    matchedRef.current = false;
+    stopRecognition();
+
+    return () => {
+      stopRecognition();
+    };
   }, [item.id]);
 
   const mark = async (correct: boolean) => {
     if (marked !== null) return;
+    stopRecognition();
     const rtMs = Math.round(performance.now() - shownAt.current);
     setMarked(correct);
     if (practice) {
@@ -81,27 +162,207 @@ export function ReadAloudPlayer({
     onDone({ itemId: item.id, correct, rtMs, replays: 0 });
   };
 
+  const startListening = () => {
+    if (marked !== null || matchedRef.current) return;
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      setHasMicSupport(false);
+      setShowManual(true);
+      return;
+    }
+
+    try {
+      stopRecognition();
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setAiState('listening');
+      };
+
+      recognition.onresult = (event: any) => {
+        let currentText = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const part = event.results[i][0]?.transcript || '';
+          currentText += ' ' + part;
+        }
+        const clean = currentText.trim();
+        if (!clean) return;
+        setTranscript(clean);
+
+        if (checkArabicWordMatch(clean, item.text)) {
+          if (!matchedRef.current) {
+            matchedRef.current = true;
+            setAiState('correct');
+            stopRecognition();
+            setTimeout(() => {
+              void mark(true);
+            }, 600);
+          }
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          setIsListening(false);
+          setAiState('mic_denied');
+          setShowManual(true);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        if (!matchedRef.current) {
+          setAiState((prev) => (prev === 'listening' ? 'try_again' : prev));
+        }
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.warn('SpeechRecognition failed to start:', err);
+      setIsListening(false);
+      setShowManual(true);
+    }
+  };
+
+  const playModelAudio = async () => {
+    if (isPlayingDemo) return;
+    setIsPlayingDemo(true);
+    stopRecognition();
+    try {
+      await speak(item.text);
+    } finally {
+      setIsPlayingDemo(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center gap-6" dir="rtl">
-      <div className="flex items-center justify-center min-h-[160px] min-w-[240px] px-10 rounded-[2rem] border-4 border-line bg-card">
+      {/* Target Word Card */}
+      <div className="flex flex-col items-center justify-center min-h-[170px] min-w-[280px] px-10 py-6 rounded-[2rem] border-4 border-line bg-card shadow-sm gap-3">
         <span className="text-6xl sm:text-7xl font-bold text-ink leading-[1.6] select-none" style={READING_FONT} lang="ar">
           {item.text}
         </span>
+        <button
+          type="button"
+          onClick={playModelAudio}
+          disabled={isPlayingDemo || marked !== null}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-sm font-semibold transition cursor-pointer"
+          title="استمع للنطق النموذجي من المعلمة الافتراضية"
+        >
+          <Volume2 className={`w-4 h-4 ${isPlayingDemo ? 'animate-bounce text-amber-600' : 'text-amber-700'}`} />
+          <span>{isPlayingDemo ? 'جارٍ الاستماع...' : 'استمع للكلمة'}</span>
+        </button>
       </div>
-      <AdultPanel>
-        <p className="bz-small text-ink-2 mb-3">هل قرأ الطفل الكلمة كلها صحيحة؟</p>
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={() => mark(true)} disabled={marked !== null} className="bz-btn bz-btn-primary bz-btn-lg">
-            <Check className="w-5 h-5" /> صحيح
+
+      {/* Child AI Voice Recognition Section */}
+      <div className="w-full max-w-md flex flex-col items-center gap-3">
+        {hasMicSupport ? (
+          <button
+            type="button"
+            onClick={isListening ? stopRecognition : startListening}
+            disabled={marked !== null || aiState === 'correct'}
+            className={`w-full py-4 px-6 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-md transition-all cursor-pointer transform active:scale-95 ${
+              isListening
+                ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse ring-4 ring-rose-200'
+                : aiState === 'correct'
+                ? 'bg-emerald-600 text-white ring-4 ring-emerald-200'
+                : 'bg-teal-600 hover:bg-teal-700 text-white hover:shadow-lg'
+            }`}
+          >
+            {isListening ? (
+              <>
+                <span className="relative flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-white"></span>
+                </span>
+                <span>🔴 الذكاء الاصطناعي يستمع... اقرأ الكلمة!</span>
+              </>
+            ) : aiState === 'correct' ? (
+              <>
+                <Check className="w-6 h-6 animate-bounce" />
+                <span>🌟 أحسنت! قراءة صحيحة ومتقنة</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-6 h-6" />
+                <span>🎙️ اضغط هنا واقرأ الكلمة بالصوت</span>
+              </>
+            )}
           </button>
-          <button type="button" onClick={() => mark(false)} disabled={marked !== null} className="bz-btn bz-btn-secondary bz-btn-lg">
-            <X className="w-5 h-5" /> خطأ أو لم يقرأ
-          </button>
-        </div>
-        <p className="text-[12px] text-muted mt-2 h-4" aria-live="polite">
-          {marked === null && waited >= hesitationSec ? `مرّت ${ar(hesitationSec)} ثوانٍ دون محاولة: اضغط «خطأ» لننتقل.` : ''}
-        </p>
-      </AdultPanel>
+        ) : (
+          <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-center text-sm">
+            الميكروفون غير مدعوم في هذا المتصفح. استخدم التصحيح اليدوي بالأسفل.
+          </div>
+        )}
+
+        {/* Live Heard Transcript */}
+        {transcript && (
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <div className="text-xs text-slate-500 font-semibold mb-1">🗣️ سمعتُ من الطفل:</div>
+            <div className="text-xl font-bold text-slate-800" style={READING_FONT}>
+              «{transcript}»
+            </div>
+          </div>
+        )}
+
+        {/* AI Feedback badges */}
+        {aiState === 'correct' && (
+          <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50 border border-emerald-300 px-4 py-2 rounded-xl text-sm font-bold animate-pulse">
+            <Sparkles className="w-5 h-5 text-emerald-600" />
+            <span>ممتاز! تم التحقق بالذكاء الاصطناعي بنجاح ✨</span>
+          </div>
+        )}
+
+        {aiState === 'try_again' && (
+          <div className="flex items-center gap-2 text-amber-800 bg-amber-50 border border-amber-300 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium">
+            <RotateCcw className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>حاول مرة ثانية بنطق أوضح، أو اضغط الميكروفون مجدداً 🔁</span>
+          </div>
+        )}
+
+        {aiState === 'mic_denied' && (
+          <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-center">
+            تم رفض إذن الميكروفون في المتصفح. يرجى تفعيله من شريط العنوان أو استخدام التقييم اليدوي بالأسفل.
+          </div>
+        )}
+      </div>
+
+      {/* Manual / Adult Fallback Controls */}
+      <div className="w-full max-w-xl flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => setShowManual((prev) => !prev)}
+          className="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1.5 py-1.5 transition cursor-pointer"
+        >
+          {showManual ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <span>{showManual ? 'إخفاء التقييم اليدوي' : 'أو تصحيح يدوي من ولي الأمر / المعلم'}</span>
+        </button>
+
+        {showManual && (
+          <div className="w-full mt-3">
+            <AdultPanel>
+              <p className="bz-small text-ink-2 mb-3">هل قرأ الطفل الكلمة كلها صحيحة؟</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => mark(true)} disabled={marked !== null} className="bz-btn bz-btn-primary bz-btn-lg">
+                  <Check className="w-5 h-5" /> صحيح
+                </button>
+                <button type="button" onClick={() => mark(false)} disabled={marked !== null} className="bz-btn bz-btn-secondary bz-btn-lg">
+                  <X className="w-5 h-5" /> خطأ أو لم يقرأ
+                </button>
+              </div>
+              <p className="text-[12px] text-muted mt-2 h-4" aria-live="polite">
+                {marked === null && waited >= hesitationSec ? `مرّت ${ar(hesitationSec)} ثوانٍ دون محاولة: اضغط «خطأ» لننتقل.` : ''}
+              </p>
+            </AdultPanel>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
