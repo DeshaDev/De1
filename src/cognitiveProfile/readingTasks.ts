@@ -95,7 +95,7 @@ export const NONWORD_ITEMS: ReadItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Oral reading passage: short, fully vowelled, first-grade vocabulary. One minute, adult marks.
+// Oral reading passage: short, fully vowelled, first-grade vocabulary. One minute, Azure audio assessment.
 // ---------------------------------------------------------------------------
 export const PASSAGE_TITLE = 'سَامِي فِي السُّوقِ';
 export const PASSAGE_TEXT =

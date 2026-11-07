@@ -19,6 +19,8 @@ import {
 } from './src/cognitiveProfile/individualPlan';
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { applyRanNameVariants, getCognitiveAudioTaskDefinition, type CognitiveAudioTaskId } from './src/cognitiveProfile/cognitiveAudioTasks';
+import type { CognitiveAudioAssessmentEvidence } from './src/cognitiveProfile/scoring';
 import {
   UsageEventSchema,
   emptyUsageStore,
@@ -1051,6 +1053,7 @@ async function verifySupabaseParent(rawHeader: string): Promise<VerifiedBaseeraS
       tenantDisplayNameAr: 'حساب ولي الأمر',
       sessionId: `parent-${user.id.replace(/-/g, '').slice(0, 24)}`,
       scopes: ['ai:analyze'],
+      parentUserId: user.id,
     } as unknown as VerifiedBaseeraSession;
     if (parentTokenCache.size >= 500) parentTokenCache.delete(parentTokenCache.keys().next().value as string);
     parentTokenCache.set(cacheKey, { session, expiresAt: Date.now() + PARENT_TOKEN_CACHE_MS });
@@ -1183,6 +1186,14 @@ async function startServer() {
     assessment: VerifiedAutomatedAudioAssessment;
   }>();
   const audioAssessmentReceiptTtlMs = 10 * 60 * 1000;
+  const cognitiveAudioAssessmentReceipts = new Map<string, {
+    sessionId: string;
+    tenantId: string;
+    studentId: string;
+    taskId: CognitiveAudioTaskId;
+    expiresAt: number;
+    assessment: CognitiveAudioAssessmentEvidence;
+  }>();
 
   const pruneAudioAssessmentReceipts = () => {
     const now = Date.now();
@@ -2125,7 +2136,68 @@ async function startServer() {
         });
         return;
       }
-      const results = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+      const incomingResults = parsed.data.results as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+      const results = { ...incomingResults } as NonNullable<StudentRecord['cognitiveBattery']>['results'];
+      for (const taskId of ['oralReading', 'ranObjects', 'ranLetters', 'wordReading', 'nonwordReading'] as const) {
+        const incomingResult = results[taskId];
+        if (!incomingResult) continue;
+        const receipt = incomingResult.audioAssessmentReceipt;
+        const suppliedAssessment = incomingResult.audioAssessment;
+        if (!receipt && !suppliedAssessment) {
+          // Client marks and browser-side transcripts are never evidence for speech tasks.
+          results[taskId] = {
+            ...incomingResult,
+            responses: [],
+            durationMs: undefined,
+            errorCount: undefined,
+            audioAssessment: undefined,
+            audioAssessmentReceipt: undefined,
+          };
+          continue;
+        }
+        const stored = typeof receipt === 'string' ? cognitiveAudioAssessmentReceipts.get(receipt) : undefined;
+        if (
+          !stored ||
+          stored.expiresAt <= Date.now() ||
+          stored.sessionId !== found.session.sessionId ||
+          stored.tenantId !== found.session.tenantId ||
+          stored.studentId !== req.params.id ||
+          stored.taskId !== taskId ||
+          suppliedAssessment?.assessmentReceipt !== receipt
+        ) {
+          res.status(409).json({
+            code: 'COGNITIVE_AUDIO_RECEIPT_INVALID',
+            error: 'إيصال التقييم الصوتي منتهي الصلاحية أو لا يخص هذا الطفل وهذه الجلسة. أعد تسجيل المهمة.',
+          });
+          return;
+        }
+        const definition = getCognitiveAudioTaskDefinition(taskId);
+        const assessment = stored.assessment;
+        if (
+          !definition ||
+          assessment.words.length !== definition.itemIds.length ||
+          assessment.words.some((word, index) => word.word !== definition.referenceWords[index])
+        ) {
+          res.status(409).json({
+            code: 'COGNITIVE_AUDIO_RECEIPT_MISMATCH',
+            error: 'لم تتطابق بيانات التقييم الصوتي مع نسخة المهمة المرجعية؛ لم تُحفظ الدرجة.',
+          });
+          return;
+        }
+        results[taskId] = {
+          ...incomingResult,
+          responses: definition.itemIds.map((itemId, index) => ({
+            itemId,
+            correct: ['None', 'DialectVariant'].includes(assessment.words[index].errorType),
+            rtMs: 0,
+            replays: 0,
+          })),
+          durationMs: Math.round(assessment.durationSeconds * 1000),
+          errorCount: assessment.omissionsCount + assessment.substitutionsCount + assessment.insertionsCount,
+          audioAssessment: stored.assessment,
+          audioAssessmentReceipt: receipt,
+        };
+      }
       const updatedRecord: StudentRecord = {
         ...studentsDb[found.idx],
         cognitiveBattery: {
@@ -3283,6 +3355,277 @@ async function startServer() {
       res.status(502).json({
         code: 'AZURE_SPEECH_ASSESSMENT_FAILED',
         error: 'تعذر إكمال تقييم الصوت من Microsoft Azure. لم يتم استخدام تفريغ المتصفح بديلاً عن تقييم الصوت.',
+      });
+    }
+  });
+
+
+  // Cognitive battery audio: task references are resolved on the server and never accepted from the browser.
+  // Only a complete Azure word-level assessment receives a short-lived receipt.
+  app.post('/api/ai/cognitive-audio-assessment', requireAiAccess(), async (req, res) => {
+    const body = req.body || {};
+    const assessmentSession = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
+    if (!/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId)) {
+      res.status(400).json({
+        code: 'STUDENT_ID_REQUIRED',
+        error: 'تعذر ربط التسجيل بملف الطفل؛ أعد اختيار الطفل ثم حاول مرة أخرى.',
+      });
+      return;
+    }
+
+    if (String(assessmentSession.role) === 'parent') {
+      const parentUserId = assessmentSession.parentUserId;
+      const authorization = String(req.headers.authorization || '');
+      if (!parentUserId || !authorization.startsWith('Bearer ')) {
+        res.status(403).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_UNVERIFIED',
+          error: 'تعذر التحقق من ملكية ملف الطفل في حساب الأسرة؛ لم نرسل التسجيل للتحليل.',
+        });
+        return;
+      }
+      try {
+        const ownerUrl =
+          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id&limit=1`;
+        const ownerResponse = await fetch(ownerUrl, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: authorization,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!ownerResponse.ok) {
+          res.status(503).json({
+            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+            error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+        const ownedRows = await ownerResponse.json().catch(() => null);
+        if (!Array.isArray(ownedRows) || !ownedRows.some((row) => row?.id === studentId)) {
+          res.status(404).json({
+            code: 'PARENT_STUDENT_NOT_OWNED',
+            error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+      } catch {
+        res.status(503).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+          error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
+        });
+        return;
+      }
+    }
+
+    const validConsentTimestamp = (value: unknown): boolean => {
+      if (typeof value !== 'string') return false;
+      const timestamp = Date.parse(value);
+      return Number.isFinite(timestamp) && timestamp <= Date.now() + 5 * 60 * 1000;
+    };
+    if (
+      body.guardianConsentGiven !== true ||
+      body.guardianAudioConsentGiven !== true ||
+      !validConsentTimestamp(body.guardianConsentRecordedAt) ||
+      !validConsentTimestamp(body.guardianAudioConsentRecordedAt)
+    ) {
+      res.status(403).json({
+        code: 'AUDIO_CONSENT_REQUIRED',
+        error: 'يلزم إقرار ولي الأمر وموافقته المنفصلة والمؤرخة على تسجيل الصوت وإرساله للتحليل.',
+      });
+      return;
+    }
+
+    const task = getCognitiveAudioTaskDefinition(body.taskId);
+    if (!task) {
+      res.status(400).json({
+        code: 'UNSUPPORTED_COGNITIVE_AUDIO_TASK',
+        error: 'هذه المهمة لا تملك نصًا مرجعيًا صوتيًا معتمدًا داخل المنصة.',
+      });
+      return;
+    }
+    if (body.language !== 'ar-EG' && body.language !== 'ar-SA') {
+      res.status(400).json({
+        code: 'UNSUPPORTED_PRONUNCIATION_LOCALE',
+        error: 'يدعم التقييم الصوتي حاليًا اللهجة المصرية والخليجية فقط. لم نبدّل لهجة الطفل تلقائيًا.',
+      });
+      return;
+    }
+    if (
+      typeof body.audioWavBase64 !== 'string' ||
+      body.audioWavBase64.length < 80 ||
+      body.audioWavBase64.length > 4_500_000 ||
+      !Number.isFinite(Number(body.durationSeconds)) ||
+      Number(body.durationSeconds) < 1 ||
+      Number(body.durationSeconds) > 88
+    ) {
+      res.status(400).json({
+        code: 'INVALID_COGNITIVE_AUDIO_INPUT',
+        error: 'التسجيل الصوتي غير صالح أو تجاوز المدة المسموح بها؛ أعد التسجيل.',
+      });
+      return;
+    }
+
+    // Never trust a browser-supplied duration for WPM/RAN speed. Derive it from
+    // the actual PCM payload and verify the complete WAV header and data length.
+    let wavBuffer: Buffer;
+    let durationSeconds: number;
+    try {
+      const suppliedBase64 = body.audioWavBase64;
+      wavBuffer = Buffer.from(suppliedBase64, 'base64');
+      const validWav =
+        wavBuffer.toString('base64') === suppliedBase64 &&
+        wavBuffer.length >= 44 &&
+        wavBuffer.toString('ascii', 0, 4) === 'RIFF' &&
+        wavBuffer.readUInt32LE(4) === wavBuffer.length - 8 &&
+        wavBuffer.toString('ascii', 8, 12) === 'WAVE' &&
+        wavBuffer.toString('ascii', 12, 16) === 'fmt ' &&
+        wavBuffer.readUInt32LE(16) === 16 &&
+        wavBuffer.readUInt16LE(20) === 1 &&
+        wavBuffer.readUInt16LE(22) === 1 &&
+        wavBuffer.readUInt32LE(24) === 16_000 &&
+        wavBuffer.readUInt32LE(28) === 32_000 &&
+        wavBuffer.readUInt16LE(32) === 2 &&
+        wavBuffer.readUInt16LE(34) === 16 &&
+        wavBuffer.toString('ascii', 36, 40) === 'data';
+      if (!validWav) throw new Error('INVALID_WAV_HEADER');
+
+      const dataBytes = wavBuffer.readUInt32LE(40);
+      if (dataBytes < 32_000 || dataBytes % 2 !== 0 || dataBytes !== wavBuffer.length - 44) {
+        throw new Error('INVALID_WAV_DATA_LENGTH');
+      }
+      durationSeconds = dataBytes / 32_000;
+      if (
+        !Number.isFinite(durationSeconds) ||
+        durationSeconds < 1 ||
+        durationSeconds > 88 ||
+        Math.abs(Number(body.durationSeconds) - durationSeconds) > 0.75
+      ) {
+        throw new Error('INVALID_AUDIO_DURATION');
+      }
+    } catch {
+      res.status(400).json({
+        code: 'INVALID_COGNITIVE_AUDIO_INPUT',
+        error: 'بنية ملف WAV أو مدته الفعلية غير صالحة؛ لم نحتسب زمنًا مرسلًا من المتصفح.',
+      });
+      return;
+    }
+
+    if (!process.env.AZURE_SPEECH_KEY?.trim() || !process.env.AZURE_SPEECH_REGION?.trim()) {
+      res.status(503).json({
+        code: 'AZURE_SPEECH_NOT_CONFIGURED',
+        error: 'خدمة تقييم الصوت غير مهيأة على الخادم. لم نستخدم التعرف الصوتي في المتصفح ولم نحتسب درجة بديلة.',
+      });
+      return;
+    }
+
+    // Expired receipts are pruned before each assessment; the raw audio is never retained by this receipt store.
+    const now = Date.now();
+    for (const [key, value] of cognitiveAudioAssessmentReceipts) {
+      if (value.expiresAt <= now) cognitiveAudioAssessmentReceipts.delete(key);
+    }
+    while (cognitiveAudioAssessmentReceipts.size >= 500) {
+      const oldestKey = cognitiveAudioAssessmentReceipts.keys().next().value;
+      if (!oldestKey) break;
+      cognitiveAudioAssessmentReceipts.delete(oldestKey);
+    }
+
+    try {
+      let result = await assessReadingAudioWithAzure({
+        referenceText: task.referenceWords.join(' '),
+        referenceWords: task.referenceWords,
+        audioWavBase64: body.audioWavBase64,
+        durationSeconds,
+        language: body.language,
+        dialectLabel: body.language === 'ar-EG' ? 'المصرية' : 'الخليجية / الفصحى',
+      });
+      if (task.taskId === 'ranObjects' || task.taskId === 'ranLetters') {
+        result = applyRanNameVariants(result, task, durationSeconds);
+      }
+
+      const completeAndResolved =
+        result.sourceModel === 'azure_pronunciation_assessment' &&
+        result.assessmentComplete === true &&
+        result.transcript.trim().length > 0 &&
+        result.words.length === task.referenceWords.length &&
+        result.words.every((word, index) =>
+          word.word === task.referenceWords[index] &&
+          word.errorType !== 'Unconfirmed' &&
+          word.errorType !== 'Insertion'
+        ) &&
+        Number.isFinite(result.wordAccuracyPercent) &&
+        Number.isFinite(result.wordsCorrectPerMinute) &&
+        Number.isFinite(result.wordsPerMinute);
+      if (!completeAndResolved) {
+        res.status(422).json({
+          code: 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE',
+          error: 'لم يحسم Azure جميع كلمات المهمة بدرجة كافية. لم نحتسب الأخطاء أو النتيجة؛ يمكنك إعادة التسجيل.',
+        });
+        return;
+      }
+
+      const receipt = crypto.randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + audioAssessmentReceiptTtlMs;
+      const assessment = {
+        taskId: task.taskId,
+        sourceModel: 'azure_pronunciation_assessment' as const,
+        assessmentComplete: true as const,
+        assessmentReceipt: receipt,
+        transcript: result.transcript,
+        durationSeconds,
+        wordAccuracyPercent: result.wordAccuracyPercent as number,
+        wordsCorrectPerMinute: result.wordsCorrectPerMinute as number,
+        wordsPerMinute: result.wordsPerMinute as number,
+        correctWordsCount: result.correctWordsCount,
+        substitutionsCount: result.substitutionsCount,
+        omissionsCount: result.omissionsCount,
+        insertionsCount: result.insertionsCount,
+        words: result.words.map((word) => ({
+          word: word.word,
+          errorType: word.errorType,
+          accuracyScore: word.accuracyScore,
+          spokenWord: word.spokenWord,
+        })),
+      };
+      cognitiveAudioAssessmentReceipts.set(receipt, {
+        sessionId: assessmentSession.sessionId,
+        tenantId: assessmentSession.tenantId,
+        studentId,
+        taskId: task.taskId,
+        expiresAt,
+        assessment,
+      });
+      res.json({
+        assessment,
+        receiptExpiresAt: new Date(expiresAt).toISOString(),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
+      console.warn(`[Cognitive Azure Assessment] Failed for ${task.taskId}: ${message}. No fallback was applied.`);
+      if ([
+        'INVALID_AUDIO_PAYLOAD',
+        'INVALID_REFERENCE_WORDS',
+        'INVALID_AUDIO_DURATION',
+        'INVALID_WAV_HEADER',
+        'UNSUPPORTED_WAV_FORMAT',
+      ].includes(message)) {
+        res.status(400).json({
+          code: message,
+          error: 'صيغة التسجيل غير مدعومة؛ أعد تسجيل الصوت ثم حاول مرة أخرى.',
+        });
+        return;
+      }
+      if (message === 'AZURE_NO_RECOGNIZED_SPEECH' || message === 'AZURE_NO_WORD_LEVEL_RESULTS') {
+        res.status(422).json({
+          code: message,
+          error: 'لم يلتقط Azure كلمات قابلة للتقييم. لم نعتبر غياب الكلمات خطأ قراءة.',
+        });
+        return;
+      }
+      res.status(502).json({
+        code: 'AZURE_SPEECH_ASSESSMENT_FAILED',
+        error: 'تعذر إكمال تقييم الصوت عبر Azure. لم نستبدله بتفريغ المتصفح أو بتصحيح يدوي.',
       });
     }
   });

@@ -146,6 +146,159 @@ describe('scoring of the reading and naming measures', () => {
     assert.ok(scored.measures?.spellingErrors?.some((e) => e.kind === 'taaMarbuta'));
   });
 
+  it('scores only complete, receipted Azure audio evidence and reports raw measures without norms', () => {
+    const words = PASSAGE_WORDS.map((word, index) => ({
+      word,
+      errorType: index === 2 ? 'Substitution' as const : 'None' as const,
+      accuracyScore: index === 2 ? 42 : 96,
+      spokenWord: word,
+    }));
+    const evidence = {
+      taskId: 'oralReading' as const,
+      sourceModel: 'azure_pronunciation_assessment' as const,
+      assessmentComplete: true as const,
+      assessmentReceipt: 'a'.repeat(64),
+      transcript: PASSAGE_WORDS.join(' '),
+      durationSeconds: 60,
+      wordAccuracyPercent: Math.round(((PASSAGE_WORDS.length - 1) / PASSAGE_WORDS.length) * 100),
+      wordsCorrectPerMinute: PASSAGE_WORDS.length - 1,
+      wordsPerMinute: PASSAGE_WORDS.length,
+      correctWordsCount: PASSAGE_WORDS.length - 1,
+      substitutionsCount: 1,
+      omissionsCount: 0,
+      insertionsCount: 0,
+      words,
+    };
+    const scored = scoreSubtest({
+      subtestId: 'oralReading',
+      responses: words.map((word, index) => ({
+        itemId: passageWordId(index),
+        correct: word.errorType === 'None',
+        rtMs: 0,
+        replays: 0,
+      })),
+      discontinued: false,
+      completedAt: now,
+      durationMs: 60_000,
+      audioAssessment: evidence,
+      audioAssessmentReceipt: evidence.assessmentReceipt,
+    }, 84);
+    assert.equal(scored.scoreAvailable, true);
+    assert.equal(scored.correct, PASSAGE_WORDS.length - 1);
+    assert.equal(scored.total, PASSAGE_WORDS.length);
+    assert.equal(scored.percent, evidence.wordAccuracyPercent);
+    assert.equal(scored.z, null);
+    assert.equal(scored.centile, null);
+    assert.equal(scored.measures?.seconds, 60);
+    assert.equal(scored.measures?.correctPerMinute, PASSAGE_WORDS.length - 1);
+  });
+
+  it('scores real-word and nonword reading lists only from complete, matching Azure receipts', () => {
+    for (const taskId of ['wordReading', 'nonwordReading'] as const) {
+      const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+      const evidence = {
+        taskId,
+        sourceModel: 'azure_pronunciation_assessment' as const,
+        assessmentComplete: true as const,
+        assessmentReceipt: (taskId === 'wordReading' ? 'b' : 'c').repeat(64),
+        transcript: items.map((item) => stripMarks(item.text)).join(' '),
+        durationSeconds: 40,
+        wordAccuracyPercent: 100,
+        wordsCorrectPerMinute: Math.round(items.length * 60 / 40),
+        wordsPerMinute: Math.round(items.length * 60 / 40),
+        correctWordsCount: items.length,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: items.map((item) => ({
+          word: item.text,
+          errorType: 'None' as const,
+          accuracyScore: 96,
+          spokenWord: stripMarks(item.text),
+        })),
+      };
+      const scored = scoreSubtest({
+        subtestId: taskId,
+        responses: items.map((item) => ({
+          itemId: item.id,
+          correct: true,
+          rtMs: 0,
+          replays: 0,
+        })),
+        discontinued: false,
+        completedAt: now,
+        durationMs: 40_000,
+        audioAssessment: evidence,
+        audioAssessmentReceipt: evidence.assessmentReceipt,
+      }, 84);
+      assert.equal(scored.scoreAvailable, true, taskId);
+      assert.equal(scored.correct, items.length, taskId);
+      assert.equal(scored.total, items.length, taskId);
+      assert.equal(scored.percent, 100, taskId);
+      assert.equal(scored.z, null, taskId);
+      assert.equal(scored.centile, null, taskId);
+      assert.equal(scored.measures?.seconds, 40, taskId);
+      assert.equal(scored.measures?.correctPerMinute, Math.round(items.length * 60 / 40), taskId);
+
+      const validUpload = CognitiveBatteryUploadSchema.safeParse({
+        ageMonths: 84,
+        examinerName: '',
+        startedAt: now,
+        results: {
+          [taskId]: {
+            subtestId: taskId,
+            responses: items.map((item) => ({
+              itemId: item.id,
+              correct: true,
+              rtMs: 0,
+              replays: 0,
+            })),
+            discontinued: false,
+            completedAt: now,
+            durationMs: 40_000,
+            audioAssessment: evidence,
+            audioAssessmentReceipt: evidence.assessmentReceipt,
+          },
+        },
+      });
+      assert.equal(validUpload.success, true, taskId);
+    }
+  });
+
+  it('rejects an audio evidence object when its task does not match the subtest', () => {
+    const parsed = CognitiveBatteryUploadSchema.safeParse({
+      ageMonths: 84,
+      examinerName: '',
+      startedAt: now,
+      results: {
+        oralReading: {
+          subtestId: 'oralReading',
+          responses: [],
+          discontinued: false,
+          completedAt: now,
+          audioAssessmentReceipt: 'a'.repeat(64),
+          audioAssessment: {
+            taskId: 'ranObjects',
+            sourceModel: 'azure_pronunciation_assessment',
+            assessmentComplete: true,
+            assessmentReceipt: 'a'.repeat(64),
+            transcript: 'شمس',
+            durationSeconds: 5,
+            wordAccuracyPercent: 100,
+            wordsCorrectPerMinute: 12,
+            wordsPerMinute: 12,
+            correctWordsCount: 1,
+            substitutionsCount: 0,
+            omissionsCount: 0,
+            insertionsCount: 0,
+            words: [{ word: 'شَمْس', errorType: 'None', accuracyScore: 99, spokenWord: 'شمس' }],
+          },
+        },
+      },
+    });
+    assert.equal(parsed.success, false);
+  });
+
   it('speech scores cannot be supplied through arbitrary client metadata', () => {
     const forged = {
       subtestId: 'ranObjects',
@@ -223,7 +376,7 @@ describe('records', () => {
 
   it('scored item ids cover every list', () => {
     assert.equal(scoredItemIds(SUBTESTS_BY_ID.oralReading).length, PASSAGE_WORDS.length);
-    assert.equal(scoredItemIds(SUBTESTS_BY_ID.ranObjects).length, 0);
+    assert.equal(scoredItemIds(SUBTESTS_BY_ID.ranObjects).length, RAN_GRID_SIZE);
   });
 });
 

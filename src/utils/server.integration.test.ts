@@ -7,6 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 import { SUBTESTS_BY_ID } from '../cognitiveProfile/battery';
+import { PASSAGE_WORDS, WORD_ITEMS, NONWORD_ITEMS, passageWordId } from '../cognitiveProfile/readingTasks';
 
 const PLATFORM_ADMIN_CODE = 'ee7c3523458b091f0923ac7815de4231b578cde09852341a';
 const SCHOOL_A_ADMIN_CODE = '3580bd6cfaada2ae57b75b7af6d75cd86fd18211ecc8bc1d';
@@ -17,6 +18,8 @@ const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368
 const TEST_ENV = {
   ...process.env,
   GEMINI_API_KEY: '', // Keep integration tests deterministic and prevent external model calls.
+  AZURE_SPEECH_KEY: '', // Audio endpoint fails closed without external credentials.
+  AZURE_SPEECH_REGION: '',
   NODE_ENV: 'production',
   TRUST_PROXY_HOPS: '0',
   BASEERA_STORE_ENCRYPTION_KEY:
@@ -35,6 +38,25 @@ const TEST_ENV = {
     },
   }),
 };
+
+function makeSilentWavBase64(durationSeconds = 1): string {
+  const dataBytes = Math.round(durationSeconds * 32_000);
+  const wav = Buffer.alloc(44 + dataBytes);
+  wav.write('RIFF', 0, 'ascii');
+  wav.writeUInt32LE(36 + dataBytes, 4);
+  wav.write('WAVE', 8, 'ascii');
+  wav.write('fmt ', 12, 'ascii');
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(16_000, 24);
+  wav.writeUInt32LE(32_000, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write('data', 36, 'ascii');
+  wav.writeUInt32LE(dataBytes, 40);
+  return wav.toString('base64');
+}
 
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -236,6 +258,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
       '/api/ai/generate-iep',
       '/api/ai/tts',
       '/api/ai/pronunciation-assessment',
+      '/api/ai/cognitive-audio-assessment',
     ];
 
     for (const route of cloudRoutes) {
@@ -260,6 +283,86 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     const retiredPayload = (await retiredIep.json()) as { code: string; baselineSummary?: string };
     assert.equal(retiredPayload.code, 'IEP_GENERATOR_RETIRED');
     assert.equal(retiredPayload.baselineSummary, undefined);
+  });
+
+  it('requires explicit audio consent and fails closed when Azure credentials are absent for cognitive audio', async () => {
+    const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const url = `${baseUrl}/api/ai/cognitive-audio-assessment`;
+    const authorization = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.token}`,
+    };
+    const timestamp = new Date().toISOString();
+    const common = {
+      taskId: 'oralReading',
+      studentId: 'student-audio-consent-test',
+      audioWavBase64: makeSilentWavBase64(1),
+      durationSeconds: 1,
+      language: 'ar-SA',
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: timestamp,
+    };
+
+    const missingAudioConsent = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({ ...common, guardianAudioConsentGiven: false }),
+    });
+    assert.equal(missingAudioConsent.status, 403);
+    assert.equal(((await missingAudioConsent.json()) as { code: string }).code, 'AUDIO_CONSENT_REQUIRED');
+
+    const invalidTask = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        taskId: 'browserSuppliedText',
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(invalidTask.status, 400);
+    assert.equal(((await invalidTask.json()) as { code: string }).code, 'UNSUPPORTED_COGNITIVE_AUDIO_TASK');
+
+    const malformedWav = Buffer.from(common.audioWavBase64, 'base64');
+    malformedWav.writeUInt32LE(malformedWav.length - 9, 4);
+    const malformedWavResponse = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        audioWavBase64: malformedWav.toString('base64'),
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(malformedWavResponse.status, 400);
+    assert.equal(((await malformedWavResponse.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
+
+    const forgedDuration = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        durationSeconds: 5,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(forgedDuration.status, 400);
+    assert.equal(((await forgedDuration.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
+
+    const noAzure = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(noAzure.status, 503);
+    assert.equal(((await noAzure.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
   });
 
   it('derives reading scores & non-empty recommendations server-side, preserves full Arabic names, tags client-reported, and blocks client score injection', async () => {
@@ -834,6 +937,132 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(summary.completedSubtests, 1);
     assert.equal(summary.referenceStatus, 'disabled');
     assert.equal(summary.subtests[0].centile, null);
+
+    // Manual response arrays and timings from the browser never become a speech score.
+    const manualSpeech = {
+      subtestId: 'oralReading',
+      responses: PASSAGE_WORDS.map((_, index) => ({
+        itemId: passageWordId(index),
+        correct: true,
+        rtMs: 0,
+        replays: 0,
+      })),
+      discontinued: false,
+      completedAt: '2026-10-01T09:01:00.000Z',
+      durationMs: 12_000,
+    };
+    const manualSpeechResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, oralReading: manualSpeech },
+    }));
+    assert.equal(manualSpeechResponse.status, 200, await manualSpeechResponse.clone().text());
+    const manualSpeechBody = (await manualSpeechResponse.json()) as {
+      student: { cognitiveBattery: { summary: { subtests: Array<{ subtestId: string; total: number; measures?: { attempted: number; seconds: number | null } }> } } };
+    };
+    const withheldSpeech = manualSpeechBody.student.cognitiveBattery.summary.subtests.find((item) => item.subtestId === 'oralReading');
+    assert.equal(withheldSpeech?.total, 0);
+    assert.equal(withheldSpeech?.measures?.attempted, 0);
+    assert.equal(withheldSpeech?.measures?.seconds, null);
+
+    // Manual marks for both real-word and made-up-word reading lists are stripped as well.
+    for (const taskId of ['wordReading', 'nonwordReading'] as const) {
+      const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+      const manualList = {
+        subtestId: taskId,
+        responses: items.map((item) => ({
+          itemId: item.id,
+          correct: true,
+          rtMs: 0,
+          replays: 0,
+        })),
+        discontinued: false,
+        completedAt: '2026-10-01T09:02:00.000Z',
+        durationMs: 8_000,
+      };
+      const manualListResponse = await fetch(route, json(admin.token, 'PUT', {
+        ...upload,
+        results: { ...results, [taskId]: manualList },
+      }));
+      assert.equal(manualListResponse.status, 200, await manualListResponse.clone().text());
+      const manualListBody = (await manualListResponse.json()) as {
+        student: { cognitiveBattery: { summary: { subtests: Array<{ subtestId: string; total: number; measures?: { attempted: number; seconds: number | null } }> } } };
+      };
+      const withheldList = manualListBody.student.cognitiveBattery.summary.subtests.find((item) => item.subtestId === taskId);
+      assert.equal(withheldList?.total, 0, taskId);
+      assert.equal(withheldList?.measures?.attempted, 0, taskId);
+      assert.equal(withheldList?.measures?.seconds, null, taskId);
+    }
+
+    // A syntactically valid but invented browser receipt is rejected by the server-side receipt store.
+    const fakeReceipt = 'a'.repeat(64);
+    const forgedAudio = {
+      ...manualSpeech,
+      audioAssessmentReceipt: fakeReceipt,
+      audioAssessment: {
+        taskId: 'oralReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: fakeReceipt,
+        transcript: PASSAGE_WORDS.join(' '),
+        durationSeconds: 20,
+        wordAccuracyPercent: 100,
+        wordsCorrectPerMinute: PASSAGE_WORDS.length * 3,
+        wordsPerMinute: PASSAGE_WORDS.length * 3,
+        correctWordsCount: PASSAGE_WORDS.length,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: PASSAGE_WORDS.map((word) => ({
+          word,
+          errorType: 'None',
+          accuracyScore: 99,
+          spokenWord: word,
+        })),
+      },
+    };
+    const forgedAudioResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, oralReading: forgedAudio },
+    }));
+    assert.equal(forgedAudioResponse.status, 409);
+    assert.equal(((await forgedAudioResponse.json()) as { code: string }).code, 'COGNITIVE_AUDIO_RECEIPT_INVALID');
+
+    const fakeNonwordReceipt = 'c'.repeat(64);
+    const forgedNonwordAudio = {
+      subtestId: 'nonwordReading',
+      responses: NONWORD_ITEMS.map((item) => ({ itemId: item.id, correct: true, rtMs: 0, replays: 0 })),
+      discontinued: false,
+      completedAt: '2026-10-01T09:03:00.000Z',
+      durationMs: 10_000,
+      audioAssessmentReceipt: fakeNonwordReceipt,
+      audioAssessment: {
+        taskId: 'nonwordReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: fakeNonwordReceipt,
+        transcript: NONWORD_ITEMS.map((item) => item.text).join(' '),
+        durationSeconds: 10,
+        wordAccuracyPercent: 100,
+        wordsCorrectPerMinute: 72,
+        wordsPerMinute: 72,
+        correctWordsCount: NONWORD_ITEMS.length,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: NONWORD_ITEMS.map((item) => ({
+          word: item.text,
+          errorType: 'None',
+          accuracyScore: 99,
+          spokenWord: item.text,
+        })),
+      },
+    };
+    const forgedNonwordResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, nonwordReading: forgedNonwordAudio },
+    }));
+    assert.equal(forgedNonwordResponse.status, 409);
+    assert.equal(((await forgedNonwordResponse.json()) as { code: string }).code, 'COGNITIVE_AUDIO_RECEIPT_INVALID');
 
     // A client-supplied summary is rejected rather than stored.
     const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
