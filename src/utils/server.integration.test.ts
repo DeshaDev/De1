@@ -1012,6 +1012,43 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(forgedAudioResponse.status, 409);
     assert.equal(((await forgedAudioResponse.json()) as { code: string }).code, 'COGNITIVE_AUDIO_RECEIPT_INVALID');
 
+    const fakeNonwordReceipt = 'c'.repeat(64);
+    const forgedNonwordAudio = {
+      subtestId: 'nonwordReading',
+      responses: NONWORD_ITEMS.map((item) => ({ itemId: item.id, correct: true, rtMs: 0, replays: 0 })),
+      discontinued: false,
+      completedAt: '2026-10-01T09:03:00.000Z',
+      durationMs: 10_000,
+      audioAssessmentReceipt: fakeNonwordReceipt,
+      audioAssessment: {
+        taskId: 'nonwordReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: fakeNonwordReceipt,
+        transcript: NONWORD_ITEMS.map((item) => item.text).join(' '),
+        durationSeconds: 10,
+        wordAccuracyPercent: 100,
+        wordsCorrectPerMinute: 72,
+        wordsPerMinute: 72,
+        correctWordsCount: NONWORD_ITEMS.length,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: NONWORD_ITEMS.map((item) => ({
+          word: item.text,
+          errorType: 'None',
+          accuracyScore: 99,
+          spokenWord: item.text,
+        })),
+      },
+    };
+    const forgedNonwordResponse = await fetch(route, json(admin.token, 'PUT', {
+      ...upload,
+      results: { ...results, nonwordReading: forgedNonwordAudio },
+    }));
+    assert.equal(forgedNonwordResponse.status, 409);
+    assert.equal(((await forgedNonwordResponse.json()) as { code: string }).code, 'COGNITIVE_AUDIO_RECEIPT_INVALID');
+
     // A client-supplied summary is rejected rather than stored.
     const forgedSummary = await fetch(route, json(admin.token, 'PUT', { ...upload, summary: { risk: 'low' } }));
     assert.equal(forgedSummary.status, 400);
