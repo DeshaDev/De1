@@ -123,7 +123,7 @@ test('parent registration limits the screening age range and requires explicit g
   });
 
   await page.goto('/parent');
-  await expect(page.getByRole('heading', { name: 'تسجيل طفل للتقييم الفوري والبدء المباشر' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'هَيَّا نَقْرَأْ — رحلة طفلك', exact: true })).toBeVisible();
 
   await expect(page.getByRole('button', { name: /٤ سنوات/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /٨ سنوات/ })).toBeVisible();
@@ -137,10 +137,10 @@ test('parent registration limits the screening age range and requires explicit g
   await page.locator('input[type="password"]').first().fill('safe-test-password');
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
   await expect(guardianConsent).not.toBeChecked();
-  await page.getByRole('button', { name: /حفظ وبدء فحص القراءة الآن/ }).click();
+  await page.getByRole('button', { name: /حفظ الطفل في السحابة وبدء الفحص/ }).click();
   await expect(page.getByRole('alert')).toContainText('اختر اللهجة الأساسية في المنزل');
   await page.getByRole('button', { name: 'سعودية / خليجية', exact: true }).click();
-  await page.getByRole('button', { name: /حفظ وبدء فحص القراءة الآن/ }).click();
+  await page.getByRole('button', { name: /حفظ الطفل في السحابة وبدء الفحص/ }).click();
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
 
   await page.goto('/');
@@ -276,19 +276,21 @@ test('content review page lists every unit and records a decision', async ({ pag
   await expect(page.getByText(/رُوجع ١ من [٠-٩]{3}/)).toBeVisible();
 });
 
-test('every training session opens with the daily progress probe (no feedback, fixed difficulty)', async ({ page }) => {
+test('training gym opens on the daily curriculum and switches to skill stations', async ({ page }) => {
+  await installSchoolTestSession(page);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.addInitScript(() => window.localStorage.clear());
-  await page.goto('/');
-  await page.locator('.baseera-topbar').getByRole('button', { name: 'البرنامج التدريبي' }).click();
-  await page.getByRole('button', { name: /برنامج عام للاستعداد للقراءة/ }).click();
-  await expect(page.getByRole('heading', { name: /التقدّم من جلسة إلى جلسة/ })).toBeVisible();
-  await expect(page.getByText(/من ٢٠/).first()).toBeVisible();
-  await page.getByRole('button', { name: /ابدأ جلسة اليوم/ }).click();
-  await expect(page.getByText('مقياس التقدّم الأسبوعي')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'مقياس الأسبوع، ثم وقت التعلّم' })).toBeVisible();
-  await page.getByRole('button', { name: /^ابدأ$/ }).click();
-  await expect(page.getByText(/^١ من ١٢$/)).toBeVisible();
+  await page.goto('/gym');
+
+  await expect(page.getByRole('heading', { name: 'صالة التدريب', exact: true })).toBeVisible();
+  const dailyTab = page.getByRole('tab', { name: /تمرين اليوم/ });
+  await expect(dailyTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'نتعلّم المهارة خطوةً خطوة' })).toBeVisible();
+  await expect(page.getByTestId('curriculum-answer-option')).toHaveCount(3);
+
+  await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
+  await expect(page.getByRole('tab', { name: /ألعاب المهارات/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: /صائد الحروف/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
