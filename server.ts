@@ -3576,7 +3576,7 @@ async function startServer() {
       }
       try {
         const ownerUrl =
-          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id&limit=1`;
+          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at&limit=1`;
         const ownerResponse = await fetch(ownerUrl, {
           headers: {
             apikey: SUPABASE_ANON_KEY,
@@ -3593,10 +3593,34 @@ async function startServer() {
           return;
         }
         const ownedRows = await ownerResponse.json().catch(() => null);
-        if (!Array.isArray(ownedRows) || !ownedRows.some((row) => row?.id === studentId)) {
+        const ownedStudent = Array.isArray(ownedRows)
+          ? ownedRows.find((row) => row?.id === studentId)
+          : undefined;
+        if (!ownedStudent || !ownedStudent.raw_data || typeof ownedStudent.raw_data !== 'object') {
           res.status(404).json({
             code: 'PARENT_STUDENT_NOT_OWNED',
             error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+        const storedChild = ownedStudent.raw_data as StudentRecord;
+        if (
+          ownedStudent.guardian_consent !== true ||
+          storedChild.guardianConsentGiven !== true ||
+          !ownedStudent.guardian_consent_recorded_at ||
+          !storedChild.guardianConsentRecordedAt ||
+          String(ownedStudent.guardian_consent_recorded_at) !== String(storedChild.guardianConsentRecordedAt)
+        ) {
+          res.status(403).json({
+            code: 'GUARDIAN_CONSENT_NOT_STORED',
+            error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+          });
+          return;
+        }
+        if (body.guardianConsentRecordedAt !== storedChild.guardianConsentRecordedAt) {
+          res.status(403).json({
+            code: 'GUARDIAN_CONSENT_TIMESTAMP_MISMATCH',
+            error: 'تاريخ موافقة ولي الأمر لا يطابق السجل المحفوظ؛ لم يُرسل الصوت للتحليل.',
           });
           return;
         }
