@@ -653,7 +653,7 @@ interface Props {
   /** Open an optional extra activity (practice games or the reader). */
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string }) => string | null;
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }) => string | null;
   supabaseUser?: any;
   onNavigateTab?: (tab: string) => void;
 }
