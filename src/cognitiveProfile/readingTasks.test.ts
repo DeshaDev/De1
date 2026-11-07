@@ -196,16 +196,24 @@ describe('age rules and sittings', () => {
 describe('records', () => {
   const base = { ageMonths: 84, examinerName: '', startedAt: now };
 
-  it('accept the new measures', () => {
+  it('accepts independently scorable tasks while keeping speech tasks outside the trusted record', () => {
     const parsed = CognitiveBatteryUploadSchema.safeParse({
       ...base,
       results: {
-        ranLetters: { subtestId: 'ranLetters', responses: [], discontinued: false, completedAt: now, durationMs: 35_000, errorCount: 1 },
         spelling: { subtestId: 'spelling', responses: [{ itemId: 'sp-1', correct: true, rtMs: 3000, replays: 0, typed: 'باب' }], discontinued: false, completedAt: now },
-        oralReading: { subtestId: 'oralReading', responses: [{ itemId: passageWordId(0), correct: true, rtMs: 0, replays: 0 }], discontinued: false, completedAt: now, durationMs: 60_000 },
       },
     });
     assert.ok(parsed.success, JSON.stringify(parsed.error?.issues));
+
+    const unverifiedSpeech = CognitiveBatteryUploadSchema.safeParse({
+      ...base,
+      results: {
+        ranLetters: { subtestId: 'ranLetters', responses: [], discontinued: false, completedAt: now, durationMs: 35_000, errorCount: 1 },
+        oralReading: { subtestId: 'oralReading', responses: [{ itemId: passageWordId(0), correct: true, rtMs: 0, replays: 0 }], discontinued: false, completedAt: now, durationMs: 60_000 },
+      },
+    });
+    assert.equal(unverifiedSpeech.success, false);
+    assert.ok(unverifiedSpeech.error?.issues.some((issue) => issue.message.includes('إيصال تقييم صوتي خادمي')));
   });
 
   it('reject typed text that is not tile letters, and passage words that do not exist', () => {
@@ -224,6 +232,24 @@ describe('records', () => {
   it('scored item ids cover every list', () => {
     assert.equal(scoredItemIds(SUBTESTS_BY_ID.oralReading).length, PASSAGE_WORDS.length);
     assert.equal(scoredItemIds(SUBTESTS_BY_ID.ranObjects).length, 0);
+  });
+});
+
+describe('unverified speech scoring guard', () => {
+  it('never exposes reading-list, passage or RAN results as valid scores', () => {
+    const cases: SubtestResult[] = [
+      { subtestId: 'wordReading', responses: [], discontinued: true, completedAt: now },
+      { subtestId: 'nonwordReading', responses: [], discontinued: true, completedAt: now },
+      { subtestId: 'oralReading', responses: [], discontinued: true, completedAt: now, durationMs: 10_000 },
+      { subtestId: 'ranObjects', responses: [], discontinued: true, completedAt: now, durationMs: 10_000, errorCount: 0 },
+      { subtestId: 'ranLetters', responses: [], discontinued: true, completedAt: now, durationMs: 10_000, errorCount: 0 },
+    ];
+    for (const result of cases) {
+      assert.equal(scoreSubtest(result, 84).scoreAvailable, false, result.subtestId);
+    }
+    const profile = buildProfile(Object.fromEntries(cases.map((r) => [r.subtestId, r])) as Partial<Record<SubtestResult['subtestId'], SubtestResult>>, 84);
+    assert.equal(profile.risk, 'insufficient');
+    assert.equal(profile.referenceStatus, 'disabled');
   });
 });
 
