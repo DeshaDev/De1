@@ -173,11 +173,16 @@ test('speech reading and naming tasks never accept manual correction or emit unv
 
   for (const task of ['قارئ الكلمات', 'سباق الصور', 'قصة سامي']) {
     await page.getByText(task, { exact: true }).click();
-    await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+    if (task === 'قارئ الكلمات') {
+      await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
+      await page.getByRole('button', { name: 'أكملت المحاولة' }).click();
+      await page.getByRole('button', { name: 'هيا بنا' }).click();
+      await expect(page.getByRole('heading', { name: 'التقييم الصوتي لهذه القائمة غير متاح بعد' })).toBeVisible();
+    } else {
+      await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
+    }
 
     if (task === 'قارئ الكلمات') {
-      await page.getByRole('button', { name: 'أكملت المحاولة' }).click();
-      await expect(page.getByRole('heading', { name: 'التقييم الصوتي لهذه القائمة غير متاح بعد' })).toBeVisible();
       await expect(page.getByRole('button', { name: 'صحيح' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'خطأ أو لم يقرأ' })).toHaveCount(0);
       await page.getByRole('button', { name: 'متابعة دون احتساب درجة' }).click();
