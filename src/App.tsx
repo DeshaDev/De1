@@ -470,6 +470,8 @@ export default function App() {
       passageId: record.passageId,
       assessmentModality: record.assessmentModality === 'voice_only' || record.oralReadingAssessed === true ? 'voice_only' : 'reading_only',
       wcpm: verifiedAudio ? (record.wcpm ?? record.oralWcpm ?? null) : null,
+      aiAssessmentVerified: verifiedAudio,
+      evidenceProvenance: verifiedAudio ? 'server-verified-audio' as const : 'client-reported' as const,
       teacherVerified: false,
       wpm: record.wpm,
       comprehensionScore: record.comprehensionScore,
@@ -1108,16 +1110,16 @@ export default function App() {
           gradeLevel: selectedStudent.gradeLevel,
           wpm: selectedStudent.wpm,
           comprehensionScore: selectedStudent.comprehensionScore,
-          problematicWords: selectedStudent.problematicWords,
+          problematicWords: hasVerifiedOralAudio(selectedStudent) ? selectedStudent.problematicWords : [],
           numberLinePAE: selectedStudent.numberLinePAE,
           subitizingAccuracy: selectedStudent.subitizingAccuracy,
           reversalErrorCount: selectedStudent.reversalErrorCount,
           dyscalculiaAssessed: selectedStudent.dyscalculiaAssessed === true,
-          oralReadingAssessed: selectedStudent.oralReadingAssessed,
-          oralAccuracyPercent: selectedStudent.oralAccuracyPercent,
-          oralWcpm: selectedStudent.oralWcpm,
-          phoneticSubstitutionCount: selectedStudent.phoneticSubstitutionCount,
-          dialectVariantCount: selectedStudent.dialectVariantCount,
+          oralReadingAssessed: hasVerifiedOralAudio(selectedStudent),
+          oralAccuracyPercent: hasVerifiedOralAudio(selectedStudent) ? selectedStudent.oralAccuracyPercent : null,
+          oralWcpm: hasVerifiedOralAudio(selectedStudent) ? selectedStudent.oralWcpm : null,
+          phoneticSubstitutionCount: hasVerifiedOralAudio(selectedStudent) ? selectedStudent.phoneticSubstitutionCount : 0,
+          dialectVariantCount: hasVerifiedOralAudio(selectedStudent) ? selectedStudent.dialectVariantCount : 0,
         }),
       });
       if (res.ok) {
@@ -2012,11 +2014,15 @@ export default function App() {
                             </time>
                           </div>
                           <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
-                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only' ? (snapshot.wcpm ?? 'غير متاح') : snapshot.wpm} كلمة/دقيقة</strong></span>
+                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only'
+                              ? snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio'
+                                ? (snapshot.wcpm ?? 'غير متاح')
+                                : 'غير متاح'
+                              : snapshot.wpm} كلمة/دقيقة</strong></span>
                             <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
                             <span>الوعي الصوتي: <strong>{snapshot.cognitiveResults?.phonemicAwarenessScorePercent ? `${snapshot.cognitiveResults.phonemicAwarenessScorePercent}%` : 'مكتمل'}</strong></span>
                           </div>
-                          {(snapshot.problematicWords || []).length > 0 && (
+                          {snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio' && (snapshot.problematicWords || []).length > 0 && (
                             <p className='mt-2 text-xs leading-relaxed text-slate-600'>
                               كلمات استهدفتها الجلسة: {(snapshot.problematicWords || []).join('، ')}
                             </p>
