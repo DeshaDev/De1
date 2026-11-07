@@ -239,6 +239,29 @@ describe('scoring of the reading and naming measures', () => {
       assert.equal(scored.centile, null, taskId);
       assert.equal(scored.measures?.seconds, 40, taskId);
       assert.equal(scored.measures?.correctPerMinute, Math.round(items.length * 60 / 40), taskId);
+
+      const validUpload = CognitiveBatteryUploadSchema.safeParse({
+        ageMonths: 84,
+        examinerName: '',
+        startedAt: now,
+        results: {
+          [taskId]: {
+            subtestId: taskId,
+            responses: items.map((item) => ({
+              itemId: item.id,
+              correct: true,
+              rtMs: 0,
+              replays: 0,
+            })),
+            discontinued: false,
+            completedAt: now,
+            durationMs: 40_000,
+            audioAssessment: evidence,
+            audioAssessmentReceipt: evidence.assessmentReceipt,
+          },
+        },
+      });
+      assert.equal(validUpload.success, true, taskId);
     }
   });
 
