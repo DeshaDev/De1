@@ -49,9 +49,10 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
-import { PassagePlayer, RanPlayer, ReadAloudPlayer, SpellingPlayer } from './ReadingPlayers';
+import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
+import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
 import { trackUsage } from '../../utils/usageTracking';
-import { SyncState, batterySessionFromRecord, canSyncToSchool, resultsEligibleForPersistence, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
+import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
 import { speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
@@ -73,10 +74,12 @@ type Stage = 'intro' | 'practice' | 'transition' | 'test' | 'done';
 
 function SubtestRunner({
   subtest,
+  audioSession,
   onFinish,
   onExit,
 }: {
   subtest: Subtest;
+  audioSession: CognitiveAudioSessionContext;
   onFinish: (result: SubtestResult) => void;
   onExit: () => void;
 }) {
@@ -84,15 +87,11 @@ function SubtestRunner({
   const [index, setIndex] = useState(0);
   const [showNote, setShowNote] = useState(false);
   const responses = useRef<ItemResponse[]>([]);
-  // These subtasks still lack a server-verified recording flow bound to their own
-  // reference items. They must not collect browser-recognition or adult-marked scores.
-  const requiresVerifiedAudio = subtest.kind === 'readList' || subtest.kind === 'passage' || subtest.kind === 'ran';
 
   useEffect(() => {
-    if (requiresVerifiedAudio) return () => stopSpeech();
     speak(subtest.introAudio);
     return () => stopSpeech();
-  }, [subtest.id, requiresVerifiedAudio]);
+  }, [subtest.id]);
 
   const practiceCount =
     subtest.kind === 'choice' ||
@@ -116,7 +115,7 @@ function SubtestRunner({
       ...extra,
     });
     setStage('done');
-    if (!requiresVerifiedAudio) speak(PHRASES.gameOver);
+    speak(PHRASES.gameOver);
   };
 
   const startTest = () => {
@@ -188,31 +187,7 @@ function SubtestRunner({
       )}
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
-        {requiresVerifiedAudio && stage === 'intro' && (
-          <div className="max-w-xl flex flex-col items-center gap-4 text-center" role="status" aria-live="polite">
-            <span className="grid place-items-center w-20 h-20 rounded-3xl bg-amber-50 text-amber-700" aria-hidden="true">
-              <AlertTriangle className="w-10 h-10" />
-            </span>
-            <h2 className="font-child text-2xl sm:text-3xl font-bold text-ink">
-              هذه المهمة غير متاحة للتقييم الصوتي المعتمد بعد
-            </h2>
-            <p className="bz-body text-ink-2">
-              لن نستخدم تعرّف المتصفح أو تصحيح ولي الأمر أو المعلم لتحديد صحة القراءة أو احتساب الأخطاء.
-              لذلك لن تُسجّل لهذه المهمة درجة، ولن تؤثر في نتيجة الطفل.
-            </p>
-            <p className="bz-small text-muted">
-              سيظل التقييم محجوبًا حتى يُربط تسجيل الطفل بمحرك صوتي خادمي موثّق خاص ببنود هذه المهمة.
-            </p>
-            <button
-              type="button"
-              onClick={() => finish(true)}
-              className="bz-btn bz-btn-secondary bz-btn-lg"
-            >
-              تخطّي دون تسجيل نتيجة
-            </button>
-          </div>
-        )}
-        {!requiresVerifiedAudio && stage === 'intro' && (
+        {stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
             <span className="grid place-items-center w-36 h-36 rounded-[40px] bg-sun-soft text-8xl animate-bounce-gentle" aria-hidden="true">{subtest.icon}</span>
             <h2 className="font-child text-4xl font-bold text-ink" style={{ fontFamily: 'var(--font-child)' }}>{subtest.gameNameAr}</h2>
@@ -306,12 +281,21 @@ function SubtestRunner({
           <AssociationPlayer key={`t-${index}`} block={subtest.blocks[index]} showFeedback={false} onDone={(rs) => recordAndAdvance(rs)} />
         )}
         {stage === 'test' && subtest.kind === 'readList' && (
-          <ReadAloudPlayer
-            key={`t-${index}`}
-            item={subtest.items[index]}
-            practice={false}
-            hesitationSec={subtest.hesitationSec}
-            onDone={(r) => recordAndAdvance([r])}
+          <ReadListAudioPlayer
+            title={subtest.gameNameAr}
+            items={subtest.items}
+            taskId={subtest.id === 'wordReading' ? 'wordReading' : 'nonwordReading'}
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
+              responses.current = rs;
+              finish(false, {
+                durationMs,
+                ...(audioAssessment ? {
+                  audioAssessment,
+                  audioAssessmentReceipt: audioAssessment.assessmentReceipt,
+                } : {}),
+              });
+            }}
           />
         )}
         {stage === 'test' && subtest.kind === 'ran' && (
@@ -319,7 +303,17 @@ function SubtestRunner({
             symbols={subtest.symbols}
             grid={subtest.grid}
             display={subtest.display}
-            onDone={(durationMs, errorCount) => finish(false, { durationMs, errorCount })}
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
+              responses.current = rs;
+              finish(false, {
+                durationMs,
+                errorCount: audioAssessment
+                  ? audioAssessment.substitutionsCount + audioAssessment.omissionsCount + audioAssessment.insertionsCount
+                  : undefined,
+                ...(audioAssessment ? { audioAssessment, audioAssessmentReceipt: audioAssessment.assessmentReceipt } : {}),
+              });
+            }}
           />
         )}
         {stage === 'test' && subtest.kind === 'passage' && (
@@ -327,9 +321,13 @@ function SubtestRunner({
             title={subtest.titleAr}
             words={subtest.words}
             timeLimitSec={subtest.timeLimitSec}
-            onDone={(rs, durationMs) => {
+            audioSession={audioSession}
+            onDone={(rs, durationMs, audioAssessment) => {
               responses.current = rs;
-              finish(false, { durationMs });
+              finish(false, {
+                durationMs,
+                ...(audioAssessment ? { audioAssessment, audioAssessmentReceipt: audioAssessment.assessmentReceipt } : {}),
+              });
             }}
           />
         )}
@@ -349,20 +347,8 @@ function SubtestRunner({
 
         {stage === 'done' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            {requiresVerifiedAudio ? (
-              <>
-                <span className="grid place-items-center w-24 h-24 rounded-full bg-amber-50 text-amber-700" aria-hidden="true">
-                  <AlertTriangle className="w-12 h-12" />
-                </span>
-                <p className="font-child text-2xl font-bold text-ink">تم تخطّي المهمة دون نتيجة</p>
-                <p className="bz-small text-ink-2">لم يُحتسب أداء صوتي أو خطأ قراءة لهذه المهمة.</p>
-              </>
-            ) : (
-              <>
-                <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
-                <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
-              </>
-            )}
+            <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
+            <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
             <button
               type="button"
               onClick={onExit}
@@ -402,9 +388,10 @@ function SetupView({
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState(supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر');
-  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || 'gulf');
+  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || '');
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
+    audioConsent: false,
     quiet: true,
     headphones: true,
     ready: true,
@@ -513,7 +500,15 @@ function SetupView({
                 <option key={d} value={d}>{DIALECT_LABELS_AR[d]}</option>
               ))}
             </select>
-            <span className="bz-hint">بعض اللهجات تدمج أصواتًا مثل ث/س وذ/ز؛ نستخدم اللهجة لتفسير هذه البنود بإنصاف.</span>
+            <span className="bz-hint">
+              {dialect === 'egyptian'
+                ? 'سيُستخدم نموذج Azure ar-EG للتقييم الصوتي.'
+                : dialect === 'gulf'
+                  ? 'سيُستخدم نموذج Azure ar-SA للتقييم الصوتي.'
+                  : dialect === ''
+                    ? 'اختر لهجة الطفل بوضوح. يتوفر التقييم الصوتي حاليًا للمصرية والخليجية فقط؛ لن نفترض لهجة عند غيابها.'
+                    : 'لا يدعم التقييم الصوتي الآلي اللهجة المختارة حاليًا؛ ستُحفظ مهام الصوت دون درجة، ولن نستبدل اللهجة بنموذج آخر.'}
+            </span>
           </label>
           <label className="bz-field">
             <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
@@ -551,6 +546,15 @@ function SetupView({
                 <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
+            <label className="bz-check sm:col-span-2">
+              <input type="checkbox" checked={checks.audioConsent} onChange={(e) => setChecks({ ...checks, audioConsent: e.target.checked })} />
+              <span className="text-ink-2">
+                <span className="font-semibold text-ink">موافقة منفصلة على تسجيل الصوت ومعالجته</span>
+                <span className="block bz-small bz-muted">
+                  أوافق على تسجيل صوت الطفل أثناء قصة القراءة ومهمة التسمية السريعة، وإرسال التسجيل إلى Microsoft Azure Speech لتحليله مقابل عناصر المهمة. لا يحفظ تطبيق هيا نقرأ ملف التسجيل الصوتي ضمن سجل الطفل؛ وقد يُحفظ التفريغ النصي وملخص الكلمات في نتيجة المهمة. يمكنني رفض الموافقة ومتابعة الأنشطة الأخرى دون تقييم صوتي.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
 
@@ -565,6 +569,11 @@ function SetupView({
               examinerName: examiner.trim(),
               startedAt: new Date().toISOString(),
               ...(dialect ? { dialect } : {}),
+              guardianConsentGiven: checks.consent,
+              guardianConsentRecordedAt: new Date().toISOString(),
+              guardianAudioConsentGiven: checks.audioConsent,
+              ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
+              ...(dialect === 'egyptian' ? { speechLocale: 'ar-EG' as const } : dialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
               results: {},
             })
           }
@@ -587,7 +596,7 @@ function SetupView({
               `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
               `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. مهام القراءة والتسمية لا تنتج درجة حتى يتوفر التقييم الصوتي الآلي الموثّق.',
+              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تحلل القصة والتسمية السريعة عبر تسجيل صوتي وموافقة منفصلة؛ وإذا لم يكتمل تحليل Azure، لا تُحتسب درجة.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
@@ -661,14 +670,28 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
 
     // If activeStudent has already been registered with valid name and age (from Parent Portal or school roster)
     const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
-    if (!activeStudent.isDemoRecord && activeStudent.name && isValidAge && activeStudent.name !== 'طفلك') {
+    if (
+      !activeStudent.isDemoRecord &&
+      activeStudent.name &&
+      isValidAge &&
+      activeStudent.name !== 'طفلك' &&
+      activeStudent.guardianConsentGiven === true &&
+      activeStudent.guardianAudioConsentGiven === true
+    ) {
+      const speechDialect = activeStudent.dialectCode as HomeDialect | undefined;
       const initialSession: BatterySession = {
         studentId: activeStudent.id,
         childName: activeStudent.name,
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        dialect: (activeStudent.dialectCode as HomeDialect) || 'gulf',
+        ...(speechDialect ? { dialect: speechDialect } : {}),
+        guardianConsentGiven: activeStudent.guardianConsentGiven === true,
+        guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
+        guardianAudioConsentGiven: activeStudent.guardianAudioConsentGiven === true,
+        guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt,
+        ...(speechDialect === 'egyptian' ? { speechLocale: 'ar-EG' as const }
+          : speechDialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
         results: {},
       };
       saveBatterySession(initialSession);
@@ -684,7 +707,6 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       // Family accounts and devices without a school: keep the result in the child's record too,
       // so the app can save it to the family's database. The summary is computed on this device.
       if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
-        const persistedResults = resultsEligibleForPersistence(s.results);
         onRecordUpdated?.({
           ...activeStudent,
           cognitiveBattery: {
@@ -693,8 +715,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             startedAt: s.startedAt,
             dialect: s.dialect,
             updatedAt: new Date().toISOString(),
-            results: persistedResults,
-            summary: summarizeBattery(persistedResults, s.ageMonths),
+            results: s.results,
+            summary: summarizeBattery(s.results, s.ageMonths),
           },
         });
       }
@@ -805,6 +827,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <SubtestRunner
         key={view.id}
         subtest={SUBTESTS_BY_ID[view.id]}
+        audioSession={session}
         onFinish={saveResult}
         onExit={() => setView({ name: 'map' })}
       />
@@ -869,9 +892,6 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {games.map((s) => {
           const done = Boolean(session.results[s.id]);
-          const audioUnscored = s.kind === 'readList' || s.kind === 'passage' || s.kind === 'ran';
-          const wasSkippedWithoutAudioScore = audioUnscored && done &&
-            (session.results[s.id]?.responses.length ?? 0) === 0;
           const isNext = nextSubtest?.id === s.id;
           const domain = DOMAINS[s.domain];
           return (
@@ -885,11 +905,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 <div className="flex items-start justify-between gap-3 w-full">
                   <span className="grid place-items-center w-16 h-16 rounded-2xl text-4xl" style={{ background: `color-mix(in srgb, ${domain.color} 12%, var(--card))` }} aria-hidden="true">{s.icon}</span>
                   {done ? (
-                    wasSkippedWithoutAudioScore ? (
-                      <span className="bz-badge bz-badge-warn"><AlertTriangle className="w-3.5 h-3.5" /> بلا نتيجة صوتية</span>
-                    ) : (
-                      <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
-                    )
+                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
                   ) : isNext ? (
                     <span className="bz-badge bz-badge-sun">التالية</span>
                   ) : (
@@ -902,7 +918,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 </div>
                 <div className="mt-auto w-full flex items-center justify-between text-[12px] font-semibold pt-3 border-t border-line">
                   <span style={{ color: domain.color }}>{domain.nameAr}</span>
-                  <span className="bz-muted">{done ? (wasSkippedWithoutAudioScore ? 'غير مقاسة' : 'إعادة اللعبة') : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
+                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
                 </div>
               </button>
             </li>
