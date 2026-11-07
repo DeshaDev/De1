@@ -2590,14 +2590,21 @@ async function startServer() {
       },
     };
 
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      res.status(503).json({
+        code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
+        error: 'الحفظ الصوتي الآمن غير مهيأ في الخادم؛ بقيت النتائج محلية ولم تُكتب إلى قاعدة البيانات.',
+      });
+      return;
+    }
     try {
       const updateUrl =
         `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}`;
       const updateResponse = await fetch(updateUrl, {
         method: 'PATCH',
         headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: authorization,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
