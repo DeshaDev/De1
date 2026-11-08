@@ -4325,7 +4325,7 @@ async function startServer() {
           sessionId: assessmentSession.sessionId,
           tenantId: assessmentSession.tenantId,
           studentId,
-          taskId: task.taskId,
+          taskId: task.taskId as 'wordReading' | 'nonwordReading',
           itemId: wordItem.itemId,
           itemIndex: wordItem.itemIndex,
           attemptId: wordItem.attemptId,
