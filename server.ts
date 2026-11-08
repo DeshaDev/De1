@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
-import { assessReadingAudioWithAzure } from './src/utils/azurePronunciationAssessment';
+import { assessReadingAudioWithAzure, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
 import {
   ACTIVITY_IDS,
   DraftPlanSchema,
@@ -19,7 +19,13 @@ import {
 } from './src/cognitiveProfile/individualPlan';
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
-import { applyRanNameVariants, getCognitiveAudioTaskDefinition, type CognitiveAudioTaskId } from './src/cognitiveProfile/cognitiveAudioTasks';
+import {
+  aggregateCognitiveWordAssessments,
+  applyRanNameVariants,
+  getCognitiveAudioTaskDefinition,
+  type CognitiveAudioTaskId,
+  type CognitiveWordAssessmentRecord,
+} from './src/cognitiveProfile/cognitiveAudioTasks';
 import type { CognitiveAudioAssessmentEvidence } from './src/cognitiveProfile/scoring';
 import {
   UsageEventSchema,
@@ -1194,6 +1200,21 @@ async function startServer() {
     taskId: CognitiveAudioTaskId;
     expiresAt: number;
     assessment: CognitiveAudioAssessmentEvidence;
+  }>();
+  // Each word clip receives its own short-lived receipt. Raw audio is discarded immediately
+  // after Azure responds; only the word-level assessment needed for final aggregation remains.
+  const cognitiveWordAssessmentReceipts = new Map<string, {
+    sessionId: string;
+    tenantId: string;
+    studentId: string;
+    taskId: 'wordReading' | 'nonwordReading';
+    itemId: string;
+    itemIndex: number;
+    attemptId: string;
+    transcript: string;
+    durationSeconds: number;
+    word: AzureAlignedWord;
+    expiresAt: number;
   }>();
   // Parent-account persistence awaits Supabase; reserve receipts during that write so
   // concurrent requests cannot replay the same one-use receipt before it is consumed.
@@ -3907,6 +3928,112 @@ async function startServer() {
   });
 
 
+  // Finalize a word-list task only after every canonical word has its own server receipt.
+  app.post('/api/ai/cognitive-audio-assessment/finalize', requireAiAccess(), (req, res) => {
+    const body = req.body || {};
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
+    const task = getCognitiveAudioTaskDefinition(body.taskId);
+    const attemptId = typeof body.attemptId === 'string' ? body.attemptId : '';
+    if (
+      !/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId) ||
+      !task ||
+      (task.taskId !== 'wordReading' && task.taskId !== 'nonwordReading') ||
+      !/^[a-f0-9]{32}$/i.test(attemptId) ||
+      !Array.isArray(body.wordReceipts) ||
+      body.wordReceipts.length !== task.itemIds.length
+    ) {
+      res.status(400).json({
+        code: 'COGNITIVE_AUDIO_WORD_LIST_INVALID',
+        error: 'قائمة الكلمات أو إيصالاتها غير مكتملة؛ لم تُنشأ نتيجة للمهمة.',
+      });
+      return;
+    }
+
+    const seenReceipts = new Set<string>();
+    const records: CognitiveWordAssessmentRecord[] = [];
+    const now = Date.now();
+    for (let index = 0; index < task.itemIds.length; index++) {
+      const supplied = body.wordReceipts[index];
+      const receipt = supplied && typeof supplied.receipt === 'string' ? supplied.receipt : '';
+      const itemId = supplied && typeof supplied.itemId === 'string' ? supplied.itemId : '';
+      if (
+        itemId !== task.itemIds[index] ||
+        !/^[a-f0-9]{64}$/.test(receipt) ||
+        seenReceipts.has(receipt)
+      ) {
+        res.status(409).json({
+          code: 'COGNITIVE_AUDIO_WORD_ORDER_INVALID',
+          error: 'ترتيب الكلمات أو الإيصالات غير صحيح؛ لم تُجمع النتيجة.',
+        });
+        return;
+      }
+      seenReceipts.add(receipt);
+      const stored = cognitiveWordAssessmentReceipts.get(receipt);
+      if (
+        !stored ||
+        stored.expiresAt <= now ||
+        stored.sessionId !== session.sessionId ||
+        stored.tenantId !== session.tenantId ||
+        stored.studentId !== studentId ||
+        stored.taskId !== task.taskId ||
+        stored.itemId !== itemId ||
+        stored.itemIndex !== index ||
+        stored.attemptId !== attemptId
+      ) {
+        res.status(409).json({
+          code: 'COGNITIVE_AUDIO_WORD_RECEIPT_INVALID',
+          error: 'أحد تسجيلات الكلمات لا يخص هذا الطفل أو هذه المحاولة أو انتهت صلاحيته. أعد تسجيل الكلمة.',
+        });
+        return;
+      }
+      records.push({
+        itemId: stored.itemId,
+        itemIndex: stored.itemIndex,
+        transcript: stored.transcript,
+        durationSeconds: stored.durationSeconds,
+        word: stored.word,
+      });
+    }
+
+    const aggregate = aggregateCognitiveWordAssessments(task, records);
+    if (!aggregate) {
+      res.status(422).json({
+        code: 'COGNITIVE_AUDIO_WORD_LIST_INCOMPLETE',
+        error: 'لم تكتمل مطابقة التسجيلات مع جميع الكلمات المرجعية بالترتيب. لم تُحتسب نتيجة.',
+      });
+      return;
+    }
+
+    while (cognitiveAudioAssessmentReceipts.size >= 500) {
+      const oldestKey = cognitiveAudioAssessmentReceipts.keys().next().value;
+      if (!oldestKey) break;
+      cognitiveAudioAssessmentReceipts.delete(oldestKey);
+    }
+    const receipt = crypto.randomBytes(32).toString('hex');
+    const expiresAt = now + audioAssessmentReceiptTtlMs;
+    const assessment: CognitiveAudioAssessmentEvidence = {
+      ...aggregate,
+      sourceModel: 'azure_pronunciation_assessment',
+      assessmentComplete: true,
+      assessmentReceipt: receipt,
+    };
+    cognitiveAudioAssessmentReceipts.set(receipt, {
+      sessionId: session.sessionId,
+      tenantId: session.tenantId,
+      studentId,
+      taskId: task.taskId,
+      expiresAt,
+      assessment,
+    });
+    // Word receipts are single-use: remove them only after the complete receipt exists.
+    for (const oldReceipt of seenReceipts) cognitiveWordAssessmentReceipts.delete(oldReceipt);
+    res.json({
+      assessment,
+      receiptExpiresAt: new Date(expiresAt).toISOString(),
+    });
+  });
+
   // Cognitive battery audio: task references are resolved on the server and never accepted from the browser.
   // Only a complete Azure word-level assessment receives a short-lived receipt.
   app.post('/api/ai/cognitive-audio-assessment', requireAiAccess(), async (req, res) => {
@@ -4016,6 +4143,27 @@ async function startServer() {
       });
       return;
     }
+    const isWordListTask = task.taskId === 'wordReading' || task.taskId === 'nonwordReading';
+    let wordItem: { itemId: string; itemIndex: number; attemptId: string; referenceWord: string } | undefined;
+    if (isWordListTask) {
+      const itemIndex = Number(body.itemIndex);
+      const itemId = typeof body.itemId === 'string' ? body.itemId : '';
+      const attemptId = typeof body.attemptId === 'string' ? body.attemptId : '';
+      if (
+        !Number.isInteger(itemIndex) ||
+        itemIndex < 0 ||
+        itemIndex >= task.itemIds.length ||
+        task.itemIds[itemIndex] !== itemId ||
+        !/^[a-f0-9]{32}$/i.test(attemptId)
+      ) {
+        res.status(400).json({
+          code: 'COGNITIVE_AUDIO_ITEM_INVALID',
+          error: 'تعذر مطابقة تسجيل الكلمة مع موضعها الصحيح في قائمة الفحص.',
+        });
+        return;
+      }
+      wordItem = { itemId, itemIndex, attemptId, referenceWord: task.referenceWords[itemIndex] };
+    }
     if (body.language !== 'ar-EG' && body.language !== 'ar-SA') {
       res.status(400).json({
         code: 'UNSUPPORTED_PRONUNCIATION_LOCALE',
@@ -4028,8 +4176,8 @@ async function startServer() {
       body.audioWavBase64.length < 80 ||
       body.audioWavBase64.length > 4_500_000 ||
       !Number.isFinite(Number(body.durationSeconds)) ||
-      Number(body.durationSeconds) < 1 ||
-      Number(body.durationSeconds) > 88
+      Number(body.durationSeconds) < (wordItem ? 0.25 : 1) ||
+      Number(body.durationSeconds) > (wordItem ? 12 : 88)
     ) {
       res.status(400).json({
         code: 'INVALID_COGNITIVE_AUDIO_INPUT',
@@ -4063,14 +4211,15 @@ async function startServer() {
       if (!validWav) throw new Error('INVALID_WAV_HEADER');
 
       const dataBytes = wavBuffer.readUInt32LE(40);
-      if (dataBytes < 32_000 || dataBytes % 2 !== 0 || dataBytes !== wavBuffer.length - 44) {
+      const minimumDataBytes = wordItem ? 8_000 : 32_000;
+      if (dataBytes < minimumDataBytes || dataBytes % 2 !== 0 || dataBytes !== wavBuffer.length - 44) {
         throw new Error('INVALID_WAV_DATA_LENGTH');
       }
       durationSeconds = dataBytes / 32_000;
       if (
         !Number.isFinite(durationSeconds) ||
-        durationSeconds < 1 ||
-        durationSeconds > 88 ||
+        durationSeconds < (wordItem ? 0.25 : 1) ||
+        durationSeconds > (wordItem ? 12 : 88) ||
         Math.abs(Number(body.durationSeconds) - durationSeconds) > 0.75
       ) {
         throw new Error('INVALID_AUDIO_DURATION');
@@ -4131,14 +4280,78 @@ async function startServer() {
     }
 
     try {
+      const requestStartedAt = Date.now();
       let result = await assessReadingAudioWithAzure({
-        referenceText: task.referenceWords.join(' '),
-        referenceWords: task.referenceWords,
+        referenceText: wordItem ? wordItem.referenceWord : task.referenceWords.join(' '),
+        referenceWords: wordItem ? [wordItem.referenceWord] : task.referenceWords,
         audioWavBase64: body.audioWavBase64,
         durationSeconds,
         language: body.language,
         dialectLabel: body.language === 'ar-EG' ? 'المصرية' : 'الخليجية / الفصحى',
       });
+
+      if (wordItem) {
+        const assessedWord = result.words[0];
+        const resolvedWord =
+          result.sourceModel === 'azure_pronunciation_assessment' &&
+          result.assessmentComplete === true &&
+          result.words.length === 1 &&
+          assessedWord?.word === wordItem.referenceWord &&
+          assessedWord.errorType !== 'Unconfirmed' &&
+          assessedWord.errorType !== 'Insertion' &&
+          typeof assessedWord.accuracyScore === 'number' &&
+          result.transcript.trim().length > 0;
+        if (!resolvedWord) {
+          res.status(422).json({
+            code: 'COGNITIVE_AUDIO_WORD_UNCONFIRMED',
+            error: 'لم يتمكن محرك الصوت من حسم نطق هذه الكلمة. لم تُسجّل كخطأ؛ أعد تسجيل الكلمة وحدها.',
+          });
+          return;
+        }
+
+        const now = Date.now();
+        for (const [key, value] of cognitiveWordAssessmentReceipts) {
+          if (value.expiresAt <= now) cognitiveWordAssessmentReceipts.delete(key);
+        }
+        while (cognitiveWordAssessmentReceipts.size >= 1_000) {
+          const oldestKey = cognitiveWordAssessmentReceipts.keys().next().value;
+          if (!oldestKey) break;
+          cognitiveWordAssessmentReceipts.delete(oldestKey);
+        }
+
+        const receipt = crypto.randomBytes(32).toString('hex');
+        const expiresAt = now + audioAssessmentReceiptTtlMs;
+        cognitiveWordAssessmentReceipts.set(receipt, {
+          sessionId: assessmentSession.sessionId,
+          tenantId: assessmentSession.tenantId,
+          studentId,
+          taskId: task.taskId,
+          itemId: wordItem.itemId,
+          itemIndex: wordItem.itemIndex,
+          attemptId: wordItem.attemptId,
+          transcript: result.transcript,
+          durationSeconds,
+          word: assessedWord,
+          expiresAt,
+        });
+        res.json({
+          wordAssessment: {
+            itemId: wordItem.itemId,
+            itemIndex: wordItem.itemIndex,
+            assessmentReceipt: receipt,
+            transcript: result.transcript,
+            durationSeconds,
+            word: {
+              word: assessedWord.word,
+              errorType: assessedWord.errorType,
+              accuracyScore: assessedWord.accuracyScore,
+              spokenWord: assessedWord.spokenWord,
+            },
+          },
+          receiptExpiresAt: new Date(expiresAt).toISOString(),
+        });
+        return;
+      }
       if (task.taskId === 'ranObjects' || task.taskId === 'ranLetters') {
         result = applyRanNameVariants(result, task, durationSeconds);
       }
