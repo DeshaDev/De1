@@ -12,6 +12,7 @@ import {
   applyRanNameVariants,
   getCognitiveAudioTaskDefinition,
   isAcceptedRanName,
+  type CognitiveWordAssessmentRecord,
 } from './cognitiveAudioTasks';
 import type { AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
 
@@ -159,7 +160,7 @@ describe('RAN spoken aliases must preserve Azure pronunciation evidence', () => 
 
 describe('per-word reading assessment aggregation', () => {
   const task = getCognitiveAudioTaskDefinition('wordReading')!;
-  const records = () => task.itemIds.map((itemId, itemIndex) => ({
+  const records = (): CognitiveWordAssessmentRecord[] => task.itemIds.map((itemId, itemIndex) => ({
     itemId,
     itemIndex,
     transcript: task.referenceWords[itemIndex].replace(/[ً-ْ]/g, ''),
