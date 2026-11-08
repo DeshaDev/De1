@@ -29,6 +29,12 @@ const audioMemoryCache = new Map<string, string>();
 const MAX_AUDIO_CACHE_ENTRIES = 50;
 const MAX_CACHED_AUDIO_URL_CHARS = 500_000;
 let currentActiveAudio: HTMLAudioElement | null = null;
+// Incremented per request so a superseded request never falls back to the robotic browser voice.
+let playbackRequestId = 0;
+
+function isPlaybackInterrupted(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { name?: string }).name === 'AbortError';
+}
 
 // Azure Speech credentials (direct browser fallback for static hosting like cPanel)
 const CLIENT_AZURE_KEY =
@@ -154,6 +160,8 @@ export async function playNaturalArabicAudio(
   const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+1%');
   const cacheKey = `${voice}_${rate}_${pitch}_${preparedText}`;
 
+  const requestId = ++playbackRequestId;
+
   // Stop previous audio playback smoothly
   if (currentActiveAudio) {
     try {
@@ -173,12 +181,15 @@ export async function playNaturalArabicAudio(
       await audio.play();
       return;
     } catch (e) {
+      if (isPlaybackInterrupted(e) || requestId !== playbackRequestId) return;
       console.warn('[NaturalSpeech] Cached audio play failed, refreshing:', e);
     }
   }
 
   // 2. Direct browser cloud Azure Neural Arabic Speech (Fastest, zero server dependency, CORS enabled)
   const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
+  // A newer request (or stop) superseded this one while Azure was synthesizing.
+  if (requestId !== playbackRequestId) return;
   if (directAudioUrl) {
     try {
       cacheAudio(cacheKey, directAudioUrl);
@@ -188,6 +199,8 @@ export async function playNaturalArabicAudio(
       await audio.play();
       return;
     } catch (directErr) {
+      // pause() from a newer request/stop is intentional: do not fall back to the robotic voice.
+      if (isPlaybackInterrupted(directErr) || requestId !== playbackRequestId) return;
       console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
     }
   }
@@ -251,6 +264,7 @@ export async function playNaturalArabicAudio(
 
 /** Stop any ongoing speech playback */
 export function stopNaturalArabicAudio(): void {
+  playbackRequestId++;
   if (currentActiveAudio) {
     try {
       currentActiveAudio.pause();
