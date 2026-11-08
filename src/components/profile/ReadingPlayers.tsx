@@ -141,6 +141,8 @@ export function ReadListAudioPlayer({
   onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
 }) {
   const [phase, setPhase] = useState<AudioTaskPhase>('ready');
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const currentItem = items[currentItemIndex];
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
   const recordingRef = useRef<WavRecordingController | null>(null);
@@ -196,8 +198,21 @@ export function ReadListAudioPlayer({
   };
 
   useEffect(() => {
-    if (phase === 'recording' && elapsedSeconds >= maxDurationSeconds) void submitRecording();
-  }, [phase, elapsedSeconds]);
+    if (phase !== 'recording' || elapsedSeconds < maxDurationSeconds) return;
+
+    // A recording is scoreable only after the child has been shown every reference word.
+    // Never submit a partial list against the full reference sequence.
+    if (currentItemIndex < items.length - 1) {
+      recordingRef.current?.cancel();
+      recordingRef.current = null;
+      finalizingRef.current = false;
+      setErrorMessage('انتهى الوقت قبل إكمال الكلمات كلها. لم تُحتسب درجة؛ أعد المهمة من الكلمة الأولى.');
+      setPhase('error');
+      return;
+    }
+
+    void submitRecording();
+  }, [phase, elapsedSeconds, currentItemIndex, items.length]);
 
   useEffect(() => () => {
     recordingRef.current?.cancel();
@@ -209,6 +224,7 @@ export function ReadListAudioPlayer({
     startingRef.current = true;
     setErrorMessage('');
     try {
+      setCurrentItemIndex(0);
       recordingRef.current = await startWavRecording();
       startAtRef.current = performance.now();
       setElapsedNow(startAtRef.current);
@@ -229,27 +245,54 @@ export function ReadListAudioPlayer({
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
             {phase === 'recording'
-              ? 'اقرأ الكلمات بالترتيب وبصوتك الطبيعي. لا تتوقف طويلًا بين الكلمات؛ سيحلل Azure التسجيل كاملًا.'
-              : 'اقرأ الكلمات المعروضة من اليمين إلى اليسار. لا توجد علامات يدوية؛ سيُحلل التسجيل مقابل الكلمات المرجعية.'}
+              ? 'اقرأ الكلمة الظاهرة، ثم اضغط «الكلمة التالية». ستظهر كل كلمة وحدها وبالترتيب.'
+              : 'ستظهر كلمة واحدة في كل مرة. ابدأ التسجيل، ثم اقرأ الكلمات بالترتيب.'}
           </p>
         </div>
 
-        <ol className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" lang="ar">
-          {items.map((item, index) => (
-            <li key={item.id} className="min-h-16 grid place-items-center rounded-2xl border border-line bg-soft px-2 py-3">
-              <span className="text-[11px] text-muted mb-1">{ar(index + 1)}</span>
-              <span className="text-2xl sm:text-3xl font-bold text-ink text-center" style={READING_FONT}>{item.text}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="w-full max-w-2xl mx-auto space-y-3" lang="ar">
+          <div className="flex items-center justify-between gap-3 text-sm font-bold text-muted">
+            <span>الكلمة {ar(currentItemIndex + 1)} من {ar(items.length)}</span>
+            <span>{ar(Math.round(((currentItemIndex + 1) / items.length) * 100))}٪</span>
+          </div>
+          <div
+            className="bz-progress"
+            role="progressbar"
+            aria-label="التقدم في كلمات القراءة"
+            aria-valuemin={0}
+            aria-valuemax={items.length}
+            aria-valuenow={currentItemIndex + 1}
+          >
+            <span style={{ width: String(((currentItemIndex + 1) / items.length) * 100) + '%' }} />
+          </div>
+          <div
+            className="min-h-56 sm:min-h-64 grid place-items-center rounded-[2rem] border-4 border-line bg-soft px-5 py-10 shadow-sm"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="text-6xl sm:text-7xl font-bold text-ink text-center leading-relaxed" style={READING_FONT}>
+              {currentItem.text}
+            </span>
+          </div>
+        </div>
 
         {phase === 'recording' && (
           <div className="space-y-3 text-center">
             <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(maxDurationSeconds - elapsedSeconds))} ثانية متبقية</p>
             <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / maxDurationSeconds * 100)) + '%' }} /></div>
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
-              <Check className="w-5 h-5" /> انتهيت من قراءة القائمة — حلّل التسجيل
-            </button>
+            {currentItemIndex < items.length - 1 ? (
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary bz-btn-lg"
+                onClick={() => setCurrentItemIndex((index) => Math.min(index + 1, items.length - 1))}
+              >
+                الكلمة التالية
+              </button>
+            ) : (
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
+                <Check className="w-5 h-5" /> انتهيت من قراءة الكلمات — حلّل التسجيل
+              </button>
+            )}
           </div>
         )}
 
@@ -270,6 +313,7 @@ export function ReadListAudioPlayer({
                 className="bz-btn bz-btn-primary"
                 onClick={() => {
                   finalizingRef.current = false;
+                  setCurrentItemIndex(0);
                   setErrorMessage('');
                   setPhase('ready');
                 }}
@@ -286,7 +330,7 @@ export function ReadListAudioPlayer({
         {phase === 'ready' && (
           <div className="flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
-              <Mic className="w-5 h-5" /> ابدأ تسجيل قراءة القائمة
+              <Mic className="w-5 h-5" /> ابدأ تسجيل القراءة
             </button>
             {!supported && <p className="w-full text-center bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
             <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
