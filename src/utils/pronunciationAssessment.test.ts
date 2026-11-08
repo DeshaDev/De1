@@ -214,3 +214,22 @@ test('a low Azure score with an explicit None tag remains unresolved, not a conf
   assert.equal(result.assessmentComplete, false);
   assert.equal(result.wordAccuracyPercent, null);
 });
+
+
+test('Azure word alignment supports an independently recorded single Arabic word', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['بَاب'],
+    transcript: 'باب',
+    durationSeconds: 0.45,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'باب', errorType: 'None', accuracyScore: 97 },
+    ],
+  });
+  assert.equal(result.sourceModel, 'azure_pronunciation_assessment');
+  assert.equal(result.words.length, 1);
+  assert.equal(result.words[0].word, 'بَاب');
+  assert.equal(result.words[0].errorType, 'None');
+  assert.equal(result.assessmentComplete, true);
+  assert.equal(result.correctWordsCount, 1);
+});
