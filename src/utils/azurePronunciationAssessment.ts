@@ -367,10 +367,10 @@ export async function assessReadingAudioWithAzure(args: {
   if (!args.audioWavBase64 || args.audioWavBase64.length > 4_500_000) {
     throw new Error('INVALID_AUDIO_PAYLOAD');
   }
-  if (args.referenceWords.length < 2 || args.referenceWords.length > 300) {
+  if (args.referenceWords.length < 1 || args.referenceWords.length > 300) {
     throw new Error('INVALID_REFERENCE_WORDS');
   }
-  if (args.durationSeconds < 1 || args.durationSeconds > 600) {
+  if (args.durationSeconds < (args.referenceWords.length === 1 ? 0.25 : 1) || args.durationSeconds > 600) {
     throw new Error('INVALID_AUDIO_DURATION');
   }
 
