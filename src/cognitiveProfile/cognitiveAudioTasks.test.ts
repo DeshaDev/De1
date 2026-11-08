@@ -182,7 +182,7 @@ describe('per-word reading assessment aggregation', () => {
     assert.equal(aggregated.words.at(-1)?.word, task.referenceWords.at(-1));
     assert.equal(aggregated.correctWordsCount, task.itemIds.length);
     assert.equal(aggregated.wordAccuracyPercent, 100);
-    assert.equal(aggregated.durationSeconds, 9.6);
+    assert.ok(Math.abs(aggregated.durationSeconds - 9.6) < 0.001);
   });
 
   it('rejects a missing, duplicated, or out-of-order word receipt', () => {
