@@ -112,7 +112,11 @@ async function fetchDirectAzureAudio(
     // Inject IPA phoneme tags so 'تُ' is pronounced pure 'Tu' (never 'toh')
     const formattedBody = formatArabicTextWithPhonemes(escaped);
 
-    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}"><prosody rate="${rate}" pitch="${pitch}">${formattedBody}</prosody></voice></speak>`;
+    // Pitch/rate shifting a single word or letter distorts it (measured: "كِتَاب" was recognised as "كابيتال"),
+    // so prosody is applied only to multi-word sentences, and never changes pitch.
+    const isMultiWord = /\s/.test(text.trim());
+    const body = isMultiWord ? `<prosody rate="${rate}">${formattedBody}</prosody>` : formattedBody;
+    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}">${body}</voice></speak>`;
 
     const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
     const res = await fetch(endpoint, {
@@ -120,7 +124,8 @@ async function fetchDirectAzureAudio(
       headers: {
         'Ocp-Apim-Subscription-Key': key,
         'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+        // 48 kHz / 192 kbps: the old 16 kHz output sounded muffled and synthetic.
+        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
       },
       body: ssml,
     });
