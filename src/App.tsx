@@ -319,7 +319,9 @@ export default function App() {
   const [supabaseError, setSupabaseError] = useState<string>('');
 
   // Direct access for testing (registration barrier removed as requested)
-  const setActiveTab = (tab: ActiveTab) => {
+  const setActiveTab = (requestedTab: ActiveTab) => {
+    // Testing mode: the registration page is skipped; go straight to the screening hub.
+    const tab: ActiveTab = requestedTab === 'parent-portal' ? 'dyslexia-lab' : requestedTab;
     setAiStatusBanner('');
     setActiveTabState(tab);
     const newPath = tabToUrlPath(tab);
@@ -330,6 +332,12 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
+
+  // Opening /parent directly (or reloading on it) also skips registration while testing.
+  useEffect(() => {
+    if (activeTab === 'parent-portal') setActiveTab('dyslexia-lab');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   useEffect(() => {
     const unsubscribe = onSupabaseAuthChange((user, session) => {
