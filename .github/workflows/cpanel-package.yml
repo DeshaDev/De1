@@ -6,6 +6,7 @@ on:
     paths:
       - "src/**"
       - "server.ts"
+      - "app_wrapper.cjs"
       - "package.json"
       - "package-lock.json"
       - "vite.config.ts"
@@ -48,6 +49,7 @@ jobs:
           cp package.json package/package.json
           cp package-lock.json package/package-lock.json
           cp server.js package/server.js
+          cp app_wrapper.cjs package/app_wrapper.cjs
           cp -a dist package/dist
           cp docs/DEPLOY_CPANEL_AR.md package/DEPLOY_CPANEL_AR.md
           cat > package/README-START-HERE.txt <<'EOF'
