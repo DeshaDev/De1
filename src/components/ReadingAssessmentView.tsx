@@ -774,7 +774,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const handleSpeakWord = (word: string) => {
     const clean = word.replace(/[.,!?،؟؛:"«»()[\]]/g, '').trim();
     if (!clean) return;
-    playNaturalArabicAudio(clean, { voice: 'ar-EG-SalmaNeural', rate: '-12%' });
+    playNaturalArabicAudio(clean, { voice: 'ar-AE-FatimaNeural', rate: '-5%' });
   };
 
   // Comprehensive summary metrics of reading words

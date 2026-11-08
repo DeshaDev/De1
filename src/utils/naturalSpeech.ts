@@ -1,7 +1,7 @@
 /**
  * Baseera Natural Arabic Speech Player
  * Powered by Microsoft Azure Neural Arabic Voices:
- * - Default: ar-EG-SalmaNeural (Warm, maternal, pedagogical teacher voice for stories & sentences)
+ * - Default: ar-AE-FatimaNeural (The gold-standard Classical Arabic female voice: pristine, eloquent, expressive)
  * - Phonemes / Isolated Letters: ar-SA-HamedNeural with Classical Fusha IPA (Tu, Ti, Ta, Bu...)
  *
  * Provides 100% authentic human-grade makharij al-huruf with client-side caching
@@ -49,16 +49,16 @@ function cacheAudio(key: string, dataUrl: string): void {
 }
 
 export type ArabicTtsVoice =
-  | 'ar-SA-ZariyahNeural' // المعلمة زارية: صوت فصحى معيارية نقي ناصع الفصاحة ومخارج الحروف
-  | 'ar-AE-FatimaNeural'  // فاطمة: صوت خليجي فصيح ووقور
+  | 'ar-AE-FatimaNeural'  // فاطمة: أفصح وأنقى صوت معلّمة عربية فصحى على الإطلاق من مايكروسوفت أزور
+  | 'ar-SA-ZariyahNeural' // المعلمة زارية: صوت فصحى نقي
   | 'ar-SA-HamedNeural'   // حامد: صوت فصحى أصيل ناصع المخارج للفونيمات والحروف المجردة
-  | 'ar-EG-SalmaNeural'   // سلمى: صوت مصري دافئ
-  | 'ar-KW-NouraNeural';  // نورة: صوت كويتي فصيح
+  | 'ar-KW-NouraNeural'   // نورة: صوت كويتي فصيح وهادئ
+  | 'ar-EG-SalmaNeural';  // سلمى: صوت مصري دافئ
 
 export interface NaturalSpeechOptions {
   voice?: ArabicTtsVoice;
-  rate?: string;  // e.g. '-12%', '-10%', '-5%'
-  pitch?: string; // e.g. '+2%', '0%'
+  rate?: string;  // e.g. '-5%', '-8%', '0%'
+  pitch?: string; // e.g. '+1%', '0%'
   onEnd?: () => void;
   onError?: (err: unknown) => void;
 }
@@ -93,7 +93,9 @@ async function fetchDirectAzureAudio(
   rate: string,
   pitch: string
 ): Promise<string | null> {
-  if (!CLIENT_AZURE_KEY || !CLIENT_AZURE_REGION) return null;
+  const key = CLIENT_AZURE_KEY;
+  const region = CLIENT_AZURE_REGION;
+  if (!key || !region) return null;
 
   try {
     const escaped = text
@@ -106,14 +108,13 @@ async function fetchDirectAzureAudio(
 
     const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}"><prosody rate="${rate}" pitch="${pitch}">${formattedBody}</prosody></voice></speak>`;
 
-    const endpoint = `https://${CLIENT_AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+    const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Ocp-Apim-Subscription-Key': CLIENT_AZURE_KEY,
+        'Ocp-Apim-Subscription-Key': key,
         'Content-Type': 'application/ssml+xml',
         'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
-        'User-Agent': 'HayanAqra-Pedagogical-Audio',
       },
       body: ssml,
     });
@@ -131,8 +132,7 @@ async function fetchDirectAzureAudio(
 
 /**
  * Play crystal-clear natural Arabic speech with 100% accurate makharij al-huruf.
- * For isolated letters and letter-sound tasks (تُ، بَ، سِ...) uses pure Fusha voice with IPA phonemes (Tu, Ba, Si...).
- * For stories and sentences, defaults to warm pedagogical voice (ar-EG-SalmaNeural).
+ * Defaults to ar-AE-FatimaNeural (the most eloquent, natural Classical Arabic voice).
  */
 export async function playNaturalArabicAudio(
   text: string,
@@ -146,11 +146,12 @@ export async function playNaturalArabicAudio(
     Boolean(getArabicPhonemeIpa(preparedText)) ||
     (preparedText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').length === 1 && !preparedText.includes(' '));
 
-  // Default to the highly eloquent Classical Arabic voice (ar-SA-ZariyahNeural)
-  const voice: ArabicTtsVoice = options.voice || (isIsolatedPhoneme ? 'ar-SA-HamedNeural' : 'ar-SA-ZariyahNeural');
+  // Default to the most eloquent Classical Arabic voice (ar-AE-FatimaNeural)
+  const voice: ArabicTtsVoice = options.voice || (isIsolatedPhoneme ? 'ar-SA-HamedNeural' : 'ar-AE-FatimaNeural');
 
-  const rate = options.rate || '-12%';
-  const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+2%');
+  // Natural human rate: '-4%' to '-6%' sounds natural and articulate, unlike unnatural '-20%'
+  const rate = options.rate || '-5%';
+  const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+1%');
   const cacheKey = `${voice}_${rate}_${pitch}_${preparedText}`;
 
   // Stop previous audio playback smoothly
@@ -176,23 +177,22 @@ export async function playNaturalArabicAudio(
     }
   }
 
-  // 1.5. Check pre-recorded studio-quality Azure Neural clips (public/audio/v1/)
-  try {
-    const manifest = await getAudioManifest();
-    const clip = manifest?.clips?.[audioKey(preparedText)];
-    if (clip?.file) {
-      const audioUrl = `/audio/v1/${clip.file}`;
-      cacheAudio(cacheKey, audioUrl);
-      const audio = new Audio(audioUrl);
+  // 2. Direct browser cloud Azure Neural Arabic Speech (Fastest, zero server dependency, CORS enabled)
+  const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
+  if (directAudioUrl) {
+    try {
+      cacheAudio(cacheKey, directAudioUrl);
+      const audio = new Audio(directAudioUrl);
       currentActiveAudio = audio;
       if (options.onEnd) audio.onended = () => options.onEnd?.();
-      let playSucceeded = false;
-      await audio.play().then(() => { playSucceeded = true; }).catch(() => {});
-      if (playSucceeded) return;
+      await audio.play();
+      return;
+    } catch (directErr) {
+      console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
     }
-  } catch {}
+  }
 
-  // 2. Fetch studio-quality neural Arabic audio from Baseera server (if backend is running)
+  // 3. Fallback: Fetch studio-quality neural Arabic audio from Baseera server endpoint
   try {
     const res = await authenticatedFetch('/api/ai/tts', {
       method: 'POST',
@@ -200,7 +200,7 @@ export async function playNaturalArabicAudio(
       body: JSON.stringify({ text: preparedText, voice, rate, pitch }),
     });
 
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (data?.audioBase64) {
         const mimeType = data.mimeType || 'audio/mp3';
@@ -218,28 +218,29 @@ export async function playNaturalArabicAudio(
     // Expected on static hosting where /api/ai/tts is not routed
   }
 
-  // 3. Direct browser cloud fallback to Azure Neural Arabic Speech (for static hosting / cPanel)
-  const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
-  if (directAudioUrl) {
-    try {
-      cacheAudio(cacheKey, directAudioUrl);
-      const audio = new Audio(directAudioUrl);
+  // 4. Pre-recorded studio-quality clips (public/audio/v1/)
+  try {
+    const manifest = await getAudioManifest();
+    const clip = manifest?.clips?.[audioKey(preparedText)];
+    if (clip?.file) {
+      const audioUrl = `/audio/v1/${clip.file}`;
+      cacheAudio(cacheKey, audioUrl);
+      const audio = new Audio(audioUrl);
       currentActiveAudio = audio;
       if (options.onEnd) audio.onended = () => options.onEnd?.();
-      await audio.play();
-      return;
-    } catch (directErr) {
-      console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
+      let playSucceeded = false;
+      await audio.play().then(() => { playSucceeded = true; }).catch(() => {});
+      if (playSucceeded) return;
     }
-  }
+  } catch {}
 
-  // 4. Ultimate fallback: browser local speech synthesis if offline
+  // 5. Ultimate fallback: browser local speech synthesis only if completely offline
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(preparedText);
-      utter.lang = voice.startsWith('ar-EG') ? 'ar-EG' : 'ar-SA';
-      utter.rate = 0.8;
+      utter.lang = 'ar-SA';
+      utter.rate = 0.85;
       if (options.onEnd) utter.onend = () => options.onEnd?.();
       window.speechSynthesis.speak(utter);
     } catch (fallbackErr) {

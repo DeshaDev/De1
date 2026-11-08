@@ -363,43 +363,28 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
     }, pacingIntervalMs);
 
     try {
-      const res = await authenticatedFetch('/api/ai/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+      setPacingSyncModeLabel('صوت المعلمة الفصيحة الطبيعية (عالي النقاء)');
+      await playNaturalArabicAudio(text, {
+        voice: 'ar-AE-FatimaNeural',
+        rate: '-5%',
+        onEnd: () => {
+          if (speechTimerRef.current) {
+            window.clearInterval(speechTimerRef.current);
+          }
+          setIsSpeaking(false);
+          setHighlightedWordIndex(null);
+        },
+        onError: () => {
+          if (speechTimerRef.current) {
+            window.clearInterval(speechTimerRef.current);
+          }
+          setIsSpeaking(false);
+          setHighlightedWordIndex(null);
+        },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.audioBase64) {
-          const mimeType = data?.mimeType || 'audio/mp3';
-          const audio = new Audio(`data:${mimeType};base64,${data.audioBase64}`);
-          audio.ontimeupdate = () => {
-            if (
-              audio.duration &&
-              Number.isFinite(audio.duration) &&
-              audio.duration > 0
-            ) {
-              boundaryEventFired = true;
-              setPacingSyncModeLabel('مرتبط نسبياً بمدة الملف الصوتي الفعلي');
-              const ratio = Math.min(0.999, audio.currentTime / audio.duration);
-              const idx = Math.floor(ratio * allWords.length);
-              setHighlightedWordIndex(idx);
-              setActiveLineIdx(Math.floor(idx / WORDS_PER_LINE));
-            }
-          };
-          audio.onended = () => {
-            if (speechTimerRef.current) {
-              window.clearInterval(speechTimerRef.current);
-            }
-            setIsSpeaking(false);
-            setHighlightedWordIndex(null);
-          };
-          audio.play().catch(() => {});
-          return;
-        }
-      }
+      return;
     } catch {
-      // Fallback to Web Speech API
+      // Fallback to Web Speech API if completely offline
     }
 
     if ('speechSynthesis' in window) {

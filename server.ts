@@ -3527,7 +3527,7 @@ async function startServer() {
     ttsAudioCache.set(key, payload);
   };
 
-  app.post('/api/ai/tts', requireBaseeraAuth('ai:analyze'), async (req, res) => {
+  app.post('/api/ai/tts', aiRateLimiter, async (req, res) => {
     const { text, voice, rate } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim() || text.length > 1200) {
       res.status(400).json({
@@ -3543,7 +3543,7 @@ async function startServer() {
                          voice === 'ar-AE-FatimaNeural' ? 'ar-AE-FatimaNeural' :
                          voice === 'ar-KW-NouraNeural' ? 'ar-KW-NouraNeural' :
                          voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
-                         'ar-SA-ZariyahNeural';
+                         'ar-AE-FatimaNeural';
     const prosodyRate = typeof rate === 'string' ? rate : '-12%';
     const prosodyPitch = typeof req.body?.pitch === 'string' ? req.body.pitch : '+2%';
     const cacheKey = `${selectedVoice}_${prosodyRate}_${prosodyPitch}_${cleanText}`;
