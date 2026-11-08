@@ -19,7 +19,14 @@ import {
 import { Pic } from './TaskPlayers';
 import { PlaybackHandle, speak, speakSegments, stopSpeech, wait } from './audio';
 import { startWavRecording, type WavRecordingController } from './audioRecording';
-import { assessCognitiveAudio, type CognitiveAudioSessionContext, type CognitiveAudioTaskId } from './cognitiveAudioClient';
+import {
+  assessCognitiveAudio,
+  assessCognitiveAudioWord,
+  finalizeCognitiveAudioWordList,
+  type CognitiveAudioSessionContext,
+  type CognitiveAudioTaskId,
+  type CognitiveAudioWordReceipt,
+} from './cognitiveAudioClient';
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 const READING_FONT = { fontFamily: "'Noto Naskh Arabic', 'Amiri', serif" } as const;
@@ -127,6 +134,17 @@ function audioFailureMessage(error: unknown): string {
 // ---------------------------------------------------------------------------
 // Continuous audio assessment for real-word and made-up-word reading lists
 // ---------------------------------------------------------------------------
+type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'finalizing' | 'error';
+
+function createAudioAttemptId(): string {
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// ---------------------------------------------------------------------------
+// One recording and one Azure assessment per visible word
+// ---------------------------------------------------------------------------
 export function ReadListAudioPlayer({
   title,
   items,
@@ -140,19 +158,21 @@ export function ReadListAudioPlayer({
   audioSession: CognitiveAudioSessionContext;
   onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
 }) {
-  const [phase, setPhase] = useState<AudioTaskPhase>('ready');
+  const [phase, setPhase] = useState<ReadListAudioPhase>('ready');
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const currentItem = items[currentItemIndex];
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
+  const [lastCompletedWord, setLastCompletedWord] = useState('');
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
-  const startingRef = useRef(false);
-  const finalizingRef = useRef(false);
-  const maxDurationSeconds = 86;
+  const busyRef = useRef(false);
+  const attemptIdRef = useRef('');
+  const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>([]);
+  const maxWordDurationSeconds = 12;
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true &&
     Boolean(audioSession.speechLocale);
+  const currentItem = items[currentItemIndex];
 
   useEffect(() => {
     if (phase !== 'recording') return;
@@ -161,25 +181,29 @@ export function ReadListAudioPlayer({
   }, [phase]);
 
   const elapsedSeconds = phase === 'recording'
-    ? Math.min(maxDurationSeconds, Math.max(0, (elapsedNow - startAtRef.current) / 1000))
+    ? Math.max(0, (elapsedNow - startAtRef.current) / 1000)
     : 0;
 
   const saveWithoutScore = () => {
-    if (finalizingRef.current) return;
-    finalizingRef.current = true;
+    if (busyRef.current) return;
+    busyRef.current = true;
     recordingRef.current?.cancel();
     recordingRef.current = null;
     onDone([], 0);
   };
 
-  const submitRecording = async () => {
-    if (finalizingRef.current || !recordingRef.current) return;
-    finalizingRef.current = true;
-    setPhase('submitting');
+  const finalizeList = async (receipts: CognitiveAudioWordReceipt[]) => {
+    if (busyRef.current || receipts.length !== items.length) return;
+    busyRef.current = true;
+    setPhase('finalizing');
+    setErrorMessage('');
     try {
-      const recording = await recordingRef.current.stop();
-      recordingRef.current = null;
-      const assessment = await assessCognitiveAudio({ taskId, session: audioSession, recording });
+      const assessment = await finalizeCognitiveAudioWordList({
+        taskId,
+        attemptId: attemptIdRef.current,
+        session: audioSession,
+        receipts,
+      });
       if (assessment.words.length !== items.length) {
         throw new Error('INVALID_VERIFIED_AUDIO_RESPONSE');
       }
@@ -189,30 +213,70 @@ export function ReadListAudioPlayer({
         rtMs: 0,
         replays: 0,
       }));
-      onDone(responses, Math.round(recording.durationSeconds * 1000), assessment);
+      onDone(responses, Math.round(assessment.durationSeconds * 1000), assessment);
     } catch (error) {
       setErrorMessage(audioFailureMessage(error));
       setPhase('error');
-      finalizingRef.current = false;
+    } finally {
+      busyRef.current = false;
+    }
+  };
+
+  const submitCurrentWord = async () => {
+    if (
+      busyRef.current ||
+      !recordingRef.current ||
+      !currentItem ||
+      !attemptIdRef.current
+    ) return;
+
+    busyRef.current = true;
+    setPhase('assessing');
+    setErrorMessage('');
+    try {
+      const recording = await recordingRef.current.stop();
+      recordingRef.current = null;
+      const wordReceipt = await assessCognitiveAudioWord({
+        taskId,
+        itemId: currentItem.id,
+        itemIndex: currentItemIndex,
+        attemptId: attemptIdRef.current,
+        session: audioSession,
+        recording,
+      });
+
+      // Replace only this item's earlier attempt, if any. The visible flow advances
+      // only after the server returns a verified word receipt.
+      const nextReceipts = [
+        ...wordReceiptsRef.current.filter((receipt) => receipt.itemId !== currentItem.id),
+        wordReceipt,
+      ].sort((a, b) => a.itemIndex - b.itemIndex);
+      wordReceiptsRef.current = nextReceipts;
+      setLastCompletedWord(currentItem.text);
+
+      if (currentItemIndex + 1 < items.length) {
+        setCurrentItemIndex(currentItemIndex + 1);
+        setPhase('ready');
+      } else {
+        // The final report is created only after every reference item has one
+        // distinct, correctly ordered receipt.
+        busyRef.current = false;
+        await finalizeList(nextReceipts);
+      }
+    } catch (error) {
+      recordingRef.current = null;
+      setErrorMessage(audioFailureMessage(error));
+      setPhase('error');
+    } finally {
+      busyRef.current = false;
     }
   };
 
   useEffect(() => {
-    if (phase !== 'recording' || elapsedSeconds < maxDurationSeconds) return;
-
-    // A recording is scoreable only after the child has been shown every reference word.
-    // Never submit a partial list against the full reference sequence.
-    if (currentItemIndex < items.length - 1) {
-      recordingRef.current?.cancel();
-      recordingRef.current = null;
-      finalizingRef.current = false;
-      setErrorMessage('انتهى الوقت قبل إكمال الكلمات كلها. لم تُحتسب درجة؛ أعد المهمة من الكلمة الأولى.');
-      setPhase('error');
-      return;
+    if (phase === 'recording' && elapsedSeconds >= maxWordDurationSeconds) {
+      void submitCurrentWord();
     }
-
-    void submitRecording();
-  }, [phase, elapsedSeconds, currentItemIndex, items.length]);
+  }, [phase, elapsedSeconds, currentItemIndex]);
 
   useEffect(() => () => {
     recordingRef.current?.cancel();
@@ -220,12 +284,14 @@ export function ReadListAudioPlayer({
   }, []);
 
   const startRecording = async () => {
-    if (!supported || startingRef.current || phase !== 'ready') return;
-    startingRef.current = true;
+    if (!supported || busyRef.current || phase !== 'ready') return;
+    busyRef.current = true;
     setErrorMessage('');
     try {
-      setCurrentItemIndex(0);
-      recordingRef.current = await startWavRecording();
+      if (!attemptIdRef.current) attemptIdRef.current = createAudioAttemptId();
+      // Individual Arabic words are often shorter than one second. Keep the real
+      // capture duration and let the server validate the short WAV clip.
+      recordingRef.current = await startWavRecording({ minimumDurationSeconds: 0.25 });
       startAtRef.current = performance.now();
       setElapsedNow(startAtRef.current);
       setPhase('recording');
@@ -233,7 +299,16 @@ export function ReadListAudioPlayer({
       setErrorMessage(audioFailureMessage(error));
       setPhase('error');
     } finally {
-      startingRef.current = false;
+      busyRef.current = false;
+    }
+  };
+
+  const retry = () => {
+    setErrorMessage('');
+    if (wordReceiptsRef.current.length === items.length) {
+      void finalizeList(wordReceiptsRef.current);
+    } else {
+      setPhase('ready');
     }
   };
 
@@ -244,9 +319,7 @@ export function ReadListAudioPlayer({
           <span className="text-5xl" aria-hidden="true">📚</span>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
-            {phase === 'recording'
-              ? 'اقرأ الكلمة الظاهرة، ثم اضغط «الكلمة التالية». ستظهر كل كلمة وحدها وبالترتيب.'
-              : 'ستظهر كلمة واحدة في كل مرة. ابدأ التسجيل، ثم اقرأ الكلمات بالترتيب.'}
+            اقرأ الكلمة الظاهرة وحدها. بعد تسجيلها وتقييمها ستنتقل إلى الكلمة التالية.
           </p>
         </div>
 
@@ -271,36 +344,38 @@ export function ReadListAudioPlayer({
             aria-atomic="true"
           >
             <span className="text-6xl sm:text-7xl font-bold text-ink text-center leading-relaxed" style={READING_FONT}>
-              {currentItem.text}
+              {currentItem?.text}
             </span>
           </div>
+          {lastCompletedWord && phase === 'ready' && (
+            <p className="text-center text-sm font-bold text-emerald-700" role="status">
+              تم تقييم الكلمة السابقة. أحسنت!
+            </p>
+          )}
         </div>
 
         {phase === 'recording' && (
           <div className="space-y-3 text-center">
-            <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(maxDurationSeconds - elapsedSeconds))} ثانية متبقية</p>
-            <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / maxDurationSeconds * 100)) + '%' }} /></div>
-            {currentItemIndex < items.length - 1 ? (
-              <button
-                type="button"
-                className="bz-btn bz-btn-primary bz-btn-lg"
-                onClick={() => setCurrentItemIndex((index) => Math.min(index + 1, items.length - 1))}
-              >
-                الكلمة التالية
-              </button>
-            ) : (
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
-                <Check className="w-5 h-5" /> انتهيت من قراءة الكلمات — حلّل التسجيل
-              </button>
-            )}
+            <p className="font-bold text-rose-700">● تسجيل هذه الكلمة · {ar(Math.ceil(maxWordDurationSeconds - elapsedSeconds))} ثانية متبقية</p>
+            <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / maxWordDurationSeconds * 100)) + '%' }} /></div>
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitCurrentWord()}>
+              <Check className="w-5 h-5" /> أنهيت قراءة الكلمة
+            </button>
           </div>
         )}
 
-        {phase === 'submitting' && (
+        {phase === 'assessing' && (
           <div className="text-center space-y-2" role="status">
             <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">يجري تحليل الكلمات واحدةً تلو الأخرى…</p>
-            <p className="bz-small text-muted">لن تُحتسب أخطاء أو نتيجة حتى تُحسم جميع الكلمات.</p>
+            <p className="font-bold text-ink">يجري تقييم نطق هذه الكلمة...</p>
+            <p className="bz-small text-muted">لن ننتقل إلى التالية حتى يصل تقييمها.</p>
+          </div>
+        )}
+
+        {phase === 'finalizing' && (
+          <div className="text-center space-y-2" role="status">
+            <span className="text-3xl" aria-hidden="true">🎧</span>
+            <p className="font-bold text-ink">اكتملت الكلمات. يجري تجميع نتائجها والتحقق من ترتيبها...</p>
           </div>
         )}
 
@@ -308,20 +383,11 @@ export function ReadListAudioPlayer({
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
             <p className="bz-small text-amber-950">{errorMessage}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                className="bz-btn bz-btn-primary"
-                onClick={() => {
-                  finalizingRef.current = false;
-                  setCurrentItemIndex(0);
-                  setErrorMessage('');
-                  setPhase('ready');
-                }}
-              >
-                إعادة التسجيل والمحاولة
+              <button type="button" className="bz-btn bz-btn-primary" onClick={retry}>
+                {wordReceiptsRef.current.length === items.length ? 'إعادة تجميع النتيجة' : 'إعادة تسجيل هذه الكلمة'}
               </button>
               <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
-                حفظ المهمة دون درجة
+                متابعة دون درجة
               </button>
             </div>
           </div>
@@ -330,7 +396,7 @@ export function ReadListAudioPlayer({
         {phase === 'ready' && (
           <div className="flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
-              <Mic className="w-5 h-5" /> ابدأ تسجيل القراءة
+              <Mic className="w-5 h-5" /> ابدأ تسجيل هذه الكلمة
             </button>
             {!supported && <p className="w-full text-center bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
             <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
