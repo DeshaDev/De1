@@ -173,18 +173,6 @@ export function ParentPortalView({
       return;
     }
 
-    if (!supabaseUser) {
-      const cleanEmail = parentEmail.trim();
-      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-        setFormError('يرجى إدخال بريد إلكتروني صحيح لحفظ ملف طفلك والتواصل معكم.');
-        return;
-      }
-      if (parentPassword.length < 6) {
-        setFormError('يرجى إدخال كلمة مرور من 6 خانات على الأقل لحماية حسابك.');
-        return;
-      }
-    }
-
     if (!Number.isInteger(ageYears) || ageYears < 4 || ageYears > 8) {
       setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
       return;
@@ -823,10 +811,9 @@ export function ParentPortalView({
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">بريدك الإلكتروني *</span>
+                        <span className="text-xs font-bold text-slate-700">بريدك الإلكتروني (اختياري للتجربة)</span>
                         <input
                           type="email"
-                          required
                           value={parentEmail}
                           onChange={(e) => setParentEmail(e.target.value)}
                           placeholder="parent@example.com"
@@ -835,10 +822,9 @@ export function ParentPortalView({
                         />
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">كلمة المرور للحساب *</span>
+                        <span className="text-xs font-bold text-slate-700">كلمة المرور (اختياري للتجربة)</span>
                         <input
                           type="password"
-                          required
                           value={parentPassword}
                           onChange={(e) => setParentPassword(e.target.value)}
                           placeholder="••••••••"

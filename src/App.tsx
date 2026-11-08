@@ -791,49 +791,26 @@ export default function App() {
     }
     let currentUser = supabaseUser;
 
-    if (!currentUser) {
-      if (!child.parentEmail || !child.parentPassword) {
-        throw new Error('سجّل دخول ولي الأمر أو أنشئ حسابًا موثّقًا قبل حفظ ملف الطفل.');
-      }
-      let authSession: any = null;
+    // Testing mode: cloud sign-up is optional. If email is missing or Supabase rate-limits
+    // the request, continue with a local guest profile instead of blocking the child.
+    if (!currentUser && child.parentEmail && child.parentPassword) {
       try {
         const res = await signUpWithEmail(child.parentEmail, child.parentPassword);
         if (res.user) {
           currentUser = res.user;
-          authSession = res.session;
           setSupabaseUser(res.user);
         }
-      } catch (signUpErr: any) {
-        // If user already registered in Supabase, sign in instead of failing
+      } catch {
         try {
           const res = await signInWithEmail(child.parentEmail, child.parentPassword);
           if (res.user) {
             currentUser = res.user;
-            authSession = res.session;
             setSupabaseUser(res.user);
-          } else {
-            throw signUpErr;
           }
-        } catch {
-          throw signUpErr;
+        } catch (authErr) {
+          console.warn('[register] cloud account skipped, continuing locally:', authErr);
         }
       }
-      if (!currentUser) {
-        throw new Error('أُرسل طلب إنشاء الحساب، لكن لم تُنشأ جلسة دخول بعد. تحقق من بريدك الإلكتروني ثم سجّل الدخول.');
-      }
-
-      const parentSession: BaseeraSessionInfo = {
-        token: authSession?.access_token || `parent-${currentUser.id}`,
-        role: 'parent',
-        accountName: currentUser.user_metadata?.full_name || currentUser.email || 'حساب الأسرة',
-        tenantId: `parent_${currentUser.id.slice(0, 8)}`,
-        tenantDisplayNameAr: 'حساب الأسرة',
-        sessionId: currentUser.id.replace(/-/g, '').slice(0, 32),
-        scopes: ['students:read', 'students:write'],
-        expiresAt: Date.now() + 86400000 * 30,
-      };
-      setBaseeraSession(parentSession);
-      storeBaseeraSession(parentSession);
     }
 
     const recordedAt = new Date().toISOString();
