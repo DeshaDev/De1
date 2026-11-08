@@ -1,0 +1,72 @@
+name: Build cPanel deployment package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "server.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "index.html"
+      - "public/**"
+      - "docs/DEPLOY_CPANEL_AR.md"
+      - ".github/workflows/cpanel-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-package:
+    name: Build uploadable Node.js application package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build production frontend and server
+        run: npm run build
+
+      - name: Assemble cPanel application package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s server.js
+          test -s dist/index.html
+          mkdir -p package
+          cp package.json package/package.json
+          cp package-lock.json package/package-lock.json
+          cp server.js package/server.js
+          cp -a dist package/dist
+          cp docs/DEPLOY_CPANEL_AR.md package/DEPLOY_CPANEL_AR.md
+          cat > package/README-START-HERE.txt <<'EOF'
+          Haya Naqra cPanel Node.js deployment package.
+          Read DEPLOY_CPANEL_AR.md before extracting or replacing any files.
+          Startup file: server.js
+          Node.js version: 22
+          The ZIP intentionally excludes node_modules, secrets, and persistent child data.
+          Do not deploy dist alone as a static website; the application requires the Node.js API server.
+          EOF
+          cd package
+          zip -qr ../hayanaqra-cpanel-deploy.zip .
+          cd ..
+          unzip -l hayanaqra-cpanel-deploy.zip
+
+      - name: Upload deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: hayanaqra-cpanel-deploy
+          path: hayanaqra-cpanel-deploy.zip
+          if-no-files-found: error
+          retention-days: 14
