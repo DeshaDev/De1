@@ -1216,6 +1216,18 @@ async function startServer() {
     word: AzureAlignedWord;
     expiresAt: number;
   }>();
+  // Finalization is idempotent: a lost HTTP response must not force a child to reread
+  // the list or make the same word receipts unusable on retry.
+  const cognitiveWordAssessmentFinalizations = new Map<string, {
+    sessionId: string;
+    tenantId: string;
+    studentId: string;
+    taskId: 'wordReading' | 'nonwordReading';
+    attemptId: string;
+    wordReceipts: Array<{ itemId: string; receipt: string }>;
+    assessment: CognitiveAudioAssessmentEvidence;
+    expiresAt: number;
+  }>();
   // Parent-account persistence awaits Supabase; reserve receipts during that write so
   // concurrent requests cannot replay the same one-use receipt before it is consumed.
   const cognitiveAudioAssessmentReceiptsInFlight = new Set<string>();
@@ -3950,9 +3962,47 @@ async function startServer() {
       return;
     }
 
+    const now = Date.now();
+    const finalizationKey = JSON.stringify([
+      session.sessionId,
+      session.tenantId,
+      studentId,
+      task.taskId,
+      attemptId,
+    ]);
+    const suppliedWordReceipts = body.wordReceipts.map((entry: any) => ({
+      itemId: entry && typeof entry.itemId === 'string' ? entry.itemId : '',
+      receipt: entry && typeof entry.receipt === 'string' ? entry.receipt : '',
+    }));
+    const priorFinalization = cognitiveWordAssessmentFinalizations.get(finalizationKey);
+    if (priorFinalization && priorFinalization.expiresAt > now) {
+      const sameReceipts = priorFinalization.wordReceipts.length === suppliedWordReceipts.length &&
+        priorFinalization.wordReceipts.every((entry, index) =>
+          entry.itemId === suppliedWordReceipts[index].itemId &&
+          entry.receipt === suppliedWordReceipts[index].receipt
+        );
+      if (
+        priorFinalization.sessionId === session.sessionId &&
+        priorFinalization.tenantId === session.tenantId &&
+        priorFinalization.studentId === studentId &&
+        priorFinalization.taskId === task.taskId &&
+        sameReceipts
+      ) {
+        res.json({
+          assessment: priorFinalization.assessment,
+          receiptExpiresAt: new Date(priorFinalization.expiresAt).toISOString(),
+        });
+        return;
+      }
+      res.status(409).json({
+        code: 'COGNITIVE_AUDIO_ATTEMPT_ALREADY_FINALIZED',
+        error: 'هذه المحاولة جُمعت بالفعل بإيصالات مختلفة؛ ابدأ محاولة جديدة عند الحاجة لإعادة التقييم.',
+      });
+      return;
+    }
+
     const seenReceipts = new Set<string>();
     const records: CognitiveWordAssessmentRecord[] = [];
-    const now = Date.now();
     for (let index = 0; index < task.itemIds.length; index++) {
       const supplied = body.wordReceipts[index];
       const receipt = supplied && typeof supplied.receipt === 'string' ? supplied.receipt : '';
@@ -4026,8 +4076,24 @@ async function startServer() {
       expiresAt,
       assessment,
     });
-    // Word receipts are single-use: remove them only after the complete receipt exists.
-    for (const oldReceipt of seenReceipts) cognitiveWordAssessmentReceipts.delete(oldReceipt);
+    cognitiveWordAssessmentFinalizations.set(finalizationKey, {
+      sessionId: session.sessionId,
+      tenantId: session.tenantId,
+      studentId,
+      taskId: task.taskId,
+      attemptId,
+      wordReceipts: suppliedWordReceipts,
+      assessment,
+      expiresAt,
+    });
+    for (const [key, value] of cognitiveWordAssessmentFinalizations) {
+      if (value.expiresAt <= now) cognitiveWordAssessmentFinalizations.delete(key);
+    }
+    while (cognitiveWordAssessmentFinalizations.size > 500) {
+      const oldestKey = cognitiveWordAssessmentFinalizations.keys().next().value;
+      if (!oldestKey) break;
+      cognitiveWordAssessmentFinalizations.delete(oldestKey);
+    }
     res.json({
       assessment,
       receiptExpiresAt: new Date(expiresAt).toISOString(),
