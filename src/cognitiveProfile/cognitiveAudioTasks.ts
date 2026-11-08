@@ -24,8 +24,8 @@ export interface AggregatedCognitiveWordAssessment {
   transcript: string;
   durationSeconds: number;
   wordAccuracyPercent: number;
-  wordsCorrectPerMinute: number;
-  wordsPerMinute: number;
+  wordsCorrectPerMinute: number | null;
+  wordsPerMinute: number | null;
   correctWordsCount: number;
   substitutionsCount: number;
   omissionsCount: number;
@@ -80,8 +80,10 @@ export function aggregateCognitiveWordAssessments(
     transcript: records.map((record) => record.transcript.trim()).join(' '),
     durationSeconds,
     wordAccuracyPercent: Math.round((correctWordsCount / words.length) * 100),
-    wordsCorrectPerMinute: Math.round((correctWordsCount * 60) / durationSeconds),
-    wordsPerMinute: Math.round((words.length * 60) / durationSeconds),
+    // Isolated clips exclude the pauses between screens, so they cannot support a
+    // defensible whole-list reading-rate measure. Report accuracy only for this task.
+    wordsCorrectPerMinute: null,
+    wordsPerMinute: null,
     correctWordsCount,
     substitutionsCount,
     omissionsCount,
