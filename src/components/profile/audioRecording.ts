@@ -28,7 +28,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function encodePcmWav(blob: Blob): Promise<RecordedWavAudio> {
+async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<RecordedWavAudio> {
   const AudioContextClass = getAudioContextConstructor();
   if (!AudioContextClass) throw new Error('AUDIO_CONTEXT_UNAVAILABLE');
 
@@ -37,7 +37,7 @@ async function encodePcmWav(blob: Blob): Promise<RecordedWavAudio> {
     const decoded = await context.decodeAudioData(await blob.arrayBuffer());
     const targetRate = 16_000;
     const durationSeconds = decoded.duration;
-    if (!Number.isFinite(durationSeconds) || durationSeconds < 1 || durationSeconds > 88) {
+    if (!Number.isFinite(durationSeconds) || durationSeconds < minimumDurationSeconds || durationSeconds > 88) {
       throw new Error('AUDIO_DURATION_OUT_OF_RANGE');
     }
 
@@ -92,7 +92,11 @@ async function encodePcmWav(blob: Blob): Promise<RecordedWavAudio> {
 }
 
 /** Capture the actual microphone stream; browser speech-to-text is never used as assessment evidence. */
-export async function startWavRecording(): Promise<WavRecordingController> {
+export async function startWavRecording(options: { minimumDurationSeconds?: number } = {}): Promise<WavRecordingController> {
+  const minimumDurationSeconds = options.minimumDurationSeconds ?? 1;
+  if (!Number.isFinite(minimumDurationSeconds) || minimumDurationSeconds < 0.25 || minimumDurationSeconds > 1) {
+    throw new Error('INVALID_MINIMUM_RECORDING_DURATION');
+  }
   if (
     typeof navigator === 'undefined' ||
     !navigator.mediaDevices?.getUserMedia ||
@@ -141,7 +145,7 @@ export async function startWavRecording(): Promise<WavRecordingController> {
       release();
       if (chunks.length === 0) throw new Error('EMPTY_AUDIO_RECORDING');
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-      return encodePcmWav(blob);
+      return encodePcmWav(blob, minimumDurationSeconds);
     },
     cancel: () => {
       if (settled) return;
