@@ -324,6 +324,19 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(invalidTask.status, 400);
     assert.equal(((await invalidTask.json()) as { code: string }).code, 'UNSUPPORTED_COGNITIVE_AUDIO_TASK');
 
+    const missingWordIdentity = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        taskId: 'wordReading',
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(missingWordIdentity.status, 400);
+    assert.equal(((await missingWordIdentity.json()) as { code: string }).code, 'COGNITIVE_AUDIO_ITEM_INVALID');
+
     const malformedWav = Buffer.from(common.audioWavBase64, 'base64');
     malformedWav.writeUInt32LE(malformedWav.length - 9, 4);
     const malformedWavResponse = await fetch(url, {
@@ -351,6 +364,35 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(forgedDuration.status, 400);
     assert.equal(((await forgedDuration.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
+
+    const noAzureWordAssessment = await fetch(url, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        ...common,
+        taskId: 'wordReading',
+        itemId: WORD_ITEMS[0].id,
+        itemIndex: 0,
+        attemptId: 'a'.repeat(32),
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: timestamp,
+      }),
+    });
+    assert.equal(noAzureWordAssessment.status, 503);
+    assert.equal(((await noAzureWordAssessment.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
+
+    const incompleteWordList = await fetch(`${baseUrl}/api/ai/cognitive-audio-assessment/finalize`, {
+      method: 'POST',
+      headers: authorization,
+      body: JSON.stringify({
+        taskId: 'wordReading',
+        studentId: 'student-audio-consent-test',
+        attemptId: 'a'.repeat(32),
+        wordReceipts: [],
+      }),
+    });
+    assert.equal(incompleteWordList.status, 400);
+    assert.equal(((await incompleteWordList.json()) as { code: string }).code, 'COGNITIVE_AUDIO_WORD_LIST_INVALID');
 
     const noAzure = await fetch(url, {
       method: 'POST',
