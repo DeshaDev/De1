@@ -163,7 +163,7 @@ export async function finalizeCognitiveAudioWordList(args: {
       taskId,
       studentId: session.studentId,
       attemptId,
-      wordReceipts: receipts.map(({ itemId, assessmentReceipt }) => ({ itemId, assessmentReceipt })),
+      wordReceipts: receipts.map(({ itemId, assessmentReceipt }) => ({ itemId, receipt: assessmentReceipt })),
     }),
   });
   if (!response.ok) await readError(response);
