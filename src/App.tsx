@@ -318,21 +318,8 @@ export default function App() {
   const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(false);
   const [supabaseError, setSupabaseError] = useState<string>('');
 
-  // Active tab setter with strict authentication guard for screening and training
-  const setActiveTab = (tab: ActiveTab, bypassAuthCheck = false) => {
-    const isProtected = ['dyslexia-lab', 'guided-program', 'reading-lab', 'cognitive-lab'].includes(tab);
-    if (isProtected && !supabaseUser && !baseeraSession && !bypassAuthCheck) {
-      setActiveTabState('parent-portal');
-      const newPath = tabToUrlPath('parent-portal');
-      if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
-        window.history.pushState(null, '', newPath);
-      }
-      setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      }
-      return;
-    }
+  // Direct access for testing (registration barrier removed as requested)
+  const setActiveTab = (tab: ActiveTab) => {
     setAiStatusBanner('');
     setActiveTabState(tab);
     const newPath = tabToUrlPath(tab);
@@ -343,22 +330,6 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
-
-  // Route guard: if browser loads directly into a screening or training URL while unauthenticated
-  useEffect(() => {
-    const isProtected = ['dyslexia-lab', 'guided-program', 'reading-lab', 'cognitive-lab'].includes(activeTab);
-    if (isProtected && !supabaseUser && !baseeraSession) {
-      setActiveTabState('parent-portal');
-      const newPath = tabToUrlPath('parent-portal');
-      if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
-        window.history.pushState(null, '', newPath);
-      }
-      setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      }
-    }
-  }, [activeTab, supabaseUser, baseeraSession]);
 
   useEffect(() => {
     const unsubscribe = onSupabaseAuthChange((user, session) => {
@@ -1568,7 +1539,7 @@ export default function App() {
               onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
                 selectStudent(studentId);
-                setActiveTab(targetTab, true);
+                setActiveTab(targetTab);
               }}
               onNavigateHome={() => setActiveTab('home')}
             />
@@ -2357,50 +2328,22 @@ export default function App() {
 
         {/* UNIFIED DYSLEXIA SCREENING & DIAGNOSTIC HUB (All Reading Tests in One Creative Hub) */}
         {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
-          !supabaseUser && !baseeraSession ? (
-            <ParentPortalView
-              supabaseUser={null}
-              authLoading={supabaseAuthLoading}
-              students={students}
-              onSignInWithEmail={handleEmailSignIn}
-              onSignOut={async () => {
-                if (supabaseUser) {
-                  try {
-                    await signOutSupabase();
-                  } catch (e) {
-                    console.error(e);
-                  }
-                  setSupabaseUser(null);
-                }
-                await logoutBaseeraSession();
-                setBaseeraSession(null);
-                setAiStatusBanner('تم تسجيل الخروج بنجاح.');
-              }}
-              onRegisterChild={handleRegisterChildByParent}
-              onLinkLocalChild={handleLinkLocalChild}
-              onSelectStudent={(studentId, targetTab) => {
-                selectStudent(studentId);
-                setActiveTab(targetTab, true);
-              }}
-              onNavigateHome={() => setActiveTab('home')}
-            />
-          ) : (
-            <DyslexiaScreeningHub
-              students={students}
-              activeStudent={selectedStudent}
-              onSelectStudent={selectStudent}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-              supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
-              initialSubTab={
-                activeTab === 'cognitive-lab'
-                  ? 'cognitive-screening'
-                  : activeTab === 'reading-lab'
-                    ? 'oral-reading'
-                    : activeTab === 'guided-program'
-                      ? 'training'
-                      : 'battery'
-              }
-              onCompleteOralSession={handleCompleteNewSession}
+          <DyslexiaScreeningHub
+            students={students}
+            activeStudent={selectedStudent}
+            onSelectStudent={selectStudent}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : { email: 'زائر للتجربة', id: 'guest-preview' })}
+            initialSubTab={
+              activeTab === 'cognitive-lab'
+                ? 'cognitive-screening'
+                : activeTab === 'reading-lab'
+                  ? 'oral-reading'
+                  : activeTab === 'guided-program'
+                    ? 'training'
+                    : 'battery'
+            }
+            onCompleteOralSession={handleCompleteNewSession}
               onCreateLearner={handleCreateBatteryLearner}
               onStudentUpdated={(updated) => {
                 const existing = students.find((student) => student.id === updated.id);
@@ -2473,7 +2416,6 @@ export default function App() {
                 setActiveTab('dashboard');
               }}
             />
-          )
         )}
 
         {/* NEW: ADAPTIVE REPORTS */}

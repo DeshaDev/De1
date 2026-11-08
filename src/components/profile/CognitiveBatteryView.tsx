@@ -666,10 +666,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     const existing = loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
     if (existing) return existing;
 
-    // If activeStudent has already been registered with valid name and age (from Parent Portal or school roster)
+    // If activeStudent has already been registered with valid name and age (from Parent Portal, demo, or school roster)
     const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
     if (
-      !activeStudent.isDemoRecord &&
       activeStudent.name &&
       isValidAge &&
       activeStudent.name !== 'طفلك'
