@@ -16,8 +16,8 @@
 1. خذ نسخة احتياطية من مجلد الموقع الحالي وأي ملف إعدادات أو قاعدة بيانات.
 2. افتح **cPanel → Setup Node.js App → Create Application**.
 3. اختر Node.js 22 وProduction، واضبط Application Root على مجلد خاص مثل `hayanaqra-app`، واربط Application URL بالنطاق المطلوب.
-4. اجعل Startup File هو `server.js`.
-5. ارفع ملف `hayanaqra-cpanel-deploy.zip` إلى Application Root ثم فك ضغطه داخله. يجب أن تكون `server.js` و`package.json` في جذر Application Root، ومجلد `dist` بجانبهما.
+4. اجعل Startup File هو `app_wrapper.cjs`. هذا الملف الصغير يستورد `server.js` المبني بصيغة ES Modules؛ وهو مدخل CommonJS متوافق مع إعدادات Passenger التي تتوقع ملف تشغيل CommonJS.
+5. ارفع ملف `hayanaqra-cpanel-deploy.zip` إلى Application Root ثم فك ضغطه داخله. يجب أن تكون `app_wrapper.cjs` و`server.js` و`package.json` في جذر Application Root، ومجلد `dist` بجانبها.
 6. من واجهة التطبيق في cPanel شغّل **Run NPM Install**. إذا لم يتوفر الزر، افتح Terminal داخل Application Root ونفّذ:
    `npm install --omit=dev --legacy-peer-deps --no-audit --no-fund`
 7. أضف متغيرات البيئة الموضحة أدناه، ثم اضغط Restart.
