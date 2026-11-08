@@ -27,8 +27,8 @@ export interface CognitiveAudioAssessmentEvidence {
   transcript: string;
   durationSeconds: number;
   wordAccuracyPercent: number;
-  wordsCorrectPerMinute: number;
-  wordsPerMinute: number;
+  wordsCorrectPerMinute: number | null;
+  wordsPerMinute: number | null;
   correctWordsCount: number;
   substitutionsCount: number;
   omissionsCount: number;
@@ -68,6 +68,8 @@ export interface ReadingMeasures {
   seconds: number | null;
   /** Correct words per minute (word lists and passage). */
   correctPerMinute?: number;
+  /** Label clarifying which elapsed time is reported for this task. */
+  secondsLabel?: string;
   /** Items named per second (rapid naming). */
   itemsPerSecond?: number;
   errors?: number;
@@ -276,8 +278,13 @@ export function scoreSubtest(
       seconds,
       errors,
       ...(subtest.kind === 'ran'
-        ? { itemsPerSecond: Math.round((total / evidence.durationSeconds) * 100) / 100 }
-        : { correctPerMinute: evidence.wordsCorrectPerMinute }),
+        ? { secondsLabel: 'زمن التسمية', itemsPerSecond: Math.round((total / evidence.durationSeconds) * 100) / 100 }
+        : {
+            secondsLabel: subtest.kind === 'readList' ? 'زمن التسجيلات الصوتية' : 'زمن القراءة',
+            ...(evidence.wordsCorrectPerMinute !== null
+              ? { correctPerMinute: evidence.wordsCorrectPerMinute }
+              : {}),
+          }),
     };
     return {
       subtestId: result.subtestId,
