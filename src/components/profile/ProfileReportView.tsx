@@ -262,7 +262,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                       <td className="px-3 py-2.5">
                         {scored.scoreAvailable === false ? '—' : scored.measures
                           ? scored.measures.seconds !== null
-                            ? `${toArabicDigits(scored.measures.seconds)} ث${scored.measures.correctPerMinute !== undefined ? ` · ${toArabicDigits(scored.measures.correctPerMinute)}/د` : ''}`
+                            ? `${scored.measures.secondsLabel ? `${scored.measures.secondsLabel}: ` : ''}${toArabicDigits(scored.measures.seconds)} ث${scored.measures.correctPerMinute !== undefined ? ` · ${toArabicDigits(scored.measures.correctPerMinute)}/د` : ''}`
                             : '—'
                           : scored.medianRtMs
                             ? `${toArabicDigits((scored.medianRtMs / 1000).toFixed(1))} ث`
