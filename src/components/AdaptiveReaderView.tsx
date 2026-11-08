@@ -383,45 +383,10 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
         },
       });
       return;
-    } catch {
-      // Fallback to Web Speech API if completely offline
-    }
-
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        const activeDialectObj = ARABIC_DIALECT_PROFILES.find(
-          (d) => d.code === selectedDialect
-        );
-        utterance.lang = activeDialectObj?.speechRecognitionLang || 'ar-SA';
-        utterance.rate = 0.85;
-        utterance.onboundary = (ev) => {
-          if (ev.name === 'word') {
-            boundaryEventFired = true;
-            setPacingSyncModeLabel(
-              'متزامن مع نطق الكلمات في المتصفح'
-            );
-            const prefix = text.slice(0, ev.charIndex);
-            const wordIdx = Math.min(
-              allWords.length - 1,
-              prefix.trim() ? prefix.trim().split(/\s+/).length : 0
-            );
-            setHighlightedWordIndex(wordIdx);
-            setActiveLineIdx(Math.floor(wordIdx / WORDS_PER_LINE));
-          }
-        };
-        utterance.onend = () => {
-          if (speechTimerRef.current) {
-            window.clearInterval(speechTimerRef.current);
-          }
-          setIsSpeaking(false);
-          setHighlightedWordIndex(null);
-        };
-        window.speechSynthesis.speak(utterance);
-      } catch {
-        // Ignore if headless browser blocks speechSynthesis
-      }
+    } catch (err) {
+      console.warn('[AdaptiveReader] Speech error:', err);
+      setIsSpeaking(false);
+      setHighlightedWordIndex(null);
     }
   };
 

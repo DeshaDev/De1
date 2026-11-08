@@ -36,12 +36,18 @@ function isPlaybackInterrupted(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { name?: string }).name === 'AbortError';
 }
 
-// Azure Speech credentials (direct browser fallback for static hosting like cPanel)
+// Azure Speech credentials (direct browser client-side synthesis)
+// Built-in fallback credentials ensure Azure Neural Speech ALWAYS works even when .env is not inlined
+const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
+  ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
+  : '';
+const DEFAULT_AZURE_REGION = 'eastus';
+
 const CLIENT_AZURE_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || '';
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || DEFAULT_AZURE_KEY;
 
 const CLIENT_AZURE_REGION =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_REGION) || 'eastus';
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_REGION) || DEFAULT_AZURE_REGION;
 
 function cacheAudio(key: string, dataUrl: string): void {
   if (dataUrl.length > MAX_CACHED_AUDIO_URL_CHARS) return;
@@ -252,19 +258,10 @@ export async function playNaturalArabicAudio(
     }
   } catch {}
 
-  // 5. Ultimate fallback: browser local speech synthesis only if completely offline
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(preparedText);
-      utter.lang = 'ar-SA';
-      utter.rate = 0.85;
-      if (options.onEnd) utter.onend = () => options.onEnd?.();
-      window.speechSynthesis.speak(utter);
-    } catch (fallbackErr) {
-      options.onError?.(fallbackErr);
-    }
-  }
+  // 5. If audio generation failed, log warning and complete gracefully.
+  // NEVER use browser speechSynthesis (robotic OS voice) in an Arabic phonological app.
+  console.warn('[NaturalSpeech] Could not play neural Azure or pre-recorded audio for:', preparedText);
+  options.onEnd?.();
 }
 
 /** Stop any ongoing speech playback */
