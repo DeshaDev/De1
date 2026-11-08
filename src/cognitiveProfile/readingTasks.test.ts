@@ -216,8 +216,10 @@ describe('scoring of the reading and naming measures', () => {
         transcript: items.map((item) => stripMarks(item.text)).join(' '),
         durationSeconds: 40,
         wordAccuracyPercent: 100,
-        wordsCorrectPerMinute: Math.round(items.length * 60 / 40),
-        wordsPerMinute: Math.round(items.length * 60 / 40),
+        // Separate one-word clips do not contain inter-word pauses, so they cannot
+        // provide a defensible full-list reading-rate measure.
+        wordsCorrectPerMinute: null,
+        wordsPerMinute: null,
         correctWordsCount: items.length,
         substitutionsCount: 0,
         omissionsCount: 0,
@@ -250,7 +252,8 @@ describe('scoring of the reading and naming measures', () => {
       assert.equal(scored.z, null, taskId);
       assert.equal(scored.centile, null, taskId);
       assert.equal(scored.measures?.seconds, 40, taskId);
-      assert.equal(scored.measures?.correctPerMinute, Math.round(items.length * 60 / 40), taskId);
+      assert.equal(scored.measures?.correctPerMinute, undefined, taskId);
+      assert.equal(scored.measures?.secondsLabel, 'زمن التسجيلات الصوتية', taskId);
 
       const validUpload = CognitiveBatteryUploadSchema.safeParse({
         ageMonths: 84,

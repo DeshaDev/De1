@@ -8,9 +8,11 @@ import {
   RAN_OBJECT_GRID,
 } from './readingTasks';
 import {
+  aggregateCognitiveWordAssessments,
   applyRanNameVariants,
   getCognitiveAudioTaskDefinition,
   isAcceptedRanName,
+  type CognitiveWordAssessmentRecord,
 } from './cognitiveAudioTasks';
 import type { AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
 
@@ -152,5 +154,63 @@ describe('RAN spoken aliases must preserve Azure pronunciation evidence', () => 
     assert.equal(result.words[0].errorType, 'Unconfirmed');
     assert.equal(result.assessmentComplete, false);
     assert.equal(result.wordAccuracyPercent, null);
+  });
+});
+
+
+describe('per-word reading assessment aggregation', () => {
+  const task = getCognitiveAudioTaskDefinition('wordReading')!;
+  const records = (): CognitiveWordAssessmentRecord[] => task.itemIds.map((itemId, itemIndex) => ({
+    itemId,
+    itemIndex,
+    transcript: task.referenceWords[itemIndex].replace(/[ً-ْ]/g, ''),
+    durationSeconds: 0.6,
+    word: {
+      word: task.referenceWords[itemIndex],
+      errorType: 'None' as const,
+      accuracyScore: 96,
+      spokenWord: task.referenceWords[itemIndex],
+      notesAr: '',
+    },
+  }));
+
+  it('aggregates all one-word receipts in canonical sequence into one complete score', () => {
+    const aggregated = aggregateCognitiveWordAssessments(task, records());
+    assert.ok(aggregated);
+    assert.equal(aggregated.taskId, 'wordReading');
+    assert.equal(aggregated.words.length, task.itemIds.length);
+    assert.equal(aggregated.words[0].word, task.referenceWords[0]);
+    assert.equal(aggregated.words.at(-1)?.word, task.referenceWords.at(-1));
+    assert.equal(aggregated.correctWordsCount, task.itemIds.length);
+    assert.equal(aggregated.wordAccuracyPercent, 100);
+    assert.equal(aggregated.wordsCorrectPerMinute, null);
+    assert.equal(aggregated.wordsPerMinute, null);
+    assert.ok(Math.abs(aggregated.durationSeconds - 9.6) < 0.001);
+  });
+
+  it('rejects a missing, duplicated, or out-of-order word receipt', () => {
+    const complete = records();
+    assert.equal(aggregateCognitiveWordAssessments(task, complete.slice(0, -1)), null);
+    const duplicate = [...complete];
+    duplicate[1] = { ...duplicate[1], itemId: duplicate[0].itemId };
+    assert.equal(aggregateCognitiveWordAssessments(task, duplicate), null);
+    const reordered = [...complete];
+    [reordered[0], reordered[1]] = [reordered[1], reordered[0]];
+    assert.equal(aggregateCognitiveWordAssessments(task, reordered), null);
+  });
+
+  it('never promotes an unresolved word to a confirmed error or success', () => {
+    const incomplete = records();
+    incomplete[4] = {
+      ...incomplete[4],
+      word: { ...incomplete[4].word, errorType: 'Unconfirmed' as const },
+    };
+    assert.equal(aggregateCognitiveWordAssessments(task, incomplete), null);
+  });
+
+  it('rejects duplicate reference ids even when the supplied sequence length matches', () => {
+    const duplicateTask = { ...task, itemIds: [...task.itemIds] };
+    duplicateTask.itemIds[1] = duplicateTask.itemIds[0];
+    assert.equal(aggregateCognitiveWordAssessments(duplicateTask, records()), null);
   });
 });

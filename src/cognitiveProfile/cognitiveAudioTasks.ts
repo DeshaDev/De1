@@ -9,7 +9,88 @@ import {
   passageWordId,
 } from './readingTasks';
 import { SUBTESTS_BY_ID } from './battery';
-import type { AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
+import type { AzureAlignedWord, AzureAudioAssessmentResult } from '../utils/azurePronunciationAssessment';
+
+export interface CognitiveWordAssessmentRecord {
+  itemId: string;
+  itemIndex: number;
+  transcript: string;
+  durationSeconds: number;
+  word: AzureAlignedWord;
+}
+
+export interface AggregatedCognitiveWordAssessment {
+  taskId: 'wordReading' | 'nonwordReading';
+  transcript: string;
+  durationSeconds: number;
+  wordAccuracyPercent: number;
+  wordsCorrectPerMinute: number | null;
+  wordsPerMinute: number | null;
+  correctWordsCount: number;
+  substitutionsCount: number;
+  omissionsCount: number;
+  insertionsCount: number;
+  words: AzureAlignedWord[];
+}
+
+/** Combines independently assessed clips only when every canonical item appears once and in order. */
+export function aggregateCognitiveWordAssessments(
+  task: CognitiveAudioTaskDefinition,
+  records: CognitiveWordAssessmentRecord[]
+): AggregatedCognitiveWordAssessment | null {
+  if (
+    (task.taskId !== 'wordReading' && task.taskId !== 'nonwordReading') ||
+    records.length !== task.itemIds.length ||
+    task.referenceWords.length !== task.itemIds.length
+  ) return null;
+
+  const seen = new Set<string>();
+  for (let index = 0; index < records.length; index++) {
+    const record = records[index];
+    if (
+      record.itemIndex !== index ||
+      record.itemId !== task.itemIds[index] ||
+      seen.has(record.itemId) ||
+      record.word.word !== task.referenceWords[index] ||
+      !Number.isFinite(record.durationSeconds) ||
+      record.durationSeconds < 0.25 ||
+      record.durationSeconds > 12 ||
+      !record.transcript.trim() ||
+      record.word.errorType === 'Unconfirmed' ||
+      record.word.errorType === 'Insertion' ||
+      typeof record.word.accuracyScore !== 'number'
+    ) return null;
+    seen.add(record.itemId);
+  }
+
+  const durationSeconds = records.reduce((total, record) => total + record.durationSeconds, 0);
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 1 || durationSeconds > 88) return null;
+  const words = records.map((record) => record.word);
+  const correctWordsCount = words.filter((word) =>
+    word.errorType === 'None' || word.errorType === 'DialectVariant'
+  ).length;
+  const substitutionsCount = words.filter((word) =>
+    word.errorType === 'Substitution' || word.errorType === 'Mispronunciation'
+  ).length;
+  const omissionsCount = words.filter((word) => word.errorType === 'Omission').length;
+  const insertionsCount = words.filter((word) => word.errorType === 'Insertion').length;
+
+  return {
+    taskId: task.taskId,
+    transcript: records.map((record) => record.transcript.trim()).join(' '),
+    durationSeconds,
+    wordAccuracyPercent: Math.round((correctWordsCount / words.length) * 100),
+    // Isolated clips exclude the pauses between screens, so they cannot support a
+    // defensible whole-list reading-rate measure. Report accuracy only for this task.
+    wordsCorrectPerMinute: null,
+    wordsPerMinute: null,
+    correctWordsCount,
+    substitutionsCount,
+    omissionsCount,
+    insertionsCount,
+    words,
+  };
+}
 
 export type CognitiveAudioTaskId = 'oralReading' | 'ranObjects' | 'ranLetters' | 'wordReading' | 'nonwordReading';
 
