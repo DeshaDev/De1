@@ -117,6 +117,22 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const hasValidGuardianConsentRecord = Boolean(effectiveGuardianConsentTimestamp && Number.isFinite(Date.parse(effectiveGuardianConsentTimestamp)));
   const hasValidAudioConsentRecord = Boolean(guardianAudioConsentRecordedAt && Number.isFinite(Date.parse(guardianAudioConsentRecordedAt)));
 
+  // Keep consent and dialect bound to the currently selected child. Audio consent is
+  // session-specific, so changing the learner requires a fresh audio-consent action.
+  useEffect(() => {
+    setGuardianConsentChecked(activeStudent?.guardianConsentGiven === true);
+    setGuardianConsentRecordedAt(activeStudent?.guardianConsentRecordedAt);
+    setAudioConsentChecked(false);
+    setGuardianAudioConsentRecordedAt(undefined);
+    setStudentDialect(activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian');
+  }, [
+    activeStudent?.id,
+    activeStudent?.guardianConsentGiven,
+    activeStudent?.guardianConsentRecordedAt,
+    activeStudent?.dialectCode,
+    activeStudent?.dialect,
+  ]);
+
   // Stages: 'intro' -> 'reading' -> 'verification' -> 'comprehension' -> 'summary'
   const [stage, setStage] = useState<'intro' | 'reading' | 'verification' | 'comprehension' | 'summary'>('intro');
   const [introStep, setIntroStep] = useState<'pick_story' | 'ready_mic'>('pick_story');
@@ -250,8 +266,14 @@ export const ReadingAssessmentView: React.FC<Props> = ({
   const handleStartReading = () => {
     // Consent is checked both in the launch control and here, so no alternate
     // caller can silently start microphone capture without the session-specific opt-in.
-    if (readingMode === 'oral_audio' && (!guardianConsentChecked || !audioConsentChecked)) {
-      setPronunciationAssessmentError('يلزم تسجيل موافقة ولي الأمر والموافقة المنفصلة على معالجة الصوت قبل تشغيل الميكروفون.');
+    if (
+      readingMode === 'oral_audio' &&
+      (!guardianConsentChecked || !hasValidGuardianConsentRecord ||
+        !audioConsentChecked || !hasValidAudioConsentRecord)
+    ) {
+      setPronunciationAssessmentError(
+        'يلزم وجود موافقة ولي أمر محفوظة بتاريخ صالح، وموافقة منفصلة مؤرخة على معالجة الصوت، قبل تشغيل الميكروفون.'
+      );
       return;
     }
     isReadingActiveRef.current = true;
@@ -532,6 +554,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       }));
 
       let azureSuccess = false;
+      let azureFailureCode = '';
 
       // Tier 1: Attempt Azure Speech assessment if audio was captured
       if (recordedAudio && recordedAudio.size > 0) {
@@ -545,12 +568,22 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
           if (locale) {
             setReadingModeNotice('يجري إرسال التسجيل الصوتي للتحليل السحابي المتقدم في Azure…');
+            const assessmentStudentId =
+              activeStudent?.id && activeStudent.isDemoRecord !== true ? activeStudent.id : '';
+            const guardianConsentAt = effectiveGuardianConsentTimestamp;
+            if (!assessmentStudentId) throw new Error('REAL_STUDENT_RECORD_REQUIRED');
+            if (!guardianConsentAt || !Number.isFinite(Date.parse(guardianConsentAt))) {
+              throw new Error('GUARDIAN_CONSENT_NOT_STORED');
+            }
+            if (!guardianAudioConsentRecordedAt || !Number.isFinite(Date.parse(guardianAudioConsentRecordedAt))) {
+              throw new Error('AUDIO_CONSENT_REQUIRED');
+            }
             const audioWavBase64 = await convertRecordedAudioToWavBase64(recordedAudio, 16000);
             const response = await authenticatedFetch('/api/ai/pronunciation-assessment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                studentId: activeStudent?.id || INITIAL_STUDENTS[0].id,
+                studentId: assessmentStudentId,
                 passageId: passage.id,
                 referenceText: passage.words.join(' '),
                 referenceWords: passage.words,
@@ -558,15 +591,20 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 durationSeconds: elapsedSec,
                 language: locale,
                 guardianConsentGiven: guardianConsentChecked,
-                guardianConsentRecordedAt: guardianConsentRecordedAt || new Date().toISOString(),
+                guardianConsentRecordedAt: guardianConsentAt,
                 guardianAudioConsentGiven: audioConsentChecked,
-                guardianAudioConsentRecordedAt: guardianAudioConsentRecordedAt || new Date().toISOString(),
+                guardianAudioConsentRecordedAt,
               }),
             });
 
-            if (response.ok) {
-              const result = await response.json().catch(() => ({}));
-              if (
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              azureFailureCode = typeof result?.code === 'string'
+                ? result.code
+                : `AZURE_HTTP_${response.status}`;
+              throw new Error(azureFailureCode);
+            }
+            if (
                 result.sourceModel === 'azure_pronunciation_assessment' &&
                 Array.isArray(result.words) &&
                 result.words.length === passage.words.length &&
@@ -631,18 +669,43 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 setStage('verification');
                 // Incomplete results remain provisional; they cannot be saved as completed oral metrics.
                 azureSuccess = true;
-              }
+            } else {
+              azureFailureCode = 'INVALID_AZURE_ASSESSMENT_RESPONSE';
             }
           }
         } catch (azureErr) {
-          // Cloud attempt failed or unconfigured, smoothly continue to Tier 2
+          azureFailureCode = azureErr instanceof Error
+            ? azureErr.message
+            : 'AZURE_SPEECH_ASSESSMENT_FAILED';
         }
       }
 
       // Fail closed if the acoustic assessment fails; browser ASR remains a preview only.
       if (!azureSuccess) {
         let reason: 'permission_denied' | 'empty_audio' | 'service_unavailable' | 'unsupported_dialect' = 'service_unavailable';
-        let errorMessage = 'تعذر إكمال التقييم الصوتي الآلي من محرك Azure AI. أعد المحاولة أو تابع دون احتساب طلاقة شفوية.';
+        let errorMessage = 'تعذر إكمال التقييم الصوتي الآلي. يمكنك متابعة أسئلة الفهم دون درجة صوتية؛ ولم نستخدم تفريغ المتصفح بديلًا.';
+
+        const serverFailureMessages: Record<string, string> = {
+          REAL_STUDENT_RECORD_REQUIRED: 'اختر ملف طفل حقيقي محفوظًا في حساب الأسرة أو المدرسة قبل إرسال التسجيل؛ لم نرسل صوتًا مرتبطًا بملف تجريبي.',
+          GUARDIAN_CONSENT_NOT_STORED: 'موافقة ولي الأمر العامة غير محفوظة أو لا تطابق سجل الطفل. احفظ الموافقة في ملف الطفل ثم أعد المحاولة.',
+          AUDIO_CONSENT_REQUIRED: 'يلزم تسجيل موافقة منفصلة ومؤرخة على معالجة الصوت قبل بدء التقييم.',
+          AZURE_SPEECH_NOT_CONFIGURED: 'خدمة Azure Speech غير مهيأة على الخادم. لم تُحتسب درجة صوتية.',
+          PARENT_STUDENT_NOT_OWNED: 'لم يمكن ربط التسجيل بملف الطفل في حساب الأسرة الحالي؛ لم يُرسل الصوت للتحليل.',
+          PARENT_STUDENT_OWNERSHIP_UNVERIFIED: 'تعذر التحقق من ملكية ملف الطفل؛ سجّل الدخول إلى حساب الأسرة ثم أعد المحاولة.',
+          PARENT_STUDENT_OWNERSHIP_CHECK_FAILED: 'تعذر التحقق من ملف الطفل لدى خدمة الحسابات؛ لم يُرسل التسجيل للتحليل.',
+          UNSUPPORTED_PRONUNCIATION_LOCALE: 'اللهجة المختارة غير مدعومة في مسار التقييم الحالي؛ لم نبدّلها تلقائيًا.',
+          REFERENCE_PASSAGE_MISMATCH: 'النص المعروض لا يطابق النص المرجعي المعتمد على الخادم. حدّث الصفحة ثم أعد المحاولة.',
+          INVALID_WAV_HEADER: 'تعذر قراءة ملف الصوت المحوّل إلى WAV. أعد التسجيل باستخدام ميكروفون ومتصفح مدعومين.',
+          UNSUPPORTED_WAV_FORMAT: 'صيغة الصوت المحوّلة غير متوافقة مع خدمة التقييم. أعد التسجيل.',
+          INVALID_AUDIO_PAYLOAD: 'ملف التسجيل غير صالح أو كبير أكثر من الحد المسموح؛ أعد التسجيل.',
+          INVALID_AUDIO_DURATION: 'مدة التسجيل الصوتي خارج النطاق المسموح؛ أعد قراءة النص ثم أرسل التسجيل.',
+
+          INVALID_ASSESSMENT_INPUT: 'بيانات التسجيل أو النص المرجعي غير مكتملة؛ حدّث الصفحة وأعد المحاولة.',
+          AZURE_NO_RECOGNIZED_SPEECH: 'لم يستخرج Azure كلامًا واضحًا من التسجيل. تحقق من مستوى الصوت والميكروفون ثم أعد المحاولة.',
+          AZURE_NO_WORD_LEVEL_RESULTS: 'وصل التسجيل لكن خدمة الصوت لم تُرجع نتائج على مستوى الكلمات؛ لم نحتسب أخطاء قراءة.',
+          AZURE_SPEECH_ASSESSMENT_FAILED: 'تعذر إكمال تقييم الصوت لدى Azure. لم نستخدم تفريغ المتصفح بديلًا.',
+          INVALID_AZURE_ASSESSMENT_RESPONSE: 'أعاد الخادم نتيجة صوتية غير مكتملة البنية؛ لم تُحتسب درجة.',
+        };
 
         if (!recordedAudio || recordedAudio.size === 0) {
           reason = 'empty_audio';
@@ -652,7 +715,10 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           errorMessage = 'التقييم الصوتي الآلي في هذا المسار متاح حاليًا للمصرية والخليجية فقط. الفصحى واللهجات الأخرى تتابع دون درجة نطق، ولم نُحوّلها إلى نموذج آخر.';
         } else {
           reason = 'service_unavailable';
-          errorMessage = 'تعذر الاتصال بمحرك التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك متابعة أسئلة الفهم دون درجة صوتية؛ ولا تُصحَّح الكلمات يدويًا.';
+          errorMessage = serverFailureMessages[azureFailureCode] ||
+            (azureFailureCode.startsWith('AZURE_HTTP_')
+              ? `رفض خادم التقييم الطلب (${azureFailureCode}). لم تُحتسب درجة.`
+              : errorMessage);
         }
 
         setAudioFailureReason(reason);
@@ -975,9 +1041,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setGuardianConsentChecked(checked);
-                      if (checked && !guardianConsentRecordedAt) {
-                        setGuardianConsentRecordedAt(new Date().toISOString());
-                      }
+                      setGuardianConsentRecordedAt(checked ? new Date().toISOString() : undefined);
                     }}
                     className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                   />
@@ -994,9 +1058,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       onChange={(e) => {
                         const checked = e.target.checked;
                         setAudioConsentChecked(checked);
-                        if (checked && !guardianAudioConsentRecordedAt) {
-                          setGuardianAudioConsentRecordedAt(new Date().toISOString());
-                        }
+                        setGuardianAudioConsentRecordedAt(checked ? new Date().toISOString() : undefined);
                       }}
                       className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />

@@ -175,3 +175,42 @@ test('Azure mapper consumes duplicate omission records only once', () => {
   assert.equal(result.words[1].errorType, 'Unconfirmed');
   assert.equal(result.assessmentComplete, false);
 });
+
+
+test('Azure omission tag cannot mark a word omitted when the transcript contains it', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['قرأ', 'الطِّفْلُ', 'قصة'],
+    transcript: 'قرأ الطفل قصة',
+    durationSeconds: 8,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'قرأ', errorType: 'None', accuracyScore: 98 },
+      { word: 'الطِّفْلُ', errorType: 'Omission', accuracyScore: 0 },
+      { word: 'قصة', errorType: 'None', accuracyScore: 95 },
+    ],
+  });
+  assert.equal(result.words[1].errorType, 'Unconfirmed');
+  assert.equal(result.words[1].spokenWord, 'الطفل');
+  assert.equal(result.omissionsCount, 0);
+  assert.equal(result.assessmentComplete, false);
+  assert.equal(result.wordAccuracyPercent, null);
+});
+
+test('a low Azure score with an explicit None tag remains unresolved, not a confirmed mispronunciation', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['باب', 'بيت'],
+    transcript: 'باب بيت',
+    durationSeconds: 4,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'باب', errorType: 'None', accuracyScore: 98 },
+      { word: 'بيت', errorType: 'None', accuracyScore: 42 },
+    ],
+  });
+  assert.equal(result.words[0].errorType, 'None');
+  assert.equal(result.words[1].errorType, 'Unconfirmed');
+  assert.equal(result.words[1].accuracyScore, 42);
+  assert.equal(result.substitutionsCount, 0);
+  assert.equal(result.assessmentComplete, false);
+  assert.equal(result.wordAccuracyPercent, null);
+});
