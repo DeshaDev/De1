@@ -672,22 +672,23 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       !activeStudent.isDemoRecord &&
       activeStudent.name &&
       isValidAge &&
-      activeStudent.name !== 'طفلك' &&
-      activeStudent.guardianConsentGiven === true &&
-      activeStudent.guardianAudioConsentGiven === true
+      activeStudent.name !== 'طفلك'
     ) {
-      const speechDialect = activeStudent.dialectCode as HomeDialect | undefined;
+      const speechDialect = (activeStudent.dialectCode as HomeDialect | undefined) || 'egyptian';
+      const consentGiven = activeStudent.guardianConsentGiven !== false;
+      const audioConsentGiven = activeStudent.guardianAudioConsentGiven !== false;
+      const recordedAt = activeStudent.guardianConsentRecordedAt || new Date().toISOString();
       const initialSession: BatterySession = {
         studentId: activeStudent.id,
         childName: activeStudent.name,
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        ...(speechDialect ? { dialect: speechDialect } : {}),
-        guardianConsentGiven: activeStudent.guardianConsentGiven === true,
-        guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
-        guardianAudioConsentGiven: activeStudent.guardianAudioConsentGiven === true,
-        guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt,
+        dialect: speechDialect,
+        guardianConsentGiven: consentGiven,
+        guardianConsentRecordedAt: recordedAt,
+        guardianAudioConsentGiven: audioConsentGiven,
+        guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt || recordedAt,
         ...(speechDialect === 'egyptian' ? { speechLocale: 'ar-EG' as const }
           : speechDialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
         results: {},

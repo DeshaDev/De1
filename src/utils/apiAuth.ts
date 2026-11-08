@@ -1,3 +1,9 @@
+import {
+  savePersistentSession,
+  loadPersistentSession,
+  clearPersistentSession,
+} from './cookiePersistence';
+
 /** `parent` is a family account signed in with Supabase; the school server never issues it. */
 export type BaseeraRole = 'platform_admin' | 'school_admin' | 'educator_readonly' | 'parent';
 
@@ -38,8 +44,20 @@ export function getTenantDisplayLabelAr(session: BaseeraSessionInfo): string {
   return cleanId ? `مدرسة (${cleanId})` : 'المدرسة المعتمدة';
 }
 
-const SESSION_STORAGE_KEY = 'baseera_session_v1';
 let cachedSession: BaseeraSessionInfo | null = null;
+
+/**
+ * Explicitly save session to persistent storage (cookies, localStorage, sessionStorage)
+ * and update the in-memory cache.
+ */
+export function storeBaseeraSession(session: BaseeraSessionInfo): void {
+  const enriched: BaseeraSessionInfo = {
+    ...session,
+    tenantDisplayNameAr: getTenantDisplayLabelAr(session),
+  };
+  cachedSession = enriched;
+  savePersistentSession(enriched);
+}
 
 export function getStoredBaseeraSession(): BaseeraSessionInfo | null {
   if (cachedSession && cachedSession.expiresAt > Date.now() + 10_000) {
@@ -47,24 +65,14 @@ export function getStoredBaseeraSession(): BaseeraSessionInfo | null {
   }
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as BaseeraSessionInfo;
-    if (
-      parsed?.token &&
-      parsed.expiresAt > Date.now() + 10_000 &&
-      typeof parsed.tenantId === 'string' &&
-      /^[a-zA-Z0-9_-]{1,80}$/.test(parsed.tenantId) &&
-      typeof parsed.sessionId === 'string' &&
-      /^[a-f0-9]{32}$/.test(parsed.sessionId)
-    ) {
+    const loaded = loadPersistentSession();
+    if (loaded && loaded.token && loaded.expiresAt > Date.now() + 10_000) {
       cachedSession = {
-        ...parsed,
-        tenantDisplayNameAr: getTenantDisplayLabelAr(parsed),
+        ...loaded,
+        tenantDisplayNameAr: getTenantDisplayLabelAr(loaded),
       };
       return cachedSession;
     }
-    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
   } catch {
     // Ignore session storage errors and keep the client signed out.
   }
@@ -92,16 +100,7 @@ export async function loginBaseeraSession(
       tenantDisplayNameAr: getTenantDisplayLabelAr(data),
     };
     cachedSession = enriched;
-    if (typeof window !== 'undefined') {
-      try {
-        window.sessionStorage.setItem(
-          SESSION_STORAGE_KEY,
-          JSON.stringify(enriched)
-        );
-      } catch {
-        // The in-memory session remains usable for this tab.
-      }
-    }
+    savePersistentSession(enriched);
     return enriched;
   } catch {
     return null;
@@ -127,13 +126,7 @@ export async function logoutBaseeraSession(): Promise<void> {
 
 export function clearBaseeraSession(): void {
   cachedSession = null;
-  if (typeof window !== 'undefined') {
-    try {
-      window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch {
-      // Ignore storage errors.
-    }
-  }
+  clearPersistentSession();
 }
 
 export async function ensureBaseeraSession(): Promise<BaseeraSessionInfo | null> {

@@ -217,6 +217,9 @@ export function ParentPortalView({
         setDialectCode('');
         setConsentChecked(false);
         setShowAddForm(false);
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
         onSelectStudent(newId, 'dyslexia-lab');
       }
     } catch (err: any) {

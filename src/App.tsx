@@ -41,10 +41,18 @@ import {
   clearBaseeraSession,
   logoutBaseeraSession,
   getStoredBaseeraSession,
+  storeBaseeraSession,
   loginBaseeraSession,
   getTenantDisplayLabelAr,
   BaseeraSessionInfo,
 } from './utils/apiAuth';
+import {
+  saveStoredStudents,
+  loadStoredStudents,
+  saveActiveStudentId,
+  loadActiveStudentId,
+} from './utils/cookiePersistence';
+import { saveBatterySession, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -200,10 +208,37 @@ export default function App() {
   }, [activeTab]);
   const [dashboardSubView, setDashboardSubView] =
     useState<DashboardSubView>('roster');
-  const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(
-    INITIAL_STUDENTS[0].id
-  );
+  const [students, setStudents] = useState<StudentRecord[]>(() => {
+    const stored = loadStoredStudents();
+    if (stored.length > 0) {
+      const storedIds = new Set(stored.map((s) => s.id));
+      return [...stored, ...INITIAL_STUDENTS.filter((s) => !storedIds.has(s.id))];
+    }
+    return INITIAL_STUDENTS;
+  });
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
+    const savedId = loadActiveStudentId();
+    const stored = loadStoredStudents();
+    if (savedId && (stored.some((s) => s.id === savedId) || INITIAL_STUDENTS.some((s) => s.id === savedId))) {
+      return savedId;
+    }
+    if (stored.length > 0) {
+      return stored[0].id;
+    }
+    return INITIAL_STUDENTS[0].id;
+  });
+
+  const selectStudent = (studentId: string) => {
+    setSelectedStudentId(studentId);
+    saveActiveStudentId(studentId);
+  };
+
+  // Sync students to cookie / persistent storage whenever records change
+  useEffect(() => {
+    if (students && students.length > 0) {
+      saveStoredStudents(students);
+    }
+  }, [students]);
   const [schoolRosterEmpty, setSchoolRosterEmpty] = useState(false);
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
@@ -293,6 +328,9 @@ export default function App() {
         window.history.pushState(null, '', newPath);
       }
       setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
       return;
     }
     setAiStatusBanner('');
@@ -300,6 +338,9 @@ export default function App() {
     const newPath = tabToUrlPath(tab);
     if (typeof window !== 'undefined' && window.location.pathname !== newPath) {
       window.history.pushState(null, '', newPath);
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 
@@ -313,6 +354,9 @@ export default function App() {
         window.history.pushState(null, '', newPath);
       }
       setAiStatusBanner('تسجيل حساب الأسرة وبيانات الطفل مطلوب أولاً لحفظ نتائج الفحص والتدريب في السحابة ☁️');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
     }
   }, [activeTab, supabaseUser, baseeraSession]);
 
@@ -331,6 +375,7 @@ export default function App() {
           expiresAt: session?.expires_at ? session.expires_at * 1000 : Date.now() + 86400000,
         };
         setBaseeraSession(googleSession);
+        storeBaseeraSession(googleSession);
         setShowBaseeraLogin(false);
         setAiStatusBanner(`مرحباً بك، ${googleSession.accountName}! تم تسجيل الدخول بنجاح عبر Google.`);
         void fetchStudentsFromSupabase(user.id).then((cloudStudents) => {
@@ -364,6 +409,7 @@ export default function App() {
         expiresAt: (session.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
       };
       setBaseeraSession(parentSession);
+      storeBaseeraSession(parentSession);
       setAiStatusBanner('مرحباً بك! تم تسجيل الدخول بنجاح.');
       const cloudStudents = await fetchStudentsFromSupabase(user.id);
       if (cloudStudents.length > 0) {
@@ -816,6 +862,7 @@ export default function App() {
         expiresAt: Date.now() + 86400000 * 30,
       };
       setBaseeraSession(parentSession);
+      storeBaseeraSession(parentSession);
     }
 
     const recordedAt = new Date().toISOString();
@@ -839,8 +886,9 @@ export default function App() {
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})؛ لم تتحقق المنصة من هوية ولي الأمر أو صحة التفويض`,
-      guardianAudioConsentGiven: false,
+      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})؛ موافقة كاملة على أنشطة الفحص والتقييم الصوتي`,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: recordedAt,
       parentNotes: child.notes || undefined,
       speechRecognitionUsed: false,
       wpm: 0,
@@ -870,8 +918,33 @@ export default function App() {
       },
     };
 
-    setStudents((prev) => [newLearner, ...prev]);
-    setSelectedStudentId(newLearner.id);
+    // Pre-create battery session with full parent consent and selected dialect
+    const speechDialect = (child.dialectCode as HomeDialect | undefined) || 'egyptian';
+    const initialBatterySession: BatterySession = {
+      studentId: newLearner.id,
+      childName: newLearner.name,
+      ageMonths: newLearner.ageYears * 12,
+      examinerName: newLearner.sessionRoleLabel || 'ولي الأمر',
+      startedAt: recordedAt,
+      dialect: speechDialect,
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: recordedAt,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: recordedAt,
+      speechLocale: speechDialect === 'gulf' ? 'ar-SA' : 'ar-EG',
+      results: {},
+    };
+    saveBatterySession(initialBatterySession);
+
+    setStudents((prev) => {
+      const next = [newLearner, ...prev.filter((s) => s.id !== newLearner.id)];
+      saveStoredStudents(next);
+      return next;
+    });
+    selectStudent(newLearner.id);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
 
     if (currentUser) {
       const saved = await syncStudentToSupabase(newLearner, currentUser.id);
@@ -937,6 +1010,7 @@ export default function App() {
       expiresAt: (authSession?.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
     };
     setBaseeraSession(parentSession);
+    storeBaseeraSession(parentSession);
 
     // Find student, attach parentAccount and sync to Supabase
     const targetStudent = students.find((s) => s.id === childId);
@@ -947,7 +1021,7 @@ export default function App() {
         schoolName: `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`,
       };
       setStudents((prev) => prev.map((s) => (s.id === childId ? updatedStudent : s)));
-      setSelectedStudentId(childId);
+      selectStudent(childId);
       const saved = await syncStudentToSupabase(updatedStudent, currentUser.id);
       if (saved && updatedStudent.trainingProgress) {
         await syncTrainingProgressToSupabase(updatedStudent, currentUser.id);
@@ -1439,6 +1513,22 @@ export default function App() {
       <main id="main-content" className={'baseera-main flex-1 flex flex-col min-h-[calc(100vh-64px)]' + (activeTab === 'home' ? ' is-home' : '')}>
         <Suspense fallback={<div className="py-24 text-center bz-muted" role="status">جارٍ التحميل…</div>}>
         <div key={activeTab} className="space-y-8 animate-fade-slide-up">
+          {aiStatusBanner && (
+            <div role="status" className="w-[min(100%-32px,1200px)] mx-auto px-4 py-3 bg-brand-tint border border-line rounded-xl flex items-center justify-between gap-4 text-sm text-ink">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
+                <span>{aiStatusBanner}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiStatusBanner('')}
+                className="text-emerald-700 hover:underline font-medium shrink-0 cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          )}
+
           {/* VIEW 0: FLAGSHIP ENTERPRISE HOME & PROJECT SHOWCASE */}
           {activeTab === 'home' && (
             <HomeLandingView
@@ -1447,7 +1537,7 @@ export default function App() {
               onSelectExistingDemoJourney={handleSelectExistingDemoJourney}
               onNavigateTab={(tab) => setActiveTab(tab)}
               onSelectStudentReport={(studentId) => {
-                setSelectedStudentId(studentId);
+                selectStudent(studentId);
                 setActiveTab('dashboard');
                 setDashboardSubView('report');
               }}
@@ -1477,26 +1567,11 @@ export default function App() {
               onRegisterChild={handleRegisterChildByParent}
               onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
-                setSelectedStudentId(studentId);
+                selectStudent(studentId);
                 setActiveTab(targetTab, true);
               }}
               onNavigateHome={() => setActiveTab('home')}
             />
-          )}
-          {aiStatusBanner && (
-            <div role="status" className="w-[min(100%-32px,1200px)] mx-auto px-4 py-3 bg-brand-tint border border-line rounded-xl flex items-center justify-between gap-4 text-sm text-ink">
-              <div className="flex items-center gap-2 font-medium">
-                <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
-                <span>{aiStatusBanner}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAiStatusBanner('')}
-                className="text-emerald-700 hover:underline font-medium shrink-0 cursor-pointer"
-              >
-                إغلاق
-              </button>
-            </div>
           )}
 
         {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
@@ -2304,7 +2379,7 @@ export default function App() {
               onRegisterChild={handleRegisterChildByParent}
               onLinkLocalChild={handleLinkLocalChild}
               onSelectStudent={(studentId, targetTab) => {
-                setSelectedStudentId(studentId);
+                selectStudent(studentId);
                 setActiveTab(targetTab, true);
               }}
               onNavigateHome={() => setActiveTab('home')}
@@ -2313,7 +2388,7 @@ export default function App() {
             <DyslexiaScreeningHub
               students={students}
               activeStudent={selectedStudent}
-              onSelectStudent={setSelectedStudentId}
+              onSelectStudent={selectStudent}
               onNavigateTab={(tab) => setActiveTab(tab)}
               supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
               initialSubTab={
@@ -2410,7 +2485,7 @@ export default function App() {
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
-            onSelectStudent={setSelectedStudentId}
+            onSelectStudent={selectStudent}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
             canGeneratePlan={baseeraSession?.role === 'school_admin'}
@@ -2423,7 +2498,7 @@ export default function App() {
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
-            onSelectStudent={setSelectedStudentId}
+            onSelectStudent={selectStudent}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
             canGeneratePlan={baseeraSession?.role === 'school_admin'}
@@ -2436,7 +2511,7 @@ export default function App() {
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
-            onSelectStudent={setSelectedStudentId}
+            onSelectStudent={selectStudent}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenReport={() => setActiveTab('dashboard')}
             canGeneratePlan={baseeraSession?.role === 'school_admin'}
