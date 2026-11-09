@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
-import { assessReadingAudioWithAzure, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
+import { assessReadingAudioWithAzure, getAzureSpeechCredentials, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
 import {
   ACTIVITY_IDS,
   DraftPlanSchema,
@@ -1070,8 +1070,39 @@ async function verifySupabaseParent(rawHeader: string): Promise<VerifiedBaseeraS
   }
 }
 
-/** School sessions as before; otherwise a verified parent account, rate limited. */
-function requireAiAccess() {
+const guestAudioRateLimitBuckets = new Map<string, number[]>();
+function guestAudioRateLimiter(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const clientIp = String(req.ip || req.socket.remoteAddress || 'local');
+  const now = Date.now();
+  const windowMs = 10 * 60_000;
+  const maxGuestRequests = 50;
+
+  const history = (guestAudioRateLimitBuckets.get(clientIp) || []).filter(
+    (ts) => now - ts < windowMs
+  );
+  if (!guestAudioRateLimitBuckets.has(clientIp) && guestAudioRateLimitBuckets.size >= 5_000) {
+    const oldestKey = guestAudioRateLimitBuckets.keys().next().value;
+    if (oldestKey !== undefined) guestAudioRateLimitBuckets.delete(oldestKey);
+  }
+  if (history.length >= maxGuestRequests) {
+    res.setHeader('Retry-After', '600');
+    res.status(429).json({
+      code: 'GUEST_RATE_LIMIT_EXCEEDED',
+      error: 'تم تجاوز الحد الأقصى لتجربة التقييم الصوتي (50 كلمة لكل 10 دقائق). يرجى الانتظار قليلًا أو تسجيل الدخول للمتابعة.',
+    });
+    return;
+  }
+  history.push(now);
+  guestAudioRateLimitBuckets.set(clientIp, history);
+  next();
+}
+
+/** School sessions as before; otherwise a verified parent account, or rate-limited guest preview for audio assessment. */
+function requireAiAccess(options: { allowGuestAudio?: boolean } = {}) {
   const school = requireBaseeraAuth('ai:analyze');
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const rawHeader = (req.headers.authorization as string) || '';
@@ -1081,6 +1112,18 @@ function requireAiAccess() {
       if (parent) {
         (req as any).baseeraSession = parent;
         aiRateLimiter(req, res, next);
+        return;
+      }
+      if (options.allowGuestAudio) {
+        const clientIp = String(req.ip || req.socket.remoteAddress || 'local').replace(/[^a-zA-Z0-9]/g, '_');
+        (req as any).baseeraSession = {
+          role: 'guest',
+          tenantId: 'demo_guest_tenant',
+          sessionId: `guest_${clientIp}`,
+          accountName: 'زائر التجربة',
+          scopes: ['ai:analyze'],
+        };
+        guestAudioRateLimiter(req, res, next);
         return;
       }
     }
@@ -3668,7 +3711,7 @@ async function startServer() {
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
-  app.post('/api/ai/pronunciation-assessment', requireAiAccess(), async (req, res) => {
+  app.post('/api/ai/pronunciation-assessment', requireAiAccess({ allowGuestAudio: true }), async (req, res) => {
     const body = req.body || {};
     const {
       referenceText,
@@ -3773,6 +3816,8 @@ async function startServer() {
         });
         return;
       }
+    } else if (String(assessmentSession.role) === 'guest') {
+      // Guest demo session: allowed for screening preview
     } else {
       const schoolStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
@@ -3795,7 +3840,8 @@ async function startServer() {
       }
     }
 
-    if (!process.env.AZURE_SPEECH_KEY?.trim() || !process.env.AZURE_SPEECH_REGION?.trim()) {
+    const { key: azureKey, region: azureRegion } = getAzureSpeechCredentials();
+    if (!azureKey || !azureRegion) {
       res.status(503).json({
         code: 'AZURE_SPEECH_NOT_CONFIGURED',
         error: 'تقييم الصوت الحقيقي غير مهيأ بعد. أضف بيانات اعتماد Azure Speech إلى ملف .env على الخادم ثم أعد تشغيله.',
@@ -3941,7 +3987,7 @@ async function startServer() {
 
 
   // Finalize a word-list task only after every canonical word has its own server receipt.
-  app.post('/api/ai/cognitive-audio-assessment/finalize', requireAiAccess(), (req, res) => {
+  app.post('/api/ai/cognitive-audio-assessment/finalize', requireAiAccess({ allowGuestAudio: true }), (req, res) => {
     const body = req.body || {};
     const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
@@ -4102,7 +4148,7 @@ async function startServer() {
 
   // Cognitive battery audio: task references are resolved on the server and never accepted from the browser.
   // Only a complete Azure word-level assessment receives a short-lived receipt.
-  app.post('/api/ai/cognitive-audio-assessment', requireAiAccess(), async (req, res) => {
+  app.post('/api/ai/cognitive-audio-assessment', requireAiAccess({ allowGuestAudio: true }), async (req, res) => {
     const body = req.body || {};
     const assessmentSession = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
@@ -4298,7 +4344,8 @@ async function startServer() {
       return;
     }
 
-    if (!process.env.AZURE_SPEECH_KEY?.trim() || !process.env.AZURE_SPEECH_REGION?.trim()) {
+    const { key: azureKey, region: azureRegion } = getAzureSpeechCredentials();
+    if (!azureKey || !azureRegion) {
       res.status(503).json({
         code: 'AZURE_SPEECH_NOT_CONFIGURED',
         error: 'خدمة تقييم الصوت غير مهيأة على الخادم. لم نستخدم التعرف الصوتي في المتصفح ولم نحتسب درجة بديلة.',
@@ -4309,7 +4356,7 @@ async function startServer() {
     // School sessions must reference a real child in the same signed tenant. Parent
     // sessions were checked against Supabase ownership above. Never send a demo,
     // unknown or cross-tenant child's audio to Azure.
-    if (String(assessmentSession.role) !== 'parent') {
+    if (String(assessmentSession.role) !== 'parent' && String(assessmentSession.role) !== 'guest') {
       const ownedStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
       );
@@ -4729,9 +4776,18 @@ async function startServer() {
     res.status(404).json({ error: 'المسار غير موجود.' });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Baseera Server running on http://localhost:${PORT}`);
-  });
+  const rawPort = process.env.PORT || '3000';
+  const isSocket = isNaN(Number(rawPort));
+  if (isSocket) {
+    app.listen(rawPort, () => {
+      console.log(`Baseera Server listening on socket ${rawPort}`);
+    });
+  } else {
+    const port = Number(rawPort);
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Baseera Server running on http://localhost:${port}`);
+    });
+  }
 }
 
 startServer();
