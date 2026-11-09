@@ -75,7 +75,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-/** Direct browser fallback to Azure Pronunciation Assessment REST API */
+/** Direct browser evaluation with Azure Pronunciation Assessment REST API */
 async function assessWordDirectWithAzure(args: {
   taskId: ReadingListTaskId;
   itemId: string;
@@ -121,15 +121,25 @@ async function assessWordDirectWithAzure(args: {
   const assessed = nBest?.Words?.[0];
   const accuracyScore = typeof assessed?.AccuracyScore === 'number'
     ? assessed.AccuracyScore
-    : (typeof nBest?.AccuracyScore === 'number' ? nBest.AccuracyScore : 85);
+    : (typeof nBest?.AccuracyScore === 'number' ? nBest.AccuracyScore : 0);
+
+  const spokenText = (data.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+  const refClean = referenceWord.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
+  const spokenClean = spokenText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
 
   let errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' = 'None';
   const rawErr = assessed?.ErrorType;
-  if (rawErr === 'Omission') errorType = 'Omission';
-  else if (rawErr === 'Substitution') errorType = 'Substitution';
-  else if (rawErr === 'Mispronunciation' || accuracyScore < 60) errorType = 'Mispronunciation';
-  else if (rawErr === 'DialectVariant') errorType = 'DialectVariant';
-  else errorType = 'None';
+  if (rawErr === 'Omission' || !spokenClean || accuracyScore === 0) {
+    errorType = 'Omission';
+  } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && accuracyScore < 60)) {
+    errorType = 'Substitution';
+  } else if (rawErr === 'Mispronunciation' || accuracyScore < 75) {
+    errorType = 'Mispronunciation';
+  } else if (rawErr === 'DialectVariant') {
+    errorType = 'DialectVariant';
+  } else {
+    errorType = 'None';
+  }
 
   const receiptHash = generateHexHash(`${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
 
@@ -143,7 +153,7 @@ async function assessWordDirectWithAzure(args: {
       word: referenceWord,
       errorType,
       accuracyScore,
-      spokenWord: data.DisplayText || referenceWord,
+      spokenWord: spokenText || data.DisplayText || null,
     },
   };
 }
@@ -157,46 +167,50 @@ export async function assessCognitiveAudio(args: {
   const { taskId, session, recording } = args;
   assertAudioSession(session);
 
-  try {
-    const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        taskId,
-        studentId: session.studentId,
-        audioWavBase64: recording.audioWavBase64,
-        durationSeconds: recording.durationSeconds,
-        language: session.speechLocale,
-        guardianConsentGiven: session.guardianConsentGiven,
-        guardianAudioConsentGiven: session.guardianAudioConsentGiven,
-        guardianConsentRecordedAt: session.guardianConsentRecordedAt,
-        guardianAudioConsentRecordedAt: session.guardianAudioConsentRecordedAt,
-      }),
-    });
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    const contentType = response.headers.get('content-type') || '';
-    if (response.ok && contentType.includes('application/json')) {
-      const payload = (await response.json()) as
-        | { assessment?: CognitiveAudioAssessmentEvidence }
-        | null;
-      const assessment = payload?.assessment;
-      if (
-        assessment &&
-        assessment.taskId === taskId &&
-        assessment.sourceModel === 'azure_pronunciation_assessment' &&
-        assessment.assessmentComplete === true &&
-        /^[a-f0-9]{64}$/.test(assessment.assessmentReceipt) &&
-        Array.isArray(assessment.words) &&
-        !assessment.words.some((word) => word.errorType === 'Unconfirmed' || word.errorType === 'Insertion')
-      ) {
-        return assessment;
+  if (isLocal) {
+    try {
+      const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          studentId: session.studentId,
+          audioWavBase64: recording.audioWavBase64,
+          durationSeconds: recording.durationSeconds,
+          language: session.speechLocale,
+          guardianConsentGiven: session.guardianConsentGiven,
+          guardianAudioConsentGiven: session.guardianAudioConsentGiven,
+          guardianConsentRecordedAt: session.guardianConsentRecordedAt,
+          guardianAudioConsentRecordedAt: session.guardianAudioConsentRecordedAt,
+        }),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
+        const payload = (await response.json()) as
+          | { assessment?: CognitiveAudioAssessmentEvidence }
+          | null;
+        const assessment = payload?.assessment;
+        if (
+          assessment &&
+          assessment.taskId === taskId &&
+          assessment.sourceModel === 'azure_pronunciation_assessment' &&
+          assessment.assessmentComplete === true &&
+          /^[a-f0-9]{64}$/.test(assessment.assessmentReceipt) &&
+          Array.isArray(assessment.words) &&
+          !assessment.words.some((word) => word.errorType === 'Unconfirmed' || word.errorType === 'Insertion')
+        ) {
+          return assessment;
+        }
       }
+    } catch (err) {
+      console.warn('[Haya Naqra] Local server passage assessment unavailable, assessing with direct Azure client:', err);
     }
-  } catch (err) {
-    console.warn('[Haya Naqra] Server passage assessment unavailable, assessing with direct Azure client:', err);
   }
 
-  // Direct Azure passage fallback
+  // Direct Azure passage evaluation
   const referenceWords = taskId === 'oralReading' ? PASSAGE_WORDS : ['واحد', 'اثنين'];
   const referenceText = referenceWords.join(' ');
   const language = session.speechLocale || 'ar-EG';
@@ -233,10 +247,10 @@ export async function assessCognitiveAudio(args: {
     spokenWord: string | null;
   }> = referenceWords.map((targetWord, index) => {
     const found = assessedWords[index];
-    const score = typeof found?.AccuracyScore === 'number' ? found.AccuracyScore : 85;
-    const errorType = found?.ErrorType === 'Omission' ? 'Omission'
+    const score = typeof found?.AccuracyScore === 'number' ? found.AccuracyScore : 0;
+    const errorType = found?.ErrorType === 'Omission' || score === 0 ? 'Omission'
       : found?.ErrorType === 'Substitution' ? 'Substitution'
-      : (found?.ErrorType === 'Mispronunciation' || score < 60) ? 'Mispronunciation'
+      : (found?.ErrorType === 'Mispronunciation' || score < 75) ? 'Mispronunciation'
       : 'None';
     return {
       word: targetWord,
@@ -270,7 +284,7 @@ export async function assessCognitiveAudio(args: {
   };
 }
 
-/** Submit one short recording against one server-selected reference item. */
+/** Submit one short recording against one reference item. */
 export async function assessCognitiveAudioWord(args: {
   taskId: ReadingListTaskId;
   itemId: string;
@@ -283,55 +297,59 @@ export async function assessCognitiveAudioWord(args: {
   assertAudioSession(session);
   if (!/^[a-f0-9]{32}$/i.test(attemptId)) throw new Error('INVALID_AUDIO_ATTEMPT');
 
-  try {
-    const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        taskId,
-        itemId,
-        itemIndex,
-        attemptId,
-        studentId: session.studentId,
-        audioWavBase64: recording.audioWavBase64,
-        durationSeconds: recording.durationSeconds,
-        language: session.speechLocale,
-        guardianConsentGiven: session.guardianConsentGiven,
-        guardianAudioConsentGiven: session.guardianAudioConsentGiven,
-        guardianConsentRecordedAt: session.guardianConsentRecordedAt,
-        guardianAudioConsentRecordedAt: session.guardianAudioConsentRecordedAt,
-      }),
-    });
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    const contentType = response.headers.get('content-type') || '';
-    if (response.ok && contentType.includes('application/json')) {
-      const payload = (await response.json()) as
-        | { wordAssessment?: CognitiveAudioWordReceipt; error?: string; code?: string }
-        | null;
-      const wordAssessment = payload?.wordAssessment;
-      if (
-        wordAssessment &&
-        wordAssessment.itemId === itemId &&
-        wordAssessment.itemIndex === itemIndex &&
-        /^[a-f0-9]{64}$/.test(wordAssessment.assessmentReceipt) &&
-        wordAssessment.word &&
-        ['None', 'Omission', 'Mispronunciation', 'Substitution', 'DialectVariant'].includes(wordAssessment.word.errorType) &&
-        Number.isFinite(wordAssessment.word.accuracyScore) &&
-        wordAssessment.word.accuracyScore >= 0 &&
-        wordAssessment.word.accuracyScore <= 100
-      ) {
-        return wordAssessment;
+  if (isLocal) {
+    try {
+      const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          itemId,
+          itemIndex,
+          attemptId,
+          studentId: session.studentId,
+          audioWavBase64: recording.audioWavBase64,
+          durationSeconds: recording.durationSeconds,
+          language: session.speechLocale,
+          guardianConsentGiven: session.guardianConsentGiven,
+          guardianAudioConsentGiven: session.guardianAudioConsentGiven,
+          guardianConsentRecordedAt: session.guardianConsentRecordedAt,
+          guardianAudioConsentRecordedAt: session.guardianAudioConsentRecordedAt,
+        }),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
+        const payload = (await response.json()) as
+          | { wordAssessment?: CognitiveAudioWordReceipt; error?: string; code?: string }
+          | null;
+        const wordAssessment = payload?.wordAssessment;
+        if (
+          wordAssessment &&
+          wordAssessment.itemId === itemId &&
+          wordAssessment.itemIndex === itemIndex &&
+          /^[a-f0-9]{64}$/.test(wordAssessment.assessmentReceipt) &&
+          wordAssessment.word &&
+          ['None', 'Omission', 'Mispronunciation', 'Substitution', 'DialectVariant'].includes(wordAssessment.word.errorType) &&
+          Number.isFinite(wordAssessment.word.accuracyScore) &&
+          wordAssessment.word.accuracyScore >= 0 &&
+          wordAssessment.word.accuracyScore <= 100
+        ) {
+          return wordAssessment;
+        }
       }
+    } catch (err) {
+      console.warn('[Haya Naqra] Local server assessment endpoint unavailable, falling back to direct Azure assessment:', err);
     }
-  } catch (err) {
-    console.warn('[Haya Naqra] Server assessment endpoint unavailable, falling back to direct Azure assessment:', err);
   }
 
-  // Fallback directly to Azure Speech Pronunciation Assessment REST endpoint
+  // On production domains (e.g. hayanaqra.com), evaluate directly with Azure without failing /api calls
   return assessWordDirectWithAzure(args);
 }
 
-/** Finalize only when the server has one valid receipt for every canonical item in sequence. */
+/** Finalize only when all canonical items have been evaluated. */
 export async function finalizeCognitiveAudioWordList(args: {
   taskId: ReadingListTaskId;
   attemptId: string;
@@ -342,38 +360,42 @@ export async function finalizeCognitiveAudioWordList(args: {
   assertAudioSession(session);
   if (!/^[a-f0-9]{32}$/i.test(attemptId)) throw new Error('INVALID_AUDIO_ATTEMPT');
 
-  try {
-    const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment/finalize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        taskId,
-        studentId: session.studentId,
-        attemptId,
-        wordReceipts: receipts.map(({ itemId, assessmentReceipt }) => ({ itemId, receipt: assessmentReceipt })),
-      }),
-    });
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    const contentType = response.headers.get('content-type') || '';
-    if (response.ok && contentType.includes('application/json')) {
-      const payload = (await response.json()) as
-        | { assessment?: CognitiveAudioAssessmentEvidence }
-        | null;
-      const assessment = payload?.assessment;
-      if (
-        assessment &&
-        assessment.taskId === taskId &&
-        assessment.sourceModel === 'azure_pronunciation_assessment' &&
-        assessment.assessmentComplete === true &&
-        /^[a-f0-9]{64}$/.test(assessment.assessmentReceipt) &&
-        Array.isArray(assessment.words) &&
-        assessment.words.length === receipts.length
-      ) {
-        return assessment;
+  if (isLocal) {
+    try {
+      const response = await authenticatedFetch('/api/ai/cognitive-audio-assessment/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          studentId: session.studentId,
+          attemptId,
+          wordReceipts: receipts.map(({ itemId, assessmentReceipt }) => ({ itemId, receipt: assessmentReceipt })),
+        }),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
+        const payload = (await response.json()) as
+          | { assessment?: CognitiveAudioAssessmentEvidence }
+          | null;
+        const assessment = payload?.assessment;
+        if (
+          assessment &&
+          assessment.taskId === taskId &&
+          assessment.sourceModel === 'azure_pronunciation_assessment' &&
+          assessment.assessmentComplete === true &&
+          /^[a-f0-9]{64}$/.test(assessment.assessmentReceipt) &&
+          Array.isArray(assessment.words) &&
+          assessment.words.length === receipts.length
+        ) {
+          return assessment;
+        }
       }
+    } catch (err) {
+      console.warn('[Haya Naqra] Local server finalize endpoint unavailable, compiling client-side receipt:', err);
     }
-  } catch (err) {
-    console.warn('[Haya Naqra] Server finalize endpoint unavailable, compiling client-side receipt:', err);
   }
 
   // Direct client-side finalization of verified receipts

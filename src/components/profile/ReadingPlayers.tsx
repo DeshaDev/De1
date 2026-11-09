@@ -163,7 +163,12 @@ export function ReadListAudioPlayer({
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
-  const [lastCompletedWord, setLastCompletedWord] = useState('');
+  const [lastWordFeedback, setLastWordFeedback] = useState<{
+    word: string;
+    accuracyScore: number;
+    errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
+    spokenWord: string | null;
+  } | null>(null);
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
   const busyRef = useRef(false);
@@ -253,7 +258,12 @@ export function ReadListAudioPlayer({
         wordReceipt,
       ].sort((a, b) => a.itemIndex - b.itemIndex);
       wordReceiptsRef.current = nextReceipts;
-      setLastCompletedWord(currentItem.text);
+      setLastWordFeedback({
+        word: currentItem.text,
+        accuracyScore: wordReceipt.word.accuracyScore,
+        errorType: wordReceipt.word.errorType,
+        spokenWord: wordReceipt.word.spokenWord || wordReceipt.transcript,
+      });
 
       if (currentItemIndex + 1 < items.length) {
         setCurrentItemIndex(currentItemIndex + 1);
@@ -353,10 +363,36 @@ export function ReadListAudioPlayer({
               {currentItem?.text}
             </span>
           </div>
-          {lastCompletedWord && phase === 'ready' && (
-            <p className="text-center text-sm font-bold text-emerald-700" role="status">
-              تم تقييم الكلمة السابقة. أحسنت!
-            </p>
+          {lastWordFeedback && phase === 'ready' && (
+            <div className="w-full flex justify-center py-2" role="status" aria-live="polite">
+              {lastWordFeedback.errorType === 'None' && lastWordFeedback.accuracyScore >= 75 ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-300 text-emerald-800 text-sm font-bold shadow-xs">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>✓ نطق صحيح لكلمة ({lastWordFeedback.word}) — دقة التقييم عبر Azure: {ar(lastWordFeedback.accuracyScore)}٪</span>
+                </div>
+              ) : lastWordFeedback.errorType === 'Mispronunciation' || (lastWordFeedback.accuracyScore > 0 && lastWordFeedback.accuracyScore < 75) ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-900 text-sm font-bold shadow-xs">
+                  <span className="text-amber-600 font-extrabold text-base">⚠️</span>
+                  <span>
+                    رُصد خطأ في نطق كلمة ({lastWordFeedback.word}) — دقة Azure: {ar(lastWordFeedback.accuracyScore)}٪
+                    {lastWordFeedback.spokenWord && lastWordFeedback.spokenWord !== lastWordFeedback.word && ` (سُمع: «${lastWordFeedback.spokenWord}»)`}
+                  </span>
+                </div>
+              ) : lastWordFeedback.errorType === 'Substitution' ? (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-sm font-bold shadow-xs">
+                  <span className="text-rose-600 font-extrabold text-base">✗</span>
+                  <span>
+                    تم استبدال كلمة ({lastWordFeedback.word}) بنطق كلمة أخرى
+                    {lastWordFeedback.spokenWord && ` «${lastWordFeedback.spokenWord}»`} (الدقة: {ar(lastWordFeedback.accuracyScore)}٪)
+                  </span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-sm font-bold shadow-xs">
+                  <span className="text-rose-600 font-extrabold text-base">✗</span>
+                  <span>لم تُنطق كلمة ({lastWordFeedback.word}) بشكل صحيح أو حُذفت (دقة التقييم عبر Azure: {ar(lastWordFeedback.accuracyScore)}٪)</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
