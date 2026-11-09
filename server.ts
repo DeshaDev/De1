@@ -3577,8 +3577,8 @@ async function startServer() {
                          voice === 'ar-KW-NouraNeural' ? 'ar-KW-NouraNeural' :
                          voice === 'ar-SA-HamedNeural' ? 'ar-SA-HamedNeural' :
                          'ar-AE-FatimaNeural';
-    const prosodyRate = typeof rate === 'string' ? rate : '-12%';
-    const prosodyPitch = typeof req.body?.pitch === 'string' ? req.body.pitch : '+2%';
+    const prosodyRate = typeof rate === 'string' ? rate : '0%';
+    const prosodyPitch = typeof req.body?.pitch === 'string' ? req.body.pitch : '0%';
     const cacheKey = `${selectedVoice}_${prosodyRate}_${prosodyPitch}_${cleanText}`;
 
     if (ttsAudioCache.has(cacheKey)) {
@@ -3605,7 +3605,7 @@ async function startServer() {
           headers: {
             'Ocp-Apim-Subscription-Key': azureKey,
             'Content-Type': 'application/ssml+xml',
-            'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+            'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
             'User-Agent': 'Baseera-Pedagogical-Audio',
           },
           body: ssml,

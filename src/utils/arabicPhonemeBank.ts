@@ -298,6 +298,26 @@ export const ARABIC_PHONEME_IPA_MAP: Record<string, string> = {
 };
 
 /**
+ * Expands a single-letter short-voweled syllable to its natural elongated Arabic spelling
+ * so neural Arabic voices articulate the exact vowel sound (/tu/, /ba/, /ji/)
+ * with 100% authentic human pronunciation, without pronouncing the letter name ("باء", "جيم")
+ * and without switching to the mechanical/robotic IPA vocoder.
+ */
+export function expandArabicPhonemeSound(token: string): string {
+  const t = token.trim();
+  if (t === 'أَ') return 'آ';
+  if (t === 'ئِ' || t === 'إِ') return 'إِي';
+  if (t === 'أُ' || t === 'ؤُ') return 'أُو';
+  const m = t.match(/^([\u0621-\u064A])([\u064E\u064F\u0650])$/);
+  if (!m) return t;
+  const [, letter, vowel] = m;
+  if (vowel === '\u064E') return `${letter}\u064Eا`;
+  if (vowel === '\u064F') return `${letter}\u064Fو`;
+  if (vowel === '\u0650') return `${letter}\u0650ي`;
+  return t;
+}
+
+/**
  * Returns the exact Fusha IPA phoneme if the input matches a standalone phoneme/syllable.
  */
 export function getArabicPhonemeIpa(token: string): string | null {
@@ -306,30 +326,27 @@ export function getArabicPhonemeIpa(token: string): string | null {
 }
 
 /**
- * Formats an Arabic text string into SSML-compatible text with IPA phonemes injected
- * for any isolated letters or letter sound prompts (e.g. 'أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟').
+ * Formats an Arabic text string into natural human Fusha text for TTS synthesis.
+ * Uses natural Arabic orthographic elongation for letter-sound prompts (e.g. 'أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟' -> 'أَيُّ حَرْفٍ صَوْتُهُ تُو، تُو؟')
+ * instead of robotic <phoneme alphabet="ipa"> tags which degrade speech into synthetic robot sounds.
  */
 export function formatArabicTextWithPhonemes(rawText: string): string {
   const clean = rawText.trim();
   if (!clean) return '';
 
-  // Check if entire text is a single phoneme/syllable (e.g. 'تُ')
-  const directIpa = getArabicPhonemeIpa(clean);
-  if (directIpa) {
-    return `<phoneme alphabet="ipa" ph="${directIpa}">${clean}</phoneme>`;
+  // Check if entire text is a single 1-letter CV syllable (e.g. 'تُ', 'سَ', 'جِ')
+  if (/^([\u0621-\u064A])([\u064E\u064F\u0650])$/.test(clean)) {
+    return expandArabicPhonemeSound(clean);
   }
 
   // Handle letter-sound prompt patterns like: 'أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟'
-  const promptMatch = clean.match(/^(.*?:\s*)([^\s.]+)(\s*\.\.\.\s*)([^\s؟?]+)(\s*[؟?]?.*)$/);
+  const promptMatch = clean.match(/^(.*?صَوْتُهُ\s*:?\s*)([^\s.]+)(\s*\.\.\.\s*|\s*،\s*)([^\s؟?]+)(\s*[؟?]?.*)$/);
   if (promptMatch) {
-    const [, prefix, sound1, separator, sound2, suffix] = promptMatch;
-    const ipa1 = getArabicPhonemeIpa(sound1);
-    const ipa2 = getArabicPhonemeIpa(sound2);
-
-    const formattedSound1 = ipa1 ? `<phoneme alphabet="ipa" ph="${ipa1}">${sound1}</phoneme>` : sound1;
-    const formattedSound2 = ipa2 ? `<phoneme alphabet="ipa" ph="${ipa2}">${sound2}</phoneme>` : sound2;
-
-    return `${prefix}${formattedSound1}${separator}${formattedSound2}${suffix}`;
+    const [, prefix, sound1, , sound2, suffix] = promptMatch;
+    const formattedSound1 = expandArabicPhonemeSound(sound1);
+    const formattedSound2 = expandArabicPhonemeSound(sound2);
+    const cleanPrefix = prefix.replace(/:\s*$/, ' ');
+    return `${cleanPrefix}${formattedSound1}، ${formattedSound2}${suffix || '؟'}`;
   }
 
   return clean;

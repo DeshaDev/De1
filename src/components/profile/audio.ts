@@ -56,24 +56,27 @@ async function playRecordedClip(text: string): Promise<boolean> {
  * reports the end (some browsers, or no Arabic voice installed).
  */
 export async function speak(text: string): Promise<void> {
-  const estimateMs = Math.max(1200, Array.from(text).length * 110 + 500);
-  let played = false;
   await new Promise<void>((resolve) => {
     let settled = false;
     const done = () => {
       if (!settled) {
         settled = true;
-        played = true;
         resolve();
       }
     };
-    playNaturalArabicAudio(text, { voice: 'ar-AE-FatimaNeural', rate: '-5%', onEnd: done, onError: done })
-      .then(() => setTimeout(done, estimateMs))
-      .catch(done);
+    const watchdog = setTimeout(done, 15000);
+    const finish = () => {
+      clearTimeout(watchdog);
+      done();
+    };
+    playNaturalArabicAudio(text, {
+      voice: 'ar-AE-FatimaNeural',
+      rate: '0%',
+      pitch: '0%',
+      onEnd: finish,
+      onError: finish,
+    }).catch(finish);
   });
-  if (!played) {
-    await playRecordedClip(text);
-  }
 }
 
 export interface PlaybackHandle {

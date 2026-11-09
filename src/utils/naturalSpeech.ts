@@ -61,16 +61,18 @@ function cacheAudio(key: string, dataUrl: string): void {
 }
 
 export type ArabicTtsVoice =
-  | 'ar-AE-FatimaNeural'  // فاطمة: أفصح وأنقى صوت معلّمة عربية فصحى على الإطلاق من مايكروسوفت أزور
-  | 'ar-SA-ZariyahNeural' // المعلمة زارية: صوت فصحى نقي
-  | 'ar-SA-HamedNeural'   // حامد: صوت فصحى أصيل ناصع المخارج للفونيمات والحروف المجردة
-  | 'ar-KW-NouraNeural'   // نورة: صوت كويتي فصيح وهادئ
-  | 'ar-EG-SalmaNeural';  // سلمى: صوت مصري دافئ
+  | 'ar-AE-FatimaNeural'         // فاطمة: صوت معلّمة فصحى طبيعي نقي عالي الفصاحة (الافتراضي الذهبي)
+  | 'ar-SA-Hamed:DragonLatestNeural' // حامد دراجون: أحدث نموذج توليدي ذكي 2026
+  | 'ar-SA-ZariyahNeural'        // زارية: صوت فصحى
+  | 'ar-SA-HamedNeural'          // حامد: صوت فصحى
+  | 'ar-KW-NouraNeural'          // نورة: صوت كويتي فصيح وهادئ
+  | 'ar-EG-SalmaNeural'          // سلمى: صوت مصري دافئ
+  | 'ar-MA-MounaNeural';         // منى: صوت تعليمي دافئ
 
 export interface NaturalSpeechOptions {
   voice?: ArabicTtsVoice;
-  rate?: string;  // e.g. '-5%', '-8%', '0%'
-  pitch?: string; // e.g. '+1%', '0%'
+  rate?: string;  // e.g. '0%', '-2%'
+  pitch?: string; // e.g. '0%'
   onEnd?: () => void;
   onError?: (err: unknown) => void;
 }
@@ -78,26 +80,44 @@ export interface NaturalSpeechOptions {
 /**
  * Prepares Arabic text for pristine educational neural articulation:
  * 1. Strips tatweel (kashida 'ـ') which distorts acoustic models.
- * 2. Normalizes whitespaces.
- * 3. Preserves natural Arabic waqf without injecting artificial tanween.
+ * 2. Formats letter-sound prompts into natural Arabic orthography (تُو، تُو بدلاً من الرموز الآلية).
+ * 3. Removes colons that cause unnatural mid-sentence pauses in construct states.
+ * 4. Applies Classical Arabic Waqf (taskeen at pauses and taa marbuta as Ha').
+ * 5. Normalizes whitespaces.
  */
 export function prepareArabicTtsText(text: string): string {
   if (!text) return '';
-  let cleaned = text.trim();
+  let s = text.trim().replace(/ـ+/g, '').replace(/\s+/g, ' ');
 
-  // Strip tatweel/kashida
-  cleaned = cleaned.replace(/ـ+/g, '');
+  // 1. Expand letter-sound prompt patterns and standalone phonemes naturally
+  s = formatArabicTextWithPhonemes(s);
 
-  // Normalize excessive whitespaces
-  cleaned = cleaned.replace(/\s+/g, ' ');
+  // 2. Remove artificial colons inside phrases ('بِصَوْتِ: شَمْس' -> 'بِصَوْتِ شَمْس')
+  s = s.replace(/:\s*/g, ' ');
 
-  return cleaned;
+  // 3. At pause (end of string or before . ؟ ? ! ، …):
+  //    a) Convert taa marbuta (ة) after long alif (ا) to اه (e.g. سُلَحْفَاة -> سُلَحْفَاه)
+  s = s.replace(/اة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'اه');
+  //    b) Convert other taa marbuta (ة) at pause to هْ (e.g. سَمَكَة -> سَمَكَهْ)
+  s = s.replace(/ة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'هْ');
+
+  // 4. Prevent closed-syllable long-vowel shortening at pause:
+  //    If a word at pause ends in [ا و ي] + consonant + [short vowel or sukun], strip the final mark (e.g. بَابْ -> بَاب, كِتَابْ -> كِتَاب)
+  s = s.replace(/([اوي][\u0621-\u064A])[\u064E\u064F\u0650\u0652]+(?=\s*($|[.؟?!،,…]))/g, '$1');
+
+  // 5. Apply natural Waqf (taskeen) on remaining final short vowels before pause on multi-letter words
+  //    (e.g. أَحْسَنْتَ! -> أَحْسَنْتْ! , نَفْسِهِ. -> نَفْسِهْ.)
+  const lettersOnly = s.replace(/[\u064B-\u065F\u0670\s.؟?!،,…]/g, '');
+  if (lettersOnly.length > 1) {
+    s = s.replace(/([\u0621-\u064A])[\u064E\u064F\u0650]+(?=\s*($|[.؟?!،,…]))/g, '$1\u0652');
+  }
+
+  return s;
 }
 
 /**
  * Synthesizes Arabic speech directly via Azure Neural TTS REST API (Client-side with CORS)
- * Ensures 100% studio-quality natural audio even on static hosts (Namecheap / cPanel)
- * using Classical Fusha IPA phoneme tags for isolated sounds and letters.
+ * Ensures 100% studio-quality natural audio in 48kHz / 192kbps.
  */
 async function fetchDirectAzureAudio(
   text: string,
@@ -115,13 +135,16 @@ async function fetchDirectAzureAudio(
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    // Inject IPA phoneme tags so 'تُ' is pronounced pure 'Tu' (never 'toh')
-    const formattedBody = formatArabicTextWithPhonemes(escaped);
+    // Pure natural prosody: if rate and pitch are neutral ('0%'), emit clean voice tag without prosody distortion
+    const hasProsody = (rate && rate !== '0%') || (pitch && pitch !== '0%');
+    const prosodyAttrs: string[] = [];
+    if (rate && rate !== '0%') prosodyAttrs.push(`rate="${rate}"`);
+    if (pitch && pitch !== '0%') prosodyAttrs.push(`pitch="${pitch}"`);
 
-    // Pitch/rate shifting a single word or letter distorts it (measured: "كِتَاب" was recognised as "كابيتال"),
-    // so prosody is applied only to multi-word sentences, and never changes pitch.
-    const isMultiWord = /\s/.test(text.trim());
-    const body = isMultiWord ? `<prosody rate="${rate}">${formattedBody}</prosody>` : formattedBody;
+    const body = hasProsody
+      ? `<prosody ${prosodyAttrs.join(' ')}>${escaped}</prosody>`
+      : escaped;
+
     const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}">${body}</voice></speak>`;
 
     const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
@@ -130,7 +153,7 @@ async function fetchDirectAzureAudio(
       headers: {
         'Ocp-Apim-Subscription-Key': key,
         'Content-Type': 'application/ssml+xml',
-        // 48 kHz / 192 kbps: the old 16 kHz output sounded muffled and synthetic.
+        // 48 kHz / 192 kbps: pristine studio-quality natural human sound
         'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
       },
       body: ssml,
@@ -148,8 +171,9 @@ async function fetchDirectAzureAudio(
 }
 
 /**
- * Play crystal-clear natural Arabic speech with 100% accurate makharij al-huruf.
- * Defaults to ar-AE-FatimaNeural (the most eloquent, natural Classical Arabic voice).
+ * Play crystal-clear natural Arabic speech with 100% authentic human makharij al-huruf.
+ * Defaults to ar-AE-FatimaNeural (the gold standard Classical Arabic teacher voice).
+ * Returns a Promise that resolves when the audio finishes playing (or is gracefully interrupted).
  */
 export async function playNaturalArabicAudio(
   text: string,
@@ -158,17 +182,12 @@ export async function playNaturalArabicAudio(
   const preparedText = prepareArabicTtsText(text);
   if (!preparedText) return;
 
-  // Determine if this is an isolated letter or phoneme
-  const isIsolatedPhoneme =
-    Boolean(getArabicPhonemeIpa(preparedText)) ||
-    (preparedText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').length === 1 && !preparedText.includes(' '));
+  // Default to the golden standard Classical Arabic voice (Fatima)
+  const voice: ArabicTtsVoice = options.voice || 'ar-AE-FatimaNeural';
 
-  // Default to the most eloquent Classical Arabic voice (ar-AE-FatimaNeural)
-  const voice: ArabicTtsVoice = options.voice || (isIsolatedPhoneme ? 'ar-SA-HamedNeural' : 'ar-AE-FatimaNeural');
-
-  // Natural human rate: '-4%' to '-6%' sounds natural and articulate, unlike unnatural '-20%'
-  const rate = options.rate || '-5%';
-  const pitch = options.pitch || (isIsolatedPhoneme ? '0%' : '+1%');
+  // 0% rate and pitch gives 100% natural, uncompressed human voice
+  const rate = options.rate || '0%';
+  const pitch = options.pitch || '0%';
   const cacheKey = `${voice}_${rate}_${pitch}_${preparedText}`;
 
   const requestId = ++playbackRequestId;
@@ -182,41 +201,71 @@ export async function playNaturalArabicAudio(
     currentActiveAudio = null;
   }
 
+  const playElement = (audio: HTMLAudioElement): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      currentActiveAudio = audio;
+      let finished = false;
+      const cleanup = () => {
+        if (!finished) {
+          finished = true;
+          if (currentActiveAudio === audio) currentActiveAudio = null;
+          options.onEnd?.();
+          resolve();
+        }
+      };
+
+      audio.onended = cleanup;
+      audio.onpause = () => {
+        cleanup();
+      };
+      audio.onerror = (e) => {
+        if (!finished) {
+          finished = true;
+          if (currentActiveAudio === audio) currentActiveAudio = null;
+          options.onError?.(e);
+          resolve();
+        }
+      };
+
+      audio.play().catch((err) => {
+        if (isPlaybackInterrupted(err) || requestId !== playbackRequestId) {
+          cleanup();
+          return;
+        }
+        console.warn('[NaturalSpeech] Audio play error:', err);
+        cleanup();
+      });
+    });
+  };
+
   // 1. Check client memory cache
   const cachedUrl = audioMemoryCache.get(cacheKey);
   if (cachedUrl) {
     try {
       const audio = new Audio(cachedUrl);
-      currentActiveAudio = audio;
-      if (options.onEnd) audio.onended = () => options.onEnd?.();
-      await audio.play();
+      await playElement(audio);
       return;
     } catch (e) {
       if (isPlaybackInterrupted(e) || requestId !== playbackRequestId) return;
-      console.warn('[NaturalSpeech] Cached audio play failed, refreshing:', e);
     }
   }
 
-  // 2. Direct browser cloud Azure Neural Arabic Speech (Fastest, zero server dependency, CORS enabled)
+  // 2. Direct browser cloud Azure Neural Arabic Speech (Fastest, 48kHz, studio natural)
   const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
-  // A newer request (or stop) superseded this one while Azure was synthesizing.
   if (requestId !== playbackRequestId) return;
   if (directAudioUrl) {
     try {
       cacheAudio(cacheKey, directAudioUrl);
       const audio = new Audio(directAudioUrl);
-      currentActiveAudio = audio;
-      if (options.onEnd) audio.onended = () => options.onEnd?.();
-      await audio.play();
+      await playElement(audio);
       return;
     } catch (directErr) {
-      // pause() from a newer request/stop is intentional: do not fall back to the robotic voice.
       if (isPlaybackInterrupted(directErr) || requestId !== playbackRequestId) return;
       console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
     }
   }
 
-  // 3. Fallback: Fetch studio-quality neural Arabic audio from Baseera server endpoint
+  // 3. Fallback: Baseera server endpoint (/api/ai/tts)
   try {
     const res = await authenticatedFetch('/api/ai/tts', {
       method: 'POST',
@@ -230,19 +279,14 @@ export async function playNaturalArabicAudio(
         const mimeType = data.mimeType || 'audio/mp3';
         const dataUrl = `data:${mimeType};base64,${data.audioBase64}`;
         cacheAudio(cacheKey, dataUrl);
-
         const audio = new Audio(dataUrl);
-        currentActiveAudio = audio;
-        if (options.onEnd) audio.onended = () => options.onEnd?.();
-        await audio.play();
+        await playElement(audio);
         return;
       }
     }
-  } catch {
-    // Expected on static hosting where /api/ai/tts is not routed
-  }
+  } catch {}
 
-  // 4. Pre-recorded studio-quality clips (public/audio/v1/)
+  // 4. Pre-recorded clips (public/audio/v1/) as last resort
   try {
     const manifest = await getAudioManifest();
     const clip = manifest?.clips?.[audioKey(preparedText)];
@@ -250,17 +294,12 @@ export async function playNaturalArabicAudio(
       const audioUrl = `/audio/v1/${clip.file}`;
       cacheAudio(cacheKey, audioUrl);
       const audio = new Audio(audioUrl);
-      currentActiveAudio = audio;
-      if (options.onEnd) audio.onended = () => options.onEnd?.();
-      let playSucceeded = false;
-      await audio.play().then(() => { playSucceeded = true; }).catch(() => {});
-      if (playSucceeded) return;
+      await playElement(audio);
+      return;
     }
   } catch {}
 
-  // 5. If audio generation failed, log warning and complete gracefully.
-  // NEVER use browser speechSynthesis (robotic OS voice) in an Arabic phonological app.
-  console.warn('[NaturalSpeech] Could not play neural Azure or pre-recorded audio for:', preparedText);
+  console.warn('[NaturalSpeech] Speech playback ended without audio for:', preparedText);
   options.onEnd?.();
 }
 

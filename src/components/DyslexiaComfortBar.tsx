@@ -88,8 +88,7 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
     setIsSpeaking(true);
 
     playNaturalArabicAudio(textToSpeak, {
-      voice: 'ar-AE-FatimaNeural',
-      rate: '-5%',
+      voice: 'ar-AE-FatimaNeural', rate: '0%', pitch: '0%',
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
     }).catch(() => setIsSpeaking(false));

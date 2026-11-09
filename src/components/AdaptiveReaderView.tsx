@@ -366,7 +366,8 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
       setPacingSyncModeLabel('صوت المعلمة الفصيحة الطبيعية (عالي النقاء)');
       await playNaturalArabicAudio(text, {
         voice: 'ar-AE-FatimaNeural',
-        rate: '-5%',
+        rate: '0%',
+        pitch: '0%',
         onEnd: () => {
           if (speechTimerRef.current) {
             window.clearInterval(speechTimerRef.current);
