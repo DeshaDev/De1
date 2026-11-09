@@ -146,6 +146,73 @@ function createAudioAttemptId(): string {
 // ---------------------------------------------------------------------------
 // One recording and one Azure assessment per visible word
 // ---------------------------------------------------------------------------
+function stripHarakat(text: string): string {
+  return (text || '').normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+}
+
+function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string): { diagnosis: string; isCorrect: boolean } {
+  const refClean = stripHarakat(expectedVowelled);
+  const spkClean = stripHarakat(spokenRaw || '');
+
+  if (errorType === 'None' && accuracyScore >= 75) {
+    return {
+      isCorrect: true,
+      diagnosis: 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.',
+    };
+  }
+
+  if (!spkClean || (errorType === 'Omission' && !spokenRaw) || accuracyScore === 0) {
+    return {
+      isCorrect: false,
+      diagnosis: 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.',
+    };
+  }
+
+  if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
+    return {
+      isCorrect: false,
+      diagnosis: `استبدال كلي للكلمة؛ المطلوب قراءة كلمة «${expectedVowelled}». `,
+    };
+  }
+
+  // Specific mispronunciation analysis
+  if (refClean[0] !== spkClean[0]) {
+    return {
+      isCorrect: false,
+      diagnosis: `خطأ في نطق الحرف الأول (سُمع «${spkClean[0]}» بدلاً من «${refClean[0]}»). `,
+    };
+  }
+  if (refClean[refClean.length - 1] !== spkClean[spkClean.length - 1]) {
+    return {
+      isCorrect: false,
+      diagnosis: `خطأ في نطق الحرف الأخير (سُمع «${spkClean[spkClean.length - 1]}» بدلاً من «${refClean[refClean.length - 1]}»). `,
+    };
+  }
+  if (refClean.includes('ا') && !spkClean.includes('ا')) {
+    return {
+      isCorrect: false,
+      diagnosis: 'خطأ في مد الألف (نُطقت بفتحة قصيرة دون إشباع المد).',
+    };
+  }
+  if (refClean.includes('ي') && !spkClean.includes('ي')) {
+    return {
+      isCorrect: false,
+      diagnosis: 'خطأ في مد الياء (نُطقت بكسرة قصيرة دون إشباع المد).',
+    };
+  }
+  if (refClean.includes('و') && !spkClean.includes('و')) {
+    return {
+      isCorrect: false,
+      diagnosis: 'خطأ في مد الواو (نُطقت بضمة قصيرة دون إشباع المد).',
+    };
+  }
+
+  return {
+    isCorrect: false,
+    diagnosis: `عدم ضبط في حركات الكلمة أو مخارج حروفها (دقة الصوت: ${accuracyScore}٪).`,
+  };
+}
+
 export function ReadListAudioPlayer({
   title,
   items,
@@ -168,6 +235,8 @@ export function ReadListAudioPlayer({
     accuracyScore: number;
     errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
     spokenWord: string | null;
+    diagnosis: string;
+    isCorrect: boolean;
   } | null>(null);
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
@@ -258,11 +327,19 @@ export function ReadListAudioPlayer({
         wordReceipt,
       ].sort((a, b) => a.itemIndex - b.itemIndex);
       wordReceiptsRef.current = nextReceipts;
+      const diag = getWordDiagnosis(
+        currentItem.text,
+        wordReceipt.word.spokenWord || wordReceipt.transcript,
+        wordReceipt.word.accuracyScore,
+        wordReceipt.word.errorType
+      );
       setLastWordFeedback({
         word: currentItem.text,
         accuracyScore: wordReceipt.word.accuracyScore,
         errorType: wordReceipt.word.errorType,
         spokenWord: wordReceipt.word.spokenWord || wordReceipt.transcript,
+        diagnosis: diag.diagnosis,
+        isCorrect: diag.isCorrect,
       });
 
       if (currentItemIndex + 1 < items.length) {
@@ -364,32 +441,72 @@ export function ReadListAudioPlayer({
             </span>
           </div>
           {lastWordFeedback && phase === 'ready' && (
-            <div className="w-full flex justify-center py-2" role="status" aria-live="polite">
-              {lastWordFeedback.errorType === 'None' && lastWordFeedback.accuracyScore >= 75 ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-300 text-emerald-800 text-sm font-bold shadow-xs">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>✓ نطق صحيح لكلمة ({lastWordFeedback.word}) — دقة التقييم عبر Azure: {ar(lastWordFeedback.accuracyScore)}٪</span>
-                </div>
-              ) : lastWordFeedback.errorType === 'Mispronunciation' || (lastWordFeedback.accuracyScore > 0 && lastWordFeedback.accuracyScore < 75) ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-900 text-sm font-bold shadow-xs">
-                  <span className="text-amber-600 font-extrabold text-base">⚠️</span>
-                  <span>
-                    رُصد خطأ في نطق كلمة ({lastWordFeedback.word}) — دقة Azure: {ar(lastWordFeedback.accuracyScore)}٪
-                    {lastWordFeedback.spokenWord && lastWordFeedback.spokenWord !== lastWordFeedback.word && ` (سُمع: «${lastWordFeedback.spokenWord}»)`}
-                  </span>
-                </div>
-              ) : lastWordFeedback.errorType === 'Substitution' ? (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-sm font-bold shadow-xs">
-                  <span className="text-rose-600 font-extrabold text-base">✗</span>
-                  <span>
-                    تم استبدال كلمة ({lastWordFeedback.word}) بنطق كلمة أخرى
-                    {lastWordFeedback.spokenWord && ` «${lastWordFeedback.spokenWord}»`} (الدقة: {ar(lastWordFeedback.accuracyScore)}٪)
-                  </span>
+            <div className="w-full max-w-xl mx-auto my-3 text-right" role="status" aria-live="polite">
+              {lastWordFeedback.isCorrect ? (
+                <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-xs space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-emerald-800 font-bold text-sm sm:text-base">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>✓ أحسنت! نطق صحيح ومتقن</span>
+                    </div>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 border border-emerald-300 font-bold">
+                      دقة Azure: {ar(lastWordFeedback.accuracyScore)}٪
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-emerald-700 font-medium pr-7">
+                    الكلمة المطلوبة: <strong>«{lastWordFeedback.word}»</strong> — المسموع: <strong>«{lastWordFeedback.spokenWord && stripHarakat(lastWordFeedback.spokenWord) ? stripHarakat(lastWordFeedback.spokenWord) : lastWordFeedback.word}»</strong> — {lastWordFeedback.diagnosis}
+                  </p>
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-sm font-bold shadow-xs">
-                  <span className="text-rose-600 font-extrabold text-base">✗</span>
-                  <span>لم تُنطق كلمة ({lastWordFeedback.word}) بشكل صحيح أو حُذفت (دقة التقييم عبر Azure: {ar(lastWordFeedback.accuracyScore)}٪)</span>
+                <div className={`p-4 rounded-2xl border-2 shadow-xs space-y-2 ${
+                  lastWordFeedback.errorType === 'Substitution'
+                    ? 'bg-rose-50 border-rose-300'
+                    : lastWordFeedback.errorType === 'Omission'
+                    ? 'bg-slate-50 border-slate-300'
+                    : 'bg-amber-50 border-amber-300'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 font-bold text-sm sm:text-base">
+                    <div className="flex items-center gap-2">
+                      {lastWordFeedback.errorType === 'Substitution' ? (
+                        <span className="text-rose-700 text-lg leading-none">✗</span>
+                      ) : lastWordFeedback.errorType === 'Omission' ? (
+                        <span className="text-slate-700 text-lg leading-none">⚠️</span>
+                      ) : (
+                        <span className="text-amber-700 text-lg leading-none">⚠️</span>
+                      )}
+                      <span className={
+                        lastWordFeedback.errorType === 'Substitution'
+                          ? 'text-rose-900'
+                          : lastWordFeedback.errorType === 'Omission'
+                          ? 'text-slate-900'
+                          : 'text-amber-900'
+                      }>
+                        {lastWordFeedback.errorType === 'Substitution'
+                          ? 'استبدال كلمة'
+                          : lastWordFeedback.errorType === 'Omission'
+                          ? 'لم يُسمع صوت واضح'
+                          : 'خطأ في نطق الكلمة'}
+                      </span>
+                    </div>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/90 border border-slate-200 text-slate-800 font-bold">
+                      درجة الدقة: {ar(lastWordFeedback.accuracyScore)}٪
+                    </span>
+                  </div>
+
+                  <div className="text-xs sm:text-sm text-slate-800 space-y-1.5 pr-6 font-medium">
+                    <p>
+                      الكلمة المطلوبة: <strong className="text-slate-950 font-bold">«{lastWordFeedback.word}»</strong>
+                    </p>
+                    <p>
+                      أنت نطقت (المسموع من الطفل):{' '}
+                      <strong className={lastWordFeedback.errorType === 'Substitution' ? 'text-rose-800 font-bold' : 'text-amber-800 font-bold'}>
+                        {lastWordFeedback.spokenWord ? `«${lastWordFeedback.spokenWord}»` : 'صمت / غير مسموع'}
+                      </strong>
+                    </p>
+                    <p className="text-xs text-slate-600 pt-0.5 border-t border-slate-200/60">
+                      <strong>التشخيص الصوتي:</strong> {lastWordFeedback.diagnosis}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

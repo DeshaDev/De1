@@ -119,20 +119,45 @@ async function assessWordDirectWithAzure(args: {
   const data = await res.json();
   const nBest = data.NBest?.[0];
   const assessed = nBest?.Words?.[0];
-  const accuracyScore = typeof assessed?.AccuracyScore === 'number'
+  let accuracyScore = typeof assessed?.AccuracyScore === 'number'
     ? assessed.AccuracyScore
     : (typeof nBest?.AccuracyScore === 'number' ? nBest.AccuracyScore : 0);
 
-  const spokenText = (data.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+  let spokenText = (data.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+  const rawErr = assessed?.ErrorType;
+
+  // On low score or error, run pure unbiased STT to capture what was actually spoken
+  if (accuracyScore < 75 || rawErr === 'Mispronunciation' || rawErr === 'Substitution') {
+    try {
+      const pureSttRes = await fetch(pronUrl.split('?')[0] + `?language=${language}`, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
+          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+          Accept: 'application/json',
+        },
+        body: wavBuffer,
+      });
+      if (pureSttRes.ok) {
+        const pureSttData = await pureSttRes.json();
+        const recognized = (pureSttData.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+        if (recognized) {
+          spokenText = recognized;
+        }
+      }
+    } catch {}
+  }
+
   const refClean = referenceWord.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
   const spokenClean = spokenText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
 
   let errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' = 'None';
-  const rawErr = assessed?.ErrorType;
   if (rawErr === 'Omission' || !spokenClean || accuracyScore === 0) {
     errorType = 'Omission';
-  } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && accuracyScore < 60)) {
+    accuracyScore = 0;
+  } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0])))) {
     errorType = 'Substitution';
+    accuracyScore = 0;
   } else if (rawErr === 'Mispronunciation' || accuracyScore < 75) {
     errorType = 'Mispronunciation';
   } else if (rawErr === 'DialectVariant') {
