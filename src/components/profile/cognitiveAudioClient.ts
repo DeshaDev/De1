@@ -27,6 +27,7 @@ export interface CognitiveAudioWordReceipt {
     errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
     accuracyScore: number;
     spokenWord: string | null;
+    diagnosis?: string;
   };
 }
 
@@ -47,6 +48,11 @@ const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
   ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
   : '';
 const DEFAULT_AZURE_REGION = 'eastus';
+
+// Direct Google Gemini credentials for detailed Arabic Tashkeel & Phonology assessment
+const DEFAULT_GEMINI_KEY = typeof atob !== 'undefined'
+  ? atob('QVEuQWI4Uk42TDV0N1pBTFozdkluOXdKMjdpLWNtR0UzR1Z0dUpmTmQ4S0RvRXBnclRfTFE=')
+  : '';
 
 function generateHexHash(str: string): string {
   let hash1 = 0xdeadbeef;
@@ -152,7 +158,7 @@ async function assessWordDirectWithAzure(args: {
   const spokenClean = spokenText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
 
   let errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' = 'None';
-  if (rawErr === 'Omission' || !spokenClean || accuracyScore === 0) {
+  if (!spokenClean || spokenText === '.' || (rawErr === 'Omission' && !spokenClean)) {
     errorType = 'Omission';
     accuracyScore = 0;
   } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0])))) {
@@ -310,6 +316,135 @@ export async function assessCognitiveAudio(args: {
 }
 
 /** Submit one short recording against one reference item. */
+
+/**
+ * Direct multimodal browser evaluation with Google Gemini.
+ * Evaluates Arabic reading audio with strict Tashkeel (Harakat, Sukoon, Madd, Tanween) understanding.
+ */
+async function assessWordDirectWithGemini(args: {
+  taskId: ReadingListTaskId;
+  itemId: string;
+  itemIndex: number;
+  attemptId: string;
+  session: CognitiveAudioSessionContext;
+  recording: RecordedWavAudio;
+}): Promise<CognitiveAudioWordReceipt | null> {
+  const { taskId, itemId, itemIndex, attemptId, recording } = args;
+  const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+  const refItem = items[itemIndex] || items.find((i) => i.id === itemId);
+  const referenceWord = refItem ? refItem.text : '';
+
+  const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || DEFAULT_GEMINI_KEY;
+  if (!apiKey) return null;
+
+  const prompt = `أنت مقيم نطق لغوي وخبير في علم الأصوات العربية ومخارج الحروف والتشكيل الدقيق للأطفال في منصة تعليمية.
+الكلمة المستهدفة والمطلوبة بالضبط بالحركات والمدود هي: «${referenceWord}».
+
+المهمة:
+استمع بدقة شديدة للمقطع الصوتي وحدد ما نطق به المتحدث من أصوات وحركات ومدود:
+1. إذا نطق الكلمة بحركاتها ومدودها ومخارجها الصحيحة المطابقة لـ «${referenceWord}»:
+   - "isCorrect": true
+   - "accuracyScore": 90 - 100
+   - "spokenWord": "${referenceWord}"
+   - "errorType": "None"
+   - "diagnosis": "نطق سليم ومتقن بالحركات والمدود ومخارج سليمة."
+
+2. إذا نطق الكلمة بتشكيل خاطئ، أو أسقط مدًا، أو أبدل حركة بأخرى (مثل فتح الفاء بدلاً من كسرها، أو سكون الياء بدلاً من المد، أو فتحة بدلاً من ضمة):
+   - "isCorrect": false
+   - "accuracyScore": 30 - 65
+   - "spokenWord": الكلمة بالتشكيل الفعلي المسموع بدقة
+   - "errorType": "Mispronunciation"
+   - "diagnosis": وضح بدقة الخطأ في الحركة أو المد باللغة العربية الفصحى.
+
+3. إذا نطق كلمة أخرى مختلفة تماماً:
+   - "isCorrect": false
+   - "accuracyScore": 0
+   - "spokenWord": الكلمة المسموعة
+   - "errorType": "Substitution"
+   - "diagnosis": "استبدال كلي للكلمة؛ نُطق كلمة أخرى بدلاً من الكلمة المطلوبة «${referenceWord}»."
+
+4. إذا لم يكن هناك صوت واضح أو صمت أو تشويش:
+   - "isCorrect": false
+   - "accuracyScore": 0
+   - "spokenWord": ""
+   - "errorType": "Omission"
+   - "diagnosis": "لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون."
+
+أجب بصيغة JSON فقط:
+{
+  "isCorrect": boolean,
+  "accuracyScore": number,
+  "spokenWord": string,
+  "errorType": "None" | "Mispronunciation" | "Substitution" | "Omission",
+  "diagnosis": string
+}`;
+
+  try {
+    const postData = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: 'audio/wav',
+              data: recording.audioWavBase64,
+            },
+          },
+        ],
+      }],
+      generationConfig: {
+        response_mime_type: 'application/json',
+      },
+    };
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+      }
+    );
+
+    if (!res.ok) {
+      console.warn('[Haya Naqra] Gemini speech evaluation returned status', res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text) as {
+      isCorrect: boolean;
+      accuracyScore: number;
+      spokenWord: string;
+      errorType: 'None' | 'Mispronunciation' | 'Substitution' | 'Omission';
+      diagnosis: string;
+    };
+
+    const receiptHash = generateHexHash(`gemini:${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
+
+    return {
+      itemId,
+      itemIndex,
+      assessmentReceipt: receiptHash,
+      transcript: parsed.spokenWord || referenceWord,
+      durationSeconds: recording.durationSeconds,
+      word: {
+        word: referenceWord,
+        errorType: parsed.errorType || (parsed.isCorrect ? 'None' : 'Mispronunciation'),
+        accuracyScore: Number(parsed.accuracyScore) || (parsed.isCorrect ? 95 : 0),
+        spokenWord: parsed.spokenWord || null,
+        diagnosis: parsed.diagnosis || '',
+      },
+    };
+  } catch (err) {
+    console.warn('[Haya Naqra] Gemini assessment failed, falling back to Azure:', err);
+    return null;
+  }
+}
+
 export async function assessCognitiveAudioWord(args: {
   taskId: ReadingListTaskId;
   itemId: string;
@@ -371,6 +506,15 @@ export async function assessCognitiveAudioWord(args: {
   }
 
   // On production domains (e.g. hayanaqra.com), evaluate directly with Azure without failing /api calls
+    try {
+    const geminiReceipt = await assessWordDirectWithGemini(args);
+    if (geminiReceipt) {
+      return geminiReceipt;
+    }
+  } catch (geminiErr) {
+    console.warn('[Haya Naqra] Gemini speech evaluation unavailable, falling back to Azure:', geminiErr);
+  }
+
   return assessWordDirectWithAzure(args);
 }
 
