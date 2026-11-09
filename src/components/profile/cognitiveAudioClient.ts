@@ -43,13 +43,14 @@ function assertAudioSession(session: CognitiveAudioSessionContext): void {
   if (!session.speechLocale) throw new Error('UNSUPPORTED_SPEECH_DIALECT');
 }
 
-// No speech or AI keys are built into the browser code: anything in the bundle is public.
-// Without a configured key, direct assessment is unavailable and the task stays unscored.
+// Injected at build time via Vite from .env (VITE_AZURE_SPEECH_KEY and VITE_GEMINI_API_KEY)
 const DEFAULT_AZURE_KEY: string =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_AZURE_SPEECH_KEY) || '';
-const DEFAULT_AZURE_REGION = 'eastus';
+const DEFAULT_AZURE_REGION =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_AZURE_SPEECH_REGION) || 'eastus';
 
-const DEFAULT_GEMINI_KEY = '';
+const DEFAULT_GEMINI_KEY: string =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || '';
 
 function generateHexHash(str: string): string {
   let hash1 = 0xdeadbeef;
@@ -169,11 +170,11 @@ async function assessWordDirectWithAzure(args: {
     accuracyScore = Math.min(accuracyScore, 50);
     diagnosis = `عدم ضبط في حركات الكلمة أو مخارج حروفها (سُمعت «${spokenText}» بدلاً من «${referenceWord}»).`;
   }
-  // 4. Correct match
+  // 4. Consonant match (Azure STT matched consonants, but cannot evaluate Tashkeel)
   else {
     errorType = 'None';
-    accuracyScore = Math.max(accuracyScore, 85);
-    diagnosis = 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.';
+    accuracyScore = Math.min(Math.max(accuracyScore, 80), 88);
+    diagnosis = 'نطق سليم لمخارج الحروف الأساسية (تقييم الحروف دون ضبط الحركات الدقيقة).';
   }
 
   const receiptHash = generateHexHash(`${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
@@ -343,38 +344,41 @@ async function assessWordDirectWithGemini(args: {
   const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || DEFAULT_GEMINI_KEY;
   if (!apiKey) return null;
 
+  const structureHint = (refItem as any)?.structureAr ? `(الوزن الصوتي: ${(refItem as any).structureAr})` : '';
+
   const prompt = `أنت مقيم نطق لغوي وخبير في علم الأصوات العربية ومخارج الحروف والتشكيل الدقيق للأطفال في منصة تعليمية.
-الكلمة المستهدفة والمطلوبة بالضبط بالحركات والمدود هي: «${referenceWord}».
+الكلمة المستهدفة والمطلوبة بالضبط بالحركات والمدود هي: «${referenceWord}» ${structureHint}.
 
 المهمة:
-استمع بدقة شديدة للمقطع الصوتي وحدد ما نطق به المتحدث من أصوات وحركات ومدود:
-1. إذا نطق الكلمة بحركاتها ومدودها ومخارجها الصحيحة المطابقة لـ «${referenceWord}»:
-   - "isCorrect": true
-   - "accuracyScore": 90 - 100
-   - "spokenWord": "${referenceWord}"
-   - "errorType": "None"
-   - "diagnosis": "نطق سليم ومتقن بالحركات والمدود ومخارج سليمة."
+استمع بدقة شديدة للمقطع الصوتي المسجل وقارن ما نطق به المتحدث مع الكلمة المستهدفة «${referenceWord}»:
 
-2. إذا نطق الكلمة بتشكيل خاطئ، أو أسقط مدًا، أو أبدل حركة بأخرى (مثل فتح الفاء بدلاً من كسرها، أو سكون الياء بدلاً من المد، أو فتحة بدلاً من ضمة):
-   - "isCorrect": false
-   - "accuracyScore": 30 - 65
-   - "spokenWord": الكلمة بالتشكيل الفعلي المسموع بدقة
-   - "errorType": "Mispronunciation"
-   - "diagnosis": وضح بدقة الخطأ في الحركة أو المد باللغة العربية الفصحى.
-
-3. إذا نطق كلمة أخرى مختلفة تماماً:
-   - "isCorrect": false
-   - "accuracyScore": 0
-   - "spokenWord": الكلمة المسموعة
-   - "errorType": "Substitution"
-   - "diagnosis": "استبدال كلي للكلمة؛ نُطق كلمة أخرى بدلاً من الكلمة المطلوبة «${referenceWord}»."
-
-4. إذا لم يكن هناك صوت واضح أو صمت أو تشويش:
+1. الصمت أو عدم وجود صوت كلامي واضح أو تشويش:
    - "isCorrect": false
    - "accuracyScore": 0
    - "spokenWord": ""
    - "errorType": "Omission"
    - "diagnosis": "لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون."
+
+2. استبدال كلمة كاملة (نطق كلمة أخرى مختلفة كلياً، مثل نطق «باب» بدلاً من «فيل»):
+   - "isCorrect": false
+   - "accuracyScore": 0
+   - "spokenWord": الكلمة المسموعة
+   - "errorType": "Substitution"
+   - "diagnosis": "استبدال كلي للكلمة؛ نُطق «${referenceWord}» بكلمة أخرى بديلة."
+
+3. خطأ في التشكيل أو الحركات أو المدود (مثل: كسر بدلاً من فتح، أو فتح بدلاً من كسر، أو إبدال لين بمد مثل «بِيت» بدلاً من «بَيْت»، أو إسقاط مد الألف/الواو/الياء أو زيادة مد، أو قراءة عامية):
+   - "isCorrect": false
+   - "accuracyScore": 40
+   - "spokenWord": الكلمة بالتشكيل الفعلي المسموع بدقة
+   - "errorType": "Mispronunciation"
+   - "diagnosis": وضح بدقة الخطأ في الحركة أو المد باللغة العربية الفصحى (مثال: نُطقت بالكسر بدلاً من الفتح، أو سقط مد الياء).
+
+4. نطق صحيح ومتقن مطابق للكلمة بحركاتها ومدودها الفصحى ومخارجها «${referenceWord}»:
+   - "isCorrect": true
+   - "accuracyScore": 95
+   - "spokenWord": "${referenceWord}"
+   - "errorType": "None"
+   - "diagnosis": "نطق سليم ومتقن بالحركات والمدود ومخارج سليمة."
 
 أجب بصيغة JSON فقط:
 {
@@ -403,9 +407,9 @@ async function assessWordDirectWithGemini(args: {
       },
     };
 
-    // Strict 1500ms timeout so evaluation is instant and never hangs
+    // 4000ms timeout so evaluation has enough time for audio analysis without hanging
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 1500) : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`,

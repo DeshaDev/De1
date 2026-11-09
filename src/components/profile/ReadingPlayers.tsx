@@ -415,7 +415,7 @@ export function ReadListAudioPlayer({
           <span className="text-5xl" aria-hidden="true">📚</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              ✨ النسخة الحديثة v2 — تقييم صوتي ذكي مباشر
+              ✨ النسخة الحديثة v2.1 — تقييم صوتي فوري بالتشكيل
             </span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
@@ -451,7 +451,7 @@ export function ReadListAudioPlayer({
           {lastWordFeedback && phase === 'ready' && (
             <div className="w-full max-w-xl mx-auto my-3 text-right" role="status" aria-live="polite">
               {lastWordFeedback.isCorrect ? (
-                <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-xs space-y-1.5">
+                <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-xs space-y-2">
                   <div className="flex items-center justify-between gap-2 text-emerald-800 font-bold text-sm sm:text-base">
                     <div className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -461,9 +461,20 @@ export function ReadListAudioPlayer({
                       درجة الدقة: {ar(lastWordFeedback.accuracyScore)}٪
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-emerald-700 font-medium pr-7">
-                    الكلمة المطلوبة: <strong>«{lastWordFeedback.word}»</strong> — المسموع: <strong>«{lastWordFeedback.spokenWord && stripHarakat(lastWordFeedback.spokenWord) ? stripHarakat(lastWordFeedback.spokenWord) : lastWordFeedback.word}»</strong> — {lastWordFeedback.diagnosis}
-                  </p>
+                  <div className="text-xs sm:text-sm text-emerald-900 space-y-1.5 pr-6 font-medium">
+                    <p>
+                      الكلمة المطلوبة: <strong className="text-emerald-950 font-bold">«{lastWordFeedback.word}»</strong>
+                    </p>
+                    <p>
+                      أنت نطقت (المسموع من الطفل):{' '}
+                      <strong className="text-emerald-800 font-bold">
+                        «{lastWordFeedback.spokenWord || lastWordFeedback.word}»
+                      </strong>
+                    </p>
+                    <p className="text-xs text-emerald-700 pt-0.5 border-t border-emerald-200/80">
+                      <strong>التشخيص الصوتي:</strong> {lastWordFeedback.diagnosis}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className={`p-4 rounded-2xl border-2 shadow-xs space-y-2 ${
