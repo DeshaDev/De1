@@ -43,16 +43,13 @@ function assertAudioSession(session: CognitiveAudioSessionContext): void {
   if (!session.speechLocale) throw new Error('UNSUPPORTED_SPEECH_DIALECT');
 }
 
-// Direct Azure Speech credentials fallback for resilient browser-side pronunciation evaluation
-const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
-  ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
-  : '';
+// No speech or AI keys are built into the browser code: anything in the bundle is public.
+// Without a configured key, direct assessment is unavailable and the task stays unscored.
+const DEFAULT_AZURE_KEY: string =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_AZURE_SPEECH_KEY) || '';
 const DEFAULT_AZURE_REGION = 'eastus';
 
-// Direct Google Gemini credentials for detailed Arabic Tashkeel & Phonology assessment
-const DEFAULT_GEMINI_KEY = typeof atob !== 'undefined'
-  ? atob('QVEuQWI4Uk42TDV0N1pBTFozdkluOXdKMjdpLWNtR0UzR1Z0dUpmTmQ4S0RvRXBnclRfTFE=')
-  : '';
+const DEFAULT_GEMINI_KEY = '';
 
 function generateHexHash(str: string): string {
   let hash1 = 0xdeadbeef;
@@ -91,6 +88,7 @@ async function assessWordDirectWithAzure(args: {
   recording: RecordedWavAudio;
 }): Promise<CognitiveAudioWordReceipt> {
   const { taskId, itemId, itemIndex, attemptId, session, recording } = args;
+  if (!DEFAULT_AZURE_KEY) throw new Error('AZURE_SPEECH_NOT_CONFIGURED');
   const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
   const refItem = items[itemIndex] || items.find((i) => i.id === itemId);
   const referenceWord = refItem ? refItem.text : '';
@@ -248,7 +246,8 @@ export async function assessCognitiveAudio(args: {
     }
   }
 
-  // Direct Azure passage evaluation
+  // Direct Azure passage evaluation (only with a configured key)
+  if (!DEFAULT_AZURE_KEY) throw new Error('AZURE_SPEECH_NOT_CONFIGURED');
   const referenceWords = taskId === 'oralReading' ? PASSAGE_WORDS : ['واحد', 'اثنين'];
   const referenceText = referenceWords.join(' ');
   const language = session.speechLocale || 'ar-EG';

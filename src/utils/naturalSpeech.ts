@@ -36,15 +36,12 @@ function isPlaybackInterrupted(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { name?: string }).name === 'AbortError';
 }
 
-// Azure Speech credentials (direct browser client-side synthesis)
-// Built-in fallback credentials ensure Azure Neural Speech ALWAYS works even when .env is not inlined
-const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
-  ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
-  : '';
+// Live Azure synthesis is off by default: every phrase the app speaks is pre-recorded
+// (public/audio). A key is never built into the code; anything in the browser bundle is public.
 const DEFAULT_AZURE_REGION = 'eastus';
 
 const CLIENT_AZURE_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || DEFAULT_AZURE_KEY;
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || '';
 
 const CLIENT_AZURE_REGION =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_REGION) || DEFAULT_AZURE_REGION;
