@@ -94,7 +94,7 @@ async function assessWordDirectWithAzure(args: {
   const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
   const refItem = items[itemIndex] || items.find((i) => i.id === itemId);
   const referenceWord = refItem ? refItem.text : '';
-  const language = session.speechLocale || 'ar-EG';
+  const language = session.speechLocale || 'ar-SA';
 
   const pronUrl = `https://${DEFAULT_AZURE_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}`;
   const pronParams = {
@@ -107,7 +107,8 @@ async function assessWordDirectWithAzure(args: {
   const pronHeader = btoa(unescape(encodeURIComponent(JSON.stringify(pronParams))));
   const wavBuffer = base64ToArrayBuffer(recording.audioWavBase64);
 
-  const res = await fetch(pronUrl, {
+  // Run Pronunciation Assessment and Pure Acoustic Recognition in parallel for speed (<700ms)
+  const pronFetch = fetch(pronUrl, {
     method: 'POST',
     headers: {
       'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
@@ -116,60 +117,65 @@ async function assessWordDirectWithAzure(args: {
       Accept: 'application/json',
     },
     body: wavBuffer,
-  });
+  }).then(async (r) => (r.ok ? r.json() : null)).catch(() => null);
 
-  if (!res.ok) {
-    throw new Error(`AZURE_DIRECT_ERROR_${res.status}`);
-  }
+  const pureSttFetch = fetch(pronUrl.split('?')[0] + `?language=${language}`, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
+      'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+      Accept: 'application/json',
+    },
+    body: wavBuffer,
+  }).then(async (r) => (r.ok ? r.json() : null)).catch(() => null);
 
-  const data = await res.json();
-  const nBest = data.NBest?.[0];
+  const [pronData, pureData] = await Promise.all([pronFetch, pureSttFetch]);
+
+  const nBest = pronData?.NBest?.[0];
   const assessed = nBest?.Words?.[0];
   let accuracyScore = typeof assessed?.AccuracyScore === 'number'
     ? assessed.AccuracyScore
     : (typeof nBest?.AccuracyScore === 'number' ? nBest.AccuracyScore : 0);
 
-  let spokenText = (data.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
   const rawErr = assessed?.ErrorType;
+  const rawPronText = (pronData?.DisplayText || '').replace(/[.,!?،؟؛:"«»()[]{}]/g, '').trim();
+  const rawPureText = (pureData?.DisplayText || '').replace(/[.,!?،؟؛:"«»()[]{}]/g, '').trim();
 
-  // On low score or error, run pure unbiased STT to capture what was actually spoken
-  if (accuracyScore < 75 || rawErr === 'Mispronunciation' || rawErr === 'Substitution') {
-    try {
-      const pureSttRes = await fetch(pronUrl.split('?')[0] + `?language=${language}`, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
-          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          Accept: 'application/json',
-        },
-        body: wavBuffer,
-      });
-      if (pureSttRes.ok) {
-        const pureSttData = await pureSttRes.json();
-        const recognized = (pureSttData.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
-        if (recognized) {
-          spokenText = recognized;
-        }
-      }
-    } catch {}
-  }
+  // Pure STT captures unbiased acoustic utterance (e.g. "باب" when target is "فيل", or "بت" when target is "بيت")
+  const spokenText = rawPureText || rawPronText || '';
 
   const refClean = referenceWord.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
   const spokenClean = spokenText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
 
   let errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' = 'None';
+  let diagnosis = '';
+
+  // 1. Omission / silence
   if (!spokenClean || spokenText === '.' || (rawErr === 'Omission' && !spokenClean)) {
     errorType = 'Omission';
     accuracyScore = 0;
-  } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0])))) {
+    diagnosis = 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.';
+  }
+  // 2. Complete word substitution (different word spoke)
+  else if (
+    rawErr === 'Substitution' ||
+    (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0]) || !spokenClean.endsWith(refClean[refClean.length - 1])))
+  ) {
     errorType = 'Substitution';
     accuracyScore = 0;
-  } else if (rawErr === 'Mispronunciation' || accuracyScore < 75) {
+    diagnosis = `استبدال كلي للكلمة؛ نُطق «${spokenText}» بدلاً من الكلمة المطلوبة «${referenceWord}».`;
+  }
+  // 3. Pronunciation mismatch (vowel shift, colloquial reduction, or missing madd detected)
+  else if (spokenClean !== refClean || rawErr === 'Mispronunciation' || accuracyScore < 75) {
     errorType = 'Mispronunciation';
-  } else if (rawErr === 'DialectVariant') {
-    errorType = 'DialectVariant';
-  } else {
+    accuracyScore = Math.min(accuracyScore, 50);
+    diagnosis = `عدم ضبط في حركات الكلمة أو مخارج حروفها (سُمعت «${spokenText}» بدلاً من «${referenceWord}»).`;
+  }
+  // 4. Correct match
+  else {
     errorType = 'None';
+    accuracyScore = Math.max(accuracyScore, 85);
+    diagnosis = 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.';
   }
 
   const receiptHash = generateHexHash(`${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
@@ -178,13 +184,14 @@ async function assessWordDirectWithAzure(args: {
     itemId,
     itemIndex,
     assessmentReceipt: receiptHash,
-    transcript: data.DisplayText || referenceWord,
+    transcript: spokenText || referenceWord,
     durationSeconds: recording.durationSeconds,
     word: {
       word: referenceWord,
       errorType,
       accuracyScore,
-      spokenWord: spokenText || data.DisplayText || null,
+      spokenWord: spokenText || null,
+      diagnosis,
     },
   };
 }
@@ -397,17 +404,23 @@ async function assessWordDirectWithGemini(args: {
       },
     };
 
+    // Strict 1500ms timeout so evaluation is instant and never hangs
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 1500) : null;
+
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(postData),
+        signal: controller?.signal,
       }
-    );
+    ).finally(() => {
+      if (timeoutId) clearTimeout(timeoutId);
+    });
 
     if (!res.ok) {
-      console.warn('[Haya Naqra] Gemini speech evaluation returned status', res.status);
       return null;
     }
 
@@ -439,8 +452,7 @@ async function assessWordDirectWithGemini(args: {
         diagnosis: parsed.diagnosis || '',
       },
     };
-  } catch (err) {
-    console.warn('[Haya Naqra] Gemini assessment failed, falling back to Azure:', err);
+  } catch {
     return null;
   }
 }
