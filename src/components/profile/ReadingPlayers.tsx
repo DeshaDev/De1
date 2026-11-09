@@ -153,28 +153,37 @@ function stripHarakat(text: string): string {
 }
 
 function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string): { diagnosis: string; isCorrect: boolean } {
+  const cleanSpoken = (spokenRaw || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
   const refClean = stripHarakat(expectedVowelled);
-  const spkClean = stripHarakat(spokenRaw || '');
+  const spkClean = stripHarakat(cleanSpoken);
 
-  if (errorType === 'None' && accuracyScore >= 75) {
-    return {
-      isCorrect: true,
-      diagnosis: 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.',
-    };
-  }
-
-  // Only consider truly silent if spkClean is completely empty or explicit silence
-  if (!spkClean || spokenRaw === 'SILENCE' || spokenRaw === '.' || spokenRaw === 'صمت' || (errorType === 'Omission' && !spokenRaw)) {
+  // 1. Silent or no voice captured
+  if (!spkClean || cleanSpoken === 'SILENCE' || cleanSpoken === '.' || cleanSpoken === 'صمت' || (errorType === 'Omission' && !cleanSpoken)) {
     return {
       isCorrect: false,
       diagnosis: 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.',
     };
   }
 
+  // 2. Exact match on consonant letters: CAN NEVER BE A SUBSTITUTION!
+  if (spkClean === refClean) {
+    if (errorType === 'None' || accuracyScore >= 70) {
+      return {
+        isCorrect: true,
+        diagnosis: 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.',
+      };
+    }
+    return {
+      isCorrect: false,
+      diagnosis: `نُطقت حروف الكلمة ولكن باختلاف في الحركات الصوتية («${cleanSpoken || expectedVowelled}»).`,
+    };
+  }
+
+  // 3. Substitution: only when letters truly differ!
   if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
     return {
       isCorrect: false,
-      diagnosis: `استبدال كلي للكلمة؛ نُطق «${spokenRaw || spkClean}» بدلاً من الكلمة المطلوبة «${expectedVowelled}».`,
+      diagnosis: `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلاً من الكلمة المطلوبة «${expectedVowelled}».`,
     };
   }
 
@@ -636,6 +645,8 @@ export function PassagePlayer({
       recognizer.continuous = true;
       recognizer.interimResults = true;
       recognizer.lang = audioSession.speechLocale || 'ar-SA';
+      recognizer.onerror = () => {};
+      recognizer.onend = () => {};
       recognizer.onresult = (event: any) => {
         const last = event.results?.[event.results.length - 1];
         const transcript = last?.[0]?.transcript?.trim() || '';
@@ -1178,64 +1189,108 @@ export function RanPlayer({
 
       {phase !== 'names' && (
         <div className="w-full max-w-2xl space-y-4">
-          <div className="grid gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-[2rem] border-4 border-line bg-card shadow-sm"
-            style={{ gridTemplateColumns: 'repeat(' + RAN_COLUMNS + ', minmax(0, 1fr))' }}>
+          {/* Top Controls Bar - ALWAYS VISIBLE ABOVE THE GRID */}
+          <div className="p-4 sm:p-5 rounded-2xl border-2 border-line bg-card shadow-xs space-y-3 text-center">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold text-ink text-base sm:text-lg">
+                {display === 'picture' ? '🏁 سباق تسمية الصور' : '🏁 سباق تسمية الحروف'}
+              </span>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200">
+                ٤٠ عنصرًا · من اليمين لليسار ◀
+              </span>
+            </div>
+
+            <p className="bz-small text-ink-2">
+              سمِّ جميع الرموز بصوت واضح بأسرع ما تستطيع، من اليمين إلى اليسار سطرًا سطرًا.
+            </p>
+
+            {phase === 'ready' && (
+              <div className="flex flex-wrap justify-center items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold px-6 py-3"
+                  onClick={() => void startRecording()}
+                  disabled={!supported}
+                >
+                  <Mic className="w-5 h-5" /> ابدأ التسجيل والسباق
+                </button>
+                <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
+                  تخطي / متابعة دون درجة
+                </button>
+                {!supported && <p className="w-full text-center bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
+              </div>
+            )}
+
+            {phase === 'recording' && (
+              <div className="space-y-3 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-2">
+                  <div className="inline-flex items-center gap-2 text-teal-800 font-bold text-sm">
+                    <span className="w-3 h-3 rounded-full bg-teal-500 animate-pulse" />
+                    <span>السباق جارٍ... سمِّ الرموز سطرًا سطرًا من اليمين إلى اليسار ◀</span>
+                  </div>
+                  <span className="text-xs font-bold text-teal-900 bg-teal-100 px-3 py-1 rounded-full border border-teal-300">
+                    ⏱️ {ar(Math.floor(elapsedSeconds))} ثانية
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-3"
+                    onClick={() => void submitRecording()}
+                  >
+                    <Check className="w-5 h-5" /> انتهيت من تسمية جميع الرموز ✓
+                  </button>
+                  <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={saveWithoutScore}>
+                    تخطي
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {phase === 'submitting' && (
+              <div className="py-2 text-center space-y-1" role="status">
+                <p className="font-bold text-teal-900">يجري احتساب معدل سرعة التسمية وتحليل النتيجة…</p>
+                <p className="bz-small text-muted">لحظات قليلة وسيكتمل التقرير.</p>
+              </div>
+            )}
+
+            {phase === 'error' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
+                <p className="bz-small text-amber-950">{errorMessage}</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    className="bz-btn bz-btn-primary"
+                    onClick={() => {
+                      finalizingRef.current = false;
+                      setErrorMessage('');
+                      setPhase('ready');
+                    }}
+                  >
+                    إعادة المحاولة
+                  </button>
+                  <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
+                    حفظ المهمة دون درجة
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 40-cell Grid (5 columns × 8 rows) */}
+          <div
+            className="grid gap-1 sm:gap-2 p-3 sm:p-4 rounded-2xl border-2 border-line bg-soft shadow-2xs"
+            style={{ gridTemplateColumns: 'repeat(' + RAN_COLUMNS + ', minmax(0, 1fr))' }}
+          >
             {grid.map((id, index) => (
-              <div key={id + '-' + index} className="grid place-items-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl">
+              <div
+                key={id + '-' + index}
+                className="grid place-items-center w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-card border border-line/60 shadow-2xs hover:border-teal-400 transition-all select-none"
+              >
                 {byId.get(id) ? <RanCell symbol={byId.get(id)!} display={display} size="sm" /> : null}
               </div>
             ))}
           </div>
-
-          {phase === 'ready' && (
-            <div className="text-center space-y-3">
-              <p className="bz-small text-ink-2">سمِّ جميع الرموز بأسرع ما تستطيع، دون الإشارة إليها بإصبعك. يستغرق التسجيل حتى ٨٦ ثانية.</p>
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
-                <Mic className="w-5 h-5" /> ابدأ التسجيل والسباق
-              </button>
-              {!supported && <p className="bz-small text-amber-800">{audioAvailabilityMessage(audioSession)}</p>}
-              <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>متابعة دون درجة</button>
-            </div>
-          )}
-
-          {phase === 'recording' && (
-            <div className="text-center space-y-3">
-              <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.floor(elapsedSeconds))} ثانية</p>
-              <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / 86 * 100)) + '%' }} /></div>
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
-                <Check className="w-5 h-5" /> انتهى السباق — حلّل التسجيل
-              </button>
-            </div>
-          )}
-
-          {phase === 'submitting' && (
-            <div className="text-center space-y-2" role="status">
-              <p className="font-bold text-ink">يجري تحليل أسماء الصور والحروف بالترتيب…</p>
-              <p className="bz-small text-muted">لا تغلق الصفحة حتى يظهر تأكيد إتمام المهمة.</p>
-            </div>
-          )}
-
-          {phase === 'error' && (
-            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
-              <p className="bz-small text-amber-950">{errorMessage}</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                <button
-                  type="button"
-                  className="bz-btn bz-btn-primary"
-                  onClick={() => {
-                    finalizingRef.current = false;
-                    setErrorMessage('');
-                    setPhase('ready');
-                  }}
-                >
-                  إعادة التسجيل والمحاولة
-                </button>
-                <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
-                  حفظ المهمة دون درجة
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
