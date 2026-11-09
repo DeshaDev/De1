@@ -1,6 +1,6 @@
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Zap, Home } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Zap, Home, GraduationCap } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
 import {
   Level,
@@ -212,14 +212,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
    * A session: the progress measure when it is due (first session, then weekly, and the last),
    * then for each skill a lesson when new, guided practice, and independent practice.
    */
-  const beginSession = () => {
+  const beginSession = (skipProbe = false) => {
     if (!progress) return;
     const today = new Date().toISOString().slice(0, 10);
     const trainedToday = progress.history.some((h) => h.date.slice(0, 10) === today);
     const sessionNumber = sessionsCompleted(progress) + (trainedToday ? 0 : 1);
     const probedToday = (progress.probes ?? []).some((p) => p.date.slice(0, 10) === today);
     const session = (progress.probes?.length ?? 0) + 1;
-    if (!probeDueAt(sessionNumber, PROGRAM_SESSIONS) || probedToday) {
+    if (skipProbe || !probeDueAt(sessionNumber, PROGRAM_SESSIONS) || probedToday) {
       const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })));
       beginSkill(0, {
         skills: todaySkills, skillIndex: 0, tasks: [], taskIndex: 0, correct: 0, phase: 'intro', change: null, results: [],
@@ -270,6 +270,32 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     // Practice time goes where the model is least sure the child has mastered the skill.
     const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(next, skill).p })));
     beginSkill(0, { ...run, probe: null, todayProbe: record, alloc, promoted }, next);
+  };
+
+    const skipProbeToLesson = () => {
+    if (!progress) return;
+    const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })));
+    beginSkill(0, {
+      skills: todaySkills,
+      skillIndex: 0,
+      tasks: [],
+      taskIndex: 0,
+      correct: 0,
+      phase: 'intro',
+      change: null,
+      results: [],
+      probe: null,
+      todayProbe: null,
+      alloc,
+      blockStart: null,
+      promoted: [],
+      lesson: null,
+      guided: 0,
+      stars: run?.stars ?? 0,
+      latencies: [],
+      fastCount: 0,
+      newBadges: run?.newBadges ?? [],
+    }, progress);
   };
 
   const beginSkill = (skillIndex: number, prev: Run | null, current: TrainingProgress | null = progress) => {
@@ -420,9 +446,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <p className="text-sm text-slate-600">
                 أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
               </p>
-              <button type="button" onClick={() => setRun({ ...run, phase: 'probe' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
-                <Play className="w-6 h-6" /> ابدأ
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
+                <button
+                  type="button"
+                  onClick={skipProbeToLesson}
+                  className="font-child bz-btn bz-btn-primary bz-btn-lg text-lg px-8 shadow-md font-bold"
+                >
+                  <GraduationCap className="w-6 h-6" /> ابدأ الدرس والشرح مباشرة ◀
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRun({ ...run, phase: 'probe' })}
+                  className="font-child bz-btn bz-btn-secondary text-sm px-4"
+                >
+                  <Play className="w-4 h-4" /> إجراء مقياس المتابعة أولاً ({toArabicDigits(PROBE_MINUTES)} د)
+                </button>
+              </div>
             </div>
           )}
           {run.phase === 'probe' && item.task.kind === 'choice' && (
@@ -714,13 +753,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           </p>
           <div className="bz-progress mt-4 w-full md:w-96"><span style={{ width: `${Math.min(100, (done / target) * 100)}%` }} /></div>
         </div>
-        <button
-          type="button"
-          onClick={beginSession}
-          className="bz-btn bz-btn-primary bz-btn-lg"
-        >
-          <Play className="w-6 h-6" /> ابدأ جلسة اليوم
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => beginSession(true)}
+            className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
+          >
+            <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم والشرح مباشرة ▷
+          </button>
+          <button
+            type="button"
+            onClick={() => beginSession(false)}
+            className="bz-btn bz-btn-secondary font-medium text-sm"
+          >
+            <TrendingUp className="w-4 h-4" /> مقياس المتابعة
+          </button>
+        </div>
       </section>
 
       {due && (
