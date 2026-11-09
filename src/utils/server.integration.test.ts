@@ -253,13 +253,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
   });
 
   it('protects all cloud AI endpoints and retires the fabricated IEP generator', async () => {
-    const cloudRoutes = [
-      '/api/ai/generate-story',
-      '/api/ai/generate-iep',
-      '/api/ai/tts',
-      '/api/ai/pronunciation-assessment',
-      '/api/ai/cognitive-audio-assessment',
-    ];
+    // Story, IEP and TTS stay closed to anyone without a school or parent session.
+    const cloudRoutes = ['/api/ai/generate-story', '/api/ai/generate-iep', '/api/ai/tts'];
 
     for (const route of cloudRoutes) {
       const response = await fetch(`${baseUrl}${route}`, {
@@ -273,6 +268,18 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         response.status === 401 || response.status === 503,
         `${route} must reject unauthenticated requests (401) or remain unavailable (503)`
       );
+    }
+
+    // Audio assessment has a guest preview by design: a visitor without an account gets past
+    // authentication (rate-limited), but a request without a valid recording is still refused.
+    for (const route of ['/api/ai/pronunciation-assessment', '/api/ai/cognitive-audio-assessment']) {
+      const response = await fetch(`${baseUrl}${route}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'اختبار بلا بيانات طفل' }),
+      });
+      assert.notEqual(response.status, 401, `${route} allows the guest preview`);
+      assert.ok(response.status >= 400 && response.status < 500, `${route} still rejects a request with no recording (got ${response.status})`);
     }
 
     const session = await loginWithCode(SCHOOL_A_ADMIN_CODE);

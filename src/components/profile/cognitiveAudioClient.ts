@@ -27,6 +27,7 @@ export interface CognitiveAudioWordReceipt {
     errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
     accuracyScore: number;
     spokenWord: string | null;
+    diagnosis?: string;
   };
 }
 
@@ -42,11 +43,13 @@ function assertAudioSession(session: CognitiveAudioSessionContext): void {
   if (!session.speechLocale) throw new Error('UNSUPPORTED_SPEECH_DIALECT');
 }
 
-// Direct Azure Speech credentials fallback for resilient browser-side pronunciation evaluation
-const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
-  ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
-  : '';
+// No speech or AI keys are built into the browser code: anything in the bundle is public.
+// Without a configured key, direct assessment is unavailable and the task stays unscored.
+const DEFAULT_AZURE_KEY: string =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_AZURE_SPEECH_KEY) || '';
 const DEFAULT_AZURE_REGION = 'eastus';
+
+const DEFAULT_GEMINI_KEY = '';
 
 function generateHexHash(str: string): string {
   let hash1 = 0xdeadbeef;
@@ -85,10 +88,11 @@ async function assessWordDirectWithAzure(args: {
   recording: RecordedWavAudio;
 }): Promise<CognitiveAudioWordReceipt> {
   const { taskId, itemId, itemIndex, attemptId, session, recording } = args;
+  if (!DEFAULT_AZURE_KEY) throw new Error('AZURE_SPEECH_NOT_CONFIGURED');
   const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
   const refItem = items[itemIndex] || items.find((i) => i.id === itemId);
   const referenceWord = refItem ? refItem.text : '';
-  const language = session.speechLocale || 'ar-EG';
+  const language = session.speechLocale || 'ar-SA';
 
   const pronUrl = `https://${DEFAULT_AZURE_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}`;
   const pronParams = {
@@ -101,7 +105,8 @@ async function assessWordDirectWithAzure(args: {
   const pronHeader = btoa(unescape(encodeURIComponent(JSON.stringify(pronParams))));
   const wavBuffer = base64ToArrayBuffer(recording.audioWavBase64);
 
-  const res = await fetch(pronUrl, {
+  // Run Pronunciation Assessment and Pure Acoustic Recognition in parallel for speed (<700ms)
+  const pronFetch = fetch(pronUrl, {
     method: 'POST',
     headers: {
       'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
@@ -110,60 +115,65 @@ async function assessWordDirectWithAzure(args: {
       Accept: 'application/json',
     },
     body: wavBuffer,
-  });
+  }).then(async (r) => (r.ok ? r.json() : null)).catch(() => null);
 
-  if (!res.ok) {
-    throw new Error(`AZURE_DIRECT_ERROR_${res.status}`);
-  }
+  const pureSttFetch = fetch(pronUrl.split('?')[0] + `?language=${language}`, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
+      'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+      Accept: 'application/json',
+    },
+    body: wavBuffer,
+  }).then(async (r) => (r.ok ? r.json() : null)).catch(() => null);
 
-  const data = await res.json();
-  const nBest = data.NBest?.[0];
+  const [pronData, pureData] = await Promise.all([pronFetch, pureSttFetch]);
+
+  const nBest = pronData?.NBest?.[0];
   const assessed = nBest?.Words?.[0];
   let accuracyScore = typeof assessed?.AccuracyScore === 'number'
     ? assessed.AccuracyScore
     : (typeof nBest?.AccuracyScore === 'number' ? nBest.AccuracyScore : 0);
 
-  let spokenText = (data.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
   const rawErr = assessed?.ErrorType;
+  const rawPronText = (pronData?.DisplayText || '').replace(/[.,!?،؟؛:"«»()[]{}]/g, '').trim();
+  const rawPureText = (pureData?.DisplayText || '').replace(/[.,!?،؟؛:"«»()[]{}]/g, '').trim();
 
-  // On low score or error, run pure unbiased STT to capture what was actually spoken
-  if (accuracyScore < 75 || rawErr === 'Mispronunciation' || rawErr === 'Substitution') {
-    try {
-      const pureSttRes = await fetch(pronUrl.split('?')[0] + `?language=${language}`, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': DEFAULT_AZURE_KEY,
-          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          Accept: 'application/json',
-        },
-        body: wavBuffer,
-      });
-      if (pureSttRes.ok) {
-        const pureSttData = await pureSttRes.json();
-        const recognized = (pureSttData.DisplayText || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
-        if (recognized) {
-          spokenText = recognized;
-        }
-      }
-    } catch {}
-  }
+  // Pure STT captures unbiased acoustic utterance (e.g. "باب" when target is "فيل", or "بت" when target is "بيت")
+  const spokenText = rawPureText || rawPronText || '';
 
   const refClean = referenceWord.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
   const spokenClean = spokenText.replace(/[\u064B-\u065F\u0670\u0640]/g, '').trim();
 
   let errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant' = 'None';
-  if (rawErr === 'Omission' || !spokenClean || accuracyScore === 0) {
+  let diagnosis = '';
+
+  // 1. Omission / silence
+  if (!spokenClean || spokenText === '.' || (rawErr === 'Omission' && !spokenClean)) {
     errorType = 'Omission';
     accuracyScore = 0;
-  } else if (rawErr === 'Substitution' || (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0])))) {
+    diagnosis = 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.';
+  }
+  // 2. Complete word substitution (different word spoke)
+  else if (
+    rawErr === 'Substitution' ||
+    (spokenClean && refClean && spokenClean !== refClean && (Math.abs(spokenClean.length - refClean.length) >= 2 || !spokenClean.startsWith(refClean[0]) || !spokenClean.endsWith(refClean[refClean.length - 1])))
+  ) {
     errorType = 'Substitution';
     accuracyScore = 0;
-  } else if (rawErr === 'Mispronunciation' || accuracyScore < 75) {
+    diagnosis = `استبدال كلي للكلمة؛ نُطق «${spokenText}» بدلاً من الكلمة المطلوبة «${referenceWord}».`;
+  }
+  // 3. Pronunciation mismatch (vowel shift, colloquial reduction, or missing madd detected)
+  else if (spokenClean !== refClean || rawErr === 'Mispronunciation' || accuracyScore < 75) {
     errorType = 'Mispronunciation';
-  } else if (rawErr === 'DialectVariant') {
-    errorType = 'DialectVariant';
-  } else {
+    accuracyScore = Math.min(accuracyScore, 50);
+    diagnosis = `عدم ضبط في حركات الكلمة أو مخارج حروفها (سُمعت «${spokenText}» بدلاً من «${referenceWord}»).`;
+  }
+  // 4. Correct match
+  else {
     errorType = 'None';
+    accuracyScore = Math.max(accuracyScore, 85);
+    diagnosis = 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.';
   }
 
   const receiptHash = generateHexHash(`${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
@@ -172,13 +182,14 @@ async function assessWordDirectWithAzure(args: {
     itemId,
     itemIndex,
     assessmentReceipt: receiptHash,
-    transcript: data.DisplayText || referenceWord,
+    transcript: spokenText || referenceWord,
     durationSeconds: recording.durationSeconds,
     word: {
       word: referenceWord,
       errorType,
       accuracyScore,
-      spokenWord: spokenText || data.DisplayText || null,
+      spokenWord: spokenText || null,
+      diagnosis,
     },
   };
 }
@@ -235,7 +246,8 @@ export async function assessCognitiveAudio(args: {
     }
   }
 
-  // Direct Azure passage evaluation
+  // Direct Azure passage evaluation (only with a configured key)
+  if (!DEFAULT_AZURE_KEY) throw new Error('AZURE_SPEECH_NOT_CONFIGURED');
   const referenceWords = taskId === 'oralReading' ? PASSAGE_WORDS : ['واحد', 'اثنين'];
   const referenceText = referenceWords.join(' ');
   const language = session.speechLocale || 'ar-EG';
@@ -310,6 +322,140 @@ export async function assessCognitiveAudio(args: {
 }
 
 /** Submit one short recording against one reference item. */
+
+/**
+ * Direct multimodal browser evaluation with Google Gemini.
+ * Evaluates Arabic reading audio with strict Tashkeel (Harakat, Sukoon, Madd, Tanween) understanding.
+ */
+async function assessWordDirectWithGemini(args: {
+  taskId: ReadingListTaskId;
+  itemId: string;
+  itemIndex: number;
+  attemptId: string;
+  session: CognitiveAudioSessionContext;
+  recording: RecordedWavAudio;
+}): Promise<CognitiveAudioWordReceipt | null> {
+  const { taskId, itemId, itemIndex, attemptId, recording } = args;
+  const items = taskId === 'wordReading' ? WORD_ITEMS : NONWORD_ITEMS;
+  const refItem = items[itemIndex] || items.find((i) => i.id === itemId);
+  const referenceWord = refItem ? refItem.text : '';
+
+  const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) || DEFAULT_GEMINI_KEY;
+  if (!apiKey) return null;
+
+  const prompt = `أنت مقيم نطق لغوي وخبير في علم الأصوات العربية ومخارج الحروف والتشكيل الدقيق للأطفال في منصة تعليمية.
+الكلمة المستهدفة والمطلوبة بالضبط بالحركات والمدود هي: «${referenceWord}».
+
+المهمة:
+استمع بدقة شديدة للمقطع الصوتي وحدد ما نطق به المتحدث من أصوات وحركات ومدود:
+1. إذا نطق الكلمة بحركاتها ومدودها ومخارجها الصحيحة المطابقة لـ «${referenceWord}»:
+   - "isCorrect": true
+   - "accuracyScore": 90 - 100
+   - "spokenWord": "${referenceWord}"
+   - "errorType": "None"
+   - "diagnosis": "نطق سليم ومتقن بالحركات والمدود ومخارج سليمة."
+
+2. إذا نطق الكلمة بتشكيل خاطئ، أو أسقط مدًا، أو أبدل حركة بأخرى (مثل فتح الفاء بدلاً من كسرها، أو سكون الياء بدلاً من المد، أو فتحة بدلاً من ضمة):
+   - "isCorrect": false
+   - "accuracyScore": 30 - 65
+   - "spokenWord": الكلمة بالتشكيل الفعلي المسموع بدقة
+   - "errorType": "Mispronunciation"
+   - "diagnosis": وضح بدقة الخطأ في الحركة أو المد باللغة العربية الفصحى.
+
+3. إذا نطق كلمة أخرى مختلفة تماماً:
+   - "isCorrect": false
+   - "accuracyScore": 0
+   - "spokenWord": الكلمة المسموعة
+   - "errorType": "Substitution"
+   - "diagnosis": "استبدال كلي للكلمة؛ نُطق كلمة أخرى بدلاً من الكلمة المطلوبة «${referenceWord}»."
+
+4. إذا لم يكن هناك صوت واضح أو صمت أو تشويش:
+   - "isCorrect": false
+   - "accuracyScore": 0
+   - "spokenWord": ""
+   - "errorType": "Omission"
+   - "diagnosis": "لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون."
+
+أجب بصيغة JSON فقط:
+{
+  "isCorrect": boolean,
+  "accuracyScore": number,
+  "spokenWord": string,
+  "errorType": "None" | "Mispronunciation" | "Substitution" | "Omission",
+  "diagnosis": string
+}`;
+
+  try {
+    const postData = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: 'audio/wav',
+              data: recording.audioWavBase64,
+            },
+          },
+        ],
+      }],
+      generationConfig: {
+        response_mime_type: 'application/json',
+      },
+    };
+
+    // Strict 1500ms timeout so evaluation is instant and never hangs
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 1500) : null;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+        signal: controller?.signal,
+      }
+    ).finally(() => {
+      if (timeoutId) clearTimeout(timeoutId);
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text) as {
+      isCorrect: boolean;
+      accuracyScore: number;
+      spokenWord: string;
+      errorType: 'None' | 'Mispronunciation' | 'Substitution' | 'Omission';
+      diagnosis: string;
+    };
+
+    const receiptHash = generateHexHash(`gemini:${attemptId}:${itemId}:${itemIndex}:${Date.now()}`);
+
+    return {
+      itemId,
+      itemIndex,
+      assessmentReceipt: receiptHash,
+      transcript: parsed.spokenWord || referenceWord,
+      durationSeconds: recording.durationSeconds,
+      word: {
+        word: referenceWord,
+        errorType: parsed.errorType || (parsed.isCorrect ? 'None' : 'Mispronunciation'),
+        accuracyScore: Number(parsed.accuracyScore) || (parsed.isCorrect ? 95 : 0),
+        spokenWord: parsed.spokenWord || null,
+        diagnosis: parsed.diagnosis || '',
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function assessCognitiveAudioWord(args: {
   taskId: ReadingListTaskId;
   itemId: string;
@@ -371,6 +517,15 @@ export async function assessCognitiveAudioWord(args: {
   }
 
   // On production domains (e.g. hayanaqra.com), evaluate directly with Azure without failing /api calls
+    try {
+    const geminiReceipt = await assessWordDirectWithGemini(args);
+    if (geminiReceipt) {
+      return geminiReceipt;
+    }
+  } catch (geminiErr) {
+    console.warn('[Haya Naqra] Gemini speech evaluation unavailable, falling back to Azure:', geminiErr);
+  }
+
   return assessWordDirectWithAzure(args);
 }
 

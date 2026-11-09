@@ -345,13 +345,11 @@ function extractWordsAndMetrics(payloads: any[]): { words: AzureRawWord[]; metri
   };
 }
 
-const DEFAULT_AZURE_KEY = typeof atob !== 'undefined'
-  ? atob('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ')
-  : (typeof Buffer !== 'undefined' ? Buffer.from('RUhSQlpMQTBLVTdad0N3SmhKTG9ZbUFiUmV1eFNSSmI4ZnEyTW84amprNXdxWTdidktBTEpRUUo5OUNKQUNZZUJqRlhKM3czQUFBWUFDT0dRZVhQ', 'base64').toString('utf8') : '');
 const DEFAULT_AZURE_REGION = 'eastus';
 
 export function getAzureSpeechCredentials(): { key: string; region: string } {
-  const key = process.env.AZURE_SPEECH_KEY?.trim() || DEFAULT_AZURE_KEY;
+  // Server environment only; no key is built into the code.
+  const key = process.env.AZURE_SPEECH_KEY?.trim() || '';
   const region = process.env.AZURE_SPEECH_REGION?.trim() || DEFAULT_AZURE_REGION;
   return { key, region };
 }

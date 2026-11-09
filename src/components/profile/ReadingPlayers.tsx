@@ -163,7 +163,8 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
     };
   }
 
-  if (!spkClean || (errorType === 'Omission' && !spokenRaw) || accuracyScore === 0) {
+  // Only consider truly silent if spkClean is completely empty or explicit silence
+  if (!spkClean || spokenRaw === 'SILENCE' || spokenRaw === '.' || spokenRaw === 'صمت' || (errorType === 'Omission' && !spokenRaw)) {
     return {
       isCorrect: false,
       diagnosis: 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.',
@@ -173,7 +174,7 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
   if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
     return {
       isCorrect: false,
-      diagnosis: `استبدال كلي للكلمة؛ المطلوب قراءة كلمة «${expectedVowelled}». `,
+      diagnosis: `استبدال كلي للكلمة؛ نُطق «${spokenRaw || spkClean}» بدلاً من الكلمة المطلوبة «${expectedVowelled}».`,
     };
   }
 
@@ -329,12 +330,17 @@ export function ReadListAudioPlayer({
         wordReceipt,
       ].sort((a, b) => a.itemIndex - b.itemIndex);
       wordReceiptsRef.current = nextReceipts;
-      const diag = getWordDiagnosis(
-        currentItem.text,
-        wordReceipt.word.spokenWord || wordReceipt.transcript,
-        wordReceipt.word.accuracyScore,
-        wordReceipt.word.errorType
-      );
+      const diag = wordReceipt.word.diagnosis
+        ? {
+            diagnosis: wordReceipt.word.diagnosis,
+            isCorrect: wordReceipt.word.errorType === 'None' && wordReceipt.word.accuracyScore >= 75,
+          }
+        : getWordDiagnosis(
+            currentItem.text,
+            wordReceipt.word.spokenWord || wordReceipt.transcript,
+            wordReceipt.word.accuracyScore,
+            wordReceipt.word.errorType
+          );
       setLastWordFeedback({
         word: currentItem.text,
         accuracyScore: wordReceipt.word.accuracyScore,
@@ -452,7 +458,7 @@ export function ReadListAudioPlayer({
                       <span>✓ أحسنت! نطق صحيح ومتقن</span>
                     </div>
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 border border-emerald-300 font-bold">
-                      دقة Azure: {ar(lastWordFeedback.accuracyScore)}٪
+                      درجة الدقة: {ar(lastWordFeedback.accuracyScore)}٪
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-emerald-700 font-medium pr-7">
@@ -485,8 +491,7 @@ export function ReadListAudioPlayer({
                       }>
                         {lastWordFeedback.errorType === 'Substitution'
                           ? 'استبدال كلمة'
-                          : lastWordFeedback.errorType === 'Omission'
-                          ? 'لم يُسمع صوت واضح'
+                          : (!lastWordFeedback.spokenWord || !stripHarakat(lastWordFeedback.spokenWord)) ? 'لم يُسمع صوت واضح'
                           : 'خطأ في نطق الكلمة'}
                       </span>
                     </div>
