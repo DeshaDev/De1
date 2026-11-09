@@ -125,7 +125,7 @@ export function BrandLockup({ tagline = true }: { tagline?: boolean }) {
             نَقْرَأْ
           </span>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs mr-1">
-            النسخة الحديثة v2
+            النسخة الحديثة v4
           </span>
         </div>
         {tagline && (
