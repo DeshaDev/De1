@@ -7,6 +7,29 @@ import { lex } from '../../cognitiveProfile/lexicon';
 import type { ItemResponse } from '../../cognitiveProfile/scoring';
 import { scoreSpanTrial } from '../../cognitiveProfile/scoring';
 import { PlaybackHandle, speak, speakSegments, stopSpeech, wait } from './audio';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES, pickLine } from '../ui/mascotLines';
+
+const seedOf = (id: string) => Array.from(id).reduce((n, c) => n + c.charCodeAt(0), 0);
+
+/**
+ * Practice only: after the child has answered, the mascot reacts (cheer or support). The space is
+ * reserved so nothing jumps, and it stays empty while the child is listening or choosing.
+ */
+function PracticeReaction({ correct, seed }: { correct: boolean | null; seed: number }) {
+  return (
+    <div className="min-h-[96px] flex items-center justify-center" aria-live="polite">
+      {correct !== null && (
+        <MascotMoment
+          mood={correct ? 'cheer' : 'support'}
+          size={76}
+          layout="row"
+          message={pickLine(correct ? MASCOT_LINES.practiceCorrect : MASCOT_LINES.practiceWrong, seed)}
+        />
+      )}
+    </div>
+  );
+}
 
 const PRAISE = PHRASES.praise;
 
@@ -181,7 +204,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
               }}
               disabled={listening || Boolean(feedback)}
               className={`shrink-0 w-11 h-11 rounded-full ${
-                hesitating ? 'bg-amber-400 text-slate-900 ring-4 ring-amber-200 animate-bounce' : 'bg-brand-soft text-brand'
+                hesitating ? 'bg-amber-400 text-slate-900 ring-4 ring-amber-200' : 'bg-brand-soft text-brand'
               } flex items-center justify-center disabled:opacity-40 cursor-pointer transition-all`}
               aria-label="استمع مرة أخرى"
             >
@@ -190,7 +213,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
           )}
         </div>
         {hesitating && !feedback && (
-          <span className="bz-badge bz-badge-sun text-xs font-bold animate-pulse">💡 استمع مرة أخرى إذا نسيت!</span>
+          <span className="bz-badge bz-badge-sun text-xs font-bold">💡 استمع مرة أخرى إذا نسيت!</span>
         )}
       </div>
       <div
@@ -216,6 +239,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
         ))}
       </div>
       <p className="text-xs font-bold text-slate-400 h-4">{listening ? 'استمع…' : ''}</p>
+      {showFeedback && <PracticeReaction correct={feedback ? feedback.correct : null} seed={seedOf(item.id)} />}
     </div>
   );
 }
@@ -308,7 +332,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
           </span>
         )}
         {phase === 'present' && modality === 'auditory' && (
-          <span className={`text-8xl ${shown ? 'animate-bounce-gentle' : ''}`} role="img" aria-label="ببغاء">🦜</span>
+          <span className={`text-8xl transition-opacity ${shown ? 'opacity-100' : 'opacity-60'}`} role="img" aria-label="ببغاء">🦜</span>
         )}
         {(phase === 'respond' || phase === 'feedback') && (
           <span className="text-6xl" role="img" aria-hidden="true">{modality === 'visual' ? '🏰' : '🦜'}</span>
@@ -359,6 +383,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
               </button>
             ))}
           </div>
+          {showFeedback && <PracticeReaction correct={phase === 'feedback' ? result : null} seed={seedOf(trial.id)} />}
         </>
       )}
     </div>

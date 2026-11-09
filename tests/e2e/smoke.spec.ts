@@ -231,6 +231,49 @@ test('dictation: letter tiles, delete, and a scored answer', async ({ page }) =>
   await expect(page.getByLabel('لم يُكتب شيء بعد')).toBeVisible();
 });
 
+test('mascot appears between tasks only: welcome, practice reaction, ready, finish; never on scored items', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
+  await page.getByLabel('السنوات').selectOption('5');
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
+  await page.getByRole('button', { name: 'بدء الفحص' }).click();
+  await page.getByText('كلمات تتشابه', { exact: true }).click();
+
+  const mascot = page.locator('[data-mascot]');
+  const option = page.locator('button[class*="min-h-[120px]"]').first();
+
+  // Welcome before the game.
+  await expect(page.locator('[data-mascot-moment="wave"]')).toBeVisible();
+  await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
+
+  // Practice: calm while listening and choosing; a reaction only after the answer.
+  for (let i = 0; i < 2; i++) {
+    await expect(option).toBeEnabled({ timeout: 20_000 });
+    await expect(mascot).toHaveCount(0);
+    await option.click();
+    await expect(page.locator('[data-mascot-moment="cheer"], [data-mascot-moment="support"]')).toBeVisible();
+  }
+
+  // Ready screen.
+  await expect(page.locator('[data-mascot-moment="cheer"]')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'هيا بنا' }).click();
+
+  // Scored items: no mascot at any point, so it cannot hint whether an answer was right.
+  const done = page.locator('[data-mascot-moment="proud"]');
+  for (let i = 0; i < 8 && !(await done.isVisible()); i++) {
+    await expect(option.or(done)).toBeVisible({ timeout: 20_000 });
+    if (await done.isVisible()) break;
+    await expect(option).toBeEnabled({ timeout: 20_000 });
+    await expect(mascot).toHaveCount(0);
+    await option.click();
+    await expect(mascot.filter({ hasNot: page.locator('[data-mascot="proud"]') })).toHaveCount(0);
+  }
+  await expect(done).toBeVisible({ timeout: 20_000 });
+});
+
 test('guided reader shows one sentence at a time and walks through the micro-steps', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));

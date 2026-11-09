@@ -1036,7 +1036,8 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   50% { transform: translateY(-6px); }
 }
 .animate-bounce-gentle {
-  animation: bounce-gentle 2s ease-in-out infinite;
+  /* Was an endless bounce; looping motion pulls a struggling reader's eyes off the text. */
+  animation: mascotPop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 
@@ -1295,4 +1296,53 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
 @media (max-width: 640px) {
   .bz-action-bar { bottom: calc(64px + env(safe-area-inset-bottom)); }
   .bz-hide-sm { display: none; }
+}
+
+/* Mascot «هُدهُد»: between-task screens only. One short entrance, never a loop. */
+@keyframes mascotPop {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.92); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.mascot-pop {
+  animation: mascotPop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.mascot-bubble {
+  position: relative;
+  max-width: 22rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 1.25rem;
+  border: 2px solid var(--sun);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(15, 30, 46, 0.08);
+}
+.mascot-bubble::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--card);
+  border: 2px solid var(--sun);
+  transform: rotate(45deg);
+}
+.mascot-bubble-up::before {
+  top: -9px;
+  left: calc(50% - 7px);
+  border-right: none;
+  border-bottom: none;
+}
+/* Side bubble: the mascot sits at the start (right in RTL), so the tail points right. */
+.mascot-bubble-side { text-align: start; font-size: 0.98rem; }
+.mascot-bubble-side::before {
+  top: calc(50% - 7px);
+  right: -9px;
+  border-left: none;
+  border-bottom: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-pop { animation: none; }
 }

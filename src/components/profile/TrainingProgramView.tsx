@@ -52,6 +52,8 @@ import ProgressChart from './ProgressChart';
 import { takePendingReadingTargets } from '../ReadingErrorPanel';
 import IndividualPlanPanel from './IndividualPlanPanel';
 import { LessonPlayer, TeachingChoicePlayer } from './TeachingPlayers';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
@@ -413,7 +415,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'probeIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <span className="grid place-items-center w-32 h-32 rounded-[36px] bg-sun-soft text-7xl" aria-hidden="true">📏</span>
+              <MascotMoment mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
               <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
               <p className="text-sm text-slate-600">
                 أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
@@ -468,8 +470,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'intro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <span className="grid place-items-center w-32 h-32 rounded-[36px] bg-sun-soft text-7xl" aria-hidden="true">{def.icon}</span>
-              <h2 className="font-child text-2xl font-black text-slate-900">{def.nameAr}</h2>
+              <MascotMoment mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
+              <h2 className="font-child text-2xl font-black text-slate-900 flex items-center gap-2">
+                <span className="text-3xl" aria-hidden="true">{def.icon}</span> {def.nameAr}
+              </h2>
               <p className="text-sm text-slate-600">{SKILLS[skill].levels[(progress.levels[skill] ?? 1) as Level]}</p>
               <button
                 type="button"
@@ -497,7 +501,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'result' && run.change && (
             <div className="flex flex-col items-center text-center gap-4">
-              <span className="text-7xl" aria-hidden="true">{run.change === 'down' ? '💪' : '⭐'}</span>
+              <MascotMoment
+                mood={run.change === 'down' ? 'support' : run.change === 'stay' ? 'wave' : 'cheer'}
+                size={130}
+                message={
+                  run.change === 'down'
+                    ? MASCOT_LINES.resultDown
+                    : run.change === 'stay'
+                      ? MASCOT_LINES.resultStay
+                      : run.change === 'mastered'
+                        ? MASCOT_LINES.resultMastered
+                        : MASCOT_LINES.resultUp
+                }
+              />
               <p className="font-child text-2xl font-black text-slate-900">
                 {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)} إجابات صحيحة
               </p>
@@ -520,7 +536,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'summary' && (
             <div className="flex flex-col items-center text-center gap-4 w-full max-w-md">
-              <span className="text-7xl" aria-hidden="true">🏆</span>
+              <MascotMoment mood="proud" size={150} message={MASCOT_LINES.sessionDone} />
               <p className="font-child text-2xl font-black text-slate-900">انتهت جلسة اليوم!</p>
               <p className="font-child text-xl text-ink">⭐ {toArabicDigits(run.stars)} نجمة اليوم</p>
               
@@ -529,7 +545,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   {run.newBadges.map((badgeSkill) => {
                     const badge = SKILL_BADGES[badgeSkill];
                     return (
-                      <div key={badgeSkill} className="w-full rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-center shadow-md animate-bounce">
+                      <div key={badgeSkill} className="w-full rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-center shadow-md mascot-pop">
                         <span className="text-5xl block mb-2">{badge.icon}</span>
                         <p className="font-child text-lg font-black text-amber-900">وسام إتقان جديد: {badge.titleAr}! 🏆</p>
                         <p className="text-xs text-amber-800 mt-1">{badge.descriptionAr}</p>

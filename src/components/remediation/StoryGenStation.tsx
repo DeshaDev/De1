@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import {
   Volume2,
   Check,
@@ -24,7 +26,6 @@ import {
   IconSportsBall,
   IconAdventureCompass,
   IconMagicWand,
-  IconBaseeraFalcon,
 } from '../ui/ChildPlayfulIcons';
 
 interface StoryGenStationProps {
@@ -64,7 +65,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
     {
       id: 'animals',
       title: 'عالم الحيوانات',
-      desc: 'أصدقاء الغابة وصقر بصيرة السريع',
+      desc: 'أصدقاء الغابة والهُدهُد السريع',
       icon: IconForestAnimals,
       bg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400 text-emerald-950',
     },
@@ -176,7 +177,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {wizardStep === 'interest' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-slate-200/80 text-center space-y-6 animate-fade-slide-up">
           <div className="space-y-2">
-            <div className="w-16 h-16 mx-auto bg-amber-100 border-2 border-amber-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm animate-bounce-gentle">
+            <div className="w-16 h-16 mx-auto bg-amber-100 border-2 border-amber-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm">
               <IconStoryBook size={38} />
             </div>
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
@@ -215,7 +216,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {wizardStep === 'phoneme' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-slate-200/80 text-center space-y-6 animate-fade-slide-up">
           <div className="space-y-2">
-            <div className="w-16 h-16 mx-auto bg-blue-100 border-2 border-blue-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm animate-bounce-gentle">
+            <div className="w-16 h-16 mx-auto bg-blue-100 border-2 border-blue-300 rounded-2xl flex items-center justify-center mb-2 shadow-sm">
               <IconLettersBlock size={38} />
             </div>
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
@@ -264,7 +265,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {/* STEP: GENERATING WITH PLAYFUL ANIMATION */}
       {wizardStep === 'generating' && (
         <div className="bg-white rounded-3xl p-10 sm:p-14 shadow-xl border-2 border-emerald-200 text-center space-y-4 animate-fade-slide-up">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center shadow-md animate-bounce-gentle">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center shadow-md">
             <IconMagicWand size={44} />
           </div>
           <h3 className="font-child text-2xl font-black text-slate-900">
@@ -296,7 +297,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               onClick={() => speakText(story.story)}
               className="duo-btn-green py-3 px-5 text-sm flex items-center gap-2 cursor-pointer shrink-0"
             >
-              <Volume2 className="w-4 h-4 animate-pulse" />
+              <Volume2 className="w-4 h-4" />
               <span>استمع للقصة كاملة</span>
             </button>
           </div>
@@ -330,15 +331,8 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             </p>
           </div>
 
-          {/* Friendly Tip from Falcon Mascot */}
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-white border border-emerald-200 flex items-center justify-center shrink-0 shadow-xs">
-              <IconBaseeraFalcon size={28} />
-            </div>
-            <p className="font-child text-xs text-emerald-950 font-bold leading-relaxed">
-              {story.articulatoryTip.description}
-            </p>
-          </div>
+          {/* Tip from the mascot: shown after the story has been read, before the quiz. */}
+          <MascotMoment mood="wave" size={72} layout="row" message={<>{MASCOT_LINES.storyTip} {story.articulatoryTip.description}</>} />
 
           {/* Action: Next to Challenge */}
           <button
@@ -359,7 +353,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {wizardStep === 'quiz' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-indigo-200 text-center space-y-6 animate-fade-slide-up">
           <div className="space-y-2">
-            <div className="w-14 h-14 mx-auto bg-indigo-100 border-2 border-indigo-300 rounded-2xl flex items-center justify-center mb-1 shadow-sm animate-bounce-gentle">
+            <div className="w-14 h-14 mx-auto bg-indigo-100 border-2 border-indigo-300 rounded-2xl flex items-center justify-center mb-1 shadow-sm">
               <IconPuzzlePieces size={34} />
             </div>
             <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 inline-block">
@@ -410,9 +404,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {/* STEP 5: CELEBRATION & TROPHY */}
       {wizardStep === 'celebrate' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border-4 border-amber-300 text-center space-y-6 animate-fade-slide-up">
-          <div className="w-24 h-24 mx-auto rounded-3xl bg-amber-100 border-3 border-amber-300 flex items-center justify-center shadow-lg animate-bounce-gentle">
-            <IconTrophy size={54} />
-          </div>
+          <MascotMoment mood="proud" size={150} message={MASCOT_LINES.storyDone} />
 
           <div className="space-y-2">
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">

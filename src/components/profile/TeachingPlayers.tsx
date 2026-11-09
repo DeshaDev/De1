@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import { ArrowLeft, Play, RotateCcw, Volume2 } from 'lucide-react';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
@@ -166,7 +168,8 @@ export function TeachingChoicePlayer({
       )}
       {phase === 'explain' && explanation && (
         <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-          <p className="font-child text-lg font-bold text-warn">لنفهم الإجابة معًا</p>
+          {/* Support after a mistake: static, beside the heading, before the explanation starts. */}
+          <MascotMoment mood="support" size={72} layout="row" message={MASCOT_LINES.explainMistake} />
           {explanation.pictureIds.length > 0 && <Visual visual={{ kind: 'pictures', ids: explanation.pictureIds }} />}
           {explanation.glyphs.length > 0 && <Visual visual={{ kind: 'glyphs', letters: explanation.glyphs }} />}
           <p className="font-child text-xl text-ink">{explanation.textAr}</p>

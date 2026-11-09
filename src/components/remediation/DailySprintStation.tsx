@@ -1,5 +1,7 @@
 import { toArabicNum } from '../../utils/arabicDigits';
 import React, { useState, useEffect } from 'react';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import {
   Flame,
   Clock,
@@ -407,7 +409,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
-            <Flame className="w-6 h-6 animate-pulse" />
+            <Flame className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -755,10 +757,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             </button>
           ) : (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
-              <div className="flex items-center justify-center gap-2 text-emerald-900 font-black text-base">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>رائع! أكملت تحدي اليوم</span>
-              </div>
+              <MascotMoment mood="proud" size={110} message={MASCOT_LINES.sprintDone} />
               <p className="text-xs text-emerald-700">
                 حافظت على وتيرة التدريب اليومية. موعدنا غداً في 5 دقائق جديدة!
               </p>
