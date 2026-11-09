@@ -10,6 +10,8 @@ import { ARABIC_READING_PASSAGES, type ReadingPassage } from '../../data/seedDat
 import { segmentArabicWordIntoSyllables } from '../../utils/learningMetrics';
 import { speak, stopSpeech } from '../profile/audio';
 import { chunkPassage } from './chunks';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 const plain = (w: string) => w.replace(/[ً-ٰٟـ]/g, '').replace(/[.,،؛:!?؟«»"]/g, '').trim();
@@ -403,7 +405,7 @@ const ReadingSession: React.FC<{
         {header}
         {progress}
         <section className="bz-card bz-card-pad space-y-5 text-center">
-          <div className="mx-auto grid place-items-center w-14 h-14 rounded-full bg-brand-soft text-brand"><Check className="w-7 h-7" /></div>
+          <MascotMoment mood="proud" size={130} message={MASCOT_LINES.readerDone} className="mx-auto" />
           <h2 className="bz-h2">أحسنت! أنهيت قراءة النص</h2>
           <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
             <div className="rounded-2xl bg-soft p-4"><dt className="bz-small bz-muted">الجمل المقروءة</dt><dd className="bz-h3 bz-num">{toArabicDigits(chunks.length)}</dd></div>

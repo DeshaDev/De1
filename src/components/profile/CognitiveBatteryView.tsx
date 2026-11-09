@@ -51,6 +51,8 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
@@ -194,8 +196,11 @@ function SubtestRunner({
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-            <span className="grid place-items-center w-36 h-36 rounded-[40px] bg-sun-soft text-8xl animate-bounce-gentle" aria-hidden="true">{subtest.icon}</span>
-            <h2 className="font-child text-4xl font-bold text-ink" style={{ fontFamily: 'var(--font-child)' }}>{subtest.gameNameAr}</h2>
+            <MascotMoment mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
+            <h2 className="font-child text-4xl font-bold text-ink flex items-center gap-3" style={{ fontFamily: 'var(--font-child)' }}>
+              <span className="grid place-items-center w-14 h-14 rounded-2xl bg-sun-soft text-4xl" aria-hidden="true">{subtest.icon}</span>
+              {subtest.gameNameAr}
+            </h2>
             <button
               type="button"
               onClick={() => speak(subtest.introAudio)}
@@ -254,7 +259,7 @@ function SubtestRunner({
 
         {stage === 'transition' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="grid place-items-center w-28 h-28 rounded-full bg-sun-soft text-7xl" aria-hidden="true">🌟</span>
+            <MascotMoment mood="cheer" size={130} message={MASCOT_LINES.ready} />
             <p className="font-child text-3xl font-bold text-ink">رائع! الآن نبدأ اللعبة</p>
             <p className="bz-body max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
             <button
@@ -364,8 +369,7 @@ function SubtestRunner({
               </>
             ) : (
               <>
-                <span className="grid place-items-center w-32 h-32 rounded-full bg-sun-soft text-8xl" aria-hidden="true">🏆</span>
-                <p className="font-child text-3xl font-bold text-ink">أحسنت! أنهيت «{subtest.gameNameAr}»</p>
+                <MascotMoment mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
               </>
             )}
             <button
@@ -858,6 +862,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   return (
     <div className="space-y-6" dir="rtl">
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
+        {(completed.length === ageTasks.length || sittingJustFinished) && (
+          <MascotMoment
+            mood={completed.length === ageTasks.length ? 'proud' : 'cheer'}
+            size={110}
+            message={completed.length === ageTasks.length ? MASCOT_LINES.allDone : MASCOT_LINES.sittingDone}
+            className="md:order-last shrink-0"
+          />
+        )}
         <div className="flex-1 min-w-0">
           <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
           <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>

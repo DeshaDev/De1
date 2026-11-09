@@ -9,6 +9,8 @@
  */
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
+import { MascotMoment } from './ui/Mascot';
+import { MASCOT_LINES } from './ui/mascotLines';
 import {
   BookOpen,
   Clock,
@@ -41,7 +43,7 @@ import {
 } from '../utils/dyslexiaEngines';
 import { convertRecordedAudioToWavBase64 } from '../utils/browserAudioWav';
 import { playNaturalArabicAudio } from '../utils/naturalSpeech';
-import { IconStoryBook, IconMicGlow, IconStar, StoryIcons } from './ui/ChildPlayfulIcons';
+import { IconStoryBook, IconStar, StoryIcons } from './ui/ChildPlayfulIcons';
 
 
 export interface FluencyLevelInfo {
@@ -1012,11 +1014,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* Animated Mic & Mascot */}
+              {/* Welcome before reading; the reading screen itself has no mascot. */}
               <div className="space-y-3">
-                <div className="w-20 h-20 mx-auto bg-emerald-100 border-3 border-emerald-400 rounded-3xl flex items-center justify-center shadow-lg animate-bounce-gentle">
-                  <IconMicGlow size={46} />
-                </div>
+                <MascotMoment mood="wave" size={120} message={MASCOT_LINES.readyToRead} className="mx-auto" />
                 <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
                   جاهزون للقراءة
                 </h1>
@@ -1153,7 +1153,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   </span>
                   {readingMode === 'oral_audio' && (
                     <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
-                      <Mic className={`w-3.5 h-3.5 ${isListening ? 'text-red-500 animate-pulse' : 'text-emerald-600'}`} />
+                      <Mic className={`w-3.5 h-3.5 ${isListening ? 'text-red-500' : 'text-emerald-600'}`} />
                       <span>{isListening ? 'تسجيل واستماع نشط' : 'قراءة جهرية'}</span>
                     </span>
                   )}
@@ -1167,7 +1167,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="flex items-center gap-3">
                 {/* Live Timer Pill */}
                 <div className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-sm">
-                  <Clock className="w-5 h-5 text-teal-400 animate-spin" style={{ animationDuration: '4s' }} />
+                  <Clock className="w-5 h-5 text-teal-400" />
                   <span className="font-mono text-lg font-bold">
                     {Math.floor(readingSeconds / 60)}:
                     {(readingSeconds % 60).toString().padStart(2, '0')}
@@ -1214,7 +1214,6 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-emerald-400 opacity-75"></span>
                     <Mic className="w-5 h-5 text-emerald-400 relative z-10" />
                   </div>
                   <div>
@@ -1222,7 +1221,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       <span className="font-black text-sm text-emerald-300">
                         تسجيل صوت الطفل — المعاينة النصية أولية
                       </span>
-                      <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">
+                      <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
                         <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                         تسجيل جارٍ
                       </span>
@@ -1233,13 +1232,13 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Animated Audio Equalizer Bars */}
+                {/* Recording level bars: static, so nothing moves beside the text being read */}
                 <div className="flex items-center gap-1 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700">
-                  <span className="w-1 bg-emerald-400 rounded-full animate-pulse h-3"></span>
-                  <span className="w-1 bg-teal-400 rounded-full animate-pulse h-5" style={{ animationDelay: '0.15s' }}></span>
-                  <span className="w-1 bg-emerald-300 rounded-full animate-pulse h-4" style={{ animationDelay: '0.3s' }}></span>
-                  <span className="w-1 bg-teal-300 rounded-full animate-pulse h-6" style={{ animationDelay: '0.45s' }}></span>
-                  <span className="w-1 bg-emerald-400 rounded-full animate-pulse h-3" style={{ animationDelay: '0.2s' }}></span>
+                  <span className="w-1 bg-emerald-400 rounded-full h-3"></span>
+                  <span className="w-1 bg-teal-400 rounded-full h-5" style={{ animationDelay: '0.15s' }}></span>
+                  <span className="w-1 bg-emerald-300 rounded-full h-4" style={{ animationDelay: '0.3s' }}></span>
+                  <span className="w-1 bg-teal-300 rounded-full h-6" style={{ animationDelay: '0.45s' }}></span>
+                  <span className="w-1 bg-emerald-400 rounded-full h-3" style={{ animationDelay: '0.2s' }}></span>
                   <span className="text-[11px] font-mono text-emerald-300 font-bold mr-2">
                     {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة في المعاينة
                   </span>

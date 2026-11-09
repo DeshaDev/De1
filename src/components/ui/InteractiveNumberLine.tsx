@@ -1,5 +1,4 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { IconBaseeraFalcon } from './ChildPlayfulIcons';
 import { Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface InteractiveNumberLineProps {
@@ -150,7 +149,7 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
             ))}
           </div>
 
-          {/* Falcon Mascot Puck / Thumb */}
+          {/* Thumb: a plain handle (no character on an active task) */}
           <div
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-75 ease-out"
             style={{ left: `${percentage}%` }}
@@ -160,7 +159,7 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
                 isDragging ? 'ring-4 ring-emerald-300 scale-110' : ''
               }`}
             >
-              <IconBaseeraFalcon size={38} />
+              <span className="w-5 h-5 rounded-full bg-emerald-500" aria-hidden="true" />
             </div>
           </div>
         </div>

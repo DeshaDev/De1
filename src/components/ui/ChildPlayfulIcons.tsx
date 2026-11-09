@@ -273,32 +273,6 @@ export const IconNumberRuler: React.FC<IconProps> = ({ className = 'w-6 h-6', si
   </svg>
 );
 
-// 10. Friendly Baseera Falcon Mascot («صقر بصيرة»)
-export const IconBaseeraFalcon: React.FC<IconProps> = ({ className = 'w-8 h-8', size = 32 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden="true"
-  >
-    <circle cx="20" cy="20" r="18" fill="#58CC02" stroke="#46A302" strokeWidth="2" />
-    {/* Body & Feathers */}
-    <ellipse cx="20" cy="22" rx="12" ry="10" fill="#FFFFFF" />
-    {/* Eyes */}
-    <circle cx="15" cy="17" r="3.5" fill="#1E293B" />
-    <circle cx="16" cy="16" r="1.2" fill="#FFFFFF" />
-    <circle cx="25" cy="17" r="3.5" fill="#1E293B" />
-    <circle cx="26" cy="16" r="1.2" fill="#FFFFFF" />
-    {/* Cute Beak */}
-    <path d="M18 20L20 25L22 20H18Z" fill="#FF9600" />
-    {/* Head Tuft */}
-    <path d="M19 4C19 4 22 2 24 5C22 6 20 6 19 4Z" fill="#46A302" />
-  </svg>
-);
-
 // 11. Story Cover Badges (Vector Illustrations instead of emojis)
 export const StoryIcons = {
   cat: () => (

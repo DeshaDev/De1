@@ -4,6 +4,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Delete, Mic, Volume2 } from 'lucide-react';
 import { PHRASES } from '../../cognitiveProfile/phrases';
+import { MascotMoment } from '../ui/Mascot';
+import { MASCOT_LINES } from '../ui/mascotLines';
 import { lex } from '../../cognitiveProfile/lexicon';
 import type { CognitiveAudioAssessmentEvidence, ItemResponse } from '../../cognitiveProfile/scoring';
 import {
@@ -1034,6 +1036,15 @@ export function SpellingPlayer({
       </div>
       {practice && result === false && (
         <p className="text-3xl font-bold text-emerald-700" style={READING_FONT} lang="ar">{item.answer}</p>
+      )}
+      {/* Practice only, after the child pressed «تمّ»: never on scored words. */}
+      {practice && result !== null && (
+        <MascotMoment
+          mood={result ? 'cheer' : 'support'}
+          size={72}
+          layout="row"
+          message={result ? MASCOT_LINES.spellPracticeCorrect : MASCOT_LINES.spellPracticeWrong}
+        />
       )}
       <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 sm:gap-2 w-full max-w-2xl" aria-label="لوحة الحروف">
         {SPELL_KEYBOARD.map((letter) => (

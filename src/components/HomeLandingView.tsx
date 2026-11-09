@@ -20,6 +20,8 @@ import {
   X,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
+import { MascotMoment } from './ui/Mascot';
+import { MASCOT_LINES } from './ui/mascotLines';
 import { BATTERY, DOMAINS, TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 import {
   MINUTES_PER_SESSION,
@@ -157,6 +159,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         />
         <div className="bz-container relative grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-14 items-start pt-10 pb-16 sm:pt-12 lg:pt-14 lg:pb-20">
           <div>
+            <MascotMoment mood="wave" size={92} layout="row" message={MASCOT_LINES.homeHello} className="mb-5" />
             <span className="bz-eyebrow">فحص مبكر وتدريب موجّه · من ٤ إلى ٨ سنوات</span>
             <h1 className="bz-display mt-5" style={{ fontSize: 'clamp(32px, 3.6vw, 50px)' }}>
               خطوة مبكرة لفهم مهارات القراءة لدى طفلك،{' '}

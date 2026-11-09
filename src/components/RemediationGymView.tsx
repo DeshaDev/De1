@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
-import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt, IconBaseeraFalcon } from './ui/ChildPlayfulIcons';
+import { IconStar, IconFlame, IconStoryBook, IconLettersBlock, IconPuzzlePieces, IconNumberRuler, IconLightningBolt } from './ui/ChildPlayfulIcons';
 import { StudentRecord } from '../data/seedData';
 import { AppTabId } from './HomeLandingView';
 import {
@@ -485,18 +485,10 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             </span>
           </div>
 
-          {/* Friendly Mascot Speech Card */}
-          <div className="flex items-center gap-3.5 bg-emerald-50/90 border-2 border-emerald-300 p-3.5 sm:p-4 rounded-3xl text-right shadow-xs">
-            <div className="w-14 h-14 rounded-2xl bg-white border-2 border-emerald-400 flex items-center justify-center shrink-0 shadow-sm animate-bounce-gentle">
-              <IconBaseeraFalcon size={38} />
-            </div>
-            <div>
-              <span className="text-xs font-black text-emerald-950 block">صقر بصيرة:</span>
-              <p className="font-child text-xs sm:text-sm font-bold text-slate-700 mt-0.5">
-                المس الزر الأخضر لسماع الكلمة، ثم ضع الحرف الناقص في صندوق الكلمة!
-              </p>
-            </div>
-          </div>
+          {/* Instruction only: the exercise screen stays calm (no mascot or movement next to the word). */}
+          <p className="font-child text-sm sm:text-base font-bold text-slate-700 bg-emerald-50/90 border-2 border-emerald-300 p-3.5 rounded-2xl">
+            المس الزر الأخضر لسماع الكلمة، ثم ضع الحرف الناقص في صندوق الكلمة.
+          </p>
 
           {/* Big 3D Audio Button */}
           <div>
@@ -514,7 +506,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
           <div className="clay-card-amber p-6 sm:p-8 space-y-3">
             <span className="text-xs font-black text-amber-800 block">ضع الحرف الناقص لإكمال الكلمة:</span>
             <div className="flex items-center justify-center gap-3 sm:gap-4 text-4xl sm:text-5xl md:text-6xl font-serif font-black" dir="rtl">
-              <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-3xl border-4 border-dashed border-amber-500 bg-white flex items-center justify-center font-child font-black text-amber-700 shadow-inner animate-pulse">
+              <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-3xl border-4 border-dashed border-amber-500 bg-white flex items-center justify-center font-child font-black text-amber-700 shadow-inner">
                 {selectedLetter || '؟'}
               </div>
               <span className="text-slate-900 tracking-wider">
