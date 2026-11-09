@@ -881,12 +881,41 @@ export function scoredItemIds(subtest: Subtest): string[] {
 
 export const appliesAtAge = (subtest: Subtest, ageMonths: number) => ageMonths >= (subtest.minAgeMonths ?? 0);
 
+/** Age tiers for adaptive screening (4:0 to 5:11, 6:0 to 7:5, 7:6 to 8:11+) */
+export const AGE_PRE_READING_MAX_MONTHS = 71;
+export const AGE_GRADE_1_MAX_MONTHS = 89;
+export const AGE_PRIMARY_MIN_MONTHS = 90;
+
+export type ScreeningMode = 'fast' | 'comprehensive';
+
+/**
+ * Fast-track screening battery (10-12 minutes, single sitting).
+ * Clinically targeted to the child's exact age and reading instruction stage:
+ * - Age 4-5 (Under 72 months): Phonological awareness, rhyme, letter sound, RAN objects, auditory discrimination. Zero reading tasks.
+ * - Age 6-7 (72-89 months, Grade 1): Word reading, nonword decoding, phonological awareness, letter sounds, RAN letters, spelling, oral passage.
+ * - Age 8+ (90+ months, Grades 2-4+): Nonword decoding, word reading, oral passage WCPM, RAN letters, dictation, phonological manipulation, verbal working memory.
+ */
+export function fastTrackSubtestsForAge(ageMonths: number): Subtest[] {
+  let ids: SubtestId[];
+  if (ageMonths < READING_MIN_AGE_MONTHS) {
+    ids = ['phonological', 'rhyme', 'letterSound', 'ranObjects', 'auditoryDiscrimination'];
+  } else if (ageMonths <= AGE_GRADE_1_MAX_MONTHS) {
+    ids = ['wordReading', 'nonwordReading', 'phonological', 'letterSound', 'ranLetters', 'spelling', 'oralReading'];
+  } else {
+    ids = ['nonwordReading', 'wordReading', 'oralReading', 'ranLetters', 'spelling', 'phonological', 'auditorySequential'];
+  }
+  return ids.map((id) => SUBTESTS_BY_ID[id]).filter((s) => appliesAtAge(s, ageMonths));
+}
+
 /**
  * The battery in short sittings of about 10–15 minutes, for this child's age. From six, when
  * reading instruction has begun, the direct reading measures come first: they answer the parent's
  * question most directly, and a child who stops after one sitting has still been asked to read.
  */
-export function sittingsForAge(ageMonths: number): Subtest[][] {
+export function sittingsForAge(ageMonths: number, mode: ScreeningMode = 'comprehensive'): Subtest[][] {
+  if (mode === 'fast') {
+    return [fastTrackSubtestsForAge(ageMonths)];
+  }
   const ids: SubtestId[][] =
     ageMonths >= READING_MIN_AGE_MONTHS
       ? [
@@ -904,9 +933,9 @@ export function sittingsForAge(ageMonths: number): Subtest[][] {
 }
 
 /** Every task this child is given, in the order they are given. */
-export const subtestsForAge = (ageMonths: number): Subtest[] => sittingsForAge(ageMonths).flat();
+export const subtestsForAge = (ageMonths: number, mode: ScreeningMode = 'comprehensive'): Subtest[] => sittingsForAge(ageMonths, mode).flat();
 
-export const minutesForAge = (ageMonths: number) => subtestsForAge(ageMonths).reduce((sum, s) => sum + s.minutes, 0);
+export const minutesForAge = (ageMonths: number, mode: ScreeningMode = 'comprehensive') => subtestsForAge(ageMonths, mode).reduce((sum, s) => sum + s.minutes, 0);
 
 /** Minutes for the full battery at the oldest ages (every task). */
 export const TOTAL_BATTERY_MINUTES = BATTERY.reduce((sum, s) => sum + s.minutes, 0);

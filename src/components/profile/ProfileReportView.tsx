@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Printer, Dumbbell, AlertTriangle, ChevronDown, Info } from 'lucide-react';
+import { ArrowRight, Printer, Dumbbell, AlertTriangle, ChevronDown, Info, Check } from 'lucide-react';
 import { BATTERY, DOMAINS, SUBTESTS_BY_ID, SubtestId, subtestsForAge } from '../../cognitiveProfile/battery';
 import { ageCautionAr, CognitiveProfile, ScoredSubtest, formatAge } from '../../cognitiveProfile/scoring';
 import { FLAG_TEXT_AR, READING_MEASURE_NOTE_AR, SUBTEST_GUIDANCE, WORD_NONWORD_NOTE_AR, readingMeasureLineAr } from '../../cognitiveProfile/guidance';

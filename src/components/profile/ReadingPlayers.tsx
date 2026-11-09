@@ -137,7 +137,7 @@ function audioFailureMessage(error: unknown): string {
 // ---------------------------------------------------------------------------
 // Continuous audio assessment for real-word and made-up-word reading lists
 // ---------------------------------------------------------------------------
-type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'finalizing' | 'error';
+type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'feedback' | 'finalizing' | 'error';
 
 function createAudioAttemptId(): string {
   const bytes = new Uint8Array(16);
@@ -388,6 +388,31 @@ export function ReadListAudioPlayer({
     recordingRef.current = null;
   }, []);
 
+    const advanceToNextWord = async () => {
+    if (busyRef.current) return;
+    setLastWordFeedback(null);
+    if (currentItemIndex + 1 < items.length) {
+      setCurrentItemIndex((prev) => prev + 1);
+      setPhase('ready');
+    } else {
+      await finalizeList(wordReceiptsRef.current);
+    }
+  };
+
+  const retryCurrentWord = () => {
+    setLastWordFeedback(null);
+    setPhase('ready');
+  };
+
+  useEffect(() => {
+    if (phase === 'feedback' && lastWordFeedback?.isCorrect) {
+      const timer = window.setTimeout(() => {
+        void advanceToNextWord();
+      }, 2500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [phase, lastWordFeedback, currentItemIndex]);
+
   const startRecording = async () => {
     if (!supported || busyRef.current || phase !== 'ready') return;
     busyRef.current = true;
@@ -457,7 +482,7 @@ export function ReadListAudioPlayer({
               {currentItem?.text}
             </span>
           </div>
-          {lastWordFeedback && phase === 'ready' && (
+          {lastWordFeedback && phase === 'feedback' && (
             <div className="w-full max-w-xl mx-auto my-3 text-right" role="status" aria-live="polite">
               {lastWordFeedback.isCorrect ? (
                 <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-xs space-y-2">
@@ -795,7 +820,7 @@ export function PassagePlayer({
         {/* Story Text Display */}
         {phase !== 'review' ? (
           <div
-            className="text-[26px] sm:text-[34px] leading-[2.2] text-ink text-start p-4 sm:p-6 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs"
+            className="text-xl sm:text-2xl leading-[2] text-ink text-start p-4 sm:p-6 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs"
             style={READING_FONT}
             lang="ar"
           >
@@ -1059,13 +1084,13 @@ export function PassagePlayer({
 function RanCell({ symbol, display, size }: { symbol: RanSymbol; display: 'picture' | 'letter'; size: 'sm' | 'lg' }) {
   if (display === 'picture') {
     return (
-      <span className={size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} aria-hidden="true">
+      <span className={size === 'lg' ? 'text-6xl' : 'text-2xl sm:text-3xl'} aria-hidden="true">
         <Pic emoji={lex(symbol.value).emoji} />
       </span>
     );
   }
   return (
-    <span className={`${size === 'lg' ? 'text-6xl' : 'text-[34px] sm:text-[44px]'} font-black text-ink leading-none`} style={READING_FONT} aria-hidden="true">
+    <span className={`${size === 'lg' ? 'text-6xl' : 'text-2xl sm:text-3xl'} font-black text-ink leading-none`} style={READING_FONT} aria-hidden="true">
       {symbol.value}
     </span>
   );
@@ -1190,7 +1215,7 @@ export function RanPlayer({
       {phase !== 'names' && (
         <div className="w-full max-w-2xl space-y-4">
           {/* Top Controls Bar - ALWAYS VISIBLE ABOVE THE GRID */}
-          <div className="p-4 sm:p-5 rounded-2xl border-2 border-line bg-card shadow-xs space-y-3 text-center">
+          <div className="sticky top-2 z-20 p-3 sm:p-4 rounded-2xl border-2 border-line bg-card/95 backdrop-blur-md shadow-md space-y-2 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-bold text-ink text-base sm:text-lg">
                 {display === 'picture' ? '🏁 سباق تسمية الصور' : '🏁 سباق تسمية الحروف'}
@@ -1285,7 +1310,7 @@ export function RanPlayer({
             {grid.map((id, index) => (
               <div
                 key={id + '-' + index}
-                className="grid place-items-center w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-card border border-line/60 shadow-2xs hover:border-teal-400 transition-all select-none"
+                className="grid place-items-center w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-card border border-line/60 shadow-2xs hover:border-teal-400 transition-all select-none"
               >
                 {byId.get(id) ? <RanCell symbol={byId.get(id)!} display={display} size="sm" /> : null}
               </div>

@@ -664,6 +664,7 @@ interface Props {
 
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
+  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('fast');
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
   const loadInitial = (): BatterySession | null => {
@@ -761,13 +762,13 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     [session]
   );
 
-  const ageTasks = session ? subtestsForAge(session.ageMonths) : [];
-  const sittings = session ? sittingsForAge(session.ageMonths) : [];
+  const ageTasks = session ? subtestsForAge(session.ageMonths, screeningMode) : [];
+  const sittings = session ? sittingsForAge(session.ageMonths, screeningMode) : [];
   const completed = ageTasks.filter((s) => session?.results[s.id]);
   const localHistory = loadScreeningHistory(activeStudent.id);
   const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
   const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
-  const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
+  const remainingMinutes = minutesForAge(session?.ageMonths ?? 72, screeningMode);
   const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
   /** The child just completed a whole sitting: a natural place to stop for today. */
   const sittingJustFinished =
