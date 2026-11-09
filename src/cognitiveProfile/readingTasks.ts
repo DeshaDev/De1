@@ -48,25 +48,25 @@ export interface SpellItem {
 // Real words: frequent in early Arabic readers, graded by syllable structure.
 // ---------------------------------------------------------------------------
 export const WORD_PRACTICE: ReadItem[] = [
-  { id: 'wr-p1', text: 'مَاء', level: 1, structureAr: 'مقطع واحد بمدّ' },
+  { id: 'wr-p1', text: 'مَاءْ', level: 1, structureAr: 'مقطع واحد بمدّ وسكون الوقف' },
 ];
 
 export const WORD_ITEMS: ReadItem[] = [
-  { id: 'wr-1', text: 'بَاب', level: 1, structureAr: 'مقطع واحد بمدّ' },
-  { id: 'wr-2', text: 'فِيل', level: 1, structureAr: 'مقطع واحد بمدّ' },
-  { id: 'wr-3', text: 'بَيْت', level: 1, structureAr: 'مقطع واحد بحرف لين وسكون' },
-  { id: 'wr-4', text: 'يَد', level: 1, structureAr: 'مقطع واحد قصير' },
-  { id: 'wr-5', text: 'قَلَم', level: 2, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'wr-6', text: 'جَمَل', level: 2, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'wr-7', text: 'وَلَد', level: 2, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'wr-8', text: 'كِتَاب', level: 2, structureAr: 'مقطعان بمدّ' },
-  { id: 'wr-9', text: 'سَمَكَة', level: 3, structureAr: 'ثلاثة مقاطع وتاء مربوطة' },
-  { id: 'wr-10', text: 'شَجَرَة', level: 3, structureAr: 'ثلاثة مقاطع وتاء مربوطة' },
-  { id: 'wr-11', text: 'مَدْرَسَة', level: 3, structureAr: 'ثلاثة مقاطع بسكون وسط الكلمة' },
-  { id: 'wr-12', text: 'حَدِيقَة', level: 3, structureAr: 'ثلاثة مقاطع بمدّ' },
-  { id: 'wr-13', text: 'الشَّمْس', level: 4, structureAr: 'لام شمسية لا تُنطق، وشدّة' },
-  { id: 'wr-14', text: 'سَيَّارَة', level: 4, structureAr: 'شدّة ومدّ وتاء مربوطة' },
-  { id: 'wr-15', text: 'المُعَلِّم', level: 4, structureAr: 'لام قمرية وشدّة وأربعة مقاطع' },
+  { id: 'wr-1', text: 'بَابْ', level: 1, structureAr: 'مقطع واحد بمدّ وسكون الوقف' },
+  { id: 'wr-2', text: 'فِيلْ', level: 1, structureAr: 'مقطع واحد بمدّ وسكون الوقف' },
+  { id: 'wr-3', text: 'بَيْتْ', level: 1, structureAr: 'مقطع واحد بحرف لين وسكون' },
+  { id: 'wr-4', text: 'يَدْ', level: 1, structureAr: 'مقطع واحد قصير وسكون الوقف' },
+  { id: 'wr-5', text: 'قَلَمْ', level: 2, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'wr-6', text: 'جَمَلْ', level: 2, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'wr-7', text: 'وَلَدْ', level: 2, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'wr-8', text: 'كِتَابْ', level: 2, structureAr: 'مقطعان بمدّ وسكون الوقف' },
+  { id: 'wr-9', text: 'سَمَكَةْ', level: 3, structureAr: 'ثلاثة مقاطع وسكون الوقف' },
+  { id: 'wr-10', text: 'شَجَرَةْ', level: 3, structureAr: 'ثلاثة مقاطع وسكون الوقف' },
+  { id: 'wr-11', text: 'مَدْرَسَةْ', level: 3, structureAr: 'ثلاثة مقاطع بسكون وسط الكلمة وآخرها' },
+  { id: 'wr-12', text: 'حَدِيقَةْ', level: 3, structureAr: 'ثلاثة مقاطع بمدّ وسكون الوقف' },
+  { id: 'wr-13', text: 'الشَّمْسْ', level: 4, structureAr: 'لام شمسية لا تُنطق، وشدّة وسكون' },
+  { id: 'wr-14', text: 'سَيَّارَةْ', level: 4, structureAr: 'شدّة ومدّ وسكون الوقف' },
+  { id: 'wr-15', text: 'المُعَلِّمْ', level: 4, structureAr: 'لام قمرية وشدّة وسكون الوقف' },
   { id: 'wr-16', text: 'مُسْتَشْفَى', level: 4, structureAr: 'أربعة مقاطع بسكونين وألف مقصورة' },
 ];
 
@@ -77,22 +77,22 @@ export const WORD_ITEMS: ReadItem[] = [
 // lexical absence in each target dialect before norming (docs/VALIDATION_PLAN_AR.md).
 // ---------------------------------------------------------------------------
 export const NONWORD_PRACTICE: ReadItem[] = [
-  { id: 'nw-p1', text: 'فُوب', level: 1, structureAr: 'مقطع واحد بمدّ' },
+  { id: 'nw-p1', text: 'فُوبْ', level: 1, structureAr: 'مقطع واحد بمدّ وسكون الوقف' },
 ];
 
 export const NONWORD_ITEMS: ReadItem[] = [
-  { id: 'nw-1', text: 'فَزَب', level: 1, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'nw-2', text: 'دُمَك', level: 1, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'nw-3', text: 'شِدَف', level: 1, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'nw-4', text: 'زَفَك', level: 1, structureAr: 'مقطعان بحركات قصيرة' },
-  { id: 'nw-5', text: 'بَاكِف', level: 2, structureAr: 'مقطعان بمدّ في الأول' },
-  { id: 'nw-6', text: 'تُومَد', level: 2, structureAr: 'مقطعان بمدّ في الأول' },
-  { id: 'nw-7', text: 'رِيفَم', level: 2, structureAr: 'مقطعان بمدّ في الأول' },
-  { id: 'nw-8', text: 'لَزُوف', level: 2, structureAr: 'مقطعان بمدّ في الثاني' },
-  { id: 'nw-9', text: 'مَفْكُوز', level: 3, structureAr: 'وزن مَفْعُول: سكون ومدّ' },
-  { id: 'nw-10', text: 'دَنْفَلَة', level: 3, structureAr: 'ثلاثة مقاطع بسكون وتاء مربوطة' },
-  { id: 'nw-11', text: 'سُفْتَام', level: 3, structureAr: 'سكون ومدّ' },
-  { id: 'nw-12', text: 'جُرْفَال', level: 3, structureAr: 'سكون ومدّ' },
+  { id: 'nw-1', text: 'فَزَبْ', level: 1, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'nw-2', text: 'دُمَكْ', level: 1, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'nw-3', text: 'شِدَفْ', level: 1, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'nw-4', text: 'زَفَكْ', level: 1, structureAr: 'مقطعان بحركات قصيرة وسكون الوقف' },
+  { id: 'nw-5', text: 'بَاكِفْ', level: 2, structureAr: 'مقطعان بمدّ في الأول وسكون الوقف' },
+  { id: 'nw-6', text: 'تُومَدْ', level: 2, structureAr: 'مقطعان بمدّ في الأول وسكون الوقف' },
+  { id: 'nw-7', text: 'رِيفَمْ', level: 2, structureAr: 'مقطعان بمدّ في الأول وسكون الوقف' },
+  { id: 'nw-8', text: 'لَزُوفْ', level: 2, structureAr: 'مقطعان بمدّ في الثاني وسكون الوقف' },
+  { id: 'nw-9', text: 'مَفْكُوزْ', level: 3, structureAr: 'وزن مَفْعُول: سكون ومدّ وسكون الوقف' },
+  { id: 'nw-10', text: 'دَنْفَلَةْ', level: 3, structureAr: 'ثلاثة مقاطع وسكون الوقف' },
+  { id: 'nw-11', text: 'سُفْتَامْ', level: 3, structureAr: 'سكون ومدّ وسكون الوقف' },
+  { id: 'nw-12', text: 'جُرْفَالْ', level: 3, structureAr: 'سكون ومدّ وسكون الوقف' },
 ];
 
 // ---------------------------------------------------------------------------

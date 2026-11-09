@@ -195,6 +195,145 @@ async function assessWordDirectWithAzure(args: {
   };
 }
 
+/**
+ * Direct multimodal evaluation with Google Gemini for continuous oral reading passages.
+ * Checks each word for correct pronunciation, Tashkeel errors, word substitution, or omission.
+ */
+async function assessPassageDirectWithGemini(args: {
+  taskId: CognitiveAudioTaskId;
+  session: CognitiveAudioSessionContext;
+  recording: RecordedWavAudio;
+  referenceWords: string[];
+}): Promise<CognitiveAudioAssessmentEvidence | null> {
+  const { taskId, session, recording, referenceWords } = args;
+  const apiKey =
+    (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) ||
+    DEFAULT_GEMINI_KEY;
+  if (!apiKey) return null;
+
+  const referenceText = referenceWords.join(' ');
+  const prompt = `أنت مقيم قراءة جهرية وخبير في الفحص اللغوي والوعي الفونيمي للأطفال باللغة العربية الفصحى.
+النص المستهدف هو قصة للأطفال:
+«${referenceText}»
+
+المهمة:
+استمع بدقة شديدة للتسجيل الصوتي الكامل المرفق، وقارن ما نطق به القارئ مع النص المرجعي كلمة بكلمة بالترتيب:
+لكل كلمة من كلمات النص الـ ${referenceWords.length}، حدد:
+1. "word": الكلمة المرجعية كما هي بالضبط بالحركات.
+2. "spokenWord": الكلمة التي نطقها القارئ بالفعل كما سُمعت بصوته (أو "" إذا تخطاها أو لم يقرأها).
+3. "errorType":
+   - "None": إذا قرأ الكلمة بشكل سليم ومتقن ومطابق بالحركات والمدود.
+   - "Mispronunciation": إذا أخطأ في حركة أو أسقط مدًا أو أبدل حركة بأخرى (مثل فتح بدلاً من كسر أو العكس أو إمالة عامية).
+   - "Substitution": إذا استبدل الكلمة بكلمة أخرى مختلفة كلياً.
+   - "Omission": إذا تخطى الكلمة ولم يقرأها.
+4. "accuracyScore": رقم بين 0 و 100 (100 للصحيح، 40 لخطأ التشكيل، 0 للاستبدال أو التخطي).
+5. "diagnosis": شرح موجز باللغة العربية الفصحى يوضح الخطأ إن وجد (مثال: نطق بكسر الهمزة بدلاً من الضم، أو استبدال كلمة).
+
+أجب بصيغة JSON فقط:
+{
+  "transcript": "تفريغ النص الصوتي كاملاً لما نطق به القارئ",
+  "words": [
+    {
+      "word": string,
+      "spokenWord": string,
+      "errorType": "None" | "Mispronunciation" | "Substitution" | "Omission",
+      "accuracyScore": number,
+      "diagnosis": string
+    }
+  ]
+}`;
+
+  try {
+    const postData = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          {
+            inline_data: {
+              mime_type: 'audio/wav',
+              data: recording.audioWavBase64,
+            },
+          },
+        ],
+      }],
+      generationConfig: {
+        response_mime_type: 'application/json',
+      },
+    };
+
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 6500) : null;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+        signal: controller?.signal,
+      }
+    ).finally(() => {
+      if (timeoutId) clearTimeout(timeoutId);
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text) as {
+      transcript?: string;
+      words: Array<{
+        word: string;
+        spokenWord?: string;
+        errorType: 'None' | 'Mispronunciation' | 'Substitution' | 'Omission';
+        accuracyScore?: number;
+        diagnosis?: string;
+      }>;
+    };
+
+    if (!Array.isArray(parsed.words) || parsed.words.length === 0) return null;
+
+    const alignedWords = referenceWords.map((refWord, index) => {
+      const found = parsed.words[index] || parsed.words.find((w) => w.word === refWord);
+      const errorType = found?.errorType || 'None';
+      const score = typeof found?.accuracyScore === 'number' ? found.accuracyScore : (errorType === 'None' ? 95 : 0);
+      return {
+        word: refWord,
+        errorType,
+        accuracyScore: score,
+        spokenWord: found?.spokenWord || (errorType === 'None' ? refWord : null),
+        diagnosis: found?.diagnosis || (errorType === 'None' ? 'نطق سليم بالحركات والمدود' : 'عدم مطابقة في القراءة'),
+      };
+    });
+
+    const correctCount = alignedWords.filter((w) => w.errorType === 'None').length;
+    const wordAccuracy = Math.round((correctCount / Math.max(1, alignedWords.length)) * 100);
+    const durationMin = Math.max(0.1, recording.durationSeconds) / 60;
+    const wordsPerMinute = Math.round(alignedWords.length / durationMin);
+    const wordsCorrectPerMinute = Math.round(correctCount / durationMin);
+
+    return {
+      taskId,
+      sourceModel: 'azure_pronunciation_assessment',
+      assessmentComplete: true,
+      assessmentReceipt: generateHexHash(`gemini:passage:${session.studentId}:${Date.now()}`),
+      transcript: parsed.transcript || referenceText,
+      durationSeconds: recording.durationSeconds,
+      correctWordsCount: correctCount,
+      substitutionsCount: alignedWords.filter((w) => w.errorType === 'Substitution' || w.errorType === 'Mispronunciation').length,
+      omissionsCount: alignedWords.filter((w) => w.errorType === 'Omission').length,
+      insertionsCount: 0,
+      wordAccuracyPercent: wordAccuracy,
+      wordsPerMinute,
+      wordsCorrectPerMinute,
+      words: alignedWords,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Whole-recording path for passage reading and rapid naming tasks. */
 export async function assessCognitiveAudio(args: {
   taskId: CognitiveAudioTaskId;

@@ -599,13 +599,18 @@ export function PassagePlayer({
   audioSession: CognitiveAudioSessionContext;
   onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
 }) {
-  const [phase, setPhase] = useState<AudioTaskPhase>('ready');
+  const [phase, setPhase] = useState<'ready' | 'recording' | 'submitting' | 'review' | 'error'>('ready');
+  const [activeWordIndex, setActiveWordIndex] = useState(0);
+  const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null);
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
+  const [assessmentResult, setAssessmentResult] = useState<CognitiveAudioAssessmentEvidence | null>(null);
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
   const startingRef = useRef(false);
   const finalizingRef = useRef(false);
+  const cachedResponsesRef = useRef<ItemResponse[]>([]);
+  const cachedDurationMsRef = useRef(0);
 
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true &&
@@ -616,6 +621,59 @@ export function PassagePlayer({
     const timer = window.setInterval(() => setElapsedNow(performance.now()), 250);
     return () => window.clearInterval(timer);
   }, [phase]);
+
+  // Live Speech Recognition in Chrome/Edge to automatically advance highlighter as the child speaks
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) return;
+    try {
+      const recognizer = new SpeechRec();
+      recognizer.continuous = true;
+      recognizer.interimResults = true;
+      recognizer.lang = audioSession.speechLocale || 'ar-SA';
+      recognizer.onresult = (event: any) => {
+        const last = event.results?.[event.results.length - 1];
+        const transcript = last?.[0]?.transcript?.trim() || '';
+        if (!transcript) return;
+        const tokens = transcript.split(/\s+/).map((w: string) =>
+          w.replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '')
+        );
+        const lastSpoken = tokens[tokens.length - 1];
+        if (!lastSpoken) return;
+
+        setActiveWordIndex((prev) => {
+          for (let i = prev; i < Math.min(words.length, prev + 5); i++) {
+            const cleanRef = words[i].replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '');
+            if (cleanRef === lastSpoken) {
+              return Math.min(words.length - 1, i + 1);
+            }
+          }
+          return prev;
+        });
+      };
+      recognizer.start();
+      return () => {
+        try { recognizer.stop(); } catch {}
+      };
+    } catch {}
+  }, [phase, words, audioSession.speechLocale]);
+
+  // Keyboard navigation for highlighter (Space / ArrowLeft advances, ArrowRight rewinds)
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setActiveWordIndex((prev) => Math.min(words.length - 1, prev + 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setActiveWordIndex((prev) => Math.max(0, prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, words.length]);
 
   const elapsedSeconds = phase === 'recording'
     ? Math.min(timeLimitSec, Math.max(0, (elapsedNow - startAtRef.current) / 1000))
@@ -647,7 +705,16 @@ export function PassagePlayer({
         rtMs: 0,
         replays: 0,
       }));
-      onDone(responses, Math.round(recording.durationSeconds * 1000), assessment);
+      cachedResponsesRef.current = responses;
+      cachedDurationMsRef.current = Math.round(recording.durationSeconds * 1000);
+      setAssessmentResult(assessment);
+
+      // Select first error word to highlight in review by default
+      const firstErrIdx = assessment.words.findIndex(
+        (w) => w.errorType !== 'None' && w.errorType !== 'DialectVariant'
+      );
+      setSelectedWordIndex(firstErrIdx >= 0 ? firstErrIdx : 0);
+      setPhase('review');
     } catch (error) {
       setErrorMessage(audioFailureMessage(error));
       setPhase('error');
@@ -668,6 +735,7 @@ export function PassagePlayer({
     if (!supported || startingRef.current || phase !== 'ready') return;
     startingRef.current = true;
     setErrorMessage('');
+    setActiveWordIndex(0);
     try {
       recordingRef.current = await startWavRecording();
       startAtRef.current = performance.now();
@@ -681,40 +749,252 @@ export function PassagePlayer({
     }
   };
 
+  const finishAndAdvance = () => {
+    if (assessmentResult) {
+      onDone(cachedResponsesRef.current, cachedDurationMsRef.current, assessmentResult);
+    } else {
+      saveWithoutScore();
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
       <div className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-5">
         <div className="text-center space-y-2">
           <span className="text-5xl" aria-hidden="true">📖</span>
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
+              ✨ محدد قراءة تفاعلي (Highlighter) + تصحيح الذكاء الاصطناعي
+            </span>
+          </div>
           <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
             {phase === 'recording'
-              ? 'اقرأ القصة بصوتك الطبيعي وبالسرعة التي تناسبك. سيُرسل التسجيل لتحليله بعد الانتهاء.'
-              : 'سجّل قراءة القصة مرة واحدة. سيحلل Azure التسجيل الكامل مقابل النص، ولن نعتمد تخمينات المتصفح.'}
+              ? 'اقرأ القصة بصوتك الطبيعي. الكلمة المحددة باللون الأصفر تتحرك معك تلقائياً أثناء النطق، أو يمكنك النقر عليها.'
+              : phase === 'review'
+              ? 'تم تحليل قراءتك بواسطة الذكاء الاصطناعي. انقر على أي كلمة ملونة لعرض التشخيص وتصحيح النطق.'
+              : 'سجّل قراءة القصة كاملة. سيتحقق الذكاء الاصطناعي من الكلمات والحركات والمدود بدقة.'}
           </p>
         </div>
-        <div className="text-[26px] sm:text-[34px] leading-[2.15] text-ink text-start" style={READING_FONT} lang="ar">
-          {words.map((word, index) => <span key={index}>{word}{index < words.length - 1 ? ' ' : ''}</span>)}
-        </div>
 
+        {/* Story Text Display */}
+        {phase !== 'review' ? (
+          <div
+            className="text-[26px] sm:text-[34px] leading-[2.2] text-ink text-start p-4 sm:p-6 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs"
+            style={READING_FONT}
+            lang="ar"
+          >
+            {words.map((word, index) => {
+              const isActive = phase === 'recording' && index === activeWordIndex;
+              const isPassed = phase === 'recording' && index < activeWordIndex;
+              return (
+                <span
+                  key={index}
+                  onClick={() => phase === 'recording' && setActiveWordIndex(index)}
+                  className={`cursor-pointer transition-all duration-150 inline-block px-1.5 py-0.5 rounded-lg mx-0.5 ${
+                    isActive
+                      ? 'bg-amber-300 text-slate-950 font-black shadow-md border-b-2 border-amber-600 scale-105 ring-2 ring-amber-400'
+                      : isPassed
+                      ? 'text-teal-900 bg-teal-100/60'
+                      : 'text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                  title={phase === 'recording' ? 'انقر لتحديد الكلمة (Highlighter)' : undefined}
+                >
+                  {word}{index < words.length - 1 ? ' ' : ''}
+                </span>
+              );
+            })}
+          </div>
+        ) : (
+          /* Review Mode with Color-coded Words */
+          <div className="space-y-4">
+            <div
+              className="text-[24px] sm:text-[30px] leading-[2.3] text-start p-5 sm:p-6 rounded-2xl bg-slate-50 border-2 border-slate-200 select-none shadow-2xs"
+              style={READING_FONT}
+              lang="ar"
+            >
+              {words.map((word, index) => {
+                const assessed = assessmentResult?.words?.[index];
+                const isCorrect = assessed?.errorType === 'None' || assessed?.errorType === 'DialectVariant';
+                const isOmission = assessed?.errorType === 'Omission';
+                const isError = !isCorrect && !isOmission;
+                const isSelected = selectedWordIndex === index;
+
+                return (
+                  <span
+                    key={index}
+                    onClick={() => setSelectedWordIndex(index)}
+                    className={`cursor-pointer inline-block px-2 py-0.5 rounded-xl mx-1 my-1 transition-all ${
+                      isSelected ? 'ring-3 ring-teal-500 scale-105 font-black ' : ''
+                    }${
+                      isCorrect
+                        ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 hover:bg-emerald-200'
+                        : isError
+                        ? 'bg-rose-100 text-rose-950 border-2 border-rose-400 font-bold shadow-2xs hover:bg-rose-200'
+                        : 'bg-slate-200/90 text-slate-500 border border-slate-300 line-through'
+                    }`}
+                  >
+                    {word}
+                    {isError && <span className="text-xs mr-1 text-rose-700 font-sans">⚠️</span>}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Selected Word Feedback Card */}
+            {selectedWordIndex !== null && assessmentResult?.words?.[selectedWordIndex] && (
+              <div
+                className={`p-4 sm:p-5 rounded-2xl border-2 shadow-xs space-y-2 text-right transition-all ${
+                  assessmentResult.words[selectedWordIndex].errorType === 'None'
+                    ? 'bg-emerald-50 border-emerald-300'
+                    : 'bg-rose-50 border-rose-300'
+                }`}
+                role="status"
+              >
+                <div className="flex items-center justify-between gap-2 font-bold text-sm sm:text-base">
+                  <div className="flex items-center gap-2">
+                    {assessmentResult.words[selectedWordIndex].errorType === 'None' ? (
+                      <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <span className="text-rose-700 text-lg leading-none">⚠️</span>
+                    )}
+                    <span className={assessmentResult.words[selectedWordIndex].errorType === 'None' ? 'text-emerald-900' : 'text-rose-900'}>
+                      {assessmentResult.words[selectedWordIndex].errorType === 'None'
+                        ? '✓ نطق صحيح ومتقن'
+                        : assessmentResult.words[selectedWordIndex].errorType === 'Substitution'
+                        ? 'استبدال كلمة في القصة'
+                        : assessmentResult.words[selectedWordIndex].errorType === 'Omission'
+                        ? 'كلمة محذوفة / لم تُقرأ'
+                        : 'خطأ في تشكيل أو نطق الكلمة'}
+                    </span>
+                  </div>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/95 border font-bold text-slate-800">
+                    درجة الدقة: {ar(assessmentResult.words[selectedWordIndex].accuracyScore || 0)}٪
+                  </span>
+                </div>
+
+                <div className="text-xs sm:text-sm text-slate-800 space-y-1.5 pr-6 font-medium">
+                  <p>
+                    الكلمة المطلوبة في القصة: <strong className="text-slate-950 font-bold">«{assessmentResult.words[selectedWordIndex].word}»</strong>
+                  </p>
+                  <p>
+                    أنت نطقت (المسموع من الطفل):{' '}
+                    <strong className={assessmentResult.words[selectedWordIndex].errorType === 'None' ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>
+                      {assessmentResult.words[selectedWordIndex].spokenWord
+                        ? `«${assessmentResult.words[selectedWordIndex].spokenWord}»`
+                        : 'صمت / لم تُقرأ'}
+                    </strong>
+                  </p>
+                  <p className="text-xs text-slate-600 pt-0.5 border-t border-slate-200/60">
+                    <strong>التشخيص الصوتي واللغوي:</strong>{' '}
+                    {(assessmentResult.words[selectedWordIndex] as any).diagnosis ||
+                      (assessmentResult.words[selectedWordIndex].errorType === 'None'
+                        ? 'نطق سليم بالحركات والمدود ومخارج سليمة.'
+                        : 'عدم مطابقة في حركات الكلمة أو مخارج حروفها.')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Performance Stats Banner */}
+            {assessmentResult && (
+              <div className="flex flex-wrap items-center justify-around gap-3 p-4 bg-teal-50 border border-teal-200 rounded-2xl text-center">
+                <div>
+                  <span className="block text-xs font-bold text-teal-800">الكلمات الصحيحة</span>
+                  <span className="text-lg font-extrabold text-teal-950">
+                    {ar(assessmentResult.correctWordsCount)} من {ar(words.length)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-teal-800">دقة القراءة</span>
+                  <span className="text-lg font-extrabold text-teal-950">
+                    {ar(assessmentResult.wordAccuracyPercent)}٪
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-teal-800">معدل الطلاقة</span>
+                  <span className="text-lg font-extrabold text-teal-950">
+                    {ar(assessmentResult.wordsCorrectPerMinute || assessmentResult.wordsPerMinute || 0)} كلمة/د
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Phase: Recording */}
         {phase === 'recording' && (
-          <div className="space-y-3 text-center">
-            <p className="font-bold text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(timeLimitSec - elapsedSeconds))} ثانية متبقية</p>
-            <div className="bz-progress"><span style={{ width: String(Math.min(100, (elapsedSeconds / timeLimitSec) * 100)) + '%' }} /></div>
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitRecording()}>
+          <div className="space-y-4 text-center">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
+              <span className="text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(timeLimitSec - elapsedSeconds))} ثانية متبقية</span>
+              <span className="text-slate-600">
+                الكلمة المحددة: {ar(activeWordIndex + 1)} من {ar(words.length)}
+              </span>
+            </div>
+            <div className="bz-progress">
+              <span style={{ width: String(Math.min(100, (elapsedSeconds / timeLimitSec) * 100)) + '%' }} />
+            </div>
+
+            {/* Live Highlighter Controls */}
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              <button
+                type="button"
+                className="bz-btn bz-btn-secondary bz-btn-sm"
+                onClick={() => setActiveWordIndex((prev) => Math.max(0, prev - 1))}
+                disabled={activeWordIndex === 0}
+              >
+                ◀ الكلمة السابقة
+              </button>
+              <button
+                type="button"
+                className="bz-btn bz-btn-secondary bz-btn-sm font-bold"
+                onClick={() => setActiveWordIndex((prev) => Math.min(words.length - 1, prev + 1))}
+                disabled={activeWordIndex === words.length - 1}
+              >
+                الكلمة التالية ◀
+              </button>
+            </div>
+
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg w-full sm:w-auto" onClick={() => void submitRecording()}>
               <Check className="w-5 h-5" /> انتهيت من القراءة — حلّل التسجيل
             </button>
           </div>
         )}
 
+        {/* Phase: Submitting */}
         {phase === 'submitting' && (
           <div className="text-center space-y-2" role="status">
-            <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">يجري تحليل التسجيل الصوتي والتحقق من الكلمات…</p>
-            <p className="bz-small text-muted">لا تغلق الصفحة حتى يظهر تأكيد إتمام المهمة.</p>
+            <span className="text-3xl animate-pulse" aria-hidden="true">🎧</span>
+            <p className="font-bold text-ink">يجري تحليل القصة صوتياً وتدقيق الكلمات عبر الذكاء الاصطناعي…</p>
+            <p className="bz-small text-muted">فحص التشكيل والمدود ومخارج الحروف كلمة بكلمة</p>
           </div>
         )}
 
+        {/* Phase: Review */}
+        {phase === 'review' && (
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <button
+              type="button"
+              className="bz-btn bz-btn-primary bz-btn-lg"
+              onClick={finishAndAdvance}
+            >
+              متابعة النتيجة والانتقال للمهمة التالية ◀
+            </button>
+            <button
+              type="button"
+              className="bz-btn bz-btn-secondary"
+              onClick={() => {
+                finalizingRef.current = false;
+                setAssessmentResult(null);
+                setPhase('ready');
+              }}
+            >
+              إعادة تسجيل القصة
+            </button>
+          </div>
+        )}
+
+        {/* Phase: Error */}
         {phase === 'error' && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
             <p className="bz-small text-amber-950">{errorMessage}</p>
@@ -737,6 +1017,7 @@ export function PassagePlayer({
           </div>
         )}
 
+        {/* Phase: Ready */}
         {phase === 'ready' && (
           <div className="flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
