@@ -246,7 +246,7 @@ export function ReadListAudioPlayer({
   const busyRef = useRef(false);
   const attemptIdRef = useRef('');
   const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>([]);
-  const maxWordDurationSeconds = 12;
+  const maxWordDurationSeconds = 30;
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true &&
     Boolean(audioSession.speechLocale);
@@ -532,12 +532,16 @@ export function ReadListAudioPlayer({
         </div>
 
         {phase === 'recording' && (
-          <div className="space-y-3 text-center">
-            <p className="font-bold text-rose-700">● تسجيل هذه الكلمة · {ar(Math.ceil(maxWordDurationSeconds - elapsedSeconds))} ثانية متبقية</p>
-            <div className="bz-progress"><span style={{ width: String(Math.min(100, elapsedSeconds / maxWordDurationSeconds * 100)) + '%' }} /></div>
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void submitCurrentWord()}>
-              <Check className="w-5 h-5" /> أنهيت قراءة الكلمة
-            </button>
+          <div className="space-y-4 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-sm shadow-2xs">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <span>نستمع إليك الآن... اقرأ الكلمة واضغط الزر أدناه عند الانتهاء</span>
+            </div>
+            <div>
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg shadow-md" onClick={() => void submitCurrentWord()}>
+                <Check className="w-5 h-5" /> أنهيت قراءة الكلمة
+              </button>
+            </div>
           </div>
         )}
 
@@ -926,8 +930,11 @@ export function PassagePlayer({
         {phase === 'recording' && (
           <div className="space-y-4 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
-              <span className="text-rose-700">● التسجيل جارٍ · {ar(Math.ceil(timeLimitSec - elapsedSeconds))} ثانية متبقية</span>
-              <span className="text-slate-600">
+              <div className="inline-flex items-center gap-2 text-teal-800">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+                <span>التسجيل الصوتي جارٍ... اقرأ على مهلك</span>
+              </div>
+              <span className="text-slate-600 text-xs">
                 الكلمة المحددة: {ar(activeWordIndex + 1)} من {ar(words.length)}
               </span>
             </div>
