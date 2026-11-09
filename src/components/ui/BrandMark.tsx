@@ -117,12 +117,15 @@ export function BrandLockup({ tagline = true }: { tagline?: boolean }) {
     <div className="inline-flex items-center gap-3 select-none">
       <BrandMark size={42} />
       <div className="flex flex-col text-right leading-none">
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-extrabold text-[1.4rem] tracking-tight text-teal-700 font-['Noto_Sans_Arabic','Readex_Pro',sans-serif]">
             هَيَّا
           </span>
           <span className="font-extrabold text-[1.4rem] tracking-tight text-slate-900 font-['Noto_Sans_Arabic','Readex_Pro',sans-serif]">
             نَقْرَأْ
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs mr-1">
+            النسخة الحديثة v2
           </span>
         </div>
         {tagline && (

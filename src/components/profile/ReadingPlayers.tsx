@@ -318,6 +318,11 @@ export function ReadListAudioPlayer({
       <div className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-5">
         <div className="text-center space-y-2">
           <span className="text-5xl" aria-hidden="true">📚</span>
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
+              ✨ النسخة الحديثة v2 — تقييم صوتي ذكي مباشر
+            </span>
+          </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
             اقرأ الكلمة الظاهرة وحدها. بعد تسجيلها وتقييمها ستنتقل إلى الكلمة التالية.
