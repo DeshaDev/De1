@@ -10,16 +10,9 @@ test.use({
 async function prepareFastAudioAndSession(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.clear();
-    const origPlay = HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play = function (...args: unknown[]) {
-      try {
-        this.defaultPlaybackRate = 16;
-        this.playbackRate = 16;
-      } catch {
-        // Ignore if playbackRate cannot be adjusted before metadata load.
-      }
-      return origPlay.apply(this, args as []);
-    };
+  });
+  await page.route('**/audio/v1/manifest.json', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
   });
 }
 
@@ -98,7 +91,8 @@ async function completeOralReadingTask(page: Page) {
   await page.getByText('قصة سامي', { exact: true }).click();
   await page.getByRole('button', { name: 'ابدأ', exact: true }).click();
   await page.getByRole('button', { name: 'ابدأ تسجيل القراءة' }).click();
-  await page.waitForTimeout(2300);
+  await expect(page.getByText(/التسجيل الصوتي جارٍ/)).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'انتهيت من القراءة — حلّل التسجيل' }).click();
   const continueBtn = page.getByRole('button', { name: /متابعة النتيجة والانتقال للمهمة التالية/ });
   await expect(continueBtn).toBeVisible({ timeout: 15_000 });
@@ -244,6 +238,9 @@ test.describe('end-to-end personalized screening to training journey', () => {
     // -------------------- Child 2: عمر --------------------
     // Accurate قصة سامي (100%) + 0% discontinued on صندوق الحروف (letterSound -> Level 1 only)
     await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.route('**/audio/v1/manifest.json', async (route) => {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+    });
     await page.evaluate(() => window.localStorage.clear());
     await page.route('**/api/ai/cognitive-audio-assessment', async (route) => {
       await route.fulfill({
