@@ -280,18 +280,20 @@ test('training selects distinct personalized focus skills, start levels, priors,
   assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound']);
 });
 
-test('oral reading sound confusions and slow RAN fluency flow automatically into personalized plans and generated exercises', () => {
+test('oral reading confusions scale severity by error frequency, and slow RAN stays descriptive without uncalibrated prescriptions', () => {
   const receipt = 'b'.repeat(64);
-  const words = PASSAGE_WORDS.map((word, index) => {
-    // Introduce 3 clear س/ص substitutions inside passage reading
-    if (word.includes('سَمَكَةً')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَمَكَةً' };
-    if (word.includes('سَاخِنًا')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَاخِنًا' };
-    if (word.includes('سَعِيدًا')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَعِيدًا' };
-    void index;
-    return { word, errorType: 'None' as const, accuracyScore: 95, spokenWord: word };
-  });
+  const makeOral = (indicesToSubstitute: number[]) =>
+    PASSAGE_WORDS.map((word, index) => {
+      if (indicesToSubstitute.includes(index)) {
+        return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: word.replace('س', 'ص') };
+      }
+      return { word, errorType: 'None' as const, accuracyScore: 95, spokenWord: word };
+    });
 
-  const childOral = buildProfile({
+  const sIdx = PASSAGE_WORDS.map((w, i) => (w.includes('س') ? i : -1)).filter((i) => i >= 0);
+  // 1) 1 isolated slip out of 37 words (97%) must NOT force targeted therapy over a single slip.
+  const slipWords = makeOral(sIdx.slice(0, 1));
+  const slipProfile = buildProfile({
     oralReading: {
       subtestId: 'oralReading',
       responses: [],
@@ -304,32 +306,107 @@ test('oral reading sound confusions and slow RAN fluency flow automatically into
         sourceModel: 'azure_pronunciation_assessment',
         assessmentComplete: true,
         assessmentReceipt: receipt,
-        transcript: words.map((w) => w.spokenWord).join(' '),
+        transcript: slipWords.map((w) => w.spokenWord).join(' '),
+        durationSeconds: 42,
+        wordAccuracyPercent: 97,
+        wordsCorrectPerMinute: 51,
+        wordsPerMinute: 53,
+        correctWordsCount: slipWords.length - 1,
+        substitutionsCount: 1,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: slipWords,
+      },
+    },
+  }, 84);
+  assert.equal(slipProfile.readingTargets?.errorCounts?.discrimination, 1);
+  assert.equal(buildTrainingPlan(slipProfile).preventive, true, 'single minor slip stays preventive');
+
+  // 2) Moderate repeated س/ص errors (3 confusions, 92% accuracy) vs high errors (6 confusions + lower accuracy)
+  const modWords = PASSAGE_WORDS.map((word) => {
+    if (word.includes('سَمَكَةً') || word.includes('سَاخِنًا') || word.includes('سَعِيدًا')) {
+      return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: word.replace('س', 'ص') };
+    }
+    return { word, errorType: 'None' as const, accuracyScore: 95, spokenWord: word };
+  });
+  const modProfile = buildProfile({
+    oralReading: {
+      subtestId: 'oralReading',
+      responses: [],
+      discontinued: false,
+      completedAt: '2026-10-28T10:00:00.000Z',
+      durationMs: 42_000,
+      audioAssessmentReceipt: receipt,
+      audioAssessment: {
+        taskId: 'oralReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: receipt,
+        transcript: modWords.map((w) => w.spokenWord).join(' '),
         durationSeconds: 42,
         wordAccuracyPercent: 92,
         wordsCorrectPerMinute: 48,
         wordsPerMinute: 53,
-        correctWordsCount: words.length - 3,
+        correctWordsCount: modWords.length - 3,
         substitutionsCount: 3,
         omissionsCount: 0,
         insertionsCount: 0,
-        words,
+        words: modWords,
       },
     },
   }, 84);
 
-  assert.ok(childOral.readingTargets?.skills.includes('discrimination'));
-  assert.ok(childOral.readingTargets?.soundPairs.some((p) => p.includes('س') && p.includes('ص')));
-  const planOral = buildTrainingPlan(childOral);
-  assert.equal(planOral.preventive, false);
-  assert.ok(planOral.focus.includes('discrimination'));
-  const progressOral = createPersonalizedProgress(planOral, childOral);
-  assert.ok(progressOral.targets?.soundPairs.some((p) => p.includes('س') && p.includes('ص')));
-  assert.equal(TrainingProgressUploadSchema.safeParse(progressOral).success, true);
-  const items = generateItems('discrimination', progressOral.levels.discrimination, 42, 8, progressOral.targets);
+  const severeWords = makeOral(sIdx.slice(0, 6)).map((w, i) =>
+    i >= 25 && i < 31 ? { ...w, errorType: 'Substitution' as const, spokenWord: 'كلمة', accuracyScore: 40 } : w
+  );
+  const severeProfile = buildProfile({
+    oralReading: {
+      subtestId: 'oralReading',
+      responses: [],
+      discontinued: false,
+      completedAt: '2026-10-28T10:00:00.000Z',
+      durationMs: 48_000,
+      audioAssessmentReceipt: receipt,
+      audioAssessment: {
+        taskId: 'oralReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: receipt,
+        transcript: severeWords.map((w) => w.spokenWord).join(' '),
+        durationSeconds: 48,
+        wordAccuracyPercent: 68,
+        wordsCorrectPerMinute: 31,
+        wordsPerMinute: 46,
+        correctWordsCount: severeWords.filter((w) => w.errorType === 'None').length,
+        substitutionsCount: severeWords.filter((w) => w.errorType !== 'None').length,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: severeWords,
+      },
+    },
+  }, 84);
+
+  const modRate = modProfile.readingTargets?.skillRates?.discrimination ?? 100;
+  const severeRate = severeProfile.readingTargets?.skillRates?.discrimination ?? 100;
+  assert.ok(severeRate < modRate, `expected frequent errors rate (${severeRate}) < moderate (${modRate})`);
+
+  const planMod = buildTrainingPlan(modProfile);
+  const progressMod = createPersonalizedProgress(planMod, modProfile);
+  assert.equal(planMod.preventive, false);
+  assert.ok(planMod.focus.includes('discrimination'));
+  assert.equal(progressMod.levels.discrimination, 2, 'moderate confusions start at level 2');
+  assert.ok(progressMod.targets?.soundPairs.some((p) => p.includes('س') && p.includes('ص')));
+
+  const planSevere = buildTrainingPlan(severeProfile);
+  const progressSevere = createPersonalizedProgress(planSevere, severeProfile);
+  assert.equal(progressSevere.levels.discrimination, 1, 'frequent errors start at foundational level 1');
+  assert.ok(masteryEstimate(progressSevere, 'discrimination').p < masteryEstimate(progressMod, 'discrimination').p);
+  assert.equal(TrainingProgressUploadSchema.safeParse(progressMod).success, true);
+  assert.equal(TrainingProgressUploadSchema.safeParse(progressSevere).success, true);
+  const items = generateItems('discrimination', progressSevere.levels.discrimination, 42, 8, progressSevere.targets);
   assert.equal(items.length, 8);
 
-  // Slow RAN letter naming rate (even with 95% accuracy) directs focus to letterSound & visualDiscrimination.
+  // 3) Slow RAN rate stays descriptive in report/rationale and never imposes automatic skills before age norming.
   const ranWords = RAN_LETTER_GRID.map((word, index) => ({
     word,
     errorType: (index < 2 ? 'Substitution' : 'None') as 'Substitution' | 'None',
@@ -365,10 +442,8 @@ test('oral reading sound confusions and slow RAN fluency flow automatically into
   }, 84);
 
   const planRan = buildTrainingPlan(childSlowRan);
-  assert.equal(planRan.preventive, false);
-  assert.ok(planRan.focus.includes('letterSound'));
-  assert.ok(planRan.focus.includes('visualDiscrimination'));
-  assert.equal(TrainingProgressUploadSchema.safeParse(createPersonalizedProgress(planRan, childSlowRan)).success, true);
+  assert.equal(planRan.preventive, true, 'uncalibrated RAN speed does not trigger automatic skill prescriptions');
+  assert.ok(planRan.rationaleAr.some((r) => r.includes('التسمية السريعة')));
 });
 
 test('every training skill and level generates valid, varied items', () => {

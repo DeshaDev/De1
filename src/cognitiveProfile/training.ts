@@ -211,10 +211,11 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   auditoryDiscrimination: ['discrimination'],
   visualDiscrimination: ['visualDiscrimination'],
   letterSound: ['letterSound'],
-  // Reading and naming measures now map to their directly addressable fluency/decoding targets
-  // (using provisional within-task accuracy & rate heuristics until Arabic norming completes).
-  ranObjects: ['soundPosition'],
-  ranLetters: ['letterSound', 'visualDiscrimination'],
+  // Rapid naming (RAN) measures an independent naming-speed construct; until Arabic age norms
+  // calibrate RAN speed thresholds and establish direct transfer validity, RAN stays descriptive
+  // in the report and never auto-prescribes phonological or letter drills on its own.
+  ranObjects: [],
+  ranLetters: [],
   wordReading: ['letterSound', 'blending'],
   nonwordReading: ['blending', 'letterSound', 'soundPosition'],
   oralReading: ['blending', 'letterSound'],
@@ -264,24 +265,12 @@ const LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS = 60;
 const MODERATE_START_MIN_PERCENT = 55;
 
 /**
- * Effective descriptive performance (0-100) used strictly for relative within-child skill
- * ordering. Combines accuracy with provisional naming/fluency signals when RAN or oral reading
- * metrics are present, without making normative peer claims.
+ * Effective descriptive accuracy (0-100) observed inside a completed task, used strictly
+ * for relative within-child skill ordering without uncalibrated speed cutoffs.
  */
 export function effectiveSubtestPercent(s: ScoredSubtest): number | null {
   if (s.scoreAvailable === false || s.total <= 0) return null;
-  let effective = s.percent;
-  if ((s.subtestId === 'ranObjects' || s.subtestId === 'ranLetters') && typeof s.measures?.itemsPerSecond === 'number') {
-    if (s.measures.itemsPerSecond < 0.85) {
-      effective = Math.min(effective, Math.round(s.measures.itemsPerSecond * 80));
-    }
-  }
-  if (s.subtestId === 'oralReading' && typeof s.measures?.correctPerMinute === 'number') {
-    if (s.measures.correctPerMinute < 20) {
-      effective = Math.min(effective, 68);
-    }
-  }
-  return Math.max(0, Math.min(100, effective));
+  return Math.max(0, Math.min(100, s.percent));
 }
 
 function skillsForScoredSubtest(s: ScoredSubtest, ageMonths: number): SkillId[] {
@@ -316,13 +305,21 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
 
   let fromTaskEvidence = false;
   let fromReadingTargets = false;
+  let hasRanCompleted = false;
   if (ordered.length === 0 && (subtests.length > 0 || (profile?.readingTargets?.skills?.length ?? 0) > 0)) {
     const scoredEntries = subtests
       .map((s) => ({ subtest: s, effective: effectiveSubtestPercent(s) }))
       .filter((entry): entry is { subtest: ScoredSubtest; effective: number } => entry.effective !== null);
 
+    hasRanCompleted = scoredEntries.some(
+      ({ subtest }) => subtest.subtestId === 'ranObjects' || subtest.subtestId === 'ranLetters'
+    );
+
     const nonMemoryBest = scoredEntries
-      .filter(({ subtest }) => !(SUBTEST_TO_SKILLS[subtest.subtestId] ?? []).every((sk) => NOT_TRAINED_AS_FOCUS.has(sk)))
+      .filter(({ subtest }) => {
+        const mapped = SUBTEST_TO_SKILLS[subtest.subtestId] ?? [];
+        return mapped.some((sk) => !NOT_TRAINED_AS_FOCUS.has(sk));
+      })
       .reduce((max, { effective }) => Math.max(max, effective), 0);
 
     const skillPriority = new Map<SkillId, number>();
@@ -342,12 +339,19 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
     }
 
     if (profile?.readingTargets && profile.readingTargets.skills.length > 0) {
-      const oral = scoredEntries.find((e) => e.subtest.subtestId === 'oralReading')?.effective ?? 65;
-      const targetPriority = Math.min(oral, 62);
+      const oralEff = scoredEntries.find((e) => e.subtest.subtestId === 'oralReading')?.effective;
       for (const skill of profile.readingTargets.skills) {
-        addSkillScore(skill, targetPriority);
+        const errCount = profile.readingTargets.errorCounts?.[skill] ?? 1;
+        const rate = profile.readingTargets.skillRates?.[skill] ?? oralEff ?? 75;
+        const belowProvisional = rate < PROVISIONAL_PRIORITY_PERCENT;
+        const relativeDip = nonMemoryBest - rate >= RELATIVE_DIP_POINTS && rate < RELATIVE_DIP_CEILING;
+        // Require either repeated confusions (>= 2) or meaningful overall drop rather than one slip.
+        if (errCount < 2 && !belowProvisional && !relativeDip) continue;
+        if (belowProvisional || relativeDip || errCount >= 2) {
+          addSkillScore(skill, rate);
+          fromReadingTargets = true;
+        }
       }
-      fromReadingTargets = true;
     }
 
     const sortedSkills = Array.from(skillPriority.entries())
@@ -377,18 +381,21 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   } else {
     rationaleAr.push(
       fromTaskEvidence
-        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بالترتيب من أدنى المهام أداءً أو الأبطأ تسميةً، وهو ترتيب تشغيلي مؤقت دون عتبات معيارية مقننة.'
+        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بالترتيب من أدنى المهام دقةً وتكرارًا للأخطاء المرصودة؛ وهو ترتيب تشغيلي مؤقت دون عتبات معيارية مقننة.'
         : 'اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.'
     );
     if (fromReadingTargets) {
-      rationaleAr.push('رُبطت أخطاء القراءة الجهرية المرصودة (الأصوات أو الحروف المتشابهة) مباشرة بمهارات التركيز.');
+      rationaleAr.push('رُبطت أخطاء القراءة الجهرية بمهارات التركيز وشدّتها وفق تكرار كل نمط خطأ مرصود لا بقيمة ثابتة.');
     }
     rationaleAr.push('تُضبط مستويات البداية (١ أو ٢) وعدد تمارين الجلسة وفق نسبة الأداء الملاحظة في الفحص لكل مهارة.');
     if (trainable.length > MAX_FOCUS_SKILLS) {
       rationaleAr.push('بقية المهارات الأقل دقة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
   }
-  return { createdAt: now.toISOString(), preventive, focus, rationaleAr };
+  if (hasRanCompleted) {
+    rationaleAr.push('تُعرض سرعة التسمية السريعة كمؤشر وصفي في التقرير دون فرض تدريب آلي منها قبل المعايرة العمرية العربية.');
+  }
+  return { createdAt: now.toISOString(), preventive, focus, rationaleAr: rationaleAr.slice(0, 10) };
 }
 
 // ---------------------------------------------------------------------------
@@ -472,9 +479,9 @@ export function skillObservedPercentsFromProfile(
   if (profile?.readingTargets && profile.readingTargets.skills.length > 0) {
     const oral = profile.subtests?.find((s) => s.subtestId === 'oralReading');
     const oralEff = oral ? effectiveSubtestPercent(oral) : null;
-    const readingPriorityPct = Math.min(oralEff ?? 62, 62);
     for (const skill of profile.readingTargets.skills) {
-      setMin(skill, readingPriorityPct);
+      const rate = profile.readingTargets.skillRates?.[skill] ?? oralEff ?? 75;
+      setMin(skill, rate);
     }
   }
   return percents;

@@ -1,3 +1,11 @@
+/**
+ * End-to-end UI wiring verification from screening setup & mic capture through training Session 1.
+ *
+ * Scope boundary: this spec captures real PCM WAV audio from Chromium's fake audio stream and
+ * verifies consent gating, API payload submission, frequency-scaled error routing, customized
+ * starting levels/BKT priors/item doses, and Session 1 exercise completion using intercepted
+ * server fixtures. It does NOT test live Azure Speech accuracy on real Arabic children's speech.
+ */
 import { expect, test, type Page } from '@playwright/test';
 import { PASSAGE_WORDS } from '../../src/cognitiveProfile/readingTasks';
 

@@ -128,6 +128,10 @@ export interface ExtractedReadingTargets {
   reasonsAr: string[];
   passageId: string;
   analysedAt: string;
+  /** Descriptive 0-100 rate per extracted error skill, scaled by actual error frequency and task accuracy. */
+  skillRates?: Partial<Record<SkillId, number>>;
+  /** Exact error count observed for each error-pattern skill. */
+  errorCounts?: Partial<Record<SkillId, number>>;
 }
 
 export interface CognitiveProfile {
@@ -271,6 +275,12 @@ function hasVerifiedAudioAssessment(
   );
 }
 
+function severityPercentFromErrorRate(errorCount: number, taskAccuracyPercent: number, totalWords: number): number {
+  const errorSharePct = (errorCount / Math.max(1, totalWords)) * 100;
+  const penalty = Math.min(68, Math.round(errorCount * 10 + (100 - taskAccuracyPercent) * 0.4 + errorSharePct * 0.5));
+  return Math.max(18, Math.min(86, 94 - penalty));
+}
+
 export function extractReadingTargetsFromResults(
   results: Partial<Record<SubtestId, SubtestResult>>
 ): ExtractedReadingTargets | undefined {
@@ -278,8 +288,18 @@ export function extractReadingTargetsFromResults(
   const soundPairs: Array<[string, string]> = [];
   const letters: string[] = [];
   const reasonsAr: string[] = [];
+  const errorCounts: Partial<Record<SkillId, number>> = {};
+  const skillRates: Partial<Record<SkillId, number>> = {};
   let passageId = '';
   let analysedAt = '';
+
+  const addErrorSkill = (skill: SkillId, count: number, rate: number) => {
+    if (count <= 0) return;
+    if (!skills.includes(skill)) skills.push(skill);
+    errorCounts[skill] = (errorCounts[skill] ?? 0) + count;
+    const prevRate = skillRates[skill];
+    skillRates[skill] = prevRate === undefined ? rate : Math.min(prevRate, rate);
+  };
 
   for (const taskId of ['oralReading', 'wordReading', 'nonwordReading'] as const) {
     const result = results[taskId];
@@ -301,12 +321,48 @@ export function extractReadingTargetsFromResults(
     const analysed = analyseReadingErrors(mapped, taskId);
     if (!passageId) passageId = taskId;
     analysedAt = analysed.analysedAt;
-    for (const sk of analysed.recommendations.skills) {
-      if (!skills.includes(sk)) skills.push(sk);
+
+    const totalWords = Math.max(1, result.audioAssessment.words.length);
+    const correctCount = result.audioAssessment.words.filter(
+      (w) => w.errorType === 'None' || w.errorType === 'DialectVariant'
+    ).length;
+    const taskAccuracyPercent = Math.round((correctCount / totalWords) * 100);
+
+    const soundCount = analysed.letterConfusions
+      .filter((c) => c.kind === 'sound')
+      .reduce((sum, c) => sum + c.count, 0);
+    const visualCount = analysed.letterConfusions
+      .filter((c) => c.kind === 'visual')
+      .reduce((sum, c) => sum + c.count, 0);
+    const longVowelCount = analysed.longVowelErrors.length;
+    const decodingCount = analysed.wholeWordSubstitutions.length + analysed.omittedWords.length;
+
+    if (soundCount > 0) {
+      addErrorSkill('discrimination', soundCount, severityPercentFromErrorRate(soundCount, taskAccuracyPercent, totalWords));
     }
-    if (analysed.wholeWordSubstitutions.length + analysed.omittedWords.length >= 2 && !skills.includes('blending')) {
-      skills.push('blending');
+    if (visualCount > 0) {
+      addErrorSkill(
+        'visualDiscrimination',
+        visualCount,
+        severityPercentFromErrorRate(visualCount, taskAccuracyPercent, totalWords)
+      );
     }
+    const letterSoundErrors = soundCount + visualCount + longVowelCount;
+    if (letterSoundErrors > 0) {
+      addErrorSkill(
+        'letterSound',
+        letterSoundErrors,
+        severityPercentFromErrorRate(letterSoundErrors, taskAccuracyPercent, totalWords)
+      );
+    }
+    if (decodingCount >= 2) {
+      addErrorSkill(
+        'blending',
+        decodingCount,
+        severityPercentFromErrorRate(decodingCount, taskAccuracyPercent, totalWords)
+      );
+    }
+
     for (const pair of analysed.recommendations.soundPairs) {
       if (!soundPairs.some(([a, b]) => (a === pair[0] && b === pair[1]) || (a === pair[1] && b === pair[0]))) {
         soundPairs.push(pair);
@@ -328,6 +384,8 @@ export function extractReadingTargetsFromResults(
     reasonsAr,
     passageId: passageId || 'oralReading',
     analysedAt: analysedAt || new Date().toISOString(),
+    skillRates,
+    errorCounts,
   };
 }
 
@@ -558,7 +616,7 @@ export function computeStructuredLiteracyPillars(
       `فارق بين قراءة المألوف والمصنوع: دقة الكلمات الحقيقية (${toAr(wordReading.percent)}٪) أعلى من الكلمات المصنوعة (${toAr(nonwordReading.percent)}٪)، ما يستدعي ممارسة إضافية في فك الترميز الصوتي.`
     );
   }
-  const rankedLowest = [nonwordReading, wordReading, oralReading, phonological, letterSound, auditoryDisc, ranLetters, spelling]
+  const rankedLowest = [nonwordReading, wordReading, oralReading, phonological, letterSound, auditoryDisc, spelling]
     .filter((s): s is ScoredSubtest => Boolean(s))
     .sort((a, b) => a.percent - b.percent);
   for (const s of rankedLowest) {
@@ -586,10 +644,10 @@ export function computeStructuredLiteracyPillars(
       'ملاحظة وصفية من المهام: التباين بين الكلمات المألوفة والمصنوعة يلفت الانتباه إلى التحويل الصوتي للحروف غير المألوفة؛ ويظل التفسير وصفيًا دون عتبات معيارية مقننة.';
   } else if (readingTargets && readingTargets.reasonsAr.length > 0) {
     phonologicalRootAr =
-      'رُبطت أنماط الأخطاء الصوتية والبصرية المرصودة في القراءة الجهرية مباشرة بأولويات التدريب والتدريس الموجه، وتبقى التقديرات وصفية دون معيار مقنن.';
+      'رُبطت أنماط الأخطاء الصوتية والبصرية المرصودة في القراءة الجهرية بمهارات التدريب وفق تكرارها، وتبقى التقديرات وصفية دون معيار مقنن.';
   } else if (ranLetters?.measures?.itemsPerSecond !== undefined) {
     phonologicalRootAr =
-      `سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} عنصر/ثانية؛ تدخل هذه الملاحظة في توجيه مهارات سرعة استرجاع الحرف وصوته بصورة وصفية مؤقتة.`;
+      `سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} عنصر/ثانية (تُعرض كمؤشر وصفي مستقل في التقرير، ولا تُحوَّل تلقائيًا إلى خطة علاجية قبل توافر معايرة عمرية مستقلة للتسمية السريعة).`;
   } else {
     phonologicalRootAr =
       'تُقرأ النتائج هنا بوصفها أداءً وصفيًا نسبيًا داخل المهام المكتملة لترتيب أولويات التدريب ومستوى البداية فقط، دون إصدار تشخيص لعسر القراءة أو اعتبار أي نسبة حدًا معياريًا قاطعًا.';
