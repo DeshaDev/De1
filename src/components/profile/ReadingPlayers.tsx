@@ -138,7 +138,7 @@ function audioFailureMessage(error: unknown): string {
 // ---------------------------------------------------------------------------
 // Continuous audio assessment for real-word and made-up-word reading lists
 // ---------------------------------------------------------------------------
-type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'feedback' | 'finalizing' | 'error';
+type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'adultMark' | 'feedback' | 'finalizing' | 'error';
 
 function createAudioAttemptId(): string {
   const bytes = new Uint8Array(16);
@@ -231,12 +231,15 @@ export function ReadListAudioPlayer({
   items,
   taskId,
   audioSession,
+  verifyByAdult = false,
   onDone,
 }: {
   title: string;
   items: ReadItem[];
   taskId: Extract<CognitiveAudioTaskId, 'wordReading' | 'nonwordReading'>;
   audioSession: CognitiveAudioSessionContext;
+  /** Accuracy study: after each word the adult marks what they heard before the engine's result is shown. */
+  verifyByAdult?: boolean;
   onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
 }) {
   const [phase, setPhase] = useState<ReadListAudioPhase>('ready');
@@ -256,6 +259,8 @@ export function ReadListAudioPlayer({
   const busyRef = useRef(false);
   const attemptIdRef = useRef('');
   const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>([]);
+  /** The adult's blind marks, by item id (accuracy study only). */
+  const humanMarksRef = useRef<Record<string, boolean>>({});
   const maxWordDurationSeconds = 30;
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true &&
@@ -295,12 +300,16 @@ export function ReadListAudioPlayer({
       if (assessment.words.length !== items.length) {
         throw new Error('INVALID_VERIFIED_AUDIO_RESPONSE');
       }
-      const responses = assessment.words.map((word, index) => ({
-        itemId: items[index].id,
-        correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
-        rtMs: 0,
-        replays: 0,
-      }));
+      const responses = assessment.words.map((word, index) => {
+        const human = humanMarksRef.current[items[index].id];
+        return {
+          itemId: items[index].id,
+          correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
+          rtMs: 0,
+          replays: 0,
+          ...(typeof human === 'boolean' ? { humanCorrect: human } : {}),
+        };
+      });
       onDone(responses, Math.round(assessment.durationSeconds * 1000), assessment);
     } catch (error) {
       setErrorMessage(audioFailureMessage(error));
@@ -354,7 +363,8 @@ export function ReadListAudioPlayer({
         diagnosis: diag.diagnosis,
         isCorrect: wordReceipt.word.errorType === 'None' || wordReceipt.word.errorType === 'DialectVariant',
       });
-      setPhase('feedback');
+      // In an accuracy study the adult marks the word first, without seeing the engine's verdict.
+      setPhase(verifyByAdult ? 'adultMark' : 'feedback');
     } catch (error) {
       recordingRef.current = null;
       setErrorMessage(audioFailureMessage(error));
@@ -589,6 +599,30 @@ export function ReadListAudioPlayer({
             <span className="text-3xl" aria-hidden="true">🎧</span>
             <p className="font-bold text-ink">يجري تقييم نطق هذه الكلمة...</p>
             <p className="bz-small text-muted">لن ننتقل إلى التالية حتى يصل تقييمها.</p>
+          </div>
+        )}
+
+        {phase === 'adultMark' && currentItem && (
+          <div className="w-full max-w-xl mx-auto rounded-2xl border-2 border-dashed border-line bg-soft p-4 space-y-3" role="group" aria-label="للبالغ: ماذا سمعت؟">
+            <p className="text-[12px] font-bold text-muted">للبالغ · دراسة دقة التقييم الصوتي</p>
+            <p className="bz-small text-ink-2">
+              بحسب ما سمعته أنت، هل قرأ الطفل «{currentItem.text}» صحيحة؟ أجب قبل أن ترى نتيجة التقييم الآلي.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {([true, false] as const).map((value) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  className={`bz-btn bz-btn-lg ${value ? 'bz-btn-primary' : 'bz-btn-secondary'}`}
+                  onClick={() => {
+                    humanMarksRef.current = { ...humanMarksRef.current, [currentItem.id]: value };
+                    setPhase('feedback');
+                  }}
+                >
+                  {value ? 'قرأها صحيحة' : 'أخطأ أو لم يقرأ'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

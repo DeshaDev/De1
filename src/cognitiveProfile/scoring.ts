@@ -19,6 +19,11 @@ export interface ItemResponse {
   partialCredit?: number;
   /** For dictation: the letters the child typed (no vowel marks). */
   typed?: string;
+  /**
+   * Voice-scored words in an accuracy study: what the adult heard, marked before seeing the
+   * engine's result. Kept for agreement statistics only; `correct` stays the engine's verdict.
+   */
+  humanCorrect?: boolean;
 }
 
 export interface CognitiveAudioAssessmentEvidence {

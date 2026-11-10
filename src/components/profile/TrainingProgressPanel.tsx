@@ -4,6 +4,7 @@ import type { StudentRecord } from '../../data/seedData';
 import { PROGRAM_SESSIONS, SKILLS, masteryEstimate } from '../../cognitiveProfile/training';
 import { describeProgressAr, summarizeProbes } from '../../cognitiveProfile/progressProbe';
 import ProgressChart from './ProgressChart';
+import { summarizeTransfer, transferPercent } from '../../cognitiveProfile/transferProbe';
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 const signed = (v: number) => (v > 0 ? `+${ar(v)}` : v < 0 ? `−${ar(Math.abs(v))}` : ar(0));
@@ -15,6 +16,8 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
   const sessions = new Set(progress.history.map((h) => h.date.slice(0, 10))).size;
   const probes = progress.probes ?? [];
   const summary = summarizeProbes(probes);
+  const transfer = summarizeTransfer(progress.transfer ?? []);
+  const placements = progress.placements ?? [];
 
   return (
     <section className="bz-card p-6 space-y-4" aria-labelledby={`training-progress-${student.id}`}>
@@ -78,6 +81,46 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
       {!compact && (
         <p className="text-xs text-ink-2">
           المقياس أسئلة جديدة بصعوبة ثابتة في الجلسة الأولى ثم أسبوعيًا، بلا تصحيح. الاتجاه عبر القياسات هو المؤشر، لا نتيجة يوم واحد. المقياس لم يُعايَر بعد على عينة من الأطفال.
+        </p>
+      )}
+      {transfer && (
+        <div className="rounded-xl border border-line p-4 space-y-2" data-testid="transfer-summary">
+          <p className="bz-small font-semibold text-ink">القراءة على كلمات لم يتدرّب عليها الطفل</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-ink-2">
+                <th className="text-right p-1.5">القائمة</th>
+                <th className="p-1.5">البداية</th>
+                <th className="p-1.5">{transfer.latest.point === 'post' ? 'النهاية' : transfer.latest.point === 'mid' ? 'المنتصف' : '—'}</th>
+                <th className="p-1.5">التغيّر</th>
+              </tr>
+            </thead>
+            <tbody className="bz-num">
+              <tr className="border-t border-line">
+                <td className="p-1.5 font-semibold">كلمات حقيقية</td>
+                <td className="p-1.5 text-center">{ar(transfer.pre.real.correct)}/{ar(transfer.pre.real.total)}</td>
+                <td className="p-1.5 text-center">{transfer.points > 1 ? `${ar(transfer.latest.real.correct)}/${ar(transfer.latest.real.total)}` : '—'}</td>
+                <td className="p-1.5 text-center font-semibold">{transfer.points > 1 ? `${signed(transfer.realChange)} نقطة` : '—'}</td>
+              </tr>
+              <tr className="border-t border-line">
+                <td className="p-1.5 font-semibold">كلمات مصنوعة</td>
+                <td className="p-1.5 text-center">{ar(transfer.pre.nonword.correct)}/{ar(transfer.pre.nonword.total)}</td>
+                <td className="p-1.5 text-center">{transfer.points > 1 ? `${ar(transfer.latest.nonword.correct)}/${ar(transfer.latest.nonword.total)}` : '—'}</td>
+                <td className="p-1.5 text-center font-semibold">{transfer.points > 1 ? `${signed(transfer.nonwordChange)} نقطة` : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-xs text-ink-2">
+            كلمات لا تظهر في التدريب، يصحّحها البالغ، بصورتين متكافئتين في البداية والنهاية. التحسّن هنا أقرب دليل على انتقال أثر التدريب إلى القراءة نفسها، لكنه لا يثبت فاعلية البرنامج وحده: يلزم ذلك مقارنة بأطفال لم يتدرّبوا (خطة التجربة).
+            {transfer.points === 1 && ` نتيجة البداية: ${ar(transferPercent(transfer.pre.real))}٪ للكلمات الحقيقية؛ يُعاد القياس في منتصف البرنامج ونهايته.`}
+          </p>
+        </div>
+      )}
+      {!compact && placements.length > 0 && (
+        <p className="text-xs text-ink-2" data-testid="placement-summary">
+          تحقق مستوى البداية: {placements
+            .map((pl) => `${SKILLS[pl.skill]?.nameAr ?? pl.skill}: اقترح الفحص المستوى ${ar(pl.suggested)}${pl.placed === pl.suggested ? ' وأكّدته إجابات الطفل' : `، وبدأ الطفل من المستوى ${ar(pl.placed)} وفق إجاباته`}`)
+            .join('؛ ')}.
         </p>
       )}
     </section>

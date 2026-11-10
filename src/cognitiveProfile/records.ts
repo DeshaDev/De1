@@ -56,6 +56,7 @@ const ItemResponseSchema = z
       .max(SPELL_MAX_LETTERS * 2)
       .refine((v) => Array.from(v).length <= SPELL_MAX_LETTERS && Array.from(v).every((c) => SPELL_LETTERS.has(c)), 'حروف غير صالحة')
       .optional(),
+    humanCorrect: z.boolean().optional(),
   })
   .strict();
 
@@ -152,6 +153,11 @@ const ProbeScoreSchema = z
   .strict()
   .refine((s) => s.correct <= s.total, 'نتيجة مقياس غير منطقية');
 
+const TransferScoreSchema = z
+  .object({ correct: z.number().int().min(0).max(8), total: z.number().int().min(0).max(8), ms: z.number().finite().min(0).max(900_000) })
+  .strict()
+  .refine((v) => v.correct <= v.total, 'نتيجة غير منطقية');
+
 export const TrainingProgressUploadSchema = z
   .object({
     plan: z
@@ -211,6 +217,35 @@ export const TrainingProgressUploadSchema = z
       .optional(),
     lessonsSeen: z.array(z.string().regex(/^[a-zA-Z]+:[123]$/)).max(30).optional(),
     badges: z.array(z.string().max(60)).max(30).optional(),
+    placements: z
+      .array(
+        z
+          .object({
+            skill: z.enum(SKILL_IDS),
+            date: isoDate,
+            suggested: LevelSchema,
+            placed: LevelSchema,
+            answers: z.array(z.object({ level: LevelSchema, correct: z.boolean() }).strict()).max(6),
+          })
+          .strict()
+      )
+      .max(24)
+      .optional(),
+    transfer: z
+      .array(
+        z
+          .object({
+            point: z.enum(['pre', 'mid', 'post']),
+            form: z.enum(['A', 'B']),
+            session: z.number().int().min(1).max(60),
+            date: isoDate,
+            real: TransferScoreSchema,
+            nonword: TransferScoreSchema,
+          })
+          .strict()
+      )
+      .max(6)
+      .optional(),
     targets: z
       .object({
         soundPairs: z.array(z.tuple([z.string().length(1), z.string().length(1)])).max(6),

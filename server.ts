@@ -1227,6 +1227,15 @@ async function startServer() {
   let studentsDb: StudentRecord[] = loadPersistedStudents();
   // Short-lived, one-use receipts bind an audio result to the same authenticated
   // session, tenant, student, and reading passage. Audio bytes are never retained here.
+/**
+ * The adult's own mark for a voice-scored word (accuracy studies), kept next to the verified
+ * engine result. It never changes the score, which always comes from the verified receipt.
+ */
+function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean }> | undefined, itemId: string): { humanCorrect?: boolean } {
+  const mark = responses?.find((r) => r.itemId === itemId)?.humanCorrect;
+  return typeof mark === 'boolean' ? { humanCorrect: mark } : {};
+}
+
   const audioAssessmentReceipts = new Map<string, {
     sessionId: string;
     tenantId: string;
@@ -2303,6 +2312,7 @@ async function startServer() {
             correct: ['None', 'DialectVariant'].includes(assessment.words[index].errorType),
             rtMs: 0,
             replays: 0,
+            ...humanMarkFor(incomingResult.responses, itemId),
           })),
           durationMs: Math.round(assessment.durationSeconds * 1000),
           errorCount: assessment.omissionsCount + assessment.substitutionsCount + assessment.insertionsCount,
@@ -2680,6 +2690,7 @@ async function startServer() {
           correct: ['None', 'DialectVariant'].includes(assessment.words[index].errorType),
           rtMs: 0,
           replays: 0,
+            ...humanMarkFor(incoming.responses, itemId),
         })),
         durationMs: Math.round(assessment.durationSeconds * 1000),
         errorCount: assessment.omissionsCount + assessment.substitutionsCount + assessment.insertionsCount,

@@ -113,9 +113,13 @@ async function completeFirstSessionExercises(page: Page) {
   await page.getByRole('button', { name: /ابدأ درس اليوم والشرح مباشرة/ }).click();
 
   const seenHeaders: string[] = [];
+  let sawTransfer = false;
+  let sawPlacement = false;
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
   for (let step = 0; step < 1500; step += 1) {
     if (await summaryDone.isVisible().catch(() => false)) break;
+
+    if (await page.getByText(/من أين نبدأ؟/).first().isVisible().catch(() => false)) sawPlacement = true;
 
     const headerLocator = page.locator('p').filter({ hasText: 'وقت التعلّم:' }).first();
     if ((await headerLocator.count()) > 0) {
@@ -139,6 +143,16 @@ async function completeFirstSessionExercises(page: Page) {
     if (await skillIntroStartBtn.isVisible().catch(() => false)) {
       await skillIntroStartBtn.click();
       continue;
+    }
+
+    // Transfer measure (untrained words, session 1): the adult marks each word.
+    const adultCorrectBtn = page.getByRole('button', { name: 'صحيح', exact: true });
+    if (await adultCorrectBtn.isVisible().catch(() => false)) {
+      if (await adultCorrectBtn.isEnabled().catch(() => false)) {
+        await adultCorrectBtn.click();
+        sawTransfer = true;
+        continue;
+      }
     }
 
     const retryBtn = page.getByRole('button', { name: /حاول مرة أخرى/ });
@@ -166,7 +180,7 @@ async function completeFirstSessionExercises(page: Page) {
 
   await expect(summaryDone).toBeVisible({ timeout: 20_000 });
   const summaryRows = await page.locator('ul li').allInnerTexts();
-  return { seenHeaders, summaryRows };
+  return { seenHeaders, summaryRows, sawTransfer, sawPlacement };
 }
 
 test.describe('end-to-end personalized screening to training journey', () => {
@@ -234,8 +248,12 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText(/جرعة الجلسة: ٧ تمارين/).first()).toBeVisible();
 
     const child1Result = await completeFirstSessionExercises(page);
-    expect(child1Result.seenHeaders.some((h) => h.includes('التمييز السمعي') && h.includes('المستوى ٢'))).toBe(true);
-    expect(child1Result.seenHeaders.some((h) => h.includes('القافية') && h.includes('المستوى ١'))).toBe(true);
+    // The screening rule's starting level is shown with the skill; the child's placement answers may then
+    // move it one level (placement.ts), so the check is on the rule's suggestion.
+    expect(child1Result.seenHeaders.some((h) => h.includes('التمييز السمعي') && h.includes('اقترح الفحص المستوى ٢'))).toBe(true);
+    expect(child1Result.seenHeaders.some((h) => h.includes('القافية') && h.includes('اقترح الفحص المستوى ١'))).toBe(true);
+    expect(child1Result.sawPlacement).toBe(true);
+    expect(child1Result.sawTransfer).toBe(true);
     const rhymeSummary = child1Result.summaryRows.find((r) => r.includes('القافية'));
     const discSummary = child1Result.summaryRows.find((r) => r.includes('التمييز السمعي'));
     const letterSummary = child1Result.summaryRows.find((r) => r.includes('ربط الحرف بصوته'));
@@ -287,7 +305,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText(/أصوات س\/ص/)).toHaveCount(0);
 
     const child2Result = await completeFirstSessionExercises(page);
-    expect(child2Result.seenHeaders.some((h) => h.includes('ربط الحرف بصوته') && h.includes('المستوى ١'))).toBe(true);
+    expect(child2Result.seenHeaders.some((h) => h.includes('ربط الحرف بصوته') && h.includes('اقترح الفحص المستوى ١'))).toBe(true);
     expect(child2Result.seenHeaders.some((h) => h.includes('التمييز السمعي') || h.includes('القافية'))).toBe(false);
     expect(child2Result.summaryRows.some((r) => r.includes('ربط الحرف بصوته'))).toBe(true);
   });
