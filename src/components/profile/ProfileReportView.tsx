@@ -6,6 +6,7 @@ import { FLAG_TEXT_AR, READING_MEASURE_NOTE_AR, SUBTEST_GUIDANCE, WORD_NONWORD_N
 import { SPELL_ERROR_TEXT_AR } from '../../cognitiveProfile/readingTasks';
 import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession, type ScreeningSnapshot } from '../../cognitiveProfile/storage';
 import { BrandMark } from '../ui/BrandMark';
+import { agreementPairs, audioAgreement, kappaLabelAr } from '../../cognitiveProfile/audioAgreement';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
@@ -231,6 +232,39 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
               )}
             </section>
           )}
+
+          {(() => {
+            const agreement = audioAgreement(agreementPairs(session.results));
+            if (!agreement) return null;
+            const t = agreement.table;
+            return (
+              <section aria-labelledby="audio-agreement-title" className="rounded-2xl border border-line p-5 space-y-3" data-testid="audio-agreement">
+                <h2 id="audio-agreement-title" className="bz-h3" style={{ fontSize: 20 }}>اتفاق التقييم الصوتي مع البالغ</h2>
+                <p className="bz-small text-ink-2">
+                  سجّل البالغ ما سمعه في كل كلمة قبل أن يرى نتيجة التقييم الآلي. البالغ هو المرجع هنا.
+                </p>
+                <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center bz-num">
+                  <div className="rounded-xl bg-soft p-3"><dt className="bz-small bz-muted">الكلمات</dt><dd className="bz-h3">{toArabicDigits(agreement.n)}</dd></div>
+                  <div className="rounded-xl bg-soft p-3"><dt className="bz-small bz-muted">الاتفاق</dt><dd className="bz-h3">{toArabicDigits(agreement.agreementPercent)}٪</dd></div>
+                  <div className="rounded-xl bg-soft p-3">
+                    <dt className="bz-small bz-muted">أخطاء التقطها التقييم الآلي</dt>
+                    <dd className="bz-h3">{agreement.sensitivityPercent === null ? '—' : `${toArabicDigits(agreement.sensitivityPercent)}٪`}</dd>
+                  </div>
+                  <div className="rounded-xl bg-soft p-3">
+                    <dt className="bz-small bz-muted">كلمات صحيحة قبلها</dt>
+                    <dd className="bz-h3">{agreement.specificityPercent === null ? '—' : `${toArabicDigits(agreement.specificityPercent)}٪`}</dd>
+                  </div>
+                </dl>
+                <p className="bz-small text-ink-2">
+                  معامل كابا (الاتفاق بعد استبعاد الصدفة): <strong className="text-ink bz-num">{agreement.kappa === null ? '—' : toArabicDigits(String(agreement.kappa))}</strong> · {kappaLabelAr(agreement.kappa)}.
+                  {' '}أخطأ الطفل في رأي البالغ ولم يلتقطها التقييم الآلي: <span className="bz-num">{toArabicDigits(t.engineMissed)}</span>؛ عدّها التقييم الآلي خطأ والبالغ صحيحة: <span className="bz-num">{toArabicDigits(t.engineOnlyWrong)}</span>.
+                </p>
+                <p className="text-xs text-ink-2">
+                  هذه عيّنة طفل واحد، وهي صغيرة. يُحكم على دقة التقييم الصوتي بتجميع هذه النتائج من أطفال كثيرين في التجربة الميدانية (docs/PILOT_PROTOCOL_AR.md).
+                </p>
+              </section>
+            );
+          })()}
 
           <section aria-labelledby="tasks-title">
             <div className="pb-4 border-b border-line">

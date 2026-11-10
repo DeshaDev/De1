@@ -6,6 +6,8 @@
  * consecutive sessions at or above the mastery criterion. Training items are generated fresh
  * for every session from the lexicon, so the child never practises the scored test items.
  */
+import type { PlacementRecord } from './placement';
+import type { TransferRecord } from './transferProbe';
 import type { ProbeRecord } from './progressProbe';
 import type { Band, CognitiveProfile, ScoredSubtest } from './scoring';
 import {
@@ -426,6 +428,10 @@ export interface TrainingProgress {
   lessonsSeen?: string[];
   /** Earned mastery badge skill ids. */
   badges?: string[];
+  /** Starting-level checks: the rule's suggestion and where the child's answers placed them (placement.ts). */
+  placements?: PlacementRecord[];
+  /** Reading of untrained words at the start, middle and end of the programme (transferProbe.ts). */
+  transfer?: TransferRecord[];
 }
 
 export interface TrainingTargets {

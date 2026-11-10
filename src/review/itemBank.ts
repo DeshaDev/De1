@@ -10,6 +10,7 @@ import { GULF_NORMS, LATE_AGE_OF_ACQUISITION, LOW_NAME_AGREEMENT } from '../cogn
 import { SKILLS, generateSession, type Level, type SkillId } from '../cognitiveProfile/training';
 import { SUBTEST_GUIDANCE, RISK_META, PATTERN_META } from '../cognitiveProfile/guidance';
 import { buildAudioCatalog } from '../cognitiveProfile/audioCatalog';
+import { TRANSFER_FORMS } from '../cognitiveProfile/transferProbe';
 import { palWhere } from '../cognitiveProfile/phrases';
 import { ARABIC_READING_PASSAGES } from '../data/seedData';
 
@@ -275,6 +276,27 @@ export function buildReviewUnits(manifest?: { clips: Record<string, { qa?: { sta
         fields: s.creatures.map((c) => ({ labelAr: 'اسم يتعلمه الطفل', text: c.name, audio: palWhere(c.name) })),
         flagsAr: [],
       });
+    }
+  }
+
+  // Transfer measure: untrained words read at the start, middle and end of the programme.
+  for (const form of ['A', 'B'] as const) {
+    for (const kind of ['real', 'nonword'] as const) {
+      for (const it of TRANSFER_FORMS[form][kind]) {
+        units.push({
+          id: `transfer.${it.id}`,
+          section: 'battery',
+          titleAr: `قياس الانتقال · الصورة ${form === 'A' ? 'أ' : 'ب'} · ${kind === 'real' ? 'كلمات حقيقية' : 'كلمات مصنوعة'}`,
+          subtitleAr: `${it.id} · المستوى ${ar(it.level)}`,
+          fields: [
+            { labelAr: kind === 'real' ? 'الكلمة' : 'الكلمة المصنوعة', text: it.text },
+            { labelAr: 'البنية', text: it.structureAr },
+          ],
+          flagsAr: kind === 'nonword'
+            ? ['للتحقق — ليست كلمة في الفصحى ولا في لهجات الأطفال المستهدفين، ولا تشبه كلمة شائعة أو غير لائقة.']
+            : ['للتحقق — مألوفة لطفل الصف الأول، وتكافئ نظيرتها في الصورة الأخرى صعوبةً.'],
+        });
+      }
     }
   }
 

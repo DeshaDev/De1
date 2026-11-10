@@ -18,6 +18,8 @@ export const MASCOT_LINES = {
   spellPracticeCorrect: 'كتابة صحيحة! أحسنت.',
   spellPracticeWrong: 'محاولة جميلة! انظر كيف تُكتب.',
   probeIntro: 'أسئلة قصيرة أولًا، ثم نتعلّم معًا.',
+  placementIntro: 'أسئلة قليلة لنعرف من أين نبدأ. لا بأس إن كانت صعبة!',
+  transferIntro: 'سنقرأ كلمات جديدة لم نتدرّب عليها. خذ وقتك.',
   skillIntro: (skill: string) => `هيا نتدرّب على ${skill}!`,
   resultUp: 'عمل رائع! انتقلت إلى مستوى جديد.',
   resultMastered: 'أتقنت هذه المهارة! أنا فخور بتعبك.',

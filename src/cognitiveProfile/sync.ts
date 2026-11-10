@@ -69,10 +69,10 @@ export function syncBatteryToSchool(session: BatterySession, student?: StudentRe
 }
 
 export function syncTrainingToSchool(studentId: string, progress: TrainingProgress, student?: StudentRecord): Promise<StudentRecord | null> {
-  const { plan, levels, mastered, history, supportFlags, probes = [], bkt, targets, lessonsSeen } = progress;
+  const { plan, levels, mastered, history, supportFlags, probes = [], bkt, targets, lessonsSeen, badges, placements, transfer } = progress;
   return put(
     `/api/students/${encodeURIComponent(studentId)}/training-progress`,
-    { plan, levels, mastered, history: history.slice(-400), supportFlags, probes: probes.slice(-200), ...(bkt ? { bkt } : {}), ...(targets ? { targets } : {}), ...(lessonsSeen ? { lessonsSeen } : {}) },
+    { plan, levels, mastered, history: history.slice(-400), supportFlags, probes: probes.slice(-200), ...(bkt ? { bkt } : {}), ...(targets ? { targets } : {}), ...(lessonsSeen ? { lessonsSeen } : {}), ...(badges ? { badges } : {}), ...(placements ? { placements } : {}), ...(transfer ? { transfer } : {}) },
     student
   );
 }
