@@ -26,6 +26,7 @@ import {
   scoredItemCount,
   sittingsForAge,
   subtestsForAge,
+  type ScreeningMode,
 } from '../../cognitiveProfile/battery';
 import { READING_MIN_AGE_MONTHS } from '../../cognitiveProfile/readingTasks';
 import {
@@ -664,35 +665,42 @@ interface Props {
 
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
-  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('fast');
+  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
   const loadInitial = (): BatterySession | null => {
     const existing = loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
     if (existing) return existing;
 
-    // If activeStudent has already been registered with valid name and age (from Parent Portal, demo, or school roster)
+    // Auto-create a session ONLY when explicit, timestamped guardian consent was already saved on the non-demo child record.
     const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
+    const explicitGeneralConsent =
+      activeStudent.guardianConsentGiven === true &&
+      typeof activeStudent.guardianConsentRecordedAt === 'string' &&
+      activeStudent.guardianConsentRecordedAt.trim().length > 0;
     if (
       activeStudent.name &&
       isValidAge &&
-      activeStudent.name !== 'طفلك'
+      activeStudent.name !== 'طفلك' &&
+      !activeStudent.isDemoRecord &&
+      explicitGeneralConsent
     ) {
-      const speechDialect = (activeStudent.dialectCode as HomeDialect | undefined) || 'egyptian';
-      const consentGiven = activeStudent.guardianConsentGiven !== false;
-      const audioConsentGiven = activeStudent.guardianAudioConsentGiven !== false;
-      const recordedAt = activeStudent.guardianConsentRecordedAt || new Date().toISOString();
+      const speechDialect = activeStudent.dialectCode as HomeDialect | undefined;
+      const explicitAudioConsent =
+        activeStudent.guardianAudioConsentGiven === true &&
+        typeof activeStudent.guardianAudioConsentRecordedAt === 'string' &&
+        activeStudent.guardianAudioConsentRecordedAt.trim().length > 0;
       const initialSession: BatterySession = {
         studentId: activeStudent.id,
         childName: activeStudent.name,
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        dialect: speechDialect,
-        guardianConsentGiven: consentGiven,
-        guardianConsentRecordedAt: recordedAt,
-        guardianAudioConsentGiven: audioConsentGiven,
-        guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt || recordedAt,
+        ...(speechDialect ? { dialect: speechDialect } : {}),
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
+        guardianAudioConsentGiven: explicitAudioConsent,
+        ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt } : {}),
         ...(speechDialect === 'egyptian' ? { speechLocale: 'ar-EG' as const }
           : speechDialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
         results: {},
@@ -768,7 +776,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const localHistory = loadScreeningHistory(activeStudent.id);
   const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
   const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
-  const remainingMinutes = minutesForAge(session?.ageMonths ?? 72, screeningMode);
+  const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
   const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
   /** The child just completed a whole sitting: a natural place to stop for today. */
   const sittingJustFinished =
@@ -872,7 +880,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           />
         )}
         <div className="flex-1 min-w-0">
-          <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
+            <div className="inline-flex rounded-xl bg-soft p-1 border border-line text-xs font-bold" role="group" aria-label="نطاق الفحص">
+              <button
+                type="button"
+                onClick={() => setScreeningMode('fast')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'fast' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
+              >
+                المسار السريع ({toArabicDigits('10')}–{toArabicDigits('12')} دقيقة)
+              </button>
+              <button
+                type="button"
+                onClick={() => setScreeningMode('comprehensive')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'comprehensive' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
+              >
+                الملف الشامل ({toArabicDigits(sittingsForAge(session.ageMonths, 'comprehensive').length)} جلسات)
+              </button>
+            </div>
+          </div>
           <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
             {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `أُنجزت ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)} مهام`}

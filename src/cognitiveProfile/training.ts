@@ -252,16 +252,46 @@ export interface TrainingPlan {
   rationaleAr: string[];
 }
 
+/** Descriptive within-task threshold used to highlight training priorities when age norms are disabled. */
+const DESCRIPTIVE_TASK_PRIORITY_PERCENT = 75;
+const LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS = 60;
+
 export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): TrainingPlan {
   const rationaleAr: string[] = [];
   const ordered: SkillId[] = [];
-  for (const subtestId of profile.weaknesses) {
-    for (const skill of SUBTEST_TO_SKILLS[subtestId]) {
+  const weaknesses = Array.isArray(profile?.weaknesses) ? profile.weaknesses : [];
+  const subtests = Array.isArray(profile?.subtests) ? profile.subtests : [];
+
+  for (const subtestId of weaknesses) {
+    for (const skill of SUBTEST_TO_SKILLS[subtestId] ?? []) {
       if (!ordered.includes(skill)) {
         ordered.push(skill);
       }
     }
   }
+
+  let fromTaskEvidence = false;
+  if (ordered.length === 0 && subtests.length > 0) {
+    const candidates = subtests
+      .filter((s) => {
+        if (s.scoreAvailable === false || s.total <= 0) return false;
+        if (s.subtestId === 'letterSound' && (profile.ageMonths ?? 72) < LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS) {
+          return false;
+        }
+        return s.percent < DESCRIPTIVE_TASK_PRIORITY_PERCENT;
+      })
+      .sort((a, b) => a.percent - b.percent);
+
+    for (const s of candidates) {
+      for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
+        if (!ordered.includes(skill)) {
+          ordered.push(skill);
+        }
+      }
+    }
+    fromTaskEvidence = ordered.length > 0;
+  }
+
   const memoryOnly = ordered.filter((s) => NOT_TRAINED_AS_FOCUS.has(s));
   const trainable = ordered.filter((s) => !NOT_TRAINED_AS_FOCUS.has(s));
   const preventive = trainable.length === 0;
@@ -275,13 +305,17 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
     rationaleAr.push(
       memoryOnly.length > 0
         ? 'يركّز البرنامج على التركيب الصوتي وربط الحرف بصوته، وهما أساس تعلّم القراءة.'
-        : 'لا تظهر مهارة دون المتوقع؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
+        : 'لا تظهر مهارة دون المتوقع في المهام المكتملة؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
     );
   } else {
-    rationaleAr.push('اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.');
+    rationaleAr.push(
+      fromTaskEvidence
+        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بناءً على أضعف نسب الأداء الملاحظة للطفل داخل المهام المكتملة فعليًا (أدلة وصفية، دون معايير عمرية مقننة).'
+        : 'اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.'
+    );
     rationaleAr.push('رُتّبت المهارات في الجلسة وفق تسلسل النمو: التمييز السمعي، ثم القافية، ثم الأصوات، ثم التركيب، ثم الحروف.');
     if (trainable.length > MAX_FOCUS_SKILLS) {
-      rationaleAr.push('بقية المهارات الضعيفة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
+      rationaleAr.push('بقية المهارات الأقل دقة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
   }
   return { createdAt: now.toISOString(), preventive, focus, rationaleAr };

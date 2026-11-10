@@ -88,6 +88,7 @@ interface ParentPortalViewProps {
     ageYears: number;
     gradeLevel: number;
     dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+    audioConsentGiven?: boolean;
     notes?: string;
     parentEmail?: string;
     parentPassword?: string;
@@ -123,6 +124,7 @@ export function ParentPortalView({
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
+  const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -193,6 +195,7 @@ export function ParentPortalView({
         ageYears,
         gradeLevel,
         dialectCode,
+        audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
         parentPassword: parentPassword,
@@ -204,6 +207,7 @@ export function ParentPortalView({
         setParentPassword('');
         setDialectCode('');
         setConsentChecked(false);
+        setAudioConsentChecked(false);
         setShowAddForm(false);
         if (typeof window !== 'undefined') {
           window.scrollTo({ top: 0, behavior: 'instant' });
@@ -637,6 +641,17 @@ export function ParentPortalView({
                       أوافق بصفتي ولي أمر الطفل على حفظ ملفه وأنشطته التعليمية في حسابي السحابي للرجوع إليها لاحقاً.
                     </span>
                   </label>
+                  <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={audioConsentChecked}
+                      onChange={(e) => setAudioConsentChecked(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+                    />
+                    <span className="text-xs text-slate-700 leading-relaxed">
+                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإلا تُحفظ هذه المهام دون درجة صوتية).
+                    </span>
+                  </label>
 
                   <div className="pt-2">
                     <button
@@ -851,7 +866,7 @@ export function ParentPortalView({
                     />
                   </label>
 
-                  {/* Consent Checkbox */}
+                  {/* Consent Checkboxes */}
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
@@ -861,6 +876,17 @@ export function ParentPortalView({
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
                       أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في قاعدة البيانات السحابية وفق سياسة الخصوصية.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={audioConsentChecked}
+                      onChange={(e) => setAudioConsentChecked(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
+                    />
+                    <span className="text-xs text-slate-700 leading-relaxed">
+                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإلا تبقى تلك المهام دون درجة صوتية).
                     </span>
                   </label>
 

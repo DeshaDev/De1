@@ -107,6 +107,83 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </p>
           </section>
 
+          {profile.structuredLiteracy && (
+            <section className="rounded-3xl border-2 border-teal-300 bg-linear-to-b from-teal-50/60 to-white p-6 sm:p-8 shadow-sm space-y-6" aria-labelledby="pillars-title">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-200/80 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl" aria-hidden="true">🎯</span>
+                  <div>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300">
+                      نموذج التدريس القرائي المنظم
+                    </span>
+                    <h2 id="pillars-title" className="text-xl sm:text-2xl font-black text-teal-950 mt-1">
+                      التحليل الوصفي والمسار التعليمي المقترح للطفل
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onStartTraining}
+                  className="bz-btn bz-btn-primary shadow-sm font-bold gap-2 text-sm no-print cursor-pointer"
+                >
+                  <Dumbbell className="w-4 h-4" /> ابدأ التدريب على هذه الخطة
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="p-5 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
+                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-black">١</span>
+                    <h3>ما الذي يستطيع الطفل فعله بنجاح؟</h3>
+                  </div>
+                  <ul className="space-y-2 pr-2 text-sm text-slate-800">
+                    {profile.structuredLiteracy.strengthsAr.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white border border-amber-200 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-base">
+                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-amber-100 text-amber-800 text-sm font-black">٢</span>
+                    <h3>أين تركزت أخطاء الطفل داخل المهام؟</h3>
+                  </div>
+                  <ul className="space-y-2 pr-2 text-sm text-slate-800">
+                    {profile.structuredLiteracy.breakdownPointsAr.map((b, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-amber-600 text-base leading-none shrink-0 mt-0.5">⚠️</span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white border border-sky-200 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 text-sky-900 font-bold text-base">
+                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-sky-100 text-sky-800 text-sm font-black">٣</span>
+                    <h3>التفسير الصوتي الوصفي للملاحظات</h3>
+                  </div>
+                  <p className="text-sm text-slate-800 leading-relaxed pr-2">
+                    {profile.structuredLiteracy.phonologicalRootAr}
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-3">
+                  <div className="flex items-center gap-2 text-purple-900 font-bold text-base">
+                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-purple-100 text-purple-800 text-sm font-black">٤</span>
+                    <h3>الخطوة التعليمية التالية المقترحة</h3>
+                  </div>
+                  <p className="text-sm text-slate-800 leading-relaxed pr-2 font-medium">
+                    {profile.structuredLiteracy.nextInstructionalTargetAr}
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {previous && (
             <section className="bz-card p-6 space-y-2" aria-labelledby="previous-title">
               <h2 id="previous-title" className="bz-h3">سجل فحص سابق</h2>

@@ -292,5 +292,5 @@ export async function generateDecodableStory(params: {
     };
   }
 
-  return CURATED_DECODABLE_STORIES[0];
+  throw new Error('CURATED_PHONEME_NOT_FOUND');
 }

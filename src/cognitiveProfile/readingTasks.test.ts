@@ -361,6 +361,25 @@ describe('age rules and sittings', () => {
   });
 });
 
+describe('fast-track screening rules', () => {
+  it('adapts to pre-reading (4-5y), grade 1 (6-7y), and primary (7.5y+) in one sitting', () => {
+    const preRead = sittingsForAge(60, 'fast');
+    assert.equal(preRead.length, 1);
+    const preIds = preRead[0].map((s) => s.id);
+    for (const forbidden of ['wordReading', 'nonwordReading', 'oralReading', 'spelling', 'ranLetters']) {
+      assert.ok(!preIds.includes(forbidden as never), forbidden);
+    }
+
+    const grade1 = sittingsForAge(78, 'fast');
+    assert.equal(grade1.length, 1);
+    assert.deepEqual(grade1[0].map((s) => s.id), ['wordReading', 'nonwordReading', 'phonological', 'letterSound', 'ranLetters', 'spelling', 'oralReading']);
+
+    const older = sittingsForAge(96, 'fast');
+    assert.equal(older.length, 1);
+    assert.equal(older[0][0].id, 'nonwordReading');
+  });
+});
+
 describe('records', () => {
   const base = { ageMonths: 84, examinerName: '', startedAt: now };
 

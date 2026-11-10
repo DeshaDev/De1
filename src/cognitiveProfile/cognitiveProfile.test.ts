@@ -239,11 +239,22 @@ test('Arabic age formatting agrees with the number', () => {
   assert.equal(formatAge(95), '7 سنوات و11 شهرًا');
 });
 
-test('training uses its existing preventive path when screening cannot validly rank weaknesses', () => {
-  const profile = profileFor({ letterSound: 20, auditoryDiscrimination: 30, phonological: 25 }, 78);
-  const plan = buildTrainingPlan(profile);
-  assert.equal(plan.preventive, true);
-  assert.deepEqual(plan.focus, ['blending', 'letterSound']);
+test('training selects distinct personalized focus skills from observed task performance without age norms', () => {
+  const profileA = profileFor({ auditoryDiscrimination: 30, rhyme: 40, letterSound: 90 }, 78);
+  const planA = buildTrainingPlan(profileA);
+  assert.equal(planA.preventive, false);
+  assert.deepEqual(planA.focus, ['discrimination', 'rhyme']);
+
+  const profileB = profileFor({ auditoryDiscrimination: 90, rhyme: 90, phonological: 25, letterSound: 20 }, 78);
+  const planB = buildTrainingPlan(profileB);
+  assert.equal(planB.preventive, false);
+  assert.deepEqual(planB.focus, ['soundPosition', 'blending', 'letterSound']);
+
+  // All tasks mastered (>= 75%) or memory-only weakness keeps the preventive baseline plan.
+  const highScores = profileFor({ auditoryDiscrimination: 90, rhyme: 90, letterSound: 90 }, 78);
+  const preventivePlan = buildTrainingPlan(highScores);
+  assert.equal(preventivePlan.preventive, true);
+  assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound']);
 });
 
 test('every training skill and level generates valid, varied items', () => {

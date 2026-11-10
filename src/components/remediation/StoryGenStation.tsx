@@ -46,6 +46,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
   const [story, setStory] = useState<DecodableStory>(CURATED_DECODABLE_STORIES[0]);
   const [revealedWord, setRevealedWord] = useState<string | null>(null);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
+  const [phonemeError, setPhonemeError] = useState<string | null>(null);
 
   const stepContainerRef = useRef<HTMLDivElement>(null);
 
@@ -128,8 +129,9 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
 
   const handleChoosePhoneme = async (phonemeSound: string) => {
     setSelectedPhoneme(phonemeSound);
+    setPhonemeError(null);
     setWizardStep('generating');
-    speakText('جارٍ كتابة قصة مشكولة لك يا بطل');
+    speakText('جارٍ تجهيز قصة مناسبة للصوت المختار');
 
     try {
       const generated = await generateDecodableStory({
@@ -143,10 +145,14 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
         speakText(`قصتنا اليوم عنوانها: ${generated.title}`);
       }, 700);
     } catch {
-      // Fallback: match EXACT phoneme
-      const fallback = CURATED_DECODABLE_STORIES.find((s) => s.targetPhoneme === phonemeSound) || CURATED_DECODABLE_STORIES[0];
-      setStory(fallback);
-      setWizardStep('story');
+      const exactFallback = CURATED_DECODABLE_STORIES.find((s) => s.targetPhoneme === phonemeSound);
+      if (exactFallback) {
+        setStory(exactFallback);
+        setWizardStep('story');
+      } else {
+        setPhonemeError(`لا تتوفر قصة مطابقة حاليًا للصوت «${phonemeSound}» دون اتصال بالخادم؛ اختر صوتًا آخر من القائمة أو فعّل الخادم.`);
+        setWizardStep('phoneme');
+      }
     }
   };
 
@@ -225,6 +231,11 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             <p className="font-child text-sm font-bold text-slate-600">
               اختر تحدي الحروف لتبدأ كتابة القصة فوراً
             </p>
+            {phonemeError && (
+              <p role="alert" className="text-sm font-bold text-amber-900 bg-amber-50 border border-amber-300 rounded-xl px-4 py-2">
+                {phonemeError}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">

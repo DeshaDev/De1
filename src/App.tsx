@@ -318,10 +318,7 @@ export default function App() {
   const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(false);
   const [supabaseError, setSupabaseError] = useState<string>('');
 
-  // Direct access for testing (registration barrier removed as requested)
-  const setActiveTab = (requestedTab: ActiveTab) => {
-    // Testing mode: the registration page is skipped; go straight to the screening hub.
-    const tab: ActiveTab = requestedTab === 'parent-portal' ? 'dyslexia-lab' : requestedTab;
+  const setActiveTab = (tab: ActiveTab) => {
     setAiStatusBanner('');
     setActiveTabState(tab);
     const newPath = tabToUrlPath(tab);
@@ -332,12 +329,6 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
-
-  // Opening /parent directly (or reloading on it) also skips registration while testing.
-  useEffect(() => {
-    if (activeTab === 'parent-portal') setActiveTab('dyslexia-lab');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
 
   useEffect(() => {
     const unsubscribe = onSupabaseAuthChange((user, session) => {
@@ -787,6 +778,7 @@ export default function App() {
     ageYears: number;
     gradeLevel: number;
     dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+    audioConsentGiven?: boolean;
     notes?: string;
     parentEmail?: string;
     parentPassword?: string;
@@ -842,9 +834,9 @@ export default function App() {
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})؛ موافقة كاملة على أنشطة الفحص والتقييم الصوتي`,
-      guardianAudioConsentGiven: true,
-      guardianAudioConsentRecordedAt: recordedAt,
+      guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})${child.audioConsentGiven === true ? ' مع موافقة صوتية منفصلة' : ''}`,
+      guardianAudioConsentGiven: child.audioConsentGiven === true,
+      ...(child.audioConsentGiven === true ? { guardianAudioConsentRecordedAt: recordedAt } : {}),
       parentNotes: child.notes || undefined,
       speechRecognitionUsed: false,
       wpm: 0,
@@ -874,8 +866,13 @@ export default function App() {
       },
     };
 
-    // Pre-create battery session with full parent consent and selected dialect
-    const speechDialect = (child.dialectCode as HomeDialect | undefined) || 'egyptian';
+    // Pre-create battery session respecting explicit audio consent and authentic dialect selection
+    const speechDialect = child.dialectCode as HomeDialect;
+    const speechLocale =
+      speechDialect === 'gulf' ? ('ar-SA' as const)
+        : speechDialect === 'egyptian' ? ('ar-EG' as const)
+        : undefined;
+    const explicitAudioConsent = child.audioConsentGiven === true;
     const initialBatterySession: BatterySession = {
       studentId: newLearner.id,
       childName: newLearner.name,
@@ -885,9 +882,9 @@ export default function App() {
       dialect: speechDialect,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
-      guardianAudioConsentGiven: true,
-      guardianAudioConsentRecordedAt: recordedAt,
-      speechLocale: speechDialect === 'gulf' ? 'ar-SA' : 'ar-EG',
+      guardianAudioConsentGiven: explicitAudioConsent,
+      ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: recordedAt } : {}),
+      ...(speechLocale ? { speechLocale } : {}),
       results: {},
     };
     saveBatterySession(initialBatterySession);

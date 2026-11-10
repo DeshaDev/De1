@@ -6,7 +6,7 @@
  * until an Arabic standardization study is completed.
  */
 import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, appliesAtAge, scoredItemCount } from './battery';
-import { letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
+import { SPELL_ERROR_TEXT_AR, letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
 
 export interface ItemResponse {
   itemId: string;
@@ -113,7 +113,7 @@ export interface StructuredLiteracyPillars {
   breakdownPointsAr: string[];
   /** 3. التفسير الصوتي والمعرفي للخلل */
   phonologicalRootAr: string;
-  /** 4. الخطة والمهارة التالية الموصى بتدريسها (Structured Literacy) */
+  /** 4. الخطة والمهارة التالية الموصى بتدريسها  */
   nextInstructionalTargetAr: string;
   /** الوحدات التدريبية المقترحة مباشرة في الصالة */
   recommendedModules: Array<{ id: string; titleAr: string; descriptionAr: string }>;
@@ -396,114 +396,122 @@ export function computeStructuredLiteracyPillars(
   subtests: ScoredSubtest[],
   ageMonths: number
 ): StructuredLiteracyPillars {
+  const toAr = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
   const scoredMap = new Map(subtests.map((s) => [s.subtestId, s]));
   const strengthsAr: string[] = [];
   const breakdownPointsAr: string[] = [];
   const recommendedModules: Array<{ id: string; titleAr: string; descriptionAr: string }> = [];
 
-  const wordReading = scoredMap.get('wordReading');
-  const nonwordReading = scoredMap.get('nonwordReading');
-  const oralReading = scoredMap.get('oralReading');
-  const phonological = scoredMap.get('phonological');
-  const letterSound = scoredMap.get('letterSound');
-  const spelling = scoredMap.get('spelling');
-  const ranLetters = scoredMap.get('ranLetters');
-  const ranObjects = scoredMap.get('ranObjects');
-  const rhyme = scoredMap.get('rhyme');
-  const auditorySeq = scoredMap.get('auditorySequential');
+  const available = (s: ScoredSubtest | undefined): s is ScoredSubtest =>
+    Boolean(s && s.scoreAvailable !== false && s.total > 0);
 
-  // Age < 72 months (Pre-reading kindergarten)
+  const wordReading = available(scoredMap.get('wordReading')) ? scoredMap.get('wordReading') : undefined;
+  const nonwordReading = available(scoredMap.get('nonwordReading')) ? scoredMap.get('nonwordReading') : undefined;
+  const oralReading = available(scoredMap.get('oralReading')) ? scoredMap.get('oralReading') : undefined;
+  const phonological = available(scoredMap.get('phonological')) ? scoredMap.get('phonological') : undefined;
+  const letterSound = available(scoredMap.get('letterSound')) ? scoredMap.get('letterSound') : undefined;
+  const spelling = available(scoredMap.get('spelling')) ? scoredMap.get('spelling') : undefined;
+  const ranLetters = available(scoredMap.get('ranLetters')) ? scoredMap.get('ranLetters') : undefined;
+  const ranObjects = available(scoredMap.get('ranObjects')) ? scoredMap.get('ranObjects') : undefined;
+  const rhyme = available(scoredMap.get('rhyme')) ? scoredMap.get('rhyme') : undefined;
+  const auditoryDisc = available(scoredMap.get('auditoryDiscrimination')) ? scoredMap.get('auditoryDiscrimination') : undefined;
+
   if (ageMonths < 72) {
-    if (rhyme && rhyme.percent >= 60) strengthsAr.push('القدرة على تمييز القافية السمعية للكلمات المتشابهة.');
-    if (letterSound && letterSound.percent >= 50) strengthsAr.push('التعرف الأولي على أصوات عدد من الحروف الهجائية.');
-    if (ranObjects && (ranObjects.measures?.itemsPerSecond || 0) >= 0.8) strengthsAr.push('استرجاع سريع ومسمّى للصور المألوفة.');
-    if (strengthsAr.length === 0) strengthsAr.push('التفاعل السمعي والاستجابة للأنشطة الصوتية الأولية.');
+    if (rhyme && rhyme.percent >= 75) strengthsAr.push(`أداء مرتفع في مهمة القافية السمعية (${toAr(rhyme.percent)}٪).`);
+    if (phonological && phonological.percent >= 75) strengthsAr.push(`أداء مرتفع في الوعي الفونولوجي داخل المهمة (${toAr(phonological.percent)}٪).`);
+    if (letterSound && letterSound.percent >= 60) strengthsAr.push(`التعرف على أصوات عدد من الحروف (${toAr(letterSound.percent)}٪ داخل المهمة).`);
+    if (ranObjects?.measures?.itemsPerSecond) strengthsAr.push(`معدل تسمية الصور الملاحظ: ${toAr(ranObjects.measures.itemsPerSecond)} عنصر/ثانية.`);
+    if (strengthsAr.length === 0) strengthsAr.push('التفاعل السمعي مع الأنشطة الأولية السابقة للقراءة.');
 
-    if (phonological && phonological.percent < 60) {
-      breakdownPointsAr.push('صعوبة في دمج المقاطع البسيطة لتكوين كلمة كاملة (Blending).');
+    if (phonological && phonological.percent < 75) {
+      breakdownPointsAr.push(`صعوبة ملاحظة في مهام تحليل الأصوات ودمج المقاطع (${toAr(phonological.percent)}٪ داخل المهمة).`);
     }
-    if (letterSound && letterSound.percent < 50) {
-      breakdownPointsAr.push('عدم استقرار الربط بين شكل الحرف وصوته الصامت.');
+    if (rhyme && rhyme.percent < 75) {
+      breakdownPointsAr.push(`تعثّر في تمييز القوافي السمعية المتشابهة (${toAr(rhyme.percent)}٪ داخل المهمة).`);
+    }
+    if (auditoryDisc && auditoryDisc.percent < 75) {
+      breakdownPointsAr.push(`تعثّر في التمييز السمعي بين الأصوات المتقاربة (${toAr(auditoryDisc.percent)}٪ داخل المهمة).`);
     }
     if (breakdownPointsAr.length === 0) {
-      breakdownPointsAr.push('التحليل الفونولوجي للأصوات المفردة يحتاج إلى تدريب تدريجي.');
+      breakdownPointsAr.push('الاستمرار في تعزيز الوعي الفونولوجي الصوتي قبل الانتقال لقراءة الكلمات.');
     }
 
     const phonologicalRootAr =
-      'المرحلة العمرية (٤-٥ سنوات) مرحلة تأسيس سمعي وفونولوجي؛ يتركز الاحتياج في بناء الوعي بالأصوات المجردة قبل الانتقال إلى القراءة الخطية المكتوبة.';
+      'المرحلة العمرية (٤–٥ سنوات) مرحلة تأسيس سمعي وفونولوجي؛ تركّز الخطة على المهارات السابقة للقراءة دون مطالبة الطفل بقراءة أو إملاء مكتوب.';
     const nextInstructionalTargetAr =
-      'التعليم الصوتي المنظم (Structured Literacy): أنشطة القافية، التصفيق لعدد المقاطع في الكلمات، والتدريب على دمج مقطعين صوتيين مسموعين.';
+      'التعليم الصوتي المنظم : أنشطة القافية، عدّ المقاطع بالتصفيق، والتمييز السمعي ودمج المقاطع المسموعة.';
 
     recommendedModules.push(
       { id: 'rhyme-gym', titleAr: 'مختبر القوافي السحرية', descriptionAr: 'تدريبات سمعية تفاعلية لتمييز نهايات الكلمات المتماثلة.' },
-      { id: 'sound-blending', titleAr: 'قطار دمج الأصوات', descriptionAr: 'تركيب الكلمات الثلاثية البسيطة من أصواتها المجردة.' }
+      { id: 'sound-blending', titleAr: 'قطار دمج الأصوات', descriptionAr: 'تركيب الكلمات البسيطة من مقاطعها وأصواتها المسموعة.' }
     );
 
     return { strengthsAr, breakdownPointsAr, phonologicalRootAr, nextInstructionalTargetAr, recommendedModules };
   }
 
-  // School-age readers (Grade 1 & Grade 2+)
-  if (wordReading && wordReading.percent >= 60) {
-    strengthsAr.push(`قراءة الكلمات الحقيقية المألوفة بنسبة دقة (${wordReading.percent}٪).`);
+  // School-age readers (descriptive in-task observations only; no unnormed cutoffs)
+  if (wordReading && wordReading.percent >= 75) {
+    strengthsAr.push(`مطابقة قراءة الكلمات الحقيقية المألوفة بنسبة ${toAr(wordReading.percent)}٪ داخل المهمة.`);
   }
-  if (letterSound && letterSound.percent >= 70) {
-    strengthsAr.push('معرفة قوية بأصوات الحروف ومطابقتها الخطية.');
+  if (nonwordReading && nonwordReading.percent >= 75) {
+    strengthsAr.push(`فك ترميز الكلمات المصنوعة بنسبة ${toAr(nonwordReading.percent)}٪ داخل المهمة.`);
   }
-  if (spelling && spelling.percent >= 60) {
-    strengthsAr.push('التهجئة الإملائية الصحيحة للكلمات البسيطة على الحروف.');
+  if (letterSound && letterSound.percent >= 75) {
+    strengthsAr.push(`ربط الحرف بصوته بنسبة ${toAr(letterSound.percent)}٪ داخل المهمة.`);
   }
-  if (oralReading && (oralReading.measures?.correctPerMinute || 0) >= 30) {
-    strengthsAr.push(`طلاقة قراءة مقبولة في النص المتصل (${oralReading.measures?.correctPerMinute} كلمة صحيحة/دقيقة).`);
+  if (spelling && spelling.percent >= 75) {
+    strengthsAr.push(`الإملاء التفاعلي للكلمات بنسبة ${toAr(spelling.percent)}٪ داخل المهمة.`);
+  }
+  if (oralReading?.measures?.correctPerMinute !== undefined) {
+    strengthsAr.push(`القراءة الجهرية للنص المتصل: ${toAr(oralReading.measures.correctPerMinute)} كلمة صحيحة/دقيقة (بلا مئينات معيارية بعد).`);
   }
   if (strengthsAr.length === 0) {
-    strengthsAr.push('التعرف على الحروف والكلمات القصيرة مع إمكانية التحسن بالتدريب المنهجي.');
+    strengthsAr.push('بدء خطوات التعرف على الحروف والكلمات ضمن المهام المكتملة.');
   }
 
-  // Breakdown analysis
   if (wordReading && nonwordReading && wordReading.percent - nonwordReading.percent >= 25) {
     breakdownPointsAr.push(
-      `فجوة فك الترميز (Decoding Gap): دقة الكلمات الحقيقية (${wordReading.percent}٪) أعلى بكثير من الكلمات المصنوعة (${nonwordReading.percent}٪)، ما يكشف اعتماد الطفل على حفظ الكلمة شكلياً بدلاً من قراءتها صوتياً.`
+      `فجوة فك الترميز: دقة الكلمات الحقيقية (${toAr(wordReading.percent)}٪) أعلى بوضوح من الكلمات المصنوعة (${toAr(nonwordReading.percent)}٪)، ما قد يشير إلى الاعتماد على الكلمات المألوفة أكثر من التهجئة الصوتية المباشرة.`
     );
-  } else if (nonwordReading && nonwordReading.percent < 60) {
-    breakdownPointsAr.push(
-      `تعثر في فك ترميز الكلمات الجديدة غير المألوفة (${nonwordReading.percent}٪)، خاصة عند توالي حركتين قصيرتين وسكون.`
-    );
+  } else if (nonwordReading && nonwordReading.percent < 75) {
+    breakdownPointsAr.push(`تعثّر في فك ترميز الكلمات المصنوعة الجديدة (${toAr(nonwordReading.percent)}٪ داخل المهمة).`);
   }
-
-  if (oralReading && (oralReading.measures?.correctPerMinute || 0) < 25) {
-    breakdownPointsAr.push('بطء في الطلاقة القرائية أثناء قراءة النص المتصل، مع استهلاك طاقة إدراكية عالية في التهجئة.');
+  if (phonological && phonological.percent < 75) {
+    breakdownPointsAr.push(`انخفاض في التحليل والدمج الفونولوجي (${toAr(phonological.percent)}٪ داخل المهمة).`);
   }
-
+  if (letterSound && letterSound.percent < 75) {
+    breakdownPointsAr.push(`حاجة لتعزيز ربط الحرف بصوته (${toAr(letterSound.percent)}٪ داخل المهمة).`);
+  }
+  if (auditoryDisc && auditoryDisc.percent < 75) {
+    breakdownPointsAr.push(`تعثّر في التمييز السمعي بين الأصوات (${toAr(auditoryDisc.percent)}٪ داخل المهمة).`);
+  }
   if (spelling && spelling.measures?.spellingErrors && spelling.measures.spellingErrors.length > 0) {
     const mainErr = spelling.measures.spellingErrors[0];
-    breakdownPointsAr.push(`أخطاء إملائية نوعية (${mainErr.kind === 'phonetic' ? 'صوتية/مدود' : 'حذف وإبدال حروف'}).`);
+    breakdownPointsAr.push(`أكثر أنماط الخطأ الإملائي تكرارًا في المهمة: ${SPELL_ERROR_TEXT_AR[mainErr.kind]}.`);
   }
-
   if (breakdownPointsAr.length === 0) {
-    breakdownPointsAr.push('الحاجة إلى صقل سرعة الاسترجاع التلقائي (RAN) والانتقال من التهجئة إلى القراءة السلسة.');
+    breakdownPointsAr.push('لا تظهر أخطاء متكررة في المهام المكتملة ذات الدرجة المتاحة؛ يُركّز على الطلاقة وتثبيت المهارات.');
   }
 
-  // Phonological & Cognitive Root
   let phonologicalRootAr = '';
   if (wordReading && nonwordReading && wordReading.percent - nonwordReading.percent >= 25) {
     phonologicalRootAr =
-      'ضعف في مسار التحويل الفونولوجي المباشر (Grapheme-to-Phoneme Mapping)؛ يعوّض الطفل بالمعجم البصري المحفوظ مسبقاً، ويتوقف عن القراءة فور مواجهة كلمة جديدة.';
-  } else if (ranLetters && (ranLetters.measures?.itemsPerSecond || 0) < 1.0) {
+      'ملاحظة وصفية من المهام: التباين بين الكلمات المألوفة والمصنوعة يلفت الانتباه إلى مهارة التحويل الصوتي للحروف غير المألوفة؛ ويظل التفسير وصفيًا دون مقارنة معيارية مقننة.';
+  } else if (ranLetters?.measures?.itemsPerSecond !== undefined) {
     phonologicalRootAr =
-      'تحدٍ مزدوج (Double-Deficit): بطء في التسمية السريعة التلقائية (RAN) يعيق الوصول المعجمي السلس، مما يحد من سرعة القراءة وفهم النص المقروء.';
+      `سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} حرف/ثانية (تُعرض كقياس وصفي أولي دون تصنيف خطر معياري).`;
   } else {
     phonologicalRootAr =
-      'صعوبة في معالجة البنية المقطعية المعقدة (الشدة، السكون، والمدود الطويلة) تتطلب تدريساً صوتياً صريحاً وتراكمياً.';
+      'تُقرأ النتائج هنا بوصفها أداءً وصفيًا داخل المهام المكتملة فقط لتوجيه أولويات التدريب التدرّجي، دون إصدار تشخيص لعسر القراءة.';
   }
 
-  // Next Instructional Target (Structured Literacy)
   const nextInstructionalTargetAr =
-    'التدريس القرائي الصريح والمنهجي (Structured Literacy): التركيز على قراءة المقاطع الثنائية والثلاثية، التمييز الدقيق بين الحركات القصيرة والمدود الطويلة (أ، و، ي)، وتدريب القراءة المكررة الموجهة (Repeated Reading) لرفع الطلاقة.';
+    'التدريس القرائي المنظم (Structured Literacy): البدء بالمهارات ذات النسبة الأقل في المهام المكتملة عبر الدرس التفاعلي والتدريب الموجّه وتكييف المستوى تلقائيًا حسب الإجابات.';
 
   recommendedModules.push(
-    { id: 'decoding-gym', titleAr: 'صالة فك الترميز والمقاطع', descriptionAr: 'تدريب تفاعلي تصاعدي على قراءة المقاطع والكلمات الجديدة بحركاتها.' },
-    { id: 'fluency-gym', titleAr: 'سباق الطلاقة القرائية', descriptionAr: 'نصوص متدرجة لرفع معدل الكلمات الصحيحة في الدقيقة (WCPM).' },
-    { id: 'spelling-gym', titleAr: 'ورشة الإملاء والمدود', descriptionAr: 'تمييز الفتحة من الألف، والضمة من الواو، والكسرة من الياء كتابةً.' }
+    { id: 'decoding-gym', titleAr: 'صالة فك الترميز والمقاطع', descriptionAr: 'تدريب تصاعدي على دمج الأصوات وقراءة المقاطع.' },
+    { id: 'fluency-gym', titleAr: 'القارئ الميسّر والطلاقة', descriptionAr: 'قراءة جملة فجملة بدعم بصري وسمعي.' },
+    { id: 'spelling-gym', titleAr: 'تمييز الحروف والأصوات', descriptionAr: 'ربط الحرف بصوته والتمييز بين الحروف المتقاربة.' }
   );
 
   return { strengthsAr, breakdownPointsAr, phonologicalRootAr, nextInstructionalTargetAr, recommendedModules };

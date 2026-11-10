@@ -130,6 +130,7 @@ function audioFailureMessage(error: unknown): string {
   if (code === 'AUDIO_RECORDING_UNAVAILABLE' || code === 'AUDIO_CONTEXT_UNAVAILABLE') return 'المتصفح أو الجهاز لا يدعم تسجيل الصوت المطلوب. لم تُحتسب درجة.';
   if (code === 'AUDIO_DURATION_OUT_OF_RANGE') return 'مدة التسجيل خارج النطاق المسموح. لم تُحتسب درجة.';
   if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم يتمكن محرك الصوت من حسم جميع الكلمات. لم نحسب الأخطاء أو الدرجة.';
+  if (code === 'AUDIO_SERVER_UNAVAILABLE') return 'خادم التقييم الصوتي غير متصل على هذا النطاق (يتطلب التطبيق خادم Node.js وخدمة Azure). ستبقى المهمة دون درجة.';
   if (code === 'COGNITIVE_AUDIO_WORD_UNCONFIRMED') return 'لم يتمكن محرك الصوت من حسم نطق هذه الكلمة. لم نُسجّلها خطأ؛ أعد تسجيل الكلمة وحدها.';
   return 'تعذر إكمال التقييم الصوتي عبر الخدمة. يمكنك حفظ المهمة دون درجة وإعادة المحاولة لاحقًا.';
 }
@@ -167,15 +168,15 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
 
   // 2. Exact match on consonant letters: CAN NEVER BE A SUBSTITUTION!
   if (spkClean === refClean) {
-    if (errorType === 'None' || accuracyScore >= 70) {
+    if (errorType === 'None' || errorType === 'DialectVariant') {
       return {
         isCorrect: true,
-        diagnosis: 'نطق سليم ومتقن بالحركات والمدود ومخارج سليمة.',
+        diagnosis: 'مطابقة صوتية واضحة للكلمة المطلوبة على مستوى الكلمة.',
       };
     }
     return {
       isCorrect: false,
-      diagnosis: `نُطقت حروف الكلمة ولكن باختلاف في الحركات الصوتية («${cleanSpoken || expectedVowelled}»).`,
+      diagnosis: `سُمعت حروف قريبة من الكلمة («${cleanSpoken || expectedVowelled}») لكن مؤشر الثقة الصوتية كان منخفضًا.`,
     };
   }
 
@@ -339,35 +340,21 @@ export function ReadListAudioPlayer({
         wordReceipt,
       ].sort((a, b) => a.itemIndex - b.itemIndex);
       wordReceiptsRef.current = nextReceipts;
-      const diag = wordReceipt.word.diagnosis
-        ? {
-            diagnosis: wordReceipt.word.diagnosis,
-            isCorrect: wordReceipt.word.errorType === 'None' && wordReceipt.word.accuracyScore >= 75,
-          }
-        : getWordDiagnosis(
-            currentItem.text,
-            wordReceipt.word.spokenWord || wordReceipt.transcript,
-            wordReceipt.word.accuracyScore,
-            wordReceipt.word.errorType
-          );
+      const diag = getWordDiagnosis(
+        currentItem.text,
+        wordReceipt.word.spokenWord || wordReceipt.transcript,
+        wordReceipt.word.accuracyScore,
+        wordReceipt.word.errorType
+      );
       setLastWordFeedback({
         word: currentItem.text,
         accuracyScore: wordReceipt.word.accuracyScore,
         errorType: wordReceipt.word.errorType,
         spokenWord: wordReceipt.word.spokenWord || wordReceipt.transcript,
         diagnosis: diag.diagnosis,
-        isCorrect: diag.isCorrect,
+        isCorrect: wordReceipt.word.errorType === 'None' || wordReceipt.word.errorType === 'DialectVariant',
       });
-
-      if (currentItemIndex + 1 < items.length) {
-        setCurrentItemIndex(currentItemIndex + 1);
-        setPhase('ready');
-      } else {
-        // The final report is created only after every reference item has one
-        // distinct, correctly ordered receipt.
-        busyRef.current = false;
-        await finalizeList(nextReceipts);
-      }
+      setPhase('feedback');
     } catch (error) {
       recordingRef.current = null;
       setErrorMessage(audioFailureMessage(error));
@@ -449,7 +436,7 @@ export function ReadListAudioPlayer({
           <span className="text-5xl" aria-hidden="true">📚</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              ✨ النسخة الحديثة v2.1 — تقييم صوتي فوري بالتشكيل
+              🎧 تقييم القراءة كلمة بكلمة عبر الخادم
             </span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
@@ -561,6 +548,24 @@ export function ReadListAudioPlayer({
                   </div>
                 </div>
               )}
+              <div className="flex flex-wrap justify-center items-center gap-3 pt-3">
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-3"
+                  onClick={() => void advanceToNextWord()}
+                >
+                  {currentItemIndex + 1 < items.length ? 'الكلمة التالية ◀' : 'إنهاء القائمة وتجميع النتيجة 🏁'}
+                </button>
+                {!lastWordFeedback.isCorrect && (
+                  <button
+                    type="button"
+                    className="bz-btn bz-btn-secondary"
+                    onClick={retryCurrentWord}
+                  >
+                    إعادة قراءة هذه الكلمة 🔄
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -568,7 +573,7 @@ export function ReadListAudioPlayer({
         {phase === 'recording' && (
           <div className="space-y-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-sm shadow-2xs">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-3 h-3 rounded-full bg-emerald-500" />
               <span>نستمع إليك الآن... اقرأ الكلمة واضغط الزر أدناه عند الانتهاء</span>
             </div>
             <div>
@@ -660,44 +665,8 @@ export function PassagePlayer({
     return () => window.clearInterval(timer);
   }, [phase]);
 
-  // Live Speech Recognition in Chrome/Edge to automatically advance highlighter as the child speaks
-  useEffect(() => {
-    if (phase !== 'recording') return;
-    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) return;
-    try {
-      const recognizer = new SpeechRec();
-      recognizer.continuous = true;
-      recognizer.interimResults = true;
-      recognizer.lang = audioSession.speechLocale || 'ar-SA';
-      recognizer.onerror = () => {};
-      recognizer.onend = () => {};
-      recognizer.onresult = (event: any) => {
-        const last = event.results?.[event.results.length - 1];
-        const transcript = last?.[0]?.transcript?.trim() || '';
-        if (!transcript) return;
-        const tokens = transcript.split(/\s+/).map((w: string) =>
-          w.replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '')
-        );
-        const lastSpoken = tokens[tokens.length - 1];
-        if (!lastSpoken) return;
-
-        setActiveWordIndex((prev) => {
-          for (let i = prev; i < Math.min(words.length, prev + 5); i++) {
-            const cleanRef = words[i].replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '');
-            if (cleanRef === lastSpoken) {
-              return Math.min(words.length - 1, i + 1);
-            }
-          }
-          return prev;
-        });
-      };
-      recognizer.start();
-      return () => {
-        try { recognizer.stop(); } catch {}
-      };
-    } catch {}
-  }, [phase, words, audioSession.speechLocale]);
+  // Browser Web Speech Recognition is intentionally not used here so microphone capture stays
+  // isolated for the server WAV recording; the reader advances the visual highlighter by tap or keyboard.
 
   // Keyboard navigation for highlighter (Space / ArrowLeft advances, ArrowRight rewinds)
   useEffect(() => {
@@ -777,7 +746,7 @@ export function PassagePlayer({
     setErrorMessage('');
     setActiveWordIndex(0);
     try {
-      recordingRef.current = await startWavRecording({ minimumDurationSeconds: 0.25 });
+      recordingRef.current = await startWavRecording();
       startAtRef.current = performance.now();
       setElapsedNow(startAtRef.current);
       setPhase('recording');
@@ -804,16 +773,16 @@ export function PassagePlayer({
           <span className="text-5xl" aria-hidden="true">📖</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              ✨ محدد قراءة تفاعلي (Highlighter) + تصحيح الذكاء الاصطناعي
+              📖 قراءة متصلة بمحدد بصري + تقييم عبر الخادم
             </span>
           </div>
           <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
             {phase === 'recording'
-              ? 'اقرأ القصة بصوتك الطبيعي. الكلمة المحددة باللون الأصفر تتحرك معك تلقائياً أثناء النطق، أو يمكنك النقر عليها.'
+              ? 'اقرأ القصة بصوتك الطبيعي. انقر على الكلمة أو اضغط زر المسافة لتحريك التظليل مع قراءتك.'
               : phase === 'review'
-              ? 'تم تحليل قراءتك بواسطة الذكاء الاصطناعي. انقر على أي كلمة ملونة لعرض التشخيص وتصحيح النطق.'
-              : 'سجّل قراءة القصة كاملة. سيتحقق الذكاء الاصطناعي من الكلمات والحركات والمدود بدقة.'}
+              ? 'اكتملت مطابقة القصة عبر الخادم. انقر على أي كلمة لعرض حالتها والكلمة الملتقطة.'
+              : 'سجّل قراءة القصة كاملة. يطابق الخادم التسجيل مع النص المرجعي، وإذا لم تُحسم الكلمات تبقى المهمة دون درجة.'}
           </p>
         </div>
 
@@ -838,7 +807,7 @@ export function PassagePlayer({
                       ? 'text-teal-900 bg-teal-100/60'
                       : 'text-slate-900 hover:bg-slate-200/60'
                   }`}
-                  title={phase === 'recording' ? 'انقر لتحديد الكلمة (Highlighter)' : undefined}
+                  title={phase === 'recording' ? 'انقر لتحديد الكلمة' : undefined}
                 >
                   {word}{index < words.length - 1 ? ' ' : ''}
                 </span>
@@ -926,11 +895,11 @@ export function PassagePlayer({
                     </strong>
                   </p>
                   <p className="text-xs text-slate-600 pt-0.5 border-t border-slate-200/60">
-                    <strong>التشخيص الصوتي واللغوي:</strong>{' '}
-                    {(assessmentResult.words[selectedWordIndex] as any).diagnosis ||
-                      (assessmentResult.words[selectedWordIndex].errorType === 'None'
-                        ? 'نطق سليم بالحركات والمدود ومخارج سليمة.'
-                        : 'عدم مطابقة في حركات الكلمة أو مخارج حروفها.')}
+                    <strong>حالة المطابقة على مستوى الكلمة:</strong>{' '}
+                    {assessmentResult.words[selectedWordIndex].errorType === 'None' ||
+                    assessmentResult.words[selectedWordIndex].errorType === 'DialectVariant'
+                      ? 'تطابق صوتي مقبول مع الكلمة المرجعية.'
+                      : 'عدم تطابق تام في الكلمة أو نطقها ضمن محاذاة الخادم.'}
                   </p>
                 </div>
               </div>
@@ -967,7 +936,7 @@ export function PassagePlayer({
           <div className="space-y-4 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
               <div className="inline-flex items-center gap-2 text-teal-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
                 <span>التسجيل الصوتي جارٍ... اقرأ على مهلك</span>
               </div>
               <span className="text-slate-600 text-xs">
@@ -1007,9 +976,9 @@ export function PassagePlayer({
         {/* Phase: Submitting */}
         {phase === 'submitting' && (
           <div className="text-center space-y-2" role="status">
-            <span className="text-3xl animate-pulse" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">يجري تحليل القصة صوتياً وتدقيق الكلمات عبر الذكاء الاصطناعي…</p>
-            <p className="bz-small text-muted">فحص التشكيل والمدود ومخارج الحروف كلمة بكلمة</p>
+            <span className="text-3xl" aria-hidden="true">🎧</span>
+            <p className="font-bold text-ink">يجري إرسال التسجيل إلى الخادم لمطابقة كلمات القصة…</p>
+            <p className="bz-small text-muted">تقييم صوتي على مستوى الكلمة عبر الخادم</p>
           </div>
         )}
 
@@ -1152,38 +1121,7 @@ export function RanPlayer({
     try {
       const recording = await recordingRef.current.stop();
       recordingRef.current = null;
-      let assessment: CognitiveAudioAssessmentEvidence;
-      try {
-        assessment = await assessCognitiveAudio({ taskId, session: audioSession, recording });
-      } catch (assessErr) {
-        // RAN is fundamentally a clinical speed/fluency metric (Items Named / Time in Seconds).
-        // If cloud STT fails on rapid Arabic letter chants, compute the timing evidence
-        // directly from duration so the child is never blocked with an error screen.
-        const durationMin = Math.max(0.1, recording.durationSeconds) / 60;
-        const wordsPerMinute = Math.round(grid.length / durationMin);
-        const refWords = grid.map((id) => byId.get(id)?.nameAr || id);
-        assessment = {
-          taskId,
-          sourceModel: 'azure_pronunciation_assessment',
-          assessmentComplete: true,
-          assessmentReceipt: createAudioAttemptId() + createAudioAttemptId(),
-          transcript: refWords.join(' '),
-          durationSeconds: recording.durationSeconds,
-          correctWordsCount: refWords.length,
-          substitutionsCount: 0,
-          omissionsCount: 0,
-          insertionsCount: 0,
-          wordAccuracyPercent: 100,
-          wordsPerMinute,
-          wordsCorrectPerMinute: wordsPerMinute,
-          words: refWords.map((w) => ({
-            word: w,
-            errorType: 'None' as const,
-            accuracyScore: 90,
-            spokenWord: w,
-          })),
-        };
-      }
+      const assessment = await assessCognitiveAudio({ taskId, session: audioSession, recording });
       const responses = assessment.words.map((word, index) => ({
         itemId: 'ran-' + (index + 1),
         correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
@@ -1281,7 +1219,7 @@ export function RanPlayer({
               <div className="space-y-3 pt-1">
                 <div className="flex flex-wrap items-center justify-between gap-2 px-2">
                   <div className="inline-flex items-center gap-2 text-teal-800 font-bold text-sm">
-                    <span className="w-3 h-3 rounded-full bg-teal-500 animate-pulse" />
+                    <span className="w-3 h-3 rounded-full bg-teal-500" />
                     <span>السباق جارٍ... سمِّ الرموز سطرًا سطرًا من اليمين إلى اليسار ◀</span>
                   </div>
                   <span className="text-xs font-bold text-teal-900 bg-teal-100 px-3 py-1 rounded-full border border-teal-300">

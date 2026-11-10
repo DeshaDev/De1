@@ -40,11 +40,8 @@ function isPlaybackInterrupted(err: unknown): boolean {
 // (public/audio). A key is never built into the code; anything in the browser bundle is public.
 const DEFAULT_AZURE_REGION = 'eastus';
 
-const CLIENT_AZURE_KEY =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_KEY) || '';
-
-const CLIENT_AZURE_REGION =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AZURE_SPEECH_REGION) || DEFAULT_AZURE_REGION;
+// Keys never ship in browser bundles; speech playback uses pre-recorded clips (/audio/v1) or the authenticated server endpoint (/api/ai/tts).
+void DEFAULT_AZURE_REGION;
 
 function cacheAudio(key: string, dataUrl: string): void {
   if (dataUrl.length > MAX_CACHED_AUDIO_URL_CHARS) return;
@@ -110,61 +107,6 @@ export function prepareArabicTtsText(text: string): string {
   }
 
   return s;
-}
-
-/**
- * Synthesizes Arabic speech directly via Azure Neural TTS REST API (Client-side with CORS)
- * Ensures 100% studio-quality natural audio in 48kHz / 192kbps.
- */
-async function fetchDirectAzureAudio(
-  text: string,
-  voice: ArabicTtsVoice,
-  rate: string,
-  pitch: string
-): Promise<string | null> {
-  const key = CLIENT_AZURE_KEY;
-  const region = CLIENT_AZURE_REGION;
-  if (!key || !region) return null;
-
-  try {
-    const escaped = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    // Pure natural prosody: if rate and pitch are neutral ('0%'), emit clean voice tag without prosody distortion
-    const hasProsody = (rate && rate !== '0%') || (pitch && pitch !== '0%');
-    const prosodyAttrs: string[] = [];
-    if (rate && rate !== '0%') prosodyAttrs.push(`rate="${rate}"`);
-    if (pitch && pitch !== '0%') prosodyAttrs.push(`pitch="${pitch}"`);
-
-    const body = hasProsody
-      ? `<prosody ${prosodyAttrs.join(' ')}>${escaped}</prosody>`
-      : escaped;
-
-    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${voice}">${body}</voice></speak>`;
-
-    const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Content-Type': 'application/ssml+xml',
-        // 48 kHz / 192 kbps: pristine studio-quality natural human sound
-        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
-      },
-      body: ssml,
-    });
-
-    if (res.ok) {
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    }
-  } catch (err) {
-    console.warn('[NaturalSpeech] Direct Azure TTS fetch error:', err);
-  }
-
-  return null;
 }
 
 /**
@@ -247,20 +189,18 @@ export async function playNaturalArabicAudio(
     }
   }
 
-  // 2. Direct browser cloud Azure Neural Arabic Speech (Fastest, 48kHz, studio natural)
-  const directAudioUrl = await fetchDirectAzureAudio(preparedText, voice, rate, pitch);
-  if (requestId !== playbackRequestId) return;
-  if (directAudioUrl) {
-    try {
-      cacheAudio(cacheKey, directAudioUrl);
-      const audio = new Audio(directAudioUrl);
+  // 2. Pre-recorded clips (public/audio/v1/) first — verified, offline-friendly, zero keys
+  try {
+    const manifest = await getAudioManifest();
+    const clip = manifest?.clips?.[audioKey(preparedText)];
+    if (clip?.file) {
+      const audioUrl = `/audio/v1/${clip.file}`;
+      cacheAudio(cacheKey, audioUrl);
+      const audio = new Audio(audioUrl);
       await playElement(audio);
       return;
-    } catch (directErr) {
-      if (isPlaybackInterrupted(directErr) || requestId !== playbackRequestId) return;
-      console.warn('[NaturalSpeech] Direct Azure audio playback error:', directErr);
     }
-  }
+  } catch {}
 
   // 3. Fallback: Baseera server endpoint (/api/ai/tts)
   try {
@@ -280,19 +220,6 @@ export async function playNaturalArabicAudio(
         await playElement(audio);
         return;
       }
-    }
-  } catch {}
-
-  // 4. Pre-recorded clips (public/audio/v1/) as last resort
-  try {
-    const manifest = await getAudioManifest();
-    const clip = manifest?.clips?.[audioKey(preparedText)];
-    if (clip?.file) {
-      const audioUrl = `/audio/v1/${clip.file}`;
-      cacheAudio(cacheKey, audioUrl);
-      const audio = new Audio(audioUrl);
-      await playElement(audio);
-      return;
     }
   } catch {}
 
