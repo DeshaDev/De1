@@ -7,12 +7,13 @@
  * for every session from the lexicon, so the child never practises the scored test items.
  */
 import type { ProbeRecord } from './progressProbe';
-import type { Band } from './scoring';
+import type { Band, CognitiveProfile, ScoredSubtest } from './scoring';
 import {
   MIN_ATTEMPTS_FOR_MASTERY,
   STEP_BACK_BELOW,
   STEP_BACK_MIN_ATTEMPTS,
   SUPPORT_MIN_ATTEMPTS,
+  allocateItems,
   bktKey,
   initialStates,
   isMastered,
@@ -41,7 +42,6 @@ import {
   lex,
   showsSynonymPair,
 } from './lexicon';
-import type { CognitiveProfile } from './scoring';
 
 export type SkillId =
   | 'rhyme'
@@ -211,13 +211,13 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   auditoryDiscrimination: ['discrimination'],
   visualDiscrimination: ['visualDiscrimination'],
   letterSound: ['letterSound'],
-  // The reading measures have no reference values, so they never mark a weakness on their own;
-  // the mapping says which practice they relate to.
-  ranObjects: [],
-  ranLetters: [],
+  // Reading and naming measures now map to their directly addressable fluency/decoding targets
+  // (using provisional within-task accuracy & rate heuristics until Arabic norming completes).
+  ranObjects: ['soundPosition'],
+  ranLetters: ['letterSound', 'visualDiscrimination'],
   wordReading: ['letterSound', 'blending'],
-  nonwordReading: ['letterSound', 'blending'],
-  oralReading: [],
+  nonwordReading: ['blending', 'letterSound', 'soundPosition'],
+  oralReading: ['blending', 'letterSound'],
   spelling: ['letterSound', 'soundPosition'],
 };
 
@@ -252,15 +252,59 @@ export interface TrainingPlan {
   rationaleAr: string[];
 }
 
-/** Descriptive within-task threshold used to highlight training priorities when age norms are disabled. */
-const DESCRIPTIVE_TASK_PRIORITY_PERCENT = 75;
+/**
+ * Provisional operational heuristic used only to sort relative training priorities while
+ * independent Arabic norms are pending. It is NOT a standardized cutoff dividing mastered
+ * skills from clinical impairment.
+ */
+const PROVISIONAL_PRIORITY_PERCENT = 75;
+const RELATIVE_DIP_POINTS = 20;
+const RELATIVE_DIP_CEILING = 85;
 const LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS = 60;
+const MODERATE_START_MIN_PERCENT = 55;
+
+/**
+ * Effective descriptive performance (0-100) used strictly for relative within-child skill
+ * ordering. Combines accuracy with provisional naming/fluency signals when RAN or oral reading
+ * metrics are present, without making normative peer claims.
+ */
+export function effectiveSubtestPercent(s: ScoredSubtest): number | null {
+  if (s.scoreAvailable === false || s.total <= 0) return null;
+  let effective = s.percent;
+  if ((s.subtestId === 'ranObjects' || s.subtestId === 'ranLetters') && typeof s.measures?.itemsPerSecond === 'number') {
+    if (s.measures.itemsPerSecond < 0.85) {
+      effective = Math.min(effective, Math.round(s.measures.itemsPerSecond * 80));
+    }
+  }
+  if (s.subtestId === 'oralReading' && typeof s.measures?.correctPerMinute === 'number') {
+    if (s.measures.correctPerMinute < 20) {
+      effective = Math.min(effective, 68);
+    }
+  }
+  return Math.max(0, Math.min(100, effective));
+}
+
+function skillsForScoredSubtest(s: ScoredSubtest, ageMonths: number): SkillId[] {
+  const skills = [...(SUBTEST_TO_SKILLS[s.subtestId] ?? [])];
+  if (
+    s.subtestId === 'spelling' &&
+    s.measures?.spellingErrors?.some((e) => e.kind === 'letter' || e.kind === 'taaMarbuta' || e.kind === 'alifMaqsura') &&
+    !skills.includes('visualDiscrimination')
+  ) {
+    skills.push('visualDiscrimination');
+  }
+  if (ageMonths < LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS) {
+    return skills.filter((sk) => sk !== 'letterSound');
+  }
+  return skills;
+}
 
 export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): TrainingPlan {
   const rationaleAr: string[] = [];
   const ordered: SkillId[] = [];
   const weaknesses = Array.isArray(profile?.weaknesses) ? profile.weaknesses : [];
   const subtests = Array.isArray(profile?.subtests) ? profile.subtests : [];
+  const ageMonths = profile?.ageMonths ?? 72;
 
   for (const subtestId of weaknesses) {
     for (const skill of SUBTEST_TO_SKILLS[subtestId] ?? []) {
@@ -271,23 +315,46 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   }
 
   let fromTaskEvidence = false;
-  if (ordered.length === 0 && subtests.length > 0) {
-    const candidates = subtests
-      .filter((s) => {
-        if (s.scoreAvailable === false || s.total <= 0) return false;
-        if (s.subtestId === 'letterSound' && (profile.ageMonths ?? 72) < LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS) {
-          return false;
-        }
-        return s.percent < DESCRIPTIVE_TASK_PRIORITY_PERCENT;
-      })
-      .sort((a, b) => a.percent - b.percent);
+  let fromReadingTargets = false;
+  if (ordered.length === 0 && (subtests.length > 0 || (profile?.readingTargets?.skills?.length ?? 0) > 0)) {
+    const scoredEntries = subtests
+      .map((s) => ({ subtest: s, effective: effectiveSubtestPercent(s) }))
+      .filter((entry): entry is { subtest: ScoredSubtest; effective: number } => entry.effective !== null);
 
-    for (const s of candidates) {
-      for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
-        if (!ordered.includes(skill)) {
-          ordered.push(skill);
-        }
+    const nonMemoryBest = scoredEntries
+      .filter(({ subtest }) => !(SUBTEST_TO_SKILLS[subtest.subtestId] ?? []).every((sk) => NOT_TRAINED_AS_FOCUS.has(sk)))
+      .reduce((max, { effective }) => Math.max(max, effective), 0);
+
+    const skillPriority = new Map<SkillId, number>();
+    const addSkillScore = (skill: SkillId, score: number) => {
+      if (ageMonths < LETTER_SOUND_PRIORITY_MIN_AGE_MONTHS && skill === 'letterSound') return;
+      const prev = skillPriority.get(skill);
+      if (prev === undefined || score < prev) skillPriority.set(skill, score);
+    };
+
+    for (const { subtest, effective } of scoredEntries) {
+      const belowProvisional = effective < PROVISIONAL_PRIORITY_PERCENT;
+      const relativeDip = nonMemoryBest - effective >= RELATIVE_DIP_POINTS && effective < RELATIVE_DIP_CEILING;
+      if (!belowProvisional && !relativeDip) continue;
+      for (const skill of skillsForScoredSubtest(subtest, ageMonths)) {
+        addSkillScore(skill, effective);
       }
+    }
+
+    if (profile?.readingTargets && profile.readingTargets.skills.length > 0) {
+      const oral = scoredEntries.find((e) => e.subtest.subtestId === 'oralReading')?.effective ?? 65;
+      const targetPriority = Math.min(oral, 62);
+      for (const skill of profile.readingTargets.skills) {
+        addSkillScore(skill, targetPriority);
+      }
+      fromReadingTargets = true;
+    }
+
+    const sortedSkills = Array.from(skillPriority.entries())
+      .sort((a, b) => a[1] - b[1])
+      .map(([skill]) => skill);
+    for (const skill of sortedSkills) {
+      if (!ordered.includes(skill)) ordered.push(skill);
     }
     fromTaskEvidence = ordered.length > 0;
   }
@@ -299,21 +366,24 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   const focus = [...chosen].sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
 
   if (memoryOnly.length > 0) {
-    rationaleAr.push('ظهر ضعف في الذاكرة، لكن تدريب الذاكرة لا ينتقل أثره إلى القراءة في الأبحاث؛ لذلك لا يتدرّب عليها البرنامج، وتجد في التقرير طرقًا لتكييف التدريس معها.');
+    rationaleAr.push('ظهر تراجع في مهام الذاكرة، لكن تدريب الذاكرة لا ينتقل أثره إلى القراءة في الأبحاث؛ لذلك يركّز البرنامج على مهارات القراءة والأصوات وتُعرض تكييفات التدريس في التقرير.');
   }
   if (preventive) {
     rationaleAr.push(
       memoryOnly.length > 0
         ? 'يركّز البرنامج على التركيب الصوتي وربط الحرف بصوته، وهما أساس تعلّم القراءة.'
-        : 'لا تظهر مهارة دون المتوقع في المهام المكتملة؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
+        : 'لم تُسجَّل فجوات نسبية في المهام المكتملة؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
     );
   } else {
     rationaleAr.push(
       fromTaskEvidence
-        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بناءً على أضعف نسب الأداء الملاحظة للطفل داخل المهام المكتملة فعليًا (أدلة وصفية، دون معايير عمرية مقننة).'
+        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بالترتيب من أدنى المهام أداءً أو الأبطأ تسميةً، وهو ترتيب تشغيلي مؤقت دون عتبات معيارية مقننة.'
         : 'اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.'
     );
-    rationaleAr.push('رُتّبت المهارات في الجلسة وفق تسلسل النمو: التمييز السمعي، ثم القافية، ثم الأصوات، ثم التركيب، ثم الحروف.');
+    if (fromReadingTargets) {
+      rationaleAr.push('رُبطت أخطاء القراءة الجهرية المرصودة (الأصوات أو الحروف المتشابهة) مباشرة بمهارات التركيز.');
+    }
+    rationaleAr.push('تُضبط مستويات البداية (١ أو ٢) وعدد تمارين الجلسة وفق نسبة الأداء الملاحظة في الفحص لكل مهارة.');
     if (trainable.length > MAX_FOCUS_SKILLS) {
       rationaleAr.push('بقية المهارات الأقل دقة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
@@ -377,8 +447,80 @@ export function skillBandsFromProfile(profile: Pick<CognitiveProfile, 'subtests'
   return bands;
 }
 
-export function createProgress(plan: TrainingPlan, startLevel: Level = 1, bands: Partial<Record<SkillId, Band>> = {}): TrainingProgress {
-  const levels = Object.fromEntries(plan.focus.map((s) => [s, plan.preventive ? 2 : startLevel])) as Record<string, Level>;
+/** Observed within-task percent behind each trainable skill (lowest effective metric among feeding tasks). */
+export function skillObservedPercentsFromProfile(
+  profile: Pick<CognitiveProfile, 'subtests' | 'readingTargets'> | null | undefined
+): Partial<Record<SkillId, number>> {
+  const percents: Partial<Record<SkillId, number>> = {};
+  const setMin = (skill: SkillId, val: number) => {
+    const cur = percents[skill];
+    if (cur === undefined || val < cur) percents[skill] = val;
+  };
+  for (const s of profile?.subtests ?? []) {
+    const eff = effectiveSubtestPercent(s);
+    if (eff === null) continue;
+    for (const skill of SUBTEST_TO_SKILLS[s.subtestId] ?? []) {
+      setMin(skill, eff);
+    }
+    if (
+      s.subtestId === 'spelling' &&
+      s.measures?.spellingErrors?.some((e) => e.kind === 'letter' || e.kind === 'taaMarbuta' || e.kind === 'alifMaqsura')
+    ) {
+      setMin('visualDiscrimination', eff);
+    }
+  }
+  if (profile?.readingTargets && profile.readingTargets.skills.length > 0) {
+    const oral = profile.subtests?.find((s) => s.subtestId === 'oralReading');
+    const oralEff = oral ? effectiveSubtestPercent(oral) : null;
+    const readingPriorityPct = Math.min(oralEff ?? 62, 62);
+    for (const skill of profile.readingTargets.skills) {
+      setMin(skill, readingPriorityPct);
+    }
+  }
+  return percents;
+}
+
+/** Determine initial level (1 foundational, 2 intermediate/borderline) per skill from screening results. */
+export function startLevelsFromProfile(
+  plan: TrainingPlan,
+  profile: Pick<CognitiveProfile, 'subtests' | 'readingTargets'> | null | undefined,
+  fallback: Level = 1
+): Record<SkillId, Level> {
+  const bands = skillBandsFromProfile(profile);
+  const observed = skillObservedPercentsFromProfile(profile);
+  const levels = {} as Record<SkillId, Level>;
+  for (const skill of plan.focus) {
+    if (plan.preventive) {
+      levels[skill] = 2;
+      continue;
+    }
+    const band = bands[skill];
+    const pct = observed[skill];
+    if (band === 'severe') {
+      levels[skill] = 1;
+    } else if (typeof pct === 'number') {
+      levels[skill] = pct < MODERATE_START_MIN_PERCENT ? 1 : 2;
+    } else if (band === 'average' || band === 'strength') {
+      levels[skill] = 2;
+    } else {
+      levels[skill] = fallback;
+    }
+  }
+  return levels;
+}
+
+export function createProgress(
+  plan: TrainingPlan,
+  startLevelOrLevels: Level | Partial<Record<SkillId, Level>> = 1,
+  bands: Partial<Record<SkillId, Band>> = {},
+  observedPercents: Partial<Record<SkillId, number>> = {}
+): TrainingProgress {
+  const levels = Object.fromEntries(
+    plan.focus.map((s) => {
+      const assigned = typeof startLevelOrLevels === 'number' ? startLevelOrLevels : (startLevelOrLevels[s] ?? 1);
+      return [s, plan.preventive ? 2 : assigned];
+    })
+  ) as Record<string, Level>;
   return {
     plan,
     levels,
@@ -387,8 +529,60 @@ export function createProgress(plan: TrainingPlan, startLevel: Level = 1, bands:
     supportFlags: [],
     probes: [],
     badges: [],
-    bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>),
+    bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>, observedPercents),
   };
+}
+
+/** Build initial TrainingProgress directly from a TrainingPlan + CognitiveProfile (levels, BKT priors, and reading error targets). */
+export function createPersonalizedProgress(
+  plan: TrainingPlan,
+  profile: CognitiveProfile | null | undefined
+): TrainingProgress {
+  const bands = skillBandsFromProfile(profile);
+  const observed = skillObservedPercentsFromProfile(profile);
+  const startLevels = startLevelsFromProfile(plan, profile, 1);
+  const base = createProgress(plan, startLevels, bands, observed);
+  if (profile?.readingTargets && (profile.readingTargets.soundPairs.length > 0 || profile.readingTargets.letters.length > 0)) {
+    return {
+      ...base,
+      targets: {
+        soundPairs: profile.readingTargets.soundPairs.slice(0, 6),
+        letters: profile.readingTargets.letters.slice(0, 10),
+        source: { passageId: profile.readingTargets.passageId, analysedAt: profile.readingTargets.analysedAt },
+      },
+    };
+  }
+  return base;
+}
+
+export interface PlanSkillSetup {
+  level: Level;
+  initialP: number;
+  sessionItems: number;
+  observedPercent?: number;
+}
+
+/** Preview exact starting level, initial mastery estimate, and allocated session dose per focus skill. */
+export function summarizePlanSetup(
+  plan: TrainingPlan,
+  profile: CognitiveProfile | null | undefined
+): Partial<Record<SkillId, PlanSkillSetup>> {
+  const preview = createPersonalizedProgress(plan, profile);
+  const observed = skillObservedPercentsFromProfile(profile);
+  const alloc = allocateItems(
+    plan.focus.map((skill) => ({ skill, p: masteryEstimate(preview, skill).p }))
+  );
+  const out: Partial<Record<SkillId, PlanSkillSetup>> = {};
+  for (const skill of plan.focus) {
+    const est = masteryEstimate(preview, skill);
+    out[skill] = {
+      level: est.level,
+      initialP: est.p,
+      sessionItems: alloc[skill] ?? 8,
+      ...(typeof observed[skill] === 'number' ? { observedPercent: observed[skill] } : {}),
+    };
+  }
+  return out;
 }
 
 /** Award a mastery badge for a skill if not already earned. */

@@ -12,6 +12,7 @@ import {
   observe,
   posteriorGivenAnswer,
   priorFor,
+  priorFromObservation,
   type BktSequence,
 } from './knowledgeTracing';
 import { applyProbeEvidence, createProgress, masteryEstimate, recordAnswer, skillBandsFromProfile, type TrainingPlan } from './training';
@@ -114,6 +115,17 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
     const a = allocateItems([{ skill: 'weak', p: 0.1 }, { skill: 'strong', p: 0.9 }]);
     assert.ok(a.weak > a.strong);
     for (const n of Object.values(a)) assert.ok(n >= 4 && n <= 12);
+  });
+
+  it('derives monotonic initial mastery priors and unequal doses from observed screening percentages', () => {
+    const pLow = priorFromObservation(20, null, 1, 1);
+    const pMid = priorFromObservation(50, null, 1, 1);
+    const pMod = priorFromObservation(68, null, 2, 2);
+    assert.ok(pLow < pMid && pMid < pMod, `${pLow} < ${pMid} < ${pMod}`);
+    const pMulti = priorFromObservation(15, null, 1, 1);
+    const pMild = priorFromObservation(72, null, 2, 2);
+    const dose = allocateItems([{ skill: 'rhyme', p: pMulti }, { skill: 'blending', p: pMild }]);
+    assert.ok(dose.rhyme > dose.blending, `expected weaker skill dose (${dose.rhyme}) > milder (${dose.blending})`);
   });
 
   it('fitting recovers the parameters of simulated children (for calibration on pilot data)', () => {

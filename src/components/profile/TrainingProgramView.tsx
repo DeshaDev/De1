@@ -20,7 +20,7 @@ import {
   awardBadge,
   buildTrainingPlan,
   chanceOf,
-  createProgress,
+  createPersonalizedProgress,
   generateItems,
   getHomeActivity,
   isReassessmentDue,
@@ -28,7 +28,7 @@ import {
   recordAnswer,
   recordSkillBlock,
   sessionsCompleted,
-  skillBandsFromProfile,
+  summarizePlanSetup,
 } from '../../cognitiveProfile/training';
 import { MASTERY_THRESHOLD, allocateItems } from '../../cognitiveProfile/knowledgeTracing';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
@@ -174,6 +174,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const seed = useRef(Date.now());
 
   const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
+  const proposedSetup = useMemo(
+    () => (proposedPlan ? summarizePlanSetup(proposedPlan, profile) : null),
+    [proposedPlan, profile]
+  );
 
   /** Keep each answer on this device; the record and the school/family database are updated per block. */
   const persistLocal = (p: TrainingProgress) => {
@@ -198,10 +202,26 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   const startProgram = (plan: TrainingPlan) => {
     trackUsage('training_started');
-    const created = createProgress(plan, 1, skillBandsFromProfile(profile));
-    // Exercises saved from an oral reading before the programme existed are added now.
+    const created = createPersonalizedProgress(plan, profile);
+    // Exercises saved from an oral reading before the programme existed are merged in cleanly.
     const pending = takePendingReadingTargets(studentId);
-    persist(pending ? applyReadingTargets(created, pending).progress : created);
+    if (!pending) {
+      persist(created);
+      return;
+    }
+    const mergedTargets = created.targets
+      ? {
+          ...pending,
+          soundPairs: [...created.targets.soundPairs, ...pending.soundPairs]
+            .filter(
+              (pair, idx, arr) =>
+                arr.findIndex(([a, b]) => (a === pair[0] && b === pair[1]) || (a === pair[1] && b === pair[0])) === idx
+            )
+            .slice(0, 6),
+          letters: Array.from(new Set([...created.targets.letters, ...pending.letters])).slice(0, 10),
+        }
+      : pending;
+    persist(applyReadingTargets(created, mergedTargets).progress);
   };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
@@ -610,7 +630,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   <div className="w-full rounded-2xl border border-line bg-card p-4 text-right">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-sm flex items-center gap-1.5 text-slate-800">
-                        <Zap className="w-4 h-4 text-amber-500" /> مؤشر التلقائية والطلاقة (Automaticity)
+                        <Zap className="w-4 h-4 text-amber-500" /> مؤشر التلقائية والطلاقة
                       </span>
                       <span className="font-black text-amber-600">{toArabicDigits(autoPct)}٪</span>
                     </div>
@@ -705,14 +725,36 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           ) : (
             <>
               <div className="grid sm:grid-cols-3 gap-4">
-                {plan.focus.map((s) => (
-                  <div key={s} className="rounded-2xl border border-line bg-brand-tint p-5">
-                    <span className="text-4xl" aria-hidden="true">{SKILLS[s].icon}</span>
-                    <p className="font-display font-semibold text-ink text-lg mt-3">{SKILLS[s].nameAr}</p>
-                    <p className="bz-small text-ink-2 mt-1">{SKILLS[s].goalAr}</p>
-                  </div>
-                ))}
+                {plan.focus.map((s) => {
+                  const setup = proposedSetup?.[s];
+                  return (
+                    <div key={s} className="rounded-2xl border border-line bg-brand-tint p-5 space-y-2">
+                      <span className="text-4xl" aria-hidden="true">{SKILLS[s].icon}</span>
+                      <p className="font-display font-semibold text-ink text-lg mt-2">{SKILLS[s].nameAr}</p>
+                      <p className="bz-small text-ink-2">{SKILLS[s].goalAr}</p>
+                      {setup && (
+                        <div className="pt-2 border-t border-line/60 space-y-1 text-xs text-ink-2">
+                          <p className="font-bold text-ink">
+                            مستوى البداية: المستوى {toArabicDigits(setup.level)} · جرعة الجلسة: {toArabicDigits(setup.sessionItems)} تمارين
+                          </p>
+                          {typeof setup.observedPercent === 'number' && (
+                            <p>
+                              أداء المهمة الملاحظ: {toArabicDigits(setup.observedPercent)}٪ · تقدير البداية: {pct(setup.initialP)}٪
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+              {profile?.readingTargets && (profile.readingTargets.soundPairs.length > 0 || profile.readingTargets.letters.length > 0) && (
+                <p className="rounded-2xl border border-line bg-soft px-4 py-3 text-sm text-ink">
+                  تخصيص إضافي من أخطاء القراءة الجهرية:
+                  {profile.readingTargets.soundPairs.length > 0 && <> أصوات {profile.readingTargets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
+                  {profile.readingTargets.letters.length > 0 && <> حروف {profile.readingTargets.letters.join(' ')}.</>}
+                </p>
+              )}
               <ul className="bz-small text-ink-2 list-disc pr-5 space-y-1">
                 {plan.rationaleAr.map((r) => <li key={r}>{r}</li>)}
               </ul>

@@ -23,9 +23,15 @@ import {
   Level,
   applySession,
   buildTrainingPlan,
+  createPersonalizedProgress,
   createProgress,
+  generateItems,
   generateSession,
+  masteryEstimate,
+  summarizePlanSetup,
 } from './training';
+import { PASSAGE_WORDS, RAN_LETTER_GRID } from './readingTasks';
+import { TrainingProgressUploadSchema } from './records';
 
 const choiceItems = (id: SubtestId): ChoiceItem[] => {
   const s = SUBTESTS_BY_ID[id];
@@ -239,22 +245,130 @@ test('Arabic age formatting agrees with the number', () => {
   assert.equal(formatAge(95), '7 سنوات و11 شهرًا');
 });
 
-test('training selects distinct personalized focus skills from observed task performance without age norms', () => {
-  const profileA = profileFor({ auditoryDiscrimination: 30, rhyme: 40, letterSound: 90 }, 78);
+test('training selects distinct personalized focus skills, start levels, priors, and session doses without age norms', () => {
+  const profileA = profileFor({ auditoryDiscrimination: 20, rhyme: 63, letterSound: 95 }, 78);
   const planA = buildTrainingPlan(profileA);
   assert.equal(planA.preventive, false);
   assert.deepEqual(planA.focus, ['discrimination', 'rhyme']);
+  const progressA = createPersonalizedProgress(planA, profileA);
+  const setupA = summarizePlanSetup(planA, profileA);
+  assert.equal(progressA.levels.discrimination, 1, 'severe subtest starts at foundational level 1');
+  assert.equal(progressA.levels.rhyme, 2, 'borderline subtest starts at intermediate level 2');
+  assert.ok(masteryEstimate(progressA, 'discrimination').p < masteryEstimate(progressA, 'rhyme').p);
+  assert.ok((setupA.discrimination?.sessionItems ?? 0) > (setupA.rhyme?.sessionItems ?? 0));
+  assert.equal(TrainingProgressUploadSchema.safeParse(progressA).success, true);
 
-  const profileB = profileFor({ auditoryDiscrimination: 90, rhyme: 90, phonological: 25, letterSound: 20 }, 78);
+  const profileB = profileFor({ auditoryDiscrimination: 95, rhyme: 95, phonological: 25, letterSound: 70 }, 78);
   const planB = buildTrainingPlan(profileB);
   assert.equal(planB.preventive, false);
   assert.deepEqual(planB.focus, ['soundPosition', 'blending', 'letterSound']);
+  const progressB = createPersonalizedProgress(planB, profileB);
+  assert.equal(progressB.levels.soundPosition, 1);
+  assert.equal(progressB.levels.letterSound, 2);
+  assert.equal(TrainingProgressUploadSchema.safeParse(progressB).success, true);
 
-  // All tasks mastered (>= 75%) or memory-only weakness keeps the preventive baseline plan.
+  // Relative within-child dip (e.g. 78% against 100% tasks) surfaces without claiming a clinical 75% boundary.
+  const dipProfile = profileFor({ auditoryDiscrimination: 78, rhyme: 100, letterSound: 100 }, 78);
+  const dipPlan = buildTrainingPlan(dipProfile);
+  assert.equal(dipPlan.preventive, false);
+  assert.deepEqual(dipPlan.focus, ['discrimination']);
+
+  // Uniformly high accuracy tasks or memory-only weakness keep the preventive baseline plan.
   const highScores = profileFor({ auditoryDiscrimination: 90, rhyme: 90, letterSound: 90 }, 78);
   const preventivePlan = buildTrainingPlan(highScores);
   assert.equal(preventivePlan.preventive, true);
   assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound']);
+});
+
+test('oral reading sound confusions and slow RAN fluency flow automatically into personalized plans and generated exercises', () => {
+  const receipt = 'b'.repeat(64);
+  const words = PASSAGE_WORDS.map((word, index) => {
+    // Introduce 3 clear س/ص substitutions inside passage reading
+    if (word.includes('سَمَكَةً')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَمَكَةً' };
+    if (word.includes('سَاخِنًا')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَاخِنًا' };
+    if (word.includes('سَعِيدًا')) return { word, errorType: 'Substitution' as const, accuracyScore: 40, spokenWord: 'صَعِيدًا' };
+    void index;
+    return { word, errorType: 'None' as const, accuracyScore: 95, spokenWord: word };
+  });
+
+  const childOral = buildProfile({
+    oralReading: {
+      subtestId: 'oralReading',
+      responses: [],
+      discontinued: false,
+      completedAt: '2026-10-28T10:00:00.000Z',
+      durationMs: 42_000,
+      audioAssessmentReceipt: receipt,
+      audioAssessment: {
+        taskId: 'oralReading',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: receipt,
+        transcript: words.map((w) => w.spokenWord).join(' '),
+        durationSeconds: 42,
+        wordAccuracyPercent: 92,
+        wordsCorrectPerMinute: 48,
+        wordsPerMinute: 53,
+        correctWordsCount: words.length - 3,
+        substitutionsCount: 3,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words,
+      },
+    },
+  }, 84);
+
+  assert.ok(childOral.readingTargets?.skills.includes('discrimination'));
+  assert.ok(childOral.readingTargets?.soundPairs.some((p) => p.includes('س') && p.includes('ص')));
+  const planOral = buildTrainingPlan(childOral);
+  assert.equal(planOral.preventive, false);
+  assert.ok(planOral.focus.includes('discrimination'));
+  const progressOral = createPersonalizedProgress(planOral, childOral);
+  assert.ok(progressOral.targets?.soundPairs.some((p) => p.includes('س') && p.includes('ص')));
+  assert.equal(TrainingProgressUploadSchema.safeParse(progressOral).success, true);
+  const items = generateItems('discrimination', progressOral.levels.discrimination, 42, 8, progressOral.targets);
+  assert.equal(items.length, 8);
+
+  // Slow RAN letter naming rate (even with 95% accuracy) directs focus to letterSound & visualDiscrimination.
+  const ranWords = RAN_LETTER_GRID.map((word, index) => ({
+    word,
+    errorType: (index < 2 ? 'Substitution' : 'None') as 'Substitution' | 'None',
+    accuracyScore: index < 2 ? 35 : 95,
+    spokenWord: word,
+  }));
+  const childSlowRan = buildProfile({
+    ranLetters: {
+      subtestId: 'ranLetters',
+      responses: [],
+      discontinued: false,
+      completedAt: '2026-10-28T10:00:00.000Z',
+      durationMs: 75_000,
+      errorCount: 2,
+      audioAssessmentReceipt: receipt,
+      audioAssessment: {
+        taskId: 'ranLetters',
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentComplete: true,
+        assessmentReceipt: receipt,
+        transcript: ranWords.map((w) => w.word).join(' '),
+        durationSeconds: 75,
+        wordAccuracyPercent: 95,
+        wordsCorrectPerMinute: 30,
+        wordsPerMinute: 32,
+        correctWordsCount: 38,
+        substitutionsCount: 2,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        words: ranWords,
+      },
+    },
+  }, 84);
+
+  const planRan = buildTrainingPlan(childSlowRan);
+  assert.equal(planRan.preventive, false);
+  assert.ok(planRan.focus.includes('letterSound'));
+  assert.ok(planRan.focus.includes('visualDiscrimination'));
+  assert.equal(TrainingProgressUploadSchema.safeParse(createPersonalizedProgress(planRan, childSlowRan)).success, true);
 });
 
 test('every training skill and level generates valid, varied items', () => {

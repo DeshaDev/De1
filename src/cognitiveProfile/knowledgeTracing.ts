@@ -88,12 +88,43 @@ export function priorFor(band: Band | null | undefined, level: BktLevel): number
   return clamp(LEVEL1_PRIOR[band ?? 'unknown'] * LEVEL_FACTOR[level]);
 }
 
-export function initialStates(skills: string[], bands: Partial<Record<string, Band>>, startLevel: Record<string, BktLevel>): BktStates {
+/**
+ * Initial mastery prior combining norm bands (when available) with descriptive in-task
+ * percentage observed for that skill. Increases monotonically with the child's observed
+ * performance at the assigned starting level, so weaker tasks start lower and receive more
+ * session items without inventing age-referenced centiles.
+ */
+export function priorFromObservation(
+  observedPercent: number | undefined,
+  band: Band | null | undefined,
+  level: BktLevel,
+  startLevel: BktLevel = 1
+): number {
+  if (band) return priorFor(band, level);
+  if (typeof observedPercent !== 'number' || !Number.isFinite(observedPercent)) {
+    return priorFor(undefined, level);
+  }
+  const bounded = Math.min(100, Math.max(0, observedPercent));
+  const atStart = 0.1 + (bounded / 100) * 0.48;
+  const stepsAbove = Math.max(0, level - startLevel);
+  return clamp(atStart * Math.pow(0.6, stepsAbove));
+}
+
+export function initialStates(
+  skills: string[],
+  bands: Partial<Record<string, Band>>,
+  startLevel: Record<string, BktLevel>,
+  observedPercents: Partial<Record<string, number>> = {}
+): BktStates {
   const states: BktStates = {};
   for (const skill of skills) {
+    const assignedStart = startLevel[skill] ?? 1;
     for (const level of [1, 2, 3] as BktLevel[]) {
-      // Levels below the starting level are assumed mastered (the preventive plan starts at 2).
-      const p = level < (startLevel[skill] ?? 1) ? MASTERY_THRESHOLD : priorFor(bands[skill], level);
+      // Levels below the starting level are assumed mastered (preventive or moderate entry).
+      const p =
+        level < assignedStart
+          ? MASTERY_THRESHOLD
+          : priorFromObservation(observedPercents[skill], bands[skill], level, assignedStart);
       states[bktKey(skill, level)] = { p, n: 0, c: 0, seq: '' };
     }
   }
@@ -109,7 +140,7 @@ export const isMastered = (s: SkillLevelState | undefined) => Boolean(s && s.p >
 export function allocateItems(pBySkill: Array<{ skill: string; p: number }>, perSkill = 8, min = 4, max = 12): Record<string, number> {
   if (pBySkill.length === 0) return {};
   const budget = perSkill * pBySkill.length;
-  const weights = pBySkill.map(({ p }) => 1 - p + 0.25);
+  const weights = pBySkill.map(({ p }) => Math.max(0.15, 1 - p + 0.15));
   const sum = weights.reduce((a, b) => a + b, 0);
   const out: Record<string, number> = {};
   pBySkill.forEach(({ skill }, i) => {

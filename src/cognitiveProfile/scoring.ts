@@ -7,6 +7,8 @@
  */
 import { BATTERY, DomainId, SUBTESTS_BY_ID, SubtestId, appliesAtAge, scoredItemCount } from './battery';
 import { SPELL_ERROR_TEXT_AR, letterAccuracy, perMinute, ranRate, spellingErrorKinds, type SpellErrorKind } from './readingTasks';
+import { analyseReadingErrors, type ReadWord } from '../utils/readingErrorPatterns';
+import type { SkillId } from './training';
 
 export interface ItemResponse {
   itemId: string;
@@ -119,8 +121,18 @@ export interface StructuredLiteracyPillars {
   recommendedModules: Array<{ id: string; titleAr: string; descriptionAr: string }>;
 }
 
+export interface ExtractedReadingTargets {
+  skills: SkillId[];
+  soundPairs: Array<[string, string]>;
+  letters: string[];
+  reasonsAr: string[];
+  passageId: string;
+  analysedAt: string;
+}
+
 export interface CognitiveProfile {
   structuredLiteracy?: StructuredLiteracyPillars;
+  readingTargets?: ExtractedReadingTargets;
   ageMonths: number;
   ageBandLabelAr: string;
   ageOutOfRange: boolean;
@@ -237,6 +249,88 @@ function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
+function hasVerifiedAudioAssessment(
+  subtestId: SubtestId,
+  result: SubtestResult | undefined
+): result is SubtestResult & { audioAssessment: CognitiveAudioAssessmentEvidence } {
+  const evidence = result?.audioAssessment;
+  const subtest = SUBTESTS_BY_ID[subtestId];
+  const receiptValid =
+    typeof evidence?.assessmentReceipt === 'string' && /^[a-f0-9]{64}$/.test(evidence.assessmentReceipt);
+  const expectedTotal = scoredItemCount(subtest);
+  return Boolean(
+    evidence &&
+      evidence.taskId === subtestId &&
+      evidence.sourceModel === 'azure_pronunciation_assessment' &&
+      evidence.assessmentComplete === true &&
+      receiptValid &&
+      evidence.words.length === expectedTotal &&
+      evidence.words.every((word) => word.errorType !== 'Unconfirmed' && word.errorType !== 'Insertion') &&
+      evidence.durationSeconds >= 1 &&
+      evidence.durationSeconds <= 88
+  );
+}
+
+export function extractReadingTargetsFromResults(
+  results: Partial<Record<SubtestId, SubtestResult>>
+): ExtractedReadingTargets | undefined {
+  const skills: SkillId[] = [];
+  const soundPairs: Array<[string, string]> = [];
+  const letters: string[] = [];
+  const reasonsAr: string[] = [];
+  let passageId = '';
+  let analysedAt = '';
+
+  for (const taskId of ['oralReading', 'wordReading', 'nonwordReading'] as const) {
+    const result = results[taskId];
+    if (!hasVerifiedAudioAssessment(taskId, result)) continue;
+    const mapped: ReadWord[] = result.audioAssessment.words.map((w) => ({
+      word: w.word,
+      spokenWord: w.spokenWord,
+      status:
+        w.errorType === 'None'
+          ? 'correct'
+          : w.errorType === 'DialectVariant'
+            ? 'dialect_variant'
+            : w.errorType === 'Omission'
+              ? 'omitted'
+              : w.errorType === 'Unconfirmed' || w.errorType === 'Insertion'
+                ? 'unconfirmed'
+                : 'phonetic_substitution',
+    }));
+    const analysed = analyseReadingErrors(mapped, taskId);
+    if (!passageId) passageId = taskId;
+    analysedAt = analysed.analysedAt;
+    for (const sk of analysed.recommendations.skills) {
+      if (!skills.includes(sk)) skills.push(sk);
+    }
+    if (analysed.wholeWordSubstitutions.length + analysed.omittedWords.length >= 2 && !skills.includes('blending')) {
+      skills.push('blending');
+    }
+    for (const pair of analysed.recommendations.soundPairs) {
+      if (!soundPairs.some(([a, b]) => (a === pair[0] && b === pair[1]) || (a === pair[1] && b === pair[0]))) {
+        soundPairs.push(pair);
+      }
+    }
+    for (const ch of analysed.recommendations.letters) {
+      if (!letters.includes(ch)) letters.push(ch);
+    }
+    for (const reason of analysed.recommendations.reasonsAr) {
+      if (!reasonsAr.includes(reason)) reasonsAr.push(reason);
+    }
+  }
+
+  if (skills.length === 0 && soundPairs.length === 0 && letters.length === 0) return undefined;
+  return {
+    skills,
+    soundPairs: soundPairs.slice(0, 6),
+    letters: letters.slice(0, 10),
+    reasonsAr,
+    passageId: passageId || 'oralReading',
+    analysedAt: analysedAt || new Date().toISOString(),
+  };
+}
+
 export function scoreSubtest(
   result: SubtestResult,
   ageMonths: number,
@@ -250,22 +344,7 @@ export function scoreSubtest(
   // Speech-based tasks are scored only from a complete Azure result carrying a
   // server-issued receipt. Browser transcripts, manual marks and client counts are ignored.
   if (subtest.kind === 'ran' || subtest.kind === 'passage' || subtest.kind === 'readList') {
-    const evidence = result.audioAssessment;
-    const expectedTask = result.subtestId;
-    const receiptValid = typeof evidence?.assessmentReceipt === 'string' && /^[a-f0-9]{64}$/.test(evidence.assessmentReceipt);
-    const expectedTotal = scoredItemCount(subtest);
-    const resolved = Boolean(
-      evidence &&
-      evidence.taskId === expectedTask &&
-      evidence.sourceModel === 'azure_pronunciation_assessment' &&
-      evidence.assessmentComplete === true &&
-      receiptValid &&
-      evidence.words.length === expectedTotal &&
-      evidence.words.every((word) => word.errorType !== 'Unconfirmed' && word.errorType !== 'Insertion') &&
-      evidence.durationSeconds >= 1 &&
-      evidence.durationSeconds <= 88
-    );
-    if (!resolved || !evidence) {
+    if (!hasVerifiedAudioAssessment(result.subtestId, result)) {
       return {
         subtestId: result.subtestId,
         correct: 0,
@@ -280,6 +359,7 @@ export function scoreSubtest(
         measures: { attempted: 0, seconds: null },
       };
     }
+    const evidence = result.audioAssessment;
 
     const correct = evidence.words.filter((word) =>
       word.errorType === 'None' || word.errorType === 'DialectVariant'
@@ -394,7 +474,8 @@ const LETTER_SOUND_RISK_MIN_AGE_MONTHS = 60;
 
 export function computeStructuredLiteracyPillars(
   subtests: ScoredSubtest[],
-  ageMonths: number
+  ageMonths: number,
+  readingTargets?: ExtractedReadingTargets
 ): StructuredLiteracyPillars {
   const toAr = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
   const scoredMap = new Map(subtests.map((s) => [s.subtestId, s]));
@@ -417,29 +498,31 @@ export function computeStructuredLiteracyPillars(
   const auditoryDisc = available(scoredMap.get('auditoryDiscrimination')) ? scoredMap.get('auditoryDiscrimination') : undefined;
 
   if (ageMonths < 72) {
-    if (rhyme && rhyme.percent >= 75) strengthsAr.push(`أداء مرتفع في مهمة القافية السمعية (${toAr(rhyme.percent)}٪).`);
-    if (phonological && phonological.percent >= 75) strengthsAr.push(`أداء مرتفع في الوعي الفونولوجي داخل المهمة (${toAr(phonological.percent)}٪).`);
-    if (letterSound && letterSound.percent >= 60) strengthsAr.push(`التعرف على أصوات عدد من الحروف (${toAr(letterSound.percent)}٪ داخل المهمة).`);
+    if (rhyme) strengthsAr.push(`دقة مهمة القافية السمعية الملاحظة: ${toAr(rhyme.percent)}٪.`);
+    if (phonological) strengthsAr.push(`دقة مهمة الوعي الفونولوجي الملاحظة: ${toAr(phonological.percent)}٪.`);
+    if (letterSound) strengthsAr.push(`دقة ربط الحرف بصوته الملاحظة: ${toAr(letterSound.percent)}٪.`);
     if (ranObjects?.measures?.itemsPerSecond) strengthsAr.push(`معدل تسمية الصور الملاحظ: ${toAr(ranObjects.measures.itemsPerSecond)} عنصر/ثانية.`);
     if (strengthsAr.length === 0) strengthsAr.push('التفاعل السمعي مع الأنشطة الأولية السابقة للقراءة.');
 
-    if (phonological && phonological.percent < 75) {
-      breakdownPointsAr.push(`صعوبة ملاحظة في مهام تحليل الأصوات ودمج المقاطع (${toAr(phonological.percent)}٪ داخل المهمة).`);
-    }
-    if (rhyme && rhyme.percent < 75) {
-      breakdownPointsAr.push(`تعثّر في تمييز القوافي السمعية المتشابهة (${toAr(rhyme.percent)}٪ داخل المهمة).`);
-    }
-    if (auditoryDisc && auditoryDisc.percent < 75) {
-      breakdownPointsAr.push(`تعثّر في التمييز السمعي بين الأصوات المتقاربة (${toAr(auditoryDisc.percent)}٪ داخل المهمة).`);
+    const preLowest = [phonological, rhyme, auditoryDisc, ranObjects]
+      .filter((s): s is ScoredSubtest => Boolean(s))
+      .sort((a, b) => a.percent - b.percent)
+      .slice(0, 3);
+    for (const item of preLowest) {
+      if (item.percent < 85) {
+        breakdownPointsAr.push(
+          `أولوية تدريبية نسبية في ${SUBTESTS_BY_ID[item.subtestId].skillNameAr}: دقة ملاحظة ${toAr(item.percent)}٪ داخل المهمة (ترتيب وصفي مؤقت بلا عتبة معيارية).`
+        );
+      }
     }
     if (breakdownPointsAr.length === 0) {
       breakdownPointsAr.push('الاستمرار في تعزيز الوعي الفونولوجي الصوتي قبل الانتقال لقراءة الكلمات.');
     }
 
     const phonologicalRootAr =
-      'المرحلة العمرية (٤–٥ سنوات) مرحلة تأسيس سمعي وفونولوجي؛ تركّز الخطة على المهارات السابقة للقراءة دون مطالبة الطفل بقراءة أو إملاء مكتوب.';
+      'المرحلة العمرية (٤–٥ سنوات) مرحلة تأسيس سمعي وفونولوجي؛ تركّز الخطة على ترتيب الأنشطة من الأقل نسبة إلى الأعلى دون مطالبة الطفل بقراءة أو إملاء مكتوب، ودون حدود معيارية مقننة.';
     const nextInstructionalTargetAr =
-      'التعليم الصوتي المنظم : أنشطة القافية، عدّ المقاطع بالتصفيق، والتمييز السمعي ودمج المقاطع المسموعة.';
+      'التعليم الصوتي المنظم: أنشطة القافية، عدّ المقاطع بالتصفيق، والتمييز السمعي ودمج المقاطع المسموعة من الأسهل إلى الأصعب.';
 
     recommendedModules.push(
       { id: 'rhyme-gym', titleAr: 'مختبر القوافي السحرية', descriptionAr: 'تدريبات سمعية تفاعلية لتمييز نهايات الكلمات المتماثلة.' },
@@ -449,21 +532,22 @@ export function computeStructuredLiteracyPillars(
     return { strengthsAr, breakdownPointsAr, phonologicalRootAr, nextInstructionalTargetAr, recommendedModules };
   }
 
-  // School-age readers (descriptive in-task observations only; no unnormed cutoffs)
-  if (wordReading && wordReading.percent >= 75) {
-    strengthsAr.push(`مطابقة قراءة الكلمات الحقيقية المألوفة بنسبة ${toAr(wordReading.percent)}٪ داخل المهمة.`);
-  }
-  if (nonwordReading && nonwordReading.percent >= 75) {
-    strengthsAr.push(`فك ترميز الكلمات المصنوعة بنسبة ${toAr(nonwordReading.percent)}٪ داخل المهمة.`);
-  }
-  if (letterSound && letterSound.percent >= 75) {
-    strengthsAr.push(`ربط الحرف بصوته بنسبة ${toAr(letterSound.percent)}٪ داخل المهمة.`);
-  }
-  if (spelling && spelling.percent >= 75) {
-    strengthsAr.push(`الإملاء التفاعلي للكلمات بنسبة ${toAr(spelling.percent)}٪ داخل المهمة.`);
+  // School-age readers (descriptive in-task observations sorted relatively; no normed clinical cutoffs)
+  for (const [label, task] of [
+    ['قراءة الكلمات الحقيقية', wordReading],
+    ['فك ترميز الكلمات المصنوعة', nonwordReading],
+    ['ربط الحرف بصوته', letterSound],
+    ['الإملاء التفاعلي', spelling],
+  ] as const) {
+    if (task && task.percent >= 50) {
+      strengthsAr.push(`${label}: دقة ملاحظة ${toAr(task.percent)}٪ داخل المهمة.`);
+    }
   }
   if (oralReading?.measures?.correctPerMinute !== undefined) {
-    strengthsAr.push(`القراءة الجهرية للنص المتصل: ${toAr(oralReading.measures.correctPerMinute)} كلمة صحيحة/دقيقة (بلا مئينات معيارية بعد).`);
+    strengthsAr.push(`القراءة الجهرية للنص المتصل: ${toAr(oralReading.percent)}٪ دقة · ${toAr(oralReading.measures.correctPerMinute)} كلمة صحيحة/دقيقة (بلا مئينات معيارية).`);
+  }
+  if (ranLetters?.measures?.itemsPerSecond !== undefined) {
+    strengthsAr.push(`سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} عنصر/ثانية (${toAr(ranLetters.percent)}٪ دقة).`);
   }
   if (strengthsAr.length === 0) {
     strengthsAr.push('بدء خطوات التعرف على الحروف والكلمات ضمن المهام المكتملة.');
@@ -471,42 +555,48 @@ export function computeStructuredLiteracyPillars(
 
   if (wordReading && nonwordReading && wordReading.percent - nonwordReading.percent >= 25) {
     breakdownPointsAr.push(
-      `فجوة فك الترميز: دقة الكلمات الحقيقية (${toAr(wordReading.percent)}٪) أعلى بوضوح من الكلمات المصنوعة (${toAr(nonwordReading.percent)}٪)، ما قد يشير إلى الاعتماد على الكلمات المألوفة أكثر من التهجئة الصوتية المباشرة.`
+      `فارق بين قراءة المألوف والمصنوع: دقة الكلمات الحقيقية (${toAr(wordReading.percent)}٪) أعلى من الكلمات المصنوعة (${toAr(nonwordReading.percent)}٪)، ما يستدعي ممارسة إضافية في فك الترميز الصوتي.`
     );
-  } else if (nonwordReading && nonwordReading.percent < 75) {
-    breakdownPointsAr.push(`تعثّر في فك ترميز الكلمات المصنوعة الجديدة (${toAr(nonwordReading.percent)}٪ داخل المهمة).`);
   }
-  if (phonological && phonological.percent < 75) {
-    breakdownPointsAr.push(`انخفاض في التحليل والدمج الفونولوجي (${toAr(phonological.percent)}٪ داخل المهمة).`);
+  const rankedLowest = [nonwordReading, wordReading, oralReading, phonological, letterSound, auditoryDisc, ranLetters, spelling]
+    .filter((s): s is ScoredSubtest => Boolean(s))
+    .sort((a, b) => a.percent - b.percent);
+  for (const s of rankedLowest) {
+    if (breakdownPointsAr.length >= 4) break;
+    if (s.percent < 85) {
+      breakdownPointsAr.push(
+        `أولوية ممارسة في ${SUBTESTS_BY_ID[s.subtestId].skillNameAr}: سُجّلت ${toAr(s.percent)}٪ داخل المهمة (ترتيب وصفي لأدنى المهام، وليس حدًا تشخيصيًا).`
+      );
+    }
   }
-  if (letterSound && letterSound.percent < 75) {
-    breakdownPointsAr.push(`حاجة لتعزيز ربط الحرف بصوته (${toAr(letterSound.percent)}٪ داخل المهمة).`);
-  }
-  if (auditoryDisc && auditoryDisc.percent < 75) {
-    breakdownPointsAr.push(`تعثّر في التمييز السمعي بين الأصوات (${toAr(auditoryDisc.percent)}٪ داخل المهمة).`);
+  if (readingTargets && readingTargets.reasonsAr.length > 0) {
+    breakdownPointsAr.push(readingTargets.reasonsAr[0]);
   }
   if (spelling && spelling.measures?.spellingErrors && spelling.measures.spellingErrors.length > 0) {
     const mainErr = spelling.measures.spellingErrors[0];
     breakdownPointsAr.push(`أكثر أنماط الخطأ الإملائي تكرارًا في المهمة: ${SPELL_ERROR_TEXT_AR[mainErr.kind]}.`);
   }
   if (breakdownPointsAr.length === 0) {
-    breakdownPointsAr.push('لا تظهر أخطاء متكررة في المهام المكتملة ذات الدرجة المتاحة؛ يُركّز على الطلاقة وتثبيت المهارات.');
+    breakdownPointsAr.push('لا تظهر فروق كبيرة بين المهام المكتملة ذات الدرجة المتاحة؛ يُركّز على الطلاقة وتثبيت المهارات.');
   }
 
   let phonologicalRootAr = '';
   if (wordReading && nonwordReading && wordReading.percent - nonwordReading.percent >= 25) {
     phonologicalRootAr =
-      'ملاحظة وصفية من المهام: التباين بين الكلمات المألوفة والمصنوعة يلفت الانتباه إلى مهارة التحويل الصوتي للحروف غير المألوفة؛ ويظل التفسير وصفيًا دون مقارنة معيارية مقننة.';
+      'ملاحظة وصفية من المهام: التباين بين الكلمات المألوفة والمصنوعة يلفت الانتباه إلى التحويل الصوتي للحروف غير المألوفة؛ ويظل التفسير وصفيًا دون عتبات معيارية مقننة.';
+  } else if (readingTargets && readingTargets.reasonsAr.length > 0) {
+    phonologicalRootAr =
+      'رُبطت أنماط الأخطاء الصوتية والبصرية المرصودة في القراءة الجهرية مباشرة بأولويات التدريب والتدريس الموجه، وتبقى التقديرات وصفية دون معيار مقنن.';
   } else if (ranLetters?.measures?.itemsPerSecond !== undefined) {
     phonologicalRootAr =
-      `سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} حرف/ثانية (تُعرض كقياس وصفي أولي دون تصنيف خطر معياري).`;
+      `سرعة التسمية الملاحظة للحروف: ${toAr(ranLetters.measures.itemsPerSecond)} عنصر/ثانية؛ تدخل هذه الملاحظة في توجيه مهارات سرعة استرجاع الحرف وصوته بصورة وصفية مؤقتة.`;
   } else {
     phonologicalRootAr =
-      'تُقرأ النتائج هنا بوصفها أداءً وصفيًا داخل المهام المكتملة فقط لتوجيه أولويات التدريب التدرّجي، دون إصدار تشخيص لعسر القراءة.';
+      'تُقرأ النتائج هنا بوصفها أداءً وصفيًا نسبيًا داخل المهام المكتملة لترتيب أولويات التدريب ومستوى البداية فقط، دون إصدار تشخيص لعسر القراءة أو اعتبار أي نسبة حدًا معياريًا قاطعًا.';
   }
 
   const nextInstructionalTargetAr =
-    'التدريس القرائي المنظم (Structured Literacy): البدء بالمهارات ذات النسبة الأقل في المهام المكتملة عبر الدرس التفاعلي والتدريب الموجّه وتكييف المستوى تلقائيًا حسب الإجابات.';
+    'التدريس القرائي المنظم: ترتيب المهارات من أدنى نسبة أداء ملاحظة في الفحص، وضبط مستوى البداية وعدد التمارين في كل جلسة وفق دقة كل مهمة وتتبّع الإتقان.';
 
   recommendedModules.push(
     { id: 'decoding-gym', titleAr: 'صالة فك الترميز والمقاطع', descriptionAr: 'تدريب تصاعدي على دمج الأصوات وقراءة المقاطع.' },
@@ -527,6 +617,7 @@ export function buildProfile(
   const subtests = BATTERY.filter((s) => results[s.id]).map((s) =>
     scoreSubtest(results[s.id] as SubtestResult, ageMonths)
   );
+  const readingTargets = extractReadingTargetsFromResults(results);
   const missing = BATTERY.filter((s) => appliesAtAge(s, ageMonths) && !results[s.id]).map((s) => s.id);
   return {
     ageMonths,
@@ -542,7 +633,8 @@ export function buildProfile(
     missing,
     coreWeakCount: 0,
     coreSevereCount: 0,
-    structuredLiteracy: computeStructuredLiteracyPillars(subtests, ageMonths),
+    ...(readingTargets ? { readingTargets } : {}),
+    structuredLiteracy: computeStructuredLiteracyPillars(subtests, ageMonths, readingTargets),
   };
 }
 
