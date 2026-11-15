@@ -277,7 +277,7 @@ test('training selects distinct personalized focus skills, start levels, priors,
   const highScores = profileFor({ auditoryDiscrimination: 90, rhyme: 90, letterSound: 90 }, 78);
   const preventivePlan = buildTrainingPlan(highScores);
   assert.equal(preventivePlan.preventive, true);
-  assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound']);
+  assert.deepEqual(preventivePlan.focus, ['comprehension', 'decoding', 'spelling']);
 });
 
 test('oral reading confusions scale severity by error frequency, and slow RAN stays descriptive without uncalibrated prescriptions', () => {

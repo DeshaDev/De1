@@ -176,11 +176,11 @@ describe('fixed pictures', () => {
 });
 
 describe('training plan follows the evidence on memory training', () => {
-  it('never chooses memory as a training goal, and keeps phonological and letter skills', async () => {
+  it('never chooses memory as a training goal, and selects the age-appropriate reading baseline', async () => {
     const { buildTrainingPlan, NOT_TRAINED_AS_FOCUS } = await import('./training');
     const plan = (weaknesses: string[]) => buildTrainingPlan({ weaknesses } as never);
     const onlyMemory = plan(['auditorySequential', 'visualSequential']);
-    assert.deepEqual([...onlyMemory.focus].sort(), ['blending', 'letterSound']);
+    assert.deepEqual([...onlyMemory.focus].sort(), ['comprehension', 'decoding', 'spelling']);
     assert.ok(onlyMemory.rationaleAr.some((t) => t.includes('الذاكرة')));
     const mixed = plan(['visualAssociative', 'rhyme', 'letterSound']);
     assert.ok(mixed.focus.every((s) => !NOT_TRAINED_AS_FOCUS.has(s)));

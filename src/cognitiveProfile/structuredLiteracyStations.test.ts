@@ -39,6 +39,17 @@ describe('age-appropriate structured literacy practice stations', () => {
     }
   });
 
+  it('keeps speech narration separate and fully vowelled for Arabic speech synthesis', () => {
+    for (const age of [4, 5, 6, 7, 8]) {
+      for (const station of getStructuredLiteracyStations(age)) {
+        assert.ok(station.teachAudioAr.length >= 30, `${station.id}: missing vowelled teaching narration`);
+        assert.ok(station.modelAudioAr.length >= 30, `${station.id}: missing vowelled model narration`);
+        assert.match(station.teachAudioAr, /[ً-ْ]/, `${station.id}: teaching audio needs Arabic vowel marks`);
+        assert.match(station.modelAudioAr, /[ً-ْ]/, `${station.id}: model audio needs Arabic vowel marks`);
+      }
+    }
+  });
+
   it('has a minimum non-trivial item bank for each age-appropriate literacy domain', () => {
     const early = getStructuredLiteracyStations(4);
     const later = getStructuredLiteracyStations(7);
