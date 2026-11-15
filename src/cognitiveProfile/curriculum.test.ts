@@ -67,7 +67,7 @@ describe('teaching curriculum: explanatory feedback ("you do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (let seed = 1; seed <= 6; seed++) {
-          for (const task of generateSession(skill, level, seed)) {
+          for (const task of generateSession(skill, level, seed, undefined, 96)) {
             if (task.kind !== 'choice') continue;
             const e = explainMistake(task.item);
             assert.ok(e, `${skill}:${level} tag ${task.item.tag}`);
@@ -88,7 +88,7 @@ describe('teaching curriculum: explanatory feedback ("you do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (let seed = 1; seed <= 6; seed++) {
-          for (const task of generateSession(skill, level, seed)) {
+          for (const task of generateSession(skill, level, seed, undefined, 96)) {
             if (task.kind !== 'choice') continue;
             for (const s of explainMistake(task.item)?.audio ?? []) if (!keys.has(audioKey(normalizeSpokenText(s.text)))) missing.add(s.text);
             for (const s of scaffold(task.item).audio) if (!keys.has(audioKey(normalizeSpokenText(s.text)))) missing.add(s.text);
