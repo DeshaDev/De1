@@ -22,6 +22,56 @@ function setupLegacySeed(seed: string) {
   return jar;
 }
 
+function installFakeIndexedDB() {
+  const stores = new Map<string, Map<string, unknown>>();
+  const db = {
+    objectStoreNames: { contains: (name: string) => stores.has(name) },
+    createObjectStore: (name: string) => { stores.set(name, new Map()); return {}; },
+    transaction: (name: string) => {
+      const transaction: any = {};
+      transaction.objectStore = () => ({
+        get: (key: string) => {
+          const request: any = {};
+          queueMicrotask(() => {
+            request.result = stores.get(name)?.get(key);
+            request.onsuccess?.();
+            transaction.oncomplete?.();
+          });
+          return request;
+        },
+        add: (value: unknown, key: string) => {
+          const request: any = {};
+          queueMicrotask(() => {
+            const store = stores.get(name)!;
+            if (store.has(key)) {
+              request.error = new Error('Key already exists');
+              transaction.onerror?.();
+              transaction.onabort?.();
+              return;
+            }
+            store.set(key, value);
+            request.onsuccess?.();
+            transaction.oncomplete?.();
+          });
+          return request;
+        },
+      });
+      return transaction;
+    },
+  };
+  (globalThis as any).indexedDB = {
+    open: () => {
+      const request: any = {};
+      queueMicrotask(() => {
+        request.result = db;
+        request.onupgradeneeded?.();
+        request.onsuccess?.();
+      });
+      return request;
+    },
+  };
+}
+
 describe('AES-GCM child storage and legacy migration', () => {
   it('uses a cryptographically secure random generator only', () => {
     const first = getSecureRandomBytes(32);
@@ -40,6 +90,28 @@ describe('AES-GCM child storage and legacy migration', () => {
   it('reads legacy plain JSON for controlled migration', async () => {
     const raw = JSON.stringify([{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
     assert.deepEqual(await secureDecryptAsync(raw), [{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
+  });
+
+  it('writes and restores AES-256-GCM ciphertext with a non-extractable IndexedDB key', async () => {
+    const jar = new Map<string, string>();
+    (globalThis as any).window = {
+      localStorage: {
+        getItem: (key: string) => jar.get(key) ?? null,
+        setItem: (key: string, value: string) => jar.set(key, value),
+        removeItem: (key: string) => jar.delete(key),
+      },
+    };
+    installFakeIndexedDB();
+    resetDeviceEncryptionKeyCacheForTesting();
+    const value = { studentId: 'aes-child-42', name: 'سارة', guardianAudioConsentGiven: true };
+    const encrypted = await secureEncrypt(value);
+    assert.ok(encrypted.startsWith(CURRENT_AES_GCM_PREFIX));
+    assert.equal(encrypted.includes('سارة'), false);
+    jar.set('child', encrypted);
+    resetDeviceEncryptionKeyCacheForTesting();
+    assert.deepEqual(await secureDecryptAsync<typeof value>(jar.get('child')!), value);
+    const tampered = encrypted.slice(0, -2) + 'AA';
+    assert.equal(await secureDecryptAsync(tampered), null);
   });
 
   it('fails closed when IndexedDB cannot persist a non-extractable key', async () => {
