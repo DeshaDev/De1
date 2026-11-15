@@ -95,8 +95,9 @@ export interface ChoiceItem {
   responseMode?: 'text';
   /** Expected normalized text for dictation tasks; never rendered to the child. */
   expected?: string;
-  /** Corrective feedback for a dictation task. */
+  /** Corrective feedback for a literacy/dictation task. */
   explanationAr?: string;
+  explanationAudio?: AudioSegment[];
 }
 
 export interface SpanTrial {
