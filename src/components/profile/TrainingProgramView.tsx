@@ -66,6 +66,7 @@ import {
   type TransferPoint,
 } from '../../cognitiveProfile/transferProbe';
 import { AdultMarkedWord } from './TransferPlayer';
+import { StructuredLiteracyStations } from './StructuredLiteracyStations';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
@@ -238,6 +239,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     return () => { cancelled = true; };
   }, [studentId]);
   const [run, setRun] = useState<Run | null>(null);
+  const [showStructuredLiteracyStations, setShowStructuredLiteracyStations] = useState(false);
   useEffect(() => {
     onRunningChange?.(run !== null);
   }, [run !== null, onRunningChange]);
@@ -612,6 +614,18 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   };
 
   // ---------------------------------------------------------------- running a session
+  if (showStructuredLiteracyStations) {
+    const ageYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? ((student?.ageYears ?? 4) * 12)) / 12)));
+    return (
+      <StructuredLiteracyStations
+        studentId={studentId}
+        ageYears={ageYears}
+        childName={childName}
+        onClose={() => setShowStructuredLiteracyStations(false)}
+      />
+    );
+  }
+
   if (run && progress && run.transfer) {
     const t = run.transfer;
     const list = TRANSFER_FORMS[t.form][t.list];
@@ -1038,6 +1052,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             </>
           )}
         </section>
+        <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
+            <p className="text-xs text-ink-2 mt-1">تدريب إضافي على فك الترميز والإملاء والفهم والطلاقة والوعي الصرفي، بحسب العمر.</p>
+          </div>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+            افتح المحطات
+          </button>
+        </section>
       </div>
     );
   }
@@ -1061,7 +1084,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <section className="joy-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج علاجي-تدريبي موجّه'}</p>
+          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
@@ -1084,6 +1107,16 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <TrendingUp className="w-4 h-4" /> مقياس المتابعة
           </button>
         </div>
+      </section>
+
+      <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
+          <p className="text-xs text-ink-2 mt-1">تدريبات إضافية على فك الترميز والإملاء والوعي الصرفي والفهم والطلاقة، مع تدرّج بحسب عمر الطفل.</p>
+        </div>
+        <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+          افتح المحطات
+        </button>
       </section>
 
       {due && (
@@ -1182,7 +1215,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
               {progress.supportFlags.includes(s) && (
                 <p className="mt-3 text-[13px] font-semibold text-warn bg-warn-soft rounded-lg p-2.5 flex gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> يحتاج دعمًا مباشرًا من المعلم: طبّق الاستراتيجيات المقترحة في التقرير بجانب التمرين.
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> تُعرض استراتيجيات المساندة المقترحة في التقرير بجانب التمرين.
                 </p>
               )}
             </div>
