@@ -230,15 +230,28 @@ test('dictation: letter tiles, delete, and a scored answer', async ({ page }) =>
 
 test('mascot appears between tasks only: welcome, practice reaction, ready, finish; never on scored items', async ({ page }) => {
   test.setTimeout(240_000);
-  // This test verifies mascot placement, not voice quality. Keep the player deterministic:
-  // missing pre-recorded clips or server TTS must fail quickly rather than lock answer controls.
+  // This test verifies mascot placement, not voice quality. Simulate short, completed
+  // audio clips so the test is deterministic and does not depend on cloud TTS availability.
   await page.route('**/audio/v1/manifest.json', (route) =>
     route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
   );
   await page.route('**/api/ai/tts', (route) =>
-    route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ audioBase64: 'AA==', mimeType: 'audio/mpeg' }),
+    })
   );
-  await page.addInitScript(() => window.localStorage.clear());
+  await page.addInitScript(() => {
+    window.localStorage.clear();
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value: function () {
+        window.setTimeout(() => this.dispatchEvent(new Event('ended')), 10);
+        return Promise.resolve();
+      },
+    });
+  });
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
