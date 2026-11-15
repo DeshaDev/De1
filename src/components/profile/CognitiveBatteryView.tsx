@@ -700,13 +700,22 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         if (cancelled) return;
         const initial = existing ?? createInitialSession();
         setSession(initial);
+        setView(initialView === 'training'
+          ? { name: 'training' }
+          : initial ? { name: 'map' } : { name: 'setup' });
       })
       .catch((error) => {
         console.error('Unable to restore encrypted battery session:', error);
-        if (!cancelled) setSession(createInitialSession());
+        if (!cancelled) {
+          const initial = createInitialSession();
+          setSession(initial);
+          setView(initialView === 'training'
+            ? { name: 'training' }
+            : initial ? { name: 'map' } : { name: 'setup' });
+        }
       });
     return () => { cancelled = true; };
-  }, [activeStudent.id]);
+  }, [activeStudent.id, initialView]);
 
   const pushToSchool = (s: BatterySession) => {
     if (!syncEnabled) {
@@ -743,10 +752,6 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [view, setView] = useState<View>(() =>
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
-
-  useEffect(() => {
-    setView(initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' });
-  }, [session, initialView]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
