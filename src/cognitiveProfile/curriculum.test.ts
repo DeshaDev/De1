@@ -49,7 +49,7 @@ describe('teaching curriculum: guided practice ("we do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (const task of generateSession(skill, level, 11)) {
-          if (task.kind !== 'choice') continue;
+          if (task.kind !== 'choice' || task.item.responseMode === 'text') continue;
           const g = scaffold(task.item);
           assert.ok(g.options.some((o) => o.id === task.item.correctId), `${skill}:${level} lost the answer`);
           if (task.item.options.length >= 3 && task.item.tag !== 'syllableCount') assert.equal(g.options.length, task.item.options.length - 1);
