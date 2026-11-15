@@ -78,6 +78,8 @@ export async function loadLiteracyPracticeProgress(studentId: string): Promise<L
 export const saveLiteracyPracticeProgress = (studentId: string, progress: LiteracyPracticeProgress) =>
   write(LITERACY_PRACTICE_KEY(studentId), sanitizeLiteracyPracticeProgress(progress));
 
+export const clearLiteracyPracticeProgress = (studentId: string) => remove(LITERACY_PRACTICE_KEY(studentId));
+
 /** Summary of a finished screening, kept when the child is screened again so the two can be compared. */
 export interface ScreeningSnapshot {
   completedAt: string;
