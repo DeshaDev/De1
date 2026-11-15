@@ -8,6 +8,7 @@ import {
   type LiteracyStationId,
 } from '../../cognitiveProfile/structuredLiteracyStations';
 import {
+  arabicSpellingMatches,
   emptyLiteracyPracticeProgress,
   recordFluencySessionCompleted,
   recordLiteracyAnswer,
@@ -139,11 +140,9 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   };
 
   const correctOption = question?.options.find((option) => option.id === question.correctId);
-  const normalizeSpelling = (value: string) =>
-    value.normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/\s+/g, '');
   const submitTextResponse = () => {
     if (!question || question.responseMode !== 'text' || selectedId) return;
-    const isCorrect = normalizeSpelling(textResponse) === normalizeSpelling(question.correctId);
+    const isCorrect = arabicSpellingMatches(textResponse, question.correctId);
     setSelectedId(isCorrect ? question.correctId : '__text_response__');
     setAnswerCorrect(isCorrect);
     if (station && station.id !== 'fluency') {
