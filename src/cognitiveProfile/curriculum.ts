@@ -19,6 +19,7 @@
  * All spoken text is fully vowelled so the pre-recorded clips are generated correctly.
  */
 import type { AudioSegment, ChoiceItem } from './battery';
+import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import { CONFUSABLE_LETTER_GROUPS, CONFUSABLE_PHONEME_PAIRS, DISTANT_PHONEME_PAIRS, LEXICON, PICTURE_IDS, lex } from './lexicon';
 import { cvSyllable, type Level, type SkillId, type TrainingTargets } from './training';
 
@@ -89,7 +90,7 @@ function closing(textAr: string, audio: string): LessonStep {
 }
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
-export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets): Lesson | null {
+export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 6): Lesson | null {
   const key = `${skill}:${level}`;
   switch (skill) {
     case 'rhyme':
@@ -198,6 +199,21 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         ],
       };
     }
+    case 'decoding':
+    case 'spelling':
+    case 'comprehension':
+    case 'morphology': {
+      const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
+      if (!station) return null;
+      return {
+        key, skill, level, titleAr: station.titleAr,
+        steps: [
+          { textAr: station.teachAr, audio: say(station.teachAudioAr) },
+          { textAr: station.modelAr, audio: say(station.modelAudioAr) },
+          closing('الآن دورك: استخدم ما تعلّمته، ثم فكّر في سبب اختيارك.', 'الْآنَ دَوْرُكَ: اسْتَخْدِمْ مَا تَعَلَّمْتَهُ، ثُمَّ فَكِّرْ فِي سَبَبِ اخْتِيَارِكَ.'),
+        ],
+      };
+    }
     default:
       return null; // memory skills are not trained as goals
   }
@@ -256,6 +272,14 @@ const labelOf = (item: ChoiceItem, id: string) => item.options.find((o) => o.id 
 export function explainMistake(item: ChoiceItem): Explanation | null {
   const correct = item.correctId;
   if (!item.tag) return null;
+  if (item.tag.startsWith('structured-')) {
+    const stationId = item.tag.slice('structured-'.length);
+    const station = getStructuredLiteracyStations(8).find((entry) => entry.id === stationId);
+    const question = station?.questions.find((entry) => entry.promptAr === item.promptAr);
+    if (question) {
+      return { textAr: question.explanationAr, audio: question.explanationAudio.map((text) => ({ text })), pictureIds: [], glyphs: [] };
+    }
+  }
   const target = item.stimulus?.label;
   const targetId = item.stimulus ? PICTURE_IDS.find((id) => LEXICON[id].emoji === item.stimulus!.value) : undefined;
   switch (item.tag) {
