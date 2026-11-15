@@ -230,6 +230,14 @@ test('dictation: letter tiles, delete, and a scored answer', async ({ page }) =>
 
 test('mascot appears between tasks only: welcome, practice reaction, ready, finish; never on scored items', async ({ page }) => {
   test.setTimeout(240_000);
+  // This test verifies mascot placement, not voice quality. Keep the player deterministic:
+  // missing pre-recorded clips or server TTS must fail quickly rather than lock answer controls.
+  await page.route('**/audio/v1/manifest.json', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+  );
+  await page.route('**/api/ai/tts', (route) =>
+    route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+  );
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
