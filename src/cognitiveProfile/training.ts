@@ -1175,7 +1175,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     const station = getStructuredLiteracyStations(ageYears).find((item) => item.id === skill);
     const bank = station?.questions.filter((question) => question.responseMode !== 'text') ?? [];
     if (bank.length === 0) return [];
-    const poolSize = Math.min(bank.length, 4 + (level - 1));
+    const poolSize = Math.min(bank.length, 5 + (level - 1));
     const pool = shuffleWith(bank.slice(0, poolSize), random);
     return pool.map((question, n) => ({
       kind: 'choice' as const,
