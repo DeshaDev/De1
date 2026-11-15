@@ -90,7 +90,7 @@ function closing(textAr: string, audio: string): LessonStep {
 }
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
-export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 6): Lesson | null {
+export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 8): Lesson | null {
   const key = `${skill}:${level}`;
   switch (skill) {
     case 'rhyme':
@@ -311,8 +311,19 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
     case 'decoding':
     case 'spelling':
     case 'morphology':
-    case 'comprehension':
-      return { textAr: `الإجابة الصحيحة: ${labelOf(item, correct)}.`, audio: say('الإِجَابَةُ الصَّحِيحَةُ:', labelOf(item, correct)), pictureIds: [], glyphs: [labelOf(item, correct)] };
+    case 'comprehension': {
+      const option = item.options.find((candidate) => candidate.id === correct);
+      const fromEmoji = option?.visual.type === 'emoji'
+        ? PICTURE_IDS.find((id) => LEXICON[id].emoji === option.visual.value)
+        : undefined;
+      const pictureId = LEXICON[correct] ? correct : fromEmoji;
+      return {
+        textAr: `الإجابة الصحيحة: ${labelOf(item, correct)}.`,
+        audio: say('الإِجَابَةُ الصَّحِيحَةُ:', labelOf(item, correct)),
+        pictureIds: pictureId ? [pictureId] : [],
+        glyphs: [labelOf(item, correct)],
+      };
+    }
     case 'letter':
     case 'word':
       return { textAr: `الصحيح: ${labelOf(item, correct)} — انظر إلى النقاط.`, audio: say('انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.'), pictureIds: [], glyphs: [labelOf(item, correct)] };
@@ -356,6 +367,17 @@ export function curriculumPhrases(): string[] {
     out.add(e.word);
     e.syllables.forEach((syl) => out.add(syl));
   }
+  // Every spoken line used by adaptive station items and their corrective feedback.
+  for (const age of [4, 5, 6, 7, 8]) {
+    for (const station of getStructuredLiteracyStations(age)) {
+      for (const question of station.questions) {
+        question.audio.forEach((phrase) => out.add(phrase));
+        question.explanationAudio.forEach((phrase) => out.add(phrase));
+        question.options.forEach((option) => out.add(option.labelAr));
+      }
+    }
+  }
+  out.add('الإِجَابَةُ الصَّحِيحَةُ:');
   // Letter sounds with each short vowel (lessons and explanations)
   for (const l of 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي'.split(' ')) for (const v of ['َ', 'ِ', 'ُ']) out.add(l + v);
   return [...out];

@@ -401,11 +401,13 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   const memoryOnly = ordered.filter((s) => NOT_TRAINED_AS_FOCUS.has(s));
   const trainable = ordered.filter((s) => !NOT_TRAINED_AS_FOCUS.has(s));
   const preventive = trainable.length === 0;
-  const preventiveSkills: SkillId[] = ageMonths < 72
-    ? ['blending', 'letterSound']
-    : ageMonths < 84
-      ? ['decoding', 'spelling', 'comprehension']
-      : ['decoding', 'spelling', 'morphology'];
+  const preventiveSkills: SkillId[] = ageMonths < 60
+    ? ['rhyme', 'blending', 'comprehension']
+    : ageMonths < 72
+      ? ['blending', 'letterSound', 'comprehension']
+      : ageMonths < 84
+        ? ['decoding', 'spelling', 'comprehension']
+        : ['decoding', 'spelling', 'morphology'];
   const chosen = preventive ? preventiveSkills : trainable.slice(0, MAX_FOCUS_SKILLS);
   const focus = [...chosen].sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
 
@@ -416,7 +418,7 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
     rationaleAr.push(
       memoryOnly.length > 0
         ? 'يركّز البرنامج على التركيب الصوتي وربط الحرف بصوته، وهما أساس تعلّم القراءة.'
-        : 'لم تُسجَّل فجوات نسبية في المهام المكتملة؛ البرنامج وقائي يعزّز التركيب الصوتي وربط الحرف بصوته استعدادًا للقراءة.'
+        : 'لم تُسجَّل فجوات نسبية في المهام المكتملة؛ البرنامج وقائي ويقدّم ممارسة متدرجة في المهارات التمهيدية أو القرائية المناسبة للعمر.'
     );
   } else {
     rationaleAr.push(
@@ -699,6 +701,30 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
         titleAr: 'الرسم بالهواء والأصابع ✏️',
         activityAr: 'ارسم الحرف بإصبعك على كف طفلك أو في الهواء واطلب منه نطق صوته الصافي بحركته (مَ / مُ / مِ) مع ذكر كلمة تبدأ به.',
         exampleWords: ['مَوْز', 'بَاب', 'رَمْل'],
+      };
+    case 'decoding':
+      return {
+        titleAr: 'صيد الكلمات وفكّها 🔤',
+        activityAr: 'اختر كلمة قصيرة من كتاب أو لافتة، ودع طفلك يتتبع الحروف من اليمين إلى اليسار ويجمع أصواتها بهدوء، ثم يقرأها كاملة.',
+        exampleWords: ['قَلَم', 'بَاب', 'نُور'],
+      };
+    case 'spelling':
+      return {
+        titleAr: 'إملاء كلمة واحدة ✍️',
+        activityAr: 'انطق كلمة مألوفة بوضوح، واطلب من طفلك كتابتها أو ترتيب حروفها، ثم ناقشا موضع المدّ ونهاية الكلمة.',
+        exampleWords: ['كِتَاب', 'نُور', 'هُدَى'],
+      };
+    case 'morphology':
+      return {
+        titleAr: 'عائلة الكلمة 🧩',
+        activityAr: 'ابحثا عن كلمتين تشتركان في الجذر والمعنى، مثل كتب وكتاب. لاحظا الحروف الأصلية والمعنى معًا.',
+        exampleWords: ['كَتَبَ', 'كِتَاب', 'مَكْتَب'],
+      };
+    case 'comprehension':
+      return {
+        titleAr: 'اسأل عن القصة 💡',
+        activityAr: 'بعد جملة أو قصة قصيرة، اسأل طفلك: ماذا حدث؟ ولماذا؟ وما الدليل في الكلام؟',
+        exampleWords: ['لِأَنَّ', 'ثُمَّ', 'لِذَلِكَ'],
       };
     case 'visualDiscrimination':
       return {
@@ -1135,7 +1161,7 @@ function spanTask(random: () => number, level: Level, n: number): SpanTrial {
   return { id: `tr-span-${n}`, sequence, choices: shuffleWith(pool, random) };
 }
 
-export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets, ageYears = 6): TrainingTask[] {
+export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets, ageYears = 8): TrainingTask[] {
   let a = seed >>> 0;
   const random = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -1151,27 +1177,24 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     if (bank.length === 0) return [];
     const poolSize = Math.min(bank.length, 4 + (level - 1));
     const pool = shuffleWith(bank.slice(0, poolSize), random);
-    return Array.from({ length: ITEMS_PER_SESSION }, (_, n) => {
-      const question = pool[n % pool.length];
-      return {
-        kind: 'choice' as const,
-        item: {
-          id: `tr-literacy-${skill}-${level}-${question.id}-${n}`,
-          promptAr: skill === 'comprehension' && ageYears < 6
-            ? 'اسْتَمِعْ إِلَى الْجُمْلَةِ، ثُمَّ اخْتَرِ الصُّورَةَ.'
-            : question.promptAr,
-          audio: question.audio.map((text) => ({ text, pauseAfterMs: 320 })),
-          options: question.options.map((option) => ({
-            id: option.id,
-            visual: option.emoji
-              ? { type: 'emoji' as const, value: option.emoji, label: option.labelAr }
-              : { type: 'glyph' as const, value: option.labelAr, label: option.labelAr },
-          })),
-          correctId: question.correctId,
-          tag: skill,
-        },
-      };
-    });
+    return pool.map((question, n) => ({
+      kind: 'choice' as const,
+      item: {
+        id: `tr-literacy-${skill}-${level}-${question.id}-${n}`,
+        promptAr: skill === 'comprehension' && ageYears < 6
+          ? 'اسْتَمِعْ إِلَى الْجُمْلَةِ، ثُمَّ اخْتَرِ الصُّورَةَ.'
+          : question.promptAr,
+        audio: question.audio.map((text) => ({ text, pauseAfterMs: 320 })),
+        options: question.options.map((option) => ({
+          id: option.id,
+          visual: option.emoji
+            ? { type: 'emoji' as const, value: option.emoji, label: option.labelAr }
+            : { type: 'glyph' as const, value: option.labelAr, label: option.labelAr },
+        })),
+        correctId: question.correctId,
+        tag: skill,
+      },
+    }));
   }
 
   if (skill === 'auditoryMemory' || skill === 'visualMemory') {
@@ -1208,15 +1231,14 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
 }
 
 /** `count` practice items for one skill and level (more or fewer than one standard block). */
-export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageYears = 6): TrainingTask[] {
+export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageYears = 8): TrainingTask[] {
   const out: TrainingTask[] = [];
   const seen = new Set<string>();
   for (let k = 0; out.length < count && k < 8; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageYears)) {
       if (out.length >= count) break;
       const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
-      const repeatSmallStationBank = ['decoding', 'spelling', 'morphology', 'comprehension'].includes(skill);
-      if (seen.has(signature) && !repeatSmallStationBank) continue;
+      if (seen.has(signature)) continue;
       seen.add(signature);
       out.push(
         task.kind === 'choice'

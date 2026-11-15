@@ -77,7 +77,7 @@ export function buildProbe(plan: Pick<TrainingPlan, 'focus' | 'ageYears'>, stude
   ];
   skills.forEach(({ skill, role }, i) => {
     const seed = hash(`probe|${studentId}|${session}|${skill}|${i}`);
-    for (const task of generateSession(skill, PROBE_LEVEL, seed, undefined, plan.ageYears ?? 6).slice(0, PROBE_ITEMS_PER_SKILL)) {
+    for (const task of generateSession(skill, PROBE_LEVEL, seed, undefined, plan.ageYears ?? 8).slice(0, PROBE_ITEMS_PER_SKILL)) {
       const tagged: TrainingTask =
         task.kind === 'choice'
           ? { ...task, item: { ...task.item, id: `probe-${session}-${skill}-${task.item.id}` } }
