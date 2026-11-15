@@ -29,6 +29,14 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.equal(getStructuredLiteracyStations(8).some((station) => station.id === 'morphology'), true);
   });
 
+  it('keeps the early-years spoken worked example consistent with the displayed answer', () => {
+    const station = getStructuredLiteracyStations(4).find((entry) => entry.id === 'comprehension');
+    assert.ok(station);
+    assert.match(station.modelAr, /نجيب: في الخزانة/);
+    assert.match(station.modelAudioAr, /نُجِيبُ: فِي الْخِزَانَةِ/);
+    assert.doesNotMatch(station.modelAudioAr, /تَحْتَ الْخِزَانَةِ/);
+  });
+
   it('provides explicit teaching and a worked example before every practice station', () => {
     for (const age of [4, 5, 6, 7, 8]) {
       for (const station of getStructuredLiteracyStations(age)) {
