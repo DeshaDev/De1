@@ -189,7 +189,7 @@ const morphology: LiteracyQuestion[] = [
     audio: ['زَرَعَ.', 'اِخْتَرْ كَلِمَةً مِنْ عَائِلَتِهَا.'],
     options: [
       { id: 'زارع', labelAr: 'زَارِع' },
-      { id: 'قارىء', labelAr: 'قَارِئ' },
+      { id: 'قارئ', labelAr: 'قَارِئ' },
       { id: 'كاتب', labelAr: 'كَاتِب' },
     ],
     correctId: 'زارع',
