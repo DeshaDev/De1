@@ -22,6 +22,8 @@ export interface LiteracyOption {
 export interface LiteracyQuestion {
   id: string;
   promptAr: string;
+  /** Instructional sequence level; items at higher levels use more complex patterns. */
+  level?: 1 | 2 | 3;
   /** Model narration or spoken prompt. Fully vowelled Arabic is preferred. */
   audio: string[];
   options: LiteracyOption[];
@@ -60,6 +62,7 @@ export interface FluencyPassage {
 const decoding: LiteracyQuestion[] = [
   {
     id: 'decode-door',
+    level: 1,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ الظَّاهِرَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الَّتِي تُمَثِّلُهَا: بَاب',
     audio: ['اِقْرَأِ الْكَلِمَةَ الظَّاهِرَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
     options: [
@@ -73,6 +76,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-elephant',
+    level: 1,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: فِيل',
     audio: ['اِقْرَأِ الْكَلِمَةَ، وَاخْتَرِ الصُّورَةَ الَّتِي تُطَابِقُهَا.'],
     options: [
@@ -86,6 +90,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-pen',
+    level: 1,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: قَلَم',
     audio: ['اِقْرَأِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
     options: [
@@ -99,6 +104,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-school',
+    level: 2,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: مَدْرَسَة',
     audio: ['اِقْرَأِ الْكَلِمَةَ، وَاخْتَرِ الصُّورَةَ الَّتِي تُمَثِّلُهَا.'],
     options: [
@@ -112,6 +118,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-ball',
+    level: 2,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: كُرَة',
     audio: ['اِقْرَأِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
     options: [
@@ -125,6 +132,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-star',
+    level: 2,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: نَجْم',
     audio: ['اِقْرَأِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
     options: [
@@ -138,6 +146,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-grapes',
+    level: 3,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ: عِنَب، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.',
     audio: ['اِقْرَأِ الْكَلِمَةَ بِالْحَرَكَاتِ، ثُمَّ اخْتَرْ مَعْنَاهَا.'],
     options: [
@@ -151,6 +160,7 @@ const decoding: LiteracyQuestion[] = [
   },
   {
     id: 'decode-window',
+    level: 3,
     promptAr: 'اِقْرَأِ الْكَلِمَةَ: نَافِذَة، وَاخْتَرْ مَا تَدُلُّ عَلَيْهِ.',
     audio: ['اِقْرَأِ الْكَلِمَةَ، وَصِلْهَا بِمَعْنَاهَا.'],
     options: [
@@ -168,6 +178,7 @@ const decoding: LiteracyQuestion[] = [
 const spelling: LiteracyQuestion[] = [
   {
     id: 'spell-door',
+    level: 1,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الْكِتَابَةَ الصَّحِيحَةَ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'بَابٌ', 'أَيُّ كِتَابَةٍ صَحِيحَةٌ؟'],
     options: [
@@ -181,6 +192,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-pen',
+    level: 1,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَاخْتَرْ رَسْمَهَا الصَّحِيحَ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'قَلَمٌ', 'اخْتَرِ الْكِتَابَةَ الصَّحِيحَةَ.'],
     options: [
@@ -194,6 +206,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-tree',
+    level: 2,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، ثُمَّ اخْتَرْ نِهَايَتَهَا الصَّحِيحَةَ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'شَجَرَةٌ', 'أَيُّ كِتَابَةٍ صَحِيحَةٌ؟'],
     options: [
@@ -207,6 +220,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-hospital',
+    level: 3,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَانْتَبِهْ إِلَى آخِرِهَا.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'مُسْتَشْفَى', 'اخْتَرْ كِتَابَتَهَا الصَّحِيحَةَ.'],
     options: [
@@ -220,6 +234,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-noor',
+    level: 2,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَاخْتَرْ رَسْمَهَا الصَّحِيحَ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'نُورٌ', 'اخْتَرِ الْكِتَابَةَ الصَّحِيحَةَ.'],
     options: [
@@ -233,6 +248,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-huda',
+    level: 3,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَانْتَبِهْ إِلَى آخِرِهَا.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'هُدَى', 'اخْتَرْ كِتَابَتَهَا الصَّحِيحَةَ.'],
     options: [
@@ -246,6 +262,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-write-book',
+    level: 2,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، ثُمَّ اكْتُبْهَا فِي الْمَكَانِ الْمُخَصَّصِ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ، ثُمَّ اكْتُبْهَا.', 'كِتَابٌ.'],
     options: [],
@@ -256,6 +273,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-school',
+    level: 2,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، ثُمَّ اخْتَرْ كِتَابَتَهَا.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'مَدْرَسَةٌ', 'أَيُّ رَسْمٍ صَحِيحٌ؟'],
     options: [
@@ -269,6 +287,7 @@ const spelling: LiteracyQuestion[] = [
   },
   {
     id: 'spell-clean',
+    level: 3,
     promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَانْتَبِهْ إِلَى حَرْفِ الْمَدِّ.',
     audio: ['اِسْمَعِ الْكَلِمَةَ:', 'نَظِيفٌ', 'اخْتَرِ الْكِتَابَةَ الصَّحِيحَةَ.'],
     options: [
@@ -286,6 +305,7 @@ const spelling: LiteracyQuestion[] = [
 const morphology: LiteracyQuestion[] = [
   {
     id: 'morphology-write',
+    level: 1,
     promptAr: 'هَذِهِ كَلِمَةٌ: كَتَبَ. أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَتِهَا؟',
     audio: ['هَذِهِ كَلِمَةٌ: كَتَبَ.', 'اخْتَرْ كَلِمَةً مِنَ الْعَائِلَةِ نَفْسِهَا.'],
     options: [
@@ -299,6 +319,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-play',
+    level: 1,
     promptAr: 'هَذِهِ كَلِمَةٌ: لَعِبَ. أَيُّ كَلِمَةٍ مِنْ عَائِلَتِهَا؟',
     audio: ['لَعِبَ.', 'اخْتَرْ كَلِمَةً تَرْتَبِطُ بِهَا فِي الْحُرُوفِ وَالْمَعْنَى.'],
     options: [
@@ -312,6 +333,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-farm',
+    level: 1,
     promptAr: 'هَذِهِ كَلِمَةٌ: زَرَعَ. أَيُّ كَلِمَةٍ تَشْتَرِكُ مَعَهَا فِي الْعَائِلَةِ؟',
     audio: ['زَرَعَ.', 'اِخْتَرْ كَلِمَةً مِنْ عَائِلَتِهَا.'],
     options: [
@@ -325,6 +347,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-teach',
+    level: 2,
     promptAr: 'هَذِهِ كَلِمَةٌ: دَرَسَ. أَيُّ كَلِمَةٍ مِنْ عَائِلَتِهَا؟',
     audio: ['دَرَسَ.', 'اِخْتَرْ كَلِمَةً تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ وَالْمَعْنَى.'],
     options: [
@@ -338,6 +361,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-understand',
+    level: 2,
     promptAr: 'هَذِهِ كَلِمَةٌ: فَهِمَ. أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَتِهَا؟',
     audio: ['فَهِمَ.', 'اِخْتَرْ كَلِمَةً تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ وَالْمَعْنَى.'],
     options: [
@@ -351,6 +375,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-playground',
+    level: 3,
     promptAr: 'هَذِهِ كَلِمَةٌ: لَعِبَ. أَيُّ كَلِمَةٍ تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ؟',
     audio: ['لَعِبَ.', 'اِخْتَرْ كَلِمَةً مِنْ عَائِلَتِهَا.'],
     options: [
@@ -364,6 +389,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-hear',
+    level: 2,
     promptAr: 'هَذِهِ كَلِمَةٌ: سَمِعَ. أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَتِهَا؟',
     audio: ['سَمِعَ.', 'اخْتَرْ كَلِمَةً تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ وَالْمَعْنَى.'],
     options: [
@@ -377,6 +403,7 @@ const morphology: LiteracyQuestion[] = [
   },
   {
     id: 'morphology-drink',
+    level: 3,
     promptAr: 'هَذِهِ كَلِمَةٌ: شَرِبَ. أَيُّ كَلِمَةٍ تَرْتَبِطُ بِهَا فِي الْجِذْرِ وَالْمَعْنَى؟',
     audio: ['شَرِبَ.', 'اخْتَرْ كَلِمَةً مِنْ عَائِلَتِهَا.'],
     options: [
@@ -394,6 +421,7 @@ const morphology: LiteracyQuestion[] = [
 const listeningComprehension: LiteracyQuestion[] = [
   {
     id: 'listen-flower',
+    level: 1,
     promptAr: 'لَيْلَى تَسْقِي زَهْرَةً. مَاذَا سَقَتْ لَيْلَى؟',
     audio: ['لَيْلَى تَسْقِي زَهْرَةً.', 'مَاذَا سَقَتْ لَيْلَى؟'],
     options: [
@@ -407,6 +435,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-bag',
+    level: 1,
     promptAr: 'وَضَعَ عُمَرُ كِتَابَهُ فِي الْحَقِيبَةِ. أَيْنَ وَضَعَ عُمَرُ الْكِتَابَ؟',
     audio: ['وَضَعَ عُمَرُ كِتَابَهُ فِي الْحَقِيبَةِ.', 'أَيْنَ وَضَعَ عُمَرُ الْكِتَابَ؟'],
     options: [
@@ -420,6 +449,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-sequence',
+    level: 2,
     promptAr: 'غَسَلَتْ هِنْدٌ يَدَيْهَا، ثُمَّ جَلَسَتْ لِتَأْكُلَ. مَاذَا فَعَلَتْ هِنْدٌ أَوَّلًا؟',
     audio: ['غَسَلَتْ هِنْدٌ يَدَيْهَا، ثُمَّ جَلَسَتْ لِتَأْكُلَ.', 'مَاذَا فَعَلَتْ هِنْدٌ أَوَّلًا؟'],
     options: [
@@ -433,6 +463,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-where',
+    level: 1,
     promptAr: 'وَضَعَتْ نُورٌ الْحِذَاءَ تَحْتَ السَّرِيرِ. أَيْنَ وَضَعَتْ نُورٌ الْحِذَاءَ؟',
     audio: ['وَضَعَتْ نُورٌ الْحِذَاءَ تَحْتَ السَّرِيرِ.', 'أَيْنَ وَضَعَتْ نُورٌ الْحِذَاءَ؟'],
     options: [
@@ -446,6 +477,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-basket',
+    level: 2,
     promptAr: 'أَحْضَرَ آدَمُ تُفَّاحَةً، وَوَضَعَهَا فِي السَّلَّةِ. أَيْنَ وَضَعَ آدَمُ التُّفَّاحَةَ؟',
     audio: ['أَحْضَرَ آدَمُ تُفَّاحَةً، وَوَضَعَهَا فِي السَّلَّةِ.', 'أَيْنَ وَضَعَ آدَمُ التُّفَّاحَةَ؟'],
     options: [
@@ -459,6 +491,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-picnic',
+    level: 3,
     promptAr: 'أَخَذَتْ مَرْيَمُ تُفَّاحَةً وَزُجَاجَةَ مَاءٍ إِلَى الْحَدِيقَةِ. مَاذَا أَخَذَتْ مَرْيَمُ؟',
     audio: ['أَخَذَتْ مَرْيَمُ تُفَّاحَةً وَزُجَاجَةَ مَاءٍ إِلَى الْحَدِيقَةِ.', 'مَاذَا أَخَذَتْ مَرْيَمُ؟'],
     options: [
@@ -472,6 +505,7 @@ const listeningComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'listen-cold',
+    level: 3,
     promptAr: 'شَعَرَ خَالِدٌ بِالْبَرْدِ، فَلَبِسَ مِعْطَفَهُ. لِمَاذَا لَبِسَ خَالِدٌ مِعْطَفَهُ؟',
     audio: ['شَعَرَ خَالِدٌ بِالْبَرْدِ، فَلَبِسَ مِعْطَفَهُ.', 'لِمَاذَا لَبِسَ خَالِدٌ مِعْطَفَهُ؟'],
     options: [
@@ -489,6 +523,7 @@ const listeningComprehension: LiteracyQuestion[] = [
 const readingComprehension: LiteracyQuestion[] = [
   {
     id: 'read-samira',
+    level: 1,
     promptAr: 'رَتَّبَتْ مَرْيَمُ كُتُبَهَا قَبْلَ النَّوْمِ؛ لِأَنَّهَا سَتَقْرَأُ قِصَّةً فِي الصَّبَاحِ. لِمَاذَا رَتَّبَتْ مَرْيَمُ كُتُبَهَا؟',
     audio: ['اِقْرَأِ النَّصَّ، ثُمَّ أَجِبْ عَنِ السُّؤَالِ.', 'رَتَّبَتْ مَرْيَمُ كُتُبَهَا قَبْلَ النَّوْمِ؛ لِأَنَّهَا سَتَقْرَأُ قِصَّةً فِي الصَّبَاحِ.', 'لِمَاذَا رَتَّبَتْ مَرْيَمُ كُتُبَهَا؟'],
     options: [
@@ -502,6 +537,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-rain',
+    level: 2,
     promptAr: 'هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ قَبْلَ أَنْ يَخْرُجَ. لِمَاذَا حَمَلَ سَامِي مِظَلَّتَهُ؟',
     audio: ['اِقْرَأِ النَّصَّ، وَفَكِّرْ فِي السَّبَبِ.', 'هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ قَبْلَ أَنْ يَخْرُجَ.', 'لِمَاذَا حَمَلَ سَامِي مِظَلَّتَهُ؟'],
     options: [
@@ -515,6 +551,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-context-word',
+    level: 3,
     promptAr: 'قَرَأَتْ سَلْمَى كِتَابًا مُشَوِّقًا، فَلَمْ تَتَوَقَّفْ حَتَّى وَصَلَتْ إِلَى نِهَايَتِهِ. مَا مَعْنَى «مُشَوِّق» فِي الْجُمْلَةِ؟',
     audio: ['اِقْرَأِ النَّصَّ، وَانْتَبِهْ إِلَى مَعْنَى الْكَلِمَةِ مِنَ السِّيَاقِ.', 'قَرَأَتْ سَلْمَى كِتَابًا مُشَوِّقًا، فَلَمْ تَتَوَقَّفْ حَتَّى وَصَلَتْ إِلَى نِهَايَتِهِ.', 'مَا مَعْنَى مُشَوِّق؟'],
     options: [
@@ -528,6 +565,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-inference',
+    level: 3,
     promptAr: 'رَأَى عَادِلٌ أَنَّ التُّرَابَ جَافٌّ، فَأَحْضَرَ الْمَاءَ وَسَقَى النَّبْتَةَ. مَاذَا نَفْهَمُ مِنْ ذَلِكَ؟',
     audio: ['اِقْرَأِ النَّصَّ، ثُمَّ اخْتَرِ الْفِكْرَةَ الْأَقْرَبَ.', 'رَأَى عَادِلٌ أَنَّ التُّرَابَ جَافٌّ، فَأَحْضَرَ الْمَاءَ وَسَقَى النَّبْتَةَ.', 'مَاذَا نَفْهَمُ مِنْ ذَلِكَ؟'],
     options: [
@@ -541,6 +579,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-sequence',
+    level: 2,
     promptAr: 'رَسَمَتْ لَيْلَى وَرْدَةً، ثُمَّ لَوَّنَتْهَا بِالْأَحْمَرِ. مَاذَا فَعَلَتْ لَيْلَى بَعْدَ الرَّسْمِ؟',
     audio: ['اِقْرَأِ النَّصَّ، ثُمَّ تَذَكَّرْ مَا حَدَثَ بَعْدَ الرَّسْمِ.', 'رَسَمَتْ لَيْلَى وَرْدَةً، ثُمَّ لَوَّنَتْهَا بِالْأَحْمَرِ.', 'مَاذَا فَعَلَتْ لَيْلَى بَعْدَ الرَّسْمِ؟'],
     options: [
@@ -554,6 +593,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-coat',
+    level: 1,
     promptAr: 'خَرَجَتْ هِنْدٌ فِي يَوْمٍ بَارِدٍ، فَارْتَدَتْ مِعْطَفًا. مَاذَا نَفْهَمُ مِنَ النَّصِّ؟',
     audio: ['اِقْرَأِ النَّصَّ، ثُمَّ اسْتَخْلِصِ الْمَعْنَى.', 'خَرَجَتْ هِنْدٌ فِي يَوْمٍ بَارِدٍ، فَارْتَدَتْ مِعْطَفًا.', 'مَاذَا نَفْهَمُ مِنَ النَّصِّ؟'],
     options: [
@@ -567,6 +607,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-order',
+    level: 2,
     promptAr: 'وَضَعَتْ سَلْمَى الْبُذُورَ فِي التُّرْبَةِ، ثُمَّ سَقَتْهَا. مَاذَا فَعَلَتْ بَعْدَ وَضْعِ الْبُذُورِ؟',
     audio: ['اِقْرَأِ النَّصَّ، وَانْتَبِهْ إِلَى كَلِمَةِ ثُمَّ.', 'وَضَعَتْ سَلْمَى الْبُذُورَ فِي التُّرْبَةِ، ثُمَّ سَقَتْهَا.', 'مَاذَا فَعَلَتْ بَعْدَ وَضْعِ الْبُذُورِ؟'],
     options: [
@@ -580,6 +621,7 @@ const readingComprehension: LiteracyQuestion[] = [
   },
   {
     id: 'read-feeling',
+    level: 3,
     promptAr: 'عَادَ سَامِي إِلَى بَيْتِهِ وَهُوَ يَبْتَسِمُ بَعْدَ أَنْ سَاعَدَ صَدِيقَهُ. كَيْفَ كَانَ شُعُورُهُ عَلَى الْأَرْجَحِ؟',
     audio: ['اِقْرَأِ الْجُمْلَةَ، وَاسْتَدِلَّ مِنْ أَفْعَالِ الشَّخْصِيَّةِ.', 'عَادَ سَامِي إِلَى بَيْتِهِ وَهُوَ يَبْتَسِمُ بَعْدَ أَنْ سَاعَدَ صَدِيقَهُ.', 'كَيْفَ كَانَ شُعُورُهُ؟'],
     options: [
