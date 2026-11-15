@@ -117,6 +117,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [replays, setReplays] = useState(0);
   const [hesitating, setHesitating] = useState(false);
+  const [speechPromptTimedOut, setSpeechPromptTimedOut] = useState(false);
   const readyAt = useRef(0);
   const handle = useRef<PlaybackHandle>({ cancelled: false });
   const hesitationTimer = useRef<number | null>(null);
@@ -136,7 +137,24 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     const h: PlaybackHandle = { cancelled: false };
     handle.current = h;
     setListening(true);
-    await speakSegments(item.audio, h, setHighlight);
+    setSpeechPromptTimedOut(false);
+
+    // A missing/stalled clip must never lock a child out of the answer choices.
+    // If the full prompt does not finish, stop it and allow the child to replay or continue.
+    let playbackTimeout: number | undefined;
+    const completed = await Promise.race([
+      speakSegments(item.audio, h, setHighlight).then(() => true),
+      new Promise<boolean>((resolve) => {
+        playbackTimeout = window.setTimeout(() => resolve(false), 12_000);
+      }),
+    ]);
+    if (playbackTimeout !== undefined) window.clearTimeout(playbackTimeout);
+    if (!completed && !h.cancelled) {
+      h.cancelled = true;
+      stopSpeech();
+      setHighlight(null);
+      setSpeechPromptTimedOut(true);
+    }
     if (!h.cancelled) {
       setListening(false);
       readyAt.current = performance.now();
@@ -144,6 +162,9 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
       hesitationTimer.current = window.setTimeout(() => {
         setHesitating(true);
       }, 6500);
+    } else if (!completed) {
+      setListening(false);
+      readyAt.current = performance.now();
     }
   };
 
@@ -239,6 +260,11 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
         ))}
       </div>
       <p className="text-xs font-bold text-slate-400 h-4">{listening ? 'استمع…' : ''}</p>
+      {speechPromptTimedOut && !listening && !feedback && (
+        <p role="status" className="bz-small text-amber-800 text-center">
+          تأخر تشغيل الصوت. يمكنك الاستماع مرة أخرى أو اختيار إجابتك.
+        </p>
+      )}
       {showFeedback && <PracticeReaction correct={feedback ? feedback.correct : null} seed={seedOf(item.id)} />}
     </div>
   );
