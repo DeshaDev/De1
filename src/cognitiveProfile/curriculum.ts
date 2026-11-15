@@ -19,7 +19,7 @@
  * All spoken text is fully vowelled so the pre-recorded clips are generated correctly.
  */
 import type { AudioSegment, ChoiceItem } from './battery';
-import { getStructuredLiteracyStations } from './structuredLiteracyStations';
+import { getStructuredLiteracyStations, getFluencyPassage } from './structuredLiteracyStations';
 import { CONFUSABLE_LETTER_GROUPS, CONFUSABLE_PHONEME_PAIRS, DISTANT_PHONEME_PAIRS, LEXICON, PICTURE_IDS, lex } from './lexicon';
 import { cvSyllable, type Level, type SkillId, type TrainingTargets } from './training';
 
