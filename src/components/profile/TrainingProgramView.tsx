@@ -817,7 +817,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج علاجي-تدريبي موجّه'}</p>
+          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
