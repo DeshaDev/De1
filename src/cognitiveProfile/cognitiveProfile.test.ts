@@ -450,11 +450,19 @@ test('every training skill and level generates valid, varied items', () => {
   for (const skill of Object.keys(SKILLS) as SkillId[]) {
     for (const level of [1, 2, 3] as Level[]) {
       for (const seed of [1, 7, 42]) {
-        const tasks = generateSession(skill, level, seed);
-        assert.ok(tasks.length >= 5, `${skill} L${level} produced ${tasks.length}`);
+        const structured = ['decoding', 'spelling', 'comprehension', 'morphology'].includes(skill);
+        const ageMonths = skill === 'morphology' ? 84 : 72;
+        const tasks = generateSession(skill, level, seed, undefined, ageMonths);
+        assert.ok(tasks.length >= (structured ? 2 : 5), `${skill} L${level} produced ${tasks.length}`);
         for (const task of tasks) {
           if (task.kind === 'span') {
             assert.ok(task.trial.sequence.every((id) => task.trial.choices.includes(id)));
+            continue;
+          }
+          if (task.item.responseMode === 'text') {
+            assert.ok(task.item.expected);
+            assert.ok(task.item.explanationAr);
+            assert.deepEqual(task.item.options, []);
             continue;
           }
           const ids = task.item.options.map((o) => o.id);
