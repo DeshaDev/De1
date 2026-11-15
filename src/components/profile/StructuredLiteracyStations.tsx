@@ -38,6 +38,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   const [playing, setPlaying] = useState(false);
   const [showLesson, setShowLesson] = useState(false);
   const [practiceProgress, setPracticeProgress] = useState<LiteracyPracticeProgress>(emptyLiteracyPracticeProgress());
+  const [practiceReady, setPracticeReady] = useState(false);
   const playback = useRef<PlaybackHandle | null>(null);
 
   const station = stations.find((item) => item.id === stationId) ?? null;
@@ -48,7 +49,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     let cancelled = false;
     void loadLiteracyPracticeProgress(studentId)
       .then((saved) => { if (!cancelled) setPracticeProgress(saved); })
-      .catch((error) => console.error('Unable to restore encrypted literacy practice progress:', error));
+      .catch((error) => console.error('Unable to restore encrypted literacy practice progress:', error))
+      .finally(() => { if (!cancelled) setPracticeReady(true); });
     return () => { cancelled = true; };
   }, [studentId]);
 
@@ -154,7 +156,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               key={item.id}
               type="button"
               onClick={() => openStation(item)}
-              className="bz-card p-5 text-right hover:border-brand transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20"
+              disabled={!practiceReady}
+              className="bz-card p-5 text-right hover:border-brand transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 disabled:opacity-60"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -335,7 +338,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               }`}
             >
               {option.emoji && <span className="text-5xl" aria-hidden="true">{option.emoji}</span>}
-              <span className={`font-child text-lg font-black text-slate-900 ${(station.id === 'decoding' || (station.id === 'comprehension' && ageYears < 6)) && option.emoji ? 'sr-only' : ''}`}>{option.labelAr}</span>
+              <span className={`font-child text-lg font-black text-slate-900 ${(station.id === 'decoding' || (station.id === 'comprehension' && safeAgeYears < 6)) && option.emoji ? 'sr-only' : ''}`}>{option.labelAr}</span>
             </button>
           );
         })}
