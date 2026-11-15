@@ -706,7 +706,7 @@ export default function App() {
   };
 
   /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
-  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }): string | null => {
+  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }): string | null => {
     if (baseeraSession?.role === 'educator_readonly') return null;
     const cleanName = input.name.trim().replace(/\s+/g, ' ');
     if (cleanName.length < 2) return null;
@@ -734,7 +734,8 @@ export default function App() {
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
       guardianConsentSource: `إقرار ذاتي من مستخدم شاشة الفحص (${input.examinerName.trim() || 'غير محدد'})؛ لم تتحقق المنصة من هوية ولي الأمر أو صحة التفويض`,
-      guardianAudioConsentGiven: false,
+      guardianAudioConsentGiven: input.guardianAudioConsentGiven === true && typeof input.guardianAudioConsentRecordedAt === 'string' && Number.isFinite(Date.parse(input.guardianAudioConsentRecordedAt)),
+      ...(input.guardianAudioConsentGiven === true && input.guardianAudioConsentRecordedAt ? { guardianAudioConsentRecordedAt: input.guardianAudioConsentRecordedAt } : {}),
       speechRecognitionUsed: false,
       wpm: 0,
       dyslexiaRiskScore: null,
@@ -781,6 +782,8 @@ export default function App() {
           guardianConsentGiven: true,
           guardianConsentRecordedAt: learner.guardianConsentRecordedAt,
           guardianConsentSource: learner.guardianConsentSource,
+          guardianAudioConsentGiven: learner.guardianAudioConsentGiven === true,
+          ...(learner.guardianAudioConsentGiven === true && learner.guardianAudioConsentRecordedAt ? { guardianAudioConsentRecordedAt: learner.guardianAudioConsentRecordedAt } : {}),
         }),
       }).then(async (response) => {
         if (!response.ok) {
