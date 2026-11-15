@@ -260,6 +260,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
             <button
               key={option.id}
               type="button"
+              aria-label={option.labelAr}
               disabled={Boolean(selectedId)}
               onClick={() => chooseOption(option.id)}
               className={`min-h-[116px] rounded-2xl border-2 p-3 flex flex-col items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 ${
@@ -267,7 +268,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
               }`}
             >
               {option.emoji && <span className="text-5xl" aria-hidden="true">{option.emoji}</span>}
-              <span className="font-child text-lg font-black text-slate-900">{option.labelAr}</span>
+              <span className={`font-child text-lg font-black text-slate-900 ${(station.id === 'decoding' || (station.id === 'comprehension' && ageYears < 6)) && option.emoji ? 'sr-only' : ''}`}>{option.labelAr}</span>
             </button>
           );
         })}
