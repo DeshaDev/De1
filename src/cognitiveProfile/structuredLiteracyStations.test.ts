@@ -29,6 +29,26 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.equal(getStructuredLiteracyStations(8).some((station) => station.id === 'morphology'), true);
   });
 
+  it('provides explicit teaching and a worked example before every practice station', () => {
+    for (const age of [4, 5, 6, 7, 8]) {
+      for (const station of getStructuredLiteracyStations(age)) {
+        assert.ok(station.teachAr.length >= 30, `${station.id}: missing explicit teaching`);
+        assert.ok(station.modelAr.length >= 30, `${station.id}: missing worked example`);
+        assert.ok(station.ageNoteAr.length > 0);
+      }
+    }
+  });
+
+  it('has a minimum non-trivial item bank for each age-appropriate literacy domain', () => {
+    const early = getStructuredLiteracyStations(4);
+    const later = getStructuredLiteracyStations(7);
+    assert.ok(early.find((s) => s.id === 'comprehension')!.questions.length >= 4);
+    assert.ok(later.find((s) => s.id === 'decoding')!.questions.length >= 6);
+    assert.ok(later.find((s) => s.id === 'spelling')!.questions.length >= 6);
+    assert.ok(later.find((s) => s.id === 'morphology')!.questions.length >= 6);
+    assert.ok(later.find((s) => s.id === 'comprehension')!.questions.length >= 4);
+  });
+
   it('gives every multiple-choice question unique options and exactly one correct answer', () => {
     for (const age of [4, 5, 6, 7, 8]) {
       for (const station of getStructuredLiteracyStations(age)) {
