@@ -149,7 +149,9 @@ export async function loadStoredStudents(): Promise<StudentRecord[]> {
   const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
   if (!raw) return [];
   const decrypted = await secureDecryptAsync<StudentRecord[]>(raw);
-  if (!Array.isArray(decrypted)) return [];
+  if (!Array.isArray(decrypted)) {
+    throw new Error('Stored child records could not be decrypted; the original ciphertext was preserved.');
+  }
   if (!isCurrentSecureCiphertext(raw)) {
     try {
       const upgraded = await secureEncrypt(decrypted);
