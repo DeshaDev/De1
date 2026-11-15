@@ -1,7 +1,7 @@
 /**
  * Cookie and persistent local storage management for user sessions,
  * child profiles, and active screening states across browser reloads.
- * Student data stored locally is encrypted at rest using application-level AES/HMAC encryption.
+ * Child records are stored with AES-256-GCM; legacy formats are read only for migration.
  */
 import type { BaseeraSessionInfo } from './apiAuth';
 import type { StudentRecord } from '../data/seedData';
