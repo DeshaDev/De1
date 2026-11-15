@@ -115,6 +115,7 @@ describe('AES-GCM child storage and legacy migration', () => {
   });
 
   it('fails closed when IndexedDB cannot persist a non-extractable key', async () => {
+    resetDeviceEncryptionKeyCacheForTesting();
     (globalThis as any).indexedDB = undefined;
     await assert.rejects(() => secureEncrypt({ child: 'سارة' }), /IndexedDB is required/);
   });
