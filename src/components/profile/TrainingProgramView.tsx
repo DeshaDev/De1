@@ -22,6 +22,7 @@ import {
   chanceOf,
   createPersonalizedProgress,
   generateItems,
+  ageAppropriateLiteracySkills,
   getHomeActivity,
   isReassessmentDue,
   masteryEstimate,
@@ -1006,7 +1007,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 </button>
                 <button
                   type="button"
-                  onClick={() => startProgram({ createdAt: new Date().toISOString(), preventive: true, focus: ['blending', 'letterSound'], rationaleAr: ['برنامج عام للاستعداد للقراءة دون فحص مسبق.'] })}
+                  onClick={() => {
+                    const ageMonths = childAgeMonths ?? 72;
+                    const foundation: SkillId[] = ageMonths < 60 ? ['blending'] : ['blending', 'letterSound'];
+                    startProgram({ createdAt: new Date().toISOString(), ageMonths, preventive: true, focus: [...foundation, ...ageAppropriateLiteracySkills(ageMonths)], rationaleAr: ['برنامج عام للاستعداد للقراءة دون فحص مسبق، مع مكونات قراءة ولغة مناسبة للعمر.'] });
+                  }}
                   className="bz-btn bz-btn-secondary bz-btn-lg"
                 >
                   برنامج عام للاستعداد للقراءة
@@ -1094,6 +1099,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
+          {(student?.ageYears ?? profile?.ageMonths ? (childAgeMonths ?? 0) / 12 : 0) >= 6 && (
+            <p className="text-xs text-slate-600 mt-3">قراءات الطلاقة المتكررة المكتملة: {toArabicDigits(progress.fluencyPractice?.readingsCompleted ?? 0)} · من دون توقيت أو تسجيل صوتي</p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
