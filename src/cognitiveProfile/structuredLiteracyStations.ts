@@ -1,3 +1,6 @@
+import type { LiteracyStationId } from './literacyPracticeProgress';
+export type { LiteracyStationId } from './literacyPracticeProgress';
+
 /**
  * Supplemental structured-literacy practice stations for Arabic readers aged 4–8.
  *
@@ -9,8 +12,6 @@
  * Fluency practice uses modeled and repeated reading with phrasing and punctuation. It does
  * not time, score, record, or automatically judge a child's voice.
  */
-
-export type LiteracyStationId = 'decoding' | 'spelling' | 'morphology' | 'comprehension' | 'fluency';
 
 export interface LiteracyOption {
   id: string;
@@ -35,6 +36,10 @@ export interface LiteracyStation {
   subtitleAr: string;
   purposeAr: string;
   ageNoteAr: string;
+  /** Explicit teaching statement shown before independent practice. */
+  teachAr: string;
+  /** A worked example shown before the child practises. */
+  modelAr: string;
   questions: LiteracyQuestion[];
 }
 
@@ -99,6 +104,32 @@ const decoding: LiteracyQuestion[] = [
     explanationAr: 'مَدْرَسَة: نَقْرَأُ الْمَقَاطِعَ بِالتَّرْتِيبِ، وَنَنْتَبِهُ إِلَى السُّكُونِ وَالتَّاءِ الْمَرْبُوطَةِ.',
     explanationAudio: ['مَدْرَسَةٌ: نَقْرَأُ الْمَقَاطِعَ بِالتَّرْتِيبِ، وَنَنْتَبِهُ إِلَى السُّكُونِ وَالتَّاءِ الْمَرْبُوطَةِ.'],
   },
+  {
+    id: 'decode-ball',
+    promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: كُرَة',
+    audio: ['اِقْرَأِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
+    options: [
+      { id: 'ball', labelAr: 'كرة', emoji: '⚽' },
+      { id: 'apple', labelAr: 'تفاحة', emoji: '🍎' },
+      { id: 'moon', labelAr: 'قمر', emoji: '🌙' },
+    ],
+    correctId: 'ball',
+    explanationAr: 'كُرَة: نَقْرَأُ الْكَافَ بِضَمَّةٍ، ثُمَّ الرَّاءَ، وَنَنْتَبِهُ إِلَى التَّاءِ الْمَرْبُوطَةِ.',
+    explanationAudio: ['كُرَةٌ: نَقْرَأُ الْكَافَ بِضَمَّةٍ، ثُمَّ الرَّاءَ، وَنَنْتَبِهُ إِلَى التَّاءِ الْمَرْبُوطَةِ.'],
+  },
+  {
+    id: 'decode-star',
+    promptAr: 'اِقْرَأِ الْكَلِمَةَ، وَاخْتَرْ مَعْنَاهَا: نَجْم',
+    audio: ['اِقْرَأِ الْكَلِمَةَ، ثُمَّ اخْتَرِ الصُّورَةَ الْمُنَاسِبَةَ.'],
+    options: [
+      { id: 'star', labelAr: 'نجم', emoji: '⭐' },
+      { id: 'fish', labelAr: 'سمكة', emoji: '🐟' },
+      { id: 'house', labelAr: 'بيت', emoji: '🏠' },
+    ],
+    correctId: 'star',
+    explanationAr: 'نَجْم: نَقْرَأُ الْحَرَكَاتِ مَعَ الْحُرُوفِ، وَنَنْتَبِهُ إِلَى السُّكُونِ فِي آخِرِ الْكَلِمَةِ.',
+    explanationAudio: ['نَجْمٌ: نَقْرَأُ الْحَرَكَاتِ مَعَ الْحُرُوفِ، وَنَنْتَبِهُ إِلَى السُّكُونِ فِي آخِرِ الْكَلِمَةِ.'],
+  },
 ];
 
 const spelling: LiteracyQuestion[] = [
@@ -153,6 +184,32 @@ const spelling: LiteracyQuestion[] = [
     correctId: 'مستشفى',
     explanationAr: 'تُكْتَبُ الْأَلِفُ الْمَقْصُورَةُ «ى» فِي آخِرِ كَلِمَةِ «مُسْتَشْفَى».',
     explanationAudio: ['تُكْتَبُ الْأَلِفُ الْمَقْصُورَةُ ى فِي آخِرِ كَلِمَةِ مُسْتَشْفَى.'],
+  },
+  {
+    id: 'spell-noor',
+    promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَاخْتَرْ رَسْمَهَا الصَّحِيحَ.',
+    audio: ['اِسْمَعِ الْكَلِمَةَ:', 'نُورٌ', 'اخْتَرِ الْكِتَابَةَ الصَّحِيحَةَ.'],
+    options: [
+      { id: 'نور', labelAr: 'نور' },
+      { id: 'نار', labelAr: 'نار' },
+      { id: 'نر', labelAr: 'نر' },
+    ],
+    correctId: 'نور',
+    explanationAr: 'فِي «نُور» نَكْتُبُ الْوَاوَ لِلدَّلَالَةِ عَلَى الْمَدِّ بِالضَّمَّةِ.',
+    explanationAudio: ['فِي نُورٍ نَكْتُبُ الْوَاوَ لِلدَّلَالَةِ عَلَى الْمَدِّ بِالضَّمَّةِ.'],
+  },
+  {
+    id: 'spell-huda',
+    promptAr: 'اِسْمَعِ الْكَلِمَةَ، وَانْتَبِهْ إِلَى آخِرِهَا.',
+    audio: ['اِسْمَعِ الْكَلِمَةَ:', 'هُدَى', 'اخْتَرْ كِتَابَتَهَا الصَّحِيحَةَ.'],
+    options: [
+      { id: 'هدى', labelAr: 'هدى' },
+      { id: 'هدا', labelAr: 'هدا' },
+      { id: 'هدي', labelAr: 'هدي' },
+    ],
+    correctId: 'هدى',
+    explanationAr: 'تُنْتَهِي كَلِمَةُ «هُدَى» بِالْأَلِفِ الْمَقْصُورَةِ «ى».',
+    explanationAudio: ['تَنْتَهِي كَلِمَةُ هُدَى بِالْأَلِفِ الْمَقْصُورَةِ ى.'],
   },
 ];
 
@@ -209,6 +266,32 @@ const morphology: LiteracyQuestion[] = [
     explanationAr: 'دَرَسَ وَمَدْرَسَةٌ مِنْ عَائِلَةِ الْجِذْرِ د، ر، س.',
     explanationAudio: ['دَرَسَ وَمَدْرَسَةٌ مِنْ عَائِلَةِ الْجِذْرِ دَال، رَاء، سِين.'],
   },
+  {
+    id: 'morphology-understand',
+    promptAr: 'هَذِهِ كَلِمَةٌ: فَهِمَ. أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَتِهَا؟',
+    audio: ['فَهِمَ.', 'اِخْتَرْ كَلِمَةً تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ وَالْمَعْنَى.'],
+    options: [
+      { id: 'مفهوم', labelAr: 'مَفْهُوم' },
+      { id: 'مفتاح', labelAr: 'مِفْتَاح' },
+      { id: 'مزرعة', labelAr: 'مَزْرَعَة' },
+    ],
+    correctId: 'مفهوم',
+    explanationAr: 'فَهِمَ وَمَفْهُومٌ يَشْتَرِكَانِ فِي الْجِذْرِ ف، ه، م وَيَرْتَبِطَانِ بِالْفَهْمِ.',
+    explanationAudio: ['فَهِمَ وَمَفْهُومٌ يَشْتَرِكَانِ فِي الْجِذْرِ فَاء، هَاء، مِيم وَيَرْتَبِطَانِ بِالْفَهْمِ.'],
+  },
+  {
+    id: 'morphology-playground',
+    promptAr: 'هَذِهِ كَلِمَةٌ: لَعِبَ. أَيُّ كَلِمَةٍ تَشْتَرِكُ مَعَهَا فِي الْجِذْرِ؟',
+    audio: ['لَعِبَ.', 'اِخْتَرْ كَلِمَةً مِنْ عَائِلَتِهَا.'],
+    options: [
+      { id: 'ملعب', labelAr: 'مَلْعَب' },
+      { id: 'مكتب', labelAr: 'مَكْتَب' },
+      { id: 'مسبح', labelAr: 'مَسْبَح' },
+    ],
+    correctId: 'ملعب',
+    explanationAr: 'لَعِبَ وَمَلْعَبٌ يَشْتَرِكَانِ فِي الْجِذْرِ ل، ع، ب، وَيَرْتَبِطَانِ بِاللَّعِبِ.',
+    explanationAudio: ['لَعِبَ وَمَلْعَبٌ يَشْتَرِكَانِ فِي الْجِذْرِ لَام، عَيْن، بَاء، وَيَرْتَبِطَانِ بِاللَّعِبِ.'],
+  },
 ];
 
 const listeningComprehension: LiteracyQuestion[] = [
@@ -238,6 +321,32 @@ const listeningComprehension: LiteracyQuestion[] = [
     explanationAr: 'وَضَعَ عُمَرُ الْكِتَابَ فِي الْحَقِيبَةِ، كَمَا قَالَتِ الْجُمْلَةُ.',
     explanationAudio: ['وَضَعَ عُمَرُ الْكِتَابَ فِي الْحَقِيبَةِ، كَمَا قَالَتِ الْجُمْلَةُ.'],
   },
+  {
+    id: 'listen-sequence',
+    promptAr: 'غَسَلَتْ هِنْدٌ يَدَيْهَا، ثُمَّ جَلَسَتْ لِتَأْكُلَ. مَاذَا فَعَلَتْ هِنْدٌ أَوَّلًا؟',
+    audio: ['غَسَلَتْ هِنْدٌ يَدَيْهَا، ثُمَّ جَلَسَتْ لِتَأْكُلَ.', 'مَاذَا فَعَلَتْ هِنْدٌ أَوَّلًا؟'],
+    options: [
+      { id: 'washed', labelAr: 'غسلت يديها', emoji: '🧼' },
+      { id: 'ate', labelAr: 'أكلت', emoji: '🍽️' },
+      { id: 'slept', labelAr: 'نامت', emoji: '🛏️' },
+    ],
+    correctId: 'washed',
+    explanationAr: 'غَسَلَتْ هِنْدٌ يَدَيْهَا أَوَّلًا، ثُمَّ جَلَسَتْ لِتَأْكُلَ.',
+    explanationAudio: ['غَسَلَتْ هِنْدٌ يَدَيْهَا أَوَّلًا، ثُمَّ جَلَسَتْ لِتَأْكُلَ.'],
+  },
+  {
+    id: 'listen-where',
+    promptAr: 'وَضَعَتْ نُورٌ الْحِذَاءَ تَحْتَ السَّرِيرِ. أَيْنَ وَضَعَتْ نُورٌ الْحِذَاءَ؟',
+    audio: ['وَضَعَتْ نُورٌ الْحِذَاءَ تَحْتَ السَّرِيرِ.', 'أَيْنَ وَضَعَتْ نُورٌ الْحِذَاءَ؟'],
+    options: [
+      { id: 'under-bed', labelAr: 'تحت السرير', emoji: '🛏️' },
+      { id: 'on-table', labelAr: 'على الطاولة', emoji: '🪑' },
+      { id: 'in-bag', labelAr: 'في الحقيبة', emoji: '🎒' },
+    ],
+    correctId: 'under-bed',
+    explanationAr: 'تَقُولُ الْجُمْلَةُ إِنَّ نُورًا وَضَعَتِ الْحِذَاءَ تَحْتَ السَّرِيرِ.',
+    explanationAudio: ['تَقُولُ الْجُمْلَةُ إِنَّ نُورًا وَضَعَتِ الْحِذَاءَ تَحْتَ السَّرِيرِ.'],
+  },
 ];
 
 const readingComprehension: LiteracyQuestion[] = [
@@ -266,6 +375,32 @@ const readingComprehension: LiteracyQuestion[] = [
     correctId: 'rain',
     explanationAr: 'حَمَلَ سَامِي الْمِظَلَّةَ بَعْدَ هُطُولِ الْمَطَرِ؛ فَالْمَطَرُ هُوَ السَّبَبُ.',
     explanationAudio: ['حَمَلَ سَامِي الْمِظَلَّةَ بَعْدَ هُطُولِ الْمَطَرِ؛ فَالْمَطَرُ هُوَ السَّبَبُ.'],
+  },
+  {
+    id: 'read-context-word',
+    promptAr: 'قَرَأَتْ سَلْمَى كِتَابًا مُشَوِّقًا، فَلَمْ تَتَوَقَّفْ حَتَّى وَصَلَتْ إِلَى نِهَايَتِهِ. مَا مَعْنَى «مُشَوِّق» فِي الْجُمْلَةِ؟',
+    audio: ['اِقْرَأِ النَّصَّ، وَانْتَبِهْ إِلَى مَعْنَى الْكَلِمَةِ مِنَ السِّيَاقِ.', 'قَرَأَتْ سَلْمَى كِتَابًا مُشَوِّقًا، فَلَمْ تَتَوَقَّفْ حَتَّى وَصَلَتْ إِلَى نِهَايَتِهِ.', 'مَا مَعْنَى مُشَوِّق؟'],
+    options: [
+      { id: 'interesting', labelAr: 'ممتع ويجذب الانتباه' },
+      { id: 'heavy', labelAr: 'ثقيل الوزن' },
+      { id: 'short', labelAr: 'قليل الصفحات' },
+    ],
+    correctId: 'interesting',
+    explanationAr: 'فَهِمْنَا أَنَّ الْكِتَابَ مُشَوِّقٌ لِأَنَّ سَلْمَى وَاصَلَتْ قِرَاءَتَهُ حَتَّى النِّهَايَةِ.',
+    explanationAudio: ['فَهِمْنَا أَنَّ الْكِتَابَ مُشَوِّقٌ لِأَنَّ سَلْمَى وَاصَلَتْ قِرَاءَتَهُ حَتَّى النِّهَايَةِ.'],
+  },
+  {
+    id: 'read-inference',
+    promptAr: 'رَأَى عَادِلٌ أَنَّ التُّرَابَ جَافٌّ، فَأَحْضَرَ الْمَاءَ وَسَقَى النَّبْتَةَ. مَاذَا نَفْهَمُ مِنْ ذَلِكَ؟',
+    audio: ['اِقْرَأِ النَّصَّ، ثُمَّ اخْتَرِ الْفِكْرَةَ الْأَقْرَبَ.', 'رَأَى عَادِلٌ أَنَّ التُّرَابَ جَافٌّ، فَأَحْضَرَ الْمَاءَ وَسَقَى النَّبْتَةَ.', 'مَاذَا نَفْهَمُ مِنْ ذَلِكَ؟'],
+    options: [
+      { id: 'plant-needs-water', labelAr: 'النبتة تحتاج إلى الماء' },
+      { id: 'plant-can-walk', labelAr: 'النبتة تستطيع المشي' },
+      { id: 'soil-is-food', labelAr: 'التراب هو ماء الشرب' },
+    ],
+    correctId: 'plant-needs-water',
+    explanationAr: 'جَفَافُ التُّرَابِ وَسَقْيُ النَّبْتَةِ يَدُلَّانِ عَلَى أَنَّهَا تَحْتَاجُ إِلَى الْمَاءِ.',
+    explanationAudio: ['جَفَافُ التُّرَابِ وَسَقْيُ النَّبْتَةِ يَدُلَّانِ عَلَى أَنَّهَا تَحْتَاجُ إِلَى الْمَاءِ.'],
   },
 ];
 
