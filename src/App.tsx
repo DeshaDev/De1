@@ -909,7 +909,7 @@ export default function App() {
       ...(speechLocale ? { speechLocale } : {}),
       results: {},
     };
-    saveBatterySession(initialBatterySession);
+    void saveBatterySession(initialBatterySession).catch((error) => console.error('Unable to persist encrypted battery session:', error));
 
     if (currentUser) {
       const saved = await syncStudentToSupabase(newLearner, currentUser.id);
