@@ -4,6 +4,8 @@ export interface ExistingSupabaseStudentForSync {
   raw_data?: Partial<StudentRecord> | null;
   guardian_consent?: boolean | null;
   guardian_consent_recorded_at?: string | null;
+  guardian_audio_consent?: boolean | null;
+  guardian_audio_consent_recorded_at?: string | null;
 }
 
 // These fields are written only by authenticated server-side assessment routes.
@@ -63,14 +65,18 @@ const SERVER_CONTROLLED_FIELDS = [
   'mathRiskLevel',
   'mathRiskLabelAr',
   'mathTrials',
-  'guardianAudioConsentGiven',
-  'guardianAudioConsentRecordedAt',
 ] as const satisfies readonly (keyof StudentRecord)[];
 
 /**
  * Generic profile synchronization is not an assessment write API.
  * New/local records are stripped of client-submitted scores and receipts;
  * existing records retain their server-persisted assessment evidence verbatim.
+ *
+ * Guardian general consent and independent audio consent are legal declarations:
+ * - On new registrations: both valid consents (with timestamps) are preserved for Supabase persistence.
+ * - On existing records: database consent state is authoritative and cannot be silently recreated,
+ *   while explicit withdrawals take effect immediately. Audio consent cannot remain active if general
+ *   consent is withdrawn.
  */
 export function prepareStudentRecordForGenericSupabaseSync(
   incoming: StudentRecord,
@@ -87,11 +93,9 @@ export function prepareStudentRecordForGenericSupabaseSync(
     }
   }
 
-  // The database consent columns are authoritative once a row exists. A generic
-  // upsert cannot change or recreate a prior consent by altering raw_data.
   if (existing) {
-    // A parent may withdraw consent through the generic profile flow, but a stale
-    // browser snapshot must never turn a database revocation back into consent.
+    // Database consent columns are authoritative once a row exists.
+    // A parent may withdraw consent, but a stale browser snapshot must never turn a database revocation back into consent.
     const consentRemainsActive =
       existing.guardian_consent === true && incoming.guardianConsentGiven !== false;
     safe.guardianConsentGiven = consentRemainsActive;
@@ -106,6 +110,46 @@ export function prepareStudentRecordForGenericSupabaseSync(
     }
 
     if (!consentRemainsActive) {
+      safe.guardianAudioConsentGiven = false;
+      delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
+    } else {
+      // General consent is active. Manage independent audio consent:
+      if (incoming.guardianAudioConsentGiven === false) {
+        // Explicit withdrawal
+        safe.guardianAudioConsentGiven = false;
+        delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
+      } else if (existing.guardian_audio_consent === true || raw?.guardianAudioConsentGiven === true) {
+        // Preserved from database
+        safe.guardianAudioConsentGiven = true;
+        safe.guardianAudioConsentRecordedAt =
+          existing.guardian_audio_consent_recorded_at ||
+          raw?.guardianAudioConsentRecordedAt ||
+          incoming.guardianAudioConsentRecordedAt ||
+          undefined;
+      } else if (incoming.guardianAudioConsentGiven === true && incoming.guardianAudioConsentRecordedAt) {
+        // Newly granted on existing profile with explicit timestamp
+        safe.guardianAudioConsentGiven = true;
+        safe.guardianAudioConsentRecordedAt = incoming.guardianAudioConsentRecordedAt;
+      } else {
+        safe.guardianAudioConsentGiven = false;
+        delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
+      }
+    }
+  } else {
+    // New child registration: preserve parent's explicit consent declarations
+    if (incoming.guardianConsentGiven === true && incoming.guardianConsentRecordedAt) {
+      safe.guardianConsentGiven = true;
+      safe.guardianConsentRecordedAt = incoming.guardianConsentRecordedAt;
+      if (incoming.guardianAudioConsentGiven === true && incoming.guardianAudioConsentRecordedAt) {
+        safe.guardianAudioConsentGiven = true;
+        safe.guardianAudioConsentRecordedAt = incoming.guardianAudioConsentRecordedAt;
+      } else {
+        safe.guardianAudioConsentGiven = false;
+        delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
+      }
+    } else {
+      safe.guardianConsentGiven = false;
+      delete (safe as Record<string, unknown>).guardianConsentRecordedAt;
       safe.guardianAudioConsentGiven = false;
       delete (safe as Record<string, unknown>).guardianAudioConsentRecordedAt;
     }

@@ -1,17 +1,18 @@
 /**
  * Cookie and persistent local storage management for user sessions,
  * child profiles, and active screening states across browser reloads.
- * Student data stored locally is encrypted at rest using application-level AES/HMAC encryption.
+ * Child records are stored with AES-256-GCM; legacy formats are read only for migration.
  */
 import type { BaseeraSessionInfo } from './apiAuth';
 import type { StudentRecord } from '../data/seedData';
-import { secureEncrypt, secureDecrypt } from './secureLocalStorage';
+import { secureEncrypt, secureDecryptAsync, isCurrentSecureCiphertext } from './secureLocalStorage';
 
 const SESSION_COOKIE_NAME = 'baseera_session';
 const SESSION_STORAGE_KEY = 'baseera_session_v1';
 const STUDENTS_STORAGE_KEY = 'hn_stored_students_v1';
 const ACTIVE_STUDENT_STORAGE_KEY = 'hn_active_student_id';
 const ACTIVE_STUDENT_COOKIE_NAME = 'hn_active_student_id';
+let studentSaveQueue: Promise<void> = Promise.resolve();
 
 /**
  * Set a browser cookie with standard security attributes.
@@ -122,38 +123,46 @@ export function clearPersistentSession(): void {
 /**
  * Save user's registered child records to localStorage (encrypted at rest) and summary cookie.
  */
-export function saveStoredStudents(students: StudentRecord[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    // Filter only non-demo or customized records to prevent storing giant demo arrays
-    const customOrUpdated = students.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
-    const encrypted = secureEncrypt(customOrUpdated);
+export function saveStoredStudents(students: StudentRecord[]): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  // Serialize writes so a slower encryption operation for an older React state
+  // cannot finish after and overwrite a newer child roster.
+  const snapshot = students.slice();
+  const operation = studentSaveQueue.catch(() => undefined).then(async () => {
+    // Never silently discard the previous record if encryption/key persistence fails.
+    const customOrUpdated = snapshot.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
+    const encrypted = await secureEncrypt(customOrUpdated);
     window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
-
-    // Store a light summary cookie for quick presence check
-    const summary = customOrUpdated.slice(0, 5).map((c) => ({ id: c.id, name: c.name, age: c.ageYears }));
-    setCookie('hn_children_summary', JSON.stringify(summary), 30);
-  } catch {
-    // Ignore quota or private-browsing errors
-  }
+    // Do not put children's names/ages in cookies; cookies are sent with HTTP requests.
+    deleteCookie('hn_children_summary');
+  });
+  studentSaveQueue = operation;
+  return operation;
 }
 
 /**
- * Load saved custom child records from localStorage (transparently decrypts at rest).
+ * Load child records asynchronously. Legacy plaintext/v1/v2 records are upgraded
+ * only after successful decoding; unreadable ciphertext is retained for recovery.
  */
-export function loadStoredStudents(): StudentRecord[] {
+export async function loadStoredStudents(): Promise<StudentRecord[]> {
   if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
-    if (!raw) return [];
-    const decrypted = secureDecrypt<StudentRecord[]>(raw);
-    if (Array.isArray(decrypted)) {
-      return decrypted;
-    }
-  } catch {
-    // Ignore errors
+  const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
+  if (!raw) return [];
+  const decrypted = await secureDecryptAsync<StudentRecord[]>(raw);
+  if (!Array.isArray(decrypted)) {
+    throw new Error('Stored child records could not be decrypted; the original ciphertext was preserved.');
   }
-  return [];
+  if (!isCurrentSecureCiphertext(raw)) {
+    try {
+      const upgraded = await secureEncrypt(decrypted);
+      window.localStorage.setItem(STUDENTS_STORAGE_KEY, upgraded);
+    } catch (error) {
+      // Return the successfully decoded legacy records, but never delete/replace
+      // them if the browser cannot persist its non-extractable AES-GCM key.
+      console.error('Legacy child records could not be upgraded yet; original data was preserved.', error);
+    }
+  }
+  return decrypted;
 }
 
 /**

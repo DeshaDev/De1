@@ -150,28 +150,48 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
   try {
     // Generic profile sync is not allowed to write assessment evidence. First read
     // the same user's stored row, then preserve its server-owned assessment fields.
+    let existingRow: {
+      raw_data?: Partial<StudentRecord> | null;
+      guardian_consent?: boolean | null;
+      guardian_consent_recorded_at?: string | null;
+      guardian_audio_consent?: boolean | null;
+      guardian_audio_consent_recorded_at?: string | null;
+    } | null = null;
+    let hasAudioConsentColumns = true;
+
     const { data: existing, error: readError } = await supabase
       .from('students')
-      .select('raw_data,guardian_consent,guardian_consent_recorded_at')
+      .select('raw_data,guardian_consent,guardian_consent_recorded_at,guardian_audio_consent,guardian_audio_consent_recorded_at')
       .eq('id', student.id)
       .eq('user_id', userId)
       .maybeSingle();
 
     if (readError) {
-      console.warn('Failed to read existing student before safe sync:', readError.message);
-      return false;
+      // Resilient fallback: support existing production databases before migration 20261115
+      if (readError.message?.includes('guardian_audio_consent') || readError.code === '42703') {
+        hasAudioConsentColumns = false;
+        const { data: legacyExisting, error: legacyReadError } = await supabase
+          .from('students')
+          .select('raw_data,guardian_consent,guardian_consent_recorded_at')
+          .eq('id', student.id)
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (legacyReadError) {
+          console.warn('Failed to read existing student before safe sync:', legacyReadError.message);
+          return false;
+        }
+        existingRow = legacyExisting;
+      } else {
+        console.warn('Failed to read existing student before safe sync:', readError.message);
+        return false;
+      }
+    } else {
+      existingRow = existing;
     }
 
-    const safeStudent = prepareStudentRecordForGenericSupabaseSync(
-      student,
-      existing as {
-        raw_data?: Partial<StudentRecord> | null;
-        guardian_consent?: boolean | null;
-        guardian_consent_recorded_at?: string | null;
-      } | null
-    );
+    const safeStudent = prepareStudentRecordForGenericSupabaseSync(student, existingRow);
 
-    const { error } = await supabase.from('students').upsert({
+    const upsertPayload: Record<string, unknown> = {
       id: safeStudent.id,
       user_id: userId,
       name: safeStudent.name,
@@ -184,8 +204,21 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
       notes: safeStudent.parentNotes || null,
       raw_data: safeStudent,
       updated_at: new Date().toISOString(),
-    });
+    };
 
+    if (hasAudioConsentColumns) {
+      upsertPayload.guardian_audio_consent = safeStudent.guardianAudioConsentGiven === true;
+      upsertPayload.guardian_audio_consent_recorded_at = safeStudent.guardianAudioConsentRecordedAt || null;
+    }
+
+    let { error } = await supabase.from('students').upsert(upsertPayload);
+
+    if (error && (error.message?.includes('guardian_audio_consent') || error.code === '42703')) {
+      delete upsertPayload.guardian_audio_consent;
+      delete upsertPayload.guardian_audio_consent_recorded_at;
+      const retryResult = await supabase.from('students').upsert(upsertPayload);
+      error = retryResult.error;
+    }
     if (error) {
       console.warn('Failed to sync student to Supabase:', error.message);
       return false;
@@ -261,6 +294,12 @@ export async function fetchStudentsFromSupabase(userId: string): Promise<Student
       .filter((row: any) => row.raw_data && typeof row.raw_data === 'object')
       .map((row: any) => {
         const student = row.raw_data as StudentRecord;
+        if (row.guardian_audio_consent !== undefined && row.guardian_audio_consent !== null) {
+          student.guardianAudioConsentGiven = row.guardian_audio_consent === true;
+          if (row.guardian_audio_consent_recorded_at) {
+            student.guardianAudioConsentRecordedAt = row.guardian_audio_consent_recorded_at;
+          }
+        }
         if (!student.country && row.dialect && row.dialect !== 'faseeh' && row.dialect !== 'msa') {
           student.country = row.dialect;
         }

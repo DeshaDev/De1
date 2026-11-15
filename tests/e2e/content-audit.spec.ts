@@ -27,7 +27,7 @@ async function installSchoolTestSession(page: Page) {
 /** Latin tokens that are allowed: brand/vendor/standard names and contact addresses. */
 const ALLOWED_LATIN = new Set([
   'PDF', 'NCSA', 'Azure', 'Microsoft', 'Speech', 'Google', 'Gemini', 'AES-256-GCM', 'HTTPS', 'TLS', 'IP', 'Render',
-  'Baseera', 'EdTech', 'AA', 'Aa', 'Twemoji', 'CC', 'BY',
+  'Baseera', 'EdTech', 'Vorala', 'LLC', 'AA', 'Aa', 'Twemoji', 'CC', 'BY',
 ]);
 const isContact = (t: string) => /@|\.(com|org|net|qa|sa)\b|^https?:/i.test(t);
 

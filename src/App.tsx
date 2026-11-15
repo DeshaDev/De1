@@ -214,25 +214,35 @@ export default function App() {
   }, [activeTab]);
   const [dashboardSubView, setDashboardSubView] =
     useState<DashboardSubView>('roster');
-  const [students, setStudents] = useState<StudentRecord[]>(() => {
-    const stored = loadStoredStudents();
-    if (stored.length > 0) {
-      const storedIds = new Set(stored.map((s) => s.id));
-      return [...stored, ...INITIAL_STUDENTS.filter((s) => !storedIds.has(s.id))];
-    }
-    return INITIAL_STUDENTS;
-  });
+  const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
+  const [isLocalStudentsLoaded, setIsLocalStudentsLoaded] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
-    const savedId = loadActiveStudentId();
-    const stored = loadStoredStudents();
-    if (savedId && (stored.some((s) => s.id === savedId) || INITIAL_STUDENTS.some((s) => s.id === savedId))) {
-      return savedId;
-    }
-    if (stored.length > 0) {
-      return stored[0].id;
-    }
-    return INITIAL_STUDENTS[0].id;
+    return loadActiveStudentId() || INITIAL_STUDENTS[0].id;
   });
+
+  // IndexedDB-backed AES-GCM requires async hydration. Do not write defaults over
+  // a user's existing encrypted/legacy records before that read has completed.
+  useEffect(() => {
+    let cancelled = false;
+    void loadStoredStudents()
+      .then((stored) => {
+        if (cancelled) return;
+        setIsLocalStudentsLoaded(true);
+        if (stored.length > 0) {
+          const storedIds = new Set(stored.map((student) => student.id));
+          const merged = [...stored, ...INITIAL_STUDENTS.filter((student) => !storedIds.has(student.id))];
+          setStudents(merged);
+          const savedId = loadActiveStudentId();
+          setSelectedStudentId(savedId && merged.some((student) => student.id === savedId) ? savedId : merged[0].id);
+        }
+      })
+      .catch((error) => {
+        // Keep local persistence disabled when ciphertext exists but cannot be
+        // decrypted; writing the initial roster could otherwise destroy it.
+        console.error('Unable to restore encrypted child records; existing data was left untouched.', error);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const selectStudent = (studentId: string) => {
     setSelectedStudentId(studentId);
@@ -241,10 +251,12 @@ export default function App() {
 
   // Sync students to cookie / persistent storage whenever records change
   useEffect(() => {
-    if (students && students.length > 0) {
-      saveStoredStudents(students);
+    if (isLocalStudentsLoaded && students && students.length > 0) {
+      void saveStoredStudents(students).catch((error) => {
+        console.error('Unable to persist encrypted child records; previous stored data was preserved.', error);
+      });
     }
-  }, [students]);
+  }, [students, isLocalStudentsLoaded]);
   const [schoolRosterEmpty, setSchoolRosterEmpty] = useState(false);
   const [isPersistedStoreLoaded, setIsPersistedStoreLoaded] =
     useState<boolean>(false);
@@ -897,7 +909,7 @@ export default function App() {
       ...(speechLocale ? { speechLocale } : {}),
       results: {},
     };
-    saveBatterySession(initialBatterySession);
+    void saveBatterySession(initialBatterySession).catch((error) => console.error('Unable to persist encrypted battery session:', error));
 
     if (currentUser) {
       const saved = await syncStudentToSupabase(newLearner, currentUser.id);
@@ -911,7 +923,7 @@ export default function App() {
 
     setStudents((prev) => {
       const next = [newLearner, ...prev.filter((s) => s.id !== newLearner.id)];
-      saveStoredStudents(next);
+      void saveStoredStudents(next).catch((error) => console.error('Encrypted child save failed:', error));
       return next;
     });
     selectStudent(newLearner.id);

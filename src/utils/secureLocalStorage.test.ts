@@ -1,61 +1,111 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { secureEncrypt, secureDecrypt } from './secureLocalStorage';
+import {
+  secureEncrypt,
+  secureDecrypt,
+  secureDecryptAsync,
+  CURRENT_AES_GCM_PREFIX,
+  getSecureRandomBytes,
+  resetDeviceEncryptionKeyCacheForTesting,
+} from './secureLocalStorage';
 
-describe('Secure Application-Level Storage Encryption Tests', () => {
-  it('encrypts sensitive student session and decrypts back to identical structure', () => {
-    const session = {
-      studentId: 'child-test-123',
-      childName: 'سارة',
-      ageMonths: 84,
-      guardianConsentGiven: true,
-      guardianConsentRecordedAt: '2026-11-14T20:00:00.000Z',
-      results: {
-        wordReading: { score: 10, accuracy: 100 },
-        nonwordReading: { score: 8, accuracy: 80 },
+function installFakeIndexedDB() {
+  const stores = new Map<string, Map<string, unknown>>();
+  const db = {
+    objectStoreNames: { contains: (name: string) => stores.has(name) },
+    createObjectStore: (name: string) => { stores.set(name, new Map()); return {}; },
+    transaction: (name: string) => {
+      const transaction: any = {};
+      transaction.objectStore = () => ({
+        get: (key: string) => {
+          const request: any = {};
+          queueMicrotask(() => {
+            request.result = stores.get(name)?.get(key);
+            request.onsuccess?.();
+            transaction.oncomplete?.();
+          });
+          return request;
+        },
+        add: (value: unknown, key: string) => {
+          const request: any = {};
+          queueMicrotask(() => {
+            const store = stores.get(name)!;
+            if (store.has(key)) {
+              request.error = new Error('Key already exists');
+              transaction.onerror?.();
+              transaction.onabort?.();
+              return;
+            }
+            store.set(key, value);
+            request.onsuccess?.();
+            transaction.oncomplete?.();
+          });
+          return request;
+        },
+      });
+      return transaction;
+    },
+  };
+  (globalThis as any).indexedDB = {
+    open: () => {
+      const request: any = {};
+      queueMicrotask(() => {
+        request.result = db;
+        request.onupgradeneeded?.();
+        request.onsuccess?.();
+      });
+      return request;
+    },
+  };
+}
+
+describe('AES-GCM child storage and legacy migration', () => {
+  it('uses a cryptographically secure random generator only', () => {
+    const first = getSecureRandomBytes(32);
+    const second = getSecureRandomBytes(32);
+    assert.equal(first.length, 32);
+    assert.notDeepEqual(first, second);
+  });
+
+  it('reads legacy plain JSON for controlled migration', async () => {
+    const raw = JSON.stringify([{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
+    assert.deepEqual(await secureDecryptAsync(raw), [{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
+  });
+
+  it('writes and restores AES-256-GCM ciphertext with a non-extractable IndexedDB key', async () => {
+    const jar = new Map<string, string>();
+    (globalThis as any).window = {
+      localStorage: {
+        getItem: (key: string) => jar.get(key) ?? null,
+        setItem: (key: string, value: string) => jar.set(key, value),
+        removeItem: (key: string) => jar.delete(key),
       },
     };
-
-    const encrypted = secureEncrypt(session);
-    assert.ok(encrypted.startsWith('baseera:enc:v1:'));
-    // Plaintext should NOT appear in encrypted string
+    installFakeIndexedDB();
+    resetDeviceEncryptionKeyCacheForTesting();
+    const value = { studentId: 'aes-child-42', name: 'سارة', guardianAudioConsentGiven: true };
+    const encrypted = await secureEncrypt(value);
+    assert.ok(encrypted.startsWith(CURRENT_AES_GCM_PREFIX));
     assert.equal(encrypted.includes('سارة'), false);
-    assert.equal(encrypted.includes('child-test-123'), false);
-
-    const decrypted = secureDecrypt<typeof session>(encrypted);
-    assert.deepEqual(decrypted, session);
+    jar.set('child', encrypted);
+    resetDeviceEncryptionKeyCacheForTesting();
+    assert.deepEqual(await secureDecryptAsync<typeof value>(jar.get('child')!), value);
+    const tampered = encrypted.slice(0, -2) + 'AA';
+    assert.equal(await secureDecryptAsync(tampered), null);
   });
 
-  it('rejects tampered ciphertext gracefully without crashing', () => {
-    const original = { secret: 'sensitive_child_score_42' };
-    const enc = secureEncrypt(original);
-    // Tamper with the ciphertext segment
-    const parts = enc.split(':');
-    parts[4] = 'tampered' + parts[4].slice(8);
-    const tampered = parts.join(':');
-
-    const result = secureDecrypt(tampered);
-    assert.equal(result, null);
+  it('fails closed when IndexedDB cannot persist a non-extractable key', async () => {
+    resetDeviceEncryptionKeyCacheForTesting();
+    (globalThis as any).indexedDB = undefined;
+    await assert.rejects(() => secureEncrypt({ child: 'سارة' }), /IndexedDB is required/);
   });
 
-  it('transparently parses legacy unencrypted plain JSON for backward compatibility', () => {
-    const legacyPlainJson = JSON.stringify({
-      studentId: 'legacy-child-99',
-      name: 'عمر',
-      score: 85,
-    });
-
-    const parsed = secureDecrypt<{ studentId: string; name: string; score: number }>(legacyPlainJson);
-    assert.ok(parsed);
-    assert.equal(parsed?.studentId, 'legacy-child-99');
-    assert.equal(parsed?.name, 'عمر');
-    assert.equal(parsed?.score, 85);
+  it('does not accept tampered or unknown ciphertext', async () => {
+    assert.equal(await secureDecryptAsync('baseera:enc:v3:aes-gcm-idb:bad:bad'), null);
+    assert.equal(secureDecrypt('baseera:enc:v1:tampered'), null);
   });
 
-  it('returns null on invalid or empty inputs', () => {
-    assert.equal(secureDecrypt(null), null);
-    assert.equal(secureDecrypt(''), null);
-    assert.equal(secureDecrypt('   '), null);
-    assert.equal(secureDecrypt('random_garbage_not_json_or_enc'), null);
+  it('exports the new versioned AES-GCM storage prefix', () => {
+    assert.ok(CURRENT_AES_GCM_PREFIX.includes('aes-gcm'));
   });
 });

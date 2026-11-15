@@ -38,7 +38,7 @@ function student(overrides: Partial<StudentRecord> = {}): StudentRecord {
 }
 
 describe('generic Supabase student sync safety', () => {
-  it('strips browser-created assessment scores and receipts for a new/local record', () => {
+  it('strips browser-created assessment scores and receipts for a new/local record while preserving legal consents', () => {
     const incoming = student({
       cognitiveBattery: { results: {} } as StudentRecord['cognitiveBattery'],
       oralReadingAssessed: true,
@@ -59,6 +59,8 @@ describe('generic Supabase student sync safety', () => {
     assert.equal(safe.name, 'طفل تجريبي');
     assert.equal(safe.guardianConsentGiven, true);
     assert.equal(safe.guardianConsentRecordedAt, consentAt);
+    assert.equal(safe.guardianAudioConsentGiven, true);
+    assert.equal(safe.guardianAudioConsentRecordedAt, consentAt);
     assert.equal(safe.cognitiveBattery, undefined);
     assert.equal(safe.oralReadingAssessed, undefined);
     assert.equal(safe.oralWcpm, undefined);
@@ -67,8 +69,6 @@ describe('generic Supabase student sync safety', () => {
     assert.equal(safe.aiAssessmentSource, undefined);
     assert.equal(safe.aiAssessmentReceipt, undefined);
     assert.equal(safe.verifiedWordsAlignment, undefined);
-    assert.equal(safe.guardianAudioConsentGiven, undefined);
-    assert.equal(safe.guardianAudioConsentRecordedAt, undefined);
     assert.equal(safe.dyslexiaRiskScore, undefined);
     assert.equal(safe.readingRiskLevel, undefined);
   });
@@ -99,14 +99,16 @@ describe('generic Supabase student sync safety', () => {
       aiAssessmentReceipt: 'c'.repeat(64),
       guardianConsentGiven: true,
       guardianConsentRecordedAt: '1999-01-01T00:00:00.000Z',
-      guardianAudioConsentGiven: false,
-      guardianAudioConsentRecordedAt: undefined,
+      guardianAudioConsentGiven: true,
+      guardianAudioConsentRecordedAt: consentAt,
     });
 
     const safe = prepareStudentRecordForGenericSupabaseSync(incoming, {
       raw_data: existingRecord,
       guardian_consent: true,
       guardian_consent_recorded_at: consentAt,
+      guardian_audio_consent: true,
+      guardian_audio_consent_recorded_at: consentAt,
     });
 
     assert.equal(safe.name, 'اسم جديد');
@@ -121,6 +123,32 @@ describe('generic Supabase student sync safety', () => {
     assert.equal(safe.guardianAudioConsentRecordedAt, consentAt);
     assert.equal(safe.guardianConsentGiven, true);
     assert.equal(safe.guardianConsentRecordedAt, consentAt);
+  });
+
+  it('allows explicit audio consent withdrawal while general platform consent remains active', () => {
+    const incoming = student({
+      guardianConsentGiven: true,
+      guardianConsentRecordedAt: consentAt,
+      guardianAudioConsentGiven: false,
+      guardianAudioConsentRecordedAt: undefined,
+    });
+    const safe = prepareStudentRecordForGenericSupabaseSync(incoming, {
+      raw_data: student({
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: consentAt,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: consentAt,
+      }),
+      guardian_consent: true,
+      guardian_consent_recorded_at: consentAt,
+      guardian_audio_consent: true,
+      guardian_audio_consent_recorded_at: consentAt,
+    });
+
+    assert.equal(safe.guardianConsentGiven, true);
+    assert.equal(safe.guardianConsentRecordedAt, consentAt);
+    assert.equal(safe.guardianAudioConsentGiven, false);
+    assert.equal(safe.guardianAudioConsentRecordedAt, undefined);
   });
 
   it('does not recreate revoked guardian consent from a stale browser record', () => {

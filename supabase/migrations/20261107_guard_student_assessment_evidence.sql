@@ -66,9 +66,7 @@ AS $$
     'mathHeuristicIndicator',
     'mathRiskLevel',
     'mathRiskLabelAr',
-    'mathTrials',
-    'guardianAudioConsentGiven',
-    'guardianAudioConsentRecordedAt'
+    'mathTrials'
   ]::text[]);
 $$;
 

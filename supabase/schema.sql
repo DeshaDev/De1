@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS public.students (
     guardian_consent BOOLEAN DEFAULT FALSE,
     guardian_consent_source TEXT,
     guardian_consent_recorded_at TEXT,
+    guardian_audio_consent BOOLEAN DEFAULT FALSE,
+    guardian_audio_consent_recorded_at TEXT,
     notes TEXT,
     raw_data JSONB,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
@@ -208,9 +210,7 @@ AS $$
     'mathHeuristicIndicator',
     'mathRiskLevel',
     'mathRiskLabelAr',
-    'mathTrials',
-    'guardianAudioConsentGiven',
-    'guardianAudioConsentRecordedAt'
+    'mathTrials'
   ]::text[]);
 $$;
 
