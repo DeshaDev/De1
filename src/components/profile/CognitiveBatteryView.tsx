@@ -650,22 +650,15 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
-  const loadInitial = (): BatterySession | null => {
-    const existing = loadBatterySession(activeStudent.id) ?? batterySessionFromRecord(activeStudent);
-    if (existing) return existing;
-
-    // Auto-create a session ONLY when explicit, timestamped guardian consent was already saved on the non-demo child record.
+  const createInitialSession = (): BatterySession | null => {
     const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
     const explicitGeneralConsent =
       activeStudent.guardianConsentGiven === true &&
       typeof activeStudent.guardianConsentRecordedAt === 'string' &&
       activeStudent.guardianConsentRecordedAt.trim().length > 0;
     if (
-      activeStudent.name &&
-      isValidAge &&
-      activeStudent.name !== 'طفلك' &&
-      !activeStudent.isDemoRecord &&
-      explicitGeneralConsent
+      activeStudent.name && isValidAge && activeStudent.name !== 'طفلك' &&
+      !activeStudent.isDemoRecord && explicitGeneralConsent
     ) {
       const explicitAudioConsent =
         activeStudent.guardianAudioConsentGiven === true &&
@@ -682,16 +675,30 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
         guardianAudioConsentGiven: explicitAudioConsent,
         ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt } : {}),
-        speechLocale: 'ar-SA' as const,
+        speechLocale: 'ar-SA',
         results: {},
       };
-      saveBatterySession(initialSession);
+      void saveBatterySession(initialSession).catch((error) => console.error('Unable to persist battery session:', error));
       return initialSession;
     }
-
     return null;
   };
-  const [session, setSession] = useState<BatterySession | null>(loadInitial);
+  const [session, setSession] = useState<BatterySession | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setSession(null);
+    void loadBatterySession(activeStudent.id)
+      .then((existing) => {
+        if (cancelled) return;
+        const initial = existing ?? createInitialSession();
+        setSession(initial);
+      })
+      .catch((error) => {
+        console.error('Unable to restore encrypted battery session:', error);
+        if (!cancelled) setSession(createInitialSession());
+      });
+    return () => { cancelled = true; };
+  }, [activeStudent.id]);
 
   const pushToSchool = (s: BatterySession) => {
     if (!syncEnabled) {
@@ -753,7 +760,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const ageTasks = session ? subtestsForAge(session.ageMonths, screeningMode) : [];
   const sittings = session ? sittingsForAge(session.ageMonths, screeningMode) : [];
   const completed = ageTasks.filter((s) => session?.results[s.id]);
-  const localHistory = loadScreeningHistory(activeStudent.id);
+  const [localHistory, setLocalHistory] = useState<ScreeningSnapshot[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void loadScreeningHistory(activeStudent.id)
+      .then((history) => { if (!cancelled) setLocalHistory(history); })
+      .catch((error) => console.error('Unable to restore screening history:', error));
+    return () => { cancelled = true; };
+  }, [activeStudent.id]);
   const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
   const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
   const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
@@ -770,7 +784,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     const wasComplete = tasks.every((s) => session.results[s.id]);
     if (!wasComplete && tasks.every((s) => updated.results[s.id])) trackUsage('battery_completed');
     setSession(updated);
-    saveBatterySession(updated);
+    void saveBatterySession(updated).catch((error) => console.error('Unable to persist battery session:', error));
     pushToSchool(updated);
   };
 
@@ -810,12 +824,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
             });
             if (newId) {
-              saveBatterySession({ ...s, studentId: newId });
+              void saveBatterySession({ ...s, studentId: newId }).catch((error) => console.error('Unable to persist battery session:', error));
               return; // the host selects the new learner and this view reloads their session
             }
           }
           setSession(s);
-          saveBatterySession(s);
+          void saveBatterySession(s).catch((error) => console.error('Unable to persist battery session:', error));
           setView({ name: 'map' });
         }}
       />
@@ -971,7 +985,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                   domains: profile.domains.map((d) => ({ domain: d.domain, centile: d.centile })),
                 };
                 const history = [...previousScreenings, snapshot].slice(-10);
-                saveScreeningHistory(activeStudent.id, history);
+                void saveScreeningHistory(activeStudent.id, history).then(() => setLocalHistory(history)).catch((error) => console.error('Unable to persist screening history:', error));
                 if (!activeStudent.isDemoRecord) onRecordUpdated?.({ ...activeStudent, screeningHistory: history });
               }
               clearBatterySession(activeStudent.id);
