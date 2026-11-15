@@ -173,7 +173,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       .then((stored) => { if (!cancelled) setProgress(stored ?? serverProgress); })
       .catch((error) => console.error('Unable to restore encrypted training progress:', error));
     return () => { cancelled = true; };
-  }, [studentId, serverProgress]);
+  }, [studentId]);
   const [run, setRun] = useState<Run | null>(null);
   useEffect(() => {
     onRunningChange?.(run !== null);
@@ -194,7 +194,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   const persist = (p: TrainingProgress) => {
     setProgress(p);
-    saveTrainingProgress(studentId, p);
+    void saveTrainingProgress(studentId, p).catch((error) => console.error('Unable to persist encrypted training progress:', error));
     if (syncEnabled) {
       syncTrainingToSchool(studentId, p, student)
         .then((student) => student && onRecordUpdated?.(student))
