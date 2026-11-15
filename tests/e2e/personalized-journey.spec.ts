@@ -116,7 +116,7 @@ async function completeFirstSessionExercises(page: Page) {
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
   let idleFingerprint = '';
   let idleRepeats = 0;
-  for (let step = 0; step < 1500; step += 1) {
+  for (let step = 0; step < 6000; step += 1) {
     if (await summaryDone.isVisible().catch(() => false)) break;
 
     if (await page.getByText(/من أين نبدأ؟/).first().isVisible().catch(() => false)) sawPlacement = true;
@@ -214,7 +214,8 @@ test.describe('end-to-end personalized screening to training journey', () => {
   test('two children with different screening results receive distinct plans, start levels, doses, and Session 1 training exercises', async ({
     page,
   }) => {
-    test.setTimeout(240_000);
+    // Session 1 now teaches up to three skills (with placement checks) for each child.
+    test.setTimeout(600_000);
 
     // -------------------- Child 1: سلمى --------------------
     // Sound confusions (س/ص) on قصة سامي (92% -> discrimination/letterSound Level 2) + 0% discontinued كلمات تتشابه (rhyme -> Level 1)
