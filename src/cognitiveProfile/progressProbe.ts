@@ -80,7 +80,7 @@ export function buildProbe(plan: Pick<TrainingPlan, 'focus'>, studentId: string,
     // Dictation is useful in teaching sessions, but fixed probes remain choice/span-only so
     // the same child-friendly response method is used consistently without typing load.
     const probeTasks = generateSession(skill, PROBE_LEVEL, seed, undefined, ageMonths)
-      .filter((task) => task.kind !== 'spelling');
+      .filter((task) => task.kind === 'span' || (task.kind === 'choice' && task.item.responseMode !== 'text'));
     for (const task of probeTasks.slice(0, PROBE_ITEMS_PER_SKILL)) {
       const tagged: TrainingTask =
         task.kind === 'choice'
