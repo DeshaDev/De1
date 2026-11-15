@@ -60,6 +60,7 @@ import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
 import { StructuredLiteracyStations } from './StructuredLiteracyStations';
+import { getFluencyPassage } from '../../cognitiveProfile/structuredLiteracyStations';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
@@ -215,7 +216,7 @@ type Run = {
   tasks: TrainingTask[];
   taskIndex: number;
   correct: number;
-  phase: 'probeIntro' | 'probe' | 'placementIntro' | 'placement' | 'lesson' | 'intro' | 'task' | 'result' | 'summary';
+  phase: 'probeIntro' | 'probe' | 'placementIntro' | 'placement' | 'lesson' | 'intro' | 'task' | 'result' | 'fluencyIntro' | 'fluencyPractice' | 'summary';
   /** The lesson for the current skill level ("I do"), when the child has not had it yet. */
   lesson: Lesson | null;
   /** How many items at the start of the block are guided (hint + one fewer option). */
@@ -248,6 +249,8 @@ type Run = {
   fastCount: number;
   /** Mastery badges awarded in today's run. */
   newBadges: SkillId[];
+  /** Number of unscored repeated readings completed in today's fluency routine. */
+  fluencyReadings?: number;
   /** Starting-level check for the current skill (first time it is trained). */
   placement?: { skill: SkillId; suggested: Level; level: Level; items: ChoiceItem[]; index: number; answers: PlacementAnswer[] } | null;
 };
@@ -710,6 +713,59 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     );
   }
 
+  if (run && progress && (run.phase === 'fluencyIntro' || run.phase === 'fluencyPractice')) {
+    const passage = getFluencyPassage(childAgeYears);
+    const readingsDone = run.fluencyReadings ?? 0;
+    const completeReading = () => {
+      const nextReadings = readingsDone + 1;
+      if (nextReadings >= 3) {
+        const previous = progress.fluencyPractice ?? { sessionsCompleted: 0, readingsCompleted: 0, lastPracticedAt: null };
+        persist({
+          ...progress,
+          fluencyPractice: {
+            sessionsCompleted: previous.sessionsCompleted + 1,
+            readingsCompleted: previous.readingsCompleted + 3,
+            lastPracticedAt: new Date().toISOString(),
+          },
+        });
+        trackUsage('training_session_completed');
+        setRun({ ...run, phase: 'summary', fluencyReadings: nextReadings });
+      } else {
+        setRun({ ...run, phase: 'fluencyPractice', fluencyReadings: nextReadings });
+      }
+    };
+    return (
+      <div className="bz-card p-5 sm:p-8 space-y-5 text-center" dir="rtl">
+        <span className="bz-badge bz-badge-brand">الطلاقة · قراءة متكررة</span>
+        {run.phase === 'fluencyIntro' ? (
+          <>
+            <h2 className="font-child text-2xl font-black text-slate-900">نقرأ النص معًا ثلاث مرات</h2>
+            <p className="text-sm leading-7 text-slate-600">استمع إلى النموذج، ثم اقرأ النص بنفسك ثلاث مرات. اقرأ بدقة، واجمع الكلمات في عبارات، وانتبه إلى علامات الوقف. لا يوجد توقيت أو تسجيل أو تقييم آلي لصوتك.</p>
+            <div className="rounded-2xl border border-line bg-soft p-5 text-right space-y-2">
+              <h3 className="font-child text-xl font-black">{passage.titleAr}</h3>
+              {passage.linesAr.map((line, index) => <p key={index} className="font-child text-xl leading-loose text-slate-900">{line}</p>)}
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button type="button" className="bz-btn bz-btn-secondary" onClick={() => { void speakSegments(passage.modelAudio.map((text) => ({ text })), { cancelled: false }); }}>استمع إلى نموذج القراءة</button>
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => setRun({ ...run, phase: 'fluencyPractice', fluencyReadings: 0 })}>ابدأ القراءة المتكررة</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="font-child text-2xl font-black text-slate-900">{passage.titleAr}</h2>
+            <p className="text-sm text-slate-600">القراءة {toArabicDigits(readingsDone + 1)} من ٣ · خذ وقتك واقرأ بوضوح.</p>
+            <div className="rounded-2xl border border-line bg-soft p-5 text-right space-y-2">
+              {passage.linesAr.map((line, index) => <p key={index} className="font-child text-xl leading-loose text-slate-900">{line}</p>)}
+            </div>
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={completeReading}>
+              {readingsDone + 1 < 3 ? 'قرأت النص، تابع' : 'إنهاء القراءة المتكررة'}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (run && progress) {
     const skill = sessionSkills[run.skillIndex];
     const def = SKILLS[skill];
@@ -810,12 +866,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
               <button
                 type="button"
-                onClick={() =>
-                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : (trackUsage('training_session_completed'), setRun({ ...run, phase: 'summary' }))
-                }
+                onClick={() => {
+                  if (run.skillIndex + 1 < sessionSkills.length) {
+                    beginSkill(run.skillIndex + 1, run);
+                  } else if (childAgeYears >= 6) {
+                    setRun({ ...run, phase: 'fluencyIntro', fluencyReadings: 0 });
+                  } else {
+                    trackUsage('training_session_completed');
+                    setRun({ ...run, phase: 'summary' });
+                  }
+                }}
                 className="bz-btn bz-btn-primary bz-btn-lg"
               >
-                {run.skillIndex + 1 < sessionSkills.length ? 'المهارة التالية' : 'إنهاء الجلسة'}
+                {run.skillIndex + 1 < sessionSkills.length ? 'المهارة التالية' : childAgeYears >= 6 ? 'القراءة المتكررة' : 'إنهاء الجلسة'}
               </button>
             </div>
           )}
