@@ -1099,7 +1099,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
-          {(student?.ageYears ?? profile?.ageMonths ? (childAgeMonths ?? 0) / 12 : 0) >= 6 && (
+          {childAgeYears >= 6 && (
             <p className="text-xs text-slate-600 mt-3">قراءات الطلاقة المتكررة المكتملة: {toArabicDigits(progress.fluencyPractice?.readingsCompleted ?? 0)} · من دون توقيت أو تسجيل صوتي</p>
           )}
         </div>
