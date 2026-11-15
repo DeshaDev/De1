@@ -227,6 +227,7 @@ export default function App() {
     void loadStoredStudents()
       .then((stored) => {
         if (cancelled) return;
+        setIsLocalStudentsLoaded(true);
         if (stored.length > 0) {
           const storedIds = new Set(stored.map((student) => student.id));
           const merged = [...stored, ...INITIAL_STUDENTS.filter((student) => !storedIds.has(student.id))];
@@ -236,10 +237,9 @@ export default function App() {
         }
       })
       .catch((error) => {
+        // Keep local persistence disabled when ciphertext exists but cannot be
+        // decrypted; writing the initial roster could otherwise destroy it.
         console.error('Unable to restore encrypted child records; existing data was left untouched.', error);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLocalStudentsLoaded(true);
       });
     return () => { cancelled = true; };
   }, []);
