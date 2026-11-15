@@ -752,9 +752,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
 
+  // Restore the appropriate screen only when the active learner/session identity changes.
+  // Updating results for the same learner must not unmount the running subtest before its
+  // completion state is shown (including the explicit unscored-audio state).
   useEffect(() => {
     setView(initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' });
-  }, [session, initialView]);
+  }, [session?.studentId, initialView]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
