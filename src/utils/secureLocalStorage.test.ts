@@ -38,18 +38,15 @@ describe('Secure Application-Level Storage Encryption Tests', () => {
     assert.equal(result, null);
   });
 
-  it('transparently parses legacy unencrypted plain JSON for backward compatibility', () => {
-    const legacyPlainJson = JSON.stringify({
+  it('strictly rejects unencrypted plain JSON to protect child privacy on shared devices', () => {
+    const unencryptedPlainJson = JSON.stringify({
       studentId: 'legacy-child-99',
       name: 'عمر',
       score: 85,
     });
 
-    const parsed = secureDecrypt<{ studentId: string; name: string; score: number }>(legacyPlainJson);
-    assert.ok(parsed);
-    assert.equal(parsed?.studentId, 'legacy-child-99');
-    assert.equal(parsed?.name, 'عمر');
-    assert.equal(parsed?.score, 85);
+    const parsed = secureDecrypt<{ studentId: string; name: string; score: number }>(unencryptedPlainJson);
+    assert.equal(parsed, null);
   });
 
   it('returns null on invalid or empty inputs', () => {

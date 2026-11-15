@@ -3977,6 +3977,23 @@ async function startServer() {
           });
           return;
         }
+        const storedAudioConsentGiven =
+          storedStudent.guardianAudioConsentGiven === true ||
+          storedStudent.audioRecordingConsentGiven === true;
+        const storedAudioConsentAt =
+          storedStudent.guardianAudioConsentRecordedAt ||
+          storedStudent.guardianConsentRecordedAt;
+        if (
+          !storedAudioConsentGiven ||
+          !storedAudioConsentAt ||
+          guardianAudioConsentRecordedAt !== storedAudioConsentAt
+        ) {
+          res.status(403).json({
+            code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
+            error: 'الموافقة الصوتية المستقلة لولي الأمر غير مسجلة في ملف الطفل المحفوظ؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
       } catch {
         res.status(503).json({
           code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
@@ -4007,6 +4024,23 @@ async function startServer() {
         res.status(403).json({
           code: 'GUARDIAN_CONSENT_NOT_STORED',
           error: 'لا يوجد ملف طفل حقيقي وموافقة ولي أمر مطابقة في حساب المدرسة؛ لم يُرسل الصوت للتحليل.',
+        });
+        return;
+      }
+      const schoolAudioConsentGiven =
+        schoolStudent.guardianAudioConsentGiven === true ||
+        schoolStudent.audioRecordingConsentGiven === true;
+      const schoolAudioConsentAt =
+        schoolStudent.guardianAudioConsentRecordedAt ||
+        schoolStudent.guardianConsentRecordedAt;
+      if (
+        !schoolAudioConsentGiven ||
+        !schoolAudioConsentAt ||
+        guardianAudioConsentRecordedAt !== schoolAudioConsentAt
+      ) {
+        res.status(403).json({
+          code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
+          error: 'لا توجد موافقة صوتية مستقلة ومطابقة مسجلة في ملف الطالب في المدرسة؛ لم نرسل التسجيل للتحليل.',
         });
         return;
       }
@@ -4536,7 +4570,91 @@ async function startServer() {
     // School sessions must reference a real child in the same signed tenant. Parent
     // sessions were checked against Supabase ownership above. Never send a demo,
     // unknown or cross-tenant child's audio to Azure.
-    if (String(assessmentSession.role) !== 'parent' && String(assessmentSession.role) !== 'guest') {
+    if (String(assessmentSession.role) === 'parent') {
+      const parentUserId = assessmentSession.parentUserId;
+      const authorization = String(req.headers.authorization || '');
+      if (!parentUserId || !authorization.startsWith('Bearer ')) {
+        res.status(403).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_UNVERIFIED',
+          error: 'تعذر التحقق من ملكية ملف الطفل في حساب الأسرة؛ لم يُرسل الصوت للتحليل.',
+        });
+        return;
+      }
+      try {
+        const ownerUrl =
+          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at&limit=1`;
+        const ownerResponse = await fetch(ownerUrl, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: authorization,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!ownerResponse.ok) {
+          res.status(503).json({
+            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+            error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+        const rows = await ownerResponse.json().catch(() => null);
+        const owned = Array.isArray(rows) ? rows.find((row) => row?.id === studentId) : undefined;
+        const storedStudent = owned?.raw_data && typeof owned.raw_data === 'object'
+          ? (owned.raw_data as StudentRecord)
+          : undefined;
+        if (!owned || !storedStudent) {
+          res.status(404).json({
+            code: 'PARENT_STUDENT_NOT_OWNED',
+            error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+        if (
+          owned.guardian_consent !== true ||
+          storedStudent.guardianConsentGiven !== true ||
+          !owned.guardian_consent_recorded_at ||
+          !storedStudent.guardianConsentRecordedAt ||
+          String(owned.guardian_consent_recorded_at) !== String(storedStudent.guardianConsentRecordedAt) ||
+          body.guardianConsentRecordedAt !== storedStudent.guardianConsentRecordedAt
+        ) {
+          res.status(403).json({
+            code: 'GUARDIAN_CONSENT_NOT_STORED',
+            error: 'موافقة ولي الأمر غير موجودة أو لا تطابق سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+          });
+          return;
+        }
+        const storedAudioConsentGiven =
+          storedStudent.guardianAudioConsentGiven === true ||
+          storedStudent.audioRecordingConsentGiven === true;
+        const storedAudioConsentAt =
+          storedStudent.guardianAudioConsentRecordedAt ||
+          storedStudent.guardianConsentRecordedAt;
+        if (
+          !storedAudioConsentGiven ||
+          !storedAudioConsentAt ||
+          body.guardianAudioConsentRecordedAt !== storedAudioConsentAt
+        ) {
+          res.status(403).json({
+            code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
+            error: 'الموافقة الصوتية المستقلة لولي الأمر غير مسجلة في ملف الطفل المحفوظ؛ لم نرسل التسجيل للتحليل.',
+          });
+          return;
+        }
+      } catch {
+        res.status(503).json({
+          code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+          error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
+        });
+        return;
+      }
+    } else if (String(assessmentSession.role) === 'guest') {
+      res.status(403).json({
+        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
+        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
+      });
+      return;
+    } else {
       const ownedStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
       );
@@ -4556,6 +4674,23 @@ async function startServer() {
         res.status(403).json({
           code: 'GUARDIAN_CONSENT_NOT_STORED',
           error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+        });
+        return;
+      }
+      const schoolAudioConsentGiven =
+        ownedStudent.guardianAudioConsentGiven === true ||
+        ownedStudent.audioRecordingConsentGiven === true;
+      const schoolAudioConsentAt =
+        ownedStudent.guardianAudioConsentRecordedAt ||
+        ownedStudent.guardianConsentRecordedAt;
+      if (
+        !schoolAudioConsentGiven ||
+        !schoolAudioConsentAt ||
+        body.guardianAudioConsentRecordedAt !== schoolAudioConsentAt
+      ) {
+        res.status(403).json({
+          code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
+          error: 'لا توجد موافقة صوتية مستقلة ومطابقة مسجلة في ملف الطالب في المدرسة؛ لم نرسل التسجيل للتحليل.',
         });
         return;
       }

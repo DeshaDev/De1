@@ -48,7 +48,7 @@ export const PrivacyPolicyView: React.FC = () => (
         سياسة الخصوصية وحوكمة بيانات الأطفال في هَيَّا نَقْرَأْ
       </h1>
       <p className="leading-relaxed text-slate-600">
-        توضح هذه السياسة التزام منصة <strong>هَيَّا نَقْرَأْ</strong> التابعة لشركة <strong>بصيرة لتكنولوجيا التعليم (Baseera EdTech)</strong>، وهي شركة مسجلة في <strong>الولايات المتحدة الأمريكية</strong>، بأعلى المعايير التنظيمية لحماية خصوصية الأطفال، والامتثال لمبادئ حماية خصوصية الأطفال الرقمية، ومعايير حماية السجلات التعليمية للطلاب، وأفضل الممارسات الدولية في تقليل البيانات وحمايتها.
+        توضح هذه السياسة التزام منصة <strong>هَيَّا نَقْرَأْ</strong> التابعة لشركة <strong>فورالا (Vorala LLC)</strong>، وهي شركة مسجلة في <strong>الولايات المتحدة الأمريكية</strong>، بأعلى المعايير التنظيمية لحماية خصوصية الأطفال، والامتثال لمبادئ حماية خصوصية الأطفال الرقمية، ومعايير حماية السجلات التعليمية للطلاب، وأفضل الممارسات الدولية في تقليل البيانات وحمايتها.
       </p>
       <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-950">
         <EyeOff className="mt-1 h-5 w-5 shrink-0" aria-hidden={true} />
@@ -66,7 +66,7 @@ export const PrivacyPolicyView: React.FC = () => (
             <span>المتحكم في البيانات والكيان المشغّل:</span>
           </div>
           <p className="text-slate-600 leading-relaxed">
-            <strong>شركة بصيرة لتكنولوجيا التعليم (Baseera EdTech)</strong>
+            <strong>شركة فورالا (Vorala LLC)</strong>
             <br />
             كيان مسجل وقائم في الولايات المتحدة الأمريكية.
             <br />
@@ -82,8 +82,8 @@ export const PrivacyPolicyView: React.FC = () => (
           <p className="text-slate-600 leading-relaxed">
             البريد الرسمي المخصص لطلبات أولياء الأمور والمدارس واستفسارات الحذف وسحب الموافقة:
             <br />
-            <a href="mailto:privacy@baseera.education" className="font-mono font-bold text-teal-800 underline">
-              privacy@baseera.education
+            <a href="mailto:hayanaqra@vorala.xyz" className="font-mono font-bold text-teal-800 underline">
+              hayanaqra@vorala.xyz
             </a>
             <br />
             مهلة الاستجابة: معالجة كافة الطلبات المؤكدة خلال ٧ أيام عمل بحد أقصى.
@@ -186,7 +186,7 @@ export const PrivacyPolicyView: React.FC = () => (
         </div>
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
           <strong className="block text-slate-900 mb-1">٣. سحب الموافقة</strong>
-          يمكن لولي الأمر سحب موافقته الصوتية أو العامة في أي وقت عبر إعدادات الملف أو بمراسلة فريق الخصوصية على <code className="text-teal-800 font-bold">privacy@baseera.education</code>.
+          يمكن لولي الأمر سحب موافقته الصوتية أو العامة في أي وقت عبر إعدادات الملف أو بمراسلة فريق الخصوصية على <code className="text-teal-800 font-bold">hayanaqra@vorala.xyz</code>.
         </div>
       </div>
     </PolicySection>

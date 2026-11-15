@@ -164,7 +164,7 @@ function base64ToUint8(b64: string): Uint8Array {
   return bytes;
 }
 
-const DEVICE_STORAGE_KEY_NAME = 'baseera_app_encryption_seed_v1';
+const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
 let cachedKey: Uint8Array | null = null;
 
 function getDeviceEncryptionKey(): Uint8Array {
@@ -172,10 +172,17 @@ function getDeviceEncryptionKey(): Uint8Array {
 
   let seed = '';
   try {
+    // SECURITY: Purge any legacy key seed stored in persistent localStorage to prevent key recovery on shared devices.
     if (typeof window !== 'undefined' && window.localStorage) {
-      seed = window.localStorage.getItem(DEVICE_STORAGE_KEY_NAME) || '';
+      window.localStorage.removeItem('baseera_app_encryption_seed_v1');
+    }
+
+    // Key material is stored STRICTLY in sessionStorage (ephemeral to the active tab/window,
+    // automatically purged when closed). This ensures that on shared family/school devices,
+    // stored records cannot be decrypted after the session is closed.
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      seed = window.sessionStorage.getItem(SESSION_STORAGE_SEED_KEY) || '';
       if (!seed || seed.length < 32) {
-        // Generate high-entropy seed
         const entropy = new Uint8Array(32);
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
           crypto.getRandomValues(entropy);
@@ -185,11 +192,11 @@ function getDeviceEncryptionKey(): Uint8Array {
           }
         }
         seed = uint8ToBase64(entropy);
-        window.localStorage.setItem(DEVICE_STORAGE_KEY_NAME, seed);
+        window.sessionStorage.setItem(SESSION_STORAGE_SEED_KEY, seed);
       }
     }
   } catch {
-    // If localStorage is blocked (private browsing), fallback to in-memory key
+    // In private browsing mode or when sessionStorage is restricted
   }
 
   if (!seed) {
@@ -240,15 +247,8 @@ export function secureDecrypt<T>(raw: string | null): T | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Backward compatibility: If plain JSON, parse directly
-  if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.startsWith('"')) {
-    try {
-      return JSON.parse(trimmed) as T;
-    } catch {
-      return null;
-    }
-  }
-
+  // Strict child data protection: Unencrypted plain JSON is strictly rejected.
+  // Sensitive child records on shared devices must be authenticated and encrypted at rest.
   if (!trimmed.startsWith(ENCRYPTED_PREFIX)) {
     return null;
   }
