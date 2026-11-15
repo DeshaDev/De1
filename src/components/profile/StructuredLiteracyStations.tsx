@@ -310,7 +310,11 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
       <div className="space-y-2">
         <p className="bz-small text-brand font-semibold">{station.titleAr}</p>
         <div className="bz-progress"><span style={{ width: `${((questionIndex + 1) / station.questions.length) * 100}%` }} /></div>
-        <p className="font-child text-xl sm:text-2xl font-black leading-loose text-slate-900 whitespace-pre-line">{question?.promptAr}</p>
+        <p
+          className={`font-child text-xl sm:text-2xl font-black leading-loose text-slate-900 whitespace-pre-line ${station.id === 'comprehension' && safeAgeYears < 6 ? 'sr-only' : ''}`}
+        >
+          {question?.promptAr}
+        </p>
         <button
           type="button"
           className="bz-btn bz-btn-ghost bz-btn-sm"
