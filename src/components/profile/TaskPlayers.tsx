@@ -141,20 +141,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
 
     // A missing/stalled clip must never lock a child out of the answer choices.
     // If the full prompt does not finish, stop it and allow the child to replay or continue.
-    let playbackTimeout: number | undefined;
-    const completed = await Promise.race([
-      speakSegments(item.audio, h, setHighlight).then(() => true),
-      new Promise<boolean>((resolve) => {
-        playbackTimeout = window.setTimeout(() => resolve(false), 12_000);
-      }),
-    ]);
-    if (playbackTimeout !== undefined) window.clearTimeout(playbackTimeout);
-    if (!completed && !h.cancelled) {
-      h.cancelled = true;
-      stopSpeech();
-      setHighlight(null);
-      setSpeechPromptTimedOut(true);
-    }
+    await speakSegments(item.audio, h, setHighlight);
     if (!h.cancelled) {
       setListening(false);
       readyAt.current = performance.now();
@@ -162,11 +149,24 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
       hesitationTimer.current = window.setTimeout(() => {
         setHesitating(true);
       }, 6500);
-    } else if (!completed) {
-      setListening(false);
-      readyAt.current = performance.now();
     }
   };
+
+  // Independent watchdog: the answer controls must not depend on TTS resolving.
+  useEffect(() => {
+    if (!listening || feedback) return;
+    const activeHandle = handle.current;
+    const watchdog = window.setTimeout(() => {
+      if (handle.current !== activeHandle || activeHandle.cancelled) return;
+      activeHandle.cancelled = true;
+      stopSpeech();
+      setHighlight(null);
+      setSpeechPromptTimedOut(true);
+      setListening(false);
+      readyAt.current = performance.now();
+    }, 12_000);
+    return () => window.clearTimeout(watchdog);
+  }, [listening, item.id, feedback]);
 
   useEffect(() => {
     setFeedback(null);
