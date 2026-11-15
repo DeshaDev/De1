@@ -277,6 +277,9 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
   const correct = item.correctId;
   if (!item.tag) return null;
   if (item.tag.startsWith('structured-')) {
+    if (item.explanationAr && item.explanationAudio?.length) {
+      return { textAr: item.explanationAr, audio: item.explanationAudio, pictureIds: LEXICON[correct] ? [correct] : [], glyphs: [] };
+    }
     const stationId = item.tag.slice('structured-'.length);
     const station = getStructuredLiteracyStations(8).find((entry) => entry.id === stationId);
     const question = station?.questions.find((entry) => entry.promptAr === item.promptAr);
