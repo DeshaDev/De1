@@ -18,8 +18,20 @@ test.use({
 async function prepareFastAudioAndSession(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.clear();
+    // This E2E covers training state and BKT flow, not speech quality. Complete audio playback
+    // immediately so the long two-child journey is not paced by browser/network audio latency.
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value(this: HTMLMediaElement) {
+        queueMicrotask(() => this.dispatchEvent(new Event('ended')));
+        return Promise.resolve();
+      },
+    });
   });
   await page.route('**/audio/v1/manifest.json', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+  });
+  await page.route('**/api/ai/tts', async (route) => {
     await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
   });
 }
