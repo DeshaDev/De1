@@ -70,15 +70,35 @@ export const saveTrainingProgress = (studentId: string, progress: TrainingProgre
 export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(studentId));
 
 /** Supplementary reading/language practice history, encrypted separately from assessment scores. */
+const literacyPracticeWrites = new Map<string, Promise<void>>();
+const clearedLiteracyPracticeIds = new Set<string>();
+
 export async function loadLiteracyPracticeProgress(studentId: string): Promise<LiteracyPracticeProgress> {
+  const pending = literacyPracticeWrites.get(studentId);
+  if (pending) await pending.catch(() => undefined);
   const stored = await read<unknown>(LITERACY_PRACTICE_KEY(studentId));
   return stored ? sanitizeLiteracyPracticeProgress(stored) : emptyLiteracyPracticeProgress();
 }
 
-export const saveLiteracyPracticeProgress = (studentId: string, progress: LiteracyPracticeProgress) =>
-  write(LITERACY_PRACTICE_KEY(studentId), sanitizeLiteracyPracticeProgress(progress));
+export function saveLiteracyPracticeProgress(studentId: string, progress: LiteracyPracticeProgress): Promise<void> {
+  if (clearedLiteracyPracticeIds.has(studentId)) return Promise.resolve();
+  const previous = literacyPracticeWrites.get(studentId) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(() =>
+    write(LITERACY_PRACTICE_KEY(studentId), sanitizeLiteracyPracticeProgress(progress))
+  );
+  literacyPracticeWrites.set(studentId, next);
+  void next.finally(() => {
+    if (literacyPracticeWrites.get(studentId) === next) literacyPracticeWrites.delete(studentId);
+  }).catch(() => undefined);
+  return next;
+}
 
-export const clearLiteracyPracticeProgress = (studentId: string) => remove(LITERACY_PRACTICE_KEY(studentId));
+export async function clearLiteracyPracticeProgress(studentId: string): Promise<void> {
+  clearedLiteracyPracticeIds.add(studentId);
+  const pending = literacyPracticeWrites.get(studentId);
+  if (pending) await pending.catch(() => undefined);
+  remove(LITERACY_PRACTICE_KEY(studentId));
+}
 
 /** Summary of a finished screening, kept when the child is screened again so the two can be compared. */
 export interface ScreeningSnapshot {
