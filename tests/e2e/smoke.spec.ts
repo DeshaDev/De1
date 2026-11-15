@@ -260,7 +260,8 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
 
   // Scored items: no mascot at any point, so it cannot hint whether an answer was right.
   const done = page.locator('[data-mascot-moment="proud"]');
-  for (let i = 0; i < 8 && !(await done.isVisible()); i++) {
+  // Finish on the actual game completion/discontinuation state, not a hard-coded number of clicks.
+  for (let i = 0; i < 20 && !(await done.isVisible()); i++) {
     await expect(option.or(done)).toBeVisible({ timeout: 20_000 });
     if (await done.isVisible()) break;
     await expect(option).toBeEnabled({ timeout: 20_000 });
