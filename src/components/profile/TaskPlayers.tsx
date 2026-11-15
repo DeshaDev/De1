@@ -121,6 +121,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const readyAt = useRef(0);
   const handle = useRef<PlaybackHandle>({ cancelled: false });
   const hesitationTimer = useRef<number | null>(null);
+  const speechWatchdog = useRef<number | null>(null);
 
   const clearHesitation = () => {
     if (hesitationTimer.current !== null) {
@@ -138,11 +139,23 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     handle.current = h;
     setListening(true);
     setSpeechPromptTimedOut(false);
+    if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
+    // Independent of the TTS promise: a stalled player must release answer choices.
+    speechWatchdog.current = window.setTimeout(() => {
+      if (handle.current !== h || h.cancelled) return;
+      h.cancelled = true;
+      stopSpeech();
+      setHighlight(null);
+      setSpeechPromptTimedOut(true);
+      setListening(false);
+      readyAt.current = performance.now();
+      speechWatchdog.current = null;
+    }, 12_000);
 
-    // A missing/stalled clip must never lock a child out of the answer choices.
-    // If the full prompt does not finish, stop it and allow the child to replay or continue.
     await speakSegments(item.audio, h, setHighlight);
     if (!h.cancelled) {
+      if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
+      speechWatchdog.current = null;
       setListening(false);
       readyAt.current = performance.now();
       // Hesitation prompt: gentle reminder after 6.5 seconds of silence
@@ -152,22 +165,6 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     }
   };
 
-  // Independent watchdog: the answer controls must not depend on TTS resolving.
-  useEffect(() => {
-    if (!listening || feedback) return;
-    const activeHandle = handle.current;
-    const watchdog = window.setTimeout(() => {
-      if (handle.current !== activeHandle || activeHandle.cancelled) return;
-      activeHandle.cancelled = true;
-      stopSpeech();
-      setHighlight(null);
-      setSpeechPromptTimedOut(true);
-      setListening(false);
-      readyAt.current = performance.now();
-    }, 12_000);
-    return () => window.clearTimeout(watchdog);
-  }, [listening, item.id, feedback]);
-
   useEffect(() => {
     setFeedback(null);
     setReplays(0);
@@ -176,6 +173,8 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     return () => {
       clearHesitation();
       handle.current.cancelled = true;
+      if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
+      speechWatchdog.current = null;
       stopSpeech();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +183,8 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const choose = async (id: string) => {
     if (feedback || listening) return;
     clearHesitation();
+    if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
+    speechWatchdog.current = null;
     const rtMs = Math.round(performance.now() - readyAt.current);
     handle.current.cancelled = true;
     stopSpeech();
