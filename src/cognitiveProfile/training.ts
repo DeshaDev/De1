@@ -256,6 +256,35 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
 };
 
 /**
+ * Primary skill for a directly measured subtest. Directly measured reading/language domains
+ * must enter the focus plan before supporting component skills so a small focus cap cannot
+ * crowd out spelling or decoding with secondary prerequisites.
+ */
+const PRIMARY_SKILL_BY_SUBTEST: Partial<Record<SubtestId, SkillId>> = {
+  visualSequential: 'visualMemory',
+  visualAssociative: 'visualMemory',
+  auditorySequential: 'auditoryMemory',
+  pairedAssociate: 'letterSound',
+  rhyme: 'rhyme',
+  auditoryDiscrimination: 'discrimination',
+  visualDiscrimination: 'visualDiscrimination',
+  letterSound: 'letterSound',
+  wordReading: 'decoding',
+  nonwordReading: 'decoding',
+  oralReading: 'decoding',
+  spelling: 'spelling',
+};
+
+/** Return age-eligible skills with the directly measured domain first. */
+function orderedSkillsForSubtest(subtestId: SubtestId, ageMonths: number): SkillId[] {
+  const skills = ageAppropriateSkills(SUBTEST_TO_SKILLS[subtestId] ?? [], ageMonths);
+  const primary = PRIMARY_SKILL_BY_SUBTEST[subtestId];
+  return primary && skills.includes(primary)
+    ? [primary, ...skills.filter((skill) => skill !== primary)]
+    : skills;
+}
+
+/**
  * Programme dose: 20 sessions, 5 a week (about 4 weeks), 15 minutes of training plus a 2-minute
  * progress probe, about 5.7 hours in all. In the National Reading Panel meta-analysis, phonemic
  * awareness instruction had its largest effects at 5 to 18 hours in total; longer programmes were
@@ -332,10 +361,21 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   const subtests = Array.isArray(profile?.subtests) ? profile.subtests : [];
   const ageMonths = profile?.ageMonths ?? 72;
 
-  for (const subtestId of weaknesses) {
+  const weaknessMappings = weaknesses.map((subtestId) => {
     const measured = subtests.find((subtest) => subtest.subtestId === subtestId);
-    const mapped = measured ? skillsForScoredSubtest(measured, ageMonths) : ageAppropriateSkills(SUBTEST_TO_SKILLS[subtestId] ?? [], ageMonths);
-    for (const skill of mapped) if (!ordered.includes(skill)) ordered.push(skill);
+    return measured
+      ? orderedSkillsForSubtest(subtestId, ageMonths).filter((skill) =>
+          skillsForScoredSubtest(measured, ageMonths).includes(skill)
+        )
+      : orderedSkillsForSubtest(subtestId, ageMonths);
+  });
+  // First allocate focus slots to the directly measured domains; component skills follow.
+  const directSkills = weaknesses
+    .map((subtestId) => PRIMARY_SKILL_BY_SUBTEST[subtestId])
+    .filter((skill): skill is SkillId => Boolean(skill) && weaknessMappings.some((mapped) => mapped.includes(skill!)));
+  const mappedSkills = weaknessMappings.flat();
+  for (const skill of [...directSkills, ...mappedSkills]) {
+    if (!ordered.includes(skill)) ordered.push(skill);
   }
 
   let fromTaskEvidence = false;
