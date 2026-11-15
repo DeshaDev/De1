@@ -5,6 +5,11 @@
 import type { SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
 import type { TrainingProgress } from './training';
+import {
+  emptyLiteracyPracticeProgress,
+  sanitizeLiteracyPracticeProgress,
+  type LiteracyPracticeProgress,
+} from './literacyPracticeProgress';
 import { secureStorage } from '../utils/secureLocalStorage';
 
 export type HomeDialect = 'msa' | 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
@@ -43,6 +48,7 @@ export interface BatterySession {
 
 const SESSION_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.session.${studentId}`;
 const TRAINING_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.training.${studentId}`;
+const LITERACY_PRACTICE_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.literacyPractice.${studentId}`;
 
 async function read<T>(key: string): Promise<T | null> {
   return secureStorage.getItem<T>(key);
@@ -64,6 +70,15 @@ export const loadTrainingProgress = (studentId: string) => read<TrainingProgress
 export const saveTrainingProgress = (studentId: string, progress: TrainingProgress) =>
   write(TRAINING_KEY(studentId), progress);
 export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(studentId));
+
+/** Supplementary literacy practice history, encrypted at rest and deliberately non-diagnostic. */
+export async function loadLiteracyPracticeProgress(studentId: string): Promise<LiteracyPracticeProgress> {
+  const stored = await read<unknown>(LITERACY_PRACTICE_KEY(studentId));
+  return stored ? sanitizeLiteracyPracticeProgress(stored) : emptyLiteracyPracticeProgress();
+}
+
+export const saveLiteracyPracticeProgress = (studentId: string, progress: LiteracyPracticeProgress) =>
+  write(LITERACY_PRACTICE_KEY(studentId), sanitizeLiteracyPracticeProgress(progress));
 
 /** Summary of a finished screening, kept when the child is screened again so the two can be compared. */
 export interface ScreeningSnapshot {
