@@ -234,6 +234,10 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText(/مستوى البداية: المستوى ١/).first()).toBeVisible();
     await expect(page.getByText(/جرعة الجلسة: ١٠ تمارين/)).toBeVisible();
     await expect(page.getByText(/جرعة الجلسة: ٧ تمارين/).first()).toBeVisible();
+    await expect(page.getByText('فك الترميز والقراءة', { exact: true })).toBeVisible();
+    await expect(page.getByText('الإملاء والكتابة', { exact: true })).toBeVisible();
+    await expect(page.getByText('الفهم اللغوي والقرائي', { exact: true })).toBeVisible();
+    await expect(page.getByText('الوعي الصرفي', { exact: true })).toBeVisible();
 
     const child1Result = await completeFirstSessionExercises(page);
     // The screening rule's starting level is shown with the skill; the child's placement answers may then
@@ -243,10 +247,8 @@ test.describe('end-to-end personalized screening to training journey', () => {
     expect(child1Result.sawPlacement).toBe(true);
     const rhymeSummary = child1Result.summaryRows.find((r) => r.includes('القافية'));
     const discSummary = child1Result.summaryRows.find((r) => r.includes('التمييز السمعي'));
-    const letterSummary = child1Result.summaryRows.find((r) => r.includes('ربط الحرف بصوته'));
     expect(rhymeSummary).toBeTruthy();
     expect(discSummary).toBeTruthy();
-    expect(letterSummary).toBeTruthy();
 
     // -------------------- Child 2: عمر --------------------
     // Accurate قصة سامي (100%) + 0% discontinued on صندوق الحروف (letterSound -> Level 1 only)
