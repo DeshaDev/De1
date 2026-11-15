@@ -141,8 +141,8 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     setSpeechPromptTimedOut(false);
     if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
     // Independent of the TTS promise: a stalled player must release answer choices.
-    speechWatchdog.current = window.setTimeout(() => {
-      if (h.cancelled) return;
+    const watchdogId = window.setTimeout(() => {
+      if (speechWatchdog.current !== watchdogId) return;
       h.cancelled = true;
       stopSpeech();
       setHighlight(null);
@@ -151,6 +151,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
       readyAt.current = performance.now();
       speechWatchdog.current = null;
     }, 12_000);
+    speechWatchdog.current = watchdogId;
 
     await speakSegments(item.audio, h, setHighlight);
     if (!h.cancelled) {
