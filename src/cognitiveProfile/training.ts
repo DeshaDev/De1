@@ -1261,9 +1261,12 @@ export function applyReadingTargets(
   const p = ensureBkt(progress);
   const focus = [...p.plan.focus];
   const added: SkillId[] = [];
+  const evidenceFocus = focus.filter((skill) => !STRUCTURED_LITERACY_SKILLS.has(skill) && !NOT_TRAINED_AS_FOCUS.has(skill));
   for (const skill of rec.skills) {
-    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || focus.length >= MAX_FOCUS_SKILLS) continue;
+    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || STRUCTURED_LITERACY_SKILLS.has(skill)) continue;
+    if (evidenceFocus.length >= MAX_FOUNDATION_SKILLS || focus.length >= MAX_FOCUS_SKILLS) continue;
     focus.push(skill);
+    evidenceFocus.push(skill);
     added.push(skill);
   }
   const ordered = focus.sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
