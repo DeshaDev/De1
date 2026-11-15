@@ -159,11 +159,12 @@ export const TrainingProgressUploadSchema = z
         createdAt: isoDate,
         preventive: z.boolean(),
         focus: z.array(z.enum(SKILL_IDS)).min(1).max(8),
+        ageYears: z.number().int().min(4).max(8).optional(),
         rationaleAr: z.array(z.string().max(300)).max(10),
       })
       .strict(),
     levels: z.partialRecord(z.enum(SKILL_IDS), LevelSchema),
-    mastered: z.array(z.enum(SKILL_IDS)).max(8),
+    mastered: z.array(z.enum(SKILL_IDS)).max(10),
     history: z
       .array(
         z
@@ -178,7 +179,7 @@ export const TrainingProgressUploadSchema = z
           .refine((h) => h.correct <= h.total, 'نتيجة جلسة غير منطقية')
       )
       .max(400),
-    supportFlags: z.array(z.enum(SKILL_IDS)).max(8),
+    supportFlags: z.array(z.enum(SKILL_IDS)).max(10),
     probes: z
       .array(
         z

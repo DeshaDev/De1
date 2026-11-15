@@ -14,7 +14,7 @@ import {
 import { PROGRAM_SESSIONS, SESSIONS_PER_WEEK, MINUTES_PER_SESSION, applySession, createProgress, type TrainingPlan } from './training';
 import { TrainingProgressUploadSchema } from './records';
 
-const plan: TrainingPlan = { createdAt: new Date().toISOString(), preventive: false, focus: ['blending', 'letterSound'], rationaleAr: [] };
+const plan: TrainingPlan = { createdAt: new Date().toISOString(), preventive: false, ageYears: 6, focus: ['blending', 'letterSound'], rationaleAr: [] };
 
 const record = (session: number, pct: number, comparisonPct?: number): ProbeRecord => ({
   date: new Date(Date.UTC(2026, 0, session)).toISOString(),
@@ -67,6 +67,8 @@ describe('daily progress probe', () => {
     const { progress: next } = applySession(progress, 'blending', 6, 8);
     assert.equal(next.probes?.length, 1);
     assert.equal(TrainingProgressUploadSchema.safeParse(next).success, true);
+    const withAge = { ...next, plan: { ...next.plan, ageYears: 6 } };
+    assert.equal(TrainingProgressUploadSchema.safeParse(withAge).success, true);
   });
 
   it('reports change as last three minus first three, and the trend as reliable only after enough sessions', () => {

@@ -32,6 +32,14 @@ describe('age-aware adaptive literacy skills', () => {
     assert.equal(olderPlan.ageYears, 6);
   });
 
+  it('keeps the preschool default to listening and pre-reading skills', () => {
+    const ageFour = { ageMonths: 48, weaknesses: [], subtests: [] } as unknown as CognitiveProfile;
+    const plan = buildTrainingPlan(ageFour);
+    assert.ok(plan.focus.includes('comprehension'));
+    assert.ok(!plan.focus.includes('letterSound'));
+    assert.ok(!plan.focus.includes('decoding'));
+  });
+
   it('offers morphology only from age seven in preventive progression', () => {
     const ageSix = { ageMonths: 72, weaknesses: [], subtests: [] } as unknown as CognitiveProfile;
     const ageSeven = { ageMonths: 84, weaknesses: [], subtests: [] } as unknown as CognitiveProfile;
@@ -48,8 +56,10 @@ describe('age-aware adaptive literacy skills', () => {
     ];
     for (const { skill, age } of domains) {
       const tasks = generateSession(skill, 1, 12345, undefined, age);
-      assert.equal(tasks.length, 8, `${skill} should fill a training block`);
+      assert.ok(tasks.length >= 4 && tasks.length <= 6, `${skill} should return only available unique items`);
       assert.ok(tasks.every((task) => task.kind === 'choice'));
+      const signatures = tasks.map((task) => task.kind === 'choice' ? task.item.audio.map((part) => part.text).join('|') : '');
+      assert.equal(new Set(signatures).size, signatures.length, `${skill} must not duplicate BKT evidence within one block`);
     }
   });
 
