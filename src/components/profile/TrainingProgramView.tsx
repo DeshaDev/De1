@@ -52,7 +52,7 @@ import ProgressChart from './ProgressChart';
 import { takePendingReadingTargets } from '../ReadingErrorPanel';
 import IndividualPlanPanel from './IndividualPlanPanel';
 import { LessonPlayer, TeachingChoicePlayer } from './TeachingPlayers';
-import { MascotMoment } from '../ui/Mascot';
+import { MascotMoment3D } from '../ui/Mascot3D';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
@@ -620,7 +620,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'transferIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              {t.list === 'real' && <MascotMoment mood="wave" size={120} message={MASCOT_LINES.transferIntro} />}
+              {t.list === 'real' && <MascotMoment3D mood="wave" size={120} message={MASCOT_LINES.transferIntro} />}
               <h2 className="font-child text-2xl font-black text-slate-900">
                 {t.list === 'real' ? 'نقرأ كلمات لم نتدرّب عليها' : 'والآن كلمات من كوكب آخر'}
               </h2>
@@ -679,7 +679,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'placementIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
+              <MascotMoment3D mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
                 للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تزيد ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل كلها صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ أغلبها بدأنا بمستوى أسهل.
               </p>
@@ -717,7 +717,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'probeIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
+              <MascotMoment3D mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
               <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
               <p className="text-sm text-slate-600">
                 أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
@@ -793,7 +793,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'intro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
+              <MascotMoment3D mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
               <h2 className="font-child text-2xl font-black text-slate-900 flex items-center gap-2">
                 <span className="text-3xl" aria-hidden="true">{def.icon}</span> {def.nameAr}
               </h2>
@@ -824,7 +824,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'result' && run.change && (
             <div className="flex flex-col items-center text-center gap-4">
-              <MascotMoment
+              <MascotMoment3D
                 mood={run.change === 'down' ? 'support' : run.change === 'stay' ? 'wave' : 'cheer'}
                 size={130}
                 message={
@@ -859,7 +859,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'summary' && (
             <div className="flex flex-col items-center text-center gap-4 w-full max-w-md">
-              <MascotMoment mood="proud" size={150} message={MASCOT_LINES.sessionDone} />
+              <MascotMoment3D mood="proud" size={150} message={MASCOT_LINES.sessionDone} />
               <p className="font-child text-2xl font-black text-slate-900">انتهت جلسة اليوم!</p>
               <p className="font-child text-xl text-ink">⭐ {toArabicDigits(run.stars)} نجمة اليوم</p>
               

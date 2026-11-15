@@ -52,7 +52,7 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
-import { MascotMoment } from '../ui/Mascot';
+import { MascotMoment3D } from '../ui/Mascot3D';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
@@ -199,7 +199,7 @@ function SubtestRunner({
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-            <MascotMoment mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
+            <MascotMoment3D mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
             <h2 className="font-child text-4xl font-bold text-ink flex items-center gap-3" style={{ fontFamily: 'var(--font-child)' }}>
               <span className="grid place-items-center w-14 h-14 rounded-2xl bg-sun-soft text-4xl" aria-hidden="true">{subtest.icon}</span>
               {subtest.gameNameAr}
@@ -262,7 +262,7 @@ function SubtestRunner({
 
         {stage === 'transition' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <MascotMoment mood="cheer" size={130} message={MASCOT_LINES.ready} />
+            <MascotMoment3D mood="cheer" size={130} message={MASCOT_LINES.ready} />
             <p className="font-child text-3xl font-bold text-ink">رائع! الآن نبدأ اللعبة</p>
             <p className="bz-body max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
             <button
@@ -373,7 +373,7 @@ function SubtestRunner({
               </>
             ) : (
               <>
-                <MascotMoment mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
+                <MascotMoment3D mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
               </>
             )}
             <button
@@ -869,7 +869,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     <div className="space-y-6" dir="rtl">
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         {(completed.length === ageTasks.length || sittingJustFinished) && (
-          <MascotMoment
+          <MascotMoment3D
             mood={completed.length === ageTasks.length ? 'proud' : 'cheer'}
             size={110}
             message={completed.length === ageTasks.length ? MASCOT_LINES.allDone : MASCOT_LINES.sittingDone}

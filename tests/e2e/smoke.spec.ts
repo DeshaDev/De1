@@ -141,7 +141,7 @@ test('parent registration limits the screening age range and requires explicit g
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
 
   await page.goto('/');
-  await page.getByRole('button', { name: /طلب تجربة مدرسة/ }).click();
+  await page.getByRole('button', { name: /اطلب تجربة لمدرستك/ }).click();
   await expect(page.getByRole('heading', { name: 'طلب تجربة مدرسية وشراكة تجريبية' })).toBeVisible();
   await page.getByPlaceholder(/مثال: مدرسة قطر الابتدائية/).fill('مدرسة الوكرة النموذجية');
   await page.getByPlaceholder(/مثال: أ. مريم السليطي/).fill('أ. خالد المهندي');

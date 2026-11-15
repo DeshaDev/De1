@@ -68,6 +68,17 @@ describe('calm reading canvas', () => {
     }
   });
 
+  it('the moving 3D mascot never loads on a task screen', () => {
+    for (const file of TASK_SCREENS) {
+      assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /Mascot3D/, file);
+    }
+  });
+
+  it('the 3D mascot stays still when the device asks for reduced motion', () => {
+    const src = fs.readFileSync('src/components/ui/Mascot3D.tsx', 'utf8');
+    assert.match(src, /prefers-reduced-motion: reduce/);
+  });
+
   it('in the item players the mascot only reacts in practice, after an answer', () => {
     const src = fs.readFileSync('src/components/profile/TaskPlayers.tsx', 'utf8');
     for (const use of src.matchAll(/<PracticeReaction[^>]*>/g)) assert.match(use[0], /correct=/);
@@ -94,10 +105,12 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     assert.match(html, /joy-decor/);
   });
 
-  it('the hero scene speaks through a note, with the mascot drawn once', () => {
+  it('the hero scene speaks through a live bubble, with the mascot drawn once', () => {
     const html = renderToStaticMarkup(<HeroScene message="مرحبًا" />);
-    assert.match(html, /role="note"/);
+    assert.match(html, /role="status"[^>]*aria-live="polite"[^>]*>مرحبًا</);
     assert.equal((html.match(/data-mascot=/g) ?? []).length, 1);
+    // Before the 3D chunk loads (and without WebGL or with reduced motion) the still picture shows.
+    assert.match(html, /data-mascot-3d="still"/);
   });
 
   it('no looping animation anywhere in the joyful layer', () => {

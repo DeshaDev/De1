@@ -1,5 +1,5 @@
 /**
- * The playful layer of «هَيَّا نَقْرَأْ»: toy letter blocks, clouds, sparkles, a hero scene with the
+ * The playful layer of «هَيَّا نَقْرَأْ»: toy letter blocks, clouds, sparkles, a 3D hero scene with the
  * mascot, wave dividers and a colourful page header.
  *
  * Rule: joyful edges, calm centre (docs/JOYFUL_DESIGN_AR.md).
@@ -8,10 +8,12 @@
  *   children's attention away from the task and lower learning (Fisher, Godwin & Seltman, 2014),
  *   and in real classrooms children did not get used to it over a term (Godwin et al., 2022).
  * - Everything here is decorative: aria-hidden, no pointer events, hidden in print and while a
- *   child is in a game or session (body.baseera-reading-focus), and static (no looping motion).
+ *   child is in a game or session (body.baseera-reading-focus). Only the 3D mascot moves, and only
+ *   on the home page and between-task screens; it stays still under prefers-reduced-motion.
  */
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Mascot, type MascotMood } from './Mascot';
+import { Mascot3D } from './Mascot3D';
 
 export type JoyColor = 'sun' | 'coral' | 'sky' | 'leaf' | 'grape' | 'brand';
 
@@ -68,59 +70,43 @@ export function WaveDivider({ fill = 'var(--paper)', flip = false, className = '
   );
 }
 
-/** The home page scene: the mascot on an open book, with letter blocks, a rainbow and clouds. */
-export function HeroScene({ message }: { message?: string }) {
+/** The name of each letter on the home cubes, for the bubble after a tap. */
+const LETTER_NAMES: Record<string, string> = { 'بَ': 'الباء', 'قَ': 'القاف', 'رَ': 'الراء', 'أَ': 'الهمزة' };
+
+/**
+ * The home page scene: «هُدهُد» in 3D among floating letter cubes. A child taps a cube, hears its
+ * sound (a recorded clip), and the bubble names the letter. The bubble sits above the scene in normal
+ * flow, so it never covers the mascot or the heading beside it.
+ */
+export function HeroScene({ message = 'المس حرفًا، وسأقرؤه لك!' }: { message?: string }) {
+  const [said, setSaid] = useState<string | null>(null);
+  const onSay = useCallback((sound: string) => {
+    setSaid(sound);
+    void import('../profile/audio').then(({ speak, stopSpeech }) => {
+      stopSpeech();
+      return speak(sound);
+    });
+  }, []);
   return (
-    <div className="joy-decor relative mx-auto w-full max-w-[520px] aspect-[1.05]" aria-hidden={message ? undefined : true}>
-      {/* Soft sun disc and rainbow */}
-      <div className="absolute inset-[6%] rounded-full" style={{ background: 'radial-gradient(circle at 50% 45%, var(--joy-sun-soft) 0%, var(--joy-peach) 55%, transparent 72%)' }} />
-      <svg viewBox="0 0 400 220" className="absolute left-[6%] right-[6%] top-[14%] w-[88%]" aria-hidden="true" focusable="false">
-        {[
-          ['var(--joy-coral)', 180],
-          ['var(--joy-sun)', 160],
-          ['var(--joy-leaf)', 140],
-          ['var(--joy-sky)', 120],
-          ['var(--joy-grape)', 100],
-        ].map(([c, r]) => (
-          <path key={String(r)} d={`M ${200 - Number(r)} 210 A ${r} ${r} 0 0 1 ${200 + Number(r)} 210`} fill="none" stroke={String(c)} strokeWidth="14" strokeLinecap="round" opacity="0.85" />
-        ))}
-      </svg>
-      <Cloud width={110} className="absolute top-[8%] right-[2%]" />
-      <Cloud width={84} className="absolute top-[24%] left-[0%]" />
-      <Sparkle size={26} color="sun" className="absolute top-[4%] left-[22%]" />
-      <Sparkle size={18} color="coral" className="absolute top-[40%] right-[4%]" />
-      <Sparkle size={16} color="sky" className="absolute top-[52%] left-[6%]" />
-
-      {/* Open book */}
-      <svg viewBox="0 0 360 120" className="absolute bottom-[4%] left-[8%] w-[84%]" aria-hidden="true" focusable="false">
-        <ellipse cx="180" cy="112" rx="160" ry="8" fill="#000" opacity="0.07" />
-        <path d="M180 30 C 130 8, 60 8, 14 22 L14 104 C 60 92, 130 92, 180 110 Z" fill="var(--card)" stroke="var(--joy-sky-deep)" strokeWidth="5" strokeLinejoin="round" />
-        <path d="M180 30 C 230 8, 300 8, 346 22 L346 104 C 300 92, 230 92, 180 110 Z" fill="var(--card)" stroke="var(--joy-sky-deep)" strokeWidth="5" strokeLinejoin="round" />
-        {[40, 56, 72].map((y) => (
-          <g key={y} stroke="var(--line-strong)" strokeWidth="5" strokeLinecap="round">
-            <path d={`M44 ${y} C 90 ${y - 8}, 130 ${y - 6}, 160 ${y + 4}`} fill="none" />
-            <path d={`M316 ${y} C 270 ${y - 8}, 230 ${y - 6}, 200 ${y + 4}`} fill="none" />
-          </g>
-        ))}
-      </svg>
-
-      {/* Letter blocks */}
-      <LetterBlock letter="ب" color="coral" size={64} rotate={-10} className="absolute bottom-[26%] right-[6%]" />
-      <LetterBlock letter="ق" color="sky" size={54} rotate={8} className="absolute bottom-[38%] right-[20%]" />
-      <LetterBlock letter="ر" color="leaf" size={58} rotate={-6} className="absolute bottom-[26%] left-[5%]" />
-      <LetterBlock letter="أ" color="grape" size={50} rotate={12} className="absolute bottom-[42%] left-[17%]" />
-
-      {/* The mascot reading on the book */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-[15%] w-[42%]">
-        <Mascot mood="wave" size={200} className="w-full h-auto" label={message ? undefined : 'هُدهُد'} />
+    <div className="relative mx-auto flex w-full max-w-[560px] flex-col items-center">
+      <div className="relative z-10 w-[86%] max-w-[22rem]">
+        <p className="mascot-bubble mascot-bubble-down font-child text-center" role="status" aria-live="polite">
+          {said ? (
+            <>
+              <span className="text-3xl font-black align-middle" style={{ color: 'var(--joy-coral-deep)' }}>{said}</span>
+              {'  '}هذا صوت {LETTER_NAMES[said] ?? 'الحرف'}. المس حرفًا آخر!
+            </>
+          ) : (
+            message
+          )}
+        </p>
       </div>
-      {message && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[82%] max-w-[22rem]">
-          <p className="mascot-bubble mascot-bubble-down font-child" role="note">
-            {message}
-          </p>
+      <div className="joy-decor relative -mt-1 w-full aspect-[1.1]">
+        <span className="absolute inset-[8%] rounded-full hn-halo" aria-hidden="true" />
+        <div className="absolute inset-0">
+          <Mascot3D mood="wave" scenery fallbackSize={230} className="h-full w-full" onSay={onSay} />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -177,7 +163,7 @@ export function KidPageHeader({
       <JoyCorners variant={color === 'sky' ? 'b' : color === 'leaf' ? 'c' : 'a'} />
       <div className="relative flex items-center gap-4 sm:gap-6">
         <div className="joy-decor shrink-0" aria-hidden="true">
-          <Mascot mood={mood} size={104} className="w-16 sm:w-[104px] h-auto" />
+          <Mascot3D mood={mood} fallbackSize={104} className="h-20 w-20 sm:h-32 sm:w-32" />
         </div>
         <div className="min-w-0 max-w-3xl">
           {eyebrow && <span className="bz-eyebrow">{eyebrow}</span>}

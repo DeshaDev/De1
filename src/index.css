@@ -1473,3 +1473,228 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
 /* Decoration never shows in print or while a child is in a game or session. */
 .baseera-reading-focus .joy-decor { display: none !important; }
 @media print { .joy-decor { display: none !important; } }
+
+/* ===================================================================================
+   Home page «تعالَ نلعب بالحروف»: a sky with hills, letters to tap, games as stops on a board.
+   One bold place (the hero scene); the rest stays quiet so parents can read.
+   =================================================================================== */
+:root {
+  --hn-sky-top: #A9DCFF;
+  --hn-sky-bottom: #E6F5FF;
+  --hn-hill-back: #8FD98C;
+  --hn-hill-front: #5CC46E;
+  --hn-sun: #FFD23F;
+  --hn-ink: #14315E;
+  --hn-board: #1E7A45;
+}
+[data-dyslexia-theme="night"] {
+  --hn-sky-top: #10213F;
+  --hn-sky-bottom: #1C3359;
+  --hn-hill-back: #1F4A3A;
+  --hn-hill-front: #19392D;
+  --hn-sun: #F4E3A1;
+  --hn-ink: #F3F6FB;
+  --hn-board: #173A2C;
+}
+.hn-sky {
+  background: linear-gradient(180deg, var(--hn-sky-top) 0%, var(--hn-sky-bottom) 78%);
+  color: var(--hn-ink);
+}
+.hn-sun {
+  position: absolute;
+  top: 7%;
+  left: 47%;
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  background: var(--hn-sun);
+  box-shadow: 0 0 0 18px color-mix(in srgb, var(--hn-sun) 30%, transparent), 0 0 0 40px color-mix(in srgb, var(--hn-sun) 14%, transparent);
+}
+@media (max-width: 1023px) { .hn-sun { display: none; } }
+.hn-halo {
+  background: radial-gradient(circle at 50% 55%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.25) 45%, transparent 70%);
+}
+.hn-display {
+  font-family: var(--font-child);
+  font-weight: 800;
+  font-size: clamp(2.3rem, 5.2vw, 4rem);
+  line-height: 1.22;
+  color: var(--hn-ink);
+  text-wrap: balance;
+}
+.hn-lead {
+  font-size: clamp(1.08rem, 1.6vw, 1.28rem);
+  line-height: 1.85;
+  color: color-mix(in srgb, var(--hn-ink) 82%, transparent);
+  font-weight: 500;
+}
+.hn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, #FFFFFF 78%, transparent);
+  color: var(--hn-ink);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+[data-dyslexia-theme="night"] .hn-pill { background: rgba(255, 255, 255, 0.1); }
+
+/* Toy-like buttons: a solid "base" under the button that it presses into. */
+.hn-toy {
+  box-shadow: 0 5px 0 var(--brand-strong);
+  transform: translateY(0);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.hn-toy:hover { transform: translateY(-1px); box-shadow: 0 6px 0 var(--brand-strong); }
+.hn-toy:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--brand-strong); }
+.hn-toy-soft {
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--hn-ink) 18%, transparent);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.hn-toy-soft:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--hn-ink) 18%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .hn-toy, .hn-toy-soft { transition: none; }
+  .hn-toy:hover, .hn-toy:active, .hn-toy-soft:active { transform: none; }
+}
+
+.hn-h2 {
+  font-family: var(--font-child);
+  font-weight: 800;
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.3;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.hn-h3 {
+  font-family: var(--font-child);
+  font-weight: 800;
+  font-size: 1.3rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.hn-body { font-size: 1.08rem; line-height: 1.85; color: var(--ink-2); }
+.hn-small { font-size: 0.95rem; line-height: 1.75; color: var(--ink-2); }
+
+/* The games board: stops on a green board, gently staggered like a path. */
+.hn-board-section { background: var(--hn-board); }
+.hn-board-section .hn-h2, .hn-board-section .hn-body, .hn-board-section .hn-small { color: #FFFFFF; }
+.hn-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.2rem 1rem;
+  padding: 2rem 1rem;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, #FFFFFF 22%, transparent) 2px, transparent 2.5px) 0 0 / 22px 22px,
+    color-mix(in srgb, #000000 14%, var(--hn-board));
+}
+@media (min-width: 640px) { .hn-board { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 2.5rem 1.5rem; } }
+@media (min-width: 1024px) { .hn-board { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.hn-stop-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+@media (min-width: 640px) { .hn-stop-wrap:nth-child(even) { transform: translateY(22px); } }
+.hn-stop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 9999px;
+  background: var(--stop, var(--joy-sun));
+  border: 5px solid #FFFFFF;
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--stop, var(--joy-sun)) 60%, #000000);
+}
+.hn-stop-icon { font-size: 2.4rem; line-height: 1; }
+.hn-stop-num {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+  color: var(--hn-ink);
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+.hn-stop-name { font-family: var(--font-child); font-weight: 800; font-size: 1.05rem; line-height: 1.3; color: #FFFFFF; margin-top: 0.35rem; }
+.hn-stop-skill { font-size: 0.82rem; line-height: 1.4; color: rgba(255, 255, 255, 0.88); }
+.hn-stop-age {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+.hn-stop-finish .hn-stop { --stop: var(--hn-sun); }
+.hn-stop-finish .hn-stop-name { color: var(--hn-sun); }
+
+.hn-report { background: var(--card); border-bottom: 1px solid var(--line); }
+
+/* Staircase of levels: each step taller than the last; the mascot stands on the current one. */
+.hn-stairs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.6rem;
+}
+.hn-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  padding: 0.9rem 0.8rem;
+  border-radius: 20px 20px 8px 8px;
+  color: #FFFFFF;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.12);
+}
+.hn-step-1 { min-height: 130px; background: var(--joy-sky-deep); }
+.hn-step-2 { min-height: 180px; background: var(--joy-leaf-deep); }
+.hn-step-3 { min-height: 230px; background: var(--joy-grape-deep); }
+.hn-step-label { font-family: var(--font-child); font-weight: 800; font-size: 1.05rem; }
+.hn-step-text { font-size: 0.85rem; line-height: 1.5; opacity: 0.95; }
+.hn-step-bird { position: absolute; top: -70px; left: 50%; transform: translateX(-50%); }
+
+.hn-who { background: var(--joy-sun-soft); }
+.hn-who-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.6rem;
+  border-radius: 28px;
+  background: var(--card);
+  border: 3px solid color-mix(in srgb, var(--who) 55%, transparent);
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--who) 35%, transparent);
+}
+.hn-who-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: var(--who);
+  color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+.hn-who-card .hn-body { margin-top: 0.4rem; }
+
+.hn-close {
+  position: relative;
+  overflow: hidden;
+  border-radius: 36px;
+  padding: 2.5rem 1.5rem;
+  background: linear-gradient(180deg, var(--hn-sky-top), var(--hn-sky-bottom));
+}
+@media (min-width: 640px) { .hn-close { padding: 3rem 3rem; } }
