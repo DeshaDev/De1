@@ -364,9 +364,10 @@ function SubtestRunner({
                   <AlertTriangle className="w-12 h-12" />
                 </span>
                 <p className="font-child text-2xl font-bold text-ink">تم إنهاء المهمة دون درجة صوتية</p>
-                <p className="bz-small text-ink-2 max-w-lg">
-                  لم تُحتسب دقة القراءة أو الأخطاء أو السرعة؛ لأن التسجيل لم يحصل على تقييم صوتي خادمي مكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
-                </p>
+                <div className="bz-small text-ink-2 max-w-lg space-y-1">
+                  <p>لم تُحتسب دقة القراءة أو الأخطاء أو السرعة؛ لأن التسجيل لم يحصل على تقييم صوتي خادمي مكتمل.</p>
+                  <p>لن تُعامل الكلمات غير المحسومة كأخطاء.</p>
+                </div>
               </>
             ) : (
               <>
@@ -640,7 +641,14 @@ interface Props {
   /** Open an optional extra activity (practice games or the reader). */
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }) => string | null;
+  onCreateLearner?: (input: {
+    name: string;
+    ageYears: number;
+    examinerName: string;
+    guardianConsentRecordedAt?: string;
+    guardianAudioConsentGiven: boolean;
+    guardianAudioConsentRecordedAt?: string;
+  }) => string | null;
   supabaseUser?: any;
   onNavigateTab?: (tab: string) => void;
 }
@@ -820,6 +828,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               ageYears: Math.floor(s.ageMonths / 12),
               examinerName: s.examinerName,
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+              guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
+              ...(s.guardianAudioConsentGiven === true && s.guardianAudioConsentRecordedAt
+                ? { guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt }
+                : {}),
             });
             if (newId) {
               void saveBatterySession({ ...s, studentId: newId }).catch((error) => console.error('Unable to persist battery session:', error));
