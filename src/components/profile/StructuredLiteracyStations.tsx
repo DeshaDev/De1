@@ -7,9 +7,18 @@ import {
   type LiteracyStation,
   type LiteracyStationId,
 } from '../../cognitiveProfile/structuredLiteracyStations';
+import {
+  emptyLiteracyPracticeProgress,
+  recordFluencySessionCompleted,
+  recordLiteracyAnswer,
+  recordLiteracyStationCompleted,
+  type LiteracyPracticeProgress,
+} from '../../cognitiveProfile/literacyPracticeProgress';
+import { loadLiteracyPracticeProgress, saveLiteracyPracticeProgress } from '../../cognitiveProfile/storage';
 import { speakSegments, stopSpeech, type PlaybackHandle } from './audio';
 
 interface Props {
+  studentId: string;
   ageYears: number;
   childName: string;
   onClose: () => void;
@@ -17,8 +26,9 @@ interface Props {
 
 const ageLabel = (age: number) => String(age).replace(/[0-9]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'[Number(digit)]);
 
-export function StructuredLiteracyStations({ ageYears, childName, onClose }: Props) {
-  const stations = useMemo(() => getStructuredLiteracyStations(ageYears), [ageYears]);
+export function StructuredLiteracyStations({ studentId, ageYears, childName, onClose }: Props) {
+  const safeAgeYears = Number.isFinite(ageYears) ? Math.max(4, Math.min(8, Math.floor(ageYears))) : 4;
+  const stations = useMemo(() => getStructuredLiteracyStations(safeAgeYears), [safeAgeYears]);
   const [stationId, setStationId] = useState<LiteracyStationId | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -26,11 +36,27 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
   const [modelHeard, setModelHeard] = useState(false);
   const [readCount, setReadCount] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [showLesson, setShowLesson] = useState(false);
+  const [practiceProgress, setPracticeProgress] = useState<LiteracyPracticeProgress>(emptyLiteracyPracticeProgress());
   const playback = useRef<PlaybackHandle | null>(null);
 
   const station = stations.find((item) => item.id === stationId) ?? null;
   const question = station?.questions[questionIndex] ?? null;
-  const fluencyPassage = getFluencyPassage(ageYears);
+  const fluencyPassage = getFluencyPassage(safeAgeYears);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadLiteracyPracticeProgress(studentId)
+      .then((saved) => { if (!cancelled) setPracticeProgress(saved); })
+      .catch((error) => console.error('Unable to restore encrypted literacy practice progress:', error));
+    return () => { cancelled = true; };
+  }, [studentId]);
+
+  const persistPractice = (next: LiteracyPracticeProgress) => {
+    setPracticeProgress(next);
+    void saveLiteracyPracticeProgress(studentId, next)
+      .catch((error) => console.error('Unable to save encrypted literacy practice progress:', error));
+  };
 
   useEffect(() => () => {
     if (playback.current) playback.current.cancelled = true;
@@ -55,6 +81,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
 
   const openStation = (next: LiteracyStation) => {
     setStationId(next.id);
+    setShowLesson(true);
     setQuestionIndex(0);
     setSelectedId(null);
     setCompleted(false);
@@ -67,6 +94,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
     stopSpeech();
     setPlaying(false);
     setStationId(null);
+    setShowLesson(false);
     setQuestionIndex(0);
     setSelectedId(null);
     setCompleted(false);
@@ -77,6 +105,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
   const nextQuestion = () => {
     if (!station) return;
     if (questionIndex + 1 >= station.questions.length) {
+      if (station.id !== 'fluency') persistPractice(recordLiteracyStationCompleted(practiceProgress, station.id));
       setCompleted(true);
       return;
     }
@@ -87,6 +116,9 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
   const chooseOption = (optionId: string) => {
     if (selectedId || !question) return;
     setSelectedId(optionId);
+    if (station && station.id !== 'fluency') {
+      persistPractice(recordLiteracyAnswer(practiceProgress, station.id, optionId === question.correctId));
+    }
     if (optionId !== question.correctId) {
       const explanation = question.explanationAudio;
       void playAudio(explanation);
@@ -135,6 +167,7 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
+              <p className="text-xs text-slate-500 mt-2">مرات إكمال سابقة: {ageLabel(practiceProgress.stations[item.id].completedSessions)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>
@@ -148,8 +181,42 @@ export function StructuredLiteracyStations({ ageYears, childName, onClose }: Pro
     );
   }
 
+  if (showLesson) {
+    return (
+      <section className="bz-card bz-card-pad space-y-5" dir="rtl">
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" onClick={closeStation} className="bz-btn bz-btn-ghost">
+            <ArrowRight className="w-4 h-4" /> المحطات
+          </button>
+          <span className="bz-badge bz-badge-brand">نتعلّم أولًا</span>
+        </div>
+        <div className="text-center space-y-2">
+          <span className="text-4xl" aria-hidden="true">🌱</span>
+          <h2 className="bz-h2">{station.titleAr}</h2>
+          <p className="bz-body">{station.teachAr}</p>
+        </div>
+        <div className="rounded-2xl bg-soft border border-line p-5 space-y-2">
+          <p className="font-black text-slate-900">مثال نتعلّمه معًا</p>
+          <p className="text-base leading-8 text-slate-800">{station.modelAr}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <button type="button" className="bz-btn bz-btn-secondary" onClick={() => void playAudio([station.teachAr, station.modelAr])} disabled={playing}>
+            <Volume2 className="w-4 h-4" /> استمع إلى الشرح والمثال
+          </button>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => setShowLesson(false)}>
+            هَيَّا نُمَارِسْ <ArrowRight className="w-4 h-4 rotate-180" />
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (stationId === 'fluency') {
-    const finishRead = () => setReadCount((count) => Math.min(3, count + 1));
+    const finishRead = () => {
+      const nextCount = Math.min(3, readCount + 1);
+      setReadCount(nextCount);
+      if (nextCount === 3) persistPractice(recordFluencySessionCompleted(practiceProgress));
+    };
     return (
       <section className="bz-card bz-card-pad space-y-5" dir="rtl">
         <div className="flex items-center justify-between gap-3">
