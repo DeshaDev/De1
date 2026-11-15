@@ -12,6 +12,7 @@ const SESSION_STORAGE_KEY = 'baseera_session_v1';
 const STUDENTS_STORAGE_KEY = 'hn_stored_students_v1';
 const ACTIVE_STUDENT_STORAGE_KEY = 'hn_active_student_id';
 const ACTIVE_STUDENT_COOKIE_NAME = 'hn_active_student_id';
+let studentSaveQueue: Promise<void> = Promise.resolve();
 
 /**
  * Set a browser cookie with standard security attributes.
@@ -122,14 +123,21 @@ export function clearPersistentSession(): void {
 /**
  * Save user's registered child records to localStorage (encrypted at rest) and summary cookie.
  */
-export async function saveStoredStudents(students: StudentRecord[]): Promise<void> {
-  if (typeof window === 'undefined') return;
-  // Never silently discard the previous record if encryption/key persistence fails.
-  const customOrUpdated = students.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
-  const encrypted = await secureEncrypt(customOrUpdated);
-  window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
-  // Do not put children's names/ages in cookies; cookies are sent with HTTP requests.
-  deleteCookie('hn_children_summary');
+export function saveStoredStudents(students: StudentRecord[]): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  // Serialize writes so a slower encryption operation for an older React state
+  // cannot finish after and overwrite a newer child roster.
+  const snapshot = students.slice();
+  const operation = studentSaveQueue.catch(() => undefined).then(async () => {
+    // Never silently discard the previous record if encryption/key persistence fails.
+    const customOrUpdated = snapshot.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
+    const encrypted = await secureEncrypt(customOrUpdated);
+    window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
+    // Do not put children's names/ages in cookies; cookies are sent with HTTP requests.
+    deleteCookie('hn_children_summary');
+  });
+  studentSaveQueue = operation;
+  return operation;
 }
 
 /**
