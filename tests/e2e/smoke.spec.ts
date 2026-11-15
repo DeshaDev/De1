@@ -286,7 +286,17 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
     await expect(option.or(done)).toBeVisible({ timeout: 20_000 });
     if (await done.isVisible()) break;
     // Whether speech ends normally or the watchdog releases it, the answer must become available.
-    await expect(option).toBeEnabled({ timeout: 20_000 });
+    try {
+      await expect(option).toBeEnabled({ timeout: 20_000 });
+    } catch (error) {
+      const state = page.locator('[data-choice-player]').first();
+      const details = {
+        item: await state.getAttribute('data-choice-item'),
+        listening: await state.getAttribute('data-choice-listening'),
+        feedback: await state.getAttribute('data-choice-feedback'),
+      };
+      throw new Error(`${error instanceof Error ? error.message : String(error)}; choice-player state: ${JSON.stringify(details)}`);
+    }
     await expect(mascot).toHaveCount(0);
     await option.click();
     await expect(mascot.filter({ hasNot: page.locator('[data-mascot="proud"]') })).toHaveCount(0);
