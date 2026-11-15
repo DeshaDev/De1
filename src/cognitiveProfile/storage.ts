@@ -1,6 +1,6 @@
 /**
  * Browser persistence for battery sessions and training progress.
- * Sensitive child data is encrypted at rest using application-level AES/HMAC authenticated encryption.
+ * Sensitive child data is encrypted at rest using AES-256-GCM and a non-extractable IndexedDB key.
  */
 import type { SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
@@ -44,12 +44,12 @@ export interface BatterySession {
 const SESSION_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.session.${studentId}`;
 const TRAINING_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.training.${studentId}`;
 
-function read<T>(key: string): T | null {
+async function read<T>(key: string): Promise<T | null> {
   return secureStorage.getItem<T>(key);
 }
 
-function write(key: string, value: unknown): void {
-  secureStorage.setItem(key, value);
+function write(key: string, value: unknown): Promise<void> {
+  return secureStorage.setItem(key, value);
 }
 
 function remove(key: string): void {
@@ -77,11 +77,11 @@ const HISTORY_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.history.
 export function sanitizeScreeningHistory(history: ScreeningSnapshot[]): ScreeningSnapshot[] {
   return history.map((snapshot) => ({ ...snapshot, risk: 'insufficient', domains: [] }));
 }
-export const loadScreeningHistory = (studentId: string): ScreeningSnapshot[] => {
-  const stored = read<ScreeningSnapshot[]>(HISTORY_KEY(studentId)) ?? [];
+export async function loadScreeningHistory(studentId: string): Promise<ScreeningSnapshot[]> {
+  const stored = (await read<ScreeningSnapshot[]>(HISTORY_KEY(studentId))) ?? [];
   const safe = sanitizeScreeningHistory(stored);
-  if (JSON.stringify(stored) !== JSON.stringify(safe)) write(HISTORY_KEY(studentId), safe);
+  if (JSON.stringify(stored) !== JSON.stringify(safe)) await write(HISTORY_KEY(studentId), safe);
   return safe;
-};
+}
 export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) =>
   write(HISTORY_KEY(studentId), sanitizeScreeningHistory(history).slice(-10));
