@@ -3978,11 +3978,9 @@ async function startServer() {
           return;
         }
         const storedAudioConsentGiven =
-          storedStudent.guardianAudioConsentGiven === true ||
-          storedStudent.audioRecordingConsentGiven === true;
+          storedStudent.guardianAudioConsentGiven === true;
         const storedAudioConsentAt =
-          storedStudent.guardianAudioConsentRecordedAt ||
-          storedStudent.guardianConsentRecordedAt;
+          storedStudent.guardianAudioConsentRecordedAt;
         if (
           !storedAudioConsentGiven ||
           !storedAudioConsentAt ||
@@ -4028,11 +4026,9 @@ async function startServer() {
         return;
       }
       const schoolAudioConsentGiven =
-        schoolStudent.guardianAudioConsentGiven === true ||
-        schoolStudent.audioRecordingConsentGiven === true;
+        schoolStudent.guardianAudioConsentGiven === true;
       const schoolAudioConsentAt =
-        schoolStudent.guardianAudioConsentRecordedAt ||
-        schoolStudent.guardianConsentRecordedAt;
+        schoolStudent.guardianAudioConsentRecordedAt;
       if (
         !schoolAudioConsentGiven ||
         !schoolAudioConsentAt ||
@@ -4625,11 +4621,9 @@ async function startServer() {
           return;
         }
         const storedAudioConsentGiven =
-          storedStudent.guardianAudioConsentGiven === true ||
-          storedStudent.audioRecordingConsentGiven === true;
+          storedStudent.guardianAudioConsentGiven === true;
         const storedAudioConsentAt =
-          storedStudent.guardianAudioConsentRecordedAt ||
-          storedStudent.guardianConsentRecordedAt;
+          storedStudent.guardianAudioConsentRecordedAt;
         if (
           !storedAudioConsentGiven ||
           !storedAudioConsentAt ||
@@ -4678,11 +4672,9 @@ async function startServer() {
         return;
       }
       const schoolAudioConsentGiven =
-        ownedStudent.guardianAudioConsentGiven === true ||
-        ownedStudent.audioRecordingConsentGiven === true;
+        ownedStudent.guardianAudioConsentGiven === true;
       const schoolAudioConsentAt =
-        ownedStudent.guardianAudioConsentRecordedAt ||
-        ownedStudent.guardianConsentRecordedAt;
+        ownedStudent.guardianAudioConsentRecordedAt;
       if (
         !schoolAudioConsentGiven ||
         !schoolAudioConsentAt ||

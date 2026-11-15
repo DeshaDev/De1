@@ -152,7 +152,7 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
     // the same user's stored row, then preserve its server-owned assessment fields.
     const { data: existing, error: readError } = await supabase
       .from('students')
-      .select('raw_data,guardian_consent,guardian_consent_recorded_at')
+      .select('raw_data,guardian_consent,guardian_consent_recorded_at,guardian_audio_consent,guardian_audio_consent_recorded_at')
       .eq('id', student.id)
       .eq('user_id', userId)
       .maybeSingle();
@@ -168,6 +168,8 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
         raw_data?: Partial<StudentRecord> | null;
         guardian_consent?: boolean | null;
         guardian_consent_recorded_at?: string | null;
+        guardian_audio_consent?: boolean | null;
+        guardian_audio_consent_recorded_at?: string | null;
       } | null
     );
 
@@ -181,6 +183,8 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
       guardian_consent: safeStudent.guardianConsentGiven === true,
       guardian_consent_source: safeStudent.guardianConsentSource || null,
       guardian_consent_recorded_at: safeStudent.guardianConsentRecordedAt || null,
+      guardian_audio_consent: safeStudent.guardianAudioConsentGiven === true,
+      guardian_audio_consent_recorded_at: safeStudent.guardianAudioConsentRecordedAt || null,
       notes: safeStudent.parentNotes || null,
       raw_data: safeStudent,
       updated_at: new Date().toISOString(),
@@ -261,6 +265,12 @@ export async function fetchStudentsFromSupabase(userId: string): Promise<Student
       .filter((row: any) => row.raw_data && typeof row.raw_data === 'object')
       .map((row: any) => {
         const student = row.raw_data as StudentRecord;
+        if (row.guardian_audio_consent !== undefined && row.guardian_audio_consent !== null) {
+          student.guardianAudioConsentGiven = row.guardian_audio_consent === true;
+          if (row.guardian_audio_consent_recorded_at) {
+            student.guardianAudioConsentRecordedAt = row.guardian_audio_consent_recorded_at;
+          }
+        }
         if (!student.country && row.dialect && row.dialect !== 'faseeh' && row.dialect !== 'msa') {
           student.country = row.dialect;
         }

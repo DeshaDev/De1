@@ -148,6 +148,12 @@ export function loadStoredStudents(): StudentRecord[] {
     if (!raw) return [];
     const decrypted = secureDecrypt<StudentRecord[]>(raw);
     if (Array.isArray(decrypted)) {
+      // In-flight migration: If existing records were unencrypted plain JSON,
+      // immediately re-encrypt them into authenticated encrypted storage so
+      // they are protected at rest on shared devices with zero data loss.
+      if (!raw.trim().startsWith('baseera:enc:v1:')) {
+        saveStoredStudents(decrypted);
+      }
       return decrypted;
     }
   } catch {

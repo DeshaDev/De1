@@ -127,3 +127,32 @@ test('Student and Active Student persistence: keeps user registered child across
   saveActiveStudentId('stu-iyad-123');
   assert.equal(loadActiveStudentId(), 'stu-iyad-123');
 });
+
+test('Student persistence: seamlessly loads legacy unencrypted plain JSON and upgrades it to encrypted format', () => {
+  const { localStorageJar } = setupMockBrowser();
+
+  const legacyStudents: Partial<StudentRecord>[] = [
+    {
+      id: 'stu-legacy-456',
+      name: 'مريم',
+      ageYears: 7,
+      isDemoRecord: false,
+      guardianConsentGiven: true,
+      guardianAudioConsentGiven: true,
+    },
+  ];
+
+  // Store legacy plain JSON directly in localStorage as occurred in older versions
+  localStorageJar.set('hn_stored_students_v1', JSON.stringify(legacyStudents));
+
+  const loaded = loadStoredStudents();
+  assert.equal(loaded.length, 1);
+  assert.equal(loaded[0].name, 'مريم');
+  assert.equal(loaded[0].guardianAudioConsentGiven, true);
+
+  // Assert that after loadStoredStudents, the data in localStorage was immediately upgraded to encrypted format
+  const rawAfterLoad = localStorageJar.get('hn_stored_students_v1');
+  assert.ok(rawAfterLoad);
+  assert.ok(rawAfterLoad?.startsWith('baseera:enc:v1:'));
+  assert.equal(rawAfterLoad?.includes('مريم'), false);
+});

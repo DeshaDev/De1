@@ -165,45 +165,58 @@ function base64ToUint8(b64: string): Uint8Array {
 }
 
 const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
+const LEGACY_STORAGE_SEED_KEY = 'baseera_app_encryption_seed_v1';
 let cachedKey: Uint8Array | null = null;
+
+function deriveKeyFromSeed(seed: string): Uint8Array {
+  return sha256(new TextEncoder().encode(`baseera:storage:key:${seed}`));
+}
 
 function getDeviceEncryptionKey(): Uint8Array {
   if (cachedKey) return cachedKey;
 
   let seed = '';
   try {
-    // SECURITY: Purge any legacy key seed stored in persistent localStorage to prevent key recovery on shared devices.
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.removeItem('baseera_app_encryption_seed_v1');
-    }
-
-    // Key material is stored STRICTLY in sessionStorage (ephemeral to the active tab/window,
-    // automatically purged when closed). This ensures that on shared family/school devices,
-    // stored records cannot be decrypted after the session is closed.
     if (typeof window !== 'undefined' && window.sessionStorage) {
       seed = window.sessionStorage.getItem(SESSION_STORAGE_SEED_KEY) || '';
-      if (!seed || seed.length < 32) {
-        const entropy = new Uint8Array(32);
-        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-          crypto.getRandomValues(entropy);
-        } else {
-          for (let i = 0; i < 32; i++) {
-            entropy[i] = Math.floor(Math.random() * 256);
-          }
+    }
+
+    // Seamless migration: If no session seed exists yet, check if a persistent seed was
+    // created previously in localStorage, copy it to sessionStorage, and preserve access to existing records.
+    if (!seed && typeof window !== 'undefined' && window.localStorage) {
+      const legacySeed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY);
+      if (legacySeed && legacySeed.length >= 32) {
+        seed = legacySeed;
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem(SESSION_STORAGE_SEED_KEY, seed);
         }
-        seed = uint8ToBase64(entropy);
+      }
+    }
+
+    // If still no seed, generate a new high-entropy seed in sessionStorage
+    if (!seed || seed.length < 32) {
+      const entropy = new Uint8Array(32);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(entropy);
+      } else {
+        for (let i = 0; i < 32; i++) {
+          entropy[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      seed = uint8ToBase64(entropy);
+      if (typeof window !== 'undefined' && window.sessionStorage) {
         window.sessionStorage.setItem(SESSION_STORAGE_SEED_KEY, seed);
       }
     }
   } catch {
-    // In private browsing mode or when sessionStorage is restricted
+    // In private browsing mode or when storage is restricted
   }
 
   if (!seed) {
     seed = 'baseera_ephemeral_child_privacy_salt_2026';
   }
 
-  cachedKey = sha256(new TextEncoder().encode(`baseera:storage:key:${seed}`));
+  cachedKey = deriveKeyFromSeed(seed);
   return cachedKey;
 }
 
@@ -247,8 +260,16 @@ export function secureDecrypt<T>(raw: string | null): T | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Strict child data protection: Unencrypted plain JSON is strictly rejected.
-  // Sensitive child records on shared devices must be authenticated and encrypted at rest.
+  // Backward compatibility & seamless migration: transparently parse unencrypted plain JSON
+  // so callers (loadStoredStudents / secureStorage.getItem) can read and immediately re-encrypt it.
+  if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.startsWith('"')) {
+    try {
+      return JSON.parse(trimmed) as T;
+    } catch {
+      return null;
+    }
+  }
+
   if (!trimmed.startsWith(ENCRYPTED_PREFIX)) {
     return null;
   }
@@ -262,25 +283,50 @@ export function secureDecrypt<T>(raw: string | null): T | null {
     const cipherBytes = base64ToUint8(parts[1]);
     const expectedTag = base64ToUint8(parts[2]);
 
-    const key = getDeviceEncryptionKey();
+    const activeKey = getDeviceEncryptionKey();
 
-    // Verify MAC
+    // Verify MAC with active key
     const macInput = new Uint8Array(iv.length + cipherBytes.length);
     macInput.set(iv, 0);
     macInput.set(cipherBytes, iv.length);
-    const computedTag = hmacSha256(key, macInput);
 
-    if (computedTag.length !== expectedTag.length) return null;
-    let diff = 0;
-    for (let i = 0; i < computedTag.length; i++) {
-      diff |= computedTag[i] ^ expectedTag[i];
+    let keyToUse: Uint8Array | null = null;
+    const computedTag = hmacSha256(activeKey, macInput);
+
+    if (computedTag.length === expectedTag.length) {
+      let diff = 0;
+      for (let i = 0; i < computedTag.length; i++) {
+        diff |= computedTag[i] ^ expectedTag[i];
+      }
+      if (diff === 0) {
+        keyToUse = activeKey;
+      }
     }
-    if (diff !== 0) {
-      console.warn('Storage integrity check failed: tampered local record');
+
+    // Fallback: If active key does not match MAC, test if legacy seed is stored in localStorage
+    if (!keyToUse && typeof window !== 'undefined' && window.localStorage) {
+      const legacySeed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY);
+      if (legacySeed) {
+        const legacyKey = deriveKeyFromSeed(legacySeed);
+        const legacyTag = hmacSha256(legacyKey, macInput);
+        if (legacyTag.length === expectedTag.length) {
+          let diff = 0;
+          for (let i = 0; i < legacyTag.length; i++) {
+            diff |= legacyTag[i] ^ expectedTag[i];
+          }
+          if (diff === 0) {
+            keyToUse = legacyKey;
+          }
+        }
+      }
+    }
+
+    if (!keyToUse) {
+      console.warn('Storage integrity check failed: tampered or unauthenticated local record');
       return null;
     }
 
-    const plainBytes = encryptCTR(key, iv, cipherBytes);
+    const plainBytes = encryptCTR(keyToUse, iv, cipherBytes);
     const decryptedJson = new TextDecoder().decode(plainBytes);
     return JSON.parse(decryptedJson) as T;
   } catch (err) {
@@ -297,7 +343,12 @@ export const secureStorage = {
     try {
       if (typeof window === 'undefined' || !window.localStorage) return null;
       const raw = window.localStorage.getItem(key);
-      return secureDecrypt<T>(raw);
+      const decrypted = secureDecrypt<T>(raw);
+      // Upgrade unencrypted plain JSON in place so it is securely encrypted at rest
+      if (decrypted !== null && raw && !raw.trim().startsWith(ENCRYPTED_PREFIX)) {
+        secureStorage.setItem(key, decrypted);
+      }
+      return decrypted;
     } catch {
       return null;
     }

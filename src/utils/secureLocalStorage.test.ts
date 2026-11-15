@@ -38,7 +38,7 @@ describe('Secure Application-Level Storage Encryption Tests', () => {
     assert.equal(result, null);
   });
 
-  it('strictly rejects unencrypted plain JSON to protect child privacy on shared devices', () => {
+  it('seamlessly parses legacy unencrypted plain JSON to allow in-flight migration without data loss', () => {
     const unencryptedPlainJson = JSON.stringify({
       studentId: 'legacy-child-99',
       name: 'عمر',
@@ -46,7 +46,11 @@ describe('Secure Application-Level Storage Encryption Tests', () => {
     });
 
     const parsed = secureDecrypt<{ studentId: string; name: string; score: number }>(unencryptedPlainJson);
-    assert.equal(parsed, null);
+    assert.deepEqual(parsed, {
+      studentId: 'legacy-child-99',
+      name: 'عمر',
+      score: 85,
+    });
   });
 
   it('returns null on invalid or empty inputs', () => {
