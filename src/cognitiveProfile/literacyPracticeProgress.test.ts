@@ -1,12 +1,22 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  arabicSpellingMatches,
   emptyLiteracyPracticeProgress,
   recordFluencySessionCompleted,
   recordLiteracyAnswer,
   recordLiteracyStationCompleted,
   sanitizeLiteracyPracticeProgress,
 } from './literacyPracticeProgress';
+
+describe('Arabic dictation matching', () => {
+  it('ignores optional vowel marks but preserves spelling contrasts', () => {
+    assert.equal(arabicSpellingMatches('كِتَابٌ', 'كتاب'), true);
+    assert.equal(arabicSpellingMatches('مَدْرَسَه', 'مدرسة'), false);
+    assert.equal(arabicSpellingMatches('هُدَي', 'هدى'), false);
+    assert.equal(arabicSpellingMatches('   ', 'كتاب'), false);
+  });
+});
 
 describe('encrypted literacy practice progress ledger', () => {
   it('starts with a safe empty record for each station', () => {
