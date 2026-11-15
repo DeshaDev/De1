@@ -375,7 +375,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       phase: 'probeIntro',
       change: null,
       results: [],
-      probe: { items: buildProbe(progress.plan, studentId, session, childAgeMonths ?? 72), index: 0, answers: [] },
+      probe: { items: buildProbe(progress.plan, studentId, session, childAgeMonths ?? 72, todaySkills), index: 0, answers: [] },
       todayProbe: null,
       alloc: {},
       blockStart: null,
