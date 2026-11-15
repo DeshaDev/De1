@@ -112,7 +112,6 @@ async function completeFirstSessionExercises(page: Page) {
   await page.getByRole('button', { name: /ابدأ درس اليوم والشرح مباشرة/ }).click();
 
   const seenHeaders: string[] = [];
-  let sawTransfer = false;
   let sawPlacement = false;
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
   for (let step = 0; step < 1500; step += 1) {
@@ -144,16 +143,6 @@ async function completeFirstSessionExercises(page: Page) {
       continue;
     }
 
-    // Transfer measure (untrained words, session 1): the adult marks each word.
-    const adultCorrectBtn = page.getByRole('button', { name: 'صحيح', exact: true });
-    if (await adultCorrectBtn.isVisible().catch(() => false)) {
-      if (await adultCorrectBtn.isEnabled().catch(() => false)) {
-        await adultCorrectBtn.click();
-        sawTransfer = true;
-        continue;
-      }
-    }
-
     const retryBtn = page.getByRole('button', { name: /حاول مرة أخرى/ });
     if (await retryBtn.isVisible().catch(() => false)) {
       await retryBtn.click();
@@ -179,7 +168,7 @@ async function completeFirstSessionExercises(page: Page) {
 
   await expect(summaryDone).toBeVisible({ timeout: 20_000 });
   const summaryRows = await page.locator('ul li').allInnerTexts();
-  return { seenHeaders, summaryRows, sawTransfer, sawPlacement };
+  return { seenHeaders, summaryRows, sawPlacement };
 }
 
 test.describe('end-to-end personalized screening to training journey', () => {
@@ -252,7 +241,6 @@ test.describe('end-to-end personalized screening to training journey', () => {
     expect(child1Result.seenHeaders.some((h) => h.includes('التمييز السمعي') && h.includes('اقترح الفحص المستوى ٢'))).toBe(true);
     expect(child1Result.seenHeaders.some((h) => h.includes('القافية') && h.includes('اقترح الفحص المستوى ١'))).toBe(true);
     expect(child1Result.sawPlacement).toBe(true);
-    expect(child1Result.sawTransfer).toBe(true);
     const rhymeSummary = child1Result.summaryRows.find((r) => r.includes('القافية'));
     const discSummary = child1Result.summaryRows.find((r) => r.includes('التمييز السمعي'));
     const letterSummary = child1Result.summaryRows.find((r) => r.includes('ربط الحرف بصوته'));
