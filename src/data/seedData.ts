@@ -120,9 +120,10 @@ export interface StudentRecord {
   schoolName: string;
   lastScreenedDate: string;
   passageId: string;
+  country?: string;
   dialectRegionAr?: string;
-  dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
-  dialect?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+  dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | string;
+  dialect?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | string;
   /** Elapsed screen-reading duration in seconds; sent as evidence for server-side scoring. */
   readingDurationSeconds?: number;
   /** Raw answer indices for server-side comprehension scoring. */

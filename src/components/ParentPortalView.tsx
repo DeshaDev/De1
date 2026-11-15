@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Cloud,
   AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
 import { subtestsForAge } from '../cognitiveProfile/battery';
@@ -27,6 +28,32 @@ import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
 
 const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+
+export const ARAB_COUNTRIES = [
+  { code: 'QA', name: 'قطر', flag: '🇶🇦' },
+  { code: 'SA', name: 'المملكة العربية السعودية', flag: '🇸🇦' },
+  { code: 'AE', name: 'الإمارات العربية المتحدة', flag: '🇦🇪' },
+  { code: 'KW', name: 'الكويت', flag: '🇰🇼' },
+  { code: 'OM', name: 'سلطنة عُمان', flag: '🇴🇲' },
+  { code: 'BH', name: 'البحرين', flag: '🇧🇭' },
+  { code: 'EG', name: 'مصر', flag: '🇪🇬' },
+  { code: 'JO', name: 'الأردن', flag: '🇯🇴' },
+  { code: 'PS', name: 'فلسطين', flag: '🇵🇸' },
+  { code: 'LB', name: 'لبنان', flag: '🇱🇧' },
+  { code: 'SY', name: 'سوريا', flag: '🇸🇾' },
+  { code: 'IQ', name: 'العراق', flag: '🇮🇶' },
+  { code: 'MA', name: 'المغرب', flag: '🇲🇦' },
+  { code: 'DZ', name: 'الجزائر', flag: '🇩🇿' },
+  { code: 'TN', name: 'تونس', flag: '🇹🇳' },
+  { code: 'LY', name: 'ليبيا', flag: '🇱🇾' },
+  { code: 'SD', name: 'السودان', flag: '🇸🇩' },
+  { code: 'YE', name: 'اليمن', flag: '🇾🇪' },
+  { code: 'MR', name: 'موريتانيا', flag: '🇲🇷' },
+  { code: 'SO', name: 'الصومال', flag: '🇸🇴' },
+  { code: 'DJ', name: 'جيبوتي', flag: '🇩🇯' },
+  { code: 'KM', name: 'جزر القمر', flag: '🇰🇲' },
+  { code: 'OTHER', name: 'دولة أخرى', flag: '🌍' },
+];
 
 interface NextStep {
   stageAr: string;
@@ -87,7 +114,8 @@ interface ParentPortalViewProps {
     name: string;
     ageYears: number;
     gradeLevel: number;
-    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+    country?: string;
+    dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | string;
     audioConsentGiven?: boolean;
     notes?: string;
     parentEmail?: string;
@@ -119,7 +147,7 @@ export function ParentPortalView({
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [dialectCode] = useState<'msa'>('msa');
+  const [country, setCountry] = useState<string>('قطر');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -190,7 +218,8 @@ export function ParentPortalView({
         name: cleanName,
         ageYears,
         gradeLevel,
-        dialectCode: 'msa',
+        country,
+        dialectCode: country,
         audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
@@ -454,7 +483,7 @@ export function ParentPortalView({
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                          العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}
+                          العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}{(child.country || (child.dialect && child.dialect !== 'faseeh' && child.dialect !== 'msa')) ? ` · الدولة: ${child.country || child.dialect}` : ''}
                         </p>
                       </div>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800">
@@ -585,6 +614,24 @@ export function ParentPortalView({
                     </div>
                   </div>
 
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Globe size={14} className="text-teal-600" />
+                      <span>دولة الطفل *</span>
+                    </span>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {ARAB_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -758,6 +805,24 @@ export function ParentPortalView({
                     </div>
                   </div>
 
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Globe size={14} className="text-teal-600" />
+                      <span>دولة الطفل *</span>
+                    </span>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {ARAB_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
                   {/* Parent Credentials */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">

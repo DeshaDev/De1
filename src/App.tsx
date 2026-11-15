@@ -711,6 +711,9 @@ export default function App() {
       trainingProgress: null,
       gradeLevel: Math.max(0, input.ageYears - 6),
       ageYears: input.ageYears,
+      country: 'قطر',
+      dialect: 'قطر',
+      dialectCode: 'قطر',
       schoolName: supabaseUser
         ? `حساب ولي الأمر (${supabaseUser.user_metadata?.full_name || supabaseUser.email || 'الأسرة'})`
         : 'على هذا الجهاز (محلي)',
@@ -783,7 +786,8 @@ export default function App() {
     name: string;
     ageYears: number;
     gradeLevel: number;
-    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+    country?: string;
+    dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | string;
     audioConsentGiven?: boolean;
     notes?: string;
     parentEmail?: string;
@@ -820,6 +824,7 @@ export default function App() {
     }
 
     const recordedAt = new Date().toISOString();
+    const selectedCountry = child.country || (child.dialectCode && child.dialectCode !== 'msa' ? child.dialectCode : 'قطر');
     const newLearner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: child.name,
@@ -832,7 +837,9 @@ export default function App() {
       trainingProgress: null,
       gradeLevel: child.gradeLevel,
       ageYears: child.ageYears,
-      dialectCode: child.dialectCode,
+      country: selectedCountry,
+      dialectCode: selectedCountry,
+      dialect: selectedCountry,
       schoolName: currentUser
         ? `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`
         : 'حساب الأسرة',

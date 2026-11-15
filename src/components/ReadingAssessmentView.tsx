@@ -126,7 +126,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setGuardianConsentRecordedAt(activeStudent?.guardianConsentRecordedAt);
     setAudioConsentChecked(false);
     setGuardianAudioConsentRecordedAt(undefined);
-    setStudentDialect(activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian');
+    const rawCode = activeStudent?.dialectCode || activeStudent?.dialect;
+    const validDialect: ArabicDialectCode = (rawCode === 'gulf' || rawCode === 'egyptian' || rawCode === 'levantine' || rawCode === 'maghrebi') ? rawCode : 'msa';
+    setStudentDialect(validDialect);
   }, [
     activeStudent?.id,
     activeStudent?.guardianConsentGiven,
