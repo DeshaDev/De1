@@ -204,7 +204,14 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
   const neutral = feedback && !showFeedback;
 
   return (
-    <div className="w-full flex flex-col items-center gap-5" dir="rtl">
+    <div
+      data-choice-player
+      data-choice-item={item.id}
+      data-choice-listening={listening ? 'true' : 'false'}
+      data-choice-feedback={feedback ? 'true' : 'false'}
+      className="w-full flex flex-col items-center gap-5"
+      dir="rtl"
+    >
       {item.stimulus && (
         <div
           className={`flex items-center justify-center min-w-[140px] min-h-[130px] px-6 rounded-[2rem] border-4 bg-card transition-all ${
