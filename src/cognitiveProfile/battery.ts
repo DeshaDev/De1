@@ -91,6 +91,13 @@ export interface ChoiceItem {
   correctId: string;
   /** Sub-skill tag used in item analysis, e.g. 'onset', 'blending'. */
   tag?: string;
+  /** For dictation-only training items, collect a typed response instead of choices. */
+  responseMode?: 'text';
+  /** Expected normalized text for dictation tasks; never rendered to the child. */
+  expected?: string;
+  /** Corrective feedback for a literacy/dictation task. */
+  explanationAr?: string;
+  explanationAudio?: AudioSegment[];
 }
 
 export interface SpanTrial {

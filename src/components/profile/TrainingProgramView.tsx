@@ -22,12 +22,15 @@ import {
   chanceOf,
   createPersonalizedProgress,
   generateItems,
+  ageAppropriateLiteracySkills,
   getHomeActivity,
   isReassessmentDue,
   masteryEstimate,
   recordAnswer,
   recordSkillBlock,
   sessionsCompleted,
+  sessionSkillsFor,
+  type DictationTrainingItem,
   summarizePlanSetup,
 } from '../../cognitiveProfile/training';
 import { MASTERY_THRESHOLD, allocateItems } from '../../cognitiveProfile/knowledgeTracing';
@@ -36,7 +39,8 @@ import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
 import { trackUsage } from '../../utils/usageTracking';
 import { GUEST_CHILD_NAME, type StudentRecord } from '../../data/seedData';
 import { ChoicePlayer, SpanPlayer } from './TaskPlayers';
-import { speak } from './audio';
+import { speak, speakSegments, stopSpeech, type PlaybackHandle } from './audio';
+import { arabicSpellingMatches } from '../../cognitiveProfile/literacyPracticeProgress';
 import {
   PROBE_MINUTES,
   buildProbe,
@@ -56,16 +60,8 @@ import { MascotMoment3D } from '../ui/Mascot3D';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
-import {
-  TRANSFER_FORMS,
-  TRANSFER_HESITATION_SEC,
-  formFor,
-  scoreTransferList,
-  transferDueAt,
-  type TransferForm,
-  type TransferPoint,
-} from '../../cognitiveProfile/transferProbe';
-import { AdultMarkedWord } from './TransferPlayer';
+import { StructuredLiteracyStations } from './StructuredLiteracyStations';
+import { getFluencyPassage } from '../../cognitiveProfile/structuredLiteracyStations';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
@@ -118,6 +114,67 @@ function LevelLadder({ skill, level, mastered }: { skill: SkillId; level: Level;
   );
 }
 
+
+/** Child-entered dictation inside the adaptive spelling skill. The first attempt is scored;
+ * a corrective explanation and retry follow an error. No adult marks the response. */
+function TrainingSpellingPlayer({ item, onDone }: { item: DictationTrainingItem; onDone: (correct: boolean, rtMs?: number) => void }) {
+  const [answer, setAnswer] = useState('');
+  const [phase, setPhase] = useState<'write' | 'explain' | 'retry'>('write');
+  const [busy, setBusy] = useState(false);
+  const firstRt = useRef<number | undefined>(undefined);
+  const startedAt = useRef(performance.now());
+  const playback = useRef<PlaybackHandle | null>(null);
+
+  useEffect(() => {
+    const handle: PlaybackHandle = { cancelled: false };
+    playback.current = handle;
+    setBusy(true);
+    void speakSegments(item.audio, handle).then(() => { if (!handle.cancelled) { startedAt.current = performance.now(); setBusy(false); } });
+    return () => { handle.cancelled = true; stopSpeech(); };
+  }, [item.id]);
+
+  const submit = async () => {
+    if (busy || !answer.trim()) return;
+    const correct = arabicSpellingMatches(answer, item.expected);
+    if (phase === 'write') firstRt.current = Math.max(1, Math.round(performance.now() - startedAt.current));
+    setBusy(true);
+    if (phase === 'write' && !correct) {
+      setPhase('explain');
+      await speakSegments([{ text: item.explanationAr }], { cancelled: false });
+      setBusy(false);
+      return;
+    }
+    if (phase === 'explain') {
+      setPhase('retry');
+      setAnswer('');
+      startedAt.current = performance.now();
+      setBusy(false);
+      return;
+    }
+    await speakSegments([{ text: correct ? 'أَحْسَنْتَ! كِتَابَةٌ صَحِيحَةٌ.' : item.explanationAr }], { cancelled: false });
+    onDone(phase === 'write' && correct, firstRt.current);
+  };
+
+  return (
+    <div className="w-full max-w-xl flex flex-col items-center gap-5 text-center" dir="rtl">
+      <span className="bz-badge bz-badge-brand">الإملاء · استمع ثم اكتب</span>
+      <p className="font-child text-xl font-bold text-slate-800">{item.promptAr}</p>
+      <button type="button" className="bz-btn bz-btn-ghost" disabled={busy} onClick={() => { setBusy(true); void speakSegments(item.audio, { cancelled: false }).finally(() => setBusy(false)); }}>استمع إلى الكلمة مرة أخرى</button>
+      {phase === 'explain' ? (
+        <div className="rounded-2xl bg-soft border border-line p-4 space-y-3">
+          <p className="font-bold">{item.explanationAr}</p>
+          <button type="button" className="bz-btn bz-btn-primary" onClick={() => { setPhase('retry'); setAnswer(''); startedAt.current = performance.now(); }}>حاول مرة أخرى</button>
+        </div>
+      ) : (
+        <>
+          <input aria-label="اكتب الكلمة التي سمعتها" autoComplete="off" spellCheck={false} dir="rtl" value={answer} onChange={(event) => setAnswer(event.target.value)} className="w-full rounded-2xl border-2 border-line bg-white px-5 py-4 text-center text-3xl font-bold text-slate-900 focus:border-brand focus:outline-none" />
+          <button type="button" disabled={busy || !answer.trim()} className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => void submit()}>{phase === 'retry' ? 'تحقق من المحاولة الثانية' : 'تحقق من الكلمة'}</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** The programme as a path of stepping stones: one per session, a week per row, a trophy at the end. */
 function SessionPath({ done, total, perWeek }: { done: number; total: number; perWeek: number }) {
   const weeks = Math.ceil(total / perWeek);
@@ -160,7 +217,7 @@ type Run = {
   tasks: TrainingTask[];
   taskIndex: number;
   correct: number;
-  phase: 'transferIntro' | 'transfer' | 'probeIntro' | 'probe' | 'placementIntro' | 'placement' | 'lesson' | 'intro' | 'task' | 'result' | 'summary';
+  phase: 'probeIntro' | 'probe' | 'placementIntro' | 'placement' | 'lesson' | 'intro' | 'task' | 'result' | 'fluencyIntro' | 'fluencyPractice' | 'summary';
   /** The lesson for the current skill level ("I do"), when the child has not had it yet. */
   lesson: Lesson | null;
   /** How many items at the start of the block are guided (hint + one fewer option). */
@@ -193,21 +250,10 @@ type Run = {
   fastCount: number;
   /** Mastery badges awarded in today's run. */
   newBadges: SkillId[];
+  /** Number of unscored repeated readings completed in today's fluency routine. */
+  fluencyReadings?: number;
   /** Starting-level check for the current skill (first time it is trained). */
   placement?: { skill: SkillId; suggested: Level; level: Level; items: ChoiceItem[]; index: number; answers: PlacementAnswer[] } | null;
-  /** Reading of untrained words (start, middle and end of the programme). */
-  transfer?: {
-    point: TransferPoint;
-    form: TransferForm;
-    session: number;
-    list: 'real' | 'nonword';
-    index: number;
-    real: Array<{ correct: boolean; rtMs: number }>;
-    nonword: Array<{ correct: boolean; rtMs: number }>;
-    started: boolean;
-    /** The adult's choice at session start, kept for after the measure («ابدأ الدرس مباشرة»). */
-    skipProbe: boolean;
-  } | null;
 };
 
 interface Props {
@@ -238,6 +284,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     return () => { cancelled = true; };
   }, [studentId]);
   const [run, setRun] = useState<Run | null>(null);
+  const [showStructuredLiteracyStations, setShowStructuredLiteracyStations] = useState(false);
   useEffect(() => {
     onRunningChange?.(run !== null);
   }, [run !== null, onRunningChange]);
@@ -295,7 +342,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   };
 
   const activeSkills = progress ? progress.plan.focus.filter((s) => !progress.mastered.includes(s)) : [];
-  const todaySkills = activeSkills.length > 0 ? activeSkills : progress?.plan.focus ?? [];
+  const todaySkills = progress ? sessionSkillsFor(progress, sessionsCompleted(progress) + 1) : activeSkills;
   const sessionSkills = run?.skills ?? todaySkills;
 
   /**
@@ -303,24 +350,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
    * then for each skill a lesson when new, guided practice, and independent practice.
    */
   const childAgeMonths = profile?.ageMonths ?? (typeof student?.ageYears === 'number' ? student.ageYears * 12 : null);
-  /** Transfer measures postponed in this visit (the adult chose «لاحقًا»); offered again next session. */
-  const postponedTransfer = useRef(false);
-
-  const beginSession = (skipProbe = false, skipTransfer = false) => {
+  const childAgeYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? 48) / 12)));
+  const beginSession = (skipProbe = false) => {
     if (!progress) return;
     const today = new Date().toISOString().slice(0, 10);
     const trainedToday = progress.history.some((h) => h.date.slice(0, 10) === today);
     const sessionNumber = sessionsCompleted(progress) + (trainedToday ? 0 : 1);
-    const transferPoint = skipTransfer || postponedTransfer.current ? null : transferDueAt(progress, sessionNumber, childAgeMonths);
-    if (transferPoint) {
-      setRun({
-        skills: todaySkills, skillIndex: 0, tasks: [], taskIndex: 0, correct: 0, phase: 'transferIntro', change: null, results: [],
-        probe: null, todayProbe: null, alloc: {}, blockStart: null, promoted: [], lesson: null, guided: 0, stars: 0,
-        latencies: [], fastCount: 0, newBadges: [],
-        transfer: { point: transferPoint, form: formFor(studentId, transferPoint), session: sessionNumber, list: 'real', index: 0, real: [], nonword: [], started: false, skipProbe },
-      });
-      return;
-    }
     const probedToday = (progress.probes ?? []).some((p) => p.date.slice(0, 10) === today);
     const session = (progress.probes?.length ?? 0) + 1;
     if (skipProbe || !probeDueAt(sessionNumber, PROGRAM_SESSIONS) || probedToday) {
@@ -341,7 +376,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       phase: 'probeIntro',
       change: null,
       results: [],
-      probe: { items: buildProbe(progress.plan, studentId, session), index: 0, answers: [] },
+      probe: { items: buildProbe(progress.plan, studentId, session, childAgeMonths ?? 72, todaySkills), index: 0, answers: [] },
       todayProbe: null,
       alloc: {},
       blockStart: null,
@@ -354,9 +389,6 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       newBadges: [],
     });
   };
-
-  const beginSessionRef = useRef<typeof beginSession | null>(null);
-  beginSessionRef.current = beginSession;
 
   const onProbeItemDone = (correct: boolean) => {
     if (!run?.probe || !progress) return;
@@ -408,8 +440,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   /** Fresh practice items at a level, used without feedback for the starting-level check. */
   const placementItems = (skill: SkillId, level: Level): ChoiceItem[] => {
     seed.current += 104729;
-    return generateItems(skill, level, seed.current, PLACEMENT_ITEMS_PER_LEVEL + 3, progress?.targets)
-      .filter((t): t is Extract<TrainingTask, { kind: 'choice' }> => t.kind === 'choice')
+    return generateItems(skill, level, seed.current, PLACEMENT_ITEMS_PER_LEVEL + 3, progress?.targets, childAgeMonths ?? 72)
+      .filter((t): t is Extract<TrainingTask, { kind: 'choice' }> => t.kind === 'choice' && t.item.responseMode !== 'text')
       .map((t) => t.item)
       .slice(0, PLACEMENT_ITEMS_PER_LEVEL);
   };
@@ -431,34 +463,6 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const placed = applyPlacement(progress, pl.skill, pl.suggested, answers, step.placed);
     persist(placed);
     beginSkill(run.skillIndex, { ...run, placement: null }, placed);
-  };
-
-  const onTransferWordDone = (answer: { correct: boolean; rtMs: number }) => {
-    if (!run?.transfer || !progress) return;
-    const t = run.transfer;
-    const list = TRANSFER_FORMS[t.form][t.list];
-    const answers = [...t[t.list], answer];
-    if (t.index + 1 < list.length) {
-      setRun({ ...run, transfer: { ...t, [t.list]: answers, index: t.index + 1 } });
-      return;
-    }
-    if (t.list === 'real') {
-      setRun({ ...run, transfer: { ...t, real: answers, list: 'nonword', index: 0, started: false }, phase: 'transferIntro' });
-      return;
-    }
-    const record = {
-      point: t.point,
-      form: t.form,
-      session: t.session,
-      date: new Date().toISOString(),
-      real: scoreTransferList(t.real),
-      nonword: scoreTransferList(answers),
-    };
-    const next = { ...progress, transfer: [...(progress.transfer ?? []), record].slice(-6) };
-    persist(next);
-    setRun(null);
-    // Carry on with the usual session (progress probe when due, unless the adult skipped it, then training).
-    window.setTimeout(() => beginSessionRef.current?.(t.skipProbe, true), 0);
   };
 
   const beginSkill = (skillIndex: number, prev: Run | null, current: TrainingProgress | null = progress) => {
@@ -491,14 +495,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         latencies: [],
         fastCount: 0,
         newBadges: prev?.newBadges ?? [],
-        transfer: null,
         placement: { skill, suggested: level, level, items: placementItems(skill, level), index: 0, answers: [] },
       });
       return;
     }
-    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets);
+    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets, childAgeYears);
     const guided = lesson || estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
-    const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets);
+    const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets, childAgeMonths ?? 72);
     // "We do": the first items come with a hint and one fewer option.
     const tasks = raw.map((t, i) => (i < guided && t.kind === 'choice' ? { ...t, item: scaffold(t.item, i) } : t));
     setRun({
@@ -542,7 +545,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       // The model moved the child to another level: the rest of the block is generated at that level.
       seed.current += 7919;
       const remaining = run.tasks.length - run.taskIndex - 1;
-      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining, updated.targets)];
+      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining, updated.targets, childAgeMonths ?? 72)];
     }
     // Moving up ends the block: the next block starts with the lesson for the new level.
     const finishedSkill = change === 'mastered' || change === 'up';
@@ -612,62 +615,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   };
 
   // ---------------------------------------------------------------- running a session
-  if (run && progress && run.transfer) {
-    const t = run.transfer;
-    const list = TRANSFER_FORMS[t.form][t.list];
-    const pointAr = t.point === 'pre' ? 'البداية' : t.point === 'mid' ? 'منتصف البرنامج' : 'نهاية البرنامج';
+  if (showStructuredLiteracyStations) {
+    const ageYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? ((student?.ageYears ?? 4) * 12)) / 12)));
     return (
-      <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
-          <p className="font-child font-black text-slate-900 flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">📘</span> قراءة كلمات جديدة · {pointAr}
-          </p>
-          <p className="text-xs font-bold text-slate-500">{t.list === 'real' ? 'كلمات حقيقية' : 'كلمات مصنوعة'}</p>
-        </div>
-        <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
-          {run.phase === 'transferIntro' && (
-            <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              {t.list === 'real' && <MascotMoment3D mood="wave" size={120} message={MASCOT_LINES.transferIntro} />}
-              <h2 className="font-child text-2xl font-black text-slate-900">
-                {t.list === 'real' ? 'نقرأ كلمات لم نتدرّب عليها' : 'والآن كلمات من كوكب آخر'}
-              </h2>
-              <p className="text-sm text-slate-600">
-                {t.list === 'real'
-                  ? `للبالغ: ${toArabicDigits(list.length)} كلمات حقيقية ثم ${toArabicDigits(TRANSFER_FORMS[t.form].nonword.length)} كلمات مصنوعة لم تظهر في التدريب (نحو دقيقتين). يقرأ الطفل كل كلمة جهرًا وتضغط «صحيح» أو «خطأ». نكرّرها في منتصف البرنامج ونهايته لنرى هل تحسّنت القراءة على كلمات جديدة، لا على تمارين البرنامج فقط.`
-                  : 'كلمات لا معنى لها، تُقرأ كما هي مكتوبة بالضبط. «صحيح» فقط إذا نطق كل حرف وحركة.'}
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
-                <button type="button" onClick={() => setRun({ ...run, phase: 'transfer', transfer: { ...t, started: true } })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
-                  <Play className="w-6 h-6" /> ابدأ
-                </button>
-                {t.list === 'real' && (
-                  <button
-                    type="button"
-                    className="bz-btn bz-btn-ghost bz-btn-sm"
-                    onClick={() => {
-                      postponedTransfer.current = true;
-                      setRun(null);
-                      window.setTimeout(() => beginSessionRef.current?.(t.skipProbe, true), 0);
-                    }}
-                  >
-                    لاحقًا (في الجلسة القادمة)
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {run.phase === 'transfer' && (
-            <AdultMarkedWord
-              key={`${t.list}-${list[t.index].id}`}
-              item={list[t.index]}
-              hesitationSec={TRANSFER_HESITATION_SEC}
-              position={t.index + 1}
-              total={list.length}
-              onDone={onTransferWordDone}
-            />
-          )}
-        </div>
-      </div>
+      <StructuredLiteracyStations
+        studentId={studentId}
+        ageYears={ageYears}
+        childName={childName}
+        onClose={() => setShowStructuredLiteracyStations(false)}
+      />
     );
   }
 
@@ -758,6 +714,59 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     );
   }
 
+  if (run && progress && (run.phase === 'fluencyIntro' || run.phase === 'fluencyPractice')) {
+    const passage = getFluencyPassage(childAgeYears);
+    const readingsDone = run.fluencyReadings ?? 0;
+    const completeReading = () => {
+      const nextReadings = readingsDone + 1;
+      if (nextReadings >= 3) {
+        const previous = progress.fluencyPractice ?? { sessionsCompleted: 0, readingsCompleted: 0, lastPracticedAt: null };
+        persist({
+          ...progress,
+          fluencyPractice: {
+            sessionsCompleted: previous.sessionsCompleted + 1,
+            readingsCompleted: previous.readingsCompleted + 3,
+            lastPracticedAt: new Date().toISOString(),
+          },
+        });
+        trackUsage('training_session_completed');
+        setRun({ ...run, phase: 'summary', fluencyReadings: nextReadings });
+      } else {
+        setRun({ ...run, phase: 'fluencyPractice', fluencyReadings: nextReadings });
+      }
+    };
+    return (
+      <div className="bz-card p-5 sm:p-8 space-y-5 text-center" dir="rtl">
+        <span className="bz-badge bz-badge-brand">الطلاقة · قراءة متكررة</span>
+        {run.phase === 'fluencyIntro' ? (
+          <>
+            <h2 className="font-child text-2xl font-black text-slate-900">نقرأ النص معًا ثلاث مرات</h2>
+            <p className="text-sm leading-7 text-slate-600">استمع إلى النموذج، ثم اقرأ النص بنفسك ثلاث مرات. اقرأ بدقة، واجمع الكلمات في عبارات، وانتبه إلى علامات الوقف. لا يوجد توقيت أو تسجيل أو تقييم آلي لصوتك.</p>
+            <div className="rounded-2xl border border-line bg-soft p-5 text-right space-y-2">
+              <h3 className="font-child text-xl font-black">{passage.titleAr}</h3>
+              {passage.linesAr.map((line, index) => <p key={index} className="font-child text-xl leading-loose text-slate-900">{line}</p>)}
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button type="button" className="bz-btn bz-btn-secondary" onClick={() => { void speakSegments(passage.modelAudio.map((text) => ({ text })), { cancelled: false }); }}>استمع إلى نموذج القراءة</button>
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => setRun({ ...run, phase: 'fluencyPractice', fluencyReadings: 0 })}>ابدأ القراءة المتكررة</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="font-child text-2xl font-black text-slate-900">{passage.titleAr}</h2>
+            <p className="text-sm text-slate-600">القراءة {toArabicDigits(readingsDone + 1)} من ٣ · خذ وقتك واقرأ بوضوح.</p>
+            <div className="rounded-2xl border border-line bg-soft p-5 text-right space-y-2">
+              {passage.linesAr.map((line, index) => <p key={index} className="font-child text-xl leading-loose text-slate-900">{line}</p>)}
+            </div>
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={completeReading}>
+              {readingsDone + 1 < 3 ? 'قرأت النص، تابع' : 'إنهاء القراءة المتكررة'}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (run && progress) {
     const skill = sessionSkills[run.skillIndex];
     const def = SKILLS[skill];
@@ -812,18 +821,21 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               >
                 <Play className="w-6 h-6" /> ابدأ
               </button>
-              {lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets) && (
+              {lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets, childAgeYears) && (
                 <button
                   type="button"
                   className="bz-btn bz-btn-ghost bz-btn-sm"
-                  onClick={() => setRun({ ...run, phase: 'lesson', lesson: lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets) })}
+                  onClick={() => setRun({ ...run, phase: 'lesson', lesson: lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets, childAgeYears) })}
                 >
                   شاهد الدرس مرة أخرى
                 </button>
               )}
             </div>
           )}
-          {run.phase === 'task' && task.kind === 'choice' && (
+          {run.phase === 'task' && task.kind === 'choice' && task.item.responseMode === 'text' && (
+            <TrainingSpellingPlayer key={task.item.id} item={task.item as DictationTrainingItem} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
+          )}
+          {run.phase === 'task' && task.kind === 'choice' && task.item.responseMode !== 'text' && (
             <TeachingChoicePlayer key={task.item.id} item={task.item} guided={run.taskIndex < run.guided} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
           )}
           {run.phase === 'task' && task.kind === 'span' && (
@@ -855,12 +867,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
               <button
                 type="button"
-                onClick={() =>
-                  run.skillIndex + 1 < sessionSkills.length ? beginSkill(run.skillIndex + 1, run) : (trackUsage('training_session_completed'), setRun({ ...run, phase: 'summary' }))
-                }
+                onClick={() => {
+                  if (run.skillIndex + 1 < sessionSkills.length) {
+                    beginSkill(run.skillIndex + 1, run);
+                  } else if (childAgeYears >= 6) {
+                    setRun({ ...run, phase: 'fluencyIntro', fluencyReadings: 0 });
+                  } else {
+                    trackUsage('training_session_completed');
+                    setRun({ ...run, phase: 'summary' });
+                  }
+                }}
                 className="bz-btn bz-btn-primary bz-btn-lg"
               >
-                {run.skillIndex + 1 < sessionSkills.length ? 'المهارة التالية' : 'إنهاء الجلسة'}
+                {run.skillIndex + 1 < sessionSkills.length ? 'المهارة التالية' : childAgeYears >= 6 ? 'القراءة المتكررة' : 'إنهاء الجلسة'}
               </button>
             </div>
           )}
@@ -988,7 +1007,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 </button>
                 <button
                   type="button"
-                  onClick={() => startProgram({ createdAt: new Date().toISOString(), preventive: true, focus: ['blending', 'letterSound'], rationaleAr: ['برنامج عام للاستعداد للقراءة دون فحص مسبق.'] })}
+                  onClick={() => {
+                    const ageMonths = childAgeMonths ?? 72;
+                    const foundation: SkillId[] = ageMonths < 60 ? ['blending'] : ['blending', 'letterSound'];
+                    startProgram({ createdAt: new Date().toISOString(), ageMonths, preventive: true, focus: [...foundation, ...ageAppropriateLiteracySkills(ageMonths)], rationaleAr: ['برنامج عام للاستعداد للقراءة دون فحص مسبق، مع مكونات قراءة ولغة مناسبة للعمر.'] });
+                  }}
                   className="bz-btn bz-btn-secondary bz-btn-lg"
                 >
                   برنامج عام للاستعداد للقراءة
@@ -1038,6 +1061,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             </>
           )}
         </section>
+        <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
+            <p className="text-xs text-ink-2 mt-1">تدريب إضافي على فك الترميز والإملاء والفهم والطلاقة والوعي الصرفي، بحسب العمر.</p>
+          </div>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+            افتح المحطات
+          </button>
+        </section>
       </div>
     );
   }
@@ -1061,12 +1093,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <section className="joy-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج علاجي-تدريبي موجّه'}</p>
+          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
+          {childAgeYears >= 6 && (
+            <p className="text-xs text-slate-600 mt-3">قراءات الطلاقة المتكررة المكتملة: {toArabicDigits(progress.fluencyPractice?.readingsCompleted ?? 0)} · من دون توقيت أو تسجيل صوتي</p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1084,6 +1119,16 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <TrendingUp className="w-4 h-4" /> مقياس المتابعة
           </button>
         </div>
+      </section>
+
+      <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
+          <p className="text-xs text-ink-2 mt-1">تدريبات إضافية على فك الترميز والإملاء والوعي الصرفي والفهم والطلاقة، مع تدرّج بحسب عمر الطفل.</p>
+        </div>
+        <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+          افتح المحطات
+        </button>
       </section>
 
       {due && (
@@ -1182,7 +1227,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
               {progress.supportFlags.includes(s) && (
                 <p className="mt-3 text-[13px] font-semibold text-warn bg-warn-soft rounded-lg p-2.5 flex gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> يحتاج دعمًا مباشرًا من المعلم: طبّق الاستراتيجيات المقترحة في التقرير بجانب التمرين.
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> تُعرض استراتيجيات المساندة المقترحة في التقرير بجانب التمرين.
                 </p>
               )}
             </div>
@@ -1287,7 +1332,7 @@ function ProgramRules() {
         <ul className="list-disc pr-5 mt-2 space-y-1 leading-relaxed">
           <li><strong>نموذج تتبّع المعرفة (Bayesian Knowledge Tracing):</strong> بعد كل إجابة يحدّث احتمال أن الطفل أتقن المستوى، مع احتساب احتمال التخمين (حسب عدد الخيارات) واحتمال الخطأ رغم الإتقان. يبدأ التقدير من نتيجة الفحص.</li>
           <li><strong>الإتقان:</strong> حين يبلغ الاحتمال ٩٥٪ بعد ٥ إجابات على الأقل ← المستوى التالي فورًا، ولو في منتصف التمرين.</li>
-          <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وتنبيه للمعلم.</li>
+          <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وملاحظة داعمة في ملف التقدم.</li>
           <li><strong>مقياس التقدّم:</strong> إجاباته تحدّث تقدير المستوى الثاني دون تعلّم، فإن أظهر إتقانه انتقل الطفل إليه مباشرة.</li>
           <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم إعادة الفحص لقياس الأثر وتحديث الخطة. مجموعها نحو ٦ ساعات، في المدى الذي حقق فيه تدريب الوعي الصوتي أكبر أثر في التحليل البعدي للجنة القراءة الوطنية الأمريكية (٥ إلى ١٨ ساعة).</li>
         </ul>

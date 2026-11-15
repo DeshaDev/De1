@@ -49,7 +49,7 @@ describe('teaching curriculum: guided practice ("we do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (const task of generateSession(skill, level, 11)) {
-          if (task.kind !== 'choice') continue;
+          if (task.kind !== 'choice' || task.item.responseMode === 'text') continue;
           const g = scaffold(task.item);
           assert.ok(g.options.some((o) => o.id === task.item.correctId), `${skill}:${level} lost the answer`);
           if (task.item.options.length >= 3 && task.item.tag !== 'syllableCount') assert.equal(g.options.length, task.item.options.length - 1);
@@ -67,7 +67,7 @@ describe('teaching curriculum: explanatory feedback ("you do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (let seed = 1; seed <= 6; seed++) {
-          for (const task of generateSession(skill, level, seed)) {
+          for (const task of generateSession(skill, level, seed, undefined, 96)) {
             if (task.kind !== 'choice') continue;
             const e = explainMistake(task.item);
             assert.ok(e, `${skill}:${level} tag ${task.item.tag}`);
@@ -88,7 +88,7 @@ describe('teaching curriculum: explanatory feedback ("you do")', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
         for (let seed = 1; seed <= 6; seed++) {
-          for (const task of generateSession(skill, level, seed)) {
+          for (const task of generateSession(skill, level, seed, undefined, 96)) {
             if (task.kind !== 'choice') continue;
             for (const s of explainMistake(task.item)?.audio ?? []) if (!keys.has(audioKey(normalizeSpokenText(s.text)))) missing.add(s.text);
             for (const s of scaffold(task.item).audio) if (!keys.has(audioKey(normalizeSpokenText(s.text)))) missing.add(s.text);

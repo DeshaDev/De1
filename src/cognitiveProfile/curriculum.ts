@@ -19,6 +19,7 @@
  * All spoken text is fully vowelled so the pre-recorded clips are generated correctly.
  */
 import type { AudioSegment, ChoiceItem } from './battery';
+import { getStructuredLiteracyStations, getFluencyPassage } from './structuredLiteracyStations';
 import { CONFUSABLE_LETTER_GROUPS, CONFUSABLE_PHONEME_PAIRS, DISTANT_PHONEME_PAIRS, LEXICON, PICTURE_IDS, lex } from './lexicon';
 import { cvSyllable, type Level, type SkillId, type TrainingTargets } from './training';
 
@@ -89,7 +90,7 @@ function closing(textAr: string, audio: string): LessonStep {
 }
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
-export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets): Lesson | null {
+export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 8): Lesson | null {
   const key = `${skill}:${level}`;
   switch (skill) {
     case 'rhyme':
@@ -198,6 +199,21 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         ],
       };
     }
+    case 'decoding':
+    case 'spelling':
+    case 'comprehension':
+    case 'morphology': {
+      const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
+      if (!station) return null;
+      return {
+        key, skill, level, titleAr: station.titleAr,
+        steps: [
+          { textAr: station.teachAr, audio: say(station.teachAudioAr) },
+          { textAr: station.modelAr, audio: say(station.modelAudioAr) },
+          closing('الآن دورك: استخدم ما تعلّمته، ثم فكّر في سبب اختيارك.', 'الْآنَ دَوْرُكَ: اسْتَخْدِمْ مَا تَعَلَّمْتَهُ، ثُمَّ فَكِّرْ فِي سَبَبِ اخْتِيَارِكَ.'),
+        ],
+      };
+    }
     default:
       return null; // memory skills are not trained as goals
   }
@@ -218,6 +234,10 @@ export const HINTS: Record<string, string> = {
   minimalPair: 'اسْمَعْ بِانْتِبَاهٍ.',
   letter: 'قَارِنِ النِّقَاطَ.',
   word: 'قَارِنِ النِّقَاطَ.',
+  'structured-decoding': 'اِنْتَبِهْ إِلَى الْحَرَكَاتِ، وَاجْمَعِ الْأَصْوَاتَ بِالتَّرْتِيبِ.',
+  'structured-spelling': 'اِسْمَعِ الْكَلِمَةَ، وَفَكِّرْ فِي الْحُرُوفِ الَّتِي تَسْمَعُهَا.',
+  'structured-comprehension': 'تَذَكَّرْ مَا حَدَثَ، وَابْحَثْ عَنِ الْكَلِمَاتِ الَّتِي تُسَاعِدُكَ.',
+  'structured-morphology': 'ابْحَثْ عَنِ الْحُرُوفِ الْأَصْلِيَّةِ وَمَعْنَى الْكَلِمَةِ.',
 };
 /** Guided items at the start of a block while the model's estimate is below this. */
 export const GUIDED_BELOW = 0.5;
@@ -256,6 +276,17 @@ const labelOf = (item: ChoiceItem, id: string) => item.options.find((o) => o.id 
 export function explainMistake(item: ChoiceItem): Explanation | null {
   const correct = item.correctId;
   if (!item.tag) return null;
+  if (item.tag.startsWith('structured-')) {
+    if (item.explanationAr && item.explanationAudio?.length) {
+      return { textAr: item.explanationAr, audio: item.explanationAudio, pictureIds: LEXICON[correct] ? [correct] : [], glyphs: [] };
+    }
+    const stationId = item.tag.slice('structured-'.length);
+    const station = getStructuredLiteracyStations(8).find((entry) => entry.id === stationId);
+    const question = station?.questions.find((entry) => entry.promptAr === item.promptAr);
+    if (question) {
+      return { textAr: question.explanationAr, audio: question.explanationAudio.map((text) => ({ text })), pictureIds: LEXICON[correct] ? [correct] : [], glyphs: [] };
+    }
+  }
   const target = item.stimulus?.label;
   const targetId = item.stimulus ? PICTURE_IDS.find((id) => LEXICON[id].emoji === item.stimulus!.value) : undefined;
   switch (item.tag) {
@@ -308,14 +339,14 @@ export function probeDueAt(sessionNumber: number, programmeSessions: number): bo
 export function curriculumPhrases(): string[] {
   const out = new Set<string>();
   const addSegs = (segs: AudioSegment[]) => segs.forEach((s) => out.add(s.text));
-  const skills: SkillId[] = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination'];
+  const skills: SkillId[] = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination', 'decoding', 'spelling', 'comprehension', 'morphology'];
   const pairTargets: TrainingTargets[] = [undefined as unknown as TrainingTargets, ...CONFUSABLE_PHONEME_PAIRS.map((p) => ({ soundPairs: [p], letters: [] }))];
   const letterTargets: TrainingTargets[] = Object.values(LEVEL_LETTERS).flat().map((l) => ({ soundPairs: [], letters: [l] }));
   const groupTargets: TrainingTargets[] = CONFUSABLE_LETTER_GROUPS.map((g) => ({ soundPairs: [], letters: [g[0]] }));
   for (const skill of skills) {
     for (const level of [1, 2, 3] as Level[]) {
       for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        lessonFor(skill, level, t ?? undefined)?.steps.forEach((s) => addSegs(s.audio));
+        lessonFor(skill, level, t ?? undefined, 8)?.steps.forEach((s) => addSegs(s.audio));
       }
     }
   }
@@ -325,6 +356,19 @@ export function curriculumPhrases(): string[] {
     'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', 'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.', 'الصَّوْتُ نَفْسُهُ.', 'صَوْتَانِ مُخْتَلِفَانِ.',
     'هَذِهِ:', 'انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.', 'حَاوِلْ مَرَّةً أُخْرَى.',
   ].forEach((p) => out.add(p));
+  // Structured literacy stations share their explicit teaching and feedback language with BKT training.
+  const stations = getStructuredLiteracyStations(8);
+  for (const station of stations) {
+    out.add(station.teachAudioAr);
+    out.add(station.modelAudioAr);
+    station.questions.forEach((question) => {
+      question.audio.forEach((phrase) => out.add(phrase));
+      question.explanationAudio.forEach((phrase) => out.add(phrase));
+    });
+  }
+  // Phrase-cued fluency examples are spoken as a model, never timed or scored.
+  getFluencyPassage(8).modelAudio.forEach((phrase) => out.add(phrase));
+
   // Words and syllables can be spoken on their own in explanations (e.g. a one-syllable word).
   for (const e of Object.values(LEXICON)) {
     out.add(e.word);

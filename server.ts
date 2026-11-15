@@ -2117,6 +2117,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       guardianConsentGiven: z.literal(true),
       guardianConsentRecordedAt: z.string().max(40).refine((v) => Number.isFinite(Date.parse(v))),
       guardianConsentSource: z.string().trim().min(1).max(400),
+      guardianAudioConsentGiven: z.boolean().optional(),
+      guardianAudioConsentRecordedAt: z.string().max(40).optional(),
       guardianName: z.string().trim().max(120).optional(),
       guardianRelationship: z.string().trim().max(80).optional(),
     })
@@ -2139,6 +2141,14 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
     const data = parsed.data;
+    const audioConsentValid = data.guardianAudioConsentGiven === true &&
+      typeof data.guardianAudioConsentRecordedAt === 'string' &&
+      Number.isFinite(Date.parse(data.guardianAudioConsentRecordedAt)) &&
+      Date.parse(data.guardianAudioConsentRecordedAt) <= Date.now() + 5 * 60 * 1000;
+    if (data.guardianAudioConsentGiven === true && !audioConsentValid) {
+      res.status(403).json({ error: 'موافقة معالجة الصوت تحتاج إلى تاريخ صالح قبل إنشاء ملف الطفل.' });
+      return;
+    }
     const existing = studentsDb.find((student) => student.id === data.id);
     if (existing) {
       if (existing.tenantId !== session.tenantId) {
@@ -2168,7 +2178,9 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       guardianConsentSource: data.guardianConsentSource,
       guardianName: data.guardianName,
       guardianRelationship: data.guardianRelationship,
-      guardianAudioConsentGiven: false,
+      guardianAudioConsentGiven: audioConsentValid,
+      ...(audioConsentValid ? { guardianAudioConsentRecordedAt: data.guardianAudioConsentRecordedAt } : {}),
+      audioRecordingConsentGiven: audioConsentValid,
       policyVersion: '2026.1',
       wpm: 0,
       dyslexiaRiskScore: null,

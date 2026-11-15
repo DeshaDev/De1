@@ -5,6 +5,7 @@
 import type { SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
 import type { TrainingProgress } from './training';
+import { emptyLiteracyPracticeProgress, sanitizeLiteracyPracticeProgress, type LiteracyPracticeProgress } from './literacyPracticeProgress';
 import { secureStorage } from '../utils/secureLocalStorage';
 
 export type HomeDialect = 'msa' | 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
@@ -45,6 +46,7 @@ export interface BatterySession {
 
 const SESSION_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.session.${studentId}`;
 const TRAINING_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.training.${studentId}`;
+const LITERACY_PRACTICE_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.literacy-practice.${studentId}`;
 
 async function read<T>(key: string): Promise<T | null> {
   return secureStorage.getItem<T>(key);
@@ -66,6 +68,37 @@ export const loadTrainingProgress = (studentId: string) => read<TrainingProgress
 export const saveTrainingProgress = (studentId: string, progress: TrainingProgress) =>
   write(TRAINING_KEY(studentId), progress);
 export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(studentId));
+
+/** Supplementary reading/language practice history, encrypted separately from assessment scores. */
+const literacyPracticeWrites = new Map<string, Promise<void>>();
+const clearedLiteracyPracticeIds = new Set<string>();
+
+export async function loadLiteracyPracticeProgress(studentId: string): Promise<LiteracyPracticeProgress> {
+  const pending = literacyPracticeWrites.get(studentId);
+  if (pending) await pending.catch(() => undefined);
+  const stored = await read<unknown>(LITERACY_PRACTICE_KEY(studentId));
+  return stored ? sanitizeLiteracyPracticeProgress(stored) : emptyLiteracyPracticeProgress();
+}
+
+export function saveLiteracyPracticeProgress(studentId: string, progress: LiteracyPracticeProgress): Promise<void> {
+  if (clearedLiteracyPracticeIds.has(studentId)) return Promise.resolve();
+  const previous = literacyPracticeWrites.get(studentId) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(() =>
+    write(LITERACY_PRACTICE_KEY(studentId), sanitizeLiteracyPracticeProgress(progress))
+  );
+  literacyPracticeWrites.set(studentId, next);
+  void next.finally(() => {
+    if (literacyPracticeWrites.get(studentId) === next) literacyPracticeWrites.delete(studentId);
+  }).catch(() => undefined);
+  return next;
+}
+
+export async function clearLiteracyPracticeProgress(studentId: string): Promise<void> {
+  clearedLiteracyPracticeIds.add(studentId);
+  const pending = literacyPracticeWrites.get(studentId);
+  if (pending) await pending.catch(() => undefined);
+  remove(LITERACY_PRACTICE_KEY(studentId));
+}
 
 /** Summary of a finished screening, kept when the child is screened again so the two can be compared. */
 export interface ScreeningSnapshot {

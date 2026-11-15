@@ -163,6 +163,7 @@ export const TrainingProgressUploadSchema = z
     plan: z
       .object({
         createdAt: isoDate,
+        ageMonths: z.number().int().min(36).max(144).optional(),
         preventive: z.boolean(),
         focus: z.array(z.enum(SKILL_IDS)).min(1).max(8),
         rationaleAr: z.array(z.string().max(300)).max(10),
@@ -217,6 +218,11 @@ export const TrainingProgressUploadSchema = z
       .optional(),
     lessonsSeen: z.array(z.string().regex(/^[a-zA-Z]+:[123]$/)).max(30).optional(),
     badges: z.array(z.string().max(60)).max(30).optional(),
+    fluencyPractice: z.object({
+      sessionsCompleted: z.number().int().min(0).max(500),
+      readingsCompleted: z.number().int().min(0).max(1500),
+      lastPracticedAt: isoDate.nullable(),
+    }).strict().optional(),
     placements: z
       .array(
         z
