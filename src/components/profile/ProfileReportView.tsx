@@ -79,8 +79,8 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             <dd className="text-ink font-semibold">{testedDate}</dd>
             <dt className="bz-muted">الفاحص</dt>
             <dd className="text-ink font-semibold">{session.examinerName || '—'}</dd>
-            <dt className="bz-muted">لهجة البيت</dt>
-            <dd className="text-ink font-semibold">{session.dialect ? DIALECT_LABELS_AR[session.dialect] : 'لم تُحدَّد'}</dd>
+            <dt className="bz-muted">اللغة المستهدفة</dt>
+            <dd className="text-ink font-semibold">العربية الفصحى المعيارية</dd>
             <dt className="bz-muted">المهام المكتملة</dt>
             <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من {toArabicDigits(totalTasks)}</dd>
           </dl>
@@ -350,14 +350,9 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                 </tbody>
               </table>
             </div>
-            {(flagged.length > 0 || dialectNotes.length > 0) && (
+            {flagged.length > 0 && (
               <div className="mt-3 rounded-xl p-4 bg-warn-soft bz-small text-ink-2 space-y-1">
                 <p className="font-semibold text-warn">ملاحظات سياق التطبيق</p>
-                {dialectNotes.length > 0 && (
-                  <p>
-                    <strong className="text-ink">التمييز السمعي واللهجة:</strong> أخطأ الطفل في {dialectNotes.join('، ')}، وهي أصوات قد تختلف في النطق اليومي بلهجة {DIALECT_LABELS_AR[session.dialect!]}؛ قد يعكس الخطأ اختلافًا لهجيًا لا صعوبة في التمييز.
-                  </p>
-                )}
                 {flagged.map((scored) => (
                   <p key={scored.subtestId}>
                     <strong className="text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}:</strong> {scored.flags.map((flag) => FLAG_TEXT_AR[flag]).join(' ')}

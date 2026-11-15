@@ -76,6 +76,7 @@ const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
 const TermsOfUseView = lazy(() => import('./components/TermsOfUseView'));
 const ContentReviewView = lazy(() => import('./components/review/ContentReviewView'));
+const AudioComparisonLabView = lazy(() => import('./components/AudioComparisonLabView'));
 import { ParentPortalView } from './components/ParentPortalView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
@@ -133,6 +134,9 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
   if (rawPath === '/review' || params.get('review') === '1') {
     return { tab: 'content-review' };
   }
+  if (rawPath === '/audio-lab' || rawPath === '/compare-audio' || params.get('audio_lab') === '1' || params.get('tab') === 'audio-lab') {
+    return { tab: 'audio-lab' };
+  }
 
   // Fallback to query params
   if (params.get('tab') === 'dashboard' || params.get('autostart') === '1') {
@@ -166,6 +170,8 @@ function tabToUrlPath(tab: ActiveTab): string {
       return '/terms';
     case 'content-review':
       return '/review';
+    case 'audio-lab':
+      return '/audio-lab';
     default:
       return '/';
   }
@@ -791,8 +797,7 @@ export default function App() {
     }
     let currentUser = supabaseUser;
 
-    // Testing mode: cloud sign-up is optional. If email is missing or Supabase rate-limits
-    // the request, continue with a local guest profile instead of blocking the child.
+    // Cloud sign-up / sign-in if parent credentials were provided
     if (!currentUser && child.parentEmail && child.parentPassword) {
       try {
         const res = await signUpWithEmail(child.parentEmail, child.parentPassword);
@@ -800,15 +805,16 @@ export default function App() {
           currentUser = res.user;
           setSupabaseUser(res.user);
         }
-      } catch {
+      } catch (signUpErr: any) {
         try {
           const res = await signInWithEmail(child.parentEmail, child.parentPassword);
           if (res.user) {
             currentUser = res.user;
             setSupabaseUser(res.user);
           }
-        } catch (authErr) {
-          console.warn('[register] cloud account skipped, continuing locally:', authErr);
+        } catch (authErr: any) {
+          const msg = authErr?.message || signUpErr?.message || 'تعذر الاتصال بخدمة المصادقة السحابية';
+          throw new Error(`تعذر إنشاء أو تسجيل الدخول إلى حساب الأسرة السحابي: ${msg}`);
         }
       }
     }
@@ -866,12 +872,9 @@ export default function App() {
       },
     };
 
-    // Pre-create battery session respecting explicit audio consent and authentic dialect selection
-    const speechDialect = child.dialectCode as HomeDialect;
-    const speechLocale =
-      speechDialect === 'gulf' ? ('ar-SA' as const)
-        : speechDialect === 'egyptian' ? ('ar-EG' as const)
-        : undefined;
+    // Pre-create battery session respecting explicit audio consent for Standard Arabic
+    const speechDialect: HomeDialect = 'msa';
+    const speechLocale = 'ar-SA' as const;
     const explicitAudioConsent = child.audioConsentGiven === true;
     const initialBatterySession: BatterySession = {
       studentId: newLearner.id,
@@ -889,6 +892,16 @@ export default function App() {
     };
     saveBatterySession(initialBatterySession);
 
+    if (currentUser) {
+      const saved = await syncStudentToSupabase(newLearner, currentUser.id);
+      if (!saved) {
+        throw new Error('فشل حفظ ملف الطفل في قاعدة البيانات السحابية (Supabase). يرجى التحقق من اتصال الشبكة وإعادة المحاولة.');
+      }
+      setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في قاعدة البيانات السحابية بنجاح ☁️`);
+    } else {
+      setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+    }
+
     setStudents((prev) => {
       const next = [newLearner, ...prev.filter((s) => s.id !== newLearner.id)];
       saveStoredStudents(next);
@@ -899,14 +912,6 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    if (currentUser) {
-      const saved = await syncStudentToSupabase(newLearner, currentUser.id);
-      if (saved) {
-        setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في قاعدة البيانات السحابية بنجاح ☁️`);
-      }
-    } else {
-      setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
-    }
     return newLearner.id;
   };
 
@@ -2454,6 +2459,7 @@ export default function App() {
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         {activeTab === 'terms' && <TermsOfUseView />}
         {activeTab === 'content-review' && <ContentReviewView />}
+        {activeTab === 'audio-lab' && <AudioComparisonLabView />}
         </div>
         </Suspense>
       </main>
@@ -2480,6 +2486,7 @@ export default function App() {
                 <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
                 <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
                 <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
+                <li><button type="button" onClick={() => setActiveTab('audio-lab')}>مختبر مقارنة التقييم الصوتي (Azure و Google)</button></li>
               </ul>
             </div>
             <div className="baseera-footer-col">

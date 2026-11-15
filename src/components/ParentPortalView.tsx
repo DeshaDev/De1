@@ -119,7 +119,7 @@ export function ParentPortalView({
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | ''>('');
+  const [dialectCode] = useState<'msa'>('msa');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -179,10 +179,6 @@ export function ParentPortalView({
       setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
       return;
     }
-    if (!dialectCode) {
-      setFormError('اختر اللهجة الأساسية في المنزل؛ لن نفترض لهجة للطفل.');
-      return;
-    }
     if (!consentChecked) {
       setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
       return;
@@ -194,7 +190,7 @@ export function ParentPortalView({
         name: cleanName,
         ageYears,
         gradeLevel,
-        dialectCode,
+        dialectCode: 'msa',
         audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
@@ -205,7 +201,6 @@ export function ParentPortalView({
         setChildName('');
         setParentNotes('');
         setParentPassword('');
-        setDialectCode('');
         setConsentChecked(false);
         setAudioConsentChecked(false);
         setShowAddForm(false);
@@ -590,31 +585,6 @@ export function ParentPortalView({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {[
-                        { code: 'gulf' as const, label: 'سعودية / خليجية' },
-                        { code: 'msa' as const, label: 'فصحى معيارية' },
-                        { code: 'egyptian' as const, label: 'مصرية' },
-                        { code: 'levantine' as const, label: 'شامية' },
-                        { code: 'maghrebi' as const, label: 'مغاربية' },
-                      ].map((d) => (
-                        <button
-                          key={d.code}
-                          type="button"
-                          onClick={() => setDialectCode(d.code)}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            dialectCode === d.code
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -788,35 +758,6 @@ export function ParentPortalView({
                     </div>
                   </div>
 
-                  {/* Home Dialect */}
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
-                    <p className="text-[11px] text-slate-500">
-                      تساعد معرفة اللهجة المنزلية على تفسير الفروق الصوتية بحذر وعدم الخلط بين التنوع اللهجي وصعوبات القراءة.
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {[
-                        { code: 'gulf' as const, label: 'سعودية / خليجية' },
-                        { code: 'msa' as const, label: 'فصحى معيارية' },
-                        { code: 'egyptian' as const, label: 'مصرية' },
-                        { code: 'levantine' as const, label: 'شامية' },
-                        { code: 'maghrebi' as const, label: 'مغاربية' },
-                      ].map((d) => (
-                        <button
-                          key={d.code}
-                          type="button"
-                          onClick={() => setDialectCode(d.code)}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            dialectCode === d.code
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
                   {/* Parent Credentials */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">

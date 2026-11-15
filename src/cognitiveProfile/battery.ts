@@ -889,7 +889,7 @@ export const AGE_PRIMARY_MIN_MONTHS = 90;
 export type ScreeningMode = 'fast' | 'comprehensive';
 
 /**
- * Fast-track screening battery (10-12 minutes, single sitting).
+ * Fast-track screening battery (single sitting, ~16–25 minutes depending on age).
  * Clinically targeted to the child's exact age and reading instruction stage:
  * - Age 4-5 (Under 72 months): Phonological awareness, rhyme, letter sound, RAN objects, auditory discrimination. Zero reading tasks.
  * - Age 6-7 (72-89 months, Grade 1): Word reading, nonword decoding, phonological awareness, letter sounds, RAN letters, spelling, oral passage.

@@ -412,7 +412,7 @@ function SetupView({
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const [examiner, setExaminer] = useState(supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر');
-  const [dialect, setDialect] = useState<HomeDialect | ''>((student.dialectCode as HomeDialect) || '');
+  const dialect: HomeDialect = 'msa';
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
     audioConsent: false,
@@ -494,24 +494,6 @@ function SetupView({
             )}
           </div>
           <label className="bz-field">
-            <span className="bz-label">لهجة الطفل في البيت</span>
-            <select value={dialect} onChange={(e) => setDialect(e.target.value as HomeDialect | '')} className="bz-input">
-              <option value="">اختر اللهجة</option>
-              {(Object.keys(DIALECT_LABELS_AR) as HomeDialect[]).map((d) => (
-                <option key={d} value={d}>{DIALECT_LABELS_AR[d]}</option>
-              ))}
-            </select>
-            <span className="bz-hint">
-              {dialect === 'egyptian'
-                ? 'سيُستخدم نموذج Azure ar-EG للتقييم الصوتي.'
-                : dialect === 'gulf'
-                  ? 'سيُستخدم نموذج Azure ar-SA للتقييم الصوتي.'
-                  : dialect === ''
-                    ? 'اختر لهجة الطفل بوضوح. يتوفر التقييم الصوتي حاليًا للمصرية والخليجية فقط؛ لن نفترض لهجة عند غيابها.'
-                    : 'لا يدعم التقييم الصوتي الآلي اللهجة المختارة حاليًا؛ ستُحفظ مهام الصوت دون درجة، ولن نستبدل اللهجة بنموذج آخر.'}
-            </span>
-          </label>
-          <label className="bz-field">
             <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
             <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
           </label>
@@ -569,14 +551,14 @@ function SetupView({
               ageMonths: years * 12 + months,
               examinerName: examiner.trim(),
               startedAt: new Date().toISOString(),
-              ...(dialect ? { dialect } : {}),
+              dialect: 'msa',
               guardianConsentGiven: checks.consent,
               guardianConsentRecordedAt: student.guardianConsentGiven === true && student.guardianConsentRecordedAt
                 ? student.guardianConsentRecordedAt
                 : new Date().toISOString(),
               guardianAudioConsentGiven: checks.audioConsent,
               ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
-              ...(dialect === 'egyptian' ? { speechLocale: 'ar-EG' as const } : dialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
+              speechLocale: 'ar-SA' as const,
               results: {},
             })
           }
@@ -665,7 +647,7 @@ interface Props {
 
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
-  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
+  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('fast');
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
   const loadInitial = (): BatterySession | null => {
@@ -685,7 +667,6 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       !activeStudent.isDemoRecord &&
       explicitGeneralConsent
     ) {
-      const speechDialect = activeStudent.dialectCode as HomeDialect | undefined;
       const explicitAudioConsent =
         activeStudent.guardianAudioConsentGiven === true &&
         typeof activeStudent.guardianAudioConsentRecordedAt === 'string' &&
@@ -696,13 +677,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        ...(speechDialect ? { dialect: speechDialect } : {}),
+        dialect: 'msa',
         guardianConsentGiven: true,
         guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
         guardianAudioConsentGiven: explicitAudioConsent,
         ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt } : {}),
-        ...(speechDialect === 'egyptian' ? { speechLocale: 'ar-EG' as const }
-          : speechDialect === 'gulf' ? { speechLocale: 'ar-SA' as const } : {}),
+        speechLocale: 'ar-SA' as const,
         results: {},
       };
       saveBatterySession(initialSession);
@@ -888,7 +868,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 onClick={() => setScreeningMode('fast')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'fast' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
               >
-                المسار السريع ({toArabicDigits('10')}–{toArabicDigits('12')} دقيقة)
+                المسار السريع (نحو {toArabicDigits(minutesForAge(session.ageMonths, 'fast'))} دقيقة)
               </button>
               <button
                 type="button"
