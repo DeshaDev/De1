@@ -52,7 +52,7 @@ import {
   saveActiveStudentId,
   loadActiveStudentId,
 } from './utils/cookiePersistence';
-import { saveBatterySession, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
+import { saveBatterySession, clearLiteracyPracticeProgress, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -1120,6 +1120,7 @@ export default function App() {
         setAiStatusBanner(data?.error || 'لم يتم حذف السجل من الخادم.');
         return;
       }
+      clearLiteracyPracticeProgress(studentId);
       const remaining = students.filter((student) => student.id !== studentId);
       setStudents(remaining);
       if (selectedStudentId === studentId && remaining.length > 0) {
