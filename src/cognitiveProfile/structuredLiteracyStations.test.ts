@@ -53,15 +53,27 @@ describe('age-appropriate structured literacy practice stations', () => {
     for (const age of [4, 5, 6, 7, 8]) {
       for (const station of getStructuredLiteracyStations(age)) {
         for (const question of station.questions) {
-          const ids = question.options.map((option) => option.id);
-          assert.ok(ids.length >= 2, `${station.id}/${question.id}: too few options`);
-          assert.equal(new Set(ids).size, ids.length, `${station.id}/${question.id}: duplicate option`);
-          assert.equal(ids.filter((id) => id === question.correctId).length, 1, `${station.id}/${question.id}: answer is missing or ambiguous`);
+          if (question.responseMode === 'text') {
+            assert.equal(station.id, 'spelling');
+            assert.equal(question.options.length, 0);
+            assert.ok(question.correctId.length > 1);
+          } else {
+            const ids = question.options.map((option) => option.id);
+            assert.ok(ids.length >= 2, `${station.id}/${question.id}: too few options`);
+            assert.equal(new Set(ids).size, ids.length, `${station.id}/${question.id}: duplicate option`);
+            assert.equal(ids.filter((id) => id === question.correctId).length, 1, `${station.id}/${question.id}: answer is missing or ambiguous`);
+          }
           assert.ok(question.explanationAr.length >= 15);
           assert.ok(question.explanationAudio.length > 0);
         }
       }
     }
+  });
+
+  it('includes at least one productive spelling task rather than relying only on recognition', () => {
+    const spelling = getStructuredLiteracyStations(6).find((station) => station.id === 'spelling');
+    assert.ok(spelling);
+    assert.ok(spelling.questions.some((question) => question.responseMode === 'text'));
   });
 
   it('keeps fluency practice untimed and unscored', () => {
