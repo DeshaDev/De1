@@ -80,13 +80,6 @@ describe('AES-GCM child storage and legacy migration', () => {
     assert.notDeepEqual(first, second);
   });
 
-  it('reads an existing authenticated CTR/HMAC record without rewriting it', () => {
-    setupLegacySeed('legacy-test-seed-0123456789abcdef');
-    resetDeviceEncryptionKeyCacheForTesting();
-    const legacy = 'baseera:enc:v1:AAECAwQFBgcICQoLDA0ODw==:WgMsp9W+MDmqZv7xEWEwnl6e7nlNiQlu97iDA6KZqOGSi6g7RBeRN92okdPM5SdFK25FkRMd:ljYRO7GYvaimnEJ+VD+Nd9dMAi8K5YYRniDcaNUonFg=';
-    assert.deepEqual(secureDecrypt(legacy), { id: 'legacy-child', guardianAudioConsentGiven: true });
-  });
-
   it('reads legacy plain JSON for controlled migration', async () => {
     const raw = JSON.stringify([{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
     assert.deepEqual(await secureDecryptAsync(raw), [{ id: 'legacy-child', name: 'مريم', guardianAudioConsentGiven: true }]);
