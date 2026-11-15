@@ -68,7 +68,7 @@ function hash(text: string): number {
  * The probe for one session. Seeds depend on the child and the session number, so the same
  * session always gets the same form and two sessions never share a seed.
  */
-export function buildProbe(plan: Pick<TrainingPlan, 'focus'>, studentId: string, session: number): ProbeItem[] {
+export function buildProbe(plan: Pick<TrainingPlan, 'focus'>, studentId: string, session: number, ageMonths = 72): ProbeItem[] {
   const items: ProbeItem[] = [];
   const comparison = comparisonSkillFor(plan);
   const skills: Array<{ skill: SkillId; role: ProbeItem['role'] }> = [
@@ -77,7 +77,11 @@ export function buildProbe(plan: Pick<TrainingPlan, 'focus'>, studentId: string,
   ];
   skills.forEach(({ skill, role }, i) => {
     const seed = hash(`probe|${studentId}|${session}|${skill}|${i}`);
-    for (const task of generateSession(skill, PROBE_LEVEL, seed).slice(0, PROBE_ITEMS_PER_SKILL)) {
+    // Dictation is useful in teaching sessions, but fixed probes remain choice/span-only so
+    // the same child-friendly response method is used consistently without typing load.
+    const probeTasks = generateSession(skill, PROBE_LEVEL, seed, undefined, ageMonths)
+      .filter((task) => task.kind !== 'spelling');
+    for (const task of probeTasks.slice(0, PROBE_ITEMS_PER_SKILL)) {
       const tagged: TrainingTask =
         task.kind === 'choice'
           ? { ...task, item: { ...task.item, id: `probe-${session}-${skill}-${task.item.id}` } }
