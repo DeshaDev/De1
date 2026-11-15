@@ -26,6 +26,8 @@ export interface LiteracyQuestion {
   audio: string[];
   options: LiteracyOption[];
   correctId: string;
+  /** Free typed response for production practice such as dictation; options stays empty. */
+  responseMode?: 'text';
   explanationAr: string;
   explanationAudio: string[];
 }
@@ -210,6 +212,16 @@ const spelling: LiteracyQuestion[] = [
     correctId: 'هدى',
     explanationAr: 'تُنْتَهِي كَلِمَةُ «هُدَى» بِالْأَلِفِ الْمَقْصُورَةِ «ى».',
     explanationAudio: ['تَنْتَهِي كَلِمَةُ هُدَى بِالْأَلِفِ الْمَقْصُورَةِ ى.'],
+  },
+  {
+    id: 'spell-write-book',
+    promptAr: 'اِسْمَعِ الْكَلِمَةَ، ثُمَّ اكْتُبْهَا فِي الْمَكَانِ الْمُخَصَّصِ.',
+    audio: ['اِسْمَعِ الْكَلِمَةَ، ثُمَّ اكْتُبْهَا.', 'كِتَابٌ.'],
+    options: [],
+    correctId: 'كتاب',
+    responseMode: 'text',
+    explanationAr: 'كِتَابٌ تُكْتَبُ بِالْكَافِ، ثُمَّ التَّاءِ، ثُمَّ أَلِفِ الْمَدِّ، ثُمَّ الْبَاءِ.',
+    explanationAudio: ['كِتَابٌ: كَاف، تَاء، أَلِف، بَاء.'],
   },
 ];
 
