@@ -1120,7 +1120,7 @@ export default function App() {
         setAiStatusBanner(data?.error || 'لم يتم حذف السجل من الخادم.');
         return;
       }
-      clearLiteracyPracticeProgress(studentId);
+      void clearLiteracyPracticeProgress(studentId).catch((error) => console.error('Unable to clear deleted child literacy practice history:', error));
       const remaining = students.filter((student) => student.id !== studentId);
       setStudents(remaining);
       if (selectedStudentId === studentId && remaining.length > 0) {
