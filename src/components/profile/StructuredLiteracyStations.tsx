@@ -41,7 +41,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   const [playing, setPlaying] = useState(false);
   const [showLesson, setShowLesson] = useState(false);
   const [practiceProgress, setPracticeProgress] = useState<LiteracyPracticeProgress>(emptyLiteracyPracticeProgress());
-  const [practiceReady, setPracticeReady] = useState(false);
+  const [loadedStudentId, setLoadedStudentId] = useState<string | null>(null);
+  const practiceReady = loadedStudentId === studentId;
   const playback = useRef<PlaybackHandle | null>(null);
 
   const station = stations.find((item) => item.id === stationId) ?? null;
@@ -50,14 +51,17 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
 
   useEffect(() => {
     let cancelled = false;
+    setLoadedStudentId(null);
+    setPracticeProgress(emptyLiteracyPracticeProgress());
     void loadLiteracyPracticeProgress(studentId)
       .then((saved) => { if (!cancelled) setPracticeProgress(saved); })
       .catch((error) => console.error('Unable to restore encrypted literacy practice progress:', error))
-      .finally(() => { if (!cancelled) setPracticeReady(true); });
+      .finally(() => { if (!cancelled) setLoadedStudentId(studentId); });
     return () => { cancelled = true; };
   }, [studentId]);
 
   const persistPractice = (next: LiteracyPracticeProgress) => {
+    if (loadedStudentId !== studentId) return;
     setPracticeProgress(next);
     void saveLiteracyPracticeProgress(studentId, next)
       .catch((error) => console.error('Unable to save encrypted literacy practice progress:', error));
