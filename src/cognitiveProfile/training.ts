@@ -349,7 +349,7 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   let fromTaskEvidence = false;
   let fromReadingTargets = false;
   let hasRanCompleted = false;
-  if (ordered.length === 0 && (subtests.length > 0 || (profile?.readingTargets?.skills?.length ?? 0) > 0)) {
+  if ((ordered.length === 0 && subtests.length > 0) || (profile?.readingTargets?.skills?.length ?? 0) > 0) {
     const scoredEntries = subtests
       .map((s) => ({ subtest: s, effective: effectiveSubtestPercent(s) }))
       .filter((entry): entry is { subtest: ScoredSubtest; effective: number } => entry.effective !== null);
