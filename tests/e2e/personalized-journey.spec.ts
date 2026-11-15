@@ -149,7 +149,19 @@ async function completeFirstSessionExercises(page: Page) {
       continue;
     }
 
-    const nextSkillBtn = page.getByRole('button', { name: /^(المهارة التالية|إنهاء الجلسة)$/ });
+    const beginFluencyBtn = page.getByRole('button', { name: 'ابدأ القراءة المتكررة' });
+    if (await beginFluencyBtn.isVisible().catch(() => false)) {
+      await beginFluencyBtn.click();
+      continue;
+    }
+
+    const repeatReadingBtn = page.getByRole('button', { name: /^(قرأت النص، تابع|إنهاء القراءة المتكررة)$/ });
+    if (await repeatReadingBtn.isVisible().catch(() => false)) {
+      await repeatReadingBtn.click();
+      continue;
+    }
+
+    const nextSkillBtn = page.getByRole('button', { name: /^(المهارة التالية|إنهاء الجلسة|القراءة المتكررة)$/ });
     if (await nextSkillBtn.isVisible().catch(() => false)) {
       await nextSkillBtn.click();
       continue;
