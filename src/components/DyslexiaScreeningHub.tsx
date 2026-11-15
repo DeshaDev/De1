@@ -19,7 +19,14 @@ interface DyslexiaScreeningHubProps {
   onCompleteCognitiveScreening: (cogData: CognitiveScreeningData) => void;
   initialSubTab?: ScreeningSubTab;
   onStudentUpdated?: (student: StudentRecord) => void;
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }) => string | null;
+  onCreateLearner?: (input: {
+    name: string;
+    ageYears: number;
+    examinerName: string;
+    guardianConsentRecordedAt?: string;
+    guardianAudioConsentGiven: boolean;
+    guardianAudioConsentRecordedAt?: string;
+  }) => string | null;
   supabaseUser?: any;
 }
 
