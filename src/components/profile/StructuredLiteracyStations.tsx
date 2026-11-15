@@ -223,7 +223,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
           <p className="text-base leading-8 text-slate-800">{station.modelAr}</p>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <button type="button" className="bz-btn bz-btn-secondary" onClick={() => void playAudio([station.teachAr, station.modelAr])} disabled={playing}>
+          <button type="button" className="bz-btn bz-btn-secondary" onClick={() => void playAudio([station.teachAudioAr, station.modelAudioAr])} disabled={playing}>
             <Volume2 className="w-4 h-4" /> استمع إلى الشرح والمثال
           </button>
           <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => setShowLesson(false)}>

@@ -209,8 +209,8 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: station.titleAr,
         steps: [
-          { textAr: station.teachAr, audio: say(station.teachAr) },
-          { textAr: station.modelAr, audio: say(station.modelAr) },
+          { textAr: station.teachAr, audio: say(station.teachAudioAr) },
+          { textAr: station.modelAr, audio: say(station.modelAudioAr) },
           closing('الآن دورك: طبّق ما تعلمته خطوة خطوة.', 'الْآنَ دَوْرُكَ: طَبِّقْ مَا تَعَلَّمْتَهُ خُطْوَةً خُطْوَةً.'),
         ],
       };
