@@ -1237,7 +1237,9 @@ export function generateItems(skill: SkillId, level: Level, seed: number, count:
   for (let k = 0; out.length < count && k < 8; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageYears)) {
       if (out.length >= count) break;
-      const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      const signature = task.kind === 'choice'
+        ? `${task.item.promptAr}|${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}|${task.item.options.map((option) => option.id).join(',')}`
+        : `${task.trial.sequence.join(',')}`;
       if (seen.has(signature)) continue;
       seen.add(signature);
       out.push(

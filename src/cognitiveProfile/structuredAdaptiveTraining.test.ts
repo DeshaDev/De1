@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildTrainingPlan,
+  generateItems,
   generateSession,
   SKILLS,
   SUBTEST_TO_SKILLS,
@@ -58,8 +59,23 @@ describe('age-aware adaptive literacy skills', () => {
       const tasks = generateSession(skill, 1, 12345, undefined, age);
       assert.ok(tasks.length >= 4 && tasks.length <= 6, `${skill} should return only available unique items`);
       assert.ok(tasks.every((task) => task.kind === 'choice'));
-      const signatures = tasks.map((task) => task.kind === 'choice' ? task.item.audio.map((part) => part.text).join('|') : '');
+      const signatures = tasks.map((task) => task.kind === 'choice' ? `${task.item.promptAr}|${task.item.audio.map((part) => part.text).join('|')}` : '');
       assert.equal(new Set(signatures).size, signatures.length, `${skill} must not duplicate BKT evidence within one block`);
+    }
+  });
+
+  it('feeds the BKT session builder unique items without filling gaps by duplication', () => {
+    const domains: Array<{ skill: SkillId; age: number }> = [
+      { skill: 'decoding', age: 6 },
+      { skill: 'spelling', age: 6 },
+      { skill: 'morphology', age: 7 },
+      { skill: 'comprehension', age: 4 },
+    ];
+    for (const { skill, age } of domains) {
+      const items = generateItems(skill, 1, 777, 8, undefined, age);
+      assert.ok(items.length >= 5 && items.length <= 6, `${skill} should provide its distinct available item bank`);
+      const signatures = items.map((task) => task.kind === 'choice' ? `${task.item.promptAr}|${task.item.audio.map((part) => part.text).join('|')}` : task.trial.sequence.join(','));
+      assert.equal(new Set(signatures).size, signatures.length);
     }
   });
 
