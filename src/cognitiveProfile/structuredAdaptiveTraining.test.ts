@@ -17,8 +17,14 @@ describe('age-aware adaptive literacy skills', () => {
       assert.ok(SKILLS[skill].nameAr.length > 0);
       assert.ok(SKILLS[skill].goalAr.length > 0);
     }
-    assert.deepEqual(SUBTEST_TO_SKILLS.wordReading, ['decoding']);
+    assert.ok(SUBTEST_TO_SKILLS.wordReading.includes('decoding'));
+    assert.ok(SUBTEST_TO_SKILLS.wordReading.includes('letterSound'));
+    assert.ok(SUBTEST_TO_SKILLS.wordReading.includes('blending'));
+    assert.ok(SUBTEST_TO_SKILLS.nonwordReading.includes('soundPosition'));
+    assert.ok(SUBTEST_TO_SKILLS.oralReading.includes('decoding'));
+    assert.ok(SUBTEST_TO_SKILLS.oralReading.includes('blending'));
     assert.ok(SUBTEST_TO_SKILLS.spelling.includes('spelling'));
+    assert.ok(SUBTEST_TO_SKILLS.spelling.includes('soundPosition'));
   });
 
   it('maps screening weaknesses only to age-eligible adaptive skills', () => {

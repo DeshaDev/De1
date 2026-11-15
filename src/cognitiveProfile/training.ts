@@ -249,10 +249,10 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   // in the report and never auto-prescribes phonological or letter drills on its own.
   ranObjects: [],
   ranLetters: [],
-  wordReading: ['decoding'],
+  wordReading: ['decoding', 'letterSound', 'blending'],
   nonwordReading: ['decoding', 'blending', 'letterSound', 'soundPosition'],
-  oralReading: ['decoding'],
-  spelling: ['spelling', 'letterSound'],
+  oralReading: ['decoding', 'blending', 'letterSound'],
+  spelling: ['spelling', 'letterSound', 'soundPosition'],
 };
 
 /**
