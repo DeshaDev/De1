@@ -198,7 +198,7 @@ function openKeyDatabase(): Promise<IDBDatabase> {
 }
 
 function readPersistedCryptoKey(): Promise<CryptoKey | null> {
-  return openKeyDatabase().then((db) => new Promise((resolve, reject) => {
+  return openKeyDatabase().then((db) => new Promise<CryptoKey | null>((resolve, reject) => {
     const transaction = db.transaction(KEY_STORE, 'readonly');
     const request = transaction.objectStore(KEY_STORE).get(KEY_ID);
     request.onsuccess = () => resolve((request.result as CryptoKey | undefined) || null);
@@ -208,7 +208,7 @@ function readPersistedCryptoKey(): Promise<CryptoKey | null> {
 }
 
 function storeCryptoKeyIfAbsent(key: CryptoKey): Promise<void> {
-  return openKeyDatabase().then((db) => new Promise((resolve, reject) => {
+  return openKeyDatabase().then((db) => new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(KEY_STORE, 'readwrite');
     transaction.objectStore(KEY_STORE).add(key, KEY_ID);
     transaction.oncomplete = () => resolve();
