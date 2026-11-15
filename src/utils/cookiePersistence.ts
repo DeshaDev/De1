@@ -5,7 +5,7 @@
  */
 import type { BaseeraSessionInfo } from './apiAuth';
 import type { StudentRecord } from '../data/seedData';
-import { secureEncrypt, secureDecrypt } from './secureLocalStorage';
+import { secureEncrypt, secureDecryptAsync, isCurrentSecureCiphertext } from './secureLocalStorage';
 
 const SESSION_COOKIE_NAME = 'baseera_session';
 const SESSION_STORAGE_KEY = 'baseera_session_v1';
@@ -122,44 +122,31 @@ export function clearPersistentSession(): void {
 /**
  * Save user's registered child records to localStorage (encrypted at rest) and summary cookie.
  */
-export function saveStoredStudents(students: StudentRecord[]): void {
+export async function saveStoredStudents(students: StudentRecord[]): Promise<void> {
   if (typeof window === 'undefined') return;
-  try {
-    // Filter only non-demo or customized records to prevent storing giant demo arrays
-    const customOrUpdated = students.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
-    const encrypted = secureEncrypt(customOrUpdated);
-    window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
-
-    // Store a light summary cookie for quick presence check
-    const summary = customOrUpdated.slice(0, 5).map((c) => ({ id: c.id, name: c.name, age: c.ageYears }));
-    setCookie('hn_children_summary', JSON.stringify(summary), 30);
-  } catch {
-    // Ignore quota or private-browsing errors
-  }
+  // Never silently discard the previous record if encryption/key persistence fails.
+  const customOrUpdated = students.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
+  const encrypted = await secureEncrypt(customOrUpdated);
+  window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
+  // Do not put children's names/ages in cookies; cookies are sent with HTTP requests.
+  deleteCookie('hn_children_summary');
 }
 
 /**
- * Load saved custom child records from localStorage (transparently decrypts at rest).
+ * Load child records asynchronously. Legacy plaintext/v1/v2 records are upgraded
+ * only after successful decoding; unreadable ciphertext is retained for recovery.
  */
-export function loadStoredStudents(): StudentRecord[] {
+export async function loadStoredStudents(): Promise<StudentRecord[]> {
   if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
-    if (!raw) return [];
-    const decrypted = secureDecrypt<StudentRecord[]>(raw);
-    if (Array.isArray(decrypted)) {
-      // In-flight migration: If existing records were unencrypted plain JSON,
-      // immediately re-encrypt them into authenticated encrypted storage so
-      // they are protected at rest on shared devices with zero data loss.
-      if (!raw.trim().startsWith('baseera:enc:v1:')) {
-        saveStoredStudents(decrypted);
-      }
-      return decrypted;
-    }
-  } catch {
-    // Ignore errors
+  const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
+  if (!raw) return [];
+  const decrypted = await secureDecryptAsync<StudentRecord[]>(raw);
+  if (!Array.isArray(decrypted)) return [];
+  if (!isCurrentSecureCiphertext(raw)) {
+    const upgraded = await secureEncrypt(decrypted);
+    window.localStorage.setItem(STUDENTS_STORAGE_KEY, upgraded);
   }
-  return [];
+  return decrypted;
 }
 
 /**
