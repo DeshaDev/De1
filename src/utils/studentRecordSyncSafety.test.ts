@@ -171,4 +171,17 @@ describe('generic Supabase student sync safety', () => {
     assert.equal(safe.guardianAudioConsentGiven, false);
     assert.equal(safe.guardianAudioConsentRecordedAt, undefined);
   });
+
+  it('preserves child country and maps to dialect column for database storage', () => {
+    const incoming = student({
+      country: 'قطر',
+      dialect: 'قطر',
+      dialectCode: 'قطر',
+    });
+
+    const safe = prepareStudentRecordForGenericSupabaseSync(incoming);
+    assert.equal(safe.country, 'قطر');
+    assert.equal(safe.dialect, 'قطر');
+    assert.equal(safe.dialectCode, 'قطر');
+  });
 });

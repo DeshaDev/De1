@@ -177,7 +177,7 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
       name: safeStudent.name,
       grade: Number.isFinite(safeStudent.gradeLevel) ? String(safeStudent.gradeLevel) : 'غير محدد',
       age: Number.isFinite(safeStudent.ageYears) ? safeStudent.ageYears : null,
-      dialect: safeStudent.dialect || safeStudent.dialectCode || 'faseeh',
+      dialect: safeStudent.country || safeStudent.dialect || safeStudent.dialectCode || 'faseeh',
       guardian_consent: safeStudent.guardianConsentGiven === true,
       guardian_consent_source: safeStudent.guardianConsentSource || null,
       guardian_consent_recorded_at: safeStudent.guardianConsentRecordedAt || null,
@@ -259,7 +259,13 @@ export async function fetchStudentsFromSupabase(userId: string): Promise<Student
     // by hand in the dashboard) lacks fields the screens need, so it is skipped instead of guessed.
     return data
       .filter((row: any) => row.raw_data && typeof row.raw_data === 'object')
-      .map((row: any) => row.raw_data as StudentRecord);
+      .map((row: any) => {
+        const student = row.raw_data as StudentRecord;
+        if (!student.country && row.dialect && row.dialect !== 'faseeh' && row.dialect !== 'msa') {
+          student.country = row.dialect;
+        }
+        return student;
+      });
   } catch (err) {
     console.warn('Failed to load students from Supabase:', err);
     return [];

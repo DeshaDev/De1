@@ -1,34 +1,29 @@
 /**
  * Browser persistence for battery sessions and training progress.
- * Data stays on this device; nothing here is sent to the server.
+ * Sensitive child data is encrypted at rest using application-level AES/HMAC authenticated encryption.
  */
 import type { SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
 import type { TrainingProgress } from './training';
+import { secureStorage } from '../utils/secureLocalStorage';
 
 export type HomeDialect = 'msa' | 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
 
 export const DIALECT_LABELS_AR: Record<HomeDialect, string> = {
   msa: 'فصحى معيارية',
-  gulf: 'خليجية',
-  levantine: 'شامية',
-  egyptian: 'مصرية',
-  iraqi: 'عراقية',
-  maghrebi: 'مغاربية',
-  sudanese: 'سودانية',
-  other: 'أخرى',
+  gulf: 'فصحى معيارية',
+  levantine: 'فصحى معيارية',
+  egyptian: 'فصحى معيارية',
+  iraqi: 'فصحى معيارية',
+  maghrebi: 'فصحى معيارية',
+  sudanese: 'فصحى معيارية',
+  other: 'فصحى معيارية',
 };
 
 /**
- * Listening items whose contrast these dialects merge in everyday speech (ث/س, ذ/ز, ق/ك …).
- * An error on them is reported as possibly dialect-related, not as a discrimination weakness.
+ * Standard Arabic is the sole evaluation benchmark for all children.
  */
-export const DIALECT_SENSITIVE_ITEMS: Record<string, { pairAr: string; dialects: HomeDialect[] }> = {
-  'ad-4': { pairAr: 'ذ/ز', dialects: ['levantine', 'egyptian', 'sudanese'] },
-  'ad-8': { pairAr: 'ث/س', dialects: ['levantine', 'egyptian', 'sudanese'] },
-  'ad-5': { pairAr: 'ك/ق', dialects: ['levantine', 'egyptian'] },
-  'ad-10': { pairAr: 'د/ض', dialects: ['maghrebi'] },
-};
+export const DIALECT_SENSITIVE_ITEMS: Record<string, { pairAr: string; dialects: HomeDialect[] }> = {};
 
 export interface BatterySession {
   studentId: string;
@@ -36,13 +31,13 @@ export interface BatterySession {
   ageMonths: number;
   examinerName: string;
   startedAt: string;
-  /** Home dialect, used to interpret dialect-sensitive sound contrasts (optional). */
+  /** All assessments evaluate against standard Modern Standard Arabic (الفصحى المعيارية). */
   dialect?: HomeDialect;
   guardianConsentGiven?: boolean;
   guardianAudioConsentGiven?: boolean;
   guardianConsentRecordedAt?: string;
   guardianAudioConsentRecordedAt?: string;
-  speechLocale?: 'ar-EG' | 'ar-SA';
+  speechLocale?: 'ar-SA';
   /** Accuracy study: the adult marks each voice-scored word before seeing the engine's result. */
   verifyAudioByAdult?: boolean;
   results: Partial<Record<SubtestId, SubtestResult>>;
@@ -52,28 +47,15 @@ const SESSION_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.session.
 const TRAINING_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.training.${studentId}`;
 
 function read<T>(key: string): T | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
+  return secureStorage.getItem<T>(key);
 }
 
 function write(key: string, value: unknown): void {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage can be unavailable (private mode); the session still works in memory.
-  }
+  secureStorage.setItem(key, value);
 }
 
 function remove(key: string): void {
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
+  secureStorage.removeItem(key);
 }
 
 export const loadBatterySession = (studentId: string) => read<BatterySession>(SESSION_KEY(studentId));
@@ -105,4 +87,3 @@ export const loadScreeningHistory = (studentId: string): ScreeningSnapshot[] => 
 };
 export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) =>
   write(HISTORY_KEY(studentId), sanitizeScreeningHistory(history).slice(-10));
-

@@ -46,6 +46,7 @@ export type AppTabId =
   | 'storygen'
   | 'guided-program'
   | 'content-review'
+  | 'audio-lab'
   | 'parent-portal';
 
 interface HomeLandingViewProps {
@@ -484,6 +485,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 </button>
                 <button type="button" className="bz-btn bz-btn-ghost" onClick={() => onNavigateTab('adaptive-reader')}>
                   القارئ الميسّر
+                </button>
+                <button type="button" className="bz-btn bz-btn-ghost text-xs" onClick={() => onNavigateTab('audio-lab')}>
+                  مختبر مقارنة الصوت (Azure ضد Google)
                 </button>
               </div>
             </article>

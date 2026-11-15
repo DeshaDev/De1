@@ -126,7 +126,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
     setGuardianConsentRecordedAt(activeStudent?.guardianConsentRecordedAt);
     setAudioConsentChecked(false);
     setGuardianAudioConsentRecordedAt(undefined);
-    setStudentDialect(activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian');
+    const rawCode = activeStudent?.dialectCode || activeStudent?.dialect;
+    const validDialect: ArabicDialectCode = (rawCode === 'gulf' || rawCode === 'egyptian' || rawCode === 'levantine' || rawCode === 'maghrebi') ? rawCode : 'msa';
+    setStudentDialect(validDialect);
   }, [
     activeStudent?.id,
     activeStudent?.guardianConsentGiven,
@@ -141,9 +143,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   // Oral recording is opt-in for every new session.
   const [readingMode, setReadingMode] = useState<'oral_audio' | 'timed_silent'>('timed_silent');
-  const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>(
-    activeStudent?.dialectCode || activeStudent?.dialect || 'egyptian'
-  );
+  const [studentDialect, setStudentDialect] = useState<ArabicDialectCode>('msa');
 
   // Audio recording & Speech recognition state
   const [spokenTranscript, setSpokenTranscript] = useState('');
@@ -328,11 +328,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
       try {
         const recognition = new SpeechRecognitionClass();
-        // Browser recognition is preview-only. Do not silently relabel MSA or
-        // an unsupported regional dialect as Saudi Arabic.
-        const langCode =
-          studentDialect === 'egyptian' ? 'ar-EG' :
-          studentDialect === 'gulf' ? 'ar-SA' : 'ar';
+        const langCode = 'ar-SA';
         recognition.lang = langCode;
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -561,12 +557,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
       // Tier 1: Attempt Azure Speech assessment if audio was captured
       if (recordedAudio && recordedAudio.size > 0) {
         try {
-          const locale: 'ar-EG' | 'ar-SA' | null =
-            studentDialect === 'egyptian'
-              ? 'ar-EG'
-              : studentDialect === 'gulf'
-                ? 'ar-SA'
-                : null;
+          const locale: 'ar-SA' = 'ar-SA';
 
           if (locale) {
             setReadingModeNotice('يجري إرسال التسجيل الصوتي للتحليل السحابي المتقدم في Azure…');
@@ -1093,7 +1084,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               {/* Reading mode and dialect options; no manual scoring controls. */}
               <details className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-right text-xs text-slate-600 space-y-3">
                 <summary className="cursor-pointer font-bold text-slate-700 hover:text-slate-900 select-none flex items-center justify-between">
-                  <span>خيارات القراءة: طريقة القراءة واللهجة</span>
+                  <span>خيارات القراءة: طريقة القراءة (جهرية / صامتة)</span>
                   <span className="text-slate-400">إعدادات</span>
                 </summary>
                 <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1116,20 +1107,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <label className="block font-bold text-slate-800 mb-1">لهجة الطفل:</label>
-                    <select
-                      value={studentDialect}
-                      onChange={(e) => setStudentDialect(e.target.value as ArabicDialectCode)}
-                      className="w-full p-2 border border-slate-300 rounded-xl bg-white font-bold"
-                    >
-                      <option value="egyptian">اللهجة المصرية</option>
-                      <option value="gulf">اللهجة الخليجية</option>
-                      <option value="levantine">اللهجة الشامية</option>
-                      <option value="maghrebi">اللهجة المغاربية</option>
-                      <option value="msa">الفصحى</option>
-                    </select>
-                  </div>
+                  
                 </div>
               </details>
             </div>

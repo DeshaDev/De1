@@ -1,9 +1,11 @@
 /**
  * Cookie and persistent local storage management for user sessions,
  * child profiles, and active screening states across browser reloads.
+ * Student data stored locally is encrypted at rest using application-level AES/HMAC encryption.
  */
 import type { BaseeraSessionInfo } from './apiAuth';
 import type { StudentRecord } from '../data/seedData';
+import { secureEncrypt, secureDecrypt } from './secureLocalStorage';
 
 const SESSION_COOKIE_NAME = 'baseera_session';
 const SESSION_STORAGE_KEY = 'baseera_session_v1';
@@ -93,18 +95,18 @@ export function loadPersistentSession(): BaseeraSessionInfo | null {
     }
     if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as BaseeraSessionInfo;
-    if (parsed?.token && parsed.expiresAt > Date.now() + 10_000) {
-      return parsed;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && typeof parsed.token === 'string' && (typeof parsed.tenantId === 'string' || typeof parsed.schoolId === 'string')) {
+      return parsed as BaseeraSessionInfo;
     }
   } catch {
-    // Ignore corrupt data
+    // Ignore corrupted data
   }
   return null;
 }
 
 /**
- * Remove session from all storage mechanisms.
+ * Clear Baseera session from all persistent storages.
  */
 export function clearPersistentSession(): void {
   if (typeof window === 'undefined') return;
@@ -118,14 +120,15 @@ export function clearPersistentSession(): void {
 }
 
 /**
- * Save user's registered child records to localStorage and summary cookie.
+ * Save user's registered child records to localStorage (encrypted at rest) and summary cookie.
  */
 export function saveStoredStudents(students: StudentRecord[]): void {
   if (typeof window === 'undefined') return;
   try {
     // Filter only non-demo or customized records to prevent storing giant demo arrays
     const customOrUpdated = students.filter((s) => !s.isDemoRecord || s.cognitiveBattery !== null || s.sessionStatus === 'completed');
-    window.localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(customOrUpdated));
+    const encrypted = secureEncrypt(customOrUpdated);
+    window.localStorage.setItem(STUDENTS_STORAGE_KEY, encrypted);
 
     // Store a light summary cookie for quick presence check
     const summary = customOrUpdated.slice(0, 5).map((c) => ({ id: c.id, name: c.name, age: c.ageYears }));
@@ -136,16 +139,16 @@ export function saveStoredStudents(students: StudentRecord[]): void {
 }
 
 /**
- * Load saved custom child records from localStorage.
+ * Load saved custom child records from localStorage (transparently decrypts at rest).
  */
 export function loadStoredStudents(): StudentRecord[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(STUDENTS_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed as StudentRecord[];
+    const decrypted = secureDecrypt<StudentRecord[]>(raw);
+    if (Array.isArray(decrypted)) {
+      return decrypted;
     }
   } catch {
     // Ignore errors

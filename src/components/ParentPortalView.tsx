@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Cloud,
   AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
 import { subtestsForAge } from '../cognitiveProfile/battery';
@@ -27,6 +28,32 @@ import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
 
 const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+
+export const ARAB_COUNTRIES = [
+  { code: 'QA', name: 'قطر', flag: '🇶🇦' },
+  { code: 'SA', name: 'المملكة العربية السعودية', flag: '🇸🇦' },
+  { code: 'AE', name: 'الإمارات العربية المتحدة', flag: '🇦🇪' },
+  { code: 'KW', name: 'الكويت', flag: '🇰🇼' },
+  { code: 'OM', name: 'سلطنة عُمان', flag: '🇴🇲' },
+  { code: 'BH', name: 'البحرين', flag: '🇧🇭' },
+  { code: 'EG', name: 'مصر', flag: '🇪🇬' },
+  { code: 'JO', name: 'الأردن', flag: '🇯🇴' },
+  { code: 'PS', name: 'فلسطين', flag: '🇵🇸' },
+  { code: 'LB', name: 'لبنان', flag: '🇱🇧' },
+  { code: 'SY', name: 'سوريا', flag: '🇸🇾' },
+  { code: 'IQ', name: 'العراق', flag: '🇮🇶' },
+  { code: 'MA', name: 'المغرب', flag: '🇲🇦' },
+  { code: 'DZ', name: 'الجزائر', flag: '🇩🇿' },
+  { code: 'TN', name: 'تونس', flag: '🇹🇳' },
+  { code: 'LY', name: 'ليبيا', flag: '🇱🇾' },
+  { code: 'SD', name: 'السودان', flag: '🇸🇩' },
+  { code: 'YE', name: 'اليمن', flag: '🇾🇪' },
+  { code: 'MR', name: 'موريتانيا', flag: '🇲🇷' },
+  { code: 'SO', name: 'الصومال', flag: '🇸🇴' },
+  { code: 'DJ', name: 'جيبوتي', flag: '🇩🇯' },
+  { code: 'KM', name: 'جزر القمر', flag: '🇰🇲' },
+  { code: 'OTHER', name: 'دولة أخرى', flag: '🌍' },
+];
 
 interface NextStep {
   stageAr: string;
@@ -87,7 +114,8 @@ interface ParentPortalViewProps {
     name: string;
     ageYears: number;
     gradeLevel: number;
-    dialectCode: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi';
+    country?: string;
+    dialectCode?: 'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | string;
     audioConsentGiven?: boolean;
     notes?: string;
     parentEmail?: string;
@@ -119,7 +147,7 @@ export function ParentPortalView({
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [dialectCode, setDialectCode] = useState<'msa' | 'gulf' | 'egyptian' | 'levantine' | 'maghrebi' | ''>('');
+  const [country, setCountry] = useState<string>('قطر');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -179,10 +207,6 @@ export function ParentPortalView({
       setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
       return;
     }
-    if (!dialectCode) {
-      setFormError('اختر اللهجة الأساسية في المنزل؛ لن نفترض لهجة للطفل.');
-      return;
-    }
     if (!consentChecked) {
       setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
       return;
@@ -194,7 +218,8 @@ export function ParentPortalView({
         name: cleanName,
         ageYears,
         gradeLevel,
-        dialectCode,
+        country,
+        dialectCode: country,
         audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
@@ -205,7 +230,6 @@ export function ParentPortalView({
         setChildName('');
         setParentNotes('');
         setParentPassword('');
-        setDialectCode('');
         setConsentChecked(false);
         setAudioConsentChecked(false);
         setShowAddForm(false);
@@ -459,7 +483,7 @@ export function ParentPortalView({
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                          العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}
+                          العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}{(child.country || (child.dialect && child.dialect !== 'faseeh' && child.dialect !== 'msa')) ? ` · الدولة: ${child.country || child.dialect}` : ''}
                         </p>
                       </div>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800">
@@ -590,31 +614,24 @@ export function ParentPortalView({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {[
-                        { code: 'gulf' as const, label: 'سعودية / خليجية' },
-                        { code: 'msa' as const, label: 'فصحى معيارية' },
-                        { code: 'egyptian' as const, label: 'مصرية' },
-                        { code: 'levantine' as const, label: 'شامية' },
-                        { code: 'maghrebi' as const, label: 'مغاربية' },
-                      ].map((d) => (
-                        <button
-                          key={d.code}
-                          type="button"
-                          onClick={() => setDialectCode(d.code)}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            dialectCode === d.code
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {d.label}
-                        </button>
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Globe size={14} className="text-teal-600" />
+                      <span>دولة الطفل *</span>
+                    </span>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {ARAB_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.flag} {c.name}
+                        </option>
                       ))}
-                    </div>
-                  </div>
+                    </select>
+                  </label>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -788,35 +805,24 @@ export function ParentPortalView({
                     </div>
                   </div>
 
-                  {/* Home Dialect */}
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700">اللهجة الأساسية في المنزل *</span>
-                    <p className="text-[11px] text-slate-500">
-                      تساعد معرفة اللهجة المنزلية على تفسير الفروق الصوتية بحذر وعدم الخلط بين التنوع اللهجي وصعوبات القراءة.
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {[
-                        { code: 'gulf' as const, label: 'سعودية / خليجية' },
-                        { code: 'msa' as const, label: 'فصحى معيارية' },
-                        { code: 'egyptian' as const, label: 'مصرية' },
-                        { code: 'levantine' as const, label: 'شامية' },
-                        { code: 'maghrebi' as const, label: 'مغاربية' },
-                      ].map((d) => (
-                        <button
-                          key={d.code}
-                          type="button"
-                          onClick={() => setDialectCode(d.code)}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            dialectCode === d.code
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {d.label}
-                        </button>
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Globe size={14} className="text-teal-600" />
+                      <span>دولة الطفل *</span>
+                    </span>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {ARAB_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.flag} {c.name}
+                        </option>
                       ))}
-                    </div>
-                  </div>
+                    </select>
+                  </label>
 
                   {/* Parent Credentials */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">

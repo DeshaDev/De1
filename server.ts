@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { assessReadingAudioWithAzure, getAzureSpeechCredentials, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
+import { assessReadingAudioWithGemini, getGeminiApiKey, getOpenRouterApiKey } from './src/utils/geminiAudioAssessment';
 import {
   ACTIVITY_IDS,
   DraftPlanSchema,
@@ -3720,6 +3721,173 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     });
   });
 
+  // Diagnostic laboratory endpoint: Compares Azure Speech Pronunciation Assessment vs Google Gemini Multimodal Audio
+  app.post('/api/ai/compare-audio-assessment', async (req, res) => {
+    const clientIp = String(req.ip || req.socket.remoteAddress || '');
+    const isLocalhost =
+      clientIp === '127.0.0.1' ||
+      clientIp === '::1' ||
+      clientIp === '::ffff:127.0.0.1' ||
+      clientIp.includes('127.0.0.1') ||
+      req.hostname === 'localhost';
+    const authHeader = String(req.headers.authorization || '');
+    const hasAdminSession = isBaseeraAuthConfigured() && Boolean(verifyBaseeraSessionToken(authHeader, BASEERA_SESSION_SECRET));
+    if (!isLocalhost && !hasAdminSession) {
+      res.status(403).json({
+        code: 'LAB_ENDPOINT_RESTRICTED',
+        error: 'مختبر مقارنة التقييم الصوتي مخصص للبيئة التجريبية المحلية (Localhost) أو جلسات الإدارة المعتمدة فقط، ولا يقبل طلبات عامة لمنع استهلاك الحصص غير المصرح به.',
+      });
+      return;
+    }
+    const body = req.body || {};
+    const referenceText = typeof body.referenceText === 'string' ? body.referenceText.trim() : '';
+    const audioWavBase64 = typeof body.audioWavBase64 === 'string' ? body.audioWavBase64.trim() : '';
+    const durationSeconds = typeof body.durationSeconds === 'number' && body.durationSeconds > 0 ? body.durationSeconds : 3;
+    const language = body.language === 'ar-EG' ? 'ar-EG' : 'ar-SA';
+    const referenceWords = Array.isArray(body.referenceWords) && body.referenceWords.length > 0
+      ? body.referenceWords.map(String)
+      : referenceText.split(/\s+/).filter(Boolean);
+
+    if (!referenceText || referenceWords.length === 0) {
+      res.status(400).json({ code: 'INVALID_REFERENCE_TEXT', error: 'يلزم إدخال نص مرجعي صالح للمقارنة.' });
+      return;
+    }
+    if (!audioWavBase64 || audioWavBase64.length < 100) {
+      res.status(400).json({ code: 'INVALID_AUDIO_DATA', error: 'يلزم إرسال تسجيل صوتي بصيغة WAV صالحة.' });
+      return;
+    }
+
+    const { key: azureKey, region: azureRegion } = getAzureSpeechCredentials();
+    const serverGeminiKey = getGeminiApiKey();
+    const serverOpenRouterKey = getOpenRouterApiKey();
+    const customKey = typeof body.geminiApiKey === 'string' && body.geminiApiKey.trim().length > 10
+      ? body.geminiApiKey.trim()
+      : null;
+    const effectiveGeminiKey = customKey || serverOpenRouterKey || serverGeminiKey;
+
+    const results: {
+      referenceText: string;
+      referenceWords: string[];
+      durationSeconds: number;
+      language: 'ar-EG' | 'ar-SA';
+      azure: {
+        configured: boolean;
+        latencyMs: number | null;
+        result: any | null;
+        error: string | null;
+      };
+      google: {
+        configured: boolean;
+        latencyMs: number | null;
+        result: any | null;
+        error: string | null;
+      };
+      comparison: {
+        winnerFastest: 'azure' | 'google' | 'tie' | null;
+        transcriptMatch: boolean | null;
+        accuracyDelta: number | null;
+      };
+    } = {
+      referenceText,
+      referenceWords,
+      durationSeconds,
+      language,
+      azure: {
+        configured: Boolean(azureKey && azureRegion),
+        latencyMs: null,
+        result: null,
+        error: null,
+      },
+      google: {
+        configured: Boolean(effectiveGeminiKey),
+        latencyMs: null,
+        result: null,
+        error: null,
+      },
+      comparison: {
+        winnerFastest: null,
+        transcriptMatch: null,
+        accuracyDelta: null,
+      },
+    };
+
+    // Run evaluations in parallel
+    const tasks: Promise<void>[] = [];
+
+    if (results.azure.configured) {
+      tasks.push((async () => {
+        const start = Date.now();
+        try {
+          const azRes = await assessReadingAudioWithAzure({
+            referenceText,
+            referenceWords,
+            audioWavBase64,
+            durationSeconds,
+            language,
+            dialectLabel: 'الفصحى المعيارية (ar-SA)',
+          });
+          results.azure.latencyMs = Date.now() - start;
+          results.azure.result = azRes;
+        } catch (azErr: any) {
+          results.azure.latencyMs = Date.now() - start;
+          results.azure.error = azErr instanceof Error ? azErr.message : String(azErr);
+        }
+      })());
+    } else {
+      results.azure.error = 'AZURE_SPEECH_NOT_CONFIGURED: مفاتيح Azure غير مهيأة في بيئة الخادم.';
+    }
+
+    if (results.google.configured) {
+      tasks.push((async () => {
+        const start = Date.now();
+        try {
+          const gemRes = await assessReadingAudioWithGemini({
+            referenceText,
+            referenceWords,
+            audioWavBase64,
+            durationSeconds,
+            language,
+            apiKey: effectiveGeminiKey || undefined,
+          });
+          results.google.latencyMs = Date.now() - start;
+          results.google.result = gemRes;
+        } catch (gemErr: any) {
+          results.google.latencyMs = Date.now() - start;
+          results.google.error = gemErr instanceof Error ? gemErr.message : String(gemErr);
+        }
+      })());
+    } else {
+      results.google.error = 'GEMINI_API_KEY_NOT_CONFIGURED: مفتاح Google Gemini غير مهيأ. يمكنك وضع مفتاح مجاني من aistudio.google.com مباشرة في المختبر.';
+    }
+
+    await Promise.allSettled(tasks);
+
+    // Compute comparison metrics
+    if (results.azure.latencyMs !== null && results.google.latencyMs !== null) {
+      if (Math.abs(results.azure.latencyMs - results.google.latencyMs) < 150) {
+        results.comparison.winnerFastest = 'tie';
+      } else if (results.azure.latencyMs < results.google.latencyMs) {
+        results.comparison.winnerFastest = 'azure';
+      } else {
+        results.comparison.winnerFastest = 'google';
+      }
+    }
+
+    if (results.azure.result && results.google.result) {
+      const azT = (results.azure.result.transcript || '').trim();
+      const ggT = (results.google.result.transcript || '').trim();
+      results.comparison.transcriptMatch = azT.length > 0 && azT === ggT;
+
+      const azAcc = results.azure.result.wordAccuracyPercent ?? results.azure.result.accuracyScore ?? null;
+      const ggAcc = results.google.result.wordAccuracyPercent ?? null;
+      if (typeof azAcc === 'number' && typeof ggAcc === 'number') {
+        results.comparison.accuracyDelta = Math.abs(azAcc - ggAcc);
+      }
+    }
+
+    res.json(results);
+  });
+
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
   app.post('/api/ai/pronunciation-assessment', requireAiAccess({ allowGuestAudio: true }), async (req, res) => {
@@ -3828,7 +3996,11 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
     } else if (String(assessmentSession.role) === 'guest') {
-      // Guest demo session: allowed for screening preview
+      res.status(403).json({
+        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
+        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
+      });
+      return;
     } else {
       const schoolStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
@@ -3915,7 +4087,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         audioWavBase64,
         durationSeconds: Number(durationSeconds),
         language,
-        dialectLabel: language === 'ar-EG' ? 'المصرية' : 'الفصحى المعيارية / الخليجية',
+        dialectLabel: 'الفصحى المعيارية (ar-SA)',
       });
       console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
 
@@ -4240,6 +4412,14 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
     }
 
+    if (String(assessmentSession.role) === 'guest') {
+      res.status(403).json({
+        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
+        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
+      });
+      return;
+    }
+
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;
       const timestamp = Date.parse(value);
@@ -4411,7 +4591,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         audioWavBase64: body.audioWavBase64,
         durationSeconds,
         language: body.language,
-        dialectLabel: body.language === 'ar-EG' ? 'المصرية' : 'الخليجية / الفصحى',
+        dialectLabel: 'الفصحى المعيارية (ar-SA)',
       });
 
       if (wordItem) {
