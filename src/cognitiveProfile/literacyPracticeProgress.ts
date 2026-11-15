@@ -33,6 +33,16 @@ export function emptyLiteracyPracticeProgress(): LiteracyPracticeProgress {
   return { schemaVersion: 1, stations, fluencyReadingsCompleted: 0 };
 }
 
+/** Ignore optional vowel marks while preserving actual Arabic spelling contrasts. */
+export function normalizeArabicSpelling(value: string): string {
+  return value.normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/\s+/g, '');
+}
+
+export function arabicSpellingMatches(response: string, expected: string): boolean {
+  const normalizedResponse = normalizeArabicSpelling(response);
+  return normalizedResponse.length > 0 && normalizedResponse === normalizeArabicSpelling(expected);
+}
+
 const safeCount = (value: unknown): number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? Math.min(1_000_000, Math.floor(value))
