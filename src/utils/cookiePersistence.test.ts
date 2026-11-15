@@ -106,7 +106,7 @@ test('Session persistence: save, load, and clear across cookie/localStorage/sess
   assert.equal(cookieJar.has('baseera_session'), false);
 });
 
-test('Student and Active Student persistence: keeps user registered child across reloads', () => {
+test('Student and Active Student persistence: fails closed without durable key storage', async () => {
   setupMockBrowser();
 
   const customChild: Partial<StudentRecord> = {
@@ -119,17 +119,14 @@ test('Student and Active Student persistence: keeps user registered child across
     guardianAudioConsentGiven: true,
   };
 
-  saveStoredStudents([customChild as StudentRecord]);
-  const loadedStudents = loadStoredStudents();
-  assert.equal(loadedStudents.length, 1);
-  assert.equal(loadedStudents[0].name, 'إياد');
-  assert.equal(loadedStudents[0].guardianAudioConsentGiven, true);
+  await assert.rejects(() => saveStoredStudents([customChild as StudentRecord]), /IndexedDB is required/);
+  assert.equal(localStorageJar.has('hn_stored_students_v1'), false);
 
   saveActiveStudentId('stu-iyad-123');
   assert.equal(loadActiveStudentId(), 'stu-iyad-123');
 });
 
-test('Student persistence: seamlessly loads legacy unencrypted plain JSON and upgrades it to encrypted format', () => {
+test('Student persistence: reads legacy plain JSON and preserves it if key upgrade is unavailable', async () => {
   const { localStorageJar } = setupMockBrowser();
 
   const legacyStudents: Partial<StudentRecord>[] = [
@@ -146,19 +143,17 @@ test('Student persistence: seamlessly loads legacy unencrypted plain JSON and up
   // Store legacy plain JSON directly in localStorage as occurred in older versions
   localStorageJar.set('hn_stored_students_v1', JSON.stringify(legacyStudents));
 
-  const loaded = loadStoredStudents();
+  const loaded = await loadStoredStudents();
   assert.equal(loaded.length, 1);
   assert.equal(loaded[0].name, 'مريم');
   assert.equal(loaded[0].guardianAudioConsentGiven, true);
 
-  // Assert that after loadStoredStudents, the data in localStorage was immediately upgraded to encrypted format
+  // No IndexedDB in this Node test: the legacy source must remain intact.
   const rawAfterLoad = localStorageJar.get('hn_stored_students_v1');
-  assert.ok(rawAfterLoad);
-  assert.ok(rawAfterLoad?.startsWith('baseera:enc:v1:'));
-  assert.equal(rawAfterLoad?.includes('مريم'), false);
+  assert.equal(rawAfterLoad, JSON.stringify(legacyStudents));
 });
 
-test('Student persistence: survives tab closure and browser restart with 100% data preservation', () => {
+test('Student persistence: does not overwrite existing data if durable key storage is unavailable', async () => {
   const { localStorageJar, sessionStorageJar } = setupMockBrowser();
   resetDeviceEncryptionKeyCacheForTesting();
 
@@ -174,20 +169,15 @@ test('Student persistence: survives tab closure and browser restart with 100% da
   };
 
   // 1. Parent registers and completes session, stored in browser
-  saveStoredStudents([child as StudentRecord]);
-  const immediateLoad = loadStoredStudents();
-  assert.equal(immediateLoad.length, 1);
-  assert.equal(immediateLoad[0].name, 'سليمان');
+  await assert.rejects(() => saveStoredStudents([child as StudentRecord]), /IndexedDB is required/);
+  assert.equal(localStorageJar.has('hn_stored_students_v1'), false);
 
   // 2. User closes browser: sessionStorage wiped, memory cache cleared
   sessionStorageJar.clear();
   resetDeviceEncryptionKeyCacheForTesting();
 
   // 3. User reopens browser on another day:
-  const restoredAfterRestart = loadStoredStudents();
-  assert.equal(restoredAfterRestart.length, 1);
-  assert.equal(restoredAfterRestart[0].name, 'سليمان');
-  assert.equal(restoredAfterRestart[0].guardianAudioConsentGiven, true);
-  assert.equal(restoredAfterRestart[0].wpm, 65);
+  const restoredAfterRestart = await loadStoredStudents();
+  assert.deepEqual(restoredAfterRestart, []);
 });
 
