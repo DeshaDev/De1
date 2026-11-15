@@ -126,7 +126,8 @@ function TrainingSpellingPlayer({ item, onDone }: { item: DictationTrainingItem;
   useEffect(() => {
     const handle: PlaybackHandle = { cancelled: false };
     playback.current = handle;
-    void speakSegments(item.audio, handle).then(() => { if (!handle.cancelled) setBusy(false); });
+    setBusy(true);
+    void speakSegments(item.audio, handle).then(() => { if (!handle.cancelled) { startedAt.current = performance.now(); setBusy(false); } });
     return () => { handle.cancelled = true; stopSpeech(); };
   }, [item.id]);
 
@@ -148,7 +149,7 @@ function TrainingSpellingPlayer({ item, onDone }: { item: DictationTrainingItem;
       setBusy(false);
       return;
     }
-    await speakSegments([{ text: correct && phase === 'write' ? 'أَحْسَنْتَ! كِتَابَةٌ صَحِيحَةٌ.' : item.explanationAr }], { cancelled: false });
+    await speakSegments([{ text: correct ? 'أَحْسَنْتَ! كِتَابَةٌ صَحِيحَةٌ.' : item.explanationAr }], { cancelled: false });
     onDone(phase === 'write' && correct, firstRt.current);
   };
 
@@ -436,7 +437,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const placementItems = (skill: SkillId, level: Level): ChoiceItem[] => {
     seed.current += 104729;
     return generateItems(skill, level, seed.current, PLACEMENT_ITEMS_PER_LEVEL + 3, progress?.targets, childAgeMonths ?? 72)
-      .filter((t): t is Extract<TrainingTask, { kind: 'choice' }> => t.kind === 'choice')
+      .filter((t): t is Extract<TrainingTask, { kind: 'choice' }> => t.kind === 'choice' && t.item.responseMode !== 'text')
       .map((t) => t.item)
       .slice(0, PLACEMENT_ITEMS_PER_LEVEL);
   };
@@ -774,14 +775,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
             </div>
           )}
-          {run.phase === 'task' && task.kind === 'choice' && (
+          {run.phase === 'task' && task.kind === 'choice' && task.item.responseMode === 'text' && (
+            <TrainingSpellingPlayer key={task.item.id} item={task.item as DictationTrainingItem} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
+          )}
+          {run.phase === 'task' && task.kind === 'choice' && task.item.responseMode !== 'text' && (
             <TeachingChoicePlayer key={task.item.id} item={task.item} guided={run.taskIndex < run.guided} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
           )}
           {run.phase === 'task' && task.kind === 'span' && (
             <SpanPlayer key={task.trial.id + run.taskIndex} trial={task.trial} modality={task.modality} showFeedback onDone={(r) => onTaskDone(r.correct, r.rtMs)} />
-          )}
-          {run.phase === 'task' && task.kind === 'spelling' && (
-            <TrainingSpellingPlayer key={task.item.id} item={task.item} onDone={(correct, rtMs) => onTaskDone(correct, rtMs)} />
           )}
           {run.phase === 'result' && run.change && (
             <div className="flex flex-col items-center text-center gap-4">
