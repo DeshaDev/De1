@@ -68,11 +68,18 @@ function hash(text: string): number {
  * The probe for one session. Seeds depend on the child and the session number, so the same
  * session always gets the same form and two sessions never share a seed.
  */
-export function buildProbe(plan: Pick<TrainingPlan, 'focus'>, studentId: string, session: number, ageMonths = 72): ProbeItem[] {
+export function buildProbe(
+  plan: Pick<TrainingPlan, 'focus'>,
+  studentId: string,
+  session: number,
+  ageMonths = 72,
+  sessionFocus?: SkillId[]
+): ProbeItem[] {
   const items: ProbeItem[] = [];
   const comparison = comparisonSkillFor(plan);
+  const trainedFocus = sessionFocus ? plan.focus.filter((skill) => sessionFocus.includes(skill)) : plan.focus;
   const skills: Array<{ skill: SkillId; role: ProbeItem['role'] }> = [
-    ...plan.focus.map((skill) => ({ skill, role: 'trained' as const })),
+    ...trainedFocus.map((skill) => ({ skill, role: 'trained' as const })),
     ...(comparison ? [{ skill: comparison, role: 'comparison' as const }] : []),
   ];
   skills.forEach(({ skill, role }, i) => {
