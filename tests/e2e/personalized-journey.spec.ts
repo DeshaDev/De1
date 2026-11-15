@@ -82,7 +82,6 @@ async function startBatteryWithAudioConsent(page: Page, childName: string) {
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill(childName);
   await page.getByLabel('السنوات').selectOption('7');
-  await page.getByLabel('لهجة الطفل في البيت').selectOption('egyptian');
   for (const label of [
     /المكان هادئ/,
     /الصوت واضح/,

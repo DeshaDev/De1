@@ -3712,6 +3712,22 @@ async function startServer() {
 
   // Diagnostic laboratory endpoint: Compares Azure Speech Pronunciation Assessment vs Google Gemini Multimodal Audio
   app.post('/api/ai/compare-audio-assessment', async (req, res) => {
+    const clientIp = String(req.ip || req.socket.remoteAddress || '');
+    const isLocalhost =
+      clientIp === '127.0.0.1' ||
+      clientIp === '::1' ||
+      clientIp === '::ffff:127.0.0.1' ||
+      clientIp.includes('127.0.0.1') ||
+      req.hostname === 'localhost';
+    const authHeader = String(req.headers.authorization || '');
+    const hasAdminSession = isBaseeraAuthConfigured() && Boolean(verifyBaseeraSessionToken(authHeader, BASEERA_SESSION_SECRET));
+    if (!isLocalhost && !hasAdminSession) {
+      res.status(403).json({
+        code: 'LAB_ENDPOINT_RESTRICTED',
+        error: 'مختبر مقارنة التقييم الصوتي مخصص للبيئة التجريبية المحلية (Localhost) أو جلسات الإدارة المعتمدة فقط، ولا يقبل طلبات عامة لمنع استهلاك الحصص غير المصرح به.',
+      });
+      return;
+    }
     const body = req.body || {};
     const referenceText = typeof body.referenceText === 'string' ? body.referenceText.trim() : '';
     const audioWavBase64 = typeof body.audioWavBase64 === 'string' ? body.audioWavBase64.trim() : '';
@@ -3969,14 +3985,11 @@ async function startServer() {
         return;
       }
     } else if (String(assessmentSession.role) === 'guest') {
-      // Guest demo session: strictly restricted to demo records to prevent processing real child audio without verified ownership.
-      if (!studentId.startsWith('demo-') && studentId !== 'child-demo') {
-        res.status(403).json({
-          code: 'GUEST_DEMO_RESTRICTED',
-          error: 'مسار الزائر التجريبي مخصص للعينات التجريبية فقط؛ يلزم تسجيل دخول ولي الأمر أو المدرسة لمعالجة تسجيلات أطفال حقيقية.',
-        });
-        return;
-      }
+      res.status(403).json({
+        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
+        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
+      });
+      return;
     } else {
       const schoolStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
@@ -4389,13 +4402,11 @@ async function startServer() {
     }
 
     if (String(assessmentSession.role) === 'guest') {
-      if (!studentId.startsWith('demo-') && studentId !== 'child-demo') {
-        res.status(403).json({
-          code: 'GUEST_DEMO_RESTRICTED',
-          error: 'مسار الزائر التجريبي مخصص للعينات التجريبية فقط؛ يلزم تسجيل دخول ولي الأمر أو المدرسة لمعالجة تسجيلات أطفال حقيقية.',
-        });
-        return;
-      }
+      res.status(403).json({
+        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
+        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
+      });
+      return;
     }
 
     const validConsentTimestamp = (value: unknown): boolean => {

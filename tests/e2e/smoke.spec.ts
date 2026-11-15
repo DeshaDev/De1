@@ -138,9 +138,6 @@ test('parent registration limits the screening age range and requires explicit g
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
   await expect(guardianConsent).not.toBeChecked();
   await page.getByRole('button', { name: /إنشاء الحساب وبدء فحص القراءة الآن/ }).click();
-  await expect(page.getByRole('alert')).toContainText('اختر اللهجة الأساسية في المنزل');
-  await page.getByRole('button', { name: 'سعودية / خليجية', exact: true }).click();
-  await page.getByRole('button', { name: /إنشاء الحساب وبدء فحص القراءة الآن/ }).click();
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
 
   await page.goto('/');

@@ -647,7 +647,7 @@ interface Props {
 
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
-  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('fast');
+  const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
   const loadInitial = (): BatterySession | null => {

@@ -151,7 +151,7 @@ RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
 PARALLEL SAFE
-AS 
+AS $$
   SELECT COALESCE(jsonb_object_agg(item.key, item.value), '{}'::jsonb)
   FROM jsonb_each(COALESCE(raw, '{}'::jsonb)) AS item(key, value)
   WHERE item.key = ANY (ARRAY[
@@ -212,12 +212,12 @@ AS
     'guardianAudioConsentGiven',
     'guardianAudioConsentRecordedAt'
   ]::text[]);
-;
+$$;
 
 CREATE OR REPLACE FUNCTION public.guard_student_assessment_evidence()
 RETURNS trigger
 LANGUAGE plpgsql
-AS 
+AS $$
 DECLARE
   jwt_role text := COALESCE(
     NULLIF(current_setting('request.jwt.claim.role', true), ''),
@@ -246,7 +246,7 @@ BEGIN
 
   RETURN NEW;
 END;
-;
+$$;
 
 DROP TRIGGER IF EXISTS students_guard_assessment_evidence ON public.students;
 CREATE TRIGGER students_guard_assessment_evidence
