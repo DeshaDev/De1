@@ -73,11 +73,11 @@ function nextStepFor(child: StudentRecord): NextStep {
       tab: 'dashboard',
     };
   }
-  const stored = loadBatterySession(child.id) ?? child.cognitiveBattery ?? null;
+  const stored = child.cognitiveBattery ?? null;
   const battery = stored?.results ?? {};
   const tasks = subtestsForAge(stored?.ageMonths ?? child.ageYears * 12);
   const done = tasks.filter((s) => battery[s.id]).length;
-  const training = loadTrainingProgress(child.id) ?? child.trainingProgress ?? null;
+  const training = child.trainingProgress ?? null;
   if (done === 0) {
     return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مؤشرات عسر القراءة', progressAr: null, tab: 'dyslexia-lab' };
   }

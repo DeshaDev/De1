@@ -25,9 +25,9 @@ export function ReadingErrorPanel({ words, passageId, studentId }: { words: Read
   const [applied, setApplied] = useState<string | null>(null);
   const hasPatterns = profile.letterConfusions.length + profile.longVowelErrors.length + profile.wholeWordSubstitutions.length + profile.omittedWords.length > 0;
 
-  const apply = () => {
+  const apply = async () => {
     const rec = { ...profile.recommendations, passageId, analysedAt: profile.analysedAt };
-    const progress = loadTrainingProgress(studentId);
+    const progress = await loadTrainingProgress(studentId);
     if (!progress) {
       try {
         window.localStorage.setItem(PENDING_KEY(studentId), JSON.stringify(rec));
@@ -40,7 +40,7 @@ export function ReadingErrorPanel({ words, passageId, studentId }: { words: Read
       return;
     }
     const { progress: next, added } = applyReadingTargets(progress, rec);
-    saveTrainingProgress(studentId, next);
+    await saveTrainingProgress(studentId, next);
     setApplied(
       added.length > 0
         ? `أُضيفت إلى البرنامج: ${added.map((s) => SKILLS[s].nameAr).join('، ')}، وصارت التمارين تركّز على أخطائه.`

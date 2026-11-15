@@ -166,7 +166,14 @@ interface Props {
 }
 
 export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
-  const [progress, setProgress] = useState<TrainingProgress | null>(() => loadTrainingProgress(studentId) ?? serverProgress);
+  const [progress, setProgress] = useState<TrainingProgress | null>(serverProgress);
+  useEffect(() => {
+    let cancelled = false;
+    void loadTrainingProgress(studentId)
+      .then((stored) => { if (!cancelled) setProgress(stored ?? serverProgress); })
+      .catch((error) => console.error('Unable to restore encrypted training progress:', error));
+    return () => { cancelled = true; };
+  }, [studentId]);
   const [run, setRun] = useState<Run | null>(null);
   useEffect(() => {
     onRunningChange?.(run !== null);
@@ -182,12 +189,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   /** Keep each answer on this device; the record and the school/family database are updated per block. */
   const persistLocal = (p: TrainingProgress) => {
     setProgress(p);
-    saveTrainingProgress(studentId, p);
+    void saveTrainingProgress(studentId, p).catch((error) => console.error('Unable to persist encrypted training progress:', error));
   };
 
   const persist = (p: TrainingProgress) => {
     setProgress(p);
-    saveTrainingProgress(studentId, p);
+    void saveTrainingProgress(studentId, p).catch((error) => console.error('Unable to persist encrypted training progress:', error));
     if (syncEnabled) {
       syncTrainingToSchool(studentId, p, student)
         .then((student) => student && onRecordUpdated?.(student))
