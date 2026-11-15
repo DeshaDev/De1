@@ -272,6 +272,9 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
   for (let i = 0; i < 20 && !(await done.isVisible()); i++) {
     await expect(option.or(done)).toBeVisible({ timeout: 20_000 });
     if (await done.isVisible()) break;
+    if (i === 0) {
+      await expect(page.getByText(/تأخر تشغيل الصوت/)).toBeVisible({ timeout: 20_000 });
+    }
     await expect(option).toBeEnabled({ timeout: 20_000 });
     await expect(mascot).toHaveCount(0);
     await option.click();
