@@ -435,7 +435,7 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
     }
     rationaleAr.push('تُدرج مهارات فك الترميز والإملاء والفهم، والوعي الصرفي من عمر ٧ سنوات، بوصفها مكونات تعليمية مناسبة للعمر لا بوصفها نقاط ضعف مستنتجة من الفحص.');
     rationaleAr.push('تُضبط مستويات البداية (١ أو ٢) وعدد تمارين الجلسة وفق نسبة الأداء الملاحظة في الفحص لكل مهارة.');
-    if (trainable.length > MAX_FOCUS_SKILLS) {
+    if (focus.length > MAX_FOCUS_SKILLS) {
       rationaleAr.push('بقية المهارات الأقل دقة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
   }
@@ -858,8 +858,7 @@ export function applySession(
 
 /** Chance of answering an item right by guessing: the "guess" parameter of the model. */
 export function chanceOf(task: TrainingTask): number {
-  if (task.kind === 'choice') return 1 / Math.max(2, task.item.options.length);
-  if (task.kind === 'spelling') return 0.01;
+  if (task.kind === 'choice') return task.item.responseMode === 'text' ? 0.01 : 1 / Math.max(2, task.item.options.length);
   return 0.05;
 }
 
@@ -876,18 +875,15 @@ export function isReassessmentDue(progress: TrainingProgress, now = new Date()):
 // ---------------------------------------------------------------------------
 // Item generators
 // ---------------------------------------------------------------------------
-export interface DictationTrainingItem {
-  id: string;
-  promptAr: string;
-  audio: AudioSegment[];
+export type DictationTrainingItem = ChoiceItem & {
+  responseMode: 'text';
   expected: string;
   explanationAr: string;
-}
+};
 
 export type TrainingTask =
   | { kind: 'choice'; item: ChoiceItem }
-  | { kind: 'span'; modality: 'visual' | 'auditory'; trial: SpanTrial }
-  | { kind: 'spelling'; item: DictationTrainingItem };
+  | { kind: 'span'; modality: 'visual' | 'auditory'; trial: SpanTrial };
 
 const ITEMS_PER_SESSION = 8;
 const SPAN_TRIALS_PER_SESSION = 5;
@@ -1180,29 +1176,23 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     if (questions.length === 0) return [];
     const ordered = shuffleWith(questions, random);
     return ordered.slice(0, ITEMS_PER_SESSION).map((question, index): TrainingTask => {
-      if (skill === 'spelling' && question.responseMode === 'text') {
-        return { kind: 'spelling', item: {
-          id: `tr-spell-${question.id}-${index}`,
-          promptAr: question.promptAr,
-          audio: question.audio.map((text) => ({ text })),
-          expected: question.correctId,
-          explanationAr: question.explanationAr,
-        } };
-      }
-      const options = shuffleWith(question.options, random).map((option) => ({
+      const isDictation = skill === 'spelling' && question.responseMode === 'text';
+      const options = isDictation ? [] : shuffleWith(question.options, random).map((option) => ({
         id: option.id,
         visual: option.emoji
           ? { type: 'emoji' as const, value: option.emoji, label: option.labelAr }
           : { type: 'glyph' as const, value: option.labelAr, label: option.labelAr },
       }));
-      return { kind: 'choice', item: {
+      const item: ChoiceItem = {
         id: `tr-literacy-${question.id}-${index}`,
         promptAr: question.promptAr,
         audio: question.audio.map((text) => ({ text })),
         options,
         correctId: question.correctId,
         tag: `structured-${skill}`,
-      } };
+        ...(isDictation ? { responseMode: 'text' as const, expected: question.correctId, explanationAr: question.explanationAr } : {}),
+      };
+      return { kind: 'choice', item };
     });
   }
 
@@ -1246,15 +1236,13 @@ export function generateItems(skill: SkillId, level: Level, seed: number, count:
   for (let k = 0; out.length < count && k < 8; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
-      const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : task.kind === 'spelling' ? `${task.item.expected}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      const signature = task.kind === 'choice' ? `${task.item.expected ?? task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
       if (seen.has(signature)) continue;
       seen.add(signature);
       out.push(
         task.kind === 'choice'
           ? { ...task, item: { ...task.item, id: `${task.item.id}-b${k}` } }
-          : task.kind === 'spelling'
-            ? { ...task, item: { ...task.item, id: `${task.item.id}-b${k}` } }
-            : { ...task, trial: { ...task.trial, id: `${task.trial.id}-b${k}` } }
+          : { ...task, trial: { ...task.trial, id: `${task.trial.id}-b${k}` } }
       );
     }
   }
