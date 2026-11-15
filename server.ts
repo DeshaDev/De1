@@ -5051,7 +5051,11 @@ async function startServer() {
     res.status(404).json({ error: 'مسار API غير موجود.' });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    (typeof process.argv[1] === 'string' && process.argv[1].endsWith('server.js'));
+
+  if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: {
