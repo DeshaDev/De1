@@ -142,8 +142,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
         </div>
 
         <section className="bz-card bz-card-pad space-y-3">
-          <p className="bz-small text-brand font-semibold">محطات قراءة متكاملة</p>
-          <h2 className="bz-h2">مهارات تتكامل معًا</h2>
+          <p className="bz-small text-brand font-semibold">محطات قراءة ولغة</p>
+          <h2 className="bz-h2">نتدرّب على مهارات قرائية متنوعة</h2>
           <p className="bz-body">
             اختر محطة قصيرة. تختلف الأنشطة بحسب العمر؛ فالطفل الأصغر يستمع ويفهم، ولا نطالبه بقراءة كلمات قبل بدء تعلّم القراءة.
           </p>
@@ -170,7 +170,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
-              <p className="text-xs text-slate-500 mt-2">مرات إكمال سابقة: {ageLabel(practiceProgress.stations[item.id].completedSessions)}</p>
+              <p className="text-xs text-slate-500 mt-2">محاولات سابقة: {ageLabel(practiceProgress.stations[item.id].attemptedQuestions)} · مرات الإكمال: {ageLabel(practiceProgress.stations[item.id].completedSessions)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>
