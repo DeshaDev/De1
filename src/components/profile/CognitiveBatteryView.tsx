@@ -656,7 +656,7 @@ interface Props {
   /** Open an optional extra activity (practice games or the reader). */
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }) => string | null;
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }) => string | null;
   supabaseUser?: any;
   onNavigateTab?: (tab: string) => void;
 }
@@ -836,6 +836,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               ageYears: Math.floor(s.ageMonths / 12),
               examinerName: s.examinerName,
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+              guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
+              guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
             });
             if (newId) {
               void saveBatterySession({ ...s, studentId: newId }).catch((error) => console.error('Unable to persist battery session:', error));
