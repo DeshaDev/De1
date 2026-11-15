@@ -303,7 +303,7 @@ export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | 
       const plaintext = await webCrypto.subtle.decrypt(
         { name: 'AES-GCM', iv: base64ToBytes(parts[0]) as unknown as BufferSource },
         key,
-        base64ToBytes(parts[1])
+        base64ToBytes(parts[1]) as unknown as BufferSource
       );
       return JSON.parse(new TextDecoder().decode(plaintext)) as T;
     }
