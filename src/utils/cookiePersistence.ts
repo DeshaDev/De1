@@ -143,8 +143,14 @@ export async function loadStoredStudents(): Promise<StudentRecord[]> {
   const decrypted = await secureDecryptAsync<StudentRecord[]>(raw);
   if (!Array.isArray(decrypted)) return [];
   if (!isCurrentSecureCiphertext(raw)) {
-    const upgraded = await secureEncrypt(decrypted);
-    window.localStorage.setItem(STUDENTS_STORAGE_KEY, upgraded);
+    try {
+      const upgraded = await secureEncrypt(decrypted);
+      window.localStorage.setItem(STUDENTS_STORAGE_KEY, upgraded);
+    } catch (error) {
+      // Return the successfully decoded legacy records, but never delete/replace
+      // them if the browser cannot persist its non-extractable AES-GCM key.
+      console.error('Legacy child records could not be upgraded yet; original data was preserved.', error);
+    }
   }
   return decrypted;
 }
