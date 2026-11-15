@@ -1190,7 +1190,9 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
         options,
         correctId: question.correctId,
         tag: `structured-${skill}`,
-        ...(isDictation ? { responseMode: 'text' as const, expected: question.correctId, explanationAr: question.explanationAr } : {}),
+        explanationAr: question.explanationAr,
+        explanationAudio: question.explanationAudio.map((text) => ({ text })),
+        ...(isDictation ? { responseMode: 'text' as const, expected: question.correctId } : {}),
       };
       return { kind: 'choice', item };
     });
