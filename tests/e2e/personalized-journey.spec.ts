@@ -78,6 +78,8 @@ function buildPassageAssessmentPayload(opts: {
 }
 
 async function startBatteryWithAudioConsent(page: Page, childName: string) {
+  // The test uses Chromium's fake microphone stream; grant browser permission explicitly.
+  await page.context().grantPermissions(['microphone']);
   await page.goto('/');
   await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill(childName);
