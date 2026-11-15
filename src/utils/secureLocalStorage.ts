@@ -1,506 +1,382 @@
 /**
- * Baseera Application-Level Local Storage Encryption
+ * Browser storage encryption for child records.
  *
- * Implements authenticated encryption at rest (Encrypt-then-MAC with HMAC-SHA256 CTR keystream
- * and standard Web Crypto AES-GCM support) for sensitive student screening records, cognitive
- * battery sessions, and training progress stored in the browser's localStorage.
+ * New writes use AES-256-GCM with a non-extractable CryptoKey persisted in IndexedDB.
+ * The key is never serialized into localStorage or stored beside ciphertext.
  *
- * Key Lifecycle:
- * - Employs a persistent device-bound encryption key seed stored in localStorage, guaranteeing that
- *   children's screening profiles, sessions, and progress survive browser restarts, tab closures,
- *   and system reboots without risk of key abandonment or data loss.
- * - Migrates legacy unencrypted plain JSON and previous seed versions automatically on read.
- * - Exclusively utilizes cryptographically secure PRNG (crypto.getRandomValues); Math.random is strictly banned.
+ * Legacy CTR/HMAC and the previous AES-GCM format remain read-only migration paths.
+ * Client-side encryption does not protect against JavaScript already executing in this
+ * origin (for example, a successful XSS); prevent that with CSP, dependency hygiene,
+ * and server-side access controls as well.
  */
 
-// Pure TypeScript SHA-256 implementation
-function sha256(bytes: Uint8Array): Uint8Array {
-  function rightRotate(value: number, amount: number): number {
-    return (value >>> amount) | (value << (32 - amount));
-  }
+const LEGACY_CTR_PREFIX = 'baseera:enc:v1:';
+const LEGACY_AES_GCM_PREFIX = 'baseera:enc:v2:aes-gcm:';
+export const CURRENT_AES_GCM_PREFIX = 'baseera:enc:v3:aes-gcm-idb:';
 
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let i: number, j: number;
-
-  const words: number[] = [];
-  const asciiBitLength = bytes.length * 8;
-
-  const hash: number[] = [];
-  const k: number[] = [];
-  let primeCounter = 0;
-
-  const isComposite: Record<number, boolean> = {};
-  for (let candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (i = 0; i < 313; i += candidate) {
-        isComposite[i] = true;
-      }
-      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
-      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
-    }
-  }
-
-  for (i = 0; i < bytes.length; i++) {
-    words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
-  }
-  words[asciiBitLength >> 5] |= 0x80 << (24 - (asciiBitLength % 32));
-  words[(((asciiBitLength + 64) >> 9) << 4) + 15] = asciiBitLength;
-
-  for (j = 0; j < words.length; j += 16) {
-    const w = words.slice(j, j + 16);
-    const oldHash = hash.slice(0);
-
-    for (i = 0; i < 64; i++) {
-      const i2 = i + j;
-      const w15 = w[i - 15];
-      const w2 = w[i - 2];
-
-      const a = hash[0];
-      const e = hash[4];
-      const temp1 =
-        hash[7] +
-        (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
-        ((e & hash[5]) ^ (~e & hash[6])) +
-        k[i] +
-        (w[i] =
-          i < 16
-            ? w[i]
-            : (w[i - 16] +
-                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
-                w[i - 7] +
-                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
-              0);
-      const temp2 =
-        (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
-        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-
-      hash[7] = hash[6];
-      hash[6] = hash[5];
-      hash[5] = hash[4];
-      hash[4] = (hash[3] + temp1) | 0;
-      hash[3] = hash[2];
-      hash[2] = hash[1];
-      hash[1] = hash[0];
-      hash[0] = (temp1 + temp2) | 0;
-    }
-
-    for (i = 0; i < 8; i++) {
-      hash[i] = (hash[i] + oldHash[i]) | 0;
-    }
-  }
-
-  const out = new Uint8Array(32);
-  for (i = 0; i < 8; i++) {
-    out[i * 4] = (hash[i] >>> 24) & 0xff;
-    out[i * 4 + 1] = (hash[i] >>> 16) & 0xff;
-    out[i * 4 + 2] = (hash[i] >>> 8) & 0xff;
-    out[i * 4 + 3] = hash[i] & 0xff;
-  }
-  return out;
-}
-
-function hmacSha256(key: Uint8Array, message: Uint8Array): Uint8Array {
-  let k = key;
-  if (k.length > 64) k = sha256(k);
-  const keyPad = new Uint8Array(64);
-  keyPad.set(k);
-
-  const oKeyPad = new Uint8Array(64);
-  const iKeyPad = new Uint8Array(64);
-  for (let i = 0; i < 64; i++) {
-    oKeyPad[i] = keyPad[i] ^ 0x5c;
-    iKeyPad[i] = keyPad[i] ^ 0x36;
-  }
-
-  const innerMsg = new Uint8Array(64 + message.length);
-  innerMsg.set(iKeyPad, 0);
-  innerMsg.set(message, 64);
-  const innerHash = sha256(innerMsg);
-
-  const outerMsg = new Uint8Array(64 + 32);
-  outerMsg.set(oKeyPad, 0);
-  outerMsg.set(innerHash, 64);
-  return sha256(outerMsg);
-}
-
-function encryptCTR(key: Uint8Array, iv: Uint8Array, data: Uint8Array): Uint8Array {
-  const output = new Uint8Array(data.length);
-  let counter = 0;
-  for (let offset = 0; offset < data.length; offset += 32) {
-    const counterBytes = new Uint8Array(4);
-    counterBytes[0] = (counter >>> 24) & 0xff;
-    counterBytes[1] = (counter >>> 16) & 0xff;
-    counterBytes[2] = (counter >>> 8) & 0xff;
-    counterBytes[3] = counter & 0xff;
-    counter++;
-
-    const blockInput = new Uint8Array(iv.length + 4);
-    blockInput.set(iv, 0);
-    blockInput.set(counterBytes, iv.length);
-
-    const keystream = hmacSha256(key, blockInput);
-    const blockSize = Math.min(32, data.length - offset);
-    for (let i = 0; i < blockSize; i++) {
-      output[offset + i] = data[offset + i] ^ keystream[i];
-    }
-  }
-  return output;
-}
-
-function uint8ToBase64(bytes: Uint8Array): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(bytes).toString('base64');
-  }
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function base64ToUint8(b64: string): Uint8Array {
-  if (typeof Buffer !== 'undefined') {
-    return new Uint8Array(Buffer.from(b64, 'base64'));
-  }
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-/**
- * Exclusively generates cryptographically secure random bytes.
- * Math.random is strictly prohibited.
- */
-export function getSecureRandomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    crypto.getRandomValues(bytes);
-    return bytes;
-  }
-  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
-    window.crypto.getRandomValues(bytes);
-    return bytes;
-  }
-  try {
-    // Node.js fallback
-    if (typeof require === 'function') {
-      const nodeCrypto = require('crypto');
-      if (typeof nodeCrypto?.randomFillSync === 'function') {
-        nodeCrypto.randomFillSync(bytes);
-        return bytes;
-      }
-    }
-  } catch {
-    // not node
-  }
-  throw new Error('Cryptographically secure random number generator is unavailable.');
-}
+const KEY_DATABASE = 'haya-naqra-secure-storage';
+const KEY_DATABASE_VERSION = 1;
+const KEY_STORE = 'crypto-keys';
+const KEY_ID = 'child-records-aes-256-gcm-v3';
+const AES_GCM_AAD = new TextEncoder().encode('haya-naqra:child-records:aes-256-gcm:v3');
 
 const DEVICE_STORAGE_SEED_KEY = 'baseera_device_storage_seed_v2';
 const LEGACY_STORAGE_SEED_KEY = 'baseera_app_encryption_seed_v1';
 const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
-let cachedKey: Uint8Array | null = null;
+
+let cachedLegacyKey: Uint8Array | null = null;
+let keyDatabasePromise: Promise<IDBDatabase> | null = null;
 
 export function resetDeviceEncryptionKeyCacheForTesting(): void {
-  cachedKey = null;
+  cachedLegacyKey = null;
+  keyDatabasePromise = null;
 }
 
-function deriveKeyFromSeed(seed: string): Uint8Array {
+/** Cryptographically secure random bytes only; never falls back to Math.random or constants. */
+export function getSecureRandomBytes(length: number): Uint8Array {
+  if (!Number.isInteger(length) || length <= 0) {
+    throw new Error('Random byte length must be a positive integer.');
+  }
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.getRandomValues) {
+    throw new Error('Cryptographically secure random number generation is unavailable.');
+  }
+  const bytes = new Uint8Array(length);
+  webCrypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  if (typeof btoa === 'function') return btoa(binary);
+  throw new Error('Base64 encoding is unavailable.');
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  if (typeof atob !== 'function') throw new Error('Base64 decoding is unavailable.');
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function sha256(bytes: Uint8Array): Uint8Array {
+  const rotate = (value: number, amount: number) => (value >>> amount) | (value << (32 - amount));
+  const words: number[] = [];
+  const hash: number[] = [];
+  const constants: number[] = [];
+  const composite: Record<number, boolean> = {};
+  let primeCounter = 0;
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!composite[candidate]) {
+      for (let i = 0; i < 313; i += candidate) composite[i] = true;
+      hash[primeCounter] = (Math.sqrt(candidate) * 0x100000000) | 0;
+      constants[primeCounter++] = (Math.cbrt(candidate) * 0x100000000) | 0;
+    }
+  }
+  const bitLength = bytes.length * 8;
+  for (let i = 0; i < bytes.length; i++) words[i >> 2] = (words[i >> 2] || 0) | (bytes[i] << (24 - (i % 4) * 8));
+  words[bitLength >> 5] = (words[bitLength >> 5] || 0) | (0x80 << (24 - (bitLength % 32)));
+  words[(((bitLength + 64) >> 9) << 4) + 15] = bitLength;
+  for (let offset = 0; offset < words.length; offset += 16) {
+    const w = words.slice(offset, offset + 16);
+    const previous = hash.slice();
+    for (let i = 0; i < 64; i++) {
+      const w15 = w[i - 15];
+      const w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const t1 = hash[7] + (rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25)) +
+        ((e & hash[5]) ^ (~e & hash[6])) + constants[i] +
+        (w[i] = i < 16 ? w[i] : (w[i - 16] +
+          (rotate(w15, 7) ^ rotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] +
+          (rotate(w2, 17) ^ rotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      const t2 = (rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)) +
+        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash[7] = hash[6]; hash[6] = hash[5]; hash[5] = hash[4];
+      hash[4] = (hash[3] + t1) | 0; hash[3] = hash[2];
+      hash[2] = hash[1]; hash[1] = hash[0]; hash[0] = (t1 + t2) | 0;
+    }
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + previous[i]) | 0;
+  }
+  const output = new Uint8Array(32);
+  for (let i = 0; i < 8; i++) {
+    output[i * 4] = hash[i] >>> 24;
+    output[i * 4 + 1] = hash[i] >>> 16;
+    output[i * 4 + 2] = hash[i] >>> 8;
+    output[i * 4 + 3] = hash[i];
+  }
+  return output;
+}
+
+function hmacSha256(key: Uint8Array, message: Uint8Array): Uint8Array {
+  let normalized = key;
+  if (normalized.length > 64) normalized = sha256(normalized);
+  const padded = new Uint8Array(64);
+  padded.set(normalized);
+  const innerPad = new Uint8Array(64);
+  const outerPad = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) {
+    innerPad[i] = padded[i] ^ 0x36;
+    outerPad[i] = padded[i] ^ 0x5c;
+  }
+  const inner = new Uint8Array(64 + message.length);
+  inner.set(innerPad);
+  inner.set(message, 64);
+  const innerHash = sha256(inner);
+  const outer = new Uint8Array(96);
+  outer.set(outerPad);
+  outer.set(innerHash, 64);
+  return sha256(outer);
+}
+
+function legacyCtrCrypt(key: Uint8Array, iv: Uint8Array, data: Uint8Array): Uint8Array {
+  const output = new Uint8Array(data.length);
+  let counter = 0;
+  for (let offset = 0; offset < data.length; offset += 32) {
+    const counterBytes = new Uint8Array([
+      (counter >>> 24) & 0xff, (counter >>> 16) & 0xff,
+      (counter >>> 8) & 0xff, counter & 0xff,
+    ]);
+    counter++;
+    const blockInput = new Uint8Array(iv.length + counterBytes.length);
+    blockInput.set(iv);
+    blockInput.set(counterBytes, iv.length);
+    const stream = hmacSha256(key, blockInput);
+    const blockLength = Math.min(32, data.length - offset);
+    for (let i = 0; i < blockLength; i++) output[offset + i] = data[offset + i] ^ stream[i];
+  }
+  return output;
+}
+
+function deriveLegacyKey(seed: string): Uint8Array {
   return sha256(new TextEncoder().encode(`baseera:storage:key:${seed}`));
 }
 
 /**
- * Returns the device-bound persistent encryption key.
- *
- * Designed to persist across browser tab closes and application restarts:
- * 1. Checks memory cache for high-frequency operations.
- * 2. Checks localStorage for persistent device seed.
- * 3. Migrates any legacy localStorage or sessionStorage seed if upgrading.
- * 4. Generates a new 256-bit cryptographically secure seed in localStorage if first launch.
+ * Read-only compatibility key for previously stored v1/v2 ciphertext.
+ * It never creates a new key and never uses a hard-coded fallback.
  */
 export function getDeviceEncryptionKey(): Uint8Array {
-  if (cachedKey) return cachedKey;
-
+  if (cachedLegacyKey) return cachedLegacyKey;
   let seed = '';
   try {
-    // 1. Primary: Persistent device seed in localStorage (retained across browser restarts)
-    if (typeof window !== 'undefined' && window.localStorage) {
-      seed = window.localStorage.getItem(DEVICE_STORAGE_SEED_KEY) || '';
-      // 2. Migration: Check previous v1 persistent seed
-      if (!seed || seed.length < 32) {
-        seed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY) || '';
-      }
-    }
-
-    // 3. Migration: Check in-flight session seed if active before tab reload
-    if ((!seed || seed.length < 32) && typeof window !== 'undefined' && window.sessionStorage) {
-      seed = window.sessionStorage.getItem(SESSION_STORAGE_SEED_KEY) || '';
-    }
-
-    // 4. If brand-new client, generate a 256-bit cryptographically secure random seed
-    if (!seed || seed.length < 32) {
-      const entropy = getSecureRandomBytes(32);
-      seed = uint8ToBase64(entropy);
-    }
-
-    // 5. Always persist to localStorage so closing the browser does not lose the key
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(DEVICE_STORAGE_SEED_KEY, seed);
+    if (typeof window !== 'undefined') {
+      seed = window.localStorage?.getItem(DEVICE_STORAGE_SEED_KEY) || '';
+      if (!seed) seed = window.localStorage?.getItem(LEGACY_STORAGE_SEED_KEY) || '';
+      if (!seed) seed = window.sessionStorage?.getItem(SESSION_STORAGE_SEED_KEY) || '';
     }
   } catch {
-    // Private mode or storage quota restriction
+    // The legacy key may be unavailable in restricted storage contexts.
   }
-
-  if (!seed) {
-    seed = 'baseera_device_child_privacy_salt_2026';
+  if (seed.length < 32) {
+    throw new Error('Legacy encryption key is unavailable; refusing to guess or recreate it.');
   }
-
-  cachedKey = deriveKeyFromSeed(seed);
-  return cachedKey;
+  cachedLegacyKey = deriveLegacyKey(seed);
+  return cachedLegacyKey;
 }
 
-const ENCRYPTED_PREFIX = 'baseera:enc:v1:';
-const AES_GCM_PREFIX = 'baseera:enc:v2:aes-gcm:';
-
-/**
- * Encrypts an object or string for secure application-level storage in localStorage.
- * Uses Authenticated Encrypt-then-MAC (HMAC-SHA256 CTR + 16-byte cryptographically secure IV).
- */
-export function secureEncrypt(value: unknown): string {
-  const jsonStr = JSON.stringify(value);
-  const plainBytes = new TextEncoder().encode(jsonStr);
-
-  const iv = getSecureRandomBytes(16);
-  const key = getDeviceEncryptionKey();
-  const cipherBytes = encryptCTR(key, iv, plainBytes);
-
-  // Authenticate (IV || ciphertext) with HMAC-SHA256 (Encrypt-then-MAC, ISO/IEC 19772)
-  const macInput = new Uint8Array(iv.length + cipherBytes.length);
-  macInput.set(iv, 0);
-  macInput.set(cipherBytes, iv.length);
-  const macTag = hmacSha256(key, macInput);
-
-  return `${ENCRYPTED_PREFIX}${uint8ToBase64(iv)}:${uint8ToBase64(cipherBytes)}:${uint8ToBase64(macTag)}`;
+function openKeyDatabase(): Promise<IDBDatabase> {
+  if (keyDatabasePromise) return keyDatabasePromise;
+  if (typeof indexedDB === 'undefined') {
+    return Promise.reject(new Error('IndexedDB is required for persistent encrypted child storage.'));
+  }
+  keyDatabasePromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(KEY_DATABASE, KEY_DATABASE_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(KEY_STORE)) db.createObjectStore(KEY_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Unable to open the encryption key database.'));
+    request.onblocked = () => reject(new Error('The encryption key database is blocked by another tab.'));
+  }).catch((error) => {
+    keyDatabasePromise = null;
+    throw error;
+  });
+  return keyDatabasePromise;
 }
 
-/**
- * Standard Web Crypto AES-GCM encryption (asynchronous standard).
- */
-export async function encryptStandardAesGcm(value: unknown): Promise<string> {
-  const jsonStr = JSON.stringify(value);
-  const plainBytes = new TextEncoder().encode(jsonStr);
+function readPersistedCryptoKey(): Promise<CryptoKey | null> {
+  return openKeyDatabase().then((db) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(KEY_STORE, 'readonly');
+    const request = transaction.objectStore(KEY_STORE).get(KEY_ID);
+    request.onsuccess = () => resolve((request.result as CryptoKey | undefined) || null);
+    request.onerror = () => reject(request.error || new Error('Unable to read the encryption key.'));
+    transaction.onerror = () => reject(transaction.error || new Error('Encryption key read failed.'));
+  }));
+}
+
+function storeCryptoKeyIfAbsent(key: CryptoKey): Promise<void> {
+  return openKeyDatabase().then((db) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(KEY_STORE, 'readwrite');
+    transaction.objectStore(KEY_STORE).add(key, KEY_ID);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error('Unable to persist the encryption key.'));
+    transaction.onabort = () => reject(transaction.error || new Error('Encryption key persistence was aborted.'));
+  }));
+}
+
+async function getOrCreatePersistentCryptoKey(): Promise<CryptoKey> {
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.subtle) throw new Error('Web Crypto AES-GCM is unavailable.');
+  const existing = await readPersistedCryptoKey();
+  if (existing) {
+    if (existing.type !== 'secret' || existing.extractable || existing.algorithm.name !== 'AES-GCM' ||
+        !existing.usages.includes('encrypt') || !existing.usages.includes('decrypt')) {
+      throw new Error('The persisted encryption key is invalid; refusing to overwrite encrypted records.');
+    }
+    return existing;
+  }
+
+  const generated = await webCrypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+  try {
+    await storeCryptoKeyIfAbsent(generated);
+    return generated;
+  } catch {
+    // Another tab may have created the key at the same time. Re-read the winner.
+    const racedKey = await readPersistedCryptoKey();
+    if (racedKey && racedKey.type === 'secret' && !racedKey.extractable &&
+        racedKey.algorithm.name === 'AES-GCM' &&
+        racedKey.usages.includes('encrypt') && racedKey.usages.includes('decrypt')) {
+      return racedKey;
+    }
+    throw new Error('Unable to persist a non-extractable encryption key.');
+  }
+}
+
+export function isCurrentSecureCiphertext(value: string | null | undefined): boolean {
+  return typeof value === 'string' && value.startsWith(CURRENT_AES_GCM_PREFIX);
+}
+
+/** New default writer: AES-256-GCM using a non-extractable IndexedDB CryptoKey. */
+export async function secureEncrypt(value: unknown): Promise<string> {
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.subtle) throw new Error('Web Crypto AES-GCM is unavailable.');
+  const json = JSON.stringify(value);
+  if (json === undefined) throw new Error('The value cannot be serialized for encrypted storage.');
+  const key = await getOrCreatePersistentCryptoKey();
   const iv = getSecureRandomBytes(12);
-  const rawKey = getDeviceEncryptionKey();
+  const ciphertext = await webCrypto.subtle.encrypt(
+    { name: 'AES-GCM', iv, additionalData: AES_GCM_AAD, tagLength: 128 },
+    key,
+    new TextEncoder().encode(json)
+  );
+  return `${CURRENT_AES_GCM_PREFIX}${bytesToBase64(iv)}:${bytesToBase64(new Uint8Array(ciphertext))}`;
+}
 
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      rawKey as any,
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt']
-    );
-    const cipherBuffer = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: iv as any },
-      cryptoKey,
-      plainBytes as any
-    );
-    const cipherBytes = new Uint8Array(cipherBuffer);
-    return `${AES_GCM_PREFIX}${uint8ToBase64(iv)}:${uint8ToBase64(cipherBytes)}`;
-  }
-
+/** Alias retained for callers/tests that explicitly name the AES-GCM format. */
+export async function encryptStandardAesGcm(value: unknown): Promise<string> {
   return secureEncrypt(value);
 }
 
-/**
- * Decrypts a secure string from localStorage.
- *
- * Supported formats:
- * - baseera:enc:v1: (Authenticated EtM CTR + HMAC-SHA256)
- * - baseera:enc:v2:aes-gcm: (Standard Web Crypto AES-GCM)
- * - Raw plain JSON (transparent in-flight migration for legacy records)
- */
-export function secureDecrypt<T>(raw: string | null): T | null {
+/** Decrypt current IndexedDB-key AES-GCM and previous v2 AES-GCM migration payloads. */
+export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | null> {
   if (!raw || typeof raw !== 'string') return null;
-
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  // Backward compatibility & seamless migration: transparently parse unencrypted plain JSON
-  // so callers (loadStoredStudents / secureStorage.getItem) can read and immediately re-encrypt it.
-  if (trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.startsWith('"')) {
-    try {
-      return JSON.parse(trimmed) as T;
-    } catch {
-      return null;
-    }
-  }
-
-  // Handle standard AES-GCM payload synchronously in Node.js runtime if present
-  if (trimmed.startsWith(AES_GCM_PREFIX)) {
-    try {
-      const payload = trimmed.slice(AES_GCM_PREFIX.length);
-      const parts = payload.split(':');
-      if (parts.length === 2 && typeof Buffer !== 'undefined' && typeof require === 'function') {
-        const nodeCrypto = require('crypto');
-        const iv = base64ToUint8(parts[0]);
-        const cipherCombined = base64ToUint8(parts[1]);
-        if (cipherCombined.length >= 16) {
-          const authTag = cipherCombined.slice(cipherCombined.length - 16);
-          const cipherText = cipherCombined.slice(0, cipherCombined.length - 16);
-          const key = getDeviceEncryptionKey();
-          const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', key, iv);
-          decipher.setAuthTag(authTag);
-          const decrypted = Buffer.concat([decipher.update(cipherText), decipher.final()]);
-          return JSON.parse(decrypted.toString('utf8')) as T;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  if (!trimmed.startsWith(ENCRYPTED_PREFIX)) {
-    return null;
-  }
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.subtle) return null;
 
   try {
-    const payload = trimmed.slice(ENCRYPTED_PREFIX.length);
-    const parts = payload.split(':');
+    if (raw.startsWith(CURRENT_AES_GCM_PREFIX)) {
+      const parts = raw.slice(CURRENT_AES_GCM_PREFIX.length).split(':');
+      if (parts.length !== 2) return null;
+      const key = await readPersistedCryptoKey();
+      if (!key || key.extractable || key.algorithm.name !== 'AES-GCM') return null;
+      const plaintext = await webCrypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: base64ToBytes(parts[0]), additionalData: AES_GCM_AAD, tagLength: 128 },
+        key,
+        base64ToBytes(parts[1])
+      );
+      return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+    }
+
+    // Compatibility for the older helper format, which used the legacy localStorage seed.
+    if (raw.startsWith(LEGACY_AES_GCM_PREFIX)) {
+      const parts = raw.slice(LEGACY_AES_GCM_PREFIX.length).split(':');
+      if (parts.length !== 2) return null;
+      const keyBytes = getDeviceEncryptionKey();
+      const key = await webCrypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
+      const plaintext = await webCrypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: base64ToBytes(parts[0]) },
+        key,
+        base64ToBytes(parts[1])
+      );
+      return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** Synchronous read-only decoder for old CTR/HMAC and unencrypted JSON records. */
+export function secureDecrypt<T>(raw: string | null): T | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const value = raw.trim();
+  if (!value) return null;
+
+  if (value.startsWith('{') || value.startsWith('[') || value.startsWith('"')) {
+    try { return JSON.parse(value) as T; } catch { return null; }
+  }
+  if (!value.startsWith(LEGACY_CTR_PREFIX)) return null;
+
+  try {
+    const parts = value.slice(LEGACY_CTR_PREFIX.length).split(':');
     if (parts.length !== 3) return null;
-
-    const iv = base64ToUint8(parts[0]);
-    const cipherBytes = base64ToUint8(parts[1]);
-    const expectedTag = base64ToUint8(parts[2]);
-
-    const activeKey = getDeviceEncryptionKey();
-
-    // Verify MAC with active key
-    const macInput = new Uint8Array(iv.length + cipherBytes.length);
-    macInput.set(iv, 0);
-    macInput.set(cipherBytes, iv.length);
-
-    let keyToUse: Uint8Array | null = null;
-    const computedTag = hmacSha256(activeKey, macInput);
-
-    if (computedTag.length === expectedTag.length) {
-      let diff = 0;
-      for (let i = 0; i < computedTag.length; i++) {
-        diff |= computedTag[i] ^ expectedTag[i];
-      }
-      if (diff === 0) {
-        keyToUse = activeKey;
-      }
-    }
-
-    // Fallback: If active key does not match MAC, test if legacy seed is stored in localStorage
-    if (!keyToUse && typeof window !== 'undefined' && window.localStorage) {
-      const legacySeed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY);
-      if (legacySeed) {
-        const legacyKey = deriveKeyFromSeed(legacySeed);
-        const legacyTag = hmacSha256(legacyKey, macInput);
-        if (legacyTag.length === expectedTag.length) {
-          let diff = 0;
-          for (let i = 0; i < legacyTag.length; i++) {
-            diff |= legacyTag[i] ^ expectedTag[i];
-          }
-          if (diff === 0) {
-            keyToUse = legacyKey;
-          }
-        }
-      }
-    }
-
-    if (!keyToUse) {
-      console.warn('Storage integrity check failed: tampered or unauthenticated local record');
-      return null;
-    }
-
-    const plainBytes = encryptCTR(keyToUse, iv, cipherBytes);
-    const decryptedJson = new TextDecoder().decode(plainBytes);
-    return JSON.parse(decryptedJson) as T;
-  } catch (err) {
-    console.warn('Storage decryption error', err);
+    const iv = base64ToBytes(parts[0]);
+    const ciphertext = base64ToBytes(parts[1]);
+    const expectedTag = base64ToBytes(parts[2]);
+    if (iv.length !== 16 || expectedTag.length !== 32) return null;
+    const key = getDeviceEncryptionKey();
+    const macInput = new Uint8Array(iv.length + ciphertext.length);
+    macInput.set(iv);
+    macInput.set(ciphertext, iv.length);
+    const actualTag = hmacSha256(key, macInput);
+    let difference = 0;
+    for (let i = 0; i < actualTag.length; i++) difference |= actualTag[i] ^ expectedTag[i];
+    if (difference !== 0) return null;
+    const plaintext = legacyCtrCrypt(key, iv, ciphertext);
+    return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  } catch {
     return null;
   }
 }
 
-/**
- * Standard Web Crypto AES-GCM decryption helper.
- */
-export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | null> {
+/** Async decoder used by every production child-record read path. */
+export async function secureDecryptAsync<T>(raw: string | null): Promise<T | null> {
   if (!raw || typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  if (trimmed.startsWith(AES_GCM_PREFIX) && typeof crypto !== 'undefined' && crypto.subtle) {
-    try {
-      const payload = trimmed.slice(AES_GCM_PREFIX.length);
-      const parts = payload.split(':');
-      if (parts.length === 2) {
-        const iv = base64ToUint8(parts[0]);
-        const cipherBytes = base64ToUint8(parts[1]);
-        const rawKey = getDeviceEncryptionKey();
-        const cryptoKey = await crypto.subtle.importKey(
-          'raw',
-          rawKey as any,
-          { name: 'AES-GCM' },
-          false,
-          ['decrypt']
-        );
-        const decryptedBuffer = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv: iv as any },
-          cryptoKey,
-          cipherBytes as any
-        );
-        const decryptedStr = new TextDecoder().decode(decryptedBuffer);
-        return JSON.parse(decryptedStr) as T;
-      }
-    } catch {
-      return null;
-    }
+  if (raw.startsWith(CURRENT_AES_GCM_PREFIX) || raw.startsWith(LEGACY_AES_GCM_PREFIX)) {
+    return decryptStandardAesGcm<T>(raw);
   }
-
   return secureDecrypt<T>(raw);
 }
 
-/**
- * Secure drop-in helper functions for localStorage
- */
+/** Async secure localStorage facade. All writes use AES-256-GCM. */
 export const secureStorage = {
-  getItem<T>(key: string): T | null {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) return null;
-      const raw = window.localStorage.getItem(key);
-      const decrypted = secureDecrypt<T>(raw);
-      // Upgrade unencrypted plain JSON in place so it is securely encrypted at rest
-      if (decrypted !== null && raw && !raw.trim().startsWith(ENCRYPTED_PREFIX) && !raw.trim().startsWith(AES_GCM_PREFIX)) {
-        secureStorage.setItem(key, decrypted);
-      }
-      return decrypted;
-    } catch {
-      return null;
+  async getItem<T>(key: string): Promise<T | null> {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const raw = window.localStorage.getItem(key);
+    const value = await secureDecryptAsync<T>(raw);
+    if (value !== null && raw && !isCurrentSecureCiphertext(raw)) {
+      // Migrate legacy ciphertext/plain JSON only after the old value decoded successfully.
+      const upgraded = await secureEncrypt(value);
+      window.localStorage.setItem(key, upgraded);
     }
+    return value;
   },
-  setItem(key: string, value: unknown): void {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) return;
-      const encrypted = secureEncrypt(value);
-      window.localStorage.setItem(key, encrypted);
-    } catch {
-      // Private mode or quota exceeded
+  async setItem(key: string, value: unknown): Promise<void> {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      throw new Error('Browser localStorage is unavailable.');
     }
+    const encrypted = await secureEncrypt(value);
+    window.localStorage.setItem(key, encrypted);
   },
   removeItem(key: string): void {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) return;
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore
-    }
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.removeItem(key);
   },
 };
