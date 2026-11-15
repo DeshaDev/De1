@@ -740,6 +740,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 >
                   برنامج عام للاستعداد للقراءة
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStructuredStations(true)}
+                  className="bz-btn bz-btn-ghost"
+                >
+                  محطات القراءة واللغة
+                </button>
               </div>
             </div>
           ) : (
