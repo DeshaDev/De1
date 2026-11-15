@@ -21,6 +21,7 @@
 import type { AudioSegment, ChoiceItem } from './battery';
 import { CONFUSABLE_LETTER_GROUPS, CONFUSABLE_PHONEME_PAIRS, DISTANT_PHONEME_PAIRS, LEXICON, PICTURE_IDS, lex } from './lexicon';
 import { cvSyllable, type Level, type SkillId, type TrainingTargets } from './training';
+import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 
 export type LessonVisual =
   | { kind: 'pictures'; ids: string[]; highlight?: string }
@@ -89,7 +90,7 @@ function closing(textAr: string, audio: string): LessonStep {
 }
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
-export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets): Lesson | null {
+export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 6): Lesson | null {
   const key = `${skill}:${level}`;
   switch (skill) {
     case 'rhyme':
@@ -198,6 +199,22 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         ],
       };
     }
+    case 'decoding':
+    case 'spelling':
+    case 'morphology':
+    case 'comprehension': {
+      const station = getStructuredLiteracyStations(ageYears).find((item) => item.id === skill);
+      if (!station) return null;
+      return {
+        key, skill, level,
+        titleAr: station.titleAr,
+        steps: [
+          { textAr: station.teachAr, audio: say(station.teachAr) },
+          { textAr: station.modelAr, audio: say(station.modelAr) },
+          closing('الآن دورك: طبّق ما تعلمته خطوة خطوة.', 'الْآنَ دَوْرُكَ: طَبِّقْ مَا تَعَلَّمْتَهُ خُطْوَةً خُطْوَةً.'),
+        ],
+      };
+    }
     default:
       return null; // memory skills are not trained as goals
   }
@@ -216,6 +233,10 @@ export const HINTS: Record<string, string> = {
   contrast: 'اسْمَعْ بِانْتِبَاهٍ.',
   catch: 'اسْمَعْ بِانْتِبَاهٍ.',
   minimalPair: 'اسْمَعْ بِانْتِبَاهٍ.',
+  decoding: 'تَابِعِ الْحُرُوفَ وَالْحَرَكَاتِ مِنَ الْيَمِينِ إِلَى الْيَسَارِ.',
+  spelling: 'اسْمَعِ الْكَلِمَةَ وَانْتَبِهْ إِلَى أَصْوَاتِهَا.',
+  morphology: 'ابْحَثْ عَنِ الْحُرُوفِ الْأَصْلِيَّةِ وَالْمَعْنَى.',
+  comprehension: 'اسْمَعْ أَوِ اقْرَأْ، ثُمَّ ابْحَثْ عَنِ الْمَعْلُومَةِ فِي الْجُمْلَةِ.',
   letter: 'قَارِنِ النِّقَاطَ.',
   word: 'قَارِنِ النِّقَاطَ.',
 };
@@ -287,6 +308,11 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
     }
     case 'minimalPair':
       return { textAr: `هذه «${labelOf(item, correct)}».`, audio: say('هَذِهِ:', labelOf(item, correct)), pictureIds: [correct], glyphs: [] };
+    case 'decoding':
+    case 'spelling':
+    case 'morphology':
+    case 'comprehension':
+      return { textAr: `الإجابة الصحيحة: ${labelOf(item, correct)}.`, audio: say('الإِجَابَةُ الصَّحِيحَةُ:', labelOf(item, correct)), pictureIds: [], glyphs: [labelOf(item, correct)] };
     case 'letter':
     case 'word':
       return { textAr: `الصحيح: ${labelOf(item, correct)} — انظر إلى النقاط.`, audio: say('انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.'), pictureIds: [], glyphs: [labelOf(item, correct)] };
@@ -308,14 +334,14 @@ export function probeDueAt(sessionNumber: number, programmeSessions: number): bo
 export function curriculumPhrases(): string[] {
   const out = new Set<string>();
   const addSegs = (segs: AudioSegment[]) => segs.forEach((s) => out.add(s.text));
-  const skills: SkillId[] = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination'];
+  const skills: SkillId[] = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'decoding', 'spelling', 'morphology', 'comprehension', 'visualDiscrimination'];
   const pairTargets: TrainingTargets[] = [undefined as unknown as TrainingTargets, ...CONFUSABLE_PHONEME_PAIRS.map((p) => ({ soundPairs: [p], letters: [] }))];
   const letterTargets: TrainingTargets[] = Object.values(LEVEL_LETTERS).flat().map((l) => ({ soundPairs: [], letters: [l] }));
   const groupTargets: TrainingTargets[] = CONFUSABLE_LETTER_GROUPS.map((g) => ({ soundPairs: [], letters: [g[0]] }));
   for (const skill of skills) {
     for (const level of [1, 2, 3] as Level[]) {
       for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        lessonFor(skill, level, t ?? undefined)?.steps.forEach((s) => addSegs(s.audio));
+        lessonFor(skill, level, t ?? undefined, 8)?.steps.forEach((s) => addSegs(s.audio));
       }
     }
   }

@@ -345,9 +345,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const skill = skills[skillIndex];
     const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
-    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets);
+    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets, current.plan.ageYears ?? 6);
     const guided = lesson || estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
-    const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets);
+    const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets, current.plan.ageYears ?? 6);
     // "We do": the first items come with a hint and one fewer option.
     const tasks = raw.map((t, i) => (i < guided && t.kind === 'choice' ? { ...t, item: scaffold(t.item, i) } : t));
     setRun({
@@ -391,7 +391,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       // The model moved the child to another level: the rest of the block is generated at that level.
       seed.current += 7919;
       const remaining = run.tasks.length - run.taskIndex - 1;
-      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining, updated.targets)];
+      tasks = [...run.tasks.slice(0, run.taskIndex + 1), ...generateItems(skill, (updated.levels[skill] ?? 1) as Level, seed.current, remaining, updated.targets, updated.plan.ageYears ?? 6)];
     }
     // Moving up ends the block: the next block starts with the lesson for the new level.
     const finishedSkill = change === 'mastered' || change === 'up';
@@ -562,11 +562,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               >
                 <Play className="w-6 h-6" /> ابدأ
               </button>
-              {lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets) && (
+              {lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets, progress.plan.ageYears ?? 6) && (
                 <button
                   type="button"
                   className="bz-btn bz-btn-ghost bz-btn-sm"
-                  onClick={() => setRun({ ...run, phase: 'lesson', lesson: lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets) })}
+                  onClick={() => setRun({ ...run, phase: 'lesson', lesson: lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets, progress.plan.ageYears ?? 6) })}
                 >
                   شاهد الدرس مرة أخرى
                 </button>
