@@ -17,7 +17,7 @@ function profile(ageMonths: number): CognitiveProfile {
     ageMonths,
     ageBandLabelAr: '',
     ageOutOfRange: false,
-    referenceStatus: 'insufficient',
+    referenceStatus: 'disabled',
     subtests: [],
     domains: [],
     risk: 'insufficient',
