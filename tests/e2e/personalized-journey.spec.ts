@@ -114,8 +114,7 @@ async function completeFirstSessionExercises(page: Page) {
   const seenHeaders: string[] = [];
   let sawPlacement = false;
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
-  let idleFingerprint = '';
-  let idleRepeats = 0;
+  let lastActionAt = Date.now();
   for (let step = 0; step < 6000; step += 1) {
     if (await summaryDone.isVisible().catch(() => false)) break;
 
@@ -130,18 +129,21 @@ async function completeFirstSessionExercises(page: Page) {
     const nextLessonBtn = page.getByRole('button', { name: 'التالي', exact: true });
     if (await nextLessonBtn.isVisible().catch(() => false)) {
       await nextLessonBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
     const trainAfterLessonBtn = page.getByRole('button', { name: /هيا نتدرّب/ });
     if (await trainAfterLessonBtn.isVisible().catch(() => false)) {
       await trainAfterLessonBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
     const skillIntroStartBtn = page.getByRole('button', { name: 'ابدأ', exact: true });
     if (await skillIntroStartBtn.isVisible().catch(() => false)) {
       await skillIntroStartBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
@@ -159,30 +161,35 @@ async function completeFirstSessionExercises(page: Page) {
         await expect(secondCheck).toBeEnabled({ timeout: 20_000 });
         await secondCheck.click();
       }
+      lastActionAt = Date.now();
       continue;
     }
 
     const retryBtn = page.getByRole('button', { name: /حاول مرة أخرى/ });
     if (await retryBtn.isVisible().catch(() => false)) {
       await retryBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
     const beginFluencyBtn = page.getByRole('button', { name: 'ابدأ القراءة المتكررة' });
     if (await beginFluencyBtn.isVisible().catch(() => false)) {
       await beginFluencyBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
     const repeatReadingBtn = page.getByRole('button', { name: /^(قرأت النص، تابع|إنهاء القراءة المتكررة)$/ });
     if (await repeatReadingBtn.isVisible().catch(() => false)) {
       await repeatReadingBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
     const nextSkillBtn = page.getByRole('button', { name: /^(المهارة التالية|إنهاء الجلسة|القراءة المتكررة)$/ });
     if (await nextSkillBtn.isVisible().catch(() => false)) {
       await nextSkillBtn.click();
+      lastActionAt = Date.now();
       continue;
     }
 
@@ -190,18 +197,16 @@ async function completeFirstSessionExercises(page: Page) {
     if (await choiceOption.isVisible().catch(() => false)) {
       if (await choiceOption.isEnabled().catch(() => false)) {
         await choiceOption.click();
-        continue;
+        lastActionAt = Date.now();
+      continue;
       }
     }
 
     await page.waitForTimeout(100);
-    const pageText = (await page.locator('body').innerText().catch(() => '')).slice(-1800);
-    const visibleButtons = await page.getByRole('button').allTextContents().catch(() => []);
-    const fingerprint = `${pageText}| ${visibleButtons.slice(-12).join(' · ')}`;
-    if (fingerprint === idleFingerprint) idleRepeats += 1;
-    else { idleFingerprint = fingerprint; idleRepeats = 0; }
-    if (idleRepeats >= 300) {
-      throw new Error(`Training journey stalled on an unhandled screen. Visible text: ${pageText.slice(-1000)}. Buttons: ${visibleButtons.slice(-12).join(' | ')}`);
+    if (Date.now() - lastActionAt >= 30_000) {
+      const pageText = (await page.locator('body').innerText().catch(() => '')).slice(-1800);
+      const visibleButtons = await page.getByRole('button').allTextContents().catch(() => []);
+      throw new Error(`Training journey made no user-action progress for 30s. Visible text: ${pageText.slice(-1000)}. Buttons: ${visibleButtons.slice(-12).join(' | ')}`);
     }
   }
 
