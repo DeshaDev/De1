@@ -68,15 +68,30 @@ describe('calm reading canvas', () => {
     }
   });
 
-  it('the moving 3D mascot never loads on a task screen', () => {
+  it('the moving mascot never appears on a task screen', () => {
     for (const file of TASK_SCREENS) {
-      assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /Mascot3D/, file);
+      const src = fs.readFileSync(file, 'utf8');
+      assert.doesNotMatch(src, /MascotLive|MascotMomentLive|\banimated\b/, file);
     }
   });
 
-  it('the 3D mascot stays still when the device asks for reduced motion', () => {
-    const src = fs.readFileSync('src/components/ui/Mascot3D.tsx', 'utf8');
-    assert.match(src, /prefers-reduced-motion: reduce/);
+  it('the moving mascot stays still when the device asks for reduced motion', () => {
+    const css = fs.readFileSync('src/index.css', 'utf8');
+    assert.match(css, /prefers-reduced-motion: reduce\) \{\n  \.mascot-animated \.m-body[^}]*animation: none !important;/);
+  });
+
+  it('every moving part turns around its own joint, separate from its pose', () => {
+    const html = renderToStaticMarkup(<Mascot mood="wave" animated />);
+    assert.match(html, /data-mascot-animated="true"/);
+    // The CSS motion is on the outer group; the pose transform lives on an inner group.
+    for (const part of ['m-wing-l', 'm-wing-r']) {
+      assert.match(html, new RegExp(`<g class="m-wing ${part}[^"]*"><g transform=`));
+    }
+    assert.doesNotMatch(html, /class="m-[a-z-]+[^"]*" transform=/);
+    const css = fs.readFileSync('src/index.css', 'utf8');
+    assert.match(css, /\.mascot-animated \.m-sparkles \{ transform-box: view-box; \}/);
+    // A still mascot (task screens) carries no motion class.
+    assert.doesNotMatch(renderToStaticMarkup(<Mascot mood="wave" />), /mascot-animated/);
   });
 
   it('in the item players the mascot only reacts in practice, after an answer', () => {
@@ -109,8 +124,8 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     const html = renderToStaticMarkup(<HeroScene message="مرحبًا" />);
     assert.match(html, /role="status"[^>]*aria-live="polite"[^>]*>مرحبًا</);
     assert.equal((html.match(/data-mascot=/g) ?? []).length, 1);
-    // Before the 3D chunk loads (and without WebGL or with reduced motion) the still picture shows.
-    assert.match(html, /data-mascot-3d="still"/);
+    assert.match(html, /data-hero-game="true"/);
+    assert.match(html, /aria-label="اسمع صوت الباء"/);
   });
 
   it('no looping animation anywhere in the joyful layer', () => {
@@ -125,7 +140,7 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     assert.doesNotMatch(css.slice(joyStart, homeStart), /infinite/);
     const home = css.slice(homeStart);
     for (const rule of home.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)) {
-      assert.match(rule[1], /\.hn-bird/, `only the hero bird may loop: ${rule[1].trim()}`);
+      assert.match(rule[1], /\.hn-bird|\.mascot-animated/, `only the moving mascot may loop: ${rule[1].trim()}`);
     }
     assert.match(home, /prefers-reduced-motion: reduce\) \{\n  \.hn-bird, \.hn-bird-hop \{ animation: none; \}/);
   });

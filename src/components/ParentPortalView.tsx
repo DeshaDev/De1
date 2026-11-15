@@ -27,7 +27,7 @@ import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/st
 import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
 import { JoyCorners } from './ui/Playful';
-import { Mascot3D } from './ui/Mascot3D';
+import { MascotLive } from './ui/MascotLive';
 
 const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
 
@@ -308,7 +308,7 @@ export function ParentPortalView({
           <JoyCorners variant="a" />
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-4">
-              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><Mascot3D mood="wave" fallbackSize={84} className="h-28 w-28" /></span>
+              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><MascotLive mood="wave" size={112} className="w-28" /></span>
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold mb-1.5">
                   <Heart size={14} className="text-teal-600 fill-teal-600" />

@@ -8,12 +8,12 @@
  *   children's attention away from the task and lower learning (Fisher, Godwin & Seltman, 2014),
  *   and in real classrooms children did not get used to it over a term (Godwin et al., 2022).
  * - Everything here is decorative: aria-hidden, no pointer events, hidden in print and while a
- *   child is in a game or session (body.baseera-reading-focus). Only the 3D mascot moves, and only
+ *   child is in a game or session (body.baseera-reading-focus). Only the mascot moves, and only
  *   on the home page and between-task screens; it stays still under prefers-reduced-motion.
  */
 import React, { useCallback, useState } from 'react';
 import { Mascot, type MascotMood } from './Mascot';
-import { Mascot3D } from './Mascot3D';
+import { MascotLive } from './MascotLive';
 
 export type JoyColor = 'sun' | 'coral' | 'sky' | 'leaf' | 'grape' | 'brand';
 
@@ -81,9 +81,8 @@ const NAME_OF_SOUND: Record<string, string> = Object.fromEntries(HERO_LETTERS.ma
 
 /**
  * The home page scene: «هُدهُد» teaches letter sounds. The child taps a letter, hears its sound (a
- * recorded clip), «هُدهُد» hops, and the bubble names the letter. With WebGL the bird and the letters
- * are 3D; without it (or under reduced motion) the same game runs with the drawn bird and letter
- * buttons, so it works on every device. The bubble sits above the scene, never over the bird.
+ * recorded clip), «هُدهُد» hops, and the bubble names the letter. Drawn SVG with CSS motion, so it
+ * works the same on every device. The bubble sits above the scene, never over the bird.
  */
 export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! المس حرفًا لأُسمعك صوته.' }: { message?: string }) {
   const [said, setSaid] = useState<string | null>(null);
@@ -96,7 +95,7 @@ export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! ال�
       return speak(sound);
     });
   }, []);
-  const still = (
+  const scene = (
     <div className="relative h-full w-full">
       {HERO_LETTERS.map((l) => (
         <button
@@ -111,7 +110,7 @@ export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! ال�
       ))}
       <div className="absolute inset-x-0 bottom-[2%] flex justify-center">
         <div key={hops} className={`hn-bird w-[54%] ${hops ? 'hn-bird-hop' : ''}`}>
-          <Mascot mood={said ? 'cheer' : 'wave'} size={230} className="h-auto w-full" />
+          <Mascot mood={said ? 'cheer' : 'wave'} size={230} className="h-auto w-full" animated />
         </div>
       </div>
     </div>
@@ -132,8 +131,8 @@ export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! ال�
       </div>
       <div className="joy-decor relative -mt-1 w-full aspect-[1.1]">
         <span className="absolute inset-[8%] rounded-full hn-halo" aria-hidden="true" />
-        <div className="absolute inset-0">
-          <Mascot3D mood="wave" scenery fallbackSize={230} className="h-full w-full" onSay={onSay} still={still} />
+        <div className="absolute inset-0" data-hero-game="true">
+          {scene}
         </div>
       </div>
     </div>
@@ -192,7 +191,7 @@ export function KidPageHeader({
       <JoyCorners variant={color === 'sky' ? 'b' : color === 'leaf' ? 'c' : 'a'} />
       <div className="relative flex items-center gap-4 sm:gap-6">
         <div className="joy-decor shrink-0" aria-hidden="true">
-          <Mascot3D mood={mood} fallbackSize={104} className="h-20 w-20 sm:h-32 sm:w-32" />
+          <MascotLive mood={mood} size={128} className="w-20 sm:w-32" />
         </div>
         <div className="min-w-0 max-w-3xl">
           {eyebrow && <span className="bz-eyebrow">{eyebrow}</span>}

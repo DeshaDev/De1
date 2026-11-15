@@ -1,6 +1,6 @@
 import { toArabicNum } from '../../utils/arabicDigits';
 import React, { useState, useEffect } from 'react';
-import { MascotMoment3D } from '../ui/Mascot3D';
+import { MascotMomentLive } from '../ui/MascotLive';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import {
   Flame,
@@ -757,7 +757,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             </button>
           ) : (
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
-              <MascotMoment3D mood="proud" size={110} message={MASCOT_LINES.sprintDone} />
+              <MascotMomentLive mood="proud" size={110} message={MASCOT_LINES.sprintDone} />
               <p className="text-xs text-emerald-700">
                 حافظت على وتيرة التدريب اليومية. موعدنا غداً في 5 دقائق جديدة!
               </p>

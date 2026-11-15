@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { MascotMoment3D } from './ui/Mascot3D';
+import { MascotMomentLive } from './ui/MascotLive';
 import { MASCOT_LINES } from './ui/mascotLines';
 import {
   BookOpen,
@@ -1007,7 +1007,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
               {/* Welcome before reading; the reading screen itself has no mascot. */}
               <div className="space-y-3">
-                <MascotMoment3D mood="wave" size={120} message={MASCOT_LINES.readyToRead} className="mx-auto" />
+                <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.readyToRead} className="mx-auto" />
                 <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
                   جاهزون للقراءة
                 </h1>

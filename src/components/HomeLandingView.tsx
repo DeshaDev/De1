@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import { Mascot } from './ui/Mascot';
-import { MascotMoment3D } from './ui/Mascot3D';
+import { MascotMomentLive } from './ui/MascotLive';
 import { Cloud, HeroScene, LetterBlock, Sparkle } from './ui/Playful';
 import { BATTERY, DOMAINS } from '../cognitiveProfile/battery';
 import {
@@ -396,7 +396,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <div className="hn-close">
           <HnCloseDecor />
           <div className="relative grid md:grid-cols-[auto_1fr] items-center gap-4 md:gap-10 text-center md:text-right">
-            <MascotMoment3D mood="wave" size={160} className="mx-auto" />
+            <MascotMomentLive mood="wave" size={160} className="mx-auto" />
             <div>
               <h2 className="hn-h2">هُدهُد ينتظر طفلك</h2>
               <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">أول جلسة من ١٠ إلى ١٥ دقيقة. اجلس بجانبه، واستمتعا باللعب معًا.</p>

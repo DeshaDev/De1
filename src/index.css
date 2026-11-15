@@ -1725,3 +1725,36 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   .hn-bird, .hn-bird-hop { animation: none; }
   .hn-letter { transition: none; }
 }
+
+/* «هُدهُد» idle motion (only with <Mascot animated>: home page and between-task screens).
+   Each part turns around its own joint in view-box units; the pose stays on an inner group. */
+.mascot-animated .m-body,
+.mascot-animated .m-head,
+.mascot-animated .m-eyes,
+.mascot-animated .m-wing,
+.mascot-animated .m-feather,
+.mascot-animated .m-sparkles { transform-box: view-box; }
+.mascot-animated .m-body { transform-origin: 100px 206px; animation: mBreathe 3.4s ease-in-out infinite; }
+.mascot-animated .m-head { transform-origin: 100px 128px; animation: mHead 5s ease-in-out infinite; }
+.mascot-animated .m-eyes { transform-origin: 100px 86px; animation: mBlink 4.2s infinite; }
+.mascot-animated .m-feather { transform-origin: 100px 62px; animation: mFeather 2.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -0.18s); }
+.mascot-animated .m-wing-l { transform-origin: 58px 132px; animation: mWingRest 3.4s ease-in-out infinite; }
+.mascot-animated .m-wing-r { transform-origin: 142px 132px; animation: mWingRestR 3.4s ease-in-out infinite; }
+.mascot-animated .m-wing-r.m-waving { animation: mWave 2.8s ease-in-out infinite; }
+.mascot-animated[data-mascot="cheer"] .m-wing-l { animation: mFlapL 0.9s ease-in-out infinite; }
+.mascot-animated[data-mascot="cheer"] .m-wing-r { animation: mFlapR 0.9s ease-in-out infinite; }
+.mascot-animated .m-sparkles { transform-origin: 100px 90px; animation: mTwinkle 1.8s ease-in-out infinite; }
+@keyframes mBreathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 1.03); } }
+@keyframes mHead { 0%, 100% { transform: rotate(0deg) translateY(0); } 30% { transform: rotate(-4deg) translateY(-1px); } 65% { transform: rotate(3deg) translateY(-2px); } }
+@keyframes mBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+@keyframes mFeather { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes mWingRest { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(5deg); } }
+@keyframes mWingRestR { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-5deg); } }
+@keyframes mWave { 0%, 40%, 100% { transform: rotate(0deg); } 10%, 30% { transform: rotate(-16deg); } 20% { transform: rotate(10deg); } }
+@keyframes mFlapL { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
+@keyframes mFlapR { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(14deg); } }
+@keyframes mTwinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.94); } }
+@media (prefers-reduced-motion: reduce) {
+  .mascot-animated .m-body, .mascot-animated .m-head, .mascot-animated .m-eyes, .mascot-animated .m-wing,
+  .mascot-animated .m-feather, .mascot-animated .m-sparkles { animation: none !important; }
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MascotMoment } from '../ui/Mascot';
-import { MascotMoment3D } from '../ui/Mascot3D';
+import { MascotMomentLive } from '../ui/MascotLive';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import {
   Volume2,
@@ -416,7 +416,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
       {/* STEP 5: CELEBRATION & TROPHY */}
       {wizardStep === 'celebrate' && (
         <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border-4 border-amber-300 text-center space-y-6 animate-fade-slide-up">
-          <MascotMoment3D mood="proud" size={150} message={MASCOT_LINES.storyDone} />
+          <MascotMomentLive mood="proud" size={150} message={MASCOT_LINES.storyDone} />
 
           <div className="space-y-2">
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
