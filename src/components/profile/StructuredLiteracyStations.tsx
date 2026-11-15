@@ -32,6 +32,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   const [stationId, setStationId] = useState<LiteracyStationId | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [textResponse, setTextResponse] = useState('');
+  const [answerCorrect, setAnswerCorrect] = useState<boolean | null>(null);
   const [completed, setCompleted] = useState(false);
   const [modelHeard, setModelHeard] = useState(false);
   const [readCount, setReadCount] = useState(0);
@@ -86,6 +88,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     setShowLesson(true);
     setQuestionIndex(0);
     setSelectedId(null);
+    setTextResponse('');
+    setAnswerCorrect(null);
     setCompleted(false);
     setModelHeard(false);
     setReadCount(0);
@@ -99,6 +103,8 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     setShowLesson(false);
     setQuestionIndex(0);
     setSelectedId(null);
+    setTextResponse('');
+    setAnswerCorrect(null);
     setCompleted(false);
     setModelHeard(false);
     setReadCount(0);
@@ -113,11 +119,14 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     }
     setQuestionIndex((current) => current + 1);
     setSelectedId(null);
+    setTextResponse('');
+    setAnswerCorrect(null);
   };
 
   const chooseOption = (optionId: string) => {
     if (selectedId || !question) return;
     setSelectedId(optionId);
+    setAnswerCorrect(optionId === question.correctId);
     if (station && station.id !== 'fluency') {
       persistPractice(recordLiteracyAnswer(practiceProgress, station.id, optionId === question.correctId));
     }
@@ -130,6 +139,18 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   };
 
   const correctOption = question?.options.find((option) => option.id === question.correctId);
+  const normalizeSpelling = (value: string) =>
+    value.normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/\s+/g, '');
+  const submitTextResponse = () => {
+    if (!question || question.responseMode !== 'text' || selectedId) return;
+    const isCorrect = normalizeSpelling(textResponse) === normalizeSpelling(question.correctId);
+    setSelectedId(isCorrect ? question.correctId : '__text_response__');
+    setAnswerCorrect(isCorrect);
+    if (station && station.id !== 'fluency') {
+      persistPractice(recordLiteracyAnswer(practiceProgress, station.id, isCorrect));
+    }
+    void playAudio(isCorrect ? ['أَحْسَنْتَ! كَتَبْتَ الْكَلِمَةَ بِشَكْلٍ صَحِيحٍ.'] : question.explanationAudio);
+  };
 
   if (!stationId || !station) {
     return (
@@ -325,6 +346,30 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
         </button>
       </div>
 
+      {question?.responseMode === 'text' ? (
+        <div className="rounded-2xl border border-line bg-soft p-4 space-y-3">
+          <label htmlFor="literacy-dictation-answer" className="block text-sm font-bold text-slate-800">اكتب الكلمة التي سمعتها</label>
+          <input
+            id="literacy-dictation-answer"
+            type="text"
+            dir="rtl"
+            lang="ar"
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={24}
+            value={textResponse}
+            onChange={(event) => setTextResponse(event.target.value)}
+            disabled={Boolean(selectedId)}
+            placeholder="اكتب الكلمة هنا"
+            className="w-full rounded-xl border-2 border-line bg-white px-4 py-3 text-2xl font-bold text-slate-900 text-right focus:border-brand focus:outline-none"
+          />
+          {!selectedId && (
+            <button type="button" className="bz-btn bz-btn-primary" onClick={submitTextResponse} disabled={!textResponse.trim() || playing}>
+              تحقّق من كتابتي
+            </button>
+          )}
+        </div>
+      ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {question?.options.map((option) => {
           const chosen = selectedId === option.id;
@@ -347,12 +392,13 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
           );
         })}
       </div>
+      )}
 
       {selectedId && question && (
         <div className="rounded-2xl border border-line bg-soft p-4 space-y-3" aria-live="polite">
           <p className="font-bold text-slate-900 flex items-center gap-2">
-            {selectedId === question.correctId ? <CheckCircle2 className="w-5 h-5 text-emerald-700" /> : <span aria-hidden="true">💡</span>}
-            {selectedId === question.correctId ? 'أحسنت، هذه هي الإجابة الصحيحة.' : `الإجابة الصحيحة: ${correctOption?.labelAr ?? ''}`}
+            {(answerCorrect ?? selectedId === question.correctId) ? <CheckCircle2 className="w-5 h-5 text-emerald-700" /> : <span aria-hidden="true">💡</span>}
+            {(answerCorrect ?? selectedId === question.correctId) ? 'أحسنت، هذه هي الإجابة الصحيحة.' : `الإجابة الصحيحة: ${question.responseMode === 'text' ? question.correctId : (correctOption?.labelAr ?? '')}`}
           </p>
           <p className="text-sm text-slate-700 leading-7">{question.explanationAr}</p>
           <div className="flex flex-wrap gap-2">
