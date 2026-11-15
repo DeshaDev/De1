@@ -21,6 +21,7 @@ const TEST_ENV = {
   AZURE_SPEECH_KEY: '', // Audio endpoint fails closed without external credentials.
   AZURE_SPEECH_REGION: '',
   NODE_ENV: 'production',
+  AI_RATE_LIMIT_PER_MINUTE: '60',
   TRUST_PROXY_HOPS: '0',
   BASEERA_STORE_ENCRYPTION_KEY:
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -477,6 +478,84 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     });
     assert.equal(response.status, 403);
     assert.equal(((await response.json()) as { code: string }).code, 'GUARDIAN_CONSENT_NOT_STORED');
+  });
+
+  it('enforces independent audio consent verification and rejects unstored or revoked consents', async () => {
+    const school = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const passage = ARABIC_READING_PASSAGES[0];
+    const consentTime = '2026-11-01T10:00:00.000Z';
+    const audioConsentTime = '2026-11-01T10:05:00.000Z';
+
+    // 1. Register a school student with general guardian consent, but WITHOUT audio consent
+    const createRes = await fetch(`${baseUrl}/api/students`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify({
+        id: 'stu-consent-test-school-1',
+        name: 'طالب بدون موافقة صوتية',
+        gradeLevel: 2,
+        ageYears: 7,
+        schoolName: 'مدرسة أ',
+        ...buildPlausibleReadingEvidence(),
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: consentTime,
+        guardianConsentSource: 'إقرار ولي الأمر في المدرسة',
+        guardianAudioConsentGiven: false,
+      }),
+    });
+    assert.equal(createRes.status, 201);
+
+    // 2. Request pronunciation assessment claiming audio consent when student record has none
+    const unstoredAudioConsent = await fetch(`${baseUrl}/api/ai/pronunciation-assessment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify({
+        studentId: 'stu-consent-test-school-1',
+        passageId: passage.id,
+        audioWavBase64: 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
+        durationSeconds: 1,
+        language: 'ar-SA',
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: consentTime,
+        guardianAudioConsentGiven: true,
+        guardianAudioConsentRecordedAt: audioConsentTime,
+      }),
+    });
+    assert.equal(unstoredAudioConsent.status, 403);
+    assert.equal(
+      ((await unstoredAudioConsent.json()) as { code: string }).code,
+      'GUARDIAN_AUDIO_CONSENT_NOT_STORED'
+    );
+
+    // 3. Request with explicit withdrawal in request body (guardianAudioConsentGiven: false)
+    const revokedInRequest = await fetch(`${baseUrl}/api/ai/pronunciation-assessment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${school.token}`,
+      },
+      body: JSON.stringify({
+        studentId: 'stu-consent-test-school-1',
+        passageId: passage.id,
+        audioWavBase64: 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
+        durationSeconds: 1,
+        language: 'ar-SA',
+        guardianConsentGiven: true,
+        guardianConsentRecordedAt: consentTime,
+        guardianAudioConsentGiven: false,
+      }),
+    });
+    assert.equal(revokedInRequest.status, 403);
+    assert.equal(
+      ((await revokedInRequest.json()) as { code: string }).code,
+      'AUDIO_CONSENT_REQUIRED'
+    );
   });
 
   it('does not allow school or anonymous sessions to use family battery persistence', async () => {

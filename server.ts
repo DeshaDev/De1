@@ -1141,7 +1141,7 @@ function aiRateLimiter(
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
   const now = Date.now();
   const windowMs = 60_000;
-  const maxRequestsPerMinute = 20;
+  const maxRequestsPerMinute = Math.max(1, Number(process.env.AI_RATE_LIMIT_PER_MINUTE ?? 20) || 20);
 
   // Bound the number of attacker-controlled IP keys as well as each sliding window.
   const history = (aiRateLimitBuckets.get(clientIp) || []).filter(

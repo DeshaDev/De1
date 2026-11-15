@@ -12,6 +12,7 @@ import {
   saveActiveStudentId,
   loadActiveStudentId,
 } from './cookiePersistence';
+import { resetDeviceEncryptionKeyCacheForTesting } from './secureLocalStorage';
 import type { BaseeraSessionInfo } from './apiAuth';
 import type { StudentRecord } from '../data/seedData';
 
@@ -156,3 +157,37 @@ test('Student persistence: seamlessly loads legacy unencrypted plain JSON and up
   assert.ok(rawAfterLoad?.startsWith('baseera:enc:v1:'));
   assert.equal(rawAfterLoad?.includes('مريم'), false);
 });
+
+test('Student persistence: survives tab closure and browser restart with 100% data preservation', () => {
+  const { localStorageJar, sessionStorageJar } = setupMockBrowser();
+  resetDeviceEncryptionKeyCacheForTesting();
+
+  const child: Partial<StudentRecord> = {
+    id: 'stu-persistent-restart-1',
+    name: 'سليمان',
+    ageYears: 8,
+    isDemoRecord: false,
+    sessionStatus: 'completed',
+    guardianConsentGiven: true,
+    guardianAudioConsentGiven: true,
+    wpm: 65,
+  };
+
+  // 1. Parent registers and completes session, stored in browser
+  saveStoredStudents([child as StudentRecord]);
+  const immediateLoad = loadStoredStudents();
+  assert.equal(immediateLoad.length, 1);
+  assert.equal(immediateLoad[0].name, 'سليمان');
+
+  // 2. User closes browser: sessionStorage wiped, memory cache cleared
+  sessionStorageJar.clear();
+  resetDeviceEncryptionKeyCacheForTesting();
+
+  // 3. User reopens browser on another day:
+  const restoredAfterRestart = loadStoredStudents();
+  assert.equal(restoredAfterRestart.length, 1);
+  assert.equal(restoredAfterRestart[0].name, 'سليمان');
+  assert.equal(restoredAfterRestart[0].guardianAudioConsentGiven, true);
+  assert.equal(restoredAfterRestart[0].wpm, 65);
+});
+

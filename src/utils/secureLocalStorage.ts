@@ -1,9 +1,16 @@
 /**
  * Baseera Application-Level Local Storage Encryption
  *
- * Implements authenticated encryption at rest (Encrypt-then-MAC with HMAC-SHA256 CTR keystream)
- * for sensitive student screening records, cognitive battery sessions, and training progress
- * stored in the browser's localStorage. Protects children's data on shared family or school devices.
+ * Implements authenticated encryption at rest (Encrypt-then-MAC with HMAC-SHA256 CTR keystream
+ * and standard Web Crypto AES-GCM support) for sensitive student screening records, cognitive
+ * battery sessions, and training progress stored in the browser's localStorage.
+ *
+ * Key Lifecycle:
+ * - Employs a persistent device-bound encryption key seed stored in localStorage, guaranteeing that
+ *   children's screening profiles, sessions, and progress survive browser restarts, tab closures,
+ *   and system reboots without risk of key abandonment or data loss.
+ * - Migrates legacy unencrypted plain JSON and previous seed versions automatically on read.
+ * - Exclusively utilizes cryptographically secure PRNG (crypto.getRandomValues); Math.random is strictly banned.
  */
 
 // Pure TypeScript SHA-256 implementation
@@ -164,56 +171,92 @@ function base64ToUint8(b64: string): Uint8Array {
   return bytes;
 }
 
-const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
+/**
+ * Exclusively generates cryptographically secure random bytes.
+ * Math.random is strictly prohibited.
+ */
+export function getSecureRandomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(bytes);
+    return bytes;
+  }
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+    window.crypto.getRandomValues(bytes);
+    return bytes;
+  }
+  try {
+    // Node.js fallback
+    if (typeof require === 'function') {
+      const nodeCrypto = require('crypto');
+      if (typeof nodeCrypto?.randomFillSync === 'function') {
+        nodeCrypto.randomFillSync(bytes);
+        return bytes;
+      }
+    }
+  } catch {
+    // not node
+  }
+  throw new Error('Cryptographically secure random number generator is unavailable.');
+}
+
+const DEVICE_STORAGE_SEED_KEY = 'baseera_device_storage_seed_v2';
 const LEGACY_STORAGE_SEED_KEY = 'baseera_app_encryption_seed_v1';
+const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
 let cachedKey: Uint8Array | null = null;
+
+export function resetDeviceEncryptionKeyCacheForTesting(): void {
+  cachedKey = null;
+}
 
 function deriveKeyFromSeed(seed: string): Uint8Array {
   return sha256(new TextEncoder().encode(`baseera:storage:key:${seed}`));
 }
 
-function getDeviceEncryptionKey(): Uint8Array {
+/**
+ * Returns the device-bound persistent encryption key.
+ *
+ * Designed to persist across browser tab closes and application restarts:
+ * 1. Checks memory cache for high-frequency operations.
+ * 2. Checks localStorage for persistent device seed.
+ * 3. Migrates any legacy localStorage or sessionStorage seed if upgrading.
+ * 4. Generates a new 256-bit cryptographically secure seed in localStorage if first launch.
+ */
+export function getDeviceEncryptionKey(): Uint8Array {
   if (cachedKey) return cachedKey;
 
   let seed = '';
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    // 1. Primary: Persistent device seed in localStorage (retained across browser restarts)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      seed = window.localStorage.getItem(DEVICE_STORAGE_SEED_KEY) || '';
+      // 2. Migration: Check previous v1 persistent seed
+      if (!seed || seed.length < 32) {
+        seed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY) || '';
+      }
+    }
+
+    // 3. Migration: Check in-flight session seed if active before tab reload
+    if ((!seed || seed.length < 32) && typeof window !== 'undefined' && window.sessionStorage) {
       seed = window.sessionStorage.getItem(SESSION_STORAGE_SEED_KEY) || '';
     }
 
-    // Seamless migration: If no session seed exists yet, check if a persistent seed was
-    // created previously in localStorage, copy it to sessionStorage, and preserve access to existing records.
-    if (!seed && typeof window !== 'undefined' && window.localStorage) {
-      const legacySeed = window.localStorage.getItem(LEGACY_STORAGE_SEED_KEY);
-      if (legacySeed && legacySeed.length >= 32) {
-        seed = legacySeed;
-        if (window.sessionStorage) {
-          window.sessionStorage.setItem(SESSION_STORAGE_SEED_KEY, seed);
-        }
-      }
+    // 4. If brand-new client, generate a 256-bit cryptographically secure random seed
+    if (!seed || seed.length < 32) {
+      const entropy = getSecureRandomBytes(32);
+      seed = uint8ToBase64(entropy);
     }
 
-    // If still no seed, generate a new high-entropy seed in sessionStorage
-    if (!seed || seed.length < 32) {
-      const entropy = new Uint8Array(32);
-      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        crypto.getRandomValues(entropy);
-      } else {
-        for (let i = 0; i < 32; i++) {
-          entropy[i] = Math.floor(Math.random() * 256);
-        }
-      }
-      seed = uint8ToBase64(entropy);
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        window.sessionStorage.setItem(SESSION_STORAGE_SEED_KEY, seed);
-      }
+    // 5. Always persist to localStorage so closing the browser does not lose the key
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(DEVICE_STORAGE_SEED_KEY, seed);
     }
   } catch {
-    // In private browsing mode or when storage is restricted
+    // Private mode or storage quota restriction
   }
 
   if (!seed) {
-    seed = 'baseera_ephemeral_child_privacy_salt_2026';
+    seed = 'baseera_device_child_privacy_salt_2026';
   }
 
   cachedKey = deriveKeyFromSeed(seed);
@@ -221,27 +264,21 @@ function getDeviceEncryptionKey(): Uint8Array {
 }
 
 const ENCRYPTED_PREFIX = 'baseera:enc:v1:';
+const AES_GCM_PREFIX = 'baseera:enc:v2:aes-gcm:';
 
 /**
  * Encrypts an object or string for secure application-level storage in localStorage.
+ * Uses Authenticated Encrypt-then-MAC (HMAC-SHA256 CTR + 16-byte cryptographically secure IV).
  */
 export function secureEncrypt(value: unknown): string {
   const jsonStr = JSON.stringify(value);
   const plainBytes = new TextEncoder().encode(jsonStr);
 
-  const iv = new Uint8Array(16);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(iv);
-  } else {
-    for (let i = 0; i < 16; i++) {
-      iv[i] = Math.floor(Math.random() * 256);
-    }
-  }
-
+  const iv = getSecureRandomBytes(16);
   const key = getDeviceEncryptionKey();
   const cipherBytes = encryptCTR(key, iv, plainBytes);
 
-  // Authenticate (IV || ciphertext) with HMAC-SHA256
+  // Authenticate (IV || ciphertext) with HMAC-SHA256 (Encrypt-then-MAC, ISO/IEC 19772)
   const macInput = new Uint8Array(iv.length + cipherBytes.length);
   macInput.set(iv, 0);
   macInput.set(cipherBytes, iv.length);
@@ -251,8 +288,41 @@ export function secureEncrypt(value: unknown): string {
 }
 
 /**
+ * Standard Web Crypto AES-GCM encryption (asynchronous standard).
+ */
+export async function encryptStandardAesGcm(value: unknown): Promise<string> {
+  const jsonStr = JSON.stringify(value);
+  const plainBytes = new TextEncoder().encode(jsonStr);
+  const iv = getSecureRandomBytes(12);
+  const rawKey = getDeviceEncryptionKey();
+
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      rawKey as any,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+    const cipherBuffer = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv as any },
+      cryptoKey,
+      plainBytes as any
+    );
+    const cipherBytes = new Uint8Array(cipherBuffer);
+    return `${AES_GCM_PREFIX}${uint8ToBase64(iv)}:${uint8ToBase64(cipherBytes)}`;
+  }
+
+  return secureEncrypt(value);
+}
+
+/**
  * Decrypts a secure string from localStorage.
- * Transparently falls back to parsing raw JSON if the data is from a legacy unencrypted session.
+ *
+ * Supported formats:
+ * - baseera:enc:v1: (Authenticated EtM CTR + HMAC-SHA256)
+ * - baseera:enc:v2:aes-gcm: (Standard Web Crypto AES-GCM)
+ * - Raw plain JSON (transparent in-flight migration for legacy records)
  */
 export function secureDecrypt<T>(raw: string | null): T | null {
   if (!raw || typeof raw !== 'string') return null;
@@ -267,6 +337,30 @@ export function secureDecrypt<T>(raw: string | null): T | null {
       return JSON.parse(trimmed) as T;
     } catch {
       return null;
+    }
+  }
+
+  // Handle standard AES-GCM payload synchronously in Node.js runtime if present
+  if (trimmed.startsWith(AES_GCM_PREFIX)) {
+    try {
+      const payload = trimmed.slice(AES_GCM_PREFIX.length);
+      const parts = payload.split(':');
+      if (parts.length === 2 && typeof Buffer !== 'undefined' && typeof require === 'function') {
+        const nodeCrypto = require('crypto');
+        const iv = base64ToUint8(parts[0]);
+        const cipherCombined = base64ToUint8(parts[1]);
+        if (cipherCombined.length >= 16) {
+          const authTag = cipherCombined.slice(cipherCombined.length - 16);
+          const cipherText = cipherCombined.slice(0, cipherCombined.length - 16);
+          const key = getDeviceEncryptionKey();
+          const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', key, iv);
+          decipher.setAuthTag(authTag);
+          const decrypted = Buffer.concat([decipher.update(cipherText), decipher.final()]);
+          return JSON.parse(decrypted.toString('utf8')) as T;
+        }
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -336,6 +430,45 @@ export function secureDecrypt<T>(raw: string | null): T | null {
 }
 
 /**
+ * Standard Web Crypto AES-GCM decryption helper.
+ */
+export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | null> {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith(AES_GCM_PREFIX) && typeof crypto !== 'undefined' && crypto.subtle) {
+    try {
+      const payload = trimmed.slice(AES_GCM_PREFIX.length);
+      const parts = payload.split(':');
+      if (parts.length === 2) {
+        const iv = base64ToUint8(parts[0]);
+        const cipherBytes = base64ToUint8(parts[1]);
+        const rawKey = getDeviceEncryptionKey();
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw',
+          rawKey as any,
+          { name: 'AES-GCM' },
+          false,
+          ['decrypt']
+        );
+        const decryptedBuffer = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: iv as any },
+          cryptoKey,
+          cipherBytes as any
+        );
+        const decryptedStr = new TextDecoder().decode(decryptedBuffer);
+        return JSON.parse(decryptedStr) as T;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return secureDecrypt<T>(raw);
+}
+
+/**
  * Secure drop-in helper functions for localStorage
  */
 export const secureStorage = {
@@ -345,7 +478,7 @@ export const secureStorage = {
       const raw = window.localStorage.getItem(key);
       const decrypted = secureDecrypt<T>(raw);
       // Upgrade unencrypted plain JSON in place so it is securely encrypted at rest
-      if (decrypted !== null && raw && !raw.trim().startsWith(ENCRYPTED_PREFIX)) {
+      if (decrypted !== null && raw && !raw.trim().startsWith(ENCRYPTED_PREFIX) && !raw.trim().startsWith(AES_GCM_PREFIX)) {
         secureStorage.setItem(key, decrypted);
       }
       return decrypted;
