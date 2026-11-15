@@ -737,10 +737,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   );
 
   useEffect(() => {
-    const loaded = loadInitial();
-    setSession(loaded);
-    setView(initialView === 'training' ? { name: 'training' } : loaded ? { name: 'map' } : { name: 'setup' });
-  }, [activeStudent.id, initialView]);
+    setView(initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' });
+  }, [session, initialView]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
