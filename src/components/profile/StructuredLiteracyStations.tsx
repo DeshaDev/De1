@@ -195,7 +195,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
-              <p className="text-xs text-slate-500 mt-2">محاولات سابقة: {ageLabel(visibleProgress.stations[item.id].attemptedQuestions)} · مرات الإكمال: {ageLabel(visibleProgress.stations[item.id].completedSessions)}</p>
+              <p className="text-xs text-slate-500 mt-2">{item.id === 'fluency' ? `قراءات مكتملة: ${ageLabel(visibleProgress.fluencyReadingsCompleted)}` : `محاولات سابقة: ${ageLabel(visibleProgress.stations[item.id].attemptedQuestions)}`} · مرات الإكمال: {ageLabel(visibleProgress.stations[item.id].completedSessions)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>
