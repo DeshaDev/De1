@@ -142,7 +142,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
     if (speechWatchdog.current !== null) window.clearTimeout(speechWatchdog.current);
     // Independent of the TTS promise: a stalled player must release answer choices.
     speechWatchdog.current = window.setTimeout(() => {
-      if (handle.current !== h || h.cancelled) return;
+      if (h.cancelled) return;
       h.cancelled = true;
       stopSpeech();
       setHighlight(null);
