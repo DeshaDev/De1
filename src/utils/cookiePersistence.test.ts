@@ -54,6 +54,7 @@ function setupMockBrowser() {
 
   (globalThis as any).document = doc;
   (globalThis as any).window = win;
+  (globalThis as any).indexedDB = undefined;
 
   return { cookieJar, localStorageJar, sessionStorageJar };
 }
