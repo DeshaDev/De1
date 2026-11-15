@@ -55,6 +55,7 @@ import { LessonPlayer, TeachingChoicePlayer } from './TeachingPlayers';
 import { MascotMoment } from '../ui/Mascot';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
+import { StructuredLiteracyStations } from './StructuredLiteracyStations';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
@@ -167,6 +168,7 @@ interface Props {
 
 export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
   const [progress, setProgress] = useState<TrainingProgress | null>(serverProgress);
+  const [showStructuredStations, setShowStructuredStations] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void loadTrainingProgress(studentId)
@@ -179,6 +181,16 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     onRunningChange?.(run !== null);
   }, [run !== null, onRunningChange]);
   const seed = useRef(Date.now());
+
+  if (showStructuredStations) {
+    return (
+      <StructuredLiteracyStations
+        ageYears={student?.ageYears ?? 6}
+        childName={childName}
+        onClose={() => setShowStructuredStations(false)}
+      />
+    );
+  }
 
   const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
   const proposedSetup = useMemo(
@@ -766,6 +778,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 {plan.rationaleAr.map((r) => <li key={r}>{r}</li>)}
               </ul>
               <ProgramRules />
+              <section className="rounded-2xl border border-line bg-soft p-4 space-y-2">
+                <h3 className="font-black text-slate-900">محطات القراءة واللغة المكملة</h3>
+                <p className="text-sm text-slate-600 leading-7">
+                  إلى جانب المهارات المحددة في الخطة، تتاح محطات مستقلة لفك الكلمات والإملاء والفهم والطلاقة، وللوعي الصرفي من عمر ٧ سنوات.
+                </p>
+                <button type="button" onClick={() => setShowStructuredStations(true)} className="bz-btn bz-btn-secondary">
+                  استكشف محطات القراءة المتكاملة
+                </button>
+              </section>
               <button type="button" onClick={() => startProgram(plan)} className="bz-btn bz-btn-primary bz-btn-lg">
                 اعتماد الخطة وبدء البرنامج
               </button>
@@ -818,6 +839,18 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <TrendingUp className="w-4 h-4" /> مقياس المتابعة
           </button>
         </div>
+      </section>
+
+      <section className="bz-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="font-black text-slate-900">محطات القراءة واللغة المكملة</h3>
+          <p className="text-sm text-slate-600 mt-1 leading-7">
+            تدريب إضافي على فك الترميز، والإملاء، والوعي الصرفي (من عمر ٧ سنوات)، والفهم. كما توجد قراءة متكررة للطلاقة دون توقيت أو تقييم صوتي آلي.
+          </p>
+        </div>
+        <button type="button" onClick={() => setShowStructuredStations(true)} className="bz-btn bz-btn-secondary shrink-0">
+          افتح محطات القراءة
+        </button>
       </section>
 
       {due && (
