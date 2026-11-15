@@ -191,7 +191,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   if (showStructuredStations) {
     return (
       <StructuredLiteracyStations
-        ageYears={student?.ageYears ?? 6}
+        studentId={studentId}
+        ageYears={student?.ageYears ?? 4}
         childName={childName}
         onClose={() => setShowStructuredStations(false)}
       />
