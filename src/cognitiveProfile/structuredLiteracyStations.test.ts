@@ -53,11 +53,11 @@ describe('age-appropriate structured literacy practice stations', () => {
   it('has a minimum non-trivial item bank for each age-appropriate literacy domain', () => {
     const early = getStructuredLiteracyStations(4);
     const later = getStructuredLiteracyStations(7);
-    assert.ok(early.find((s) => s.id === 'comprehension')!.questions.length >= 4);
+    assert.ok(early.find((s) => s.id === 'comprehension')!.questions.length >= 5);
     assert.ok(later.find((s) => s.id === 'decoding')!.questions.length >= 6);
     assert.ok(later.find((s) => s.id === 'spelling')!.questions.length >= 6);
     assert.ok(later.find((s) => s.id === 'morphology')!.questions.length >= 6);
-    assert.ok(later.find((s) => s.id === 'comprehension')!.questions.length >= 4);
+    assert.ok(later.find((s) => s.id === 'comprehension')!.questions.length >= 5);
   });
 
   it('gives every multiple-choice question unique options and exactly one correct answer', () => {
