@@ -249,7 +249,7 @@ test('training selects distinct personalized focus skills, start levels, priors,
   const profileA = profileFor({ auditoryDiscrimination: 20, rhyme: 63, letterSound: 95 }, 78);
   const planA = buildTrainingPlan(profileA);
   assert.equal(planA.preventive, false);
-  assert.deepEqual(planA.focus, ['discrimination', 'rhyme']);
+  assert.deepEqual(planA.focus, ['discrimination', 'rhyme', 'decoding', 'spelling', 'comprehension']);
   const progressA = createPersonalizedProgress(planA, profileA);
   const setupA = summarizePlanSetup(planA, profileA);
   assert.equal(progressA.levels.discrimination, 1, 'severe subtest starts at foundational level 1');
@@ -261,7 +261,7 @@ test('training selects distinct personalized focus skills, start levels, priors,
   const profileB = profileFor({ auditoryDiscrimination: 95, rhyme: 95, phonological: 25, letterSound: 70 }, 78);
   const planB = buildTrainingPlan(profileB);
   assert.equal(planB.preventive, false);
-  assert.deepEqual(planB.focus, ['soundPosition', 'blending', 'letterSound']);
+  assert.deepEqual(planB.focus, ['soundPosition', 'blending', 'letterSound', 'decoding', 'spelling', 'comprehension']);
   const progressB = createPersonalizedProgress(planB, profileB);
   assert.equal(progressB.levels.soundPosition, 1);
   assert.equal(progressB.levels.letterSound, 2);
@@ -271,13 +271,13 @@ test('training selects distinct personalized focus skills, start levels, priors,
   const dipProfile = profileFor({ auditoryDiscrimination: 78, rhyme: 100, letterSound: 100 }, 78);
   const dipPlan = buildTrainingPlan(dipProfile);
   assert.equal(dipPlan.preventive, false);
-  assert.deepEqual(dipPlan.focus, ['discrimination']);
+  assert.deepEqual(dipPlan.focus, ['discrimination', 'decoding', 'spelling', 'comprehension']);
 
   // Uniformly high accuracy tasks or memory-only weakness keep the preventive baseline plan.
   const highScores = profileFor({ auditoryDiscrimination: 90, rhyme: 90, letterSound: 90 }, 78);
   const preventivePlan = buildTrainingPlan(highScores);
   assert.equal(preventivePlan.preventive, true);
-  assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound']);
+  assert.deepEqual(preventivePlan.focus, ['blending', 'letterSound', 'decoding', 'spelling', 'comprehension']);
 });
 
 test('oral reading confusions scale severity by error frequency, and slow RAN stays descriptive without uncalibrated prescriptions', () => {
