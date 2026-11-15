@@ -281,7 +281,7 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
     const station = getStructuredLiteracyStations(8).find((entry) => entry.id === stationId);
     const question = station?.questions.find((entry) => entry.promptAr === item.promptAr);
     if (question) {
-      return { textAr: question.explanationAr, audio: question.explanationAudio.map((text) => ({ text })), pictureIds: [], glyphs: [] };
+      return { textAr: question.explanationAr, audio: question.explanationAudio.map((text) => ({ text })), pictureIds: LEXICON[correct] ? [correct] : [], glyphs: [] };
     }
   }
   const target = item.stimulus?.label;
