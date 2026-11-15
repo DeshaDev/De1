@@ -4,6 +4,7 @@ function toEasternArabicDigits(value: number | string): string {
 }
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { KidPageHeader } from './ui/Playful';
 import { authenticatedFetch } from '../utils/apiAuth';
 import EvidenceBasedCurriculumView from './EvidenceBasedCurriculumView';
 import { playNaturalArabicAudio } from '../utils/naturalSpeech';
@@ -379,15 +380,11 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   return (
     <div className="space-y-5 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
       {/* Header: who is training, and their points */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="bz-h2">صالة التدريب</h1>
-          <p className="bz-muted">تدريب {activeStudent.name}: تمرين يومي قصير، وألعاب لكل مهارة.</p>
-        </div>
-        <span className="bz-badge bz-badge-sun text-base px-4 py-2">
-          <IconStar size={16} /> {xpPoints > 0 ? <><span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة</> : 'لا نقاط بعد'}
+      <KidPageHeader color="coral" mood="cheer" title="صالة التدريب" subtitle={`تدريب ${activeStudent.name}: تمرين يومي قصير، وألعاب لكل مهارة.`}>
+        <span className="joy-chip mt-3 text-base font-bold">
+          <IconStar size={18} /> {xpPoints > 0 ? <><span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة</> : 'لا نقاط بعد'}
         </span>
-      </header>
+      </KidPageHeader>
 
       {/* Two ways to train */}
       <div className="bz-segment w-full sm:w-auto" role="tablist" aria-label="طريقة التدريب">

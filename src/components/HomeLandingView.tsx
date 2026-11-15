@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import { MascotMoment } from './ui/Mascot';
+import { Cloud, HeroScene, JoyCorners, LetterBlock, Sparkle, WaveDivider } from './ui/Playful';
 import { MASCOT_LINES } from './ui/mascotLines';
 import { BATTERY, DOMAINS, TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 import {
@@ -147,29 +148,23 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
   return (
     <div className="baseera-home" dir="rtl">
       {/* ================= HERO ================= */}
-      <section className="relative overflow-hidden border-b border-line" style={{ background: 'linear-gradient(180deg, var(--card) 0%, var(--paper) 100%)' }}>
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0)',
-            backgroundSize: '28px 28px',
-            maskImage: 'linear-gradient(180deg, rgba(0,0,0,.6), transparent 85%)',
-            WebkitMaskImage: 'linear-gradient(180deg, rgba(0,0,0,.6), transparent 85%)',
-          }}
-        />
-        <div className="bz-container relative grid lg:grid-cols-[1.15fr_0.85fr] gap-12 lg:gap-14 items-start pt-10 pb-16 sm:pt-12 lg:pt-14 lg:pb-20">
+      <section className="joy-hero relative overflow-hidden">
+        <div className="joy-decor pointer-events-none absolute inset-0 hidden md:block" aria-hidden="true">
+          <Cloud width={130} className="absolute top-6 right-[42%] opacity-90" />
+          <Sparkle size={22} color="coral" className="absolute top-24 right-[6%]" />
+          <Sparkle size={16} color="sky" className="absolute bottom-24 right-[48%]" />
+        </div>
+        <div className="bz-container relative grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center pt-10 pb-12 sm:pt-12 lg:pt-14 lg:pb-16">
           <div>
-            <MascotMoment mood="wave" size={92} layout="row" message={MASCOT_LINES.homeHello} className="mb-5" />
             <span className="bz-eyebrow">فحص مبكر وتدريب موجّه · من ٤ إلى ٨ سنوات</span>
-            <h1 className="bz-display mt-5" style={{ fontSize: 'clamp(32px, 3.6vw, 50px)' }}>
+            <h1 className="joy-display mt-4">
               خطوة مبكرة لفهم مهارات القراءة لدى طفلك،{' '}
               <span className="text-brand">ومساعدته على التعلّم بثقة.</span>
             </h1>
-            <p className="bz-lead mt-6 max-w-[38rem]">
+            <p className="bz-lead mt-5 max-w-[38rem]">
               ألعاب قصيرة تستكشف أداء الطفل في مهارات ترتبط بتعلّم القراءة: الذاكرة السمعية والبصرية، والوعي الصوتي، والتمييز، ومعرفة الحروف، والتسمية السريعة. ومن السادسة يقرأ الطفل أيضًا كلمات حقيقية وكلمات مصنوعة وقصة قصيرة، ويكتب كلمات مسموعة. يعرض التقرير ما سجّله الطفل داخل كل نشاط وأفكارًا للممارسة. النتائج استكشافية وليست مقارنة معيارية أو تشخيصًا.
             </p>
-            <div className="flex flex-wrap gap-3 mt-8">
+            <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
                 سجّل طفلك وابدأ الفحص
                 <ArrowLeft size={18} aria-hidden="true" />
@@ -179,43 +174,35 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 شاهد نموذج التقرير
               </button>
             </div>
-            <dl className="mt-10 grid grid-cols-3 max-w-[30rem] gap-6">
+            <dl className="mt-8 flex flex-wrap gap-3">
               {[
-                { k: `${ar(TOTAL_BATTERY_MINUTES)} دقيقة`, v: 'مدة الفحص' },
-                { k: `${ar(BATTERY.length)} مهمة`, v: 'في ٧ مجالات' },
-                { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'برنامج تدريبي' },
+                { k: `${ar(TOTAL_BATTERY_MINUTES)} دقيقة`, v: 'مدة الفحص', icon: Timer, tone: 'sun' },
+                { k: `${ar(BATTERY.length)} مهمة`, v: 'في ٧ مجالات', icon: Gamepad2, tone: 'sky' },
+                { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'برنامج تدريبي', icon: Dumbbell, tone: 'coral' },
               ].map((s) => (
-                <div key={s.v} className="border-r-2 border-brand-soft pr-4">
-                  <dt className="sr-only">{s.v}</dt>
-                  <dd className="font-display font-bold text-ink text-lg sm:text-xl whitespace-nowrap">{s.k}</dd>
-                  <dd className="bz-small bz-muted">{s.v}</dd>
+                <div key={s.v} className="joy-chip">
+                  <span className={`joy-tile joy-tile-${s.tone} w-10 h-10`} aria-hidden="true"><s.icon size={20} /></span>
+                  <span>
+                    <dt className="sr-only">{s.v}</dt>
+                    <dd className="font-child font-extrabold text-ink text-lg leading-tight whitespace-nowrap">{s.k}</dd>
+                    <dd className="text-[13px] text-muted leading-tight">{s.v}</dd>
+                  </span>
                 </div>
               ))}
             </dl>
           </div>
-          <div className="relative">
-            <div aria-hidden="true" className="absolute -inset-6 rounded-[36px]" style={{ background: 'radial-gradient(60% 60% at 70% 30%, var(--brand-soft), transparent 70%), radial-gradient(50% 50% at 20% 90%, var(--sun-soft), transparent 70%)' }} />
-            <div className="relative">
-              <SampleProfileCard compact />
-              <div className="hidden sm:flex absolute -bottom-9 -left-5 bz-card px-4 py-3 items-center gap-3" style={{ boxShadow: 'var(--shadow-md)' }}>
-                <span className="grid place-items-center w-9 h-9 rounded-xl bg-sun-soft text-sun-strong" aria-hidden="true">
-                  <Dumbbell size={18} />
-                </span>
-                <span>
-                  <span className="block text-[13px] font-semibold text-ink">الجلسة ٣ من ٢٠</span>
-                  <span className="block text-[12px] text-muted">الوعي الصوتي · المستوى ٢</span>
-                </span>
-              </div>
-            </div>
+          <div className="relative pb-10">
+            <HeroScene message={MASCOT_LINES.homeHello} />
           </div>
         </div>
+        <WaveDivider fill="var(--paper)" />
       </section>
 
       {/* ================= PROBLEM ================= */}
       <section className="bz-container py-16 sm:py-24">
         <div className="bz-section-head">
           <span className="bz-eyebrow">لماذا هَيَّا نَقْرَأْ؟</span>
-          <h2 className="bz-h2">صعوبة القراءة تُكتشف عادةً متأخرة، بعد أن يفقد الطفل ثقته بنفسه.</h2>
+          <h2 className="joy-h2">صعوبة القراءة تُكتشف عادةً متأخرة، بعد أن يفقد الطفل ثقته بنفسه.</h2>
           <p className="bz-lead">
             قد تمر صعوبات تعلّم القراءة دون ملاحظة في سنوات الدراسة الأولى. وتحتاج الأسرة إلى فهم ما يستطيع الطفل أداءه الآن، وما المهارات التي تستحق مزيدًا من الممارسة، دون إطلاق أحكام مبكرة.
           </p>
@@ -237,10 +224,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               title: 'من النتيجة إلى خطة عمل',
               body: 'لا يتوقف التقرير عند الدرجة: يشرح ماذا تعني، ويقترح استراتيجيات صفية وأنشطة منزلية، ويبني برنامجًا تدريبيًا.',
             },
-          ].map((c) => (
-            <article key={c.title} className="bz-card bz-card-pad">
-              <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand" aria-hidden="true">
-                <c.icon size={22} />
+          ].map((c, i) => (
+            <article key={c.title} className="joy-card joy-card-hover bz-card-pad">
+              <span className={`joy-tile joy-tile-${['coral', 'sky', 'leaf'][i]} w-14 h-14`} aria-hidden="true">
+                <c.icon size={26} />
               </span>
               <h3 className="bz-h3 mt-5">{c.title}</h3>
               <p className="bz-body mt-2">{c.body}</p>
@@ -250,14 +237,16 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section className="bg-card border-y border-line">
-        <div className="bz-container py-16 sm:py-24">
+      <WaveDivider fill="var(--joy-sky-soft)" />
+      <section className="joy-band-sky relative">
+        <JoyCorners variant="b" />
+        <div className="bz-container relative py-14 sm:py-20">
           <div className="bz-section-head is-center">
             <span className="bz-eyebrow">كيف تعمل</span>
-            <h2 className="bz-h2">ثلاث خطوات من الفحص إلى التحسّن</h2>
+            <h2 className="joy-h2">ثلاث خطوات من الفحص إلى التحسّن</h2>
           </div>
           <ol className="grid md:grid-cols-3 gap-10 md:gap-6 relative">
-            <span aria-hidden="true" className="hidden md:block absolute top-6 inset-x-[16%] h-px bg-line-strong" />
+            <span aria-hidden="true" className="joy-decor hidden md:block absolute top-9 inset-x-[18%] border-t-4 border-dashed" style={{ borderColor: 'color-mix(in srgb, var(--joy-sky) 45%, transparent)' }} />
             {[
               {
                 icon: Gamepad2,
@@ -279,11 +268,15 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               },
             ].map((step, i) => (
               <li key={step.title} className="relative text-center px-2">
-                <span className="relative mx-auto grid place-items-center w-12 h-12 rounded-full bg-brand text-on-brand font-display font-bold text-lg" style={{ boxShadow: '0 0 0 8px var(--card)' }}>
-                  {ar(i + 1)}
+                <span
+                  className="joy-step relative mx-auto"
+                  style={{ background: ['var(--joy-sun)', 'var(--joy-coral)', 'var(--joy-leaf)'][i], color: '#FFFFFF' }}
+                  aria-hidden="true"
+                >
+                  <step.icon size={32} />
                 </span>
-                <h3 className="bz-h3 mt-5 inline-flex items-center gap-2">
-                  <step.icon size={19} className="text-brand" aria-hidden="true" /> {step.title}
+                <h3 className="font-child font-extrabold text-ink text-2xl mt-4">
+                  <span className="sr-only">الخطوة {ar(i + 1)}: </span>{step.title}
                 </h3>
                 <p className="bz-small text-brand font-semibold mt-1">{step.meta}</p>
                 <p className="bz-body mt-3 max-w-[22rem] mx-auto">{step.body}</p>
@@ -293,12 +286,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         </div>
       </section>
 
+      <WaveDivider fill="var(--joy-sky-soft)" flip />
+
       {/* ================= THE BATTERY ================= */}
       <section className="bz-container py-16 sm:py-24">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
           <div className="bz-section-head mb-0">
             <span className="bz-eyebrow">فحص مؤشرات عسر القراءة</span>
-            <h2 className="bz-h2">المهارات السابقة للقراءة، والقراءة نفسها</h2>
+            <h2 className="joy-h2">المهارات السابقة للقراءة، والقراءة نفسها</h2>
             <p className="bz-lead">كل لعبة تركّز على مهارة واحدة، فيعرف المعلم إن كانت الصعوبة في الذاكرة السمعية، أو التحليل الصوتي، أو الذاكرة البصرية. ومن السادسة تُقاس القراءة مباشرة: الدقة والسرعة وفك الترميز والإملاء.</p>
           </div>
           <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={() => onNavigateTab('parent-portal')}>
@@ -309,12 +304,12 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           {BATTERY.map((s) => {
             const domain = DOMAINS[s.domain];
             return (
-              <article key={s.id} className="bz-card p-5 flex gap-4">
-                <span className="grid place-items-center w-14 h-14 shrink-0 rounded-2xl text-3xl" style={{ background: `color-mix(in srgb, ${domain.color} 12%, var(--card))` }} aria-hidden="true">
+              <article key={s.id} className="joy-card joy-card-hover p-5 flex gap-4" style={{ borderTop: `6px solid ${domain.color}` }}>
+                <span className="joy-tile w-16 h-16 text-4xl" style={{ background: `color-mix(in srgb, ${domain.color} 14%, var(--card))` }} aria-hidden="true">
                   {s.icon}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="font-display font-semibold text-ink text-[17px] leading-snug">{s.gameNameAr}</h3>
+                  <h3 className="font-child font-extrabold text-ink text-[19px] leading-snug">{s.gameNameAr}</h3>
                   <p className="bz-small text-ink-2 mt-0.5">{s.skillNameAr}</p>
                   <p className="text-[12px] font-semibold mt-2" style={{ color: domain.color }}>{domain.nameAr}</p>
                 </div>
@@ -387,7 +382,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           <div>
             <div className="bz-section-head">
               <span className="bz-eyebrow">البرنامج التدريبي الموجّه</span>
-              <h2 className="bz-h2">تدريب قصير كل يوم، يتقدّم بقدر ما يتقن الطفل</h2>
+              <h2 className="joy-h2">تدريب قصير كل يوم، يتقدّم بقدر ما يتقن الطفل</h2>
               <p className="bz-lead">
                 يختار مسار الممارسة حتى ثلاث مهارات للتركيز استنادًا إلى نتائج الأنشطة المتاحة. تُعرض هذه الاختيارات بوصفها اقتراحات أولية للممارسة، لا ترتيبًا معياريًا لمستوى الطفل.
               </p>
@@ -397,9 +392,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 { k: `${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, v: 'للجلسة (ممارسة + قياس)' },
                 { k: `${ar(SESSIONS_PER_WEEK)} جلسات`, v: 'أسبوعيًا' },
                 { k: `${ar(PROGRAM_SESSIONS)} جلسة`, v: 'ثم إعادة فحص' },
-              ].map((s) => (
-                <div key={s.v} className="bz-card-quiet p-4">
-                  <p className="font-display font-bold text-ink text-xl">{s.k}</p>
+              ].map((s, i) => (
+                <div key={s.v} className={`joy-card p-4 joy-band-${['sun', 'peach', 'leaf'][i]}`}>
+                  <p className="font-child font-extrabold text-ink text-2xl">{s.k}</p>
                   <p className="bz-small bz-muted">{s.v}</p>
                 </div>
               ))}
@@ -436,15 +431,17 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       </section>
 
       {/* ================= AUDIENCES ================= */}
-      <section className="bg-card border-y border-line">
-        <div className="bz-container py-16 sm:py-24">
+      <WaveDivider fill="var(--joy-peach)" />
+      <section className="joy-band-peach relative">
+        <JoyCorners variant="a" />
+        <div className="bz-container relative py-14 sm:py-20">
           <div className="bz-section-head is-center">
             <span className="bz-eyebrow">لمن صُممت هَيَّا نَقْرَأْ</span>
-            <h2 className="bz-h2">أداة واحدة، ثلاثة مستخدمين</h2>
+            <h2 className="joy-h2">أداة واحدة، ثلاثة مستخدمين</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
-            <article className="bz-card bz-card-pad flex flex-col">
-              <span className="grid place-items-center w-11 h-11 rounded-xl bg-sun-soft text-sun-strong" aria-hidden="true"><Users size={22} /></span>
+            <article className="joy-card bz-card-pad flex flex-col">
+              <span className="joy-tile joy-tile-sun w-14 h-14" aria-hidden="true"><Users size={26} /></span>
               <h3 className="bz-h3 mt-5">الأسر</h3>
               <p className="bz-body mt-2 flex-1">افهم سبب تعثّر طفلك بلغة واضحة، واحصل على أنشطة منزلية قصيرة وبرنامج يومي يتابع تقدّمه.</p>
               <div className="mt-6 grid gap-2">
@@ -454,8 +451,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 </button>
               </div>
             </article>
-            <article className="bz-card bz-card-pad flex flex-col" style={{ borderColor: 'color-mix(in srgb, var(--brand) 40%, transparent)', boxShadow: 'var(--shadow-md)' }}>
-              <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand" aria-hidden="true"><Building2 size={22} /></span>
+            <article className="joy-card bz-card-pad flex flex-col" style={{ borderColor: 'color-mix(in srgb, var(--brand) 40%, transparent)' }}>
+              <span className="joy-tile joy-tile-brand w-14 h-14" aria-hidden="true"><Building2 size={26} /></span>
               <h3 className="bz-h3 mt-5">المدارس ومراكز التعلّم</h3>
               <p className="bz-body mt-2 flex-1">فرز مبكر لطلاب الصفوف الأولى، ولوحة متابعة للمعلم، وتقارير فردية تساعد على توجيه الدعم لمن يحتاجه أولًا.</p>
               <div className="mt-6 grid gap-2">
@@ -475,8 +472,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 </button>
               </div>
             </article>
-            <article className="bz-card bz-card-pad flex flex-col">
-              <span className="grid place-items-center w-11 h-11 rounded-xl bg-info-soft text-info" aria-hidden="true"><Stethoscope size={22} /></span>
+            <article className="joy-card bz-card-pad flex flex-col">
+              <span className="joy-tile joy-tile-sky w-14 h-14" aria-hidden="true"><Stethoscope size={26} /></span>
               <h3 className="bz-h3 mt-5">الأخصائيون</h3>
               <p className="bz-body mt-2 flex-1">درجات خام ونسب أداء داخل المهام، وأزمنة استجابة وملاحظات سياقية، وأدوات تكميلية للقراءة الجهرية.</p>
               <div className="mt-6 grid gap-2">
@@ -495,12 +492,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         </div>
       </section>
 
+      <WaveDivider fill="var(--joy-peach)" flip />
+
       {/* ================= METHOD & TRUST ================= */}
       <section className="bz-container py-16 sm:py-24">
         <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12">
           <div className="bz-section-head mb-0">
             <span className="bz-eyebrow">المنهجية والثقة</span>
-            <h2 className="bz-h2">مبنية على أسس علمية، وشفافة في حدودها</h2>
+            <h2 className="joy-h2">مبنية على أسس علمية، وشفافة في حدودها</h2>
             <p className="bz-lead">
               نوضح ما تقيسه هَيَّا نَقْرَأْ وما لا تقيسه. الأنشطة استكشافية وتساعد الأسرة على ملاحظة أداء الطفل داخلها، ولا تشخّص عسر القراءة أو تحدد الحاجة إلى الإحالة بمفردها.
             </p>
@@ -511,9 +510,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               { icon: FlaskConical, t: 'منهج تعليم منظّم', b: 'برنامج صريح ومتدرّج يتبع مبادئ التعليم المنظّم للقراءة.' },
               { icon: EyeOff, t: 'بلا كاميرا', b: 'لا تتبع للعين ولا تصوير. يعمل الفحص بالصوت واللمس فقط.' },
               { icon: Lock, t: 'خصوصية الطفل أولًا', b: 'تقليل البيانات، وموافقة مستقلة للصوت، وشرح مزودي الخدمات وطرق معالجة البيانات في سياسة الخصوصية.' },
-            ].map((x) => (
-              <div key={x.t} className="bz-card p-5">
-                <x.icon size={22} className="text-brand" aria-hidden="true" />
+            ].map((x, i) => (
+              <div key={x.t} className="joy-card p-5">
+                <span className={`joy-tile joy-tile-${['sky', 'grape', 'leaf', 'coral'][i]} w-12 h-12`} aria-hidden="true"><x.icon size={22} /></span>
                 <h3 className="font-semibold text-ink mt-3">{x.t}</h3>
                 <p className="bz-small text-ink-2 mt-1">{x.b}</p>
               </div>
@@ -530,22 +529,28 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
 
       {/* ================= FINAL CTA ================= */}
       <section className="bz-container pb-16 sm:pb-24">
-        <div className="relative overflow-hidden rounded-[28px] px-6 py-12 sm:px-12 sm:py-16 text-center" style={{ background: 'linear-gradient(135deg, #0B6E69 0%, #084B48 100%)', color: '#FFFFFF' }}>
-          <div aria-hidden="true" className="absolute -top-24 -left-24 w-72 h-72 rounded-full" style={{ background: 'rgba(242,169,59,.18)' }} />
-          <div aria-hidden="true" className="absolute -bottom-28 -right-20 w-80 h-80 rounded-full" style={{ background: 'rgba(255,255,255,.06)' }} />
-          <h2 className="relative font-display font-bold text-[clamp(26px,3.2vw,40px)] leading-snug" style={{ color: '#FFFFFF' }}>
-            ابدأ بخطوة هادئة لفهم مهارات القراءة لدى طفلك.
-          </h2>
-          <p className="relative mt-4 text-[17px] leading-relaxed max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,.82)' }}>
-            أكمل الأنشطة على فترات قصيرة، ثم راجع النتائج الوصفية والأفكار المقترحة للممارسة.
-          </p>
-          <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" className="bz-btn bz-btn-sun bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
-              سجّل طفلك وابدأ الفحص <ArrowLeft size={18} aria-hidden="true" />
-            </button>
-            <button type="button" className="bz-btn bz-btn-outline-light bz-btn-lg" onClick={() => onNavigateTab('remediation-gym')}>
-              صالة التدريب
-            </button>
+        <div className="joy-header joy-header-sun relative overflow-hidden rounded-[32px] px-6 py-10 sm:px-12 sm:py-14">
+          <div className="joy-decor pointer-events-none absolute inset-0 hidden sm:block" aria-hidden="true">
+            <LetterBlock letter="ه" color="coral" size={52} rotate={-12} className="absolute bottom-5 left-6" />
+            <LetterBlock letter="ي" color="sky" size={44} rotate={10} className="absolute bottom-6 left-20" />
+            <Sparkle size={20} color="grape" className="absolute bottom-16 left-36" />
+          </div>
+          <div className="relative grid md:grid-cols-[auto_1fr] items-center gap-6 md:gap-10 text-center md:text-right">
+            <MascotMoment mood="proud" size={150} className="mx-auto" />
+            <div>
+              <h2 className="joy-h2">ابدأ بخطوة هادئة لفهم مهارات القراءة لدى طفلك.</h2>
+              <p className="bz-lead mt-3 max-w-2xl md:mx-0 mx-auto">
+                أكمل الأنشطة على فترات قصيرة، ثم راجع النتائج الوصفية والأفكار المقترحة للممارسة.
+              </p>
+              <div className="mt-7 flex flex-wrap justify-center md:justify-start gap-3">
+                <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => onNavigateTab('parent-portal')}>
+                  سجّل طفلك وابدأ الفحص <ArrowLeft size={18} aria-hidden="true" />
+                </button>
+                <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg" onClick={() => onNavigateTab('remediation-gym')}>
+                  صالة التدريب
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

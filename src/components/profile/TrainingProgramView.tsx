@@ -118,6 +118,42 @@ function LevelLadder({ skill, level, mastered }: { skill: SkillId; level: Level;
   );
 }
 
+/** The programme as a path of stepping stones: one per session, a week per row, a trophy at the end. */
+function SessionPath({ done, total, perWeek }: { done: number; total: number; perWeek: number }) {
+  const weeks = Math.ceil(total / perWeek);
+  return (
+    <div className="mt-4 space-y-2" aria-label={`الجلسات المنجزة ${toArabicDigits(done)} من ${toArabicDigits(total)}`} role="img">
+      {Array.from({ length: weeks }, (_, w) => (
+        <div key={w} className="flex items-center gap-2" aria-hidden="true">
+          <span className="w-16 shrink-0 text-[12px] font-bold text-muted">الأسبوع {toArabicDigits(w + 1)}</span>
+          {Array.from({ length: perWeek }, (_, d) => {
+            const n = w * perWeek + d + 1;
+            if (n > total) return null;
+            const isDone = n <= done;
+            const isNext = n === done + 1;
+            return (
+              <span
+                key={n}
+                className="grid place-items-center w-9 h-9 rounded-full text-[13px] font-extrabold bz-num"
+                style={
+                  isDone
+                    ? { background: 'var(--joy-sun)', color: '#FFFFFF', boxShadow: '0 3px 0 var(--joy-sun-deep)' }
+                    : isNext
+                      ? { background: 'var(--card)', color: 'var(--brand)', border: '3px solid var(--brand)' }
+                      : { background: 'var(--soft)', color: 'var(--muted)' }
+                }
+              >
+                {isDone ? '⭐' : toArabicDigits(n)}
+              </span>
+            );
+          })}
+          {w === weeks - 1 && <span className="text-2xl" aria-hidden="true">🏆</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type Run = {
   skills: SkillId[];
   skillIndex: number;
@@ -930,8 +966,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <ArrowRight className="w-4 h-4" /> العودة
           </button>
         )}
-        <section className="bz-card bz-card-pad space-y-6">
-          <div><p className="bz-small text-brand font-semibold">{childName === GUEST_CHILD_NAME ? childName : `الطفل: ${childName}`}</p><h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>{plan ? 'الخطة المقترحة من نتائج الفحص' : 'لم يُجرَ الفحص بعد'}</h2></div>
+        <section className="joy-card bz-card-pad space-y-6">
+          <div className="flex items-center gap-4">
+            <div><p className="bz-small text-brand font-semibold">{childName === GUEST_CHILD_NAME ? childName : `الطفل: ${childName}`}</p><h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>{plan ? 'الخطة المقترحة من نتائج الفحص' : 'لم يُجرَ الفحص بعد'}</h2></div>
+          </div>
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">
@@ -1014,14 +1052,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </button>
       )}
 
-      <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <section className="joy-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج علاجي-تدريبي موجّه'}</p>
-          <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>برنامج {childName}</h2>
+          <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
           </p>
-          <div className="bz-progress mt-4 w-full md:w-96"><span style={{ width: `${Math.min(100, (done / target) * 100)}%` }} /></div>
+          <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button

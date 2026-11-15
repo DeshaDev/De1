@@ -3,6 +3,7 @@
  * the full-text reader and the spelling/dialect analysis stay available as specialist tools.
  */
 import React, { useCallback, useState } from 'react';
+import { KidPageHeader } from '../ui/Playful';
 import { ArrowRight } from 'lucide-react';
 import { AdaptiveReaderView } from '../AdaptiveReaderView';
 import { FocusReader } from './FocusReader';
@@ -32,15 +33,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ problematicWords, studen
   return (
     <div className="space-y-6" dir="rtl">
       {!reading && (
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="bz-h2">القارئ الميسّر</h1>
-            <p className="bz-muted max-w-2xl">جملة قصيرة واحدة على الشاشة في كل مرة.</p>
-          </div>
-          <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={() => setMode('tools')}>
+        <KidPageHeader color="sky" title="القارئ الميسّر" subtitle="جملة قصيرة واحدة على الشاشة في كل مرة.">
+          <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm mt-2" onClick={() => setMode('tools')}>
             أدوات الأخصائي
           </button>
-        </header>
+        </KidPageHeader>
       )}
       <FocusReader studentName={studentName} problematicWords={problematicWords} passageId={passageId} onReadingChange={onReadingChange} />
     </div>

@@ -1,5 +1,6 @@
 import { toArabicNum } from '../utils/arabicDigits';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { KidPageHeader } from './ui/Playful';
 import { BookOpen, Brain, Dumbbell, Timer } from 'lucide-react';
 import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
 const ReadingAssessmentView = lazy(() => import('./ReadingAssessmentView'));
@@ -54,17 +55,16 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
     <div className="space-y-6" dir="rtl">
       {!focused && subTab !== 'training' && (
         <header className="space-y-4">
-          <div className="max-w-3xl">
-            <span className="bz-eyebrow">{subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من الصف الأول إلى السادس'}</span>
-            <h1 className="bz-h2 mt-2">
-              {subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
-            </h1>
-            <p className="bz-body mt-2">
-              {subTab === 'battery'
+          <KidPageHeader
+            color={subTab === 'battery' ? 'sun' : 'sky'}
+            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من الصف الأول إلى السادس'}
+            title={subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
+            subtitle={
+              subTab === 'battery'
                 ? `ألعاب قصيرة للمهارات السابقة للقراءة والتسمية السريعة، ومن السادسة مهام قراءة وإملاء مباشرة (حتى نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
-                : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب فحص مؤشرات عسر القراءة لا بديلًا عنه.'}
-            </p>
-          </div>
+                : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب فحص مؤشرات عسر القراءة لا بديلًا عنه.'
+            }
+          />
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
             {subTab !== 'battery' && (
               <button type="button" className="bz-link" onClick={() => setSubTab('battery')}>
@@ -92,10 +92,12 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
       )}
 
       {!focused && subTab === 'training' && (
-        <header className="max-w-3xl">
-          <h1 className="bz-h2">البرنامج التدريبي الموجّه</h1>
-          <p className="bz-body mt-2">جلسات قصيرة تركّز على أضعف مهارات الطفل في الفحص، وتتقدّم مستوى بعد مستوى عند الإتقان.</p>
-        </header>
+        <KidPageHeader
+          color="leaf"
+          mood="cheer"
+          title="البرنامج التدريبي الموجّه"
+          subtitle="جلسات قصيرة تركّز على أضعف مهارات الطفل في الفحص، وتتقدّم مستوى بعد مستوى عند الإتقان."
+        />
       )}
 
       {(subTab === 'battery' || subTab === 'training') && (

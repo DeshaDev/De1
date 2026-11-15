@@ -942,13 +942,17 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               <button
                 type="button"
                 onClick={() => setView({ name: 'run', id: s.id })}
-                className="bz-card bz-card-interactive w-full h-full p-5 flex flex-col gap-4"
-                style={isNext ? { borderColor: 'var(--brand)', boxShadow: '0 0 0 3px var(--brand-soft)' } : undefined}
+                className="joy-card joy-card-hover w-full h-full p-5 flex flex-col gap-4 text-right"
+                style={{
+                  borderTop: `6px solid ${domain.color}`,
+                  ...(isNext ? { borderColor: 'var(--brand)', borderTopColor: domain.color, boxShadow: '0 4px 0 var(--brand), 0 0 0 4px var(--brand-soft)' } : {}),
+                  ...(done ? { background: `color-mix(in srgb, ${domain.color} 6%, var(--card))` } : {}),
+                }}
               >
                 <div className="flex items-start justify-between gap-3 w-full">
-                  <span className="grid place-items-center w-16 h-16 rounded-2xl text-4xl" style={{ background: `color-mix(in srgb, ${domain.color} 12%, var(--card))` }} aria-hidden="true">{s.icon}</span>
+                  <span className="joy-tile w-20 h-20 text-5xl" style={{ background: `color-mix(in srgb, ${domain.color} 14%, var(--card))` }} aria-hidden="true">{s.icon}</span>
                   {done ? (
-                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة</span>
+                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة ⭐</span>
                   ) : isNext ? (
                     <span className="bz-badge bz-badge-sun">التالية</span>
                   ) : (

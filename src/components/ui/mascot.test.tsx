@@ -74,3 +74,37 @@ describe('calm reading canvas', () => {
     assert.ok([...src.matchAll(/\{showFeedback && <PracticeReaction/g)].length >= 2, 'reactions are gated on practice feedback');
   });
 });
+
+describe('joyful layer: joyful edges, calm centre', async () => {
+  const { KidPageHeader, HeroScene, LetterBlock, JoyCorners, WaveDivider } = await import('./Playful');
+
+  it('decoration is marked decorative and hidden while a child plays and in print', () => {
+    const css = fs.readFileSync('src/index.css', 'utf8');
+    assert.match(css, /\.baseera-reading-focus \.joy-decor \{ display: none !important; \}/);
+    assert.match(css, /@media print \{ \.joy-decor \{ display: none !important; \} \}/);
+    for (const el of [<LetterBlock letter="ب" />, <JoyCorners />, <WaveDivider />]) {
+      assert.match(renderToStaticMarkup(el), /aria-hidden="true"/);
+    }
+    assert.match(renderToStaticMarkup(<JoyCorners />), /joy-decor/);
+  });
+
+  it('page headers keep their text off the decoration and expose a real heading', () => {
+    const html = renderToStaticMarkup(<KidPageHeader title="العنوان" subtitle="وصف" />);
+    assert.match(html, /<h1[^>]*>العنوان<\/h1>/);
+    assert.match(html, /joy-decor/);
+  });
+
+  it('the hero scene speaks through a note, with the mascot drawn once', () => {
+    const html = renderToStaticMarkup(<HeroScene message="مرحبًا" />);
+    assert.match(html, /role="note"/);
+    assert.equal((html.match(/data-mascot=/g) ?? []).length, 1);
+  });
+
+  it('no looping animation anywhere in the joyful layer', () => {
+    const src = fs.readFileSync('src/components/ui/Playful.tsx', 'utf8');
+    assert.doesNotMatch(src, /animate-(bounce|pulse|ping|spin)/);
+    const css = fs.readFileSync('src/index.css', 'utf8');
+    const joy = css.slice(css.indexOf('Joyful layer: joyful edges, calm centre.'));
+    assert.doesNotMatch(joy, /infinite/);
+  });
+});

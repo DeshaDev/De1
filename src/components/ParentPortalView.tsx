@@ -26,6 +26,8 @@ import { summarizeProbes } from '../cognitiveProfile/progressProbe';
 import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/storage';
 import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
+import { JoyCorners } from './ui/Playful';
+import { Mascot } from './ui/Mascot';
 
 const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
 
@@ -298,21 +300,21 @@ export function ParentPortalView({
   };
 
   return (
-    <div className="min-h-[85vh] bg-gradient-to-b from-slate-50 to-white py-10 px-4 sm:px-6 lg:px-8" dir="rtl">
+    <div className="min-h-[85vh] py-10 px-4 sm:px-6 lg:px-8" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Top Header Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="joy-header joy-header-sun rounded-[28px] p-6 sm:p-8 relative overflow-hidden">
+          <JoyCorners variant="a" />
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-4">
-              <BrandMark size={48} />
+              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><Mascot mood="wave" size={84} /></span>
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold mb-1.5">
                   <Heart size={14} className="text-teal-600 fill-teal-600" />
                   <span>بوابة أولياء الأمور والأسرة</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                <h1 className="joy-title">
                   هَيَّا نَقْرَأْ — رحلة طفلك
                 </h1>
                 <p className="text-sm text-slate-600 mt-1">
