@@ -181,7 +181,7 @@ function openKeyDatabase(): Promise<IDBDatabase> {
   if (typeof indexedDB === 'undefined') {
     return Promise.reject(new Error('IndexedDB is required for persistent encrypted child storage.'));
   }
-  keyDatabasePromise = new Promise((resolve, reject) => {
+  keyDatabasePromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(KEY_DATABASE, KEY_DATABASE_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -194,7 +194,7 @@ function openKeyDatabase(): Promise<IDBDatabase> {
     keyDatabasePromise = null;
     throw error;
   });
-  return keyDatabasePromise;
+  return keyDatabasePromise!;
 }
 
 function readPersistedCryptoKey(): Promise<CryptoKey | null> {
@@ -262,9 +262,9 @@ export async function secureEncrypt(value: unknown): Promise<string> {
   const key = await getOrCreatePersistentCryptoKey();
   const iv = getSecureRandomBytes(12);
   const ciphertext = await webCrypto.subtle.encrypt(
-    { name: 'AES-GCM', iv, additionalData: AES_GCM_AAD, tagLength: 128 },
+    { name: 'AES-GCM', iv: iv as unknown as BufferSource, additionalData: AES_GCM_AAD as unknown as BufferSource, tagLength: 128 },
     key,
-    new TextEncoder().encode(json)
+    new TextEncoder().encode(json) as unknown as BufferSource
   );
   return `${CURRENT_AES_GCM_PREFIX}${bytesToBase64(iv)}:${bytesToBase64(new Uint8Array(ciphertext))}`;
 }
@@ -287,9 +287,9 @@ export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | 
       const key = await readPersistedCryptoKey();
       if (!key || key.extractable || key.algorithm.name !== 'AES-GCM') return null;
       const plaintext = await webCrypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: base64ToBytes(parts[0]), additionalData: AES_GCM_AAD, tagLength: 128 },
+        { name: 'AES-GCM', iv: base64ToBytes(parts[0]) as unknown as BufferSource, additionalData: AES_GCM_AAD as unknown as BufferSource, tagLength: 128 },
         key,
-        base64ToBytes(parts[1])
+        base64ToBytes(parts[1]) as unknown as BufferSource
       );
       return JSON.parse(new TextDecoder().decode(plaintext)) as T;
     }
@@ -299,9 +299,9 @@ export async function decryptStandardAesGcm<T>(raw: string | null): Promise<T | 
       const parts = raw.slice(LEGACY_AES_GCM_PREFIX.length).split(':');
       if (parts.length !== 2) return null;
       const keyBytes = getDeviceEncryptionKey();
-      const key = await webCrypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
+      const key = await webCrypto.subtle.importKey('raw', keyBytes as unknown as BufferSource, { name: 'AES-GCM' }, false, ['decrypt']);
       const plaintext = await webCrypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: base64ToBytes(parts[0]) },
+        { name: 'AES-GCM', iv: base64ToBytes(parts[0]) as unknown as BufferSource },
         key,
         base64ToBytes(parts[1])
       );
