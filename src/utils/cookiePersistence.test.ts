@@ -108,7 +108,7 @@ test('Session persistence: save, load, and clear across cookie/localStorage/sess
 });
 
 test('Student and Active Student persistence: fails closed without durable key storage', async () => {
-  setupMockBrowser();
+  const { localStorageJar } = setupMockBrowser();
 
   const customChild: Partial<StudentRecord> = {
     id: 'stu-iyad-123',
