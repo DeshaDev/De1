@@ -46,6 +46,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   const playback = useRef<PlaybackHandle | null>(null);
 
   const station = stations.find((item) => item.id === stationId) ?? null;
+  const visibleProgress = practiceReady ? practiceProgress : emptyLiteracyPracticeProgress();
   const question = station?.questions[questionIndex] ?? null;
   const fluencyPassage = getFluencyPassage(safeAgeYears);
 
@@ -194,7 +195,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
-              <p className="text-xs text-slate-500 mt-2">محاولات سابقة: {ageLabel(practiceProgress.stations[item.id].attemptedQuestions)} · مرات الإكمال: {ageLabel(practiceProgress.stations[item.id].completedSessions)}</p>
+              <p className="text-xs text-slate-500 mt-2">محاولات سابقة: {ageLabel(visibleProgress.stations[item.id].attemptedQuestions)} · مرات الإكمال: {ageLabel(visibleProgress.stations[item.id].completedSessions)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>
