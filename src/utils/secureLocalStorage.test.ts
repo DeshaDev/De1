@@ -9,19 +9,6 @@ import {
   resetDeviceEncryptionKeyCacheForTesting,
 } from './secureLocalStorage';
 
-function setupLegacySeed(seed: string) {
-  const jar = new Map<string, string>([['baseera_device_storage_seed_v2', seed]]);
-  (globalThis as any).window = {
-    localStorage: {
-      getItem: (key: string) => jar.get(key) ?? null,
-      setItem: (key: string, value: string) => jar.set(key, value),
-      removeItem: (key: string) => jar.delete(key),
-    },
-    sessionStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined },
-  };
-  return jar;
-}
-
 function installFakeIndexedDB() {
   const stores = new Map<string, Map<string, unknown>>();
   const db = {
