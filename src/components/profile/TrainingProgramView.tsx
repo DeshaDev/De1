@@ -182,6 +182,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   }, [run !== null, onRunningChange]);
   const seed = useRef(Date.now());
 
+  const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
+  const proposedSetup = useMemo(
+    () => (proposedPlan ? summarizePlanSetup(proposedPlan, profile) : null),
+    [proposedPlan, profile]
+  );
+
   if (showStructuredStations) {
     return (
       <StructuredLiteracyStations
@@ -192,11 +198,6 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     );
   }
 
-  const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
-  const proposedSetup = useMemo(
-    () => (proposedPlan ? summarizePlanSetup(proposedPlan, profile) : null),
-    [proposedPlan, profile]
-  );
 
   /** Keep each answer on this device; the record and the school/family database are updated per block. */
   const persistLocal = (p: TrainingProgress) => {
