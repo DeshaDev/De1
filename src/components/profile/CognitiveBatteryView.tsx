@@ -661,6 +661,15 @@ interface Props {
   onNavigateTab?: (tab: string) => void;
 }
 
+/**
+ * A session started on the setup screen for a learner record created a moment ago. Saving is
+ * asynchronous (encrypted storage), and the view reloads as soon as the host selects the new
+ * learner, so the reload must not race the save: it takes the session from here first. Without
+ * this the reload found nothing yet and rebuilt a session from the record, losing the consents
+ * just given (the audio consent among them).
+ */
+const startedSessions = new Map<string, BatterySession>();
+
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
   const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
@@ -703,6 +712,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   useEffect(() => {
     let cancelled = false;
     setSession(null);
+    const started = startedSessions.get(activeStudent.id);
+    if (started) {
+      // Kept until its save finishes (see onStart), so a second effect run (StrictMode) finds it too.
+      setSession(started);
+      return () => { cancelled = true; };
+    }
     void loadBatterySession(activeStudent.id)
       .then((existing) => {
         if (cancelled) return;
@@ -752,9 +767,13 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
 
+  // Pick the opening screen when the session first loads (or the child changes), not on every saved
+  // result: re-running this after each update sent the child back to the map mid-flow and skipped
+  // the end-of-game screen.
+  const hasSession = session !== null;
   useEffect(() => {
-    setView(initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' });
-  }, [session, initialView]);
+    setView(initialView === 'training' ? { name: 'training' } : hasSession ? { name: 'map' } : { name: 'setup' });
+  }, [hasSession, activeStudent.id, initialView]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -838,7 +857,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
             });
             if (newId) {
-              void saveBatterySession({ ...s, studentId: newId }).catch((error) => console.error('Unable to persist battery session:', error));
+              startedSessions.set(newId, { ...s, studentId: newId });
+              void saveBatterySession({ ...s, studentId: newId })
+                .catch((error) => console.error('Unable to persist battery session:', error))
+                .finally(() => startedSessions.delete(newId));
               return; // the host selects the new learner and this view reloads their session
             }
           }

@@ -2505,7 +2505,6 @@ export default function App() {
                 <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
                 <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
                 <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
-                <li><button type="button" onClick={() => setActiveTab('audio-lab')}>مختبر مقارنة التقييم الصوتي (Azure و Google)</button></li>
               </ul>
             </div>
             <div className="baseera-footer-col">

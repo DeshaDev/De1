@@ -70,31 +70,60 @@ export function WaveDivider({ fill = 'var(--paper)', flip = false, className = '
   );
 }
 
-/** The name of each letter on the home cubes, for the bubble after a tap. */
-const LETTER_NAMES: Record<string, string> = { 'بَ': 'الباء', 'قَ': 'القاف', 'رَ': 'الراء', 'أَ': 'الهمزة' };
+/** The letters around «هُدهُد» on the home page: what the bubble calls them and where they sit. */
+const HERO_LETTERS: { letter: string; sound: string; name: string; color: JoyColor; pos: string; rotate: number }[] = [
+  { letter: 'ب', sound: 'بَ', name: 'الباء', color: 'coral', pos: 'top-[10%] right-[4%]', rotate: -10 },
+  { letter: 'ق', sound: 'قَ', name: 'القاف', color: 'sky', pos: 'top-[6%] left-[6%]', rotate: 8 },
+  { letter: 'ر', sound: 'رَ', name: 'الراء', color: 'leaf', pos: 'bottom-[20%] right-[2%]', rotate: 6 },
+  { letter: 'أ', sound: 'أَ', name: 'الهمزة', color: 'grape', pos: 'bottom-[24%] left-[3%]', rotate: -8 },
+];
+const NAME_OF_SOUND: Record<string, string> = Object.fromEntries(HERO_LETTERS.map((l) => [l.sound, l.name]));
 
 /**
- * The home page scene: «هُدهُد» in 3D among floating letter cubes. A child taps a cube, hears its
- * sound (a recorded clip), and the bubble names the letter. The bubble sits above the scene in normal
- * flow, so it never covers the mascot or the heading beside it.
+ * The home page scene: «هُدهُد» teaches letter sounds. The child taps a letter, hears its sound (a
+ * recorded clip), «هُدهُد» hops, and the bubble names the letter. With WebGL the bird and the letters
+ * are 3D; without it (or under reduced motion) the same game runs with the drawn bird and letter
+ * buttons, so it works on every device. The bubble sits above the scene, never over the bird.
  */
-export function HeroScene({ message = 'المس حرفًا، وسأقرؤه لك!' }: { message?: string }) {
+export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! المس حرفًا لأُسمعك صوته.' }: { message?: string }) {
   const [said, setSaid] = useState<string | null>(null);
+  const [hops, setHops] = useState(0);
   const onSay = useCallback((sound: string) => {
     setSaid(sound);
+    setHops((n) => n + 1);
     void import('../profile/audio').then(({ speak, stopSpeech }) => {
       stopSpeech();
       return speak(sound);
     });
   }, []);
+  const still = (
+    <div className="relative h-full w-full">
+      {HERO_LETTERS.map((l) => (
+        <button
+          key={l.letter}
+          type="button"
+          onClick={() => onSay(l.sound)}
+          className={`hn-letter absolute ${l.pos}`}
+          aria-label={`اسمع صوت ${l.name}`}
+        >
+          <LetterBlock letter={l.letter} color={l.color} size={78} rotate={l.rotate} />
+        </button>
+      ))}
+      <div className="absolute inset-x-0 bottom-[2%] flex justify-center">
+        <div key={hops} className={`hn-bird w-[54%] ${hops ? 'hn-bird-hop' : ''}`}>
+          <Mascot mood={said ? 'cheer' : 'wave'} size={230} className="h-auto w-full" />
+        </div>
+      </div>
+    </div>
+  );
   return (
     <div className="relative mx-auto flex w-full max-w-[560px] flex-col items-center">
-      <div className="relative z-10 w-[86%] max-w-[22rem]">
+      <div className="relative z-10 w-[88%] max-w-[23rem]">
         <p className="mascot-bubble mascot-bubble-down font-child text-center" role="status" aria-live="polite">
           {said ? (
             <>
               <span className="text-3xl font-black align-middle" style={{ color: 'var(--joy-coral-deep)' }}>{said}</span>
-              {'  '}هذا صوت {LETTER_NAMES[said] ?? 'الحرف'}. المس حرفًا آخر!
+              {'  '}هذا صوت {NAME_OF_SOUND[said] ?? 'الحرف'}. جرّب حرفًا آخر!
             </>
           ) : (
             message
@@ -104,7 +133,7 @@ export function HeroScene({ message = 'المس حرفًا، وسأقرؤه لك
       <div className="joy-decor relative -mt-1 w-full aspect-[1.1]">
         <span className="absolute inset-[8%] rounded-full hn-halo" aria-hidden="true" />
         <div className="absolute inset-0">
-          <Mascot3D mood="wave" scenery fallbackSize={230} className="h-full w-full" onSay={onSay} />
+          <Mascot3D mood="wave" scenery fallbackSize={230} className="h-full w-full" onSay={onSay} still={still} />
         </div>
       </div>
     </div>

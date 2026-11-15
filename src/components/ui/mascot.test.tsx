@@ -117,7 +117,16 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     const src = fs.readFileSync('src/components/ui/Playful.tsx', 'utf8');
     assert.doesNotMatch(src, /animate-(bounce|pulse|ping|spin)/);
     const css = fs.readFileSync('src/index.css', 'utf8');
-    const joy = css.slice(css.indexOf('Joyful layer: joyful edges, calm centre.'));
-    assert.doesNotMatch(joy, /infinite/);
+    // The joyful layer is still. The only looping motion is the home hero's bird, which lives in its
+    // own block and stops under reduced motion.
+    const joyStart = css.indexOf('Joyful layer: joyful edges, calm centre.');
+    const homeStart = css.indexOf('Home page «تعالَ نلعب بالحروف»');
+    assert.ok(joyStart > 0 && homeStart > joyStart);
+    assert.doesNotMatch(css.slice(joyStart, homeStart), /infinite/);
+    const home = css.slice(homeStart);
+    for (const rule of home.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)) {
+      assert.match(rule[1], /\.hn-bird/, `only the hero bird may loop: ${rule[1].trim()}`);
+    }
+    assert.match(home, /prefers-reduced-motion: reduce\) \{\n  \.hn-bird, \.hn-bird-hop \{ animation: none; \}/);
   });
 });

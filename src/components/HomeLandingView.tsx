@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
+  Gamepad2,
   Building2,
   CheckCircle2,
   ClipboardCheck,
-  EyeOff,
   FileBarChart,
   GraduationCap,
   Lock,
@@ -172,9 +172,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <HnSkyDecor />
         <div className="bz-container relative grid lg:grid-cols-[1fr_1fr] gap-2 lg:gap-10 items-center pt-5 pb-10 sm:pt-10 lg:pt-12 lg:pb-14">
           <div className="relative z-10">
-            <h1 className="hn-display">ألعاب تكشف أين يتعثّر طفلك في القراءة</h1>
+            <h1 className="hn-display">ننمّي مهارات القراءة لدى طفلك، ونساعده على تجاوز عسر القراءة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              {ar(BATTERY.length)} لعبة عربية قصيرة لأطفال ٤ إلى ٨ سنوات. يلعب طفلك مع هُدهُد، وتحصل أنت على تقرير واضح وتدريب يومي على قدر مستواه.
+              ألعاب عربية قصيرة لأطفال ٤ إلى ٨ سنوات تكشف مبكرًا أين يتعثّر طفلك، ثم تدريب يومي على قدر مستواه يقوّي المهارات التي يحتاجها ليقرأ بثقة.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -188,8 +188,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <ul className="mt-7 flex flex-wrap gap-2">
               {[
                 { t: 'من ٤ إلى ٨ سنوات', icon: Users },
-                { t: 'جلسات من ١٠ إلى ١٥ دقيقة', icon: Timer },
-                { t: 'بلا كاميرا', icon: EyeOff },
+                { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
+                { t: `تدريب ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة يوميًا`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
@@ -377,8 +377,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <h2 className="hn-h2">خصوصية طفلك، وحدود ما نقيسه</h2>
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
-            { icon: EyeOff, t: 'لا كاميرا', b: 'لا تصوير ولا تتبّع للعين. اللعب باللمس والصوت فقط.', tone: 'coral' },
-            { icon: Lock, t: 'أقل قدر من البيانات', b: 'موافقة مستقلة قبل تسجيل الصوت، وسياسة خصوصية تشرح أين تذهب البيانات.', tone: 'grape' },
+            { icon: Lock, t: 'صوت طفلك بإذنك', b: 'لا يُسجَّل صوته إلا بموافقة منفصلة منك، ويمكنك سحبها متى شئت.', tone: 'coral' },
+            { icon: Users, t: 'بيانات أقل', b: 'نحفظ ما يلزم للتقرير فقط، وسياسة الخصوصية تشرح أين يُحفظ.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
             { icon: GraduationCap, t: 'لا تشخيص', b: 'لا مئينات ولا تصنيف خطورة قبل دراسة تقنين مستقلة.', tone: 'leaf' },
           ].map((x) => (

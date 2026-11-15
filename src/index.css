@@ -1517,8 +1517,8 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
 .hn-display {
   font-family: var(--font-child);
   font-weight: 800;
-  font-size: clamp(2.3rem, 5.2vw, 4rem);
-  line-height: 1.22;
+  font-size: clamp(2.1rem, 4.4vw, 3.4rem);
+  line-height: 1.25;
   color: var(--hn-ink);
   text-wrap: balance;
 }
@@ -1586,9 +1586,7 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   gap: 2.2rem 1rem;
   padding: 2rem 1rem;
   border-radius: 32px;
-  background:
-    radial-gradient(circle, color-mix(in srgb, #FFFFFF 22%, transparent) 2px, transparent 2.5px) 0 0 / 22px 22px,
-    color-mix(in srgb, #000000 14%, var(--hn-board));
+  background: color-mix(in srgb, #000000 14%, var(--hn-board));
 }
 @media (min-width: 640px) { .hn-board { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 2.5rem 1.5rem; } }
 @media (min-width: 1024px) { .hn-board { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
@@ -1698,3 +1696,32 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   background: linear-gradient(180deg, var(--hn-sky-top), var(--hn-sky-bottom));
 }
 @media (min-width: 640px) { .hn-close { padding: 3rem 3rem; } }
+
+/* Home hero without WebGL: tappable letters and a bird that floats, blinks its whole body gently
+   and hops when a letter is tapped. Home page only; nothing moves under reduced motion. */
+.hn-letter {
+  border-radius: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  filter: drop-shadow(0 6px 0 rgba(20, 49, 94, 0.12));
+}
+.hn-letter:hover { transform: translateY(-4px) scale(1.06); }
+.hn-letter:active { transform: translateY(2px) scale(0.96); }
+.hn-letter:focus-visible { outline: 3px solid var(--brand); outline-offset: 4px; }
+.hn-bird { animation: hnFloat 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+.hn-bird-hop { animation: hnHop 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) 1, hnFloat 3.2s ease-in-out 0.7s infinite; }
+@keyframes hnFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(-1.5deg); }
+}
+@keyframes hnHop {
+  0% { transform: translateY(0) scale(1, 1); }
+  20% { transform: translateY(0) scale(1.08, 0.9); }
+  55% { transform: translateY(-46px) scale(0.95, 1.06) rotate(-6deg); }
+  85% { transform: translateY(0) scale(1.06, 0.94); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hn-bird, .hn-bird-hop { animation: none; }
+  .hn-letter { transition: none; }
+}

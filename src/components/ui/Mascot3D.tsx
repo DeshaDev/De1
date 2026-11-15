@@ -50,15 +50,17 @@ export interface Mascot3DProps {
   style?: React.CSSProperties;
   /** Called with a letter's sound when the child taps a letter cube (scenery only). */
   onSay?: (sound: string) => void;
+  /** What to show instead of the 3D scene (while loading, without WebGL, or under reduced motion). */
+  still?: React.ReactNode;
 }
 
-export function Mascot3D({ mood = 'wave', scenery = false, fallbackSize = 200, className = '', style, onSay }: Mascot3DProps) {
+export function Mascot3D({ mood = 'wave', scenery = false, fallbackSize = 200, className = '', style, onSay, still: customStill }: Mascot3DProps) {
   const [use3D, setUse3D] = useState(false);
   useEffect(() => {
     setUse3D(canRender3D());
   }, []);
 
-  const still = (
+  const still = customStill ?? (
     <div className="flex h-full w-full items-end justify-center">
       <Mascot mood={mood} size={fallbackSize} className="h-auto w-[62%] max-w-full" />
     </div>
