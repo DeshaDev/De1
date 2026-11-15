@@ -114,6 +114,8 @@ async function completeFirstSessionExercises(page: Page) {
   const seenHeaders: string[] = [];
   let sawPlacement = false;
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
+  let idleFingerprint = '';
+  let idleRepeats = 0;
   for (let step = 0; step < 1500; step += 1) {
     if (await summaryDone.isVisible().catch(() => false)) break;
 
@@ -193,6 +195,14 @@ async function completeFirstSessionExercises(page: Page) {
     }
 
     await page.waitForTimeout(100);
+    const pageText = (await page.locator('body').innerText().catch(() => '')).slice(-1800);
+    const visibleButtons = await page.getByRole('button').allTextContents().catch(() => []);
+    const fingerprint = `${pageText}| ${visibleButtons.slice(-12).join(' · ')}`;
+    if (fingerprint === idleFingerprint) idleRepeats += 1;
+    else { idleFingerprint = fingerprint; idleRepeats = 0; }
+    if (idleRepeats >= 300) {
+      throw new Error(`Training journey stalled on an unhandled screen. Visible text: ${pageText.slice(-1000)}. Buttons: ${visibleButtons.slice(-12).join(' | ')}`);
+    }
   }
 
   await expect(summaryDone).toBeVisible({ timeout: 20_000 });
