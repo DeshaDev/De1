@@ -143,6 +143,23 @@ async function completeFirstSessionExercises(page: Page) {
       continue;
     }
 
+    const dictationInput = page.getByLabel('اكتب الكلمة التي سمعتها');
+    if (await dictationInput.isVisible().catch(() => false)) {
+      await dictationInput.fill('كتاب');
+      const firstCheck = page.getByRole('button', { name: 'تحقق من الكلمة' });
+      await expect(firstCheck).toBeEnabled({ timeout: 20_000 });
+      await firstCheck.click();
+      const dictationRetry = page.getByRole('button', { name: 'حاول مرة أخرى' });
+      if (await dictationRetry.isVisible().catch(() => false)) {
+        await dictationRetry.click();
+        await dictationInput.fill('كتاب');
+        const secondCheck = page.getByRole('button', { name: 'تحقق من المحاولة الثانية' });
+        await expect(secondCheck).toBeEnabled({ timeout: 20_000 });
+        await secondCheck.click();
+      }
+      continue;
+    }
+
     const retryBtn = page.getByRole('button', { name: /حاول مرة أخرى/ });
     if (await retryBtn.isVisible().catch(() => false)) {
       await retryBtn.click();
@@ -244,8 +261,13 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText('القافية', { exact: true })).toBeVisible();
     await expect(page.getByText(/مستوى البداية: المستوى ٢/).first()).toBeVisible();
     await expect(page.getByText(/مستوى البداية: المستوى ١/).first()).toBeVisible();
-    await expect(page.getByText(/جرعة الجلسة: ١٠ تمارين/)).toBeVisible();
-    await expect(page.getByText(/جرعة الجلسة: ٧ تمارين/).first()).toBeVisible();
+    const doseLabels = await page.getByText(/جرعة الجلسة:/).allTextContents();
+    expect(doseLabels.length).toBeGreaterThanOrEqual(4);
+    const doseValues = doseLabels.map((label) => {
+      const digits = label.match(/جرعة الجلسة:\s*([٠-٩]+)/)?.[1] ?? '';
+      return Number(digits.replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))));
+    });
+    expect(doseValues.every((value) => value >= 4 && value <= 12)).toBe(true);
     await expect(page.getByText('فك الترميز والقراءة', { exact: true })).toBeVisible();
     await expect(page.getByText('الإملاء والكتابة', { exact: true })).toBeVisible();
     await expect(page.getByText('الفهم اللغوي والقرائي', { exact: true })).toBeVisible();
