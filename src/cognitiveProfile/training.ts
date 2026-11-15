@@ -1174,7 +1174,9 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
   if (skill === 'decoding' || skill === 'spelling' || skill === 'comprehension' || skill === 'morphology') {
     const ageYears = Math.min(8, Math.max(4, Math.floor(ageMonths / 12)));
     const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
-    const questions = (station?.questions ?? []).filter((question) => question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'));
+    const eligibleQuestions = (station?.questions ?? []).filter((question) => question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'));
+    const atLevel = eligibleQuestions.filter((question) => (question.level ?? 1) === level);
+    const questions = atLevel.length >= 2 ? atLevel : eligibleQuestions.filter((question) => (question.level ?? 1) <= level);
     if (questions.length === 0) return [];
     const ordered = shuffleWith(questions, random);
     return ordered.slice(0, ITEMS_PER_SESSION).map((question, index): TrainingTask => {
