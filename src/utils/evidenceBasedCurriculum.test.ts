@@ -75,7 +75,7 @@ test('core Arabic reading items preserve their intended phonological, grapheme a
   const lessons = READING_CURRICULUM_SEQUENCE.map((item) => getCurriculumLesson('reading', item.id)!);
   const questions = lessons.flatMap((lesson) => lesson.questions);
   const expected: Record<string, string> = {
-    'pa-1': '/م/', 'pa-2': '/س/', 'pa-3': '/ن/', 'pa-4': '/ش/', 'pa-5': '/ق/',
+    'pa-1': 'م', 'pa-2': 'س', 'pa-3': 'ن', 'pa-4': 'ش', 'pa-5': 'ق',
     'ls-1': 'ب', 'ls-2': 'ت', 'ls-3': 'ث', 'ls-4': 'م', 'ls-5': 'د',
     'sv-1': 'كَتَبَ', 'sv-2': 'بِئْرٌ', 'sv-3': 'عِلْمٌ',
     'sv-4': 'تُفَّاحٌ', 'sv-5': 'فتحة',
@@ -87,7 +87,7 @@ test('core Arabic reading items preserve their intended phonological, grapheme a
     'ct-3': 'حكت لأسرتها ما تعلمته', 'ct-4': 'صفحتين',
     'ct-5': 'شاركت ما تعلمته',
     'rc-1': 'قرب النافذة', 'rc-2': 'بدت ووضحت للعيان',
-    'rc-3': 'لأنّ سامرًا سقاها ووضعها قرب النافذة', 'rc-4': 'كل صباح',
+    'rc-3': 'سقاها سامر كل صباح', 'rc-4': 'كل صباح',
     'rc-5': 'ظهور ورقتين خضراوين',
   };
   for (const [id, answer] of Object.entries(expected)) {
@@ -96,6 +96,24 @@ test('core Arabic reading items preserve their intended phonological, grapheme a
     assert.equal(item.options[item.correctIndex], answer, id + ' expected correct answer');
   }
   assert.equal(Object.keys(expected).length, 35);
+});
+
+
+test('child-facing explanations match the skill and avoid technical phoneme notation', () => {
+  const phonology = getCurriculumLesson('reading', 'phonological-awareness')!;
+  assert.match(phonology.model, /أَوَّلِ صَوْتٍ/);
+  assert.match(phonology.guidedPractice, /صَوْتَ الْفَاءِ/);
+  for (const item of phonology.questions) {
+    assert.deepEqual(item.options, item.options.map((option) => option.replaceAll('/', '')));
+    assert.ok(item.options.every((option) => !option.includes('/')));
+  }
+
+  const blending = getCurriculumLesson('reading', 'syllable-blending')!;
+  assert.match(blending.model, /كل مقطع/);
+  const comprehension = getCurriculumLesson('reading', 'reading-comprehension')!;
+  const causeItem = comprehension.questions.find((item) => item.id === 'rc-3');
+  assert.ok(causeItem);
+  assert.equal(causeItem.options[causeItem.correctIndex], 'سقاها سامر كل صباح');
 });
 
 test('reading recommendations use recorded instructional evidence and clearly avoid diagnosis', () => {
