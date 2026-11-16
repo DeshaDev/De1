@@ -33,6 +33,16 @@ describe('training dose and item identity', () => {
     }
   });
 
+  it('treats a repeated task as new spaced retrieval only on a later local day', () => {
+    const [task] = generateItems('decoding', 1, 21, 1, undefined, 72);
+    assert.ok(task);
+    const firstDay = trainingEvidenceKey(task, '2026-11-16');
+    const sameDay = trainingEvidenceKey(task, '2026-11-16');
+    const nextDay = trainingEvidenceKey(task, '2026-11-17');
+    assert.equal(firstDay, sameDay);
+    assert.notEqual(firstDay, nextDay);
+  });
+
   it('keeps generated evidence identity stable when answer options are reordered', () => {
     const [task] = generateItems('decoding', 1, 19, 1, undefined, 72);
     assert.ok(task && task.kind === 'choice');
