@@ -122,6 +122,14 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
     assert.equal(TrainingProgressUploadSchema.safeParse(repeated.progress).success, true);
   });
 
+  it('counts a later-day repeat as spaced-retrieval practice evidence', () => {
+    const firstDay = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, 'item-a1-b2@2026-11-16');
+    const nextDay = recordAnswer(firstDay.progress, 'rhyme', true, 1 / 3, 'item-a1-b2@2026-11-17');
+    assert.equal(firstDay.progress.bkt!['rhyme:1'].n, 1);
+    assert.equal(nextDay.progress.bkt!['rhyme:1'].n, 2);
+    assert.deepEqual(nextDay.progress.seenTrainingItems, ['item-a1-b2@2026-11-16', 'item-a1-b2@2026-11-17']);
+  });
+
   it('does not reuse an item already seen in practice as fresh progress-probe evidence', () => {
     const practiced = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, 'item-a1-b2@2026-11-16').progress;
     const before = practiced.bkt!['rhyme:2'].n;
