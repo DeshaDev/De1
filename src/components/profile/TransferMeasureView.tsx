@@ -10,6 +10,7 @@ import {
   type TransferTaskKind,
 } from '../../cognitiveProfile/transferProbe';
 import { authenticatedFetch } from '../../utils/apiAuth';
+import { normalizeHomeDialect, pronunciationLocaleForDialect } from '../../cognitiveProfile/storage';
 import { startWavRecording, type WavRecordingController } from './audioRecording';
 
 interface Props {
@@ -66,11 +67,8 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
     typeof guardianConsentAt === 'string' && Number.isFinite(Date.parse(guardianConsentAt));
   const validAudioConsent = student?.guardianAudioConsentGiven === true &&
     typeof audioConsentAt === 'string' && Number.isFinite(Date.parse(audioConsentAt));
-  const storedDialect = student?.dialectCode || student?.dialect || 'msa';
-  // Older builds mistakenly stored the country name as the dialect. These tasks are in MSA,
-  // so legacy country values fall back to the MSA service locale rather than disabling the measure.
-  const dialect = student?.country && storedDialect === student.country ? 'msa' : storedDialect;
-  const language = dialect === 'egyptian' ? 'ar-EG' : ['msa', 'gulf', 'faseeh'].includes(dialect) ? 'ar-SA' : null;
+  const dialect = normalizeHomeDialect(student?.dialectCode || student?.dialect, student?.country);
+  const language = pronunciationLocaleForDialect(dialect) ?? null;
   const canAssess = Boolean(
     student && !student.isDemoRecord && validGuardianConsent && validAudioConsent && language
   );
