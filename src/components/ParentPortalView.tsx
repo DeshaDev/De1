@@ -263,6 +263,18 @@ export function ParentPortalView({
       return;
     }
 
+    const cleanEmail = parentEmail.trim();
+    const hasEmail = cleanEmail.length > 0;
+    const hasPassword = parentPassword.length > 0;
+    if (hasEmail !== hasPassword) {
+      setFormError('لإنشاء حساب الأسرة، أدخل البريد وكلمة المرور معًا، أو اتركهما فارغين لاستخدام وضع الزائر.');
+      return;
+    }
+    if (hasEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.') || parentPassword.length < 6)) {
+      setFormError('أدخل بريدًا إلكترونيًا صحيحًا وكلمة مرور من ٦ خانات على الأقل، أو اترك الحقلين فارغين.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const newId = await onRegisterChild({
@@ -725,7 +737,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على حفظ ملفه وأنشطته التعليمية في حسابي السحابي للرجوع إليها لاحقًا.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ أنشطته التعليمية وفق سياسة الخصوصية. أفهم أن وضع الزائر يحفظ الملف على هذا الجهاز فقط.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
