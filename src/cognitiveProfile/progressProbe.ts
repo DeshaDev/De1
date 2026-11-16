@@ -2,10 +2,10 @@
  * Scheduled progress probe: a short, fixed-difficulty check at the start of selected sessions.
  *
  * Why: the training score of a session cannot show progress, because the level changes as the
- * child improves. Progress monitoring uses equivalent short forms at one fixed difficulty, given
- * repeatedly, and judges growth by the trend across sessions (curriculum-based measurement;
+ * child improves. Progress monitoring uses newly generated items at one fixed instructional level, given
+ * at scheduled intervals. Their trend is a descriptive in-app indicator, not a calibrated scale (curriculum-based measurement;
  * Deno, 1985; Fuchs & Fuchs). Each probe here is a new set of items generated at level 2 for the
- * plan's focus skills, with no feedback, so scores are comparable from session to session.
+ * plan's focus skills, with no feedback, so scores can be compared descriptively; equal difficulty has not been validated.
  *
  * Trained skills are compared with one skill the plan does not train (multiple baseline across
  * skills, a single-case design accepted as evidence by the What Works Clearinghouse). If the trained
@@ -200,7 +200,7 @@ export function describeProgressAr(summary: ProbeSummary | null): string {
   if (!summary) return 'يبدأ قياس التقدّم مع الجلسة الأولى، ثم يُعاد كل خمس جلسات وفي الجلسة الأخيرة.';
   if (summary.count === 1) return `نتيجة البداية: ${arDigits(summary.baseline)}٪. تظهر المقارنة في القياس التالي بعد خمس جلسات، وتقدير مستوى التدريب يتحدّث بعد كل إجابة.`;
   if (!summary.reliable) {
-    return `من ${arDigits(summary.baseline)}٪ في البداية إلى ${arDigits(summary.latest)}٪ في آخر جلسة. النتائج تتذبذب من يوم لآخر، ويصبح الاتجاه موثوقًا بعد ${measures(RELIABLE_TREND_PROBES)}.`;
+    return `من ${arDigits(summary.baseline)}٪ في البداية إلى ${arDigits(summary.latest)}٪ في آخر قياس. النتائج قد تتذبذب؛ نحتاج إلى ${measures(RELIABLE_TREND_PROBES)} على الأقل لعرض اتجاه أولي، وهو مؤشر داخلي غير معياري.`;
   }
   const direction =
     summary.change > 0 ? `تحسّن بمقدار ${points(summary.change)}` : summary.change < 0 ? `انخفاض بمقدار ${points(summary.change)}` : 'ثبات';
