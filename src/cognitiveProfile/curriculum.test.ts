@@ -70,7 +70,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
       const listeningLesson = lessonFor('comprehension', 1, undefined, age);
       assert.ok(listeningLesson);
       assert.match(listeningLesson.steps[0].textAr, /أستمع/);
-      assert.match(listeningLesson.steps[1].textAr, /وضعت نور/);
+      assert.match(listeningLesson.steps[1].textAr, /سقت ليلى/);
       assert.doesNotMatch(listeningLesson.steps[0].textAr, /أقرأ الجملة أو النص/);
       assert.equal(listeningLesson.steps[1].visual?.kind, 'story');
     }
@@ -78,8 +78,26 @@ describe('teaching curriculum: lessons ("I do")', () => {
     const readingLesson = lessonFor('comprehension', 1, undefined, 6);
     assert.ok(readingLesson);
     assert.match(readingLesson.steps[0].textAr, /أقرأ الجملة أو النص/);
-    assert.match(readingLesson.steps[1].textAr, /هطل المطر/);
+    assert.match(readingLesson.steps[1].textAr, /سقت ليلى/);
     assert.equal(readingLesson.steps[1].visual?.kind, 'story');
+  });
+
+  it('changes structured-literacy teaching and modelling across all three skill levels', () => {
+    for (const skill of ['decoding', 'spelling', 'comprehension', 'morphology'] as const) {
+      const age = skill === 'morphology' ? 7 : 6;
+      const lessons = ([1, 2, 3] as Level[]).map((level) => lessonFor(skill, level, undefined, age)!);
+      assert.equal(new Set(lessons.map((lesson) => lesson.steps[0].textAr)).size, 3, `${skill}: teaching must change by level`);
+      assert.equal(new Set(lessons.map((lesson) => lesson.steps[1].textAr)).size, 3, `${skill}: worked example must change by level`);
+      assert.ok(lessons.every((lesson) => lesson.steps[1].visual?.kind === 'story'), `${skill}: each level needs a visual model`);
+    }
+  });
+
+  it('keeps comprehension instruction listening-led before age six at every level', () => {
+    for (const level of [1, 2, 3] as Level[]) {
+      const lesson = lessonFor('comprehension', level, undefined, 4)!;
+      assert.doesNotMatch(lesson.steps[0].textAr, /أقرأ/);
+      assert.match(lesson.steps[0].textAr, /أستمع|أنتبه|أربط/);
+    }
   });
 
   it('gives each structured-literacy lesson a visible worked example', () => {
@@ -98,7 +116,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
       if (skill === 'decoding') {
         const visual = lesson.steps[1].visual;
         assert.ok(visual?.kind === 'story');
-        assert.equal(visual.frames[1].detailAr, 'قَ + لَ + مٌ');
+        assert.equal(visual.relationAr, 'قَ + لَ + مٌ. نجمع الأصوات بالترتيب.');
       }
     }
   });
