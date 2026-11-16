@@ -69,8 +69,35 @@ describe('teaching curriculum: lessons ("I do")', () => {
       for (const level of [1, 2, 3] as Level[]) {
         const lesson = lessonFor(skill, level);
         assert.ok(lesson, `${skill}:${level}`);
-        assert.ok(lesson.steps.length >= 3 && lesson.steps.length <= 6, `${skill}:${level} has ${lesson.steps.length} steps`);
+        assert.ok(lesson.steps.length >= 3 && lesson.steps.length <= 8, `${skill}:${level} has ${lesson.steps.length} steps`);
         assert.match(lesson.steps.at(-1)!.textAr, /دورك/);
+      }
+    }
+  });
+
+  it('provides several distinct worked models for every foundational skill and level', () => {
+    const skills = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination'] as const;
+    for (const skill of skills) {
+      for (const level of [1, 2, 3] as Level[]) {
+        const lesson = lessonFor(skill, level);
+        assert.ok(lesson, `${skill}/L${level}: lesson missing`);
+        const models = lesson.steps.filter((step) => step.visual !== undefined);
+        assert.ok(models.length >= 2, `${skill}/L${level}: expected at least two visible models`);
+        assert.ok(new Set(models.map((step) => step.textAr)).size >= 2, `${skill}/L${level}: model text repeated`);
+      }
+    }
+  });
+
+  it('adds a second worked example before practice in every structured literacy lesson', () => {
+    for (const skill of ['decoding', 'spelling', 'comprehension', 'morphology'] as const) {
+      const age = skill === 'morphology' ? 7 : 6;
+      for (const level of [1, 2, 3] as Level[]) {
+        const lesson = lessonFor(skill, level, undefined, age);
+        assert.ok(lesson, `${skill}/L${level}: lesson missing`);
+        assert.ok(lesson.steps[1].visual, `${skill}/L${level}: first model needs a visual`);
+        assert.ok(lesson.steps[2].visual, `${skill}/L${level}: second model needs a visual`);
+        assert.match(lesson.steps[2].textAr, /مثال آخر/);
+        assert.match(lesson.steps.at(-1)!.textAr, /مثال جديد/);
       }
     }
   });
