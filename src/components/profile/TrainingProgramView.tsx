@@ -802,21 +802,16 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
-          <p className="font-child font-black text-slate-900 flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">{def.icon}</span> وقت التعلّم: {def.nameAr}
-            <span className="text-xs font-bold text-slate-500">· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
-            {(() => {
-              const pl = (progress.placements ?? []).find((x) => x.skill === skill);
-              return pl ? (
-                <span className="text-xs font-bold text-slate-500" title="مستوى البداية الذي اقترحه الفحص، قبل التحقق بإجابات الطفل">
-                  · اقترح الفحص المستوى {toArabicDigits(pl.suggested)}
-                </span>
-              ) : null;
-            })()}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="font-child font-black text-slate-900 flex items-center gap-2">
+              <span className="text-2xl" aria-hidden="true">{def.icon}</span>
+              مغامرتنا اليوم: {def.nameAr}
+            </p>
+            <p className="text-xs font-bold text-slate-500">نتعلّم خطوة جديدة مع هُدهُد</p>
+          </div>
           <p className="text-xs font-bold text-slate-500 flex items-center gap-3">
             <span aria-label={`نجوم الجلسة: ${toArabicDigits(run.stars)}`}>⭐ {toArabicDigits(run.stars)}</span>
-            <span>المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
+            <span>المغامرة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
           </p>
         </div>
         {run.phase === 'task' && (
@@ -891,11 +886,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 الإجابات الصحيحة: {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)}
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
-              {run.results.length > 0 && (
-                <p className="text-xs text-ink-2 max-w-sm">
-                  تقدير النموذج لإتقان المستوى الحالي: من {pct(run.results[run.results.length - 1].pBefore)}٪ إلى {pct(run.results[run.results.length - 1].pAfter)}٪
-                </p>
-              )}
+              <p className="text-sm text-slate-600">كل محاولة تعلّم جديد. خذ وقتك، ونحن نتقدّم خطوة خطوة.</p>
               <button
                 type="button"
                 onClick={() => {
@@ -1173,6 +1164,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </div>
       )}
 
+      <details className="bz-card p-5">
+        <summary className="cursor-pointer font-black text-slate-900">متابعة تقدّم طفلك والمهارات التي يتعلّمها</summary>
+        <div className="mt-4 space-y-5">
       <section className="bz-card p-5 space-y-3" aria-labelledby="progress-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id="progress-heading" className="font-black text-slate-900 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> التقدّم من جلسة إلى جلسة</h3>
@@ -1266,8 +1260,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         })}
       </div>
 
+        </div>
+      </details>
+
       {onOpenExtra && (
-        <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">ألعاب وقراءات إضافية</summary>
+          <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-black text-slate-900">أنشطة إضافية اختيارية</h3>
             <p className="text-xs text-ink-2 mt-1">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
@@ -1279,10 +1278,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
             )}
           </div>
-        </section>
+          </section>
       )}
 
-      {student && <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />}
+        </details>
+      )}
+      {student && (
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">اقتراحات الممارسة للأسرة</summary>
+          <div className="mt-4">
+            <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />
+          </div>
+        </details>
+      )}
 
       <ProgramRules />
 
@@ -1351,7 +1359,7 @@ function TodayProbeCard({ today, probes }: { today: ProbeRecord; probes: ProbeRe
 function ProgramRules() {
   return (
     <details className="bz-card-quiet p-5 text-sm text-ink-2">
-      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (للمعلم والأخصائي)</summary>
+      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (لولي الأمر)</summary>
       <ProgramRulesBody />
     </details>
   );
