@@ -334,3 +334,28 @@ test('training gym opens on the daily curriculum and switches to skill stations'
   await expect(page.getByRole('button', { name: /صائد الحروف/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test('a parent can permanently delete a child file kept on this device', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('ريم');
+  await page.getByLabel('السنوات').selectOption('5');
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
+    await page.getByLabel(label).check();
+  }
+  await page.getByRole('button', { name: 'بدء الفحص' }).click();
+  await expect(page.getByText(/فحص ريم/)).toBeVisible();
+
+  await page.getByRole('button', { name: /تسجيل طفل \/ حساب الأسرة/ }).first().click();
+  await expect(page.getByText(/ملف الطفل «ريم» محفوظ على هذا الجهاز فقط/)).toBeVisible();
+  await page.getByRole('button', { name: 'حذف ملف الطفل وبياناته' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('لا يمكن التراجع عن الحذف');
+  await page.getByRole('button', { name: 'نعم، احذف نهائيًا' }).click();
+  await expect(page.getByText(/ملف الطفل «ريم» محفوظ على هذا الجهاز فقط/)).toHaveCount(0);
+
+  // Gone after a reload too: nothing is left on the device.
+  await page.reload();
+  await page.getByRole('button', { name: /تسجيل طفل \/ حساب الأسرة/ }).first().click();
+  await expect(page.getByText(/«ريم»/)).toHaveCount(0);
+});

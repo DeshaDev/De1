@@ -52,7 +52,7 @@ import {
   saveActiveStudentId,
   loadActiveStudentId,
 } from './utils/cookiePersistence';
-import { saveBatterySession, clearLiteracyPracticeProgress, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
+import { saveBatterySession, clearLiteracyPracticeProgress, clearAllChildData, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -62,6 +62,7 @@ import {
   fetchStudentsFromSupabase,
   syncStudentToSupabase,
   syncTrainingProgressToSupabase,
+  deleteStudentFromSupabase,
 } from './utils/supabaseClient';
 import { AssessmentProvider } from './contexts/AssessmentContext';
 const ReaderPage = lazy(() => import('./components/reader/ReaderPage').then((m) => ({ default: m.ReaderPage })));
@@ -1100,6 +1101,29 @@ export default function App() {
     }
   };
 
+  /**
+   * A parent deletes their child's file: from their cloud account (with the child's screenings,
+   * readings and training, by cascade) and from this device. Nothing is kept for later.
+   */
+  const handleDeleteChildByParent = async (studentId: string): Promise<{ success: boolean; error?: string }> => {
+    const target = students.find((student) => student.id === studentId);
+    if (!target || target.isDemoRecord) return { success: false, error: 'لا يمكن حذف هذا الملف.' };
+    if (supabaseUser?.id && target.parentAccount) {
+      const ok = await deleteStudentFromSupabase(studentId, supabaseUser.id);
+      if (!ok) return { success: false, error: 'تعذّر حذف ملف الطفل من حسابك. تحقّق من اتصال الإنترنت وأعد المحاولة.' };
+    }
+    try {
+      await clearAllChildData(studentId);
+    } catch (error) {
+      console.error('Unable to clear the deleted child data on this device:', error);
+    }
+    const remaining = students.filter((student) => student.id !== studentId);
+    setStudents(remaining.length > 0 ? remaining : INITIAL_STUDENTS);
+    if (selectedStudentId === studentId) selectStudent((remaining[0] ?? INITIAL_STUDENTS[0]).id);
+    setAiStatusBanner(`حُذف ملف «${target.name}» وكل نتائجه نهائيًا.`);
+    return { success: true };
+  };
+
   const handleDeleteStudentRecord = async (studentId: string) => {
     if (!baseeraSession || baseeraSession.role !== 'school_admin') {
       setAiStatusBanner(baseeraSession
@@ -1547,6 +1571,7 @@ export default function App() {
               }}
               onRegisterChild={handleRegisterChildByParent}
               onLinkLocalChild={handleLinkLocalChild}
+              onDeleteChild={handleDeleteChildByParent}
               onSelectStudent={(studentId, targetTab) => {
                 selectStudent(studentId);
                 setActiveTab(targetTab);

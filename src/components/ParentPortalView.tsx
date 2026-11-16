@@ -18,6 +18,7 @@ import {
   Cloud,
   AlertTriangle,
   Globe,
+  Trash2,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
 import { subtestsForAge } from '../cognitiveProfile/battery';
@@ -124,6 +125,8 @@ interface ParentPortalViewProps {
     parentPassword?: string;
   }) => Promise<string | null> | (string | null);
   onLinkLocalChild: (childId: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  /** Permanently delete a child's file and results (cloud account and this device). */
+  onDeleteChild?: (childId: string) => Promise<{ success: boolean; error?: string }>;
   onSelectStudent: (studentId: string, targetTab: 'dyslexia-lab' | 'dashboard' | 'guided-program') => void;
   onNavigateHome: () => void;
 }
@@ -136,6 +139,7 @@ export function ParentPortalView({
   onSignOut,
   onRegisterChild,
   onLinkLocalChild,
+  onDeleteChild,
   onSelectStudent,
   onNavigateHome,
 }: ParentPortalViewProps) {
@@ -157,6 +161,50 @@ export function ParentPortalView({
   const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Deleting a child's file: which child awaits confirmation, and any error.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const deleteChild = async (childId: string) => {
+    if (!onDeleteChild) return;
+    setIsDeleting(true);
+    setDeleteError('');
+    const result = await onDeleteChild(childId);
+    setIsDeleting(false);
+    if (result.success) setConfirmDeleteId(null);
+    else setDeleteError(result.error || 'تعذّر حذف الملف. أعد المحاولة.');
+  };
+
+  const deleteControls = (child: StudentRecord) =>
+    onDeleteChild ? (
+      confirmDeleteId === child.id ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2" role="alertdialog" aria-label={`تأكيد حذف ملف ${child.name}`}>
+          <p className="text-xs font-bold text-rose-900">
+            سيُحذف ملف «{child.name}» وكل نتائجه (الفحص والقراءة والتدريب) نهائيًا من حسابك ومن هذا الجهاز. لا يمكن التراجع عن الحذف.
+          </p>
+          {deleteError && <p className="text-xs text-rose-800" role="alert">{deleteError}</p>}
+          <div className="flex gap-2">
+            <button type="button" disabled={isDeleting} onClick={() => void deleteChild(child.id)} className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold disabled:opacity-60">
+              {isDeleting ? 'جارٍ الحذف…' : 'نعم، احذف نهائيًا'}
+            </button>
+            <button type="button" disabled={isDeleting} onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }} className="flex-1 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-bold">
+              إلغاء
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setConfirmDeleteId(child.id); setDeleteError(''); }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-rose-700 hover:bg-rose-50 text-xs font-bold transition-colors cursor-pointer"
+        >
+          <Trash2 size={14} aria-hidden="true" />
+          <span>حذف ملف الطفل وبياناته</span>
+        </button>
+      )
+    ) : null;
 
   // Login Form State
   const [loginEmail, setLoginEmail] = useState('');
@@ -397,6 +445,7 @@ export function ParentPortalView({
                 متابعة الفحص كزائر ←
               </button>
             </div>
+            <div className="max-w-sm">{deleteControls(localGuestChildren[0])}</div>
 
             <div className="bg-white/90 backdrop-blur-xs rounded-2xl p-4 sm:p-5 border border-amber-200/80 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
@@ -514,6 +563,7 @@ export function ParentPortalView({
                             <FileBarChart size={15} />
                             <span>عرض التقرير وخطة الدعم</span>
                           </button>
+                          {deleteControls(child)}
                         </div>
                       );
                     })()}

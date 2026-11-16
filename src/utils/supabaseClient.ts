@@ -271,6 +271,26 @@ export async function syncTrainingProgressToSupabase(student: StudentRecord, use
 }
 
 /**
+ * Permanently delete one child's record for the signed-in parent. Row-level security allows a user
+ * to delete only their own rows, and the child's assessments, oral-reading sessions and training
+ * progress are removed with it (ON DELETE CASCADE in supabase/schema.sql).
+ */
+export async function deleteStudentFromSupabase(studentId: string, userId: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !userId || !studentId) return false;
+  try {
+    const { error } = await supabase.from('students').delete().eq('id', studentId).eq('user_id', userId);
+    if (error) {
+      console.warn('Failed to delete student from Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Failed to delete student from Supabase:', err);
+    return false;
+  }
+}
+
+/**
  * Load all students for the authenticated Supabase user
  */
 export async function fetchStudentsFromSupabase(userId: string): Promise<StudentRecord[]> {
