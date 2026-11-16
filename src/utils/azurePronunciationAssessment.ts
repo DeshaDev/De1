@@ -210,7 +210,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         spokenWord: alignedWord?.spokenWord ?? null,
         notesAr: enableMiscue
           ? 'لم يحسم تقييم Azure هذه الكلمة؛ يلزم التحقق من الصوت قبل تصنيفها.'
-          : 'وضع Azure المستمر لا يؤكد الحذف؛ الكلمة غير محسومة آلياً.',
+          : 'وضع Azure المستمر لا يؤكد الحذف؛ الكلمة غير محسومة آليًا.',
       };
     }
 
@@ -263,7 +263,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         errorType: 'Mispronunciation',
         accuracyScore: score,
         spokenWord: alignedWord.spokenWord ?? null,
-        notesAr: 'رصد Azure انخفاضاً في دقة نطق الكلمة.',
+        notesAr: 'رصد Azure انخفاضًا في دقة نطق الكلمة.',
       };
     }
 

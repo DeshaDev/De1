@@ -210,14 +210,14 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
         setActivityStatusMessage(
           res.status === 401 || res.status === 403
             ? 'الأنشطة متاحة ومحدّثة.'
-            : 'تعذّر تحميل أنشطة الصف؛ يمكنك متابعة الأنشطة التعليمية العامة الحالية.'
+            : 'تعذّر تحميل أنشطة الصف؛ يمكنك المتابعة بالأنشطة التعليمية العامة.'
         );
         return;
       }
 
       const data = await res.json();
       if (!data?.session) {
-        setActivityStatusMessage('لم يصل مخطط صالح؛ استمر بالأنشطة العامة دون تخصيص.');
+        setActivityStatusMessage('تعذّر تخصيص الأنشطة؛ تابع بالأنشطة العامة.');
         return;
       }
 
@@ -234,12 +234,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
       if (announce) {
         triggerCelebration(
-          `تم اختيار أنشطة تعليمية للصف ${student.gradeLevel}.`,
+          `اختيرت أنشطة تعليمية للصف ${toEasternArabicDigits(student.gradeLevel)}.`,
           40
         );
       }
     } catch {
-      setActivityStatusMessage('تعذّر الاتصال بالخادم؛ استمر بالأنشطة التعليمية العامة الحالية.');
+      setActivityStatusMessage('تعذّر الاتصال بالخادم؛ تابع بالأنشطة التعليمية العامة.');
     } finally {
       setIsLoadingCurated(false);
     }
@@ -342,7 +342,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   const triggerPhonicsScaffold = () => {
     const hint =
       currentPhonics.ruleTip ||
-      `استمع لصوت حرف ال${currentPhonics.targetLetter} في بداية كلمة «${currentPhonics.spokenWord}»، وانتبه لعدد النقاط وموضعها.`;
+      `استمع إلى صوت الحرف «${currentPhonics.targetLetter}» في بداية كلمة «${currentPhonics.spokenWord}»، وانتبه لعدد النقاط وموضعها.`;
     setActiveScaffold({
       title: `مساعدة النشاط (عائلة ${currentPhonics.family})`,
       text: hint,
@@ -353,7 +353,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   const triggerSyllableScaffold = () => {
     const firstSyl = currentSyllable.syllables[0];
-    const hint = `المقطع الصوتي الأول في كلمة «${currentSyllable.targetWord}» هو: «${firstSyl}». ابدأ بالنقر عليه أولاً.`;
+    const hint = `المقطع الصوتي الأول في كلمة «${currentSyllable.targetWord}» هو: «${firstSyl}». ابدأ بالنقر عليه أولًا.`;
     setActiveScaffold({
       title: `تلميح مقطعي لكلمة «${currentSyllable.targetWord}»`,
       text: hint,

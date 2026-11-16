@@ -100,7 +100,7 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
       );
     } catch {
       next = { status: 'draft', source: 'rules', plan: rulesDraft(facts), referralAr: null, facts, generatedAt: new Date().toISOString() };
-      setNote({ text: 'خدمة النموذج اللغوي غير متاحة أو لم تجتز المخرجات الفحص الآلي؛ عُرض اقتراح مبني على قواعد ثابتة من نتائج المهام.', errors: [] });
+      setNote({ text: 'خدمة النموذج اللغوي غير متاحة، أو لم تجتز مخرجاتها التحقق الآلي؛ عُرض اقتراح مبني على قواعد ثابتة من نتائج المهام.', errors: [] });
     } finally {
       setBusy(false);
     }
@@ -215,7 +215,7 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
             </div>
           )}
           <p className="text-xs text-ink-2">
-            هذه أفكار ممارسة تعليمية استرشادية وليست تشخيصًا أو وصفة علاجية. النسب والأرقام - إن ظهرت - تصف أنشطة المنصة فقط، ولا تثبت مستوى الطفل مقارنةً بأقرانه أو تحسن قراءته خارجها.
+            هذه أفكار ممارسة تعليمية استرشادية وليست تشخيصًا أو وصفة علاجية. النسب والأرقام، إن ظهرت، تصف أنشطة المنصة فقط، ولا تثبت مستوى الطفل مقارنةً بأقرانه أو تحسن قراءته خارجها.
           </p>
         </div>
       )}

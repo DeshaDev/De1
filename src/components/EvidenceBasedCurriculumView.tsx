@@ -57,7 +57,7 @@ function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
             <span className="text-[10px] text-teal-100 font-bold mt-1">كلمة تامة</span>
           </div>
         </div>
-        <p className="text-xs text-slate-600">استمع إلى كل صوت على حدة، ثم اجمع الأصوات معاً بسلاسة.</p>
+        <p className="text-xs text-slate-600">استمع إلى كل صوت على حدة، ثم اجمع الأصوات معًا بسلاسة.</p>
       </div>
     );
   }
@@ -354,7 +354,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
                         استمع إلى الكلمة
                       </button>
                     )}
-                    <span className="text-xs font-bold text-teal-900">استمع جيداً ثم ركّز على أول صوت تسمعه.</span>
+                    <span className="text-xs font-bold text-teal-900">استمع جيدًا ثم ركّز على أول صوت تسمعه.</span>
                   </div>
                 )}
 

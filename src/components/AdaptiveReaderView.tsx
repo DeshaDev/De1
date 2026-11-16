@@ -1,4 +1,5 @@
 import { authenticatedFetch } from '../utils/apiAuth';
+import { toArabicNum } from '../utils/arabicDigits';
 import { playNaturalArabicAudio, stopNaturalArabicAudio } from '../utils/naturalSpeech';
 import React, { useState, useRef, useMemo } from 'react';
 import {
@@ -67,9 +68,9 @@ const DYSLEXICO_PRESETS: {
   },
   {
     id: 'ar-phonological-pairs',
-    label: 'مثال تدريبي — الحروف المتشابهة صوتاً ورسماً',
+    label: 'مثال تدريبي — الحروف المتشابهة صوتًا ورسمًا',
     dialect: 'msa',
-    sample: 'ذهب سامي إلى شاطيء البحر وجمع الصدف من الرمال وسبح في الماء',
+    sample: 'ذهب سامي إلى شاطئ البحر وجمع الصدف من الرمال وسبح في الماء',
   },
 ];
 
@@ -134,7 +135,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
       syllables: 'شَا · هَـ · دَتْ',
       root: 'ش - ه - د',
       meaning:
-        'رأت بعينيها بوضوح (ويقابلها في اللهجات العربية الصحيحة: شافت).',
+        'رأت بعينيها بوضوح (ويقابلها في كثير من اللهجات العربية: شافت).',
     },
     {
       word: 'التُّفَّاحِ',
@@ -355,7 +356,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
     }, pacingIntervalMs);
 
     try {
-      setPacingSyncModeLabel('صوت المعلمة الفصيحة الطبيعية (عالي النقاء)');
+      setPacingSyncModeLabel('صوت معلّمة بالفصحى (واضح ونقي)');
       await playNaturalArabicAudio(text, {
         voice: 'ar-AE-FatimaNeural',
         rate: '0%',
@@ -516,7 +517,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
         {problematicWords.length > 0 && (
         <section aria-live="polite" className="mx-6 sm:mx-8 mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
           <h3 className="text-sm font-bold text-amber-950">أنشطة قراءة مقترحة{studentName ? ` للمتعلّم «${studentName}»` : ''}</h3>
-          <p className="text-xs leading-relaxed text-amber-900">هذه الكلمات تم تحديدها بالتحليل الصوتي الآلي في جلسة سابقة للتدريب والمراجعة. جرّب قراءتها وفهمها؛ لا تعني القائمة وحدها وجود صعوبة.</p>
+          <p className="text-xs leading-relaxed text-amber-900">حدّد التحليل الصوتي الآلي هذه الكلمات في جلسة سابقة للتدريب والمراجعة. جرّب قراءتها وفهمها؛ لا تعني القائمة وحدها وجود صعوبة.</p>
           <div className="flex flex-wrap gap-2">{problematicWords.map((word, index) => <span key={`${word}-${index}`} className="rounded-md border border-amber-300 bg-white px-2 py-1 text-sm font-semibold text-amber-950">{word}</span>)}</div>
         </section>
       )}
@@ -554,7 +555,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               >
                 {ARABIC_READING_PASSAGES.map((p) => (
                   <option key={p.id} value={p.id}>
-                    الصف {p.gradeLevel}: {p.title} (
+                    الصف {toArabicNum(p.gradeLevel)}: {p.title} (
                     {p.diacriticLabelAr || p.category})
                   </option>
                 ))}
@@ -639,7 +640,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     : 'الخط القياسي مفعّل'}
                 </span>
                 <span className="font-mono tabular-nums">
-                  السطر النشط: {activeLineIdx + 1} / {Math.max(1, lines.length)}
+                  السطر النشط: {toArabicNum(activeLineIdx + 1)} / {toArabicNum(Math.max(1, lines.length))}
                 </span>
               </div>
 
@@ -795,7 +796,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     تمييز بصري للكلمات
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    حد سفلي للكلمات للمساعدة على تتبع حدودها؛ لا يُحمّل خطًا خارجيًا.
+                    حد سفلي للكلمات للمساعدة على تتبع حدودها؛ لا يُحمّل خطًّا خارجيًا.
                   </div>
                 </div>
                 <span className="text-xs font-mono font-semibold text-[#0284C7]">
@@ -820,7 +821,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                     التقطيع المقطعي الملون
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    تقسيم بصري تقريبي للكلمات المشكلة البسيطة؛ قد تظهر الكلمة كاملة إذا لم يكن التقطيع موثوقًا
+                    تقسيم بصري تقريبي للكلمات المشكولة البسيطة؛ قد تظهر الكلمة كاملة إذا لم يكن التقطيع موثوقًا
                   </div>
                 </div>
                 <span className="text-xs font-mono font-semibold text-[#0284C7]">
@@ -842,7 +843,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
               >
                 <div>
                   <div className="text-xs font-semibold">
-                    تمييز الحروف المتشابهة رسماً (ب/ت/ث · ج/ح/خ)
+                    تمييز الحروف المتشابهة رسمًا (ب/ت/ث · ج/ح/خ)
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
                     تلوين المجموعات الحرفية المتجانسة
@@ -1087,7 +1088,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>
-                    موائمة النص إلى الفصحى ({nonExactTokens.length})
+                    مواءمة النص مع الفصحى ({nonExactTokens.length})
                   </span>
                 </button>
               )}

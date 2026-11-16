@@ -442,7 +442,7 @@ export default function AudioComparisonLabView() {
         )}
 
         <p className="text-slate-300 text-sm leading-relaxed max-w-3xl">
-          يتيح لك هذا المختبر اختبار كلا المحركين بنفس ملف الصوت مباشرة على Localhost: استمع لميكروفونك أو ارفع تسجيلاً أو استخدم عينة جاهزة، وقارن سرعة الاستجابة، ودقة رصد التشكيل ومخارج الحروف، وسلوك الكلمات المصنوعة (Nonwords) بين تقييم النطق المتخصص في Azure والذكاء الاصطناعي متعدد الوسائط في Google Gemini.
+          يتيح لك هذا المختبر اختبار كلا المحركين بنفس ملف الصوت مباشرة على Localhost: استمع لميكروفونك أو ارفع تسجيلًا أو استخدم عينة جاهزة، وقارن سرعة الاستجابة، ودقة رصد التشكيل ومخارج الحروف، وسلوك الكلمات المصنوعة (Nonwords) بين تقييم النطق المتخصص في Azure والذكاء الاصطناعي متعدد الوسائط في Google Gemini.
         </p>
 
         {/* 3-Step Interactive Process Guide */}
@@ -698,7 +698,7 @@ export default function AudioComparisonLabView() {
 
             {!audioWavBase64 && (
               <span className="text-xs text-slate-500 font-bold">
-                (اضغط الزر الأحمر لتسجيل صوتك أولاً، أو زر «استخدم عيّنة جاهزة»)
+                (اضغط الزر الأحمر لتسجيل صوتك أولًا، أو زر «استخدم عيّنة جاهزة»)
               </span>
             )}
           </div>
@@ -866,12 +866,12 @@ export default function AudioComparisonLabView() {
                       : evalResult.google.error}
                   </p>
                   <div className="bg-white/80 p-3 rounded-xl border border-amber-200 space-y-2">
-                    <div className="font-bold text-slate-800 text-[11px]">خطوات التفعيل الفوري (مجاناً بدون بطاقة دفع):</div>
+                    <div className="font-bold text-slate-800 text-[11px]">خطوات التفعيل الفوري (مجانًا بدون بطاقة دفع):</div>
                     <ol className="list-decimal list-inside space-y-1 text-slate-600 text-[11px]">
                       <li>
                         افتح <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold">Google AI Studio (اضغط هنا)</a>
                       </li>
-                      <li>أنشئ مفتاح API جديداً في مشروع مجاني عادي (Free Tier يمنح 15 استجابة/دقيقة).</li>
+                      <li>أنشئ مفتاح API جديدًا في مشروع مجاني عادي (Free Tier يمنح 15 استجابة/دقيقة).</li>
                       <li>الصق المفتاح في الحقل أدناه ثم اضغط «إعادة المقارنة»:</li>
                     </ol>
                     <div className="flex gap-2 pt-1">

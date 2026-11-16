@@ -120,3 +120,13 @@ export async function loadScreeningHistory(studentId: string): Promise<Screening
 }
 export const saveScreeningHistory = (studentId: string, history: ScreeningSnapshot[]) =>
   write(HISTORY_KEY(studentId), sanitizeScreeningHistory(history).slice(-10));
+
+export const clearScreeningHistory = (studentId: string) => remove(HISTORY_KEY(studentId));
+
+/** Remove everything this device keeps for one child (screening, training, practice, history). */
+export async function clearAllChildData(studentId: string): Promise<void> {
+  clearBatterySession(studentId);
+  clearTrainingProgress(studentId);
+  clearScreeningHistory(studentId);
+  await clearLiteracyPracticeProgress(studentId);
+}

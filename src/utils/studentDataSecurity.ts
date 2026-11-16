@@ -94,8 +94,8 @@ const ROLE_SCOPES: Record<BaseeraRole, BaseeraScope[]> = {
 };
 
 const TENANT_DISPLAY_NAME_MAP: Record<string, string> = {
-  platform: 'إدارة منصة بصيرة المركزية',
-  baseera_hq: 'المقر الرئيسي لمنصة بصيرة',
+  platform: 'إدارة منصة هَيَّا نَقْرَأْ المركزية',
+  baseera_hq: 'المقر الرئيسي لمنصة هَيَّا نَقْرَأْ',
   default: 'مدرسة الرواد الابتدائية',
   school_a: 'مدرسة الرواد الأولى (أ)',
   school_b: 'مدرسة النخبة الثانية (ب)',
@@ -326,7 +326,7 @@ export function validateExplicitGuardianConsent(consentField: unknown): {
     return {
       valid: false,
       errorAr:
-        'مرفوض أمنياً (Default-Deny): يجب تقديم إقرار صريح ومؤكد بموافقة ولي الأمر (guardianConsentGiven: true) قبل حفظ أو تحليل بيانات الطفل.',
+        'مرفوض أمنيًا (Default-Deny): يجب تقديم إقرار صريح ومؤكد بموافقة ولي الأمر (guardianConsentGiven: true) قبل حفظ أو تحليل بيانات الطفل.',
     };
   }
   return { valid: true };
@@ -537,13 +537,13 @@ export const StudentProfilePatchSchema = z
       .string()
       .trim()
       .min(2, 'اسم الطالب يجب أن يتكون من حرفين على الأقل.')
-      .max(120, 'اسم الطالب لا يتجاوز 120 حرفاً.')
+      .max(120, 'اسم الطالب لا يتجاوز 120 حرفًا.')
       .optional(),
     schoolName: z
       .string()
       .trim()
       .min(2, 'اسم المدرسة يجب أن يتكون من حرفين على الأقل.')
-      .max(160, 'اسم المدرسة لا يتجاوز 160 حرفاً.')
+      .max(160, 'اسم المدرسة لا يتجاوز 160 حرفًا.')
       .optional(),
     gradeLevel: z.number().int().min(1).max(6).optional(),
     ageYears: z.number().int().min(6).max(16).optional(),
@@ -573,11 +573,11 @@ export const LearningReportSchema = z
           })
           .strict()
       )
-      .min(1, 'يجب أن يتضمن التقرير تمرين مساندة واحداً على الأقل.')
+      .min(1, 'يجب أن يتضمن التقرير تمرين مساندة واحدًا على الأقل.')
       .max(10),
     classroomAccommodations: z
       .array(z.string().trim().min(5).max(600))
-      .min(1, 'يجب أن يتضمن التقرير تيسيراً صفياً واحداً على الأقل.')
+      .min(1, 'يجب أن يتضمن التقرير تيسيرًا صفيًا واحدًا على الأقل.')
       .max(12),
   })
   .strict();
@@ -910,7 +910,7 @@ export function buildDeterministicLearningReport(params: {
       durationMinutes: 10,
       description:
         'نشاط تعليمي مقترح لقراءة كلمات مثل (' + targetWordsSample +
-        ') وتقسيمها إلى مقاطع بالتدريب التفاعلي الذكي أو بتوجيه الأسرة. هذه توصية تعليمية وليست تدخلاً علاجياً مُثبتاً.',
+        ') وتقسيمها إلى مقاطع بالتدريب التفاعلي الذكي أو بتوجيه الأسرة. هذه توصية تعليمية وليست تدخلًا علاجيًا مُثبتًا.',
     },
     {
       title: 'تمييز الحروف العربية المتقاربة رسمًا ونقطًا',
@@ -927,7 +927,7 @@ export function buildDeterministicLearningReport(params: {
         : 'استكشاف الكميات وخط الأعداد',
       durationMinutes: 10,
       description: numberLinePracticeSuggested
-        ? 'أظهرت هذه الجلسة فارقاً في تحديد الموقع على خط الأعداد قدره ' + params.numberLinePAE +
+        ? 'أظهرت هذه الجلسة فارقًا في تحديد الموقع على خط الأعداد قدره ' + params.numberLinePAE +
           '% وعدد ' + (params.reversalErrorCount ?? 'غير متاح') +
           ' من أخطاء ترتيب رموز العدد في المهام المحددة. يمكن استخدام ذلك لاختيار تدريب، دون تحويله إلى تصنيف خطر.'
         : 'نشاط اختياري لربط الكميات بمواقعها على خط الأعداد. المقاييس وصفية لهذه الجلسة ولا تكوّن درجة معيارية.',
@@ -975,10 +975,10 @@ export function buildDeterministicLearningReport(params: {
 
   return {
     learningSummary,
-    ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
+    ocularMotorAnalysis: 'غير منطبق؛ لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
     orthographicAndPhonologicalPatterns: isReadingOnly
       ? 'لم تُقيّم أنماط الإملاء أو النطق في جلسة القراءة الصامتة؛ احتُسب زمن إتمام النص وأسئلة الفهم فقط.'
-      : 'مخرجات محاذاة القراءة الجهرية معتمدة بالذكاء الاصطناعي وفق التحليل الصوتي المباشر للكلمات. تمثل هذه المؤشرات أداء الجلسة ولا تمثل تشخيصاً طبياً.' + oralText,
+      : 'مخرجات محاذاة القراءة الجهرية معتمدة بالذكاء الاصطناعي وفق التحليل الصوتي المباشر للكلمات. تمثل هذه المؤشرات أداء الجلسة ولا تمثل تشخيصًا طبيًا.' + oralText,
     dyscalculiaSpatialAnalysis: !isMathTested
       ? 'لم تُنفّذ مهام الحساب في هذه الجلسة؛ لا توجد نتائج حسابية أو درجة خطر. يمكن إجراء الأنشطة الحسابية الوصفية عند الحاجة.'
       : 'مقاييس وصفية للمهام المنفذة: فارق موقع خط الأعداد ' + params.numberLinePAE +

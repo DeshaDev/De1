@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
+  Gamepad2,
   Building2,
   CheckCircle2,
   ClipboardCheck,
-  EyeOff,
   FileBarChart,
   GraduationCap,
   Lock,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import { Mascot } from './ui/Mascot';
-import { MascotMoment3D } from './ui/Mascot3D';
+import { MascotMomentLive } from './ui/MascotLive';
 import { Cloud, HeroScene, LetterBlock, Sparkle } from './ui/Playful';
 import { BATTERY, DOMAINS } from '../cognitiveProfile/battery';
 import {
@@ -155,7 +155,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       if (!res.ok) throw new Error(data.error || 'تعذر إرسال طلب التجربة.');
       setDemoSubmitSuccess(true);
     } catch (err: any) {
-      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقاً.');
+      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقًا.');
     } finally {
       setIsSubmittingDemo(false);
     }
@@ -172,9 +172,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <HnSkyDecor />
         <div className="bz-container relative grid lg:grid-cols-[1fr_1fr] gap-2 lg:gap-10 items-center pt-5 pb-10 sm:pt-10 lg:pt-12 lg:pb-14">
           <div className="relative z-10">
-            <h1 className="hn-display">ألعاب تكشف أين يتعثّر طفلك في القراءة</h1>
+            <h1 className="hn-display">ننمّي مهارات القراءة لدى طفلك، ونساعده على تجاوز عسر القراءة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              {ar(BATTERY.length)} لعبة عربية قصيرة لأطفال ٤ إلى ٨ سنوات. يلعب طفلك مع هُدهُد، وتحصل أنت على تقرير واضح وتدريب يومي على قدر مستواه.
+              ألعاب عربية قصيرة لأطفال ٤ إلى ٨ سنوات تكشف مبكرًا أين يتعثّر طفلك، ثم تدريب يومي على قدر مستواه يقوّي المهارات التي يحتاج إليها ليقرأ بثقة.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -188,8 +188,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <ul className="mt-7 flex flex-wrap gap-2">
               {[
                 { t: 'من ٤ إلى ٨ سنوات', icon: Users },
-                { t: 'جلسات من ١٠ إلى ١٥ دقيقة', icon: Timer },
-                { t: 'بلا كاميرا', icon: EyeOff },
+                { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
+                { t: `تدريب ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة يوميًا`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
@@ -302,7 +302,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           <div>
             <h2 className="hn-h2">{ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة كل يوم، والمستوى يتبع طفلك</h2>
             <p className="hn-body mt-3">
-              {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة حين يحتاج، ثم يُعاد الفحص لنرى ما تغيّر.
+              {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
             </p>
             <p className="hn-small mt-5">
               المهارات في البرنامج: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}.
@@ -321,7 +321,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               </div>
             ))}
             <p className="hn-small sm:col-span-3 mt-2">
-              يصعد حين يقدّر النموذج أن احتمال إتقانه بلغ ٩٥٪ بعد ٥ إجابات على الأقل، وينزل وينبَّه المعلم إن بقي أقل من ٢٠٪ بعد ٨ إجابات.
+              يصعد حين يقدّر النموذج أن احتمال إتقانه بلغ ٩٥٪ بعد ٥ إجابات على الأقل، وينزل درجة ويُنبَّه المعلم إن بقي أقل من ٢٠٪ بعد ٨ إجابات.
             </p>
           </div>
         </div>
@@ -335,7 +335,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-sun)' }}>
               <span className="hn-who-icon" aria-hidden="true"><Users size={28} /></span>
               <h3 className="hn-h3">الأسرة</h3>
-              <p className="hn-body flex-1">اعرف أين يحتاج طفلك مساعدة، وتدرّب معه دقائق قليلة كل يوم.</p>
+              <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه دقائق قليلة كل يوم.</p>
               <button type="button" className="bz-btn bz-btn-primary hn-toy mt-5" onClick={() => onNavigateTab('parent-portal')}>ابدأ اللعب مع طفلك</button>
             </article>
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-leaf)' }}>
@@ -377,8 +377,8 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <h2 className="hn-h2">خصوصية طفلك، وحدود ما نقيسه</h2>
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
-            { icon: EyeOff, t: 'لا كاميرا', b: 'لا تصوير ولا تتبّع للعين. اللعب باللمس والصوت فقط.', tone: 'coral' },
-            { icon: Lock, t: 'أقل قدر من البيانات', b: 'موافقة مستقلة قبل تسجيل الصوت، وسياسة خصوصية تشرح أين تذهب البيانات.', tone: 'grape' },
+            { icon: Lock, t: 'صوت طفلك بإذنك', b: 'لا يُسجَّل صوته إلا بموافقة منفصلة منك، ويمكنك سحبها متى شئت.', tone: 'coral' },
+            { icon: Users, t: 'بيانات أقل', b: 'نحفظ ما يلزم للتقرير فقط، وسياسة الخصوصية تشرح أين يُحفظ.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
             { icon: GraduationCap, t: 'لا تشخيص', b: 'لا مئينات ولا تصنيف خطورة قبل دراسة تقنين مستقلة.', tone: 'leaf' },
           ].map((x) => (
@@ -396,10 +396,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <div className="hn-close">
           <HnCloseDecor />
           <div className="relative grid md:grid-cols-[auto_1fr] items-center gap-4 md:gap-10 text-center md:text-right">
-            <MascotMoment3D mood="wave" size={160} className="mx-auto" />
+            <MascotMomentLive mood="wave" size={160} className="mx-auto" />
             <div>
               <h2 className="hn-h2">هُدهُد ينتظر طفلك</h2>
-              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">أول جلسة من ١٠ إلى ١٥ دقيقة. اجلس بجانبه، واستمتعا باللعب معًا.</p>
+              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">تستغرق الجلسة الأولى من ١٠ إلى ١٥ دقيقة. اجلس بجانب طفلك، واستمتعا باللعب معًا.</p>
               <div className="mt-7 flex flex-wrap justify-center md:justify-start gap-3">
                 <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
                   ابدأ اللعب مع طفلك
@@ -432,7 +432,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <div className="py-6 text-center space-y-4">
                 <span className="mx-auto grid place-items-center w-16 h-16 rounded-full bg-brand-soft text-brand"><CheckCircle2 size={34} /></span>
                 <h4 className="bz-h3">تم استلام طلبكم بنجاح!</h4>
-                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. ستُستكمل آلية التواصل وجدولة الجلسات قبل بدء التجربة.</p>
+                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. سنتواصل معكم لجدولة الجلسات قبل بدء التجربة.</p>
                 <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-primary">إغلاق</button>
               </div>
             ) : (
@@ -449,7 +449,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                   </label>
                   <label className="bz-field">
                     <span className="bz-label">الصفة الوظيفية</span>
-                    <input type="text" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="منسق دعم / أخصائي تخاطب" className="bz-input" />
+                    <input type="text" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="منسّق دعم / أخصائي تخاطب" className="bz-input" />
                   </label>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">

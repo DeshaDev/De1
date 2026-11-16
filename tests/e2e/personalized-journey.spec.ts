@@ -121,16 +121,21 @@ async function completeOralReadingTask(page: Page) {
 
 async function completeFirstSessionExercises(page: Page) {
   await page.getByRole('button', { name: 'اعتماد الخطة وبدء البرنامج' }).click();
-  await page.getByRole('button', { name: /ابدأ درس اليوم والشرح مباشرة/ }).click();
+  await page.getByRole('button', { name: /ابدأ درس اليوم/ }).click();
 
   const seenHeaders: string[] = [];
   let sawPlacement = false;
+  let sawLesson = false;
+  let placementBeforeLesson = false;
   const summaryDone = page.getByText('انتهت جلسة اليوم!', { exact: true });
   let lastActionAt = Date.now();
   for (let step = 0; step < 6000; step += 1) {
     if (await summaryDone.isVisible().catch(() => false)) break;
 
-    if (await page.getByText(/من أين نبدأ؟/).first().isVisible().catch(() => false)) sawPlacement = true;
+    if (await page.getByText(/من أين نبدأ؟/).first().isVisible().catch(() => false)) {
+      sawPlacement = true;
+      if (!sawLesson) placementBeforeLesson = true;
+    }
 
     const headerLocator = page.locator('p').filter({ hasText: 'وقت التعلّم:' }).first();
     if ((await headerLocator.count()) > 0) {
@@ -140,6 +145,7 @@ async function completeFirstSessionExercises(page: Page) {
 
     const nextLessonBtn = page.getByRole('button', { name: 'التالي', exact: true });
     if (await nextLessonBtn.isVisible().catch(() => false)) {
+      sawLesson = true;
       await nextLessonBtn.click();
       lastActionAt = Date.now();
       continue;
@@ -147,6 +153,7 @@ async function completeFirstSessionExercises(page: Page) {
 
     const trainAfterLessonBtn = page.getByRole('button', { name: /هيا نتدرّب/ });
     if (await trainAfterLessonBtn.isVisible().catch(() => false)) {
+      sawLesson = true;
       await trainAfterLessonBtn.click();
       lastActionAt = Date.now();
       continue;
@@ -224,6 +231,8 @@ async function completeFirstSessionExercises(page: Page) {
 
   await expect(summaryDone).toBeVisible({ timeout: 20_000 });
   const summaryRows = await page.locator('ul li').allInnerTexts();
+  // The first session teaches before it checks the starting level (never a test first).
+  expect(placementBeforeLesson).toBe(false);
   return { seenHeaders, summaryRows, sawPlacement };
 }
 
@@ -289,10 +298,10 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText('القافية', { exact: true })).toBeVisible();
     await expect(page.getByText(/مستوى البداية: المستوى ٢/).first()).toBeVisible();
     await expect(page.getByText(/مستوى البداية: المستوى ١/).first()).toBeVisible();
-    const doseLabels = await page.getByText(/جرعة الجلسة:/).allTextContents();
+    const doseLabels = await page.getByText(/عدد تمارين الجلسة:/).allTextContents();
     expect(doseLabels.length).toBeGreaterThanOrEqual(4);
     const doseValues = doseLabels.map((label) => {
-      const digits = label.match(/جرعة الجلسة:\s*([٠-٩]+)/)?.[1] ?? '';
+      const digits = label.match(/عدد تمارين الجلسة:\s*([٠-٩]+)/)?.[1] ?? '';
       return Number(digits.replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))));
     });
     expect(doseValues.every((value) => value >= 4 && value <= 12)).toBe(true);

@@ -52,7 +52,7 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
-import { MascotMoment3D } from '../ui/Mascot3D';
+import { MascotMomentLive } from '../ui/MascotLive';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
@@ -199,7 +199,7 @@ function SubtestRunner({
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
           <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-            <MascotMoment3D mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
+            <MascotMomentLive mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
             <h2 className="font-child text-4xl font-bold text-ink flex items-center gap-3" style={{ fontFamily: 'var(--font-child)' }}>
               <span className="grid place-items-center w-14 h-14 rounded-2xl bg-sun-soft text-4xl" aria-hidden="true">{subtest.icon}</span>
               {subtest.gameNameAr}
@@ -262,7 +262,7 @@ function SubtestRunner({
 
         {stage === 'transition' && (
           <div className="flex flex-col items-center gap-5 text-center">
-            <MascotMoment3D mood="cheer" size={130} message={MASCOT_LINES.ready} />
+            <MascotMomentLive mood="cheer" size={130} message={MASCOT_LINES.ready} />
             <p className="font-child text-3xl font-bold text-ink">رائع! الآن نبدأ اللعبة</p>
             <p className="bz-body max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
             <button
@@ -368,12 +368,12 @@ function SubtestRunner({
                 </span>
                 <p className="font-child text-2xl font-bold text-ink">تم إنهاء المهمة دون درجة صوتية</p>
                 <p className="bz-small text-ink-2 max-w-lg">
-                  لم تُحتسب دقة القراءة أو الأخطاء أو السرعة؛ لأن التسجيل لم يحصل على تقييم صوتي خادمي مكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
+                  لم تُحتسب دقة القراءة ولا الأخطاء ولا السرعة، لأن التقييم الصوتي للتسجيل لم يكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
                 </p>
               </>
             ) : (
               <>
-                <MascotMoment3D mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
+                <MascotMomentLive mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
               </>
             )}
             <button
@@ -430,7 +430,7 @@ function SetupView({
     return (
       <section className="bz-card bz-card-pad max-w-2xl mx-auto space-y-3" dir="rtl" role="alert">
         <h2 className="bz-h3">هذا الفحص غير متاح لهذا العمر</h2>
-        <p className="bz-body">البطارية الحالية مصممة للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
+        <p className="bz-body">الفحص الحالي مصمم للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
         <p className="bz-small bz-muted">يمكن استخدام القارئ الميسّر والأنشطة التعليمية العامة، أو تصحيح العمر المسجل إذا كان غير دقيق.</p>
       </section>
     );
@@ -443,7 +443,7 @@ function SetupView({
           {supabaseUser ? (
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 font-bold flex items-center gap-2">
               <Cloud className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>متصل بحساب الأسرة ({supabaseUser.email}) — سيتم حفظ نتائج الفحص تلقائياً في قاعدة البيانات السحابية ☁️</span>
+              <span>متصل بحساب الأسرة ({supabaseUser.email}) — ستُحفظ نتائج الفحص تلقائيًا في حسابك ☁️</span>
             </div>
           ) : (
             <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -452,7 +452,7 @@ function SetupView({
                 <div>
                   <p className="font-bold">وضع الفحص السريع على هذا المتصفح (محلي)</p>
                   <p className="text-[11px] text-amber-800 mt-0.5">
-                    لن يُحفظ ملف الطفل في قاعدة البيانات السحابية إلا بحساب ولي أمر.
+                    لن يُحفظ ملف الطفل في حساب إلا إذا سجّل ولي الأمر حسابًا.
                   </p>
                 </div>
               </div>
@@ -530,7 +530,7 @@ function SetupView({
               <input type="checkbox" checked={checks.consent} onChange={(e) => setChecks({ ...checks, consent: e.target.checked })} />
               <span className="text-ink-2">
                 <span className="font-semibold text-ink">موافقة ولي الأمر</span>
-                <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
+                <span className="block bz-small bz-muted">أُقرّ بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
             <label className="bz-check sm:col-span-2">
@@ -584,7 +584,7 @@ function SetupView({
         </button>
         {!supabaseUser && (
           <p className="text-xs text-slate-500 text-center mt-2">
-            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقاً ربطه وحفظه في السحابة من بوابة الأسرة.
+            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقًا ربطه وحفظه في السحابة من بوابة الأسرة.
           </p>
         )}
       </section>
@@ -595,9 +595,9 @@ function SetupView({
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
               `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
-              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
+              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. أما الإملاء ففي الجلسة الأخيرة.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تحلل القصة والتسمية السريعة عبر تسجيل صوتي وموافقة منفصلة؛ وإذا لم يكتمل تحليل Azure، لا تُحتسب درجة.',
+              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تُحلَّل القصة والتسمية السريعة عبر تسجيل صوتي بموافقة منفصلة، وإذا لم يكتمل التحليل الصوتي فلا تُحتسب درجة.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
@@ -661,6 +661,15 @@ interface Props {
   onNavigateTab?: (tab: string) => void;
 }
 
+/**
+ * A session started on the setup screen for a learner record created a moment ago. Saving is
+ * asynchronous (encrypted storage), and the view reloads as soon as the host selects the new
+ * learner, so the reload must not race the save: it takes the session from here first. Without
+ * this the reload found nothing yet and rebuilt a session from the record, losing the consents
+ * just given (the audio consent among them).
+ */
+const startedSessions = new Map<string, BatterySession>();
+
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   const [trainingRunning, setTrainingRunning] = useState(false);
   const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
@@ -703,6 +712,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   useEffect(() => {
     let cancelled = false;
     setSession(null);
+    const started = startedSessions.get(activeStudent.id);
+    if (started) {
+      // Kept until its save finishes (see onStart), so a second effect run (StrictMode) finds it too.
+      setSession(started);
+      return () => { cancelled = true; };
+    }
     void loadBatterySession(activeStudent.id)
       .then((existing) => {
         if (cancelled) return;
@@ -843,7 +858,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
             });
             if (newId) {
-              void saveBatterySession({ ...s, studentId: newId }).catch((error) => console.error('Unable to persist battery session:', error));
+              startedSessions.set(newId, { ...s, studentId: newId });
+              void saveBatterySession({ ...s, studentId: newId })
+                .catch((error) => console.error('Unable to persist battery session:', error))
+                .finally(() => startedSessions.delete(newId));
               return; // the host selects the new learner and this view reloads their session
             }
           }
@@ -886,7 +904,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     <div className="space-y-6" dir="rtl">
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         {(completed.length === ageTasks.length || sittingJustFinished) && (
-          <MascotMoment3D
+          <MascotMomentLive
             mood={completed.length === ageTasks.length ? 'proud' : 'cheer'}
             size={110}
             message={completed.length === ageTasks.length ? MASCOT_LINES.allDone : MASCOT_LINES.sittingDone}
@@ -915,7 +933,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           </div>
           <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
-            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `أُنجزت ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)} مهام`}
+            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
           </h2>
           <div className="mt-4 flex items-center gap-3 max-w-md">
             <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / Math.max(1, ageTasks.length)) * 100}%` }} /></div>

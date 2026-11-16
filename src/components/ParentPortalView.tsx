@@ -18,6 +18,7 @@ import {
   Cloud,
   AlertTriangle,
   Globe,
+  Trash2,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
 import { subtestsForAge } from '../cognitiveProfile/battery';
@@ -27,7 +28,7 @@ import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/st
 import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
 import { JoyCorners } from './ui/Playful';
-import { Mascot3D } from './ui/Mascot3D';
+import { MascotLive } from './ui/MascotLive';
 
 const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
 
@@ -71,7 +72,7 @@ function nextStepFor(child: StudentRecord): NextStep {
     return {
       stageAr: 'خارج نطاق الفحص الحالي',
       actionAr: 'عرض الملف والأنشطة الميسّرة',
-      progressAr: 'البطارية الحالية مخصصة للأطفال من ٤ إلى ٨ سنوات؛ لن نغيّر العمر تلقائيًا لتجاوز هذا النطاق.',
+      progressAr: 'الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات، ولن نغيّر العمر تلقائيًا لتجاوز هذا النطاق.',
       tab: 'dashboard',
     };
   }
@@ -87,7 +88,7 @@ function nextStepFor(child: StudentRecord): NextStep {
     return {
       stageAr: 'الفحص قيد التنفيذ',
       actionAr: 'أكمل الفحص',
-      progressAr: `أنهى ${toArabicNum(done)} من ${toArabicNum(tasks.length)} مهام. يمكن إكمالها على أكثر من جلسة.`,
+      progressAr: `المهام المنجزة: ${toArabicNum(done)} من ${toArabicNum(tasks.length)}. يمكن إكمال الفحص على أكثر من جلسة.`,
       tab: 'dyslexia-lab',
     };
   }
@@ -124,6 +125,8 @@ interface ParentPortalViewProps {
     parentPassword?: string;
   }) => Promise<string | null> | (string | null);
   onLinkLocalChild: (childId: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  /** Permanently delete a child's file and results (cloud account and this device). */
+  onDeleteChild?: (childId: string) => Promise<{ success: boolean; error?: string }>;
   onSelectStudent: (studentId: string, targetTab: 'dyslexia-lab' | 'dashboard' | 'guided-program') => void;
   onNavigateHome: () => void;
 }
@@ -136,6 +139,7 @@ export function ParentPortalView({
   onSignOut,
   onRegisterChild,
   onLinkLocalChild,
+  onDeleteChild,
   onSelectStudent,
   onNavigateHome,
 }: ParentPortalViewProps) {
@@ -157,6 +161,50 @@ export function ParentPortalView({
   const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Deleting a child's file: which child awaits confirmation, and any error.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const deleteChild = async (childId: string) => {
+    if (!onDeleteChild) return;
+    setIsDeleting(true);
+    setDeleteError('');
+    const result = await onDeleteChild(childId);
+    setIsDeleting(false);
+    if (result.success) setConfirmDeleteId(null);
+    else setDeleteError(result.error || 'تعذّر حذف الملف. أعد المحاولة.');
+  };
+
+  const deleteControls = (child: StudentRecord) =>
+    onDeleteChild ? (
+      confirmDeleteId === child.id ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2" role="alertdialog" aria-label={`تأكيد حذف ملف ${child.name}`}>
+          <p className="text-xs font-bold text-rose-900">
+            سيُحذف ملف «{child.name}» وكل نتائجه (الفحص والقراءة والتدريب) نهائيًا من حسابك ومن هذا الجهاز. لا يمكن التراجع عن الحذف.
+          </p>
+          {deleteError && <p className="text-xs text-rose-800" role="alert">{deleteError}</p>}
+          <div className="flex gap-2">
+            <button type="button" disabled={isDeleting} onClick={() => void deleteChild(child.id)} className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold disabled:opacity-60">
+              {isDeleting ? 'جارٍ الحذف…' : 'نعم، احذف نهائيًا'}
+            </button>
+            <button type="button" disabled={isDeleting} onClick={() => { setConfirmDeleteId(null); setDeleteError(''); }} className="flex-1 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-bold">
+              إلغاء
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setConfirmDeleteId(child.id); setDeleteError(''); }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-rose-700 hover:bg-rose-50 text-xs font-bold transition-colors cursor-pointer"
+        >
+          <Trash2 size={14} aria-hidden="true" />
+          <span>حذف ملف الطفل وبياناته</span>
+        </button>
+      )
+    ) : null;
 
   // Login Form State
   const [loginEmail, setLoginEmail] = useState('');
@@ -241,7 +289,7 @@ export function ParentPortalView({
         onSelectStudent(newId, 'dyslexia-lab');
       }
     } catch (err: any) {
-      setFormError(err?.message || 'حدث خطأ أثناء تسجيل البيانات. يرجى المحاولة ثانية.');
+      setFormError(err?.message || 'حدث خطأ أثناء تسجيل البيانات. حاول مرة أخرى.');
     } finally {
       setIsSubmitting(false);
     }
@@ -269,7 +317,7 @@ export function ParentPortalView({
       setLoginEmail('');
       setLoginPassword('');
     } else {
-      setLoginError(res.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+      setLoginError(res.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحين.');
     }
   };
 
@@ -283,7 +331,7 @@ export function ParentPortalView({
       return;
     }
     if (linkPassword.length < 6) {
-      setLinkError('كلمة المرور يجب أن لا تقل عن 6 خانات.');
+      setLinkError('يجب ألّا تقل كلمة المرور عن ٦ خانات.');
       return;
     }
 
@@ -295,7 +343,7 @@ export function ParentPortalView({
       setLinkEmail('');
       setLinkPassword('');
     } else {
-      setLinkError(res.error || 'تعذر حفظ الملف في السحابة. يرجى التأكد من البيانات.');
+      setLinkError(res.error || 'تعذّر حفظ الملف في حسابك. تأكّد من البيانات وأعد المحاولة.');
     }
   };
 
@@ -308,7 +356,7 @@ export function ParentPortalView({
           <JoyCorners variant="a" />
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-4">
-              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><Mascot3D mood="wave" fallbackSize={84} className="h-28 w-28" /></span>
+              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><MascotLive mood="wave" size={112} className="w-28" /></span>
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold mb-1.5">
                   <Heart size={14} className="text-teal-600 fill-teal-600" />
@@ -318,7 +366,7 @@ export function ParentPortalView({
                   هَيَّا نَقْرَأْ — رحلة طفلك
                 </h1>
                 <p className="text-sm text-slate-600 mt-1">
-                  اكتشف قدرات طفلك في القراءة مبكراً، واحفظ تقدمه في حساب سحابي آمن.
+                  تعرّف مبكرًا إلى مهارات طفلك في القراءة، واحفظ تقدّمه في حساب آمن.
                 </p>
               </div>
             </div>
@@ -365,7 +413,7 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>الخصوصية ومعالجة البيانات:</strong> تُحفظ بيانات الطفل في قاعدة البيانات السحابية المشفرة المرتبطة بحساب ولي الأمر للرجوع إليها ومتابعة التقدم من أي جهاز. لا تُستخدم البيانات للإعلانات مطلقاً.
+            <strong>الخصوصية ومعالجة البيانات:</strong> تُحفظ بيانات الطفل في قاعدة البيانات السحابية المشفرة المرتبطة بحساب ولي الأمر للرجوع إليها ومتابعة التقدم من أي جهاز. لا تُستخدم البيانات للإعلانات مطلقًا.
           </div>
         </div>
 
@@ -385,7 +433,7 @@ export function ParentPortalView({
                     </span>
                   </h2>
                   <p className="text-xs text-amber-900/80 mt-1">
-                    العمر: {toArabicNum(localGuestChildren[0].ageYears)} سنوات · أُنشئ هذا الملف أثناء الفحص السريع على هذا المتصفح. إذا أغلقت المتصفح أو مسحت الذاكرة قد تفقد نتائجه.
+                    العمر: {toArabicNum(localGuestChildren[0].ageYears)} سنوات · أُنشئ هذا الملف أثناء الفحص السريع على هذا المتصفح، وإذا مُسحت بيانات المتصفح فقد تضيع نتائجه.
                   </p>
                 </div>
               </div>
@@ -397,14 +445,15 @@ export function ParentPortalView({
                 متابعة الفحص كزائر ←
               </button>
             </div>
+            <div className="max-w-sm">{deleteControls(localGuestChildren[0])}</div>
 
             <div className="bg-white/90 backdrop-blur-xs rounded-2xl p-4 sm:p-5 border border-amber-200/80 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
                 <Cloud size={16} className="text-teal-600" />
-                <span>احفظ ملف «{localGuestChildren[0].name}» الآن في قاعدة البيانات السحابية بضغطة واحدة:</span>
+                <span>احفظ ملف «{localGuestChildren[0].name}» في حسابك الآن بضغطة واحدة:</span>
               </div>
               <p className="text-xs text-slate-600">
-                أدخل بريدك الإلكتروني وكلمة المرور لإنشاء حساب عائلي دائم (أو الدخول بحسابك السابق) وحفظ نتائج الطفل تلقائياً:
+                أدخل بريدك الإلكتروني وكلمة المرور لإنشاء حساب للأسرة (أو للدخول إلى حسابك)، فتُحفظ نتائج الطفل تلقائيًا:
               </p>
 
               {linkError && (
@@ -429,7 +478,7 @@ export function ParentPortalView({
                   minLength={6}
                   value={linkPassword}
                   onChange={(e) => setLinkPassword(e.target.value)}
-                  placeholder="كلمة المرور (6 خانات على الأقل)"
+                  placeholder="كلمة المرور (٦ خانات على الأقل)"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 font-medium bg-white"
                   dir="ltr"
                 />
@@ -454,7 +503,7 @@ export function ParentPortalView({
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Baby size={20} className="text-teal-600" />
-                <span>أطفالي المسجلون في السحابة ({cloudChildren.length})</span>
+                <span>أطفالي المسجّلون في الحساب ({toArabicNum(cloudChildren.length)})</span>
               </h2>
               {!showAddForm && (
                 <button
@@ -514,6 +563,7 @@ export function ParentPortalView({
                             <FileBarChart size={15} />
                             <span>عرض التقرير وخطة الدعم</span>
                           </button>
+                          {deleteControls(child)}
                         </div>
                       );
                     })()}
@@ -532,7 +582,7 @@ export function ParentPortalView({
                       <span>{cloudChildren.length > 0 ? 'إضافة طفل آخر إلى حسابك' : 'تسجيل أول طفل في حسابك السحابي'}</span>
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">
-                      أدخل بيانات الطفل لحفظ ملفه في حسابك السحابي ({supabaseUser.email}) وبدء ألعاب الفحص والتدريب فوراً.
+                      أدخل بيانات الطفل لحفظ ملفه في حسابك السحابي ({supabaseUser.email}) وبدء ألعاب الفحص والتدريب فورًا.
                     </p>
                   </div>
                   {cloudChildren.length > 0 && (
@@ -657,7 +707,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على حفظ ملفه وأنشطته التعليمية في حسابي السحابي للرجوع إليها لاحقاً.
+                      أوافق بصفتي ولي أمر الطفل على حفظ ملفه وأنشطته التعليمية في حسابي السحابي للرجوع إليها لاحقًا.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -668,7 +718,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإلا تُحفظ هذه المهام دون درجة صوتية).
+                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإن لم توافق، تُحفظ هذه المهام دون درجة صوتية).
                     </span>
                   </label>
 
@@ -730,7 +780,7 @@ export function ParentPortalView({
                     <span>تسجيل طفل وإنشاء حساب عائلي سحابي</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    أدخل بيانات طفلك لتهيئة ألعاب الفحص والبرنامج المخصص له، وإنشاء حساب لحفظ ومتابعة نتائجه بشكل دائم في قاعدة البيانات.
+                    أدخل بيانات طفلك لتهيئة ألعاب الفحص والبرنامج المخصص له، وإنشاء حساب تُحفظ فيه نتائجه لتتابعها دائمًا.
                   </p>
                 </div>
 
@@ -830,7 +880,7 @@ export function ParentPortalView({
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
                       <Mail size={16} className="text-teal-600" />
-                      <span>بيانات حساب ولي الأمر (لحفظ ملف الطفل في قاعدة البيانات السحابية)</span>
+                      <span>بيانات حساب ولي الأمر (لحفظ ملف الطفل في حسابك)</span>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <label className="block space-y-1">
@@ -883,7 +933,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في قاعدة البيانات السحابية وفق سياسة الخصوصية.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي وفق سياسة الخصوصية.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -894,7 +944,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإلا تبقى تلك المهام دون درجة صوتية).
+                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإن لم توافق، تُحفظ هذه المهام دون درجة صوتية).
                     </span>
                   </label>
 

@@ -56,7 +56,7 @@ import ProgressChart from './ProgressChart';
 import { takePendingReadingTargets } from '../ReadingErrorPanel';
 import IndividualPlanPanel from './IndividualPlanPanel';
 import { LessonPlayer, TeachingChoicePlayer } from './TeachingPlayers';
-import { MascotMoment3D } from '../ui/Mascot3D';
+import { MascotMomentLive } from '../ui/MascotLive';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
@@ -472,8 +472,36 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
     if (needsPlacement(current, skill)) {
-      // First time this skill is trained: a few items check the rule's starting level first.
+      // First time this skill is trained: teach first («أنا أعلّمك»), then a few unscored items
+      // check the rule's starting level, then practice. A session that opens with a test before any
+      // teaching felt like an exam to parents and children.
       const level = estimate.level;
+      if (!(current.lessonsSeen ?? []).includes(`${skill}:${level}`)) {
+        setRun({
+          ...(prev ?? ({} as Run)),
+          skills,
+          skillIndex,
+          tasks: [],
+          taskIndex: 0,
+          correct: 0,
+          phase: 'lesson',
+          lesson: lessonFor(skill, level, current.targets),
+          guided: 0,
+          stars: prev?.stars ?? 0,
+          change: null,
+          results: prev?.results ?? [],
+          probe: null,
+          todayProbe: prev?.todayProbe ?? null,
+          alloc: prev?.alloc ?? {},
+          blockStart: null,
+          promoted: prev?.promoted ?? [],
+          latencies: [],
+          fastCount: 0,
+          newBadges: prev?.newBadges ?? [],
+          placement: null,
+        });
+        return;
+      }
       setRun({
         ...(prev ?? ({} as Run)),
         skills,
@@ -642,9 +670,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'placementIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment3D mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
+              <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
-                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تزيد ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل كلها صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ أغلبها بدأنا بمستوى أسهل.
+                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تُضاف ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل عنها كلها إجابة صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ في أغلبها بدأنا بمستوى أسهل.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -680,7 +708,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'probeIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment3D mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
+              <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
               <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
               <p className="text-sm text-slate-600">
                 أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
@@ -691,14 +719,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   onClick={skipProbeToLesson}
                   className="font-child bz-btn bz-btn-primary bz-btn-lg text-lg px-8 shadow-md font-bold"
                 >
-                  <GraduationCap className="w-6 h-6" /> ابدأ الدرس والشرح مباشرة ◀
+                  <GraduationCap className="w-6 h-6" /> ابدأ الدرس مباشرة ◀
                 </button>
                 <button
                   type="button"
                   onClick={() => setRun({ ...run, phase: 'probe' })}
                   className="font-child bz-btn bz-btn-secondary text-sm px-4"
                 >
-                  <Play className="w-4 h-4" /> إجراء مقياس المتابعة أولاً ({toArabicDigits(PROBE_MINUTES)} د)
+                  <Play className="w-4 h-4" /> إجراء مقياس المتابعة أولًا ({toArabicDigits(PROBE_MINUTES)} د)
                 </button>
               </div>
             </div>
@@ -802,14 +830,17 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               lesson={run.lesson}
               onDone={() => {
                 const key = run.lesson!.key;
-                persistLocal({ ...progress, lessonsSeen: Array.from(new Set([...(progress.lessonsSeen ?? []), key])).slice(-30) });
-                setRun({ ...run, phase: 'task' });
+                const seen = { ...progress, lessonsSeen: Array.from(new Set([...(progress.lessonsSeen ?? []), key])).slice(-30) };
+                persistLocal(seen);
+                // A new skill: after the lesson comes the short starting-level check.
+                if (run.tasks.length === 0) beginSkill(run.skillIndex, run, seen);
+                else setRun({ ...run, phase: 'task' });
               }}
             />
           )}
           {run.phase === 'intro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMoment3D mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
+              <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
               <h2 className="font-child text-2xl font-black text-slate-900 flex items-center gap-2">
                 <span className="text-3xl" aria-hidden="true">{def.icon}</span> {def.nameAr}
               </h2>
@@ -843,7 +874,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'result' && run.change && (
             <div className="flex flex-col items-center text-center gap-4">
-              <MascotMoment3D
+              <MascotMomentLive
                 mood={run.change === 'down' ? 'support' : run.change === 'stay' ? 'wave' : 'cheer'}
                 size={130}
                 message={
@@ -857,7 +888,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 }
               />
               <p className="font-child text-2xl font-black text-slate-900">
-                {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)} إجابات صحيحة
+                الإجابات الصحيحة: {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)}
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
               {run.results.length > 0 && (
@@ -885,7 +916,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           )}
           {run.phase === 'summary' && (
             <div className="flex flex-col items-center text-center gap-4 w-full max-w-md">
-              <MascotMoment3D mood="proud" size={150} message={MASCOT_LINES.sessionDone} />
+              <MascotMomentLive mood="proud" size={150} message={MASCOT_LINES.sessionDone} />
               <p className="font-child text-2xl font-black text-slate-900">انتهت جلسة اليوم!</p>
               <p className="font-child text-xl text-ink">⭐ {toArabicDigits(run.stars)} نجمة اليوم</p>
               
@@ -932,7 +963,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                         ? 'استجابات سريعة وتلقائية تدل على تمكّن وثقة ذهنية عالية ⚡'
                         : autoPct >= 40
                         ? 'دقة جيدة مع استغراق وقت للتفكير والتهجئة 🎯'
-                        : 'يحتاج مزيداً من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
+                        : 'يحتاج مزيدًا من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
                     </p>
                   </div>
                 ) : null;
@@ -945,7 +976,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                       <span className="font-bold">{SKILLS[r.skill].nameAr}</span>
                       <span>{toArabicDigits(r.correct)} من {toArabicDigits(r.total)}</span>
                     </div>
-                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · انتقل مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · عاد مستوى' : ''}</p>
+                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · صعد مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · نزل مستوى' : ''}</p>
                   </li>
                 ))}
               </ul>
@@ -1031,7 +1062,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                       {setup && (
                         <div className="pt-2 border-t border-line/60 space-y-1 text-xs text-ink-2">
                           <p className="font-bold text-ink">
-                            مستوى البداية: المستوى {toArabicDigits(setup.level)} · جرعة الجلسة: {toArabicDigits(setup.sessionItems)} تمارين
+                            مستوى البداية: المستوى {toArabicDigits(setup.level)} · عدد تمارين الجلسة: {toArabicDigits(setup.sessionItems)}
                           </p>
                           {typeof setup.observedPercent === 'number' && (
                             <p>
@@ -1109,7 +1140,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             onClick={() => beginSession(true)}
             className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
           >
-            <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم والشرح مباشرة ▷
+            <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم
           </button>
           <button
             type="button"
@@ -1165,7 +1196,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <Award className="w-4 h-4 text-amber-500" /> لوحة أوسمة الإتقان وجواز الإنجاز
           </h3>
           <span className="text-xs font-bold text-slate-500">
-            {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)} أوسمة
+            الأوسمة: {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
@@ -1219,7 +1250,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <p className="font-display font-semibold text-ink text-lg mt-3">{SKILLS[s].nameAr}</p>
               <p className="bz-small text-ink-2 mt-0.5">{SKILLS[s].goalAr}</p>
               <LevelLadder skill={s} level={level} mastered={isMastered} />
-              <MasteryBar p={masteryEstimate(progress, s).p} label={isMastered ? 'احتمال الإتقان (المستوى الثالث)' : `احتمال إتقان المستوى ${toArabicDigits(level)}`} />
+              <MasteryBar p={masteryEstimate(progress, s).p} label={isMastered ? 'أتقن المستوى الثالث' : `التقدّم نحو إتقان المستوى ${toArabicDigits(level)}:`} />
               {last && (
                 <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5" /> آخر جلسة: {toArabicDigits(Math.round((last.correct / last.total) * 100))}٪
@@ -1313,15 +1344,28 @@ function TodayProbeCard({ today, probes }: { today: ProbeRecord; probes: ProbeRe
   );
 }
 
+/**
+ * How the programme works, for teachers and specialists. Collapsed by default: parents see the
+ * child's path and the start button first, not the method.
+ */
 function ProgramRules() {
   return (
-    <section className="bz-card-quiet p-6 grid md:grid-cols-2 gap-6 text-sm text-ink-2">
+    <details className="bz-card-quiet p-5 text-sm text-ink-2">
+      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (للمعلم والأخصائي)</summary>
+      <ProgramRulesBody />
+    </details>
+  );
+}
+
+function ProgramRulesBody() {
+  return (
+    <section className="mt-4 grid md:grid-cols-2 gap-6">
       <div>
         <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
-          <li><strong>درس قصير (أنا أعلّمك):</strong> عند أول لقاء بكل مستوى، وعند الرجوع مستوى: شرح بالصوت والصورة ونموذج ومثال مضاد.</li>
+          <li><strong>درس قصير (أنا أعلّمك):</strong> في أول مرة في كل مستوى، وعند النزول مستوى: شرح بالصوت والصورة، ونموذج، ومثال مضاد.</li>
           <li><strong>ممارسة موجّهة (نفعلها معًا):</strong> أول تمرينين بتلميح مسموع وخيار أقل، ثم تُسحب المساعدة.</li>
-          <li><strong>ممارسة مستقلة (افعلها وحدك):</strong> عند الخطأ يشرح التطبيق لماذا الإجابة الصحيحة صحيحة، ثم محاولة ثانية. عدد البنود (٤ إلى ١٢) يحدده نموذج تتبّع المعرفة.</li>
+          <li><strong>ممارسة مستقلة (افعلها وحدك):</strong> عند الخطأ يشرح التطبيق لماذا كانت الإجابة الصحيحة صحيحة، ثم يحاول الطفل مرة ثانية. عدد البنود (٤ إلى ١٢) يحدده نموذج تتبّع المعرفة.</li>
           <li><strong>مقياس التقدّم ({toArabicDigits(PROBE_MINUTES)} دقائق):</strong> في أول جلسة ثم مرة كل أسبوع وفي الجلسة الأخيرة، بلا تصحيح، مع مهارة غير مدرَّبة للمقارنة. التقدّم اليومي يظهر من تقدير النموذج بعد كل إجابة.</li>
           <li>تُرتَّب المهارات من الأسهل نمائيًا: التمييز السمعي ← القافية ← الأصوات ← التركيب ← الحروف.</li>
           <li>بنود التدريب تُولَّد جديدة في كل جلسة ولا تكرر بنود الفحص، كي لا يتدرّب الطفل على الاختبار نفسه.</li>

@@ -182,7 +182,7 @@ export function alignSpeechWithReferenceText(
       errorType: 'Substitution' as WordErrorType,
       accuracyScore: Math.max(20, Math.round((1 - aligned.weightedDistance) * 100)),
       spokenWord: aligned.spokenWord,
-      notesAr: `نُطقت: "${aligned.spokenWord || ''}" بدلاً من "${targetWord}"`,
+      notesAr: `نُطقت: "${aligned.spokenWord || ''}" بدلًا من "${targetWord}"`,
     };
   });
 

@@ -170,7 +170,7 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   ]) {
     await expect(page.getByText(game, { exact: true })).toBeVisible();
   }
-  await expect(page.getByText('أُنجزت ٠ من ١٥ مهام')).toBeVisible();
+  await expect(page.getByText('المهام المنجزة: ٠ من ١٥')).toBeVisible();
   await expect(page.getByRole('button', { name: 'النتيجة والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
@@ -310,7 +310,7 @@ test('teachers can reach the login on a phone', async ({ page }) => {
 test('content review page lists every unit and records a decision', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/?review=1');
-  await expect(page.getByRole('heading', { name: 'مراجعة محتوى بصيرة' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'مراجعة محتوى هَيَّا نَقْرَأْ' })).toBeVisible();
   await expect(page.getByText(/رُوجع ٠ من [٠-٩]{3}/)).toBeVisible();
   await page.getByRole('button', { name: 'صحيح' }).first().click();
   await expect(page.getByText(/رُوجع ١ من [٠-٩]{3}/)).toBeVisible();
@@ -333,4 +333,29 @@ test('training gym opens on the daily curriculum and switches to skill stations'
   await expect(page.getByRole('tab', { name: /ألعاب المهارات/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('button', { name: /صائد الحروف/ })).toBeVisible();
   expect(pageErrors).toEqual([]);
+});
+
+test('a parent can permanently delete a child file kept on this device', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+  await page.goto('/');
+  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByLabel('اسم الطفل أو لقبه').fill('ريم');
+  await page.getByLabel('السنوات').selectOption('5');
+  for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
+    await page.getByLabel(label).check();
+  }
+  await page.getByRole('button', { name: 'بدء الفحص' }).click();
+  await expect(page.getByText(/فحص ريم/)).toBeVisible();
+
+  await page.getByRole('button', { name: /تسجيل طفل \/ حساب الأسرة/ }).first().click();
+  await expect(page.getByText(/ملف الطفل «ريم» محفوظ على هذا الجهاز فقط/)).toBeVisible();
+  await page.getByRole('button', { name: 'حذف ملف الطفل وبياناته' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('لا يمكن التراجع عن الحذف');
+  await page.getByRole('button', { name: 'نعم، احذف نهائيًا' }).click();
+  await expect(page.getByText(/ملف الطفل «ريم» محفوظ على هذا الجهاز فقط/)).toHaveCount(0);
+
+  // Gone after a reload too: nothing is left on the device.
+  await page.reload();
+  await page.getByRole('button', { name: /تسجيل طفل \/ حساب الأسرة/ }).first().click();
+  await expect(page.getByText(/«ريم»/)).toHaveCount(0);
 });

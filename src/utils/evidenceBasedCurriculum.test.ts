@@ -87,7 +87,7 @@ test('core Arabic reading items preserve their intended phonological, grapheme a
     'ct-3': 'حكت لأسرتها ما تعلمته', 'ct-4': 'صفحتين',
     'ct-5': 'شاركت ما تعلمته',
     'rc-1': 'قرب النافذة', 'rc-2': 'بدت ووضحت للعيان',
-    'rc-3': 'لأنّ سامراً سقاها ووضعها قرب النافذة', 'rc-4': 'كل صباح',
+    'rc-3': 'لأنّ سامرًا سقاها ووضعها قرب النافذة', 'rc-4': 'كل صباح',
     'rc-5': 'ظهور ورقتين خضراوين',
   };
   for (const [id, answer] of Object.entries(expected)) {

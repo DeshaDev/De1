@@ -126,11 +126,11 @@ function audioFailureMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : '';
   if (code === 'UNSUPPORTED_SPEECH_DIALECT') return 'التقييم الصوتي غير متاح للهجة المختارة. لم نغيّر اللهجة تلقائيًا.';
   if (code === 'AUDIO_CONSENT_REQUIRED') return 'يلزم تسجيل موافقة ولي الأمر المنفصلة على معالجة الصوت قبل التسجيل.';
-  if (code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'خدمة Azure Speech غير مهيأة على الخادم؛ لم تُحتسب درجة لهذه المهمة.';
+  if (code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'خدمة التقييم الصوتي غير مهيّأة على الخادم؛ لم تُحتسب درجة لهذه المهمة.';
   if (code === 'AUDIO_RECORDING_UNAVAILABLE' || code === 'AUDIO_CONTEXT_UNAVAILABLE') return 'المتصفح أو الجهاز لا يدعم تسجيل الصوت المطلوب. لم تُحتسب درجة.';
   if (code === 'AUDIO_DURATION_OUT_OF_RANGE') return 'مدة التسجيل خارج النطاق المسموح. لم تُحتسب درجة.';
   if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم يتمكن محرك الصوت من حسم جميع الكلمات. لم نحسب الأخطاء أو الدرجة.';
-  if (code === 'AUDIO_SERVER_UNAVAILABLE') return 'خادم التقييم الصوتي غير متصل على هذا النطاق (يتطلب التطبيق خادم Node.js وخدمة Azure). ستبقى المهمة دون درجة.';
+  if (code === 'AUDIO_SERVER_UNAVAILABLE') return 'خادم التقييم الصوتي غير متصل الآن، لذلك ستبقى المهمة دون درجة.';
   if (code === 'COGNITIVE_AUDIO_WORD_UNCONFIRMED') return 'لم يتمكن محرك الصوت من حسم نطق هذه الكلمة. لم نُسجّلها خطأ؛ أعد تسجيل الكلمة وحدها.';
   return 'تعذر إكمال التقييم الصوتي عبر الخدمة. يمكنك حفظ المهمة دون درجة وإعادة المحاولة لاحقًا.';
 }
@@ -162,7 +162,7 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
   if (!spkClean || cleanSpoken === 'SILENCE' || cleanSpoken === '.' || cleanSpoken === 'صمت' || (errorType === 'Omission' && !cleanSpoken)) {
     return {
       isCorrect: false,
-      diagnosis: 'لم نلتقط صوتاً واضحاً أو كافياً للكلمة؛ يرجى التحدث بوضوح قرب الميكروفون.',
+      diagnosis: 'لم نلتقط صوتًا واضحًا أو كافيًا للكلمة؛ تحدّث بوضوح قرب الميكروفون.',
     };
   }
 
@@ -184,7 +184,7 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
   if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
     return {
       isCorrect: false,
-      diagnosis: `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلاً من الكلمة المطلوبة «${expectedVowelled}».`,
+      diagnosis: `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلًا من الكلمة المطلوبة «${expectedVowelled}».`,
     };
   }
 
@@ -192,13 +192,13 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
   if (refClean[0] !== spkClean[0]) {
     return {
       isCorrect: false,
-      diagnosis: `خطأ في نطق الحرف الأول (سُمع «${spkClean[0]}» بدلاً من «${refClean[0]}»). `,
+      diagnosis: `خطأ في نطق الحرف الأول (سُمع «${spkClean[0]}» بدلًا من «${refClean[0]}»). `,
     };
   }
   if (refClean[refClean.length - 1] !== spkClean[spkClean.length - 1]) {
     return {
       isCorrect: false,
-      diagnosis: `خطأ في نطق الحرف الأخير (سُمع «${spkClean[spkClean.length - 1]}» بدلاً من «${refClean[refClean.length - 1]}»). `,
+      diagnosis: `خطأ في نطق الحرف الأخير (سُمع «${spkClean[spkClean.length - 1]}» بدلًا من «${refClean[refClean.length - 1]}»). `,
     };
   }
   if (refClean.includes('ا') && !spkClean.includes('ا')) {
@@ -222,7 +222,7 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
 
   return {
     isCorrect: false,
-    diagnosis: `عدم ضبط في حركات الكلمة أو مخارج حروفها (دقة الصوت: ${accuracyScore}٪).`,
+    diagnosis: `حركات الكلمة أو مخارج حروفها غير مضبوطة (دقة الصوت: ${accuracyScore}٪).`,
   };
 }
 
@@ -446,7 +446,7 @@ export function ReadListAudioPlayer({
           <span className="text-5xl" aria-hidden="true">📚</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              🎧 تقييم القراءة كلمة بكلمة عبر الخادم
+              🎧 قراءة الكلمات كلمةً كلمة
             </span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
@@ -497,7 +497,7 @@ export function ReadListAudioPlayer({
                       الكلمة المطلوبة: <strong className="text-emerald-950 font-bold">«{lastWordFeedback.word}»</strong>
                     </p>
                     <p>
-                      أنت نطقت (المسموع من الطفل):{' '}
+                      ما سُمع من الطفل:{' '}
                       <strong className="text-emerald-800 font-bold">
                         «{lastWordFeedback.spokenWord || lastWordFeedback.word}»
                       </strong>
@@ -547,7 +547,7 @@ export function ReadListAudioPlayer({
                       الكلمة المطلوبة: <strong className="text-slate-950 font-bold">«{lastWordFeedback.word}»</strong>
                     </p>
                     <p>
-                      أنت نطقت (المسموع من الطفل):{' '}
+                      ما سُمع من الطفل:{' '}
                       <strong className={lastWordFeedback.errorType === 'Substitution' ? 'text-rose-800 font-bold' : 'text-amber-800 font-bold'}>
                         {lastWordFeedback.spokenWord ? `«${lastWordFeedback.spokenWord}»` : 'صمت / غير مسموع'}
                       </strong>
@@ -584,7 +584,7 @@ export function ReadListAudioPlayer({
           <div className="space-y-4 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-sm shadow-2xs">
               <span className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span>نستمع إليك الآن... اقرأ الكلمة واضغط الزر أدناه عند الانتهاء</span>
+              <span>نستمع إليك الآن… اقرأ الكلمة، ثم اضغط الزر أدناه.</span>
             </div>
             <div>
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg shadow-md" onClick={() => void submitCurrentWord()}>
@@ -597,7 +597,7 @@ export function ReadListAudioPlayer({
         {phase === 'assessing' && (
           <div className="text-center space-y-2" role="status">
             <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">يجري تقييم نطق هذه الكلمة...</p>
+            <p className="font-bold text-ink">جارٍ تقييم نطق الكلمة…</p>
             <p className="bz-small text-muted">لن ننتقل إلى التالية حتى يصل تقييمها.</p>
           </div>
         )}
@@ -606,7 +606,7 @@ export function ReadListAudioPlayer({
           <div className="w-full max-w-xl mx-auto rounded-2xl border-2 border-dashed border-line bg-soft p-4 space-y-3" role="group" aria-label="للبالغ: ماذا سمعت؟">
             <p className="text-[12px] font-bold text-muted">للبالغ · دراسة دقة التقييم الصوتي</p>
             <p className="bz-small text-ink-2">
-              بحسب ما سمعته أنت، هل قرأ الطفل «{currentItem.text}» صحيحة؟ أجب قبل أن ترى نتيجة التقييم الآلي.
+              بحسب ما سمعته أنت، هل قرأ الطفل «{currentItem.text}» قراءة صحيحة؟ أجب قبل أن ترى نتيجة التقييم الآلي.
             </p>
             <div className="grid grid-cols-2 gap-3">
               {([true, false] as const).map((value) => (
@@ -629,7 +629,7 @@ export function ReadListAudioPlayer({
         {phase === 'finalizing' && (
           <div className="text-center space-y-2" role="status">
             <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">اكتملت الكلمات. يجري تجميع نتائجها والتحقق من ترتيبها...</p>
+            <p className="font-bold text-ink">اكتملت الكلمات. جارٍ تجميع النتائج…</p>
           </div>
         )}
 
@@ -807,7 +807,7 @@ export function PassagePlayer({
           <span className="text-5xl" aria-hidden="true">📖</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              📖 قراءة متصلة بمحدد بصري + تقييم عبر الخادم
+              📖 قراءة القصة بصوت مسموع
             </span>
           </div>
           <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
@@ -815,8 +815,8 @@ export function PassagePlayer({
             {phase === 'recording'
               ? 'اقرأ القصة بصوتك الطبيعي. انقر على الكلمة أو اضغط زر المسافة لتحريك التظليل مع قراءتك.'
               : phase === 'review'
-              ? 'اكتملت مطابقة القصة عبر الخادم. انقر على أي كلمة لعرض حالتها والكلمة الملتقطة.'
-              : 'سجّل قراءة القصة كاملة. يطابق الخادم التسجيل مع النص المرجعي، وإذا لم تُحسم الكلمات تبقى المهمة دون درجة.'}
+              ? 'اكتمل تقييم القصة. انقر على أي كلمة لترى نتيجتها وما سُمع منها.'
+              : 'سجّل قراءة القصة كاملة. يُقارَن التسجيل بنص القصة، وإذا تعذّر الحسم في الكلمات بقيت المهمة دون درجة.'}
           </p>
         </div>
 
@@ -921,7 +921,7 @@ export function PassagePlayer({
                     الكلمة المطلوبة في القصة: <strong className="text-slate-950 font-bold">«{assessmentResult.words[selectedWordIndex].word}»</strong>
                   </p>
                   <p>
-                    أنت نطقت (المسموع من الطفل):{' '}
+                    ما سُمع من الطفل:{' '}
                     <strong className={assessmentResult.words[selectedWordIndex].errorType === 'None' ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>
                       {assessmentResult.words[selectedWordIndex].spokenWord
                         ? `«${assessmentResult.words[selectedWordIndex].spokenWord}»`
@@ -933,7 +933,7 @@ export function PassagePlayer({
                     {assessmentResult.words[selectedWordIndex].errorType === 'None' ||
                     assessmentResult.words[selectedWordIndex].errorType === 'DialectVariant'
                       ? 'تطابق صوتي مقبول مع الكلمة المرجعية.'
-                      : 'عدم تطابق تام في الكلمة أو نطقها ضمن محاذاة الخادم.'}
+                      : 'لم تتطابق الكلمة أو نطقها مع نص القصة.'}
                   </p>
                 </div>
               </div>
@@ -971,7 +971,7 @@ export function PassagePlayer({
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
               <div className="inline-flex items-center gap-2 text-teal-800">
                 <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                <span>التسجيل الصوتي جارٍ... اقرأ على مهلك</span>
+                <span>التسجيل الصوتي جارٍ… اقرأ على مهلك</span>
               </div>
               <span className="text-slate-600 text-xs">
                 الكلمة المحددة: {ar(activeWordIndex + 1)} من {ar(words.length)}
@@ -1011,8 +1011,8 @@ export function PassagePlayer({
         {phase === 'submitting' && (
           <div className="text-center space-y-2" role="status">
             <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">يجري إرسال التسجيل إلى الخادم لمطابقة كلمات القصة…</p>
-            <p className="bz-small text-muted">تقييم صوتي على مستوى الكلمة عبر الخادم</p>
+            <p className="font-bold text-ink">جارٍ تحليل تسجيل القصة…</p>
+            <p className="bz-small text-muted">تقييم صوتي لكل كلمة</p>
           </div>
         )}
 
@@ -1201,7 +1201,7 @@ export function RanPlayer({
       {phase === 'names' && (
         <div className="w-full max-w-2xl flex flex-col items-center gap-5 text-center">
           <p className="font-child text-2xl font-black text-ink">{display === 'picture' ? 'ما أسماء هذه الصور؟' : 'ما أسماء هذه الحروف؟'}</p>
-          <p className="bz-small text-ink-2">تعرّف إلى الرموز أولًا، ثم سمّها في السباق من اليمين إلى اليسار. لا توجد علامات يدوية أثناء التقييم.</p>
+          <p className="bz-small text-ink-2">تعرّف إلى الرموز أولًا، ثم سمّها في السباق من اليمين إلى اليسار. ولا يضع البالغ أي علامات أثناء التقييم.</p>
           <div className="flex flex-wrap justify-center gap-3">
             {symbols.map((symbol) => (
               <div key={symbol.id} className="grid place-items-center w-24 h-24 rounded-3xl border-[3px] border-line bg-card">
@@ -1224,7 +1224,7 @@ export function RanPlayer({
                 {display === 'picture' ? '🏁 سباق تسمية الصور' : '🏁 سباق تسمية الحروف'}
               </span>
               <span className="text-xs px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200">
-                ٤٠ عنصرًا · من اليمين لليسار ◀
+                ٤٠ عنصرًا · من اليمين إلى اليسار ◀
               </span>
             </div>
 
@@ -1254,7 +1254,7 @@ export function RanPlayer({
                 <div className="flex flex-wrap items-center justify-between gap-2 px-2">
                   <div className="inline-flex items-center gap-2 text-teal-800 font-bold text-sm">
                     <span className="w-3 h-3 rounded-full bg-teal-500" />
-                    <span>السباق جارٍ... سمِّ الرموز سطرًا سطرًا من اليمين إلى اليسار ◀</span>
+                    <span>السباق جارٍ… سمِّ الرموز سطرًا سطرًا من اليمين إلى اليسار ◀</span>
                   </div>
                   <span className="text-xs font-bold text-teal-900 bg-teal-100 px-3 py-1 rounded-full border border-teal-300">
                     ⏱️ {ar(Math.floor(elapsedSeconds))} ثانية
@@ -1277,8 +1277,8 @@ export function RanPlayer({
 
             {phase === 'submitting' && (
               <div className="py-2 text-center space-y-1" role="status">
-                <p className="font-bold text-teal-900">يجري احتساب معدل سرعة التسمية وتحليل النتيجة…</p>
-                <p className="bz-small text-muted">لحظات قليلة وسيكتمل التقرير.</p>
+                <p className="font-bold text-teal-900">جارٍ حساب سرعة التسمية وتحليل النتيجة…</p>
+                <p className="bz-small text-muted">لحظات ويكتمل التحليل.</p>
               </div>
             )}
 

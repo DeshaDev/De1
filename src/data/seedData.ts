@@ -1365,7 +1365,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
     mathRiskLabelAr: 'لم تبدأ مهام الحساب بعد.',
     learningReport: {
       learningSummary: 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة.',
-      ocularMotorAnalysis: 'غير منطبق؛ منصة بصيرة لا تعتمد على الكاميرا أو تتبع حركة العين.',
+      ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
       orthographicAndPhonologicalPatterns: 'تظهر هنا الأخطاء المتكررة في الأصوات والكلمات بعد أول نشاط قراءة.',
       dyscalculiaSpatialAnalysis: 'في انتظار بيانات مختبر الحساب لتحليل الإدراك المكاني للكميات وخط الأعداد.',
       interventionExercises: [],
@@ -1395,7 +1395,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       ranHesitationCount: 4,
       ranCategory: 'colors',
       ranStatus: 'unassessed',
-      ranStatusLabelAr: 'بيانات تجريبية للتوضيح؛ لا توجد معايير عربية معيارية معتمدة في بصيرة.',
+      ranStatusLabelAr: 'بيانات تجريبية للتوضيح؛ لا توجد معايير عربية معتمدة في هَيَّا نَقْرَأْ.',
       pseudoWordScorePercent: 62,
       pseudoWordWordsRead: 5,
       pseudoWordTotalCount: 8,
@@ -1417,7 +1417,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
+        'غير منطبق؛ لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1478,7 +1478,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
+        'غير منطبق؛ لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1533,7 +1533,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
+        'غير منطبق؛ لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:
@@ -1582,7 +1582,7 @@ export const INITIAL_STUDENTS: StudentRecord[] = [
       learningSummary:
         'حالة نموذجية اصطناعية لشرح شكل التقرير فقط. القيم المعروضة ليست بيانات طفل حقيقي، ولا تمثل مئينات معيارية أو تشخيصًا.',
       ocularMotorAnalysis:
-        'غير منطبق؛ لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
+        'غير منطبق؛ لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين ولا تجمع قياسات نظر.',
       orthographicAndPhonologicalPatterns:
         'لا يثبت هذا السجل الاصطناعي وجود صعوبة لغوية أو سلامة المهارات؛ الكلمات والقيم هنا أمثلة توضيحية فقط.',
       dyscalculiaSpatialAnalysis:

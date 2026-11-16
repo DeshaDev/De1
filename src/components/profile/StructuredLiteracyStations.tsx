@@ -256,7 +256,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
         <div className="text-center space-y-2">
           <span className="text-4xl" aria-hidden="true">📖</span>
           <h2 className="bz-h2">{fluencyPassage.titleAr}</h2>
-          <p className="bz-body">نستمع إلى النموذج، ثم نقرأ النص أكثر من مرة. نركز على صحة الكلمات، وتجميعها في عبارات، والوقوف عند علامات الترقيم؛ لا على من يقرأ أسرع.</p>
+          <p className="bz-body">نستمع إلى النموذج، ثم نقرأ النص أكثر من مرة. نركّز على صحة الكلمات، وتجميعها في عبارات، والوقوف عند علامات الترقيم؛ لا على سرعة القراءة.</p>
         </div>
         <div className="rounded-2xl border border-line bg-soft p-5 space-y-4 text-right">
           {fluencyPassage.linesAr.map((line, index) => (
@@ -293,7 +293,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
           </p>
           {modelHeard && readCount < 3 && (
             <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={finishRead}>
-              أنهيت القراءة {ageLabel(readCount + 1)}
+              أنهيت القراءة رقم {ageLabel(readCount + 1)}
             </button>
           )}
           {readCount === 3 && (

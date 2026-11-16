@@ -74,7 +74,7 @@ export interface NaturalSpeechOptions {
 /**
  * Prepares Arabic text for pristine educational neural articulation:
  * 1. Strips tatweel (kashida 'ـ') which distorts acoustic models.
- * 2. Formats letter-sound prompts into natural Arabic orthography (تُو، تُو بدلاً من الرموز الآلية).
+ * 2. Formats letter-sound prompts into natural Arabic orthography (تُو، تُو بدلًا من الرموز الآلية).
  * 3. Removes colons that cause unnatural mid-sentence pauses in construct states.
  * 4. Applies Classical Arabic Waqf (taskeen at pauses and taa marbuta as Ha').
  * 5. Normalizes whitespaces.
