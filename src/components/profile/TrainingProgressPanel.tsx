@@ -108,11 +108,21 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
                 <td className="p-1.5 text-center">{transfer.points > 1 ? `${ar(transfer.latest.nonword.correct)}/${ar(transfer.latest.nonword.total)}` : '—'}</td>
                 <td className="p-1.5 text-center font-semibold">{transfer.points > 1 ? `${signed(transfer.nonwordChange)} نقطة` : '—'}</td>
               </tr>
+              {transfer.pre.passage && transfer.latest.passage && (
+                <tr className="border-t border-line">
+                  <td className="p-1.5 font-semibold">نص جديد</td>
+                  <td className="p-1.5 text-center">{ar(transfer.pre.passage.correct)}/{ar(transfer.pre.passage.total)}</td>
+                  <td className="p-1.5 text-center">{transfer.points > 1 ? `${ar(transfer.latest.passage.correct)}/${ar(transfer.latest.passage.total)}` : '—'}</td>
+                  <td className="p-1.5 text-center font-semibold">{transfer.passageChange !== null && transfer.points > 1 ? `${signed(transfer.passageChange)} نقطة` : '—'}</td>
+                </tr>
+              )}
             </tbody>
           </table>
           <p className="text-xs text-ink-2">
-            كلمات لا تظهر في التدريب، يصحّحها البالغ، بصورتين متكافئتين في البداية والنهاية. التحسّن هنا أقرب دليل على انتقال أثر التدريب إلى القراءة نفسها، لكنه لا يثبت فاعلية البرنامج وحده: يلزم ذلك مقارنة بأطفال لم يتدرّبوا (خطة التجربة).
-            {transfer.points === 1 && ` نتيجة البداية: ${ar(transferPercent(transfer.pre.real))}٪ للكلمات الحقيقية؛ يُعاد القياس في منتصف البرنامج ونهايته.`}
+            {transfer.pre.sourceModel === 'azure_pronunciation_assessment'
+              ? 'قُيّمت الكلمات والنص الجديد من تسجيل الطفل آليًا. لا تظهر درجة إلا عند اكتمال التحليل الصوتي؛ وهذا مؤشر وصفي غير معياري، وليس تشخيصًا أو إثباتًا لفاعلية البرنامج.'
+              : 'هذا سجل سابق من نموذج قياس قديم، ولا يُعدّ تقييمًا صوتيًا آليًا موثّقًا.'}
+            {transfer.points === 1 && ` نتيجة البداية للكلمات الحقيقية: ${ar(transferPercent(transfer.pre.real))}٪؛ يُعاد القياس بمواد مختلفة في منتصف البرنامج ونهايته.`}
           </p>
         </div>
       )}
