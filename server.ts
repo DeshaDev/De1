@@ -21,6 +21,7 @@ import {
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
 import { getTransferAudioTask, scoreVerifiedTransferAudio, TRANSFER_WINDOWS, formFor } from './src/cognitiveProfile/transferProbe';
+import { PROGRAM_SESSIONS } from './src/cognitiveProfile/training';
 import {
   aggregateCognitiveWordAssessments,
   applyRanNameVariants,
