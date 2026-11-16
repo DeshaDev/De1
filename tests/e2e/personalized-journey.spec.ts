@@ -168,13 +168,19 @@ async function completeFirstSessionExercises(page: Page) {
       if (emptySlots < previousEmptyAssemblySlots) guidedAssemblyOffset = 0;
       previousEmptyAssemblySlots = emptySlots;
       const count = await assemblyOptions.count();
-      const candidate = assemblyOptions.nth(guidedAssemblyOffset % Math.max(1, count));
-      if (await candidate.isEnabled().catch(() => false)) {
-        await candidate.click();
-        guidedAssemblyOffset = (guidedAssemblyOffset + 1) % Math.max(1, count);
-        lastActionAt = Date.now();
-        continue;
+      let clickedAssemblyOption = false;
+      for (let attempt = 0; attempt < count; attempt += 1) {
+        const candidateIndex = (guidedAssemblyOffset + attempt) % Math.max(1, count);
+        const candidate = assemblyOptions.nth(candidateIndex);
+        if (await candidate.isEnabled().catch(() => false)) {
+          await candidate.click();
+          guidedAssemblyOffset = (candidateIndex + 1) % Math.max(1, count);
+          lastActionAt = Date.now();
+          clickedAssemblyOption = true;
+          break;
+        }
       }
+      if (clickedAssemblyOption) continue;
     }
 
     const guidedChoiceOptions = page.locator('button[class*="min-h-[92px]"]');
@@ -193,6 +199,13 @@ async function completeFirstSessionExercises(page: Page) {
         lastActionAt = Date.now();
         continue;
       }
+    }
+
+    const skipProbeBtn = page.getByRole('button', { name: /ابدأ الدرس مباشرة/ });
+    if (await skipProbeBtn.isVisible().catch(() => false)) {
+      await skipProbeBtn.click();
+      lastActionAt = Date.now();
+      continue;
     }
 
     const skillIntroStartBtn = page.getByRole('button', { name: 'ابدأ', exact: true });
