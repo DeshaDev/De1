@@ -68,7 +68,7 @@ function GuidedSyllableAssembly({
   onDone: () => void;
 }) {
   const [placed, setPlaced] = useState<number[]>([]);
-  const [hint, setHint] = useState('اختر الجزء الذي نسمعه أولًا.');
+  const [hint, setHint] = useState('');
   const [busy, setBusy] = useState(true);
   const [complete, setComplete] = useState(false);
   const handle = useRef<PlaybackHandle | null>(null);
@@ -130,7 +130,7 @@ function GuidedSyllableAssembly({
     <div className="flex flex-col items-center gap-5 w-full max-w-2xl text-center" dir="rtl">
       <span className="bz-badge bz-badge-sun">هَيَّا نَتَعَلَّمُ مَعًا</span>
       <MascotMoment mood="wave" size={76} layout="row" message="ساعدني يا صديقي! لنرتّب أجزاء الكلمة." />
-      <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">مَنْ يَعْرِفُ أَوَّلَ عَرَبَةٍ؟</h2>
+      <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">هَيَّا نُرَتِّبُ عَرَبَاتِ الْكَلِمَةِ</h2>
       <p className="font-child text-lg leading-relaxed text-ink">{activity.instructionAr}</p>
 
       <div className="w-full rounded-3xl border-2 border-dashed border-brand/40 bg-brand-tint p-4">
@@ -148,7 +148,7 @@ function GuidedSyllableAssembly({
         </div>
       </div>
 
-      <p className="font-child text-base font-bold text-slate-700" aria-live="polite">{hint}</p>
+      {hint && <p className="font-child text-base font-bold text-slate-700" aria-live="polite">{hint}</p>}
       <div className="flex flex-wrap justify-center gap-3" dir="rtl">
         {displayChoices.map(({ part, index }) => (
           <button
@@ -191,7 +191,7 @@ function GuidedChoiceLesson({
 }) {
   const [busy, setBusy] = useState(true);
   const [complete, setComplete] = useState(false);
-  const [message, setMessage] = useState(activity.promptAr);
+  const [message, setMessage] = useState('');
   const handle = useRef<PlaybackHandle | null>(null);
 
   useEffect(() => {
@@ -230,7 +230,7 @@ function GuidedChoiceLesson({
       <MascotMoment mood={complete ? 'cheer' : 'wave'} size={78} layout="row" message={complete ? 'أحسنت! عرفت الفكرة. هيا نكمل.' : 'جرّب معي. لا بأس أن نعيد المحاولة.'} />
       <section className="w-full rounded-3xl border-2 border-amber-100 bg-amber-50/70 p-5 space-y-3">
         <p className="font-child text-2xl sm:text-3xl font-black text-slate-900">{activity.promptAr}</p>
-        <p className="font-child text-base font-bold text-slate-600" aria-live="polite">{message}</p>
+        {message && <p className="font-child text-base font-bold text-slate-600" aria-live="polite">{message}</p>}
       </section>
 
       {!complete ? (
