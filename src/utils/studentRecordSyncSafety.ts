@@ -93,6 +93,24 @@ export function prepareStudentRecordForGenericSupabaseSync(
     }
   }
 
+  // Transfer scores are server-derived from one-use Azure receipts. Generic profile
+  // sync may update ordinary training progress, but it must not create or replace that evidence.
+  const rawTraining = raw?.trainingProgress as (Partial<NonNullable<StudentRecord['trainingProgress']>> & Record<string, unknown>) | undefined;
+  if (rawTraining) {
+    const incomingTraining = safe.trainingProgress as (NonNullable<StudentRecord['trainingProgress']> & Record<string, unknown>) | undefined;
+    const mergedTraining = { ...(incomingTraining ?? rawTraining) } as Record<string, unknown>;
+    if (Object.prototype.hasOwnProperty.call(rawTraining, 'transfer')) {
+      mergedTraining.transfer = rawTraining.transfer;
+    } else {
+      delete mergedTraining.transfer;
+    }
+    safe.trainingProgress = mergedTraining as StudentRecord['trainingProgress'];
+  } else if (safe.trainingProgress) {
+    const incomingTraining = { ...safe.trainingProgress } as Record<string, unknown>;
+    delete incomingTraining.transfer;
+    safe.trainingProgress = incomingTraining as StudentRecord['trainingProgress'];
+  }
+
   if (existing) {
     // Database consent columns are authoritative once a row exists.
     // A parent may withdraw consent, but a stale browser snapshot must never turn a database revocation back into consent.
