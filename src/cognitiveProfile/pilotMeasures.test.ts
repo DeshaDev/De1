@@ -8,6 +8,7 @@ import { buildTrainingPlan, createProgress, generateSession, getHomeActivity, FO
 import { curriculumPhrases } from './curriculum';
 import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import { TrainingProgressUploadSchema } from './records';
+import { normalizeHomeDialect, pronunciationLocaleForDialect } from './storage';
 
 const plan: TrainingPlan = { createdAt: '2026-11-10T00:00:00.000Z', preventive: false, focus: ['rhyme', 'blending'], rationaleAr: [] };
 const ans = (level: Level, ...correct: boolean[]): PlacementAnswer[] => correct.map((c) => ({ level, correct: c, guess: 1 / 3 }));
@@ -53,6 +54,24 @@ describe('starting-level check (placement)', () => {
     const r = (suggested: Level, placed: Level) => ({ skill: 'rhyme' as const, date: '2026-11-10T00:00:00.000Z', suggested, placed, answers: [] });
     assert.deepEqual(placementAgreement([r(1, 1), r(1, 2), r(2, 1), r(2, 2)]), { n: 4, agreementPercent: 50, placedHigher: 1, placedLower: 1 });
     assert.equal(placementAgreement([]), null);
+  });
+});
+
+describe('Arabic pronunciation model selection', () => {
+  it('maps only explicitly selected Egyptian and Saudi dialects to Azure pronunciation models', () => {
+    assert.equal(pronunciationLocaleForDialect('egyptian'), 'ar-EG');
+    assert.equal(pronunciationLocaleForDialect('saudi'), 'ar-SA');
+    for (const dialect of ['msa', 'gulf', 'levantine', 'iraqi', 'maghrebi', 'sudanese', 'other'] as const) {
+      assert.equal(pronunciationLocaleForDialect(dialect), undefined, dialect);
+    }
+  });
+
+  it('never interprets a country name as a reading dialect', () => {
+    assert.equal(normalizeHomeDialect('قطر', 'قطر'), 'other');
+    assert.equal(normalizeHomeDialect('المملكة العربية السعودية', 'المملكة العربية السعودية'), 'other');
+    assert.equal(normalizeHomeDialect('egyptian', 'مصر'), 'egyptian');
+    assert.equal(normalizeHomeDialect('saudi', 'السعودية'), 'saudi');
+    assert.equal(normalizeHomeDialect('unknown-value', 'مصر'), 'other');
   });
 });
 
