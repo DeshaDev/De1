@@ -172,9 +172,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <HnSkyDecor />
         <div className="bz-container relative grid lg:grid-cols-[1fr_1fr] gap-2 lg:gap-10 items-center pt-5 pb-10 sm:pt-10 lg:pt-12 lg:pb-14">
           <div className="relative z-10">
-            <h1 className="hn-display">ننمّي مهارات القراءة لدى طفلك، ونساعده على تجاوز عسر القراءة</h1>
+            <h1 className="hn-display">ننمّي مهارات القراءة العربية لدى طفلك، خطوةً خطوة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              ألعاب عربية قصيرة لأطفال ٤ إلى ٨ سنوات تكشف مبكرًا أين يتعثّر طفلك، ثم تدريب يومي على قدر مستواه يقوّي المهارات التي يحتاج إليها ليقرأ بثقة.
+              أنشطة عربية قصيرة للأطفال من ٤ إلى ٨ سنوات تساعد على استكشاف مهارات القراءة، ثم تقدّم ممارسة متدرجة بحسب أداء الطفل داخل الأنشطة.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -300,7 +300,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       <section className="bz-container py-16 sm:py-20">
         <div className="grid lg:grid-cols-[1fr_1fr] gap-12 items-center">
           <div>
-            <h2 className="hn-h2">{ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة كل يوم، والمستوى يتبع طفلك</h2>
+            <h2 className="hn-h2">نحو {ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة للجلسة، والمستوى يتبع طفلك</h2>
             <p className="hn-body mt-3">
               {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
             </p>
