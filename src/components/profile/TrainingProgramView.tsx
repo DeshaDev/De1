@@ -245,7 +245,7 @@ type Run = {
   blockStart: { level: Level; p: number } | null;
   /** Skills the probe moved up a level today. */
   promoted: SkillId[];
-  /** The fixed-difficulty progress probe that opens every session. */
+  /** The fixed-difficulty progress probe used at scheduled sessions. */
   probe: { items: ProbeItem[]; index: number; answers: boolean[] } | null;
   todayProbe: ProbeRecord | null;
   /** Response time latencies for current skill block. */
