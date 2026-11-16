@@ -78,18 +78,22 @@ function Visual({ visual }: { visual: LessonVisual }) {
 }
 
 /** "I do": a child-facing lesson with one clear idea, a visible example, and a calm hand-off. */
-export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () => void }) {
+export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Lesson; onDone: () => void; isReview?: boolean }) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const handle = useRef<PlaybackHandle | null>(null);
   const current = lesson.steps[step];
   const last = step === lesson.steps.length - 1;
   const stage = step === 0
-    ? { label: 'اكتشف الفكرة', cue: 'هيا نفهم الفكرة معًا، خطوةً خطوة.' }
+    ? isReview
+      ? { label: 'تذكّر الفكرة', cue: 'لنراجع ما تعلّمناه قبل أن نبدأ التدريب.' }
+      : { label: 'اكتشف الفكرة', cue: 'هيا نفهم الفكرة معًا، خطوةً خطوة.' }
     : last
       ? { label: 'استعد للتطبيق', cue: 'أصبحت تعرف الفكرة. الآن جرّبها بنفسك!' }
       : { label: 'شاهد المثال', cue: 'انظر إلى المثال، وسنحلّه معًا.' };
-  const explanationLabel = step === 0 ? 'الفكرة ببساطة' : last ? 'تذكّر قبل أن تبدأ' : 'مثال نطبّقه معًا';
+  const explanationLabel = step === 0
+    ? isReview ? 'تذكّر ببساطة' : 'الفكرة ببساطة'
+    : last ? 'تذكّر قبل أن تبدأ' : 'مثال نطبّقه معًا';
 
   const play = async () => {
     if (handle.current) handle.current.cancelled = true;
@@ -120,7 +124,7 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
     <div className="flex w-full max-w-3xl flex-col items-center gap-5 text-center" dir="rtl" data-testid="lesson-player">
       <section className="w-full rounded-3xl border border-line bg-card p-4 sm:p-6 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="rounded-full bg-brand-tint px-3 py-1.5 font-child text-sm font-black text-brand">نتعلّم مع هُدهُد</span>
+          <span className="rounded-full bg-brand-tint px-3 py-1.5 font-child text-sm font-black text-brand">{isReview ? 'نراجع مع هُدهُد' : 'نتعلّم مع هُدهُد'}</span>
           <span className="text-xs font-bold text-slate-500">الخطوة {ar(step + 1)} من {ar(lesson.steps.length)}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-soft" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={1} aria-valuemax={lesson.steps.length} aria-valuenow={step + 1}>
