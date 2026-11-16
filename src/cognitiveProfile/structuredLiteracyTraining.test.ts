@@ -75,7 +75,7 @@ describe('age-appropriate structured literacy training', () => {
   });
 
   it('sends typed dictation through BKT as a child response, not an adult judgement', () => {
-    const tasks = generateSession('spelling', 2, 42, undefined, 72);
+    const tasks = generateSession('spelling', 1, 42, undefined, 72);
     const task = tasks.find((entry) => entry.kind === 'choice' && entry.item.responseMode === 'text');
     assert.ok(task && task.kind === 'choice');
     if (!task || task.kind !== 'choice') return;
