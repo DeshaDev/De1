@@ -725,7 +725,7 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
     case 'spelling':
       return { titleAr: 'أسمع وأكتب ✍️', activityAr: 'استمع إلى كلمة قصيرة، وانطق أصواتها ومقاطعها، ثم اكتبها. راجع حرف المد ونهاية الكلمة.', exampleWords: ['بَاب', 'شَجَرَة', 'هُدَى'] };
     case 'comprehension':
-      return { titleAr: 'احكِ ما فهمت 💡', activityAr: 'اقرأ جملة أو نصًّا قصيرًا، ثم اسأل: ماذا حدث؟ لماذا؟ وماذا تتوقع بعد ذلك؟', exampleWords: ['لأن', 'ثم', 'لذلك'] };
+      return { titleAr: 'احكِ ما فهمت 💡', activityAr: 'استمع مع طفلك إلى جملة قصيرة أو اقرأها معه، ثم اسأل: ماذا حدث؟ لماذا؟ وماذا تتوقع بعد ذلك؟', exampleWords: ['لأن', 'ثم', 'لذلك'] };
     case 'morphology':
       return { titleAr: 'عائلة الكلمات 🧩', activityAr: 'اجمع كلمات من جذر واحد، ثم اشرح كيف يرتبط معنى كل كلمة بالأصل.', exampleWords: ['كَتَبَ', 'كِتَاب', 'كَاتِب'] };
     default:
