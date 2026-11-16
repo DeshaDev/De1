@@ -66,7 +66,10 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
     typeof guardianConsentAt === 'string' && Number.isFinite(Date.parse(guardianConsentAt));
   const validAudioConsent = student?.guardianAudioConsentGiven === true &&
     typeof audioConsentAt === 'string' && Number.isFinite(Date.parse(audioConsentAt));
-  const dialect = student?.dialectCode || student?.dialect || 'msa';
+  const storedDialect = student?.dialectCode || student?.dialect || 'msa';
+  // Older builds mistakenly stored the country name as the dialect. These tasks are in MSA,
+  // so legacy country values fall back to the MSA service locale rather than disabling the measure.
+  const dialect = student?.country && storedDialect === student.country ? 'msa' : storedDialect;
   const language = dialect === 'egyptian' ? 'ar-EG' : ['msa', 'gulf', 'faseeh'].includes(dialect) ? 'ar-SA' : null;
   const canAssess = Boolean(
     student && !student.isDemoRecord && validGuardianConsent && validAudioConsent && language
@@ -200,10 +203,10 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
       <header className="border-b border-line bg-soft p-5">
         <p className="bz-small text-brand font-bold">محطة قصيرة · {point === 'pre' ? 'بداية البرنامج' : point === 'mid' ? 'منتصف البرنامج' : 'نهاية البرنامج'}</p>
         <h2 id="transfer-measure-title" className="mt-1 font-child text-2xl font-black text-slate-900">تحدّي قراءة جديدة</h2>
-        <p className="mt-1 text-sm text-slate-600">اقرأ بهدوء. هذه كلمات وقصة لم تتدرّب عليها من قبل.</p>
+        <p className="mt-1 text-sm text-slate-600">اقرأ بهدوء؛ أمامك كلمات جديدة وقصة قصيرة مختلفة عن أنشطة التدريب.</p>
         <div className="mt-3 flex items-center justify-between text-xs font-bold text-slate-500">
           <span>المحطة {ARABIC_DIGITS(index + 1)} من {ARABIC_DIGITS(tasks.length)}</span>
-          <span>تُحلَّل القراءة آليًا عند اكتمال التسجيل فقط</span>
+          <span>اقرأ على مهل</span>
         </div>
         <div className="bz-progress mt-2"><span style={{ width: `${((index + 1) / tasks.length) * 100}%` }} /></div>
       </header>
