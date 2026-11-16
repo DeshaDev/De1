@@ -1038,7 +1038,15 @@ function confusableWith(letter: string): string[] {
 function soundPositionTask(random: () => number, level: Level, n: number): ChoiceItem | null {
   const useCoda = level === 3;
   const key = (e: LexiconEntry) => (useCoda ? e.coda : e.onset);
-  const entries = PICTURE_IDS.map((id) => LEXICON[id]).filter((e) => key(e) !== null);
+  const taughtFinalSounds = level === 3 ? new Set(['ب', 'م']) : null;
+  const taughtInitialSounds = level === 1 ? new Set(['س', 'ن', 'م']) : null;
+  const entries = PICTURE_IDS.map((id) => LEXICON[id]).filter((e) => {
+    const sound = key(e);
+    if (sound === null) return false;
+    if (taughtFinalSounds && !taughtFinalSounds.has(sound)) return false;
+    if (taughtInitialSounds && !taughtInitialSounds.has(sound)) return false;
+    return true;
+  });
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const target = pick(entries, random);
     const sound = key(target) as string;
@@ -1090,7 +1098,11 @@ function blendingTask(random: () => number, level: Level, n: number): ChoiceItem
       tag: 'syllableCount',
     };
   }
-  const candidates = entries.filter((e) => (level === 1 ? e.syllables.length === 2 : e.syllables.length >= 3));
+  const candidates = entries.filter((e) =>
+    level === 1
+      ? e.syllables.length === 2
+      : e.syllables.length >= 3 && e.syllables.length <= 4
+  );
   const target = pick(candidates, random);
   // Distractors share the first syllable's onset or length so the child must blend, not guess.
   const distractors = shuffleWith(
@@ -1140,7 +1152,11 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
     };
   }
   const ownPairs = level === 1 ? [] : (targets?.soundPairs ?? []).filter(([x, y]) => CONFUSABLE_PHONEME_PAIRS.some(([p, q]) => (p === x && q === y) || (p === y && q === x)));
-  const pairs = level === 1 ? DISTANT_PHONEME_PAIRS : ownPairs.length > 0 && random() < TARGET_SHARE ? ownPairs : CONFUSABLE_PHONEME_PAIRS;
+  const pairs = level === 1
+    ? [DISTANT_PHONEME_PAIRS[0], DISTANT_PHONEME_PAIRS[1]]
+    : level === 2
+      ? [ownPairs[0] && random() < TARGET_SHARE ? ownPairs[0] : CONFUSABLE_PHONEME_PAIRS[0]]
+      : [ownPairs[0] ?? CONFUSABLE_PHONEME_PAIRS[1]];
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
   const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
   const same = random() < 0.3;
@@ -1169,7 +1185,8 @@ const ALL_LETTERS = 'ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف
 const SHORT_VOWEL = { a: 'َ', i: 'ِ', u: 'ُ' } as const;
 
 function letterSoundTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem {
-  const set = level === 1 ? LETTER_SET_1 : level === 2 ? LETTER_SET_2 : ALL_LETTERS.filter((l) => l !== 'ا');
+  const LETTER_SET_3 = ['ب', 'ت', 'ث', 'س', 'ص'];
+  const set = level === 1 ? LETTER_SET_1 : level === 2 ? LETTER_SET_2 : LETTER_SET_3;
   const own = (targets?.letters ?? []).filter((l) => set.includes(l));
   const letter = own.length > 0 && random() < TARGET_SHARE ? pick(own, random) : pick(set, random);
   const close = level === 3 ? confusableWith(letter).filter((l) => ALL_LETTERS.includes(l)) : [];
@@ -1204,8 +1221,7 @@ function swapOneLetter(word: string, random: () => number): string | null {
 function visualDiscriminationTask(random: () => number, level: Level, n: number, targets?: TrainingTargets): ChoiceItem | null {
   if (level === 1 || level === 2) {
     const eligible = CONFUSABLE_LETTER_GROUPS.filter((g) => (level === 2 ? g.length >= 3 : true));
-    const own = eligible.filter((g) => (targets?.letters ?? []).some((l) => g.includes(l)));
-    const group = pick(own.length > 0 && random() < TARGET_SHARE ? own : eligible, random);
+    const group = eligible.find((g) => (targets?.letters ?? []).some((l) => g.includes(l))) ?? eligible[0];
     const nonConnecting = ['د', 'ذ', 'ر', 'ز'];
     const extraGroups = CONFUSABLE_LETTER_GROUPS.filter(
       (g) => g !== group && (level === 1 || !g.some((l) => nonConnecting.includes(l)))

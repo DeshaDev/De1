@@ -69,8 +69,121 @@ describe('teaching curriculum: lessons ("I do")', () => {
       for (const level of [1, 2, 3] as Level[]) {
         const lesson = lessonFor(skill, level);
         assert.ok(lesson, `${skill}:${level}`);
-        assert.ok(lesson.steps.length >= 3 && lesson.steps.length <= 6, `${skill}:${level} has ${lesson.steps.length} steps`);
+        assert.ok(lesson.steps.length >= 3 && lesson.steps.length <= 8, `${skill}:${level} has ${lesson.steps.length} steps`);
         assert.match(lesson.steps.at(-1)!.textAr, /دورك/);
+      }
+    }
+  });
+
+  it('provides several distinct worked models for every foundational skill and level', () => {
+    const skills = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination'] as const;
+    for (const skill of skills) {
+      for (const level of [1, 2, 3] as Level[]) {
+        const lesson = lessonFor(skill, level);
+        assert.ok(lesson, `${skill}/L${level}: lesson missing`);
+        const models = lesson.steps.filter((step) => step.visual !== undefined);
+        assert.ok(models.length >= 2, `${skill}/L${level}: expected at least two visible models`);
+        assert.ok(new Set(models.map((step) => step.textAr)).size >= 2, `${skill}/L${level}: model text repeated`);
+      }
+    }
+  });
+
+  it('adds a second worked example before practice in every structured literacy lesson', () => {
+    for (const skill of ['decoding', 'spelling', 'comprehension', 'morphology'] as const) {
+      const age = skill === 'morphology' ? 7 : 6;
+      for (const level of [1, 2, 3] as Level[]) {
+        const lesson = lessonFor(skill, level, undefined, age);
+        assert.ok(lesson, `${skill}/L${level}: lesson missing`);
+        assert.ok(lesson.steps[1].visual, `${skill}/L${level}: first model needs a visual`);
+        assert.ok(lesson.steps[2].visual, `${skill}/L${level}: second model needs a visual`);
+        assert.match(lesson.steps[2].textAr, /مثال آخر/);
+        assert.match(lesson.steps.at(-1)!.textAr, /مثال جديد/);
+      }
+    }
+  });
+
+  it('teaches blending through several worked examples before handing over', () => {
+    const expected: Record<Level, string[]> = {
+      1: ['pen', 'rain', 'moon'],
+      2: ['fish', 'apple', 'orange'],
+      3: ['pen', 'fish', 'orange'],
+    };
+
+    for (const level of [1, 2, 3] as Level[]) {
+      const lesson = lessonFor('blending', level);
+      assert.ok(lesson);
+      const models = lesson.steps.flatMap((step) =>
+        step.visual?.kind === 'syllables' ? [step.visual] : []
+      );
+      assert.deepEqual(models.map((model) => model.pictureId), expected[level]);
+      assert.ok(lesson.steps.length >= 5, `blending/L${level} needs more than one explanation step`);
+
+      for (const model of models) {
+        const id = model.pictureId;
+        assert.ok(id);
+        assert.deepEqual(model.parts, LEXICON[id].syllables);
+        assert.equal(model.word, LEXICON[id].word);
+        assert.ok(model.parts.length >= 2 && model.parts.length <= 4);
+      }
+      assert.match(lesson.steps.at(-1)!.textAr, /دورك/);
+    }
+  });
+
+  it('keeps blending assessment items within the syllable count named by each level', () => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const twoPart = generateSession('blending', 1, seed);
+      const threeOrFourPart = generateSession('blending', 2, seed);
+
+      for (const task of twoPart) {
+        if (task.kind !== 'choice') continue;
+        assert.equal(LEXICON[task.item.correctId].syllables.length, 2);
+      }
+      for (const task of threeOrFourPart) {
+        if (task.kind !== 'choice') continue;
+        const count = LEXICON[task.item.correctId].syllables.length;
+        assert.ok(count === 3 || count === 4, `level 2 generated ${count} syllables`);
+      }
+    }
+  });
+
+  it('keeps letter-sound tasks inside the full letter set taught at each level', () => {
+    const taught: Record<Level, string[]> = {
+      1: ['م', 'ب', 'س', 'ل', 'ر', 'ن'],
+      2: ['ت', 'د', 'ف', 'ك', 'ع', 'ح'],
+      3: ['ب', 'ت', 'ث', 'س', 'ص'],
+    };
+    for (const level of [1, 2, 3] as Level[]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        for (const task of generateSession('letterSound', level, seed)) {
+          if (task.kind !== 'choice') continue;
+          assert.ok(taught[level].includes(task.item.correctId), `L${level}: untaught letter ${task.item.correctId}`);
+        }
+      }
+    }
+  });
+
+  it('keeps Level 1 and Level 3 sound-position targets inside the modelled sounds', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      for (const level of [1, 3] as Level[]) {
+        for (const task of generateSession('soundPosition', level, seed)) {
+          if (task.kind !== 'choice' || !task.item.stimulus) continue;
+          const id = PICTURE_IDS.find((entry) => LEXICON[entry].emoji === task.item.stimulus!.value);
+          assert.ok(id);
+          const sound = level === 1 ? LEXICON[id].onset : LEXICON[id].coda;
+          assert.ok(level === 1 ? ['س', 'ن', 'م'].includes(sound ?? '') : ['ب', 'م'].includes(sound ?? ''), `L${level}: untaught sound ${sound}`);
+        }
+      }
+    }
+  });
+
+  it('keeps visual-discrimination targets inside the first worked group for Levels 1 and 2', () => {
+    const firstGroup = ['ب', 'ت', 'ث', 'ن', 'ي'];
+    for (const level of [1, 2] as Level[]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        for (const task of generateSession('visualDiscrimination', level, seed)) {
+          if (task.kind !== 'choice') continue;
+          assert.ok(firstGroup.includes(task.item.correctId.replace('ـ', '')));
+        }
       }
     }
   });
@@ -152,7 +265,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
     assert.match(lesson.titleAr, /ت/);
     assert.match(lesson.titleAr, /ط/);
     const letters = lessonFor('letterSound', 2, { soundPairs: [], letters: ['ع'] })!;
-    assert.ok(letters.steps.some((s) => s.visual?.kind === 'glyphs' && s.visual.letters.includes('ع')));
+    assert.ok(letters.steps.some((s) => s.visual?.kind === 'glyphs' && s.visual.letters.some((letter) => letter === 'ع' || letter.startsWith('ع'))));
   });
 });
 
