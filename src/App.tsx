@@ -135,7 +135,9 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
   if (rawPath === '/review' || params.get('review') === '1') {
     return { tab: 'content-review' };
   }
-  if (rawPath === '/audio-lab' || rawPath === '/compare-audio' || params.get('audio_lab') === '1' || params.get('tab') === 'audio-lab') {
+  // The multi-provider comparison lab is a developer diagnostic, not a child/family feature.
+  // Keep its UI out of production builds even when someone guesses the route.
+  if (import.meta.env.DEV && (rawPath === '/audio-lab' || rawPath === '/compare-audio' || params.get('audio_lab') === '1' || params.get('tab') === 'audio-lab')) {
     return { tab: 'audio-lab' };
   }
 
