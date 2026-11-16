@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MascotMoment } from '../ui/Mascot';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { ArrowLeft, Play, RotateCcw, Volume2 } from 'lucide-react';
 import type { AudioSegment, ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
-import { explainMistake, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
+import { explainMistake, guidedChoiceForLesson, type GuidedLessonChoice, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
 import { ChoicePlayer, Pic } from './TaskPlayers';
 import { speakSegments, stopSpeech, type PlaybackHandle } from './audio';
 
@@ -181,6 +181,100 @@ function GuidedSyllableAssembly({
   );
 }
 
+/** One gentle, unscored "we do" question with a retry hint before the formal placement check. */
+function GuidedChoiceLesson({
+  activity,
+  onDone,
+}: {
+  activity: GuidedLessonChoice;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(true);
+  const [complete, setComplete] = useState(false);
+  const [message, setMessage] = useState(activity.promptAr);
+  const handle = useRef<PlaybackHandle | null>(null);
+
+  useEffect(() => {
+    const h: PlaybackHandle = { cancelled: false };
+    handle.current = h;
+    setBusy(true);
+    void speakSegments(activity.promptAudio, h).finally(() => {
+      if (!h.cancelled) setBusy(false);
+    });
+    return () => {
+      h.cancelled = true;
+      stopSpeech();
+    };
+  }, [activity]);
+
+  const choose = async (id: string) => {
+    if (busy || complete) return;
+    if (handle.current) handle.current.cancelled = true;
+    stopSpeech();
+    const h: PlaybackHandle = { cancelled: false };
+    handle.current = h;
+    setBusy(true);
+
+    if (id === activity.correctId) {
+      setComplete(true);
+      setMessage(activity.successAr);
+      await speakSegments(activity.successAudio, h);
+    } else {
+      setMessage(activity.hintAr);
+      await speakSegments(activity.hintAudio, h);
+    }
+    if (!h.cancelled) setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-5 w-full max-w-2xl text-center" dir="rtl">
+      <span className="bz-badge bz-badge-sun">نَتَعَلَّمُ مَعًا · مِنْ دُونِ دَرَجَةٍ</span>
+      <MascotMoment mood={complete ? 'cheer' : 'wave'} size={78} layout="row" message={complete ? 'أحسنت! عرفت الفكرة. هيا نكمل.' : 'جرّب معي. لا بأس أن نعيد المحاولة.'} />
+      <section className="w-full rounded-3xl border-2 border-amber-100 bg-amber-50/70 p-5 space-y-3">
+        <p className="font-child text-2xl sm:text-3xl font-black text-slate-900">{activity.promptAr}</p>
+        <p className="font-child text-base font-bold text-slate-600" aria-live="polite">{message}</p>
+      </section>
+
+      {!complete ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+          {activity.options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              disabled={busy}
+              onClick={() => void choose(option.id)}
+              className="min-h-[92px] rounded-3xl border-[3px] border-line bg-white p-4 shadow-sm transition-all hover:border-brand hover:-translate-y-0.5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30"
+            >
+              {option.emoji && <span className="block text-5xl mb-2"><Pic emoji={option.emoji} label={option.labelAr} /></span>}
+              <span className={`font-child font-black text-slate-900 ${option.labelAr.length <= 3 ? 'text-4xl' : 'text-lg leading-relaxed'}`}>{option.labelAr}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="w-full rounded-3xl border-2 border-emerald-200 bg-emerald-50 p-5 space-y-3">
+          <p className="font-child text-xl font-black text-emerald-900">{activity.successAr}</p>
+          <button type="button" className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10" onClick={onDone}>
+            هَيَّا نَتَدَرَّبُ
+          </button>
+        </div>
+      )}
+      {!complete && (
+        <button type="button" className="bz-btn bz-btn-ghost" disabled={busy} onClick={() => {
+          if (handle.current) handle.current.cancelled = true;
+          const h: PlaybackHandle = { cancelled: false };
+          handle.current = h;
+          setBusy(true);
+          void speakSegments(activity.promptAudio, h).finally(() => {
+            if (!h.cancelled) setBusy(false);
+          });
+        }}>
+          <Volume2 className="w-5 h-5" /> أَعِدِ السُّؤَالَ
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** "I do": explain the idea, show a worked example, then let the child try it with Hudhud. */
 export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () => void }) {
   const [step, setStep] = useState(0);
@@ -188,6 +282,7 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
   const [assembling, setAssembling] = useState(false);
   const handle = useRef<PlaybackHandle | null>(null);
   const current = lesson.steps[step];
+  const guidedChoice = useMemo(() => guidedChoiceForLesson(lesson), [lesson]);
 
   useEffect(() => {
     setStep(0);
@@ -216,6 +311,9 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
 
   if (lesson.guidedAssembly && assembling) {
     return <GuidedSyllableAssembly activity={lesson.guidedAssembly} onDone={onDone} />;
+  }
+  if (guidedChoice && assembling) {
+    return <GuidedChoiceLesson activity={guidedChoice} onDone={onDone} />;
   }
 
   const last = step === lesson.steps.length - 1;
@@ -255,12 +353,12 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
             if (handle.current) handle.current.cancelled = true;
             stopSpeech();
             if (last) {
-              if (lesson.guidedAssembly) setAssembling(true);
+              if (lesson.guidedAssembly || guidedChoice) setAssembling(true);
               else onDone();
             } else setStep(step + 1);
           }}
         >
-          {last ? (lesson.guidedAssembly ? 'هَيَّا نُرَكِّبُهَا مَعًا' : 'هَيَّا نَتَدَرَّبُ') : 'التَّالِي'}
+          {last ? (lesson.guidedAssembly ? 'هَيَّا نُرَكِّبُهَا مَعًا' : guidedChoice ? 'هَيَّا نُجَرِّبُ مَعًا' : 'هَيَّا نَتَدَرَّبُ') : 'التَّالِي'}
           <ArrowLeft className="w-5 h-5" />
         </button>
       </div>
