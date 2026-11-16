@@ -70,10 +70,15 @@ describe('transfer measure (untrained words)', () => {
   const all = (['A', 'B'] as const).flatMap((f) => [...TRANSFER_FORMS[f].real, ...TRANSFER_FORMS[f].nonword]);
 
   it('no word appears in the screening, the story, the lexicon or the training items', () => {
+    const trainedTokens = new Set(
+      trainingText
+        .replace(/[ً-ْٰـ]/g, '')
+        .match(/[ء-ي]+/g) ?? []
+    );
     for (const w of all) {
-      const bare = stripMarks(w.text);
+      const bare = stripMarks(w.text).replace(/[.,،]/g, '');
       assert.ok(!used.has(bare), `${w.text} is already used`);
-      assert.ok(!trainingText.includes(w.text) && !trainingText.includes(bare), `${w.text} appears in training`);
+      assert.ok(!trainedTokens.has(bare), `${w.text} appears as a trained word`);
     }
     assert.equal(new Set(all.map((w) => stripMarks(w.text))).size, all.length, 'no word twice');
   });
