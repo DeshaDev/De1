@@ -471,12 +471,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const skill = skills[skillIndex];
     const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
+    // Compare the versioned lesson key, not the legacy "skill:level" marker. This ensures
+    // children who completed the earlier, abbreviated lesson still receive the expanded teaching.
+    const levelLesson = lessonFor(skill, estimate.level, current.targets, childAgeYears);
+    const lessonSeen = !levelLesson || (current.lessonsSeen ?? []).includes(levelLesson.key);
     if (needsPlacement(current, skill)) {
-      // First time this skill is trained: teach first («أنا أعلّمك»), then a few unscored items
-      // check the rule's starting level, then practice. A session that opens with a test before any
-      // teaching felt like an exam to parents and children.
+      // First time this skill is trained: teach first, then check the rule's starting level,
+      // then practise. A session that opens with a test before any teaching feels like an exam.
       const level = estimate.level;
-      if (!(current.lessonsSeen ?? []).includes(`${skill}:${level}`)) {
+      if (!lessonSeen) {
         setRun({
           ...(prev ?? ({} as Run)),
           skills,
@@ -485,7 +488,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           taskIndex: 0,
           correct: 0,
           phase: 'lesson',
-          lesson: lessonFor(skill, level, current.targets, childAgeYears),
+          lesson: levelLesson,
           guided: 0,
           stars: prev?.stars ?? 0,
           change: null,
@@ -527,7 +530,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       });
       return;
     }
-    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets, childAgeYears);
+    const lesson = lessonSeen ? null : levelLesson;
     const guided = lesson || estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
     const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets, childAgeMonths ?? 72);
     // "We do": the first items come with a hint and one fewer option.
