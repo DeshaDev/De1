@@ -26,7 +26,8 @@ import { cvSyllable, type Level, type SkillId, type TrainingTargets } from './tr
 export type LessonVisual =
   | { kind: 'pictures'; ids: string[]; highlight?: string }
   | { kind: 'glyphs'; letters: string[]; notesAr?: string[] }
-  | { kind: 'syllables'; parts: string[]; word: string; pictureId?: string };
+  | { kind: 'syllables'; parts: string[]; word: string; pictureId?: string }
+  | { kind: 'story'; frames: { symbol: string; titleAr: string; detailAr: string }[]; relationAr?: string };
 
 export interface LessonStep {
   /** What the adult and child read on screen. */
@@ -87,6 +88,62 @@ function exampleFor(letter: string): string | null {
 
 function closing(textAr: string, audio: string): LessonStep {
   return { textAr, audio: say(audio) };
+}
+
+/** A visual worked example for literacy skills that otherwise appeared as plain paragraphs. */
+function stationModelVisual(skill: SkillId, ageYears: number): LessonVisual | undefined {
+  switch (skill) {
+    case 'decoding':
+      return {
+        kind: 'story',
+        frames: [
+          { symbol: '🔤', titleAr: 'أقرأ الحروف', detailAr: 'قَ  لَ  مْ' },
+          { symbol: '🧩', titleAr: 'أجمع الأصوات', detailAr: 'قَ + لَ + مْ' },
+          { symbol: '🖊️', titleAr: 'أقرأ الكلمة', detailAr: 'قَلَم' },
+        ],
+        relationAr: 'نقرأ من اليمين إلى اليسار، ثم نجمع الأصوات بالترتيب.',
+      };
+    case 'spelling':
+      return {
+        kind: 'story',
+        frames: [
+          { symbol: '👂', titleAr: 'أسمع الكلمة', detailAr: 'بَاب' },
+          { symbol: '🔎', titleAr: 'ألاحظ صوت المدّ', detailAr: 'صوت الألف طويل' },
+          { symbol: '✏️', titleAr: 'أكتب ما سمعت', detailAr: 'ب + ا + ب = باب' },
+        ],
+        relationAr: 'عندما نسمع صوت المدّ بالألف، نكتب حرف الألف.',
+      };
+    case 'comprehension':
+      return ageYears < 6
+        ? {
+            kind: 'story',
+            frames: [
+              { symbol: '👟', titleAr: 'ماذا فعلت نور؟', detailAr: 'وضعت الحذاء' },
+              { symbol: '🚪', titleAr: 'أين وضعته؟', detailAr: 'في الخزانة' },
+            ],
+            relationAr: 'نستمع إلى الجملة كاملة، ثم نجيب من المعلومات التي سمعناها.',
+          }
+        : {
+            kind: 'story',
+            frames: [
+              { symbol: '🌧️', titleAr: 'السبب', detailAr: 'هطل المطر' },
+              { symbol: '☂️', titleAr: 'النتيجة', detailAr: 'حمل سامي مظلته' },
+            ],
+            relationAr: 'نسأل: ماذا حدث أولًا؟ وماذا حدث بسببه؟',
+          };
+    case 'morphology':
+      return {
+        kind: 'story',
+        frames: [
+          { symbol: 'ك ت ب', titleAr: 'الحروف المشتركة', detailAr: 'كاف، تاء، باء' },
+          { symbol: '✍️', titleAr: 'كَتَبَ', detailAr: 'فعل يدل على الكتابة' },
+          { symbol: '📖', titleAr: 'كِتَاب', detailAr: 'شيء نقرأه' },
+        ],
+        relationAr: 'الكلمات من عائلة واحدة تشترك في الجذر وفي معنى مرتبط.',
+      };
+    default:
+      return undefined;
+  }
 }
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
@@ -205,11 +262,12 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
     case 'morphology': {
       const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
       if (!station) return null;
+      const modelVisual = stationModelVisual(skill, ageYears);
       return {
         key, skill, level, titleAr: station.titleAr,
         steps: [
           { textAr: station.teachAr, audio: say(station.teachAudioAr) },
-          { textAr: station.modelAr, audio: say(station.modelAudioAr) },
+          { textAr: station.modelAr, audio: say(station.modelAudioAr), ...(modelVisual ? { visual: modelVisual } : {}) },
           closing('الآن دورك: استخدم ما تعلّمته، ثم فكّر في سبب اختيارك.', 'الْآنَ دَوْرُكَ: اسْتَخْدِمْ مَا تَعَلَّمْتَهُ، ثُمَّ فَكِّرْ فِي سَبَبِ اخْتِيَارِكَ.'),
         ],
       };
