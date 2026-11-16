@@ -180,11 +180,13 @@ describe('training plan follows the evidence on memory training', () => {
     const { buildTrainingPlan, NOT_TRAINED_AS_FOCUS } = await import('./training');
     const plan = (weaknesses: string[]) => buildTrainingPlan({ weaknesses } as never);
     const onlyMemory = plan(['auditorySequential', 'visualSequential']);
-    assert.deepEqual([...onlyMemory.focus].sort(), ['blending', 'letterSound']);
+    assert.ok(onlyMemory.focus.includes('blending') && onlyMemory.focus.includes('letterSound'));
+    assert.ok(['decoding', 'spelling', 'comprehension'].every((skill) => onlyMemory.focus.includes(skill as never)));
     assert.ok(onlyMemory.rationaleAr.some((t) => t.includes('الذاكرة')));
     const mixed = plan(['visualAssociative', 'rhyme', 'letterSound']);
     assert.ok(mixed.focus.every((s) => !NOT_TRAINED_AS_FOCUS.has(s)));
-    assert.deepEqual([...mixed.focus].sort(), ['letterSound', 'rhyme']);
+    assert.ok(mixed.focus.includes('letterSound') && mixed.focus.includes('rhyme'));
+    assert.ok(['decoding', 'spelling', 'comprehension'].every((skill) => mixed.focus.includes(skill as never)));
   });
 });
 

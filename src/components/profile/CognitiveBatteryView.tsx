@@ -656,7 +656,7 @@ interface Props {
   /** Open an optional extra activity (practice games or the reader). */
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string }) => string | null;
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }) => string | null;
   supabaseUser?: any;
   onNavigateTab?: (tab: string) => void;
 }
@@ -767,13 +767,12 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
 
-  // Pick the opening screen when the session first loads (or the child changes), not on every saved
-  // result: re-running this after each update sent the child back to the map mid-flow and skipped
-  // the end-of-game screen.
-  const hasSession = session !== null;
+  // Restore the appropriate screen only when the active learner/session identity changes.
+  // Updating results for the same learner must not unmount the running subtest before its
+  // completion state is shown (including the explicit unscored-audio state).
   useEffect(() => {
-    setView(initialView === 'training' ? { name: 'training' } : hasSession ? { name: 'map' } : { name: 'setup' });
-  }, [hasSession, activeStudent.id, initialView]);
+    setView(initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' });
+  }, [session?.studentId, initialView]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -855,6 +854,8 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               ageYears: Math.floor(s.ageMonths / 12),
               examinerName: s.examinerName,
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+              guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
+              guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
             });
             if (newId) {
               startedSessions.set(newId, { ...s, studentId: newId });

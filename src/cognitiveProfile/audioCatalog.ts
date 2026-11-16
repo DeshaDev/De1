@@ -85,7 +85,7 @@ export function buildAudioCatalog(): CatalogEntry[] {
   for (const skill of Object.keys(SKILLS) as SkillId[]) {
     for (const level of [1, 2, 3] as Level[]) {
       for (let seed = 1; seed <= TRAINING_CATALOG_SEEDS; seed++) {
-        for (const task of generateSession(skill, level, seed)) {
+        for (const task of generateSession(skill, level, seed, undefined, 96)) {
           if (task.kind === 'choice') addSegments(map, task.item.audio, `training.${skill}`);
           else for (const id of [...task.trial.sequence, ...task.trial.choices]) add(map, lex(id).word, `training.${skill}`);
         }

@@ -10,6 +10,7 @@ import type { PlacementRecord } from './placement';
 import type { TransferRecord } from './transferProbe';
 import type { ProbeRecord } from './progressProbe';
 import type { Band, CognitiveProfile, ScoredSubtest } from './scoring';
+import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import {
   MIN_ATTEMPTS_FOR_MASTERY,
   STEP_BACK_BELOW,
@@ -52,6 +53,10 @@ export type SkillId =
   | 'discrimination'
   | 'letterSound'
   | 'visualDiscrimination'
+  | 'decoding'
+  | 'spelling'
+  | 'comprehension'
+  | 'morphology'
   | 'auditoryMemory'
   | 'visualMemory';
 
@@ -108,6 +113,10 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
     goalAr: 'يلاحظ الفروق الدقيقة في النقاط وشكل الحروف والكلمات.',
     levels: { 1: 'حروف منفردة', 2: 'حروف في أول الكلمة', 3: 'كلمات كاملة' },
   },
+  decoding: { id: 'decoding', nameAr: 'فك الترميز والقراءة', icon: '🔤', goalAr: 'يفكّ الكلمات العربية ويربط الحركات والمدّ والسكون بأصواتها.', levels: { 1: 'كلمات قصيرة مشكولة', 2: 'كلمات متعددة المقاطع والمدود', 3: 'كلمات أطول مع السكون والتاء المربوطة' } },
+  spelling: { id: 'spelling', nameAr: 'الإملاء والكتابة', icon: '✍️', goalAr: 'يحوّل الأصوات والمقاطع المسموعة إلى كتابة عربية صحيحة.', levels: { 1: 'كلمات قصيرة وأصوات واضحة', 2: 'المدود والمقاطع', 3: 'التاء المربوطة والألف المقصورة وأنماط الرسم' } },
+  comprehension: { id: 'comprehension', nameAr: 'الفهم اللغوي والقرائي', icon: '💡', goalAr: 'يفهم المعنى الصريح وتسلسل الأحداث والسبب والنتيجة والاستدلال.', levels: { 1: 'معلومة صريحة في جملة', 2: 'التسلسل والسبب والنتيجة', 3: 'المفردات من السياق والاستدلال' } },
+  morphology: { id: 'morphology', nameAr: 'الوعي الصرفي', icon: '🧩', goalAr: 'يلاحظ الجذور وعائلات الكلمات والعلاقة بين الصيغة والمعنى.', levels: { 1: 'التعرّف إلى كلمات من جذر واحد', 2: 'ربط الجذر بالمعنى', 3: 'مقارنة صيغ مشتقة مختلفة' } },
   auditoryMemory: {
     id: 'auditoryMemory',
     nameAr: 'الذاكرة السمعية',
@@ -175,6 +184,10 @@ export const SKILL_BADGES: Record<SkillId, MasteryBadge> = {
     icon: '🦅',
     descriptionAr: 'يلاحظ الفروق الدقيقة بين نقاط الحروف ورسمها دون تردد.',
   },
+  decoding: { id: 'decoding', skill: 'decoding', titleAr: 'قارئ الكلمات', icon: '🔤', descriptionAr: 'يفكّ الكلمات الجديدة بالربط بين الحرف والحركة والمقطع.' },
+  spelling: { id: 'spelling', skill: 'spelling', titleAr: 'كاتب الكلمات', icon: '✍️', descriptionAr: 'يحوّل ما يسمعه إلى كتابة دقيقة، ويراجع أنماط الرسم العربي.' },
+  comprehension: { id: 'comprehension', skill: 'comprehension', titleAr: 'مستكشف المعنى', icon: '💡', descriptionAr: 'يفهم النص، ويربط الأحداث، ويستنتج المعنى من السياق.' },
+  morphology: { id: 'morphology', skill: 'morphology', titleAr: 'باحث عائلات الكلمات', icon: '🧩', descriptionAr: 'يكتشف الجذور والصيغ والعلاقات بين الكلمات العربية.' },
   auditoryMemory: {
     id: 'auditoryMemory',
     skill: 'auditoryMemory',
@@ -198,6 +211,10 @@ const SKILL_ORDER: SkillId[] = [
   'soundPosition',
   'blending',
   'letterSound',
+  'decoding',
+  'spelling',
+  'comprehension',
+  'morphology',
   'visualDiscrimination',
   'auditoryMemory',
   'visualMemory',
@@ -218,10 +235,10 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
   // in the report and never auto-prescribes phonological or letter drills on its own.
   ranObjects: [],
   ranLetters: [],
-  wordReading: ['letterSound', 'blending'],
-  nonwordReading: ['blending', 'letterSound', 'soundPosition'],
-  oralReading: ['blending', 'letterSound'],
-  spelling: ['letterSound', 'soundPosition'],
+  wordReading: ['decoding', 'letterSound', 'blending'],
+  nonwordReading: ['decoding', 'blending', 'letterSound', 'soundPosition'],
+  oralReading: ['decoding', 'blending', 'letterSound'],
+  spelling: ['spelling', 'letterSound', 'soundPosition'],
 };
 
 /**
@@ -236,7 +253,28 @@ export const PROGRAM_WEEKS = PROGRAM_SESSIONS / SESSIONS_PER_WEEK;
 export const MINUTES_PER_SESSION = 15;
 /** Missed days are normal; reassessment is offered at the latest two weeks after the planned end. */
 const LATEST_REASSESSMENT_DAYS = (PROGRAM_WEEKS + 2) * 7;
-const MAX_FOCUS_SKILLS = 3;
+const MAX_FOUNDATION_SKILLS = 3;
+const MAX_FOCUS_SKILLS = 7;
+const STRUCTURED_LITERACY_SKILLS = new Set<SkillId>(['decoding', 'spelling', 'comprehension', 'morphology']);
+const DAILY_FOCUS_SKILLS = 3;
+
+/** Age-appropriate curriculum pillars; inclusion does not imply an inferred screening weakness. */
+export function ageAppropriateLiteracySkills(ageMonths: number): SkillId[] {
+  const skills: SkillId[] = ageMonths >= 72 ? ['decoding', 'spelling', 'comprehension'] : ['comprehension'];
+  if (ageMonths >= 84) skills.push('morphology');
+  return skills;
+}
+
+/** Rotate a bounded set of active skills through daily sessions so the complete plan remains teachable. */
+export function sessionSkillsFor(progress: Pick<TrainingProgress, 'plan' | 'mastered'>, sessionNumber: number): SkillId[] {
+  const active = progress.plan.focus.filter((skill) => !progress.mastered.includes(skill));
+  const pool = active.length > 0 ? active : progress.plan.focus;
+  if (pool.length <= DAILY_FOCUS_SKILLS) return pool;
+  const groupCount = Math.ceil(pool.length / DAILY_FOCUS_SKILLS);
+  const groupIndex = Math.max(0, Math.floor(sessionNumber - 1)) % groupCount;
+  const selected = pool.slice(groupIndex * DAILY_FOCUS_SKILLS, groupIndex * DAILY_FOCUS_SKILLS + DAILY_FOCUS_SKILLS);
+  return selected.length > 0 ? selected : pool.slice(0, DAILY_FOCUS_SKILLS);
+}
 
 /**
  * Skills the programme does not choose as training goals. Training memory improves memory
@@ -250,7 +288,10 @@ export const FOCUS_SKILLS = (Object.keys(SKILLS) as SkillId[]).filter((id) => !N
 
 export interface TrainingPlan {
   createdAt: string;
+  /** Age at plan creation, used to choose age-appropriate literacy tasks. */
+  ageMonths?: number;
   preventive: boolean;
+  /** All planned BKT skills; at most three are practised in one daily session. */
   focus: SkillId[];
   rationaleAr: string[];
 }
@@ -308,7 +349,7 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   let fromTaskEvidence = false;
   let fromReadingTargets = false;
   let hasRanCompleted = false;
-  if (ordered.length === 0 && (subtests.length > 0 || (profile?.readingTargets?.skills?.length ?? 0) > 0)) {
+  if ((ordered.length === 0 && subtests.length > 0) || (profile?.readingTargets?.skills?.length ?? 0) > 0) {
     const scoredEntries = subtests
       .map((s) => ({ subtest: s, effective: effectiveSubtestPercent(s) }))
       .filter((entry): entry is { subtest: ScoredSubtest; effective: number } => entry.effective !== null);
@@ -365,11 +406,14 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
     fromTaskEvidence = ordered.length > 0;
   }
 
+  const ageLiteracySkills = ageAppropriateLiteracySkills(ageMonths);
+  for (const skill of ageLiteracySkills) if (!ordered.includes(skill)) ordered.push(skill);
   const memoryOnly = ordered.filter((s) => NOT_TRAINED_AS_FOCUS.has(s));
-  const trainable = ordered.filter((s) => !NOT_TRAINED_AS_FOCUS.has(s));
-  const preventive = trainable.length === 0;
-  const chosen = preventive ? (['blending', 'letterSound'] as SkillId[]) : trainable.slice(0, MAX_FOCUS_SKILLS);
-  const focus = [...chosen].sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
+  const evidenceTrainable = ordered.filter((s) => !NOT_TRAINED_AS_FOCUS.has(s) && !STRUCTURED_LITERACY_SKILLS.has(s));
+  const preventive = evidenceTrainable.length === 0;
+  const chosenFoundation = preventive ? (ageMonths < 60 ? ['blending'] as SkillId[] : ['blending', 'letterSound'] as SkillId[]) : evidenceTrainable.slice(0, MAX_FOUNDATION_SKILLS);
+  const focus = Array.from(new Set([...chosenFoundation, ...ageLiteracySkills, ...evidenceTrainable.filter((s) => STRUCTURED_LITERACY_SKILLS.has(s))]))
+    .sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
 
   if (memoryOnly.length > 0) {
     rationaleAr.push('ظهر تراجع في مهام الذاكرة، لكن تدريب الذاكرة لا ينتقل أثره إلى القراءة في الأبحاث؛ لذلك يركّز البرنامج على مهارات القراءة والأصوات وتُعرض تكييفات التدريس في التقرير.');
@@ -383,21 +427,22 @@ export function buildTrainingPlan(profile: CognitiveProfile, now = new Date()): 
   } else {
     rationaleAr.push(
       fromTaskEvidence
-        ? 'اختيرت مهارات التركيز (حتى ٣ مهارات) بالترتيب من أدنى المهام دقةً وتكرارًا للأخطاء المرصودة؛ وهو ترتيب تشغيلي مؤقت دون عتبات معيارية مقننة.'
-        : 'اختيرت المهارات الأضعف في الملف المعرفي (حتى ٣ مهارات) لأن التركيز يحقق أثرًا أكبر من توزيع الجهد.'
+        ? 'اختيرت مهارات الأساس (حتى ٣) من أدنى المهام دقةً وتكرارًا للأخطاء المرصودة؛ وهو ترتيب تشغيلي مؤقت دون عتبات معيارية مقننة.'
+        : 'اختيرت مهارات الأساس من الملف المعرفي، وتُدرج مهارات القراءة والكتابة المناسبة للعمر ضمن تسلسل المنهج.'
     );
     if (fromReadingTargets) {
       rationaleAr.push('رُبطت أخطاء القراءة الجهرية بمهارات التركيز وشدّتها وفق تكرار كل نمط خطأ مرصود لا بقيمة ثابتة.');
     }
+    rationaleAr.push('تُدرج مهارات فك الترميز والإملاء والفهم، والوعي الصرفي من عمر ٧ سنوات، بوصفها مكونات تعليمية مناسبة للعمر لا بوصفها نقاط ضعف مستنتجة من الفحص.');
     rationaleAr.push('تُضبط مستويات البداية (١ أو ٢) وعدد تمارين الجلسة وفق نسبة الأداء الملاحظة في الفحص لكل مهارة.');
-    if (trainable.length > MAX_FOCUS_SKILLS) {
+    if (focus.length > MAX_FOCUS_SKILLS) {
       rationaleAr.push('بقية المهارات الأقل دقة تُضاف بعد إتقان مهارة من مهارات التركيز الحالية.');
     }
   }
   if (hasRanCompleted) {
     rationaleAr.push('تُعرض سرعة التسمية السريعة كمؤشر وصفي في التقرير دون فرض تدريب آلي منها قبل المعايرة العمرية العربية.');
   }
-  return { createdAt: now.toISOString(), preventive, focus, rationaleAr: rationaleAr.slice(0, 10) };
+  return { createdAt: now.toISOString(), ageMonths, preventive, focus, rationaleAr: rationaleAr.slice(0, 10) };
 }
 
 // ---------------------------------------------------------------------------
@@ -422,6 +467,8 @@ export interface TrainingProgress {
   probes?: ProbeRecord[];
   /** Knowledge-tracing state per skill and level (see knowledgeTracing.ts). Absent in older records. */
   bkt?: BktStates;
+  /** Unscored repeated-reading practice; never interpreted as a fluency proficiency score. */
+  fluencyPractice?: { sessionsCompleted: number; readingsCompleted: number; lastPracticedAt: string | null };
   /** Sounds and letters to practise more often, from the child's oral-reading errors. */
   targets?: TrainingTargets;
   /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
@@ -503,12 +550,12 @@ export function startLevelsFromProfile(
   const observed = skillObservedPercentsFromProfile(profile);
   const levels = {} as Record<SkillId, Level>;
   for (const skill of plan.focus) {
-    if (plan.preventive) {
+    const band = bands[skill];
+    const pct = observed[skill];
+    if (plan.preventive && !STRUCTURED_LITERACY_SKILLS.has(skill)) {
       levels[skill] = 2;
       continue;
     }
-    const band = bands[skill];
-    const pct = observed[skill];
     if (band === 'severe') {
       levels[skill] = 1;
     } else if (typeof pct === 'number') {
@@ -531,7 +578,7 @@ export function createProgress(
   const levels = Object.fromEntries(
     plan.focus.map((s) => {
       const assigned = typeof startLevelOrLevels === 'number' ? startLevelOrLevels : (startLevelOrLevels[s] ?? 1);
-      return [s, plan.preventive ? 2 : assigned];
+      return [s, plan.preventive && !STRUCTURED_LITERACY_SKILLS.has(s) ? 2 : assigned];
     })
   ) as Record<string, Level>;
   return {
@@ -543,6 +590,7 @@ export function createProgress(
     probes: [],
     badges: [],
     bkt: initialStates(plan.focus, bands, levels as Record<string, BktLevel>, observedPercents),
+    fluencyPractice: { sessionsCompleted: 0, readingsCompleted: 0, lastPracticedAt: null },
   };
 }
 
@@ -666,6 +714,14 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
         activityAr: 'اكتب حروفًا متشابهة رسمًا واسأل طفلك كالمحقق: أين هربت النقطة في الباء (تحت)؟ وكم نقطة في التاء (اثنتان فوق)؟',
         exampleWords: ['بَيْت', 'تِين', 'ثَوْب'],
       };
+    case 'decoding':
+      return { titleAr: 'صيد الكلمات من حولنا 🔤', activityAr: 'اختر كلمة قصيرة مشكولة من لافتة أو كتاب. اقرأها ببطء، ثم اجمع أصوات حروفها في كلمة واحدة.', exampleWords: ['قَلَم', 'بَاب', 'عِنَب'] };
+    case 'spelling':
+      return { titleAr: 'أسمع وأكتب ✍️', activityAr: 'استمع إلى كلمة قصيرة، وانطق أصواتها ومقاطعها، ثم اكتبها. راجع حرف المد ونهاية الكلمة.', exampleWords: ['بَاب', 'شَجَرَة', 'هُدَى'] };
+    case 'comprehension':
+      return { titleAr: 'احكِ ما فهمت 💡', activityAr: 'اقرأ جملة أو نصًّا قصيرًا، ثم اسأل: ماذا حدث؟ لماذا؟ وماذا تتوقع بعد ذلك؟', exampleWords: ['لأن', 'ثم', 'لذلك'] };
+    case 'morphology':
+      return { titleAr: 'عائلة الكلمات 🧩', activityAr: 'اجمع كلمات من جذر واحد، ثم اشرح كيف يرتبط معنى كل كلمة بالأصل.', exampleWords: ['كَتَبَ', 'كِتَاب', 'كَاتِب'] };
     default:
       return {
         titleAr: 'دقيقة تشجيع قرائي ممتعة ⭐',
@@ -802,7 +858,7 @@ export function applySession(
 
 /** Chance of answering an item right by guessing: the "guess" parameter of the model. */
 export function chanceOf(task: TrainingTask): number {
-  if (task.kind === 'choice') return 1 / Math.max(2, task.item.options.length);
+  if (task.kind === 'choice') return task.item.responseMode === 'text' ? 0.01 : 1 / Math.max(2, task.item.options.length);
   return 0.05;
 }
 
@@ -819,6 +875,12 @@ export function isReassessmentDue(progress: TrainingProgress, now = new Date()):
 // ---------------------------------------------------------------------------
 // Item generators
 // ---------------------------------------------------------------------------
+export type DictationTrainingItem = ChoiceItem & {
+  responseMode: 'text';
+  expected: string;
+  explanationAr: string;
+};
+
 export type TrainingTask =
   | { kind: 'choice'; item: ChoiceItem }
   | { kind: 'span'; modality: 'visual' | 'auditory'; trial: SpanTrial };
@@ -1095,7 +1157,7 @@ function spanTask(random: () => number, level: Level, n: number): SpanTrial {
   return { id: `tr-span-${n}`, sequence, choices: shuffleWith(pool, random) };
 }
 
-export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets): TrainingTask[] {
+export function generateSession(skill: SkillId, level: Level, seed: number, targets?: TrainingTargets, ageMonths = 72): TrainingTask[] {
   let a = seed >>> 0;
   const random = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -1104,6 +1166,37 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+
+  if (skill === 'decoding' || skill === 'spelling' || skill === 'comprehension' || skill === 'morphology') {
+    const ageYears = Math.min(8, Math.max(4, Math.floor(ageMonths / 12)));
+    const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
+    const eligibleQuestions = (station?.questions ?? []).filter((question) => question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'));
+    const atLevel = eligibleQuestions.filter((question) => (question.level ?? 1) === level);
+    const questions = atLevel.length >= 2 ? atLevel : eligibleQuestions.filter((question) => (question.level ?? 1) <= level);
+    if (questions.length === 0) return [];
+    const ordered = shuffleWith(questions, random);
+    return ordered.slice(0, ITEMS_PER_SESSION).map((question, index): TrainingTask => {
+      const isDictation = skill === 'spelling' && question.responseMode === 'text';
+      const options = isDictation ? [] : shuffleWith(question.options, random).map((option) => ({
+        id: option.id,
+        visual: option.emoji
+          ? { type: 'emoji' as const, value: option.emoji, label: option.labelAr }
+          : { type: 'glyph' as const, value: option.labelAr, label: option.labelAr },
+      }));
+      const item: ChoiceItem = {
+        id: `tr-literacy-${question.id}-${index}`,
+        promptAr: question.promptAr,
+        audio: question.audio.map((text) => ({ text })),
+        options,
+        correctId: question.correctId,
+        tag: `structured-${skill}`,
+        explanationAr: question.explanationAr,
+        explanationAudio: question.explanationAudio.map((text) => ({ text })),
+        ...(isDictation ? { responseMode: 'text' as const, expected: question.correctId } : {}),
+      };
+      return { kind: 'choice', item };
+    });
+  }
 
   if (skill === 'auditoryMemory' || skill === 'visualMemory') {
     return Array.from({ length: SPAN_TRIALS_PER_SESSION }, (_, n) => ({
@@ -1139,13 +1232,13 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
 }
 
 /** `count` practice items for one skill and level (more or fewer than one standard block). */
-export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets): TrainingTask[] {
+export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageMonths = 72): TrainingTask[] {
   const out: TrainingTask[] = [];
   const seen = new Set<string>();
   for (let k = 0; out.length < count && k < 8; k++) {
-    for (const task of generateSession(skill, level, seed + k * 104_729, targets)) {
+    for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
-      const signature = task.kind === 'choice' ? `${task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      const signature = task.kind === 'choice' ? `${task.item.expected ?? task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
       if (seen.has(signature)) continue;
       seen.add(signature);
       out.push(
@@ -1170,9 +1263,12 @@ export function applyReadingTargets(
   const p = ensureBkt(progress);
   const focus = [...p.plan.focus];
   const added: SkillId[] = [];
+  const evidenceFocus = focus.filter((skill) => !STRUCTURED_LITERACY_SKILLS.has(skill) && !NOT_TRAINED_AS_FOCUS.has(skill));
   for (const skill of rec.skills) {
-    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || focus.length >= MAX_FOCUS_SKILLS) continue;
+    if (focus.includes(skill) || NOT_TRAINED_AS_FOCUS.has(skill) || STRUCTURED_LITERACY_SKILLS.has(skill)) continue;
+    if (evidenceFocus.length >= MAX_FOUNDATION_SKILLS || focus.length >= MAX_FOCUS_SKILLS) continue;
     focus.push(skill);
+    evidenceFocus.push(skill);
     added.push(skill);
   }
   const ordered = focus.sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
