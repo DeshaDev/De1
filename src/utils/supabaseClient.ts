@@ -1,8 +1,6 @@
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
 import type { StudentRecord } from '../data/seedData';
 import { prepareStudentRecordForGenericSupabaseSync } from './studentRecordSyncSafety';
-import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
-import { summarizeProbes } from '../cognitiveProfile/progressProbe';
 
 // Vite client-side environment variables
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
@@ -231,36 +229,27 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
 }
 
 /**
- * Mirror the guided programme, including every daily progress probe, to the training_progress
- * table (one row per child), so progress can be queried and reported from the database.
- * The child's row in `students` must exist first (it is written when the child is registered).
+ * Save family training progress through the server. The server checks child ownership and
+ * re-derives new transfer scores from its short-lived Azure receipts before cloud persistence.
  */
 export async function syncTrainingProgressToSupabase(student: StudentRecord, userId: string): Promise<boolean> {
   const progress = student.trainingProgress;
   if (!isSupabaseConfigured() || !userId || !progress) return false;
-  const sessions = new Set(progress.history.map((h) => h.date.slice(0, 10))).size;
-  const probes = progress.probes ?? [];
   try {
-    const { error } = await supabase.from('training_progress').upsert({
-      id: `${student.id}:guided-program`,
-      student_id: student.id,
-      user_id: userId,
-      station: 'guided-program',
-      progress_percent: Math.min(100, Math.round((sessions / PROGRAM_SESSIONS) * 100)),
-      completed_milestones: progress.mastered,
-      details: {
-        plan: progress.plan,
-        levels: progress.levels,
-        supportFlags: progress.supportFlags,
-        sessionsCompleted: sessions,
-        history: progress.history.slice(-400),
-        probes: probes.slice(-200),
-        probeSummary: summarizeProbes(probes),
+    const { data, error } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (error || !accessToken || data.session?.user?.id !== userId) return false;
+    const response = await fetch(`/api/parent/students/${encodeURIComponent(student.id)}/training-progress`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
-      updated_at: new Date().toISOString(),
+      body: JSON.stringify({ progress }),
     });
-    if (error) {
-      console.warn('Failed to sync training progress to Supabase:', error.message);
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null) as { error?: string } | null;
+      console.warn('Failed to sync training progress to Supabase:', failure?.error || response.status);
       return false;
     }
     return true;
