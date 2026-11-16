@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Mic, MicOff, SkipForward, Volume2 } from 'lucide-react';
+import { AlertCircle, Mic, MicOff, SkipForward } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import {
   getTransferAudioTask,
@@ -89,8 +89,9 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
     setRecording(false);
     setError('');
     try {
-      const recordingData = await controller.current.stop();
+      const activeController = controller.current;
       controller.current = null;
+      const recordingData = await activeController.stop();
       const response = await authenticatedFetch('/api/ai/pronunciation-assessment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
