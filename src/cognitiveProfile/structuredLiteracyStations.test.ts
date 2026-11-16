@@ -58,17 +58,7 @@ describe('age-appropriate structured literacy practice stations', () => {
     }
   });
 
-  it('has a minimum non-trivial item bank for each age-appropriate literacy domain', () => {
-    const early = getStructuredLiteracyStations(4);
-    const later = getStructuredLiteracyStations(7);
-    assert.ok(early.find((s) => s.id === 'comprehension')!.questions.length >= 5);
-    assert.ok(later.find((s) => s.id === 'decoding')!.questions.length >= 6);
-    assert.ok(later.find((s) => s.id === 'spelling')!.questions.length >= 6);
-    assert.ok(later.find((s) => s.id === 'morphology')!.questions.length >= 6);
-    assert.ok(later.find((s) => s.id === 'comprehension')!.questions.length >= 5);
-  });
-
-  it('provides at least five distinct practice items for every available skill level', () => {
+  it('provides a full bank of at least twenty items per level for every age-appropriate reading domain', () => {
     for (const age of [4, 5, 6, 7, 8]) {
       for (const station of getStructuredLiteracyStations(age)) {
         if (station.questions.length === 0) continue;
@@ -76,9 +66,42 @@ describe('age-appropriate structured literacy practice stations', () => {
         assert.equal(new Set(ids).size, ids.length, `${station.id}: duplicate question ID`);
         for (const level of [1, 2, 3] as const) {
           const items = station.questions.filter((question) => (question.level ?? 1) === level);
-          assert.ok(items.length >= 5, `${station.id}/age ${age}/L${level}: expected at least five distinct items, got ${items.length}`);
+          assert.ok(items.length >= 20, `${station.id}/age ${age}/L${level}: expected at least twenty distinct items, got ${items.length}`);
         }
+        assert.ok(station.questions.length >= 60, `${station.id}: expected at least sixty questions across levels`);
       }
+    }
+  });
+
+  it('keeps different items distinct by their instruction, spoken content, options and answer', () => {
+    for (const age of [4, 5, 6, 7, 8]) {
+      for (const station of getStructuredLiteracyStations(age)) {
+        const signatures = station.questions.map((question) => [
+          question.level ?? 1,
+          question.promptAr,
+          question.audio.join('|'),
+          question.options.map((option) => `${option.id}:${option.labelAr}`).sort().join('|'),
+          question.correctId,
+        ].join('::'));
+        assert.equal(new Set(signatures).size, signatures.length, `${station.id}: duplicate item content`);
+      }
+    }
+  });
+
+  it('does not display story text as a reading prompt to children under six', () => {
+    const station = getStructuredLiteracyStations(4).find((entry) => entry.id === 'comprehension');
+    assert.ok(station);
+    const instruction = 'اِسْتَمِعْ إِلَى الْجُمْلَةِ، ثُمَّ أَجِبْ عَنِ السُّؤَالِ.';
+    assert.ok(station.questions.length >= 60);
+    for (const question of station.questions) assert.equal(question.promptAr, instruction, question.id);
+  });
+
+  it('includes at least five productive spelling tasks at every level', () => {
+    const spelling = getStructuredLiteracyStations(6).find((station) => station.id === 'spelling');
+    assert.ok(spelling);
+    for (const level of [1, 2, 3] as const) {
+      const tasks = spelling.questions.filter((question) => question.level === level && question.responseMode === 'text');
+      assert.ok(tasks.length >= 5, `L${level}: expected five direct writing tasks, got ${tasks.length}`);
     }
   });
 
