@@ -36,8 +36,8 @@ describe('age-appropriate structured literacy training', () => {
   it('teaches syllable blending with a spoken model and a non-scored interactive assembly', () => {
     const lesson = lessonFor('blending', 2, undefined, 6);
     assert.ok(lesson);
-    assert.equal(lesson.steps.length, 3);
-    assert.match(lesson.steps[0].textAr, /قِطَارٌ صَغِيرٌ/);
+    assert.equal(lesson.steps.length, 4);
+    assert.match(lesson.steps[0].textAr, /وَجَدَ هُدْهُدٌ/);
     assert.deepEqual(lesson.guidedAssembly?.parts, ['سَ', 'مَ', 'كَة']);
     assert.equal(lesson.guidedAssembly?.word, 'سَمَكَة');
     assert.equal(lesson.guidedAssembly?.pictureId, 'fish');
