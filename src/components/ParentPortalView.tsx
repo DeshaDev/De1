@@ -82,7 +82,7 @@ function nextStepFor(child: StudentRecord): NextStep {
   const done = tasks.filter((s) => battery[s.id]).length;
   const training = child.trainingProgress ?? null;
   if (done === 0) {
-    return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مؤشرات عسر القراءة', progressAr: null, tab: 'dyslexia-lab' };
+    return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مهارات القراءة', progressAr: null, tab: 'dyslexia-lab' };
   }
   if (done < tasks.length && !training) {
     return {
@@ -153,7 +153,8 @@ export function ParentPortalView({
   const [childName, setChildName] = useState('');
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
-  const [country, setCountry] = useState<string>('قطر');
+  const [country, setCountry] = useState<string>('');
+  const [readingDialect, setReadingDialect] = useState<'msa' | 'egyptian' | 'gulf' | 'other'>('msa');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -269,7 +270,7 @@ export function ParentPortalView({
         ageYears,
         gradeLevel,
         country,
-        dialectCode: country,
+        dialectCode: readingDialect,
         audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
@@ -413,7 +414,7 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>الخصوصية ومعالجة البيانات:</strong> تُحفظ بيانات الطفل في قاعدة البيانات السحابية المشفرة المرتبطة بحساب ولي الأمر للرجوع إليها ومتابعة التقدم من أي جهاز. لا تُستخدم البيانات للإعلانات مطلقًا.
+            <strong>حفظ البيانات:</strong> لا يعني إنشاء ملف الطفل وحده أنه حُفظ سحابيًا؛ ستظهر رسالة بعد نجاح الحفظ في الحساب، أو تنبيه إذا بقي الملف على هذا الجهاز فقط. موافقة تسجيل الصوت ومعالجته منفصلة واختيارية.
           </div>
         </div>
 
@@ -673,16 +674,33 @@ export function ParentPortalView({
                       <span>دولة الطفل *</span>
                     </span>
                     <select
+                      required
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
-                      {ARAB_COUNTRIES.map((c) => (
+                      <option value="">اختر الدولة</option>
+                      {AR_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.name}>
                           {c.flag} {c.name}
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700">لهجة القراءة الجهرية *</span>
+                    <select
+                      required
+                      value={readingDialect}
+                      onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      <option value="msa">الفصحى</option>
+                      <option value="egyptian">المصرية</option>
+                      <option value="gulf">الخليجية</option>
+                      <option value="other">لهجة عربية أخرى</option>
+                    </select>
+                    <span className="text-xs text-slate-500 leading-5">هذا الاختيار يضبط تقييم الصوت فقط؛ عند اختيار لهجة أخرى، يستمر التدريب دون درجة صوتية.</span>
                   </label>
 
                   <label className="block space-y-1.5">
@@ -864,16 +882,33 @@ export function ParentPortalView({
                       <span>دولة الطفل *</span>
                     </span>
                     <select
+                      required
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
-                      {ARAB_COUNTRIES.map((c) => (
+                      <option value="">اختر الدولة</option>
+                      {AR_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.name}>
                           {c.flag} {c.name}
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700">لهجة القراءة الجهرية *</span>
+                    <select
+                      required
+                      value={readingDialect}
+                      onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      <option value="msa">الفصحى</option>
+                      <option value="egyptian">المصرية</option>
+                      <option value="gulf">الخليجية</option>
+                      <option value="other">لهجة عربية أخرى</option>
+                    </select>
+                    <span className="text-xs text-slate-500 leading-5">هذا الاختيار يضبط تقييم الصوت فقط؛ عند اختيار لهجة أخرى، يستمر التدريب دون درجة صوتية.</span>
                   </label>
 
                   {/* Parent Credentials */}
