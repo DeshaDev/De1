@@ -157,6 +157,10 @@ const TransferScoreSchema = z
   .object({ correct: z.number().int().min(0).max(8), total: z.number().int().min(0).max(8), ms: z.number().finite().min(0).max(900_000) })
   .strict()
   .refine((v) => v.correct <= v.total, 'نتيجة غير منطقية');
+const TransferPassageScoreSchema = z
+  .object({ correct: z.number().int().min(0).max(80), total: z.number().int().min(2).max(80), ms: z.number().finite().min(0).max(900_000) })
+  .strict()
+  .refine((v) => v.correct <= v.total, 'نتيجة غير منطقية');
 
 export const TrainingProgressUploadSchema = z
   .object({
@@ -243,13 +247,27 @@ export const TrainingProgressUploadSchema = z
         z
           .object({
             point: z.enum(['pre', 'mid', 'post']),
-            form: z.enum(['A', 'B']),
+            form: z.enum(['A', 'B', 'C']),
             session: z.number().int().min(1).max(60),
             date: isoDate,
             real: TransferScoreSchema,
             nonword: TransferScoreSchema,
+            // New fields are optional so records created by earlier builds remain readable.
+            passage: TransferPassageScoreSchema.optional(),
+            sourceModel: z.literal('azure_pronunciation_assessment').optional(),
+            assessmentReceipts: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(3).optional(),
           })
           .strict()
+          .superRefine((record, ctx) => {
+            if (record.sourceModel) {
+              if (!record.passage || !record.assessmentReceipts || record.assessmentReceipts.length !== 3) {
+                ctx.addIssue({ code: 'custom', message: 'القياس الصوتي الآلي يحتاج نتائج القصة وإيصالات المهام الثلاث.' });
+              }
+              if (new Set(record.assessmentReceipts ?? []).size !== 3) {
+                ctx.addIssue({ code: 'custom', message: 'إيصالات القياس الصوتي يجب أن تكون فريدة.' });
+              }
+            }
+          })
       )
       .max(6)
       .optional(),
