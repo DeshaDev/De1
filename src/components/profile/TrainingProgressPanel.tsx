@@ -103,7 +103,7 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
                 <td className="p-1.5 text-center font-semibold">{transfer.points > 1 ? `${signed(transfer.realChange)} نقطة` : '—'}</td>
               </tr>
               <tr className="border-t border-line">
-                <td className="p-1.5 font-semibold">كلمات مصنوعة</td>
+                <td className="p-1.5 font-semibold">كلمات للتجربة (بلا معنى)</td>
                 <td className="p-1.5 text-center">{ar(transfer.pre.nonword.correct)}/{ar(transfer.pre.nonword.total)}</td>
                 <td className="p-1.5 text-center">{transfer.points > 1 ? `${ar(transfer.latest.nonword.correct)}/${ar(transfer.latest.nonword.total)}` : '—'}</td>
                 <td className="p-1.5 text-center font-semibold">{transfer.points > 1 ? `${signed(transfer.nonwordChange)} نقطة` : '—'}</td>
@@ -118,12 +118,15 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
               )}
             </tbody>
           </table>
-          <p className="text-xs text-ink-2">
-            {transfer.pre.sourceModel === 'azure_pronunciation_assessment'
-              ? 'قُيّمت الكلمات والنص الجديد من تسجيل الطفل آليًا. لا تظهر درجة إلا عند اكتمال التحليل الصوتي؛ وهذا مؤشر وصفي غير معياري، وليس تشخيصًا أو إثباتًا لفاعلية البرنامج.'
-              : 'هذا سجل سابق من نموذج قياس قديم، ولا يُعدّ تقييمًا صوتيًا آليًا موثّقًا.'}
-            {transfer.points === 1 && ` نتيجة البداية للكلمات الحقيقية: ${ar(transferPercent(transfer.pre.real))}٪؛ يُعاد القياس بمواد مختلفة في منتصف البرنامج ونهايته.`}
-          </p>
+          <details className="rounded-lg bg-soft px-3 py-2">
+            <summary className="cursor-pointer text-xs font-semibold text-ink-2">كيف نقرأ هذه النتيجة؟</summary>
+            <p className="mt-2 text-xs leading-5 text-ink-2">
+              {transfer.pre.sourceModel === 'azure_pronunciation_assessment'
+                ? 'الدرجة ناتجة عن تقييم صوتي آلي مكتمل للكلمات والنص الجديد. هي مؤشر وصفي لمقارنة أداء الطفل بمواد مختلفة، وليست تشخيصًا أو مقياسًا معياريًا أو إثباتًا لفاعلية البرنامج.'
+                : 'هذا سجل سابق من نموذج قياس قديم، ولا يُعدّ تقييمًا صوتيًا آليًا موثّقًا.'}
+              {transfer.points === 1 && ` نتيجة البداية للكلمات الحقيقية: ${ar(transferPercent(transfer.pre.real))}٪؛ سيُعاد القياس بمواد مختلفة في المنتصف والنهاية.`}
+            </p>
+          </details>
         </div>
       )}
       {!compact && placements.length > 0 && (
