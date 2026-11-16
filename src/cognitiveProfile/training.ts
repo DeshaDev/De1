@@ -685,7 +685,7 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
     case 'soundPosition':
       return {
         titleAr: 'لعبة الصوت الأول والأخير السريع 🔊',
-        activityAr: 'أشر إلى أشياء حولكم في الغرفة واطلب من طفلك استخراج الصوت الأول أو الأخير فورًا بصوته الصافي (مثل: سَـرير / كُـرسي).',
+        activityAr: 'أشر إلى أشياء حولكم في الغرفة واطلب من طفلك استخراج الصوت الأول أو الأخير فورًا بصوته الصافي (مثل: بَاب / كُرْسِي).',
         exampleWords: ['بَاب', 'كُرْسِي', 'طَاوِلَة'],
       };
     case 'blending':
