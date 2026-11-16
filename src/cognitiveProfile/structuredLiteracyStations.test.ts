@@ -184,14 +184,22 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.equal(byId('morphology-farm').correctId, 'زراعة');
     assert.equal(byId('morphology-remember').correctId, 'رحمة');
     assert.equal(byId('morphology-succeed-family').correctId, 'نجاح');
+    assert.equal(byId('morphology-drink').level, 1);
+    assert.equal(byId('morphology-drink').correctId, 'شرب');
 
     assert.equal(byId('morphology-open').level, 2);
     assert.equal(byId('morphology-open').correctId, 'فاتح');
     assert.match(byId('morphology-open').explanationAr, /اسْمُ فَاعِلٍ/);
+    assert.equal(byId('morphology-playground').level, 2);
+    assert.match(byId('morphology-playground').explanationAr, /اسْمُ مَكَانٍ/);
 
+    assert.equal(byId('morphology-understand').level, 3);
+    assert.equal(byId('morphology-understand').correctId, 'مفهوم');
+    assert.match(byId('morphology-understand').explanationAr, /اسْمُ مَفْعُولٍ/);
     assert.equal(byId('morphology-write-passive').level, 3);
     assert.equal(byId('morphology-write-passive').correctId, 'مكتوب');
     assert.match(byId('morphology-write-passive').explanationAr, /اسْمُ مَفْعُولٍ/);
+    assert.equal(byId('morphology-repaired').level, 3);
   });
 
   it('keeps fluency practice untimed and unscored', () => {
