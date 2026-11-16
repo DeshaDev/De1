@@ -230,7 +230,7 @@ function SubtestRunner({
                 className="bz-btn bz-btn-ghost bz-btn-sm"
                 aria-expanded={showNote}
               >
-                <ClipboardList className="w-3.5 h-3.5" /> ملاحظة للفاحص
+                <ClipboardList className="w-3.5 h-3.5" /> إرشاد للمرافق
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNote ? 'rotate-180' : ''}`} />
               </button>
               {showNote && (
@@ -411,7 +411,17 @@ function SetupView({
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
-  const dialect: HomeDialect = 'msa';
+  const storedDialect = student.dialectCode || student.dialect || 'msa';
+  // Older child records stored the country name in the dialect field; the reading tasks are in MSA.
+  const selectedDialect = student.country && storedDialect === student.country ? 'msa' : storedDialect;
+  const dialect = (['msa', 'gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other'].includes(selectedDialect)
+    ? selectedDialect
+    : 'other') as HomeDialect;
+  const speechLocale = selectedDialect === 'egyptian'
+    ? 'ar-EG' as const
+    : ['msa', 'gulf'].includes(selectedDialect)
+      ? 'ar-SA' as const
+      : undefined;
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
     audioConsent: false,
@@ -547,14 +557,14 @@ function SetupView({
               ageMonths: years * 12 + months,
               examinerName: supabaseUser?.user_metadata?.full_name || 'ولي الأمر',
               startedAt: new Date().toISOString(),
-              dialect: 'msa',
+              dialect,
               guardianConsentGiven: checks.consent,
               guardianConsentRecordedAt: student.guardianConsentGiven === true && student.guardianConsentRecordedAt
                 ? student.guardianConsentRecordedAt
                 : new Date().toISOString(),
               guardianAudioConsentGiven: checks.audioConsent,
               ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
-              speechLocale: 'ar-SA' as const,
+              ...(speechLocale ? { speechLocale } : {}),
               results: {},
             })
           }
