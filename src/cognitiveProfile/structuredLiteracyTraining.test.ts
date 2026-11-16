@@ -79,7 +79,8 @@ describe('age-appropriate structured literacy training', () => {
     const task = tasks.find((entry) => entry.kind === 'choice' && entry.item.responseMode === 'text');
     assert.ok(task && task.kind === 'choice');
     if (!task || task.kind !== 'choice') return;
-    assert.equal(task.item.expected, 'كتاب');
+    assert.ok(task.item.expected && task.item.expected.length >= 2, 'dictation item must supply the exact expected word');
+    assert.equal(task.item.correctId, task.item.expected, 'typed response is checked against that question\'s own answer');
     assert.deepEqual(task.item.options, []);
     assert.ok(task.item.explanationAr);
     assert.equal(chanceOf(task), 0.01);
