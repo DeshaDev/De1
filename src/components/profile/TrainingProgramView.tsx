@@ -983,36 +983,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               {run.todayProbe && <TodayProbeCard today={run.todayProbe} probes={progress.probes ?? []} />}
               {run.promoted.length > 0 && (
                 <p className="w-full rounded-xl bg-brand-tint px-4 py-2.5 text-sm text-right">
-                  أظهر مقياس اليوم إتقان المستوى الثاني في: {run.promoted.map((s) => SKILLS[s].nameAr).join('، ')}، فانتقل إليه مباشرة.
+                  أظهرت إجابات اليوم استعدادًا لتجربة المستوى التالي في: {run.promoted.map((s) => SKILLS[s].nameAr).join('، ')}.
                 </p>
               )}
-
-              {/* Fluency and automaticity metric */}
-              {(() => {
-                const totalItems = run.results.reduce((acc, r) => acc + r.total, 0);
-                const totalFast = run.results.reduce((acc, r) => acc + (r.automaticCount ?? 0), 0);
-                const autoPct = totalItems > 0 ? Math.round((totalFast / totalItems) * 100) : 0;
-                return totalItems > 0 ? (
-                  <div className="w-full rounded-2xl border border-line bg-card p-4 text-right">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm flex items-center gap-1.5 text-slate-800">
-                        <Zap className="w-4 h-4 text-amber-500" /> مؤشر التلقائية والطلاقة
-                      </span>
-                      <span className="font-black text-amber-600">{toArabicDigits(autoPct)}٪</span>
-                    </div>
-                    <div className="relative h-2 rounded-full bg-slate-100 mt-2 overflow-hidden">
-                      <span className="absolute inset-y-0 right-0 rounded-full bg-amber-500" style={{ width: `${autoPct}%` }} />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1.5">
-                      {autoPct >= 70
-                        ? 'استجابات سريعة وتلقائية تدل على تمكّن وثقة ذهنية عالية ⚡'
-                        : autoPct >= 40
-                        ? 'دقة جيدة مع استغراق وقت للتفكير والتهجئة 🎯'
-                        : 'يحتاج مزيدًا من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
-                    </p>
-                  </div>
-                ) : null;
-              })()}
 
               <ul className="w-full space-y-2">
                 {run.results.map((r) => (
@@ -1021,7 +994,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                       <span className="font-bold">{SKILLS[r.skill].nameAr}</span>
                       <span>{toArabicDigits(r.correct)} من {toArabicDigits(r.total)}</span>
                     </div>
-                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · صعد مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · نزل مستوى' : ''}</p>
+                    <p className="text-xs text-ink-2 mt-1">{r.change === 'up' ? 'ننتقل إلى المستوى التالي' : r.change === 'mastered' ? 'أكملنا مستويات هذه المهارة' : r.change === 'down' ? 'سنراجعها بخطوة أسهل' : 'سنواصل التدريب على المهارة'}</p>
                   </li>
                 ))}
               </ul>
