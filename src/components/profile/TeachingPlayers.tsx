@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MascotMoment } from '../ui/Mascot';
 import { MASCOT_LINES } from '../ui/mascotLines';
-import { ArrowLeft, ArrowRight, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, RotateCcw, Square, Volume2 } from 'lucide-react';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
 import { explainMistake, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
@@ -114,9 +114,14 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  const moveTo = (nextStep: number) => {
+  const stop = () => {
     if (handle.current) handle.current.cancelled = true;
     stopSpeech();
+    setPlaying(false);
+  };
+
+  const moveTo = (nextStep: number) => {
+    stop();
     setStep(nextStep);
   };
 
@@ -157,9 +162,15 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
             <ArrowRight className="h-4 w-4" /> السابق
           </button>
         )}
-        <button type="button" className="bz-btn bz-btn-ghost" onClick={play} disabled={playing}>
-          <Volume2 className="h-5 w-5" /> أعد الاستماع
-        </button>
+        {playing ? (
+          <button type="button" className="bz-btn bz-btn-ghost" onClick={stop} aria-label="إيقاف الصوت">
+            <Square className="h-4 w-4" /> إيقاف الصوت
+          </button>
+        ) : (
+          <button type="button" className="bz-btn bz-btn-ghost" onClick={play}>
+            <Volume2 className="h-5 w-5" /> استمع إلى الشرح
+          </button>
+        )}
         <button
           type="button"
           className="font-child bz-btn bz-btn-sun bz-btn-lg px-8 text-lg"
