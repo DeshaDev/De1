@@ -19,6 +19,39 @@ describe('teaching curriculum: lessons ("I do")', () => {
     }
   });
 
+  it('keeps comprehension lessons matched to the child\u2019s reading stage', () => {
+    for (const age of [4, 5]) {
+      const listeningLesson = lessonFor('comprehension', 1, undefined, age);
+      assert.ok(listeningLesson);
+      assert.match(listeningLesson.steps[0].textAr, /أستمع/);
+      assert.match(listeningLesson.steps[1].textAr, /وضعت نور/);
+      assert.doesNotMatch(listeningLesson.steps[0].textAr, /أقرأ الجملة أو النص/);
+      assert.equal(listeningLesson.steps[1].visual?.kind, 'story');
+    }
+
+    const readingLesson = lessonFor('comprehension', 1, undefined, 6);
+    assert.ok(readingLesson);
+    assert.match(readingLesson.steps[0].textAr, /أقرأ الجملة أو النص/);
+    assert.match(readingLesson.steps[1].textAr, /هطل المطر/);
+    assert.equal(readingLesson.steps[1].visual?.kind, 'story');
+  });
+
+  it('gives each structured-literacy lesson a visible worked example', () => {
+    const cases = [
+      ['decoding', 6],
+      ['spelling', 6],
+      ['comprehension', 4],
+      ['comprehension', 6],
+      ['morphology', 7],
+    ] as const;
+
+    for (const [skill, age] of cases) {
+      const lesson = lessonFor(skill, 1, undefined, age);
+      assert.ok(lesson, `${skill} at age ${age}`);
+      assert.equal(lesson.steps[1].visual?.kind, 'story', `${skill} should have a visual worked example`);
+    }
+  });
+
   it('lesson pictures are picturable words and every spoken phrase is vowelled', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
