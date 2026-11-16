@@ -1009,7 +1009,7 @@ export function ParentPortalView({
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                     >
                       <Brain size={18} />
-                      <span>{isSubmitting ? 'جارٍ حفظ الملف…' : parentEmail.trim() && parentPassword ? 'حفظ ملف الطفل في حساب الأسرة وبدء الفحص ←' : 'حفظ ملف الطفل على هذا الجهاز وبدء الفحص ←'}</span>
+                      <span>{isSubmitting ? 'جارٍ حفظ الملف…' : parentEmail.trim() && parentPassword ? 'حفظ ملف الطفل في حساب الأسرة وبدء الفحص ←' : parentEmail.trim() || parentPassword ? 'أكمل البريد وكلمة المرور معًا' : 'حفظ ملف الطفل على هذا الجهاز وبدء الفحص ←'}</span>
                     </button>
                   </div>
                 </form>
