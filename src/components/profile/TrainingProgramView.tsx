@@ -1118,7 +1118,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
-            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
+            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION)} دقيقة للتدريب
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
           {childAgeYears >= 6 && (
@@ -1374,7 +1374,7 @@ function ProgramRulesBody() {
   return (
     <section className="mt-4 grid md:grid-cols-2 gap-6">
       <div>
-        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
+        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION)} دقيقة للتدريب)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
           <li><strong>درس قصير (أنا أعلّمك):</strong> في أول مرة في كل مستوى، وعند النزول مستوى: شرح بالصوت والصورة، ونموذج، ومثال مضاد.</li>
           <li><strong>ممارسة موجّهة (نفعلها معًا):</strong> أول تمرينين بتلميح مسموع وخيار أقل، ثم تُسحب المساعدة.</li>
@@ -1391,7 +1391,7 @@ function ProgramRulesBody() {
           <li><strong>الإتقان:</strong> حين يبلغ الاحتمال ٩٥٪ بعد ٥ إجابات على الأقل ← المستوى التالي فورًا، ولو في منتصف التمرين.</li>
           <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وملاحظة داعمة في ملف التقدم.</li>
           <li><strong>مقياس التقدّم:</strong> إجاباته تحدّث تقدير المستوى الثاني دون تعلّم، فإن أظهر إتقانه انتقل الطفل إليه مباشرة.</li>
-          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم إعادة الفحص لقياس الأثر وتحديث الخطة. مجموعها نحو ٦ ساعات، في المدى الذي حقق فيه تدريب الوعي الصوتي أكبر أثر في التحليل البعدي للجنة القراءة الوطنية الأمريكية (٥ إلى ١٨ ساعة).</li>
+          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع). مدة التدريب نحو ١٥ دقيقة للجلسة، ويُضاف مقياس متابعة مدته {toArabicDigits(PROBE_MINUTES)} دقائق في الجلسات ١ و٦ و١١ و١٦ و٢٠؛ أي نحو ٥ ساعات و١٥ دقيقة إجمالًا. هذه مدة تنظيمية مقترحة وليست دليلًا على ثبوت أثر البرنامج أو كفاية جرعته. والنتائج المنشورة عن ٥–١٨ ساعة تخص تدريبًا محددًا للوعي الصوتي، ولا تثبت فعالية هذا البرنامج متعدد المهارات.</li>
         </ul>
       </div>
     </section>
