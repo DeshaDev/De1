@@ -1350,7 +1350,7 @@ function TodayProbeCard({ today, probes }: { today: ProbeRecord; probes: ProbeRe
       <p className="text-sm font-bold text-ink">مقياس اليوم: {toArabicDigits(probePercent(today))}٪</p>
       <p className="text-xs text-ink-2 mt-1">
         {isFirst
-          ? 'هذه نتيجة البداية، وكل جلسة قادمة تُقارن بها.'
+          ? 'هذه قراءة البداية، وستُقارن بها القياسات المجدولة التالية.'
           : `نتيجة البداية: ${toArabicDigits(probePercent(first))}٪. التذبذب من يوم لآخر طبيعي؛ انظر إلى اتجاه الرسم في صفحة البرنامج.`}
       </p>
     </div>
