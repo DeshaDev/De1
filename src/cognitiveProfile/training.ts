@@ -1335,7 +1335,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
 export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageMonths = 72): TrainingTask[] {
   const out: TrainingTask[] = [];
   const seen = new Set<string>();
-  for (let k = 0; out.length < count && k < 8; k++) {
+  for (let k = 0; out.length < count && k < 32; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
       const signature = trainingEvidenceKey(task);
