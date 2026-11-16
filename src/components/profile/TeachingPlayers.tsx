@@ -102,7 +102,7 @@ function GuidedSyllableAssembly({
     if (index !== expectedIndex) {
       setHint('قريب! اسمع المقطع الذي نبحث عنه، ثم اختر بطاقته.');
       await speakSegments([
-        { text: 'اِسْمَعِ الْمَقْطَعَ الْأَوَّلَ، ثُمَّ ابْحَثْ عَنْهُ.' },
+        { text: 'اِسْمَعِ الْجُزْءَ الْأَوَّلَ، ثُمَّ ابْحَثْ عَنْهُ.' },
         { text: activity.parts[expectedIndex] },
       ], h);
       if (!h.cancelled) setBusy(false);
