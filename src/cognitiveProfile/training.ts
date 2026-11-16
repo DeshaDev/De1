@@ -473,6 +473,8 @@ export interface TrainingProgress {
   targets?: TrainingTargets;
   /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
   lessonsSeen?: string[];
+  /** Stable fingerprints of practice/probe items already used as evidence; legacy records omit this. */
+  seenTrainingItems?: string[];
   /** Earned mastery badge skill ids. */
   badges?: string[];
   /** Starting-level checks: the rule's suggestion and where the child's answers placed them (placement.ts). */
@@ -630,8 +632,12 @@ export function summarizePlanSetup(
 ): Partial<Record<SkillId, PlanSkillSetup>> {
   const preview = createPersonalizedProgress(plan, profile);
   const observed = skillObservedPercentsFromProfile(profile);
-  const alloc = allocateItems(
-    plan.focus.map((skill) => ({ skill, p: masteryEstimate(preview, skill).p }))
+  const ageMonths = profile?.ageMonths ?? plan.ageMonths ?? 72;
+  const alloc = allocateTrainingItems(
+    plan.focus,
+    plan.focus.map((skill) => ({ skill, p: masteryEstimate(preview, skill).p })),
+    preview.levels,
+    ageMonths
   );
   const out: Partial<Record<SkillId, PlanSkillSetup>> = {};
   for (const skill of plan.focus) {
@@ -639,7 +645,7 @@ export function summarizePlanSetup(
     out[skill] = {
       level: est.level,
       initialP: est.p,
-      sessionItems: alloc[skill] ?? 8,
+      sessionItems: alloc[skill] ?? 0,
       ...(typeof observed[skill] === 'number' ? { observedPercent: observed[skill] } : {}),
     };
   }
@@ -765,9 +771,18 @@ export function recordAnswer(
   progress: TrainingProgress,
   skill: SkillId,
   correct: boolean,
-  guess: number
+  guess: number,
+  evidenceKey?: string
 ): { progress: TrainingProgress; change: LevelChange } {
   const p = ensureBkt(progress);
+  const seen = p.seenTrainingItems ?? [];
+  if (evidenceKey && seen.includes(evidenceKey)) {
+    // Repeated content remains practice, but cannot masquerade as a new independent observation.
+    return { progress: p, change: 'stay' };
+  }
+  const seenTrainingItems = evidenceKey
+    ? [...seen, evidenceKey].slice(-MAX_STORED_ITEM_EXPOSURES)
+    : p.seenTrainingItems;
   const level = (p.levels[skill] ?? 1) as BktLevel;
   const key = bktKey(skill, level);
   const state = observe(p.bkt[key] ?? { p: priorFor(undefined, level), n: 0, c: 0, seq: '' }, correct, guess, true);
@@ -797,7 +812,13 @@ export function recordAnswer(
   } else if (level === 1 && state.n >= SUPPORT_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW && !supportFlags.includes(skill)) {
     supportFlags.push(skill);
   }
-  return { progress: { ...p, bkt, levels, mastered, supportFlags }, change };
+  return {
+    progress: {
+      ...p, bkt, levels, mastered, supportFlags,
+      ...(seenTrainingItems ? { seenTrainingItems } : {}),
+    },
+    change,
+  };
 }
 
 /** Log one block of practice for the session history (sessions count and teacher table). */
@@ -811,13 +832,16 @@ export function recordSkillBlock(progress: TrainingProgress, skill: SkillId, lev
  */
 export function applyProbeEvidence(
   progress: TrainingProgress,
-  answers: Array<{ skill: SkillId; correct: boolean; guess: number }>
+  answers: Array<{ skill: SkillId; correct: boolean; guess: number; evidenceKey?: string }>
 ): { progress: TrainingProgress; promoted: SkillId[] } {
   const p = ensureBkt(progress);
   const bkt: BktStates = { ...p.bkt };
+  const seenTrainingItems = new Set(p.seenTrainingItems ?? []);
   const levels = { ...p.levels };
   for (const a of answers) {
     if (!p.plan.focus.includes(a.skill)) continue;
+    if (a.evidenceKey && seenTrainingItems.has(a.evidenceKey)) continue;
+    if (a.evidenceKey) seenTrainingItems.add(a.evidenceKey);
     const key = bktKey(a.skill, 2);
     bkt[key] = observe(bkt[key] ?? { p: priorFor(undefined, 2), n: 0, c: 0, seq: '' }, a.correct, a.guess, false);
   }
@@ -829,7 +853,13 @@ export function applyProbeEvidence(
       promoted.push(skill);
     }
   }
-  return { progress: { ...p, bkt, levels }, promoted };
+  return {
+    progress: {
+      ...p, bkt, levels,
+      ...(seenTrainingItems.size > 0 ? { seenTrainingItems: Array.from(seenTrainingItems).slice(-MAX_STORED_ITEM_EXPOSURES) } : {}),
+    },
+    promoted,
+  };
 }
 
 /**
@@ -887,6 +917,61 @@ export type TrainingTask =
 
 const ITEMS_PER_SESSION = 8;
 const SPAN_TRIALS_PER_SESSION = 5;
+const MAX_STORED_ITEM_EXPOSURES = 2000;
+
+const STRUCTURED_SKILLS = new Set<SkillId>(['decoding', 'spelling', 'comprehension', 'morphology']);
+
+/** Number of distinct, level-matched items currently available (not an intended dose). */
+export function availableTrainingItems(skill: SkillId, level: Level, ageMonths = 72): number {
+  if (STRUCTURED_SKILLS.has(skill)) {
+    const ageYears = Math.min(8, Math.max(4, Math.floor(ageMonths / 12)));
+    const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
+    return (station?.questions ?? []).filter((question) =>
+      (question.level ?? 1) === level &&
+      (question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'))
+    ).length;
+  }
+  return skill === 'auditoryMemory' || skill === 'visualMemory' ? SPAN_TRIALS_PER_SESSION : ITEMS_PER_SESSION;
+}
+
+/** Allocate the adaptive budget, then cap each skill at its real distinct-item capacity. */
+export function allocateTrainingItems(
+  skills: SkillId[],
+  estimates: Array<{ skill: string; p: number }>,
+  levels: Partial<Record<SkillId, Level>>,
+  ageMonths = 72
+): Partial<Record<SkillId, number>> {
+  const requested = allocateItems(estimates);
+  const capped: Partial<Record<SkillId, number>> = {};
+  for (const skill of skills) {
+    const capacity = availableTrainingItems(skill, levels[skill] ?? 1, ageMonths);
+    capped[skill] = Math.min(requested[skill] ?? 8, capacity);
+  }
+  return capped;
+}
+
+/** Stable identity based on task content, not a generated React/task id or option order. */
+export function trainingEvidenceKey(task: TrainingTask): string {
+  let source: string;
+  if (task.kind === 'span') {
+    source = `span|${task.modality}|${task.trial.sequence.join('|')}`;
+  } else {
+    const item = task.item;
+    source = [
+      item.tag ?? '', item.promptAr, item.expected ?? '', item.correctId,
+      item.stimulus?.value ?? '',
+      item.options.map((option) => option.id).sort().join(','),
+    ].join('|');
+  }
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let i = 0; i < source.length; i += 1) {
+    const code = source.charCodeAt(i);
+    first = Math.imul(first ^ code, 0x01000193) >>> 0;
+    second = Math.imul(second ^ (code + i), 0x85ebca6b) >>> 0;
+  }
+  return `item-${first.toString(36)}-${second.toString(36)}`;
+}
 
 const pic = (id: string): ChoiceOption => {
   const entry = lex(id);
@@ -1171,8 +1256,9 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     const ageYears = Math.min(8, Math.max(4, Math.floor(ageMonths / 12)));
     const station = getStructuredLiteracyStations(ageYears).find((entry) => entry.id === skill);
     const eligibleQuestions = (station?.questions ?? []).filter((question) => question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'));
-    const atLevel = eligibleQuestions.filter((question) => (question.level ?? 1) === level);
-    const questions = atLevel.length >= 2 ? atLevel : eligibleQuestions.filter((question) => (question.level ?? 1) <= level);
+    // Never silently mix easier questions into a higher level. If the level has too few items,
+    // expose that shortfall through the actual generated count rather than mislabeling the task.
+    const questions = eligibleQuestions.filter((question) => (question.level ?? 1) === level);
     if (questions.length === 0) return [];
     const ordered = shuffleWith(questions, random);
     return ordered.slice(0, ITEMS_PER_SESSION).map((question, index): TrainingTask => {
@@ -1238,7 +1324,7 @@ export function generateItems(skill: SkillId, level: Level, seed: number, count:
   for (let k = 0; out.length < count && k < 8; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
-      const signature = task.kind === 'choice' ? `${task.item.expected ?? task.item.stimulus?.value ?? ''}|${task.item.audio.map((a) => a.text).join('|')}` : `${task.trial.sequence.join(',')}`;
+      const signature = trainingEvidenceKey(task);
       if (seen.has(signature)) continue;
       seen.add(signature);
       out.push(
