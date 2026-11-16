@@ -8,11 +8,30 @@ import type { TrainingProgress } from './training';
 import { emptyLiteracyPracticeProgress, sanitizeLiteracyPracticeProgress, type LiteracyPracticeProgress } from './literacyPracticeProgress';
 import { secureStorage } from '../utils/secureLocalStorage';
 
-export type HomeDialect = 'msa' | 'gulf' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
+export type HomeDialect = 'msa' | 'gulf' | 'saudi' | 'levantine' | 'egyptian' | 'iraqi' | 'maghrebi' | 'sudanese' | 'other';
+export type PronunciationLocale = 'ar-EG' | 'ar-SA';
+
+const HOME_DIALECTS: readonly HomeDialect[] = [
+  'msa', 'gulf', 'saudi', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other',
+];
+
+/** Normalise stored child dialects without interpreting a country name as a dialect. */
+export function normalizeHomeDialect(value: unknown, country?: string): HomeDialect {
+  if (typeof value !== 'string' || !value.trim() || (country && value === country)) return 'other';
+  return HOME_DIALECTS.includes(value as HomeDialect) ? value as HomeDialect : 'other';
+}
+
+/** Azure pronunciation assessment currently has Arabic regional models for Egypt and Saudi Arabia only. */
+export function pronunciationLocaleForDialect(dialect: HomeDialect): PronunciationLocale | undefined {
+  if (dialect === 'egyptian') return 'ar-EG';
+  if (dialect === 'saudi') return 'ar-SA';
+  return undefined;
+}
 
 export const DIALECT_LABELS_AR: Record<HomeDialect, string> = {
   msa: 'فصحى معيارية',
   gulf: 'فصحى معيارية',
+  saudi: 'فصحى معيارية',
   levantine: 'فصحى معيارية',
   egyptian: 'فصحى معيارية',
   iraqi: 'فصحى معيارية',
