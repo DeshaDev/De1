@@ -1553,7 +1553,7 @@ export default function App() {
           {/* VIEW: PARENT PORTAL & CHILD REGISTRATION */}
           {activeTab === 'parent-portal' && (
             <ParentPortalView
-              supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
+              supabaseUser={supabaseUser}
               authLoading={supabaseAuthLoading}
               students={students}
               onSignInWithEmail={handleEmailSignIn}
@@ -1995,20 +1995,23 @@ export default function App() {
             )}
             {/* SUB-VIEW 3: LEARNING PERFORMANCE SUMMARY & SUPPORT PLAN */}
             {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
-              <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
-            )}
-            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
-              <TrainingProgressPanel student={selectedStudent} compact />
-            )}
-            {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
-              <IndividualPlanPanel
-                student={selectedStudent}
-                progress={selectedStudent.trainingProgress ?? null}
-                onRecordUpdated={(updated) => {
-                  setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
-                  if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);
-                }}
-              />
+              <details className="space-y-4">
+                <summary className="cursor-pointer bz-card p-4 font-bold text-slate-900">
+                  تفاصيل الفحص والتقدّم وخطة الممارسة
+                </summary>
+                <div className="space-y-4">
+                  <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
+                  <TrainingProgressPanel student={selectedStudent} compact />
+                  <IndividualPlanPanel
+                    student={selectedStudent}
+                    progress={selectedStudent.trainingProgress ?? null}
+                    onRecordUpdated={(updated) => {
+                      setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));
+                      if (supabaseUser) void syncStudentToSupabase(updated, supabaseUser.id);
+                    }}
+                  />
+                </div>
+              </details>
             )}
             {dashboardSubView === 'report' && (
               <section id="student-report-content" className="print-report-root bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -2084,38 +2087,42 @@ export default function App() {
                 </div>
 
                 {selectedStudent.assessmentHistory && selectedStudent.assessmentHistory.length > 0 && (
-                  <section aria-label='سجل جلسات الفحص السابقة' className='border-b border-slate-200 bg-slate-50/70 p-6 sm:p-8 space-y-4'>
-                    <div>
-                      <h3 className='text-sm font-bold text-slate-900'>سجل المتابعة</h3>
-                      <p className='mt-1 text-xs leading-relaxed text-slate-600'>سجل المتابعة الزمنية لجلسات الطالب لمقارنة تطور مؤشرات إتمام النص، وفهم المقروء، والوعي الفونولوجي عبر الزمن.</p>
+                  <details aria-label="سجل جلسات الفحص السابقة" className="border-b border-slate-200 bg-slate-50/70">
+                    <summary className="cursor-pointer p-4 sm:px-8 text-sm font-bold text-slate-900">
+                      عرض سجل الجلسات السابقة ({toArabicNum(selectedStudent.assessmentHistory.length)})
+                    </summary>
+                    <div className="px-6 pb-6 sm:px-8 sm:pb-8 space-y-4">
+                      <p className="text-xs leading-relaxed text-slate-600">نتائج الجلسات السابقة لمراجعة التغيّر عبر الزمن.</p>
+                      <ol className="space-y-3">
+                        {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
+                          <li key={snapshot.sessionId} className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-900">الجلسة السابقة {selectedStudent.assessmentHistory!.length - index}</span>
+                              <time dateTime={snapshot.completedAt} className="text-xs text-slate-500">
+                                {Number.isFinite(Date.parse(snapshot.completedAt)) ? new Date(snapshot.completedAt).toLocaleString('ar-EG') : 'تاريخ غير متاح'}
+                              </time>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700">
+                              <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المَقيس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only'
+                                ? snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio'
+                                  ? (snapshot.wcpm ?? 'غير متاح')
+                                  : 'غير متاح'
+                                : snapshot.wpm} كلمة/دقيقة</strong></span>
+                              <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
+                              <span>الوعي الصوتي: <strong>{snapshot.cognitiveResults?.phonemicAwarenessScorePercent != null
+                                ? `${snapshot.cognitiveResults.phonemicAwarenessScorePercent}%`
+                                : 'غير متاح'}</strong></span>
+                            </div>
+                            {snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio' && (snapshot.problematicWords || []).length > 0 && (
+                              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                                كلمات استهدفتها الجلسة: {(snapshot.problematicWords || []).join('، ')}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
                     </div>
-                    <ol className='space-y-3'>
-                      {[...selectedStudent.assessmentHistory].reverse().map((snapshot, index) => (
-                        <li key={snapshot.sessionId} className='rounded-xl border border-slate-200 bg-white p-4'>
-                          <div className='flex flex-wrap items-center justify-between gap-2'>
-                            <span className='text-xs font-bold text-slate-900'>الجلسة السابقة {selectedStudent.assessmentHistory!.length - index}</span>
-                            <time dateTime={snapshot.completedAt} className='text-xs text-slate-500'>
-                              {Number.isFinite(Date.parse(snapshot.completedAt)) ? new Date(snapshot.completedAt).toLocaleString('ar-EG') : 'تاريخ غير متاح'}
-                            </time>
-                          </div>
-                          <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
-                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المَقيس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only'
-                              ? snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio'
-                                ? (snapshot.wcpm ?? 'غير متاح')
-                                : 'غير متاح'
-                              : snapshot.wpm} كلمة/دقيقة</strong></span>
-                            <span>الفهم: <strong>{snapshot.comprehensionScore}%</strong></span>
-                            <span>الوعي الصوتي: <strong>{snapshot.cognitiveResults?.phonemicAwarenessScorePercent ? `${snapshot.cognitiveResults.phonemicAwarenessScorePercent}%` : 'مكتمل'}</strong></span>
-                          </div>
-                          {snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio' && (snapshot.problematicWords || []).length > 0 && (
-                            <p className='mt-2 text-xs leading-relaxed text-slate-600'>
-                              كلمات استهدفتها الجلسة: {(snapshot.problematicWords || []).join('، ')}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
+                  </details>
                 )}
                 {/* Hairline-Divided 2x2 Analytical Matrix (Zero Card-in-Card Nesting) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-slate-200 border-b border-slate-200">
