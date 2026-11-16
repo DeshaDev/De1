@@ -1051,7 +1051,7 @@ const readingComprehension: LiteracyQuestion[] = [
     audio: ['اِقْرَأِ الْجُمْلَةَ وَابْحَثْ عَنِ الْوَقْتِ.', 'جَلَسَ عُمَرُ مَعَ أُسْرَتِهِ لِيَتَنَاوَلَ الْعَشَاءَ.', 'مَتَى جَلَسَ عُمَرُ؟'],
     options: [
       { id: 'dinner', labelAr: 'وقت العشاء' },
-      { id: 'morning', labelAr: 'وقت الصباح' },
+      { id: 'afternoon', labelAr: 'وقت الظهيرة' },
       { id: 'noon', labelAr: 'وقت الظهر' },
     ],
     correctId: 'dinner',
