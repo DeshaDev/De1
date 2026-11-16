@@ -415,7 +415,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
     const skipProbeToLesson = () => {
     if (!progress) return;
-    const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })));
+    const alloc = allocateTrainingItems(todaySkills, todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })), progress.levels, childAgeMonths ?? 72);
     beginSkill(0, {
       skills: todaySkills,
       skillIndex: 0,
