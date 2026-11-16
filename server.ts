@@ -1247,6 +1247,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     assessment: VerifiedAutomatedAudioAssessment;
   }>();
   const audioAssessmentReceiptTtlMs = 10 * 60 * 1000;
+  const audioAssessmentReceiptsInFlight = new Set<string>();
   const cognitiveAudioAssessmentReceipts = new Map<string, {
     sessionId: string;
     tenantId: string;
@@ -1401,6 +1402,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
           !task ||
           !stored ||
           stored.expiresAt <= Date.now() ||
+          audioAssessmentReceiptsInFlight.has(receipt) ||
           stored.sessionId !== session.sessionId ||
           stored.tenantId !== session.tenantId ||
           stored.studentId !== studentId ||
