@@ -44,6 +44,17 @@ export interface GuidedSyllableAssembly {
   instructionAr: string;
 }
 
+export interface GuidedLessonChoice {
+  promptAr: string;
+  promptAudio: AudioSegment[];
+  options: Array<{ id: string; labelAr: string; emoji?: string }>;
+  correctId: string;
+  hintAr: string;
+  hintAudio: AudioSegment[];
+  successAr: string;
+  successAudio: AudioSegment[];
+}
+
 export interface Lesson {
   key: string;
   skill: SkillId;
@@ -248,6 +259,213 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
   }
 }
 
+
+/**
+ * One short, unscored "we do" item after the explanation and worked example.
+ * It checks whether the child can use the just-taught idea before placement/practice begins.
+ */
+export function guidedChoiceForLesson(lesson: Lesson): GuidedLessonChoice | null {
+  const make = (
+    promptAr: string,
+    promptAudio: AudioSegment[],
+    options: GuidedLessonChoice['options'],
+    correctId: string,
+    hintAr: string,
+    hintAudio: AudioSegment[],
+    successAr: string,
+    successAudio: AudioSegment[],
+  ): GuidedLessonChoice => ({ promptAr, promptAudio, options, correctId, hintAr, hintAudio, successAr, successAudio });
+
+  switch (lesson.skill) {
+    case 'rhyme':
+      return make(
+        'اِسْمَعْ: قَلَمٌ وَعَلَمٌ. هَلْ يَتَشَابَهَانِ فِي آخِرِهِمَا؟',
+        say('اِسْمَعْ: قَلَمٌ وَعَلَمٌ.', 'هَلْ يَتَشَابَهَانِ فِي آخِرِهِمَا؟'),
+        [{ id: 'same', labelAr: 'نَعَمْ، النِّهَايَةُ مُتَشَابِهَةٌ' }, { id: 'different', labelAr: 'لَا، النِّهَايَةُ مُخْتَلِفَةٌ' }],
+        'same',
+        'اِسْمَعْ آخِرَ الْكَلِمَتَيْنِ: لَمْ ... لَمْ.',
+        say('اِسْمَعْ آخِرَ الْكَلِمَتَيْنِ:', 'لَمْ.', 'لَمْ.'),
+        'أَحْسَنْتَ! قَلَمٌ وَعَلَمٌ يَتَشَابَهَانِ فِي النِّهَايَةِ.',
+        say('أَحْسَنْتَ!', 'قَلَمٌ وَعَلَمٌ يَتَشَابَهَانِ فِي النِّهَايَةِ.'),
+      );
+    case 'soundPosition':
+      if (lesson.level === 3) {
+        return make(
+          'مَا الصَّوْتُ الْأَخِيرُ فِي كَلِمَةِ بَابٍ؟',
+          say('كَلِمَةُ بَابٍ.', 'مَا الصَّوْتُ الْأَخِيرُ؟'),
+          [{ id: 'بْ', labelAr: 'بْ' }, { id: 'مْ', labelAr: 'مْ' }, { id: 'لْ', labelAr: 'لْ' }],
+          'بْ',
+          'قُلْ بَابْ بِبُطْءٍ، وَاسْمَعْ آخِرَ صَوْتٍ.',
+          say('قُلْ بَابْ بِبُطْءٍ، وَاسْمَعْ آخِرَ صَوْتٍ.'),
+          'صَحِيحٌ! آخِرُ صَوْتٍ فِي بَابْ هُوَ بْ.',
+          say('صَحِيحٌ!', 'آخِرُ صَوْتٍ فِي بَابْ هُوَ بْ.'),
+        );
+      }
+      return make(
+        'مَا الصَّوْتُ الْأَوَّلُ فِي كَلِمَةِ سَمَكَةٍ؟',
+        say('سَمَكَةٌ.', 'مَا الصَّوْتُ الْأَوَّلُ؟'),
+        [{ id: 'سَ', labelAr: 'سَ' }, { id: 'مَ', labelAr: 'مَ' }, { id: 'كَ', labelAr: 'كَ' }],
+        'سَ',
+        'اِسْمَعْ بَدْءَ الْكَلِمَةِ: سَ ... مَ ... كَة.',
+        say('اِسْمَعْ بَدْءَ الْكَلِمَةِ:', 'سَ.', 'مَ.', 'كَة.'),
+        'أَحْسَنْتَ! سَمَكَةٌ تَبْدَأُ بِصَوْتِ سَ.',
+        say('أَحْسَنْتَ!', 'سَمَكَةٌ تَبْدَأُ بِصَوْتِ سَ.'),
+      );
+    case 'blending':
+      if (lesson.level !== 3) return null;
+      return make(
+        'كَمْ مَقْطَعًا نَسْمَعُ فِي كَلِمَةِ سَمَكَةٍ؟',
+        say('سَمَكَةٌ.', 'كَمْ مَقْطَعًا نَسْمَعُ؟'),
+        [{ id: '2', labelAr: 'مَقْطَعَانِ' }, { id: '3', labelAr: 'ثَلَاثَةُ مَقَاطِعَ' }, { id: '4', labelAr: 'أَرْبَعَةُ مَقَاطِعَ' }],
+        '3',
+        'صَفِّقْ مَعِي مَرَّةً لِكُلِّ جُزْءٍ: سَ ... مَ ... كَة.',
+        say('صَفِّقْ مَعِي مَرَّةً لِكُلِّ جُزْءٍ:', 'سَ.', 'مَ.', 'كَة.'),
+        'رَائِعٌ! سَمَكَةٌ فِيهَا ثَلَاثَةُ مَقَاطِعَ.',
+        say('رَائِعٌ!', 'سَمَكَةٌ فِيهَا ثَلَاثَةُ مَقَاطِعَ.'),
+      );
+    case 'discrimination': {
+      if (lesson.level === 1) {
+        return make(
+          'اِسْمَعْ: سَ ... سَ. هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ؟',
+          say('سَ.', 'سَ.', 'هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ؟'),
+          [{ id: 'same', labelAr: 'الصَّوْتُ نَفْسُهُ' }, { id: 'different', labelAr: 'صَوْتَانِ مُخْتَلِفَانِ' }],
+          'same',
+          'اِسْمَعِ الْمَقْطَعَيْنِ مَرَّةً أُخْرَى.',
+          say('اِسْمَعِ الْمَقْطَعَيْنِ مَرَّةً أُخْرَى:', 'سَ.', 'سَ.'),
+          'صَحِيحٌ! سَ وَسَ هُمَا الصَّوْتُ نَفْسُهُ.',
+          say('صَحِيحٌ!', 'سَ وَسَ هُمَا الصَّوْتُ نَفْسُهُ.'),
+        );
+      }
+      const pairVisual = lesson.steps.find((step) => step.visual?.kind === 'glyphs')?.visual;
+      const letters = pairVisual?.kind === 'glyphs' ? pairVisual.letters : ['س', 'ص'];
+      const first = letters[0] + 'َ';
+      const second = letters[1] + 'َ';
+      return make(
+        'اِسْمَعْ: ' + first + ' ... ' + second + '. هَلْ هُمَا الصَّوْتُ نَفْسُهُ؟',
+        say('اِسْمَعْ:', first, second, 'هَلْ هُمَا الصَّوْتُ نَفْسُهُ؟'),
+        [{ id: 'same', labelAr: 'الصَّوْتُ نَفْسُهُ' }, { id: 'different', labelAr: 'صَوْتَانِ مُخْتَلِفَانِ' }],
+        'different',
+        'اِسْمَعْ كُلَّ مَقْطَعٍ وَحْدَهُ، ثُمَّ قَارِنْ بَيْنَهُمَا.',
+        say('اِسْمَعْ كُلَّ مَقْطَعٍ وَحْدَهُ، ثُمَّ قَارِنْ بَيْنَهُمَا.'),
+        'أَحْسَنْتَ! الْمَقْطَعَانِ مُخْتَلِفَانِ.',
+        say('أَحْسَنْتَ!', 'الْمَقْطَعَانِ مُخْتَلِفَانِ.'),
+      );
+    }
+    case 'letterSound': {
+      const glyphSteps = lesson.steps.filter((step) => step.visual?.kind === 'glyphs');
+      const glyphVisual = glyphSteps[0]?.visual;
+      const target = glyphVisual?.kind === 'glyphs' ? glyphVisual.letters[0] : 'م';
+      const distractors = ['م', 'ب', 'س', 'ل', 'ر'].filter((letter) => letter !== target).slice(0, 2);
+      return make(
+        'أَيُّ حَرْفٍ صَوْتُهُ ' + target + 'َ؟',
+        say('أَيُّ حَرْفٍ صَوْتُهُ:', target + 'َ؟'),
+        [{ id: target, labelAr: target }, ...distractors.map((letter) => ({ id: letter, labelAr: letter }))],
+        target,
+        'اِسْمَعْ صَوْتَ ' + target + 'َ، وَانْظُرْ إِلَى شَكْلِ الْحَرْفِ.',
+        say('اِسْمَعْ صَوْتَ:', target + 'َ،', 'وَانْظُرْ إِلَى شَكْلِ الْحَرْفِ.'),
+        'صَحِيحٌ! هَذَا هُوَ الْحَرْفُ ' + target + '.',
+        say('صَحِيحٌ!', 'هَذَا هُوَ الْحَرْفُ:', target),
+      );
+    }
+    case 'visualDiscrimination': {
+      const glyphVisual = lesson.steps.find((step) => step.visual?.kind === 'glyphs')?.visual;
+      const group = glyphVisual?.kind === 'glyphs' ? glyphVisual.letters : ['ب', 'ت', 'ث'];
+      const target = group[0];
+      const distractors = group.slice(1, 3);
+      return make(
+        'أَيْنَ حَرْفُ ' + target + '؟',
+        say('أَيْنَ حَرْفُ:', target),
+        [{ id: target, labelAr: target }, ...distractors.map((letter) => ({ id: letter, labelAr: letter }))],
+        target,
+        'اُنْظُرْ إِلَى عَدَدِ النُّقَطِ وَمَكَانِهَا.',
+        say('اُنْظُرْ إِلَى عَدَدِ النُّقَطِ وَمَكَانِهَا.'),
+        'أَحْسَنْتَ! هَذَا هُوَ حَرْفُ ' + target + '.',
+        say('أَحْسَنْتَ!', 'هَذَا هُوَ حَرْفُ:', target),
+      );
+    }
+    case 'decoding':
+      return make(
+        'اِقْرَأْ: قَلَمٌ. ثُمَّ اخْتَرْ صُورَتَهُ.',
+        say('اِقْرَأْ:', 'قَلَمٌ.', 'ثُمَّ اخْتَرْ صُورَتَهُ.'),
+        [
+          { id: 'pen', labelAr: 'قَلَمٌ', emoji: LEXICON.pen.emoji },
+          { id: 'key', labelAr: 'مِفْتَاحٌ', emoji: LEXICON.key.emoji },
+          { id: 'fish', labelAr: 'سَمَكَةٌ', emoji: LEXICON.fish.emoji },
+        ],
+        'pen',
+        'اِقْرَأْ كُلَّ حَرْفٍ مَعَ حَرَكَتِهِ، ثُمَّ اِجْمَعِ الْأَصْوَاتَ.',
+        say('اِقْرَأْ كُلَّ حَرْفٍ مَعَ حَرَكَتِهِ، ثُمَّ اِجْمَعِ الْأَصْوَاتَ.'),
+        'رَائِعٌ! قَلَمٌ هُوَ الصُّورَةُ الصَّحِيحَةُ.',
+        say('رَائِعٌ!', 'قَلَمٌ هُوَ الصُّورَةُ الصَّحِيحَةُ.'),
+      );
+    case 'spelling':
+      return make(
+        'أَيُّ كَلِمَةٍ كُتِبَتْ بِشَكْلٍ صَحِيحٍ؟',
+        say('أَيُّ كَلِمَةٍ كُتِبَتْ بِشَكْلٍ صَحِيحٍ؟', 'اِسْمَعْ: شَجَرَةٌ.'),
+        [
+          { id: 'correct', labelAr: 'شَجَرَةٌ' },
+          { id: 'wrong-h', labelAr: 'شَجَرَهْ' },
+          { id: 'wrong-t', labelAr: 'شَجَرَتْ' },
+        ],
+        'correct',
+        'اِسْمَعْ نِهَايَةَ الْكَلِمَةِ، وَتَذَكَّرْ أَنَّهَا تَنْتَهِي بِتَاءٍ مَرْبُوطَةٍ.',
+        say('اِسْمَعْ نِهَايَةَ الْكَلِمَةِ.', 'تَنْتَهِي شَجَرَةٌ بِتَاءٍ مَرْبُوطَةٍ.'),
+        'أَحْسَنْتَ! شَجَرَةٌ تَنْتَهِي بِالتَّاءِ الْمَرْبُوطَةِ.',
+        say('أَحْسَنْتَ!', 'شَجَرَةٌ تَنْتَهِي بِالتَّاءِ الْمَرْبُوطَةِ.'),
+      );
+    case 'comprehension': {
+      const listeningOnly = lesson.steps[0]?.textAr.startsWith('استمع إلى الجملة');
+      if (listeningOnly) {
+        return make(
+          'سَمِعْنَا: وَضَعَتْ نُورٌ الْحِذَاءَ فِي الْخِزَانَةِ. أَيْنَ الْحِذَاءُ؟',
+          say('وَضَعَتْ نُورٌ الْحِذَاءَ فِي الْخِزَانَةِ.', 'أَيْنَ الْحِذَاءُ؟'),
+          [
+            { id: 'closet', labelAr: 'فِي الْخِزَانَةِ' },
+            { id: 'bag', labelAr: 'فِي الْحَقِيبَةِ' },
+            { id: 'garden', labelAr: 'فِي الْحَدِيقَةِ' },
+          ],
+          'closet',
+          'اِسْمَعِ الْجُمْلَةَ مِنْ جَدِيدٍ، وَانْتَبِهْ إِلَى كَلِمَةِ «فِي».',
+          say('اِسْمَعِ الْجُمْلَةَ مِنْ جَدِيدٍ.', 'اِنْتَبِهْ إِلَى كَلِمَةِ فِي الْخِزَانَةِ.'),
+          'أَحْسَنْتَ! الْحِذَاءُ فِي الْخِزَانَةِ.',
+          say('أَحْسَنْتَ!', 'الْحِذَاءُ فِي الْخِزَانَةِ.'),
+        );
+      }
+      return make(
+        'هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ. مَا سَبَبُ حَمْلِ الْمِظَلَّةِ؟',
+        say('هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ.', 'مَا سَبَبُ حَمْلِ الْمِظَلَّةِ؟'),
+        [
+          { id: 'rain', labelAr: 'الْمَطَرُ' },
+          { id: 'play', labelAr: 'اللَّعِبُ' },
+          { id: 'outing', labelAr: 'النُّزْهَةُ' },
+        ],
+        'rain',
+        'اِبْحَثْ عَنِ الْحَدَثِ الَّذِي حَدَثَ أَوَّلًا فِي الْجُمْلَةِ.',
+        say('اِبْحَثْ عَنِ الْحَدَثِ الَّذِي حَدَثَ أَوَّلًا فِي الْجُمْلَةِ.'),
+        'صَحِيحٌ! الْمَطَرُ هُوَ السَّبَبُ.',
+        say('صَحِيحٌ!', 'الْمَطَرُ هُوَ السَّبَبُ.'),
+      );
+    }
+    case 'morphology':
+      return make(
+        'أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَةِ كَتَبَ؟',
+        say('أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَةِ كَتَبَ؟'),
+        [
+          { id: 'book', labelAr: 'كِتَابٌ', emoji: LEXICON.book.emoji },
+          { id: 'sun', labelAr: 'شَمْسٌ', emoji: LEXICON.sun.emoji },
+          { id: 'fish', labelAr: 'سَمَكَةٌ', emoji: LEXICON.fish.emoji },
+        ],
+        'book',
+        'اِبْحَثْ عَنِ الْحُرُوفِ ك، ت، ب، وَتَذَكَّرِ الْمَعْنَى.',
+        say('اِبْحَثْ عَنِ الْحُرُوفِ:', 'كَاف، تَاء، بَاء.', 'وَتَذَكَّرِ الْمَعْنَى.'),
+        'أَحْسَنْتَ! كَتَبَ وَكِتَابٌ مِنْ عَائِلَةٍ وَاحِدَةٍ.',
+        say('أَحْسَنْتَ!', 'كَتَبَ وَكِتَابٌ مِنْ عَائِلَةٍ وَاحِدَةٍ.'),
+      );
+    default:
+      return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Guided practice: a spoken hint and one fewer option
 // ---------------------------------------------------------------------------
@@ -375,7 +593,15 @@ export function curriculumPhrases(): string[] {
   for (const skill of skills) {
     for (const level of [1, 2, 3] as Level[]) {
       for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        lessonFor(skill, level, t ?? undefined, 8)?.steps.forEach((s) => addSegs(s.audio));
+        const lesson = lessonFor(skill, level, t ?? undefined, 8);
+        if (!lesson) continue;
+        lesson.steps.forEach((step) => addSegs(step.audio));
+        const guided = guidedChoiceForLesson(lesson);
+        if (guided) {
+          addSegs(guided.promptAudio);
+          addSegs(guided.hintAudio);
+          addSegs(guided.successAudio);
+        }
       }
     }
   }
