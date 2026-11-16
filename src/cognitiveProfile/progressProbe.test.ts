@@ -84,7 +84,7 @@ describe('daily progress probe', () => {
   it('describes progress without overclaiming', () => {
     assert.match(describeProgressAr(null), /يبدأ قياس التقدّم/);
     assert.match(describeProgressAr(summarizeProbes([record(1, 40)])), /نتيجة البداية/);
-    assert.match(describeProgressAr(summarizeProbes([record(1, 40), record(2, 50)])), /يصبح الاتجاه موثوقًا/);
+    assert.match(describeProgressAr(summarizeProbes([record(1, 40), record(2, 50)])), /اتجاه أولي، وهو مؤشر داخلي غير معياري/);
     const text = describeProgressAr(summarizeProbes([20, 30, 40, 50, 60, 70].map((p, i) => record(i + 1, p, 30))));
     assert.match(text, /تحسّن بمقدار ٣٠ نقطة/);
     assert.match(text, /لم تتغير/);
