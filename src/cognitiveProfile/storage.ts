@@ -38,7 +38,7 @@ export interface BatterySession {
   guardianAudioConsentGiven?: boolean;
   guardianConsentRecordedAt?: string;
   guardianAudioConsentRecordedAt?: string;
-  speechLocale?: 'ar-SA';
+  speechLocale?: 'ar-SA' | 'ar-EG';
   results: Partial<Record<SubtestId, SubtestResult>>;
 }
 
