@@ -218,7 +218,7 @@ describe('Learning-session RBAC, Evidence Derivation, Plausibility Gates & Rate 
     assert.ok(readingSession.derivedFields.wpm > 0);
     assert.match(
       readingSession.derivedFields.learningReport.ocularMotorAnalysis,
-      /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
+      /لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين/
     );
     assert.ok(readingSession.derivedFields.learningReport.interventionExercises.length >= 2);
     assert.ok(readingSession.derivedFields.learningReport.classroomAccommodations.length >= 2);

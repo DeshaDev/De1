@@ -126,7 +126,7 @@ export const ContentReviewView: React.FC = () => {
     <div className="space-y-6" dir="rtl">
       <header className="space-y-3">
         <span className="bz-eyebrow">قبل الإطلاق · للمراجع المتخصص</span>
-        <h1 className="bz-h2">مراجعة محتوى بصيرة</h1>
+        <h1 className="bz-h2">مراجعة محتوى هَيَّا نَقْرَأْ</h1>
         <p className="bz-body max-w-3xl">
           كل كلمة وصورة وبند وتمرين ونص ومقطع صوتي، كما يراه الطفل ويسمعه. علّم كل وحدة «صحيح» أو «يحتاج تعديلًا» مع ملاحظة، ثم صدّر القرارات وأرسلها لفريق التطوير. تُحفظ القرارات في هذا المتصفح فقط حتى تصدّرها.
         </p>

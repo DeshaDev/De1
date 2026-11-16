@@ -368,7 +368,7 @@ function SubtestRunner({
                 </span>
                 <p className="font-child text-2xl font-bold text-ink">تم إنهاء المهمة دون درجة صوتية</p>
                 <p className="bz-small text-ink-2 max-w-lg">
-                  لم تُحتسب دقة القراءة أو الأخطاء أو السرعة؛ لأن التسجيل لم يحصل على تقييم صوتي خادمي مكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
+                  لم تُحتسب دقة القراءة ولا الأخطاء ولا السرعة، لأن التقييم الصوتي للتسجيل لم يكتمل. لن تُعامل الكلمات غير المحسومة كأخطاء.
                 </p>
               </>
             ) : (
@@ -430,7 +430,7 @@ function SetupView({
     return (
       <section className="bz-card bz-card-pad max-w-2xl mx-auto space-y-3" dir="rtl" role="alert">
         <h2 className="bz-h3">هذا الفحص غير متاح لهذا العمر</h2>
-        <p className="bz-body">البطارية الحالية مصممة للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
+        <p className="bz-body">الفحص الحالي مصمم للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
         <p className="bz-small bz-muted">يمكن استخدام القارئ الميسّر والأنشطة التعليمية العامة، أو تصحيح العمر المسجل إذا كان غير دقيق.</p>
       </section>
     );
@@ -443,7 +443,7 @@ function SetupView({
           {supabaseUser ? (
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 font-bold flex items-center gap-2">
               <Cloud className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>متصل بحساب الأسرة ({supabaseUser.email}) — سيتم حفظ نتائج الفحص تلقائياً في قاعدة البيانات السحابية ☁️</span>
+              <span>متصل بحساب الأسرة ({supabaseUser.email}) — ستُحفظ نتائج الفحص تلقائيًا في حسابك ☁️</span>
             </div>
           ) : (
             <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -452,7 +452,7 @@ function SetupView({
                 <div>
                   <p className="font-bold">وضع الفحص السريع على هذا المتصفح (محلي)</p>
                   <p className="text-[11px] text-amber-800 mt-0.5">
-                    لن يُحفظ ملف الطفل في قاعدة البيانات السحابية إلا بحساب ولي أمر.
+                    لن يُحفظ ملف الطفل في حساب إلا إذا سجّل ولي الأمر حسابًا.
                   </p>
                 </div>
               </div>
@@ -530,7 +530,7 @@ function SetupView({
               <input type="checkbox" checked={checks.consent} onChange={(e) => setChecks({ ...checks, consent: e.target.checked })} />
               <span className="text-ink-2">
                 <span className="font-semibold text-ink">موافقة ولي الأمر</span>
-                <span className="block bz-small bz-muted">أقر بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
+                <span className="block bz-small bz-muted">أُقرّ بصفتي ولي أمر الطفل بأنني وافقت على إجراء هذه الأنشطة وحفظ نتائجها في ملف الطفل داخل المنصة وفق سياسة الخصوصية. هذا إقرار ذاتي تسجله المنصة، ولا تتحقق المنصة من هويتي أو من صحة الصفة المعلنة.</span>
               </span>
             </label>
             <label className="bz-check sm:col-span-2">
@@ -584,7 +584,7 @@ function SetupView({
         </button>
         {!supabaseUser && (
           <p className="text-xs text-slate-500 text-center mt-2">
-            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقاً ربطه وحفظه في السحابة من بوابة الأسرة.
+            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقًا ربطه وحفظه في السحابة من بوابة الأسرة.
           </p>
         )}
       </section>
@@ -595,9 +595,9 @@ function SetupView({
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
               `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
-              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. والإملاء في الجلسة الأخيرة.`,
+              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. أما الإملاء ففي الجلسة الأخيرة.`,
               'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تحلل القصة والتسمية السريعة عبر تسجيل صوتي وموافقة منفصلة؛ وإذا لم يكتمل تحليل Azure، لا تُحتسب درجة.',
+              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تُحلَّل القصة والتسمية السريعة عبر تسجيل صوتي بموافقة منفصلة، وإذا لم يكتمل التحليل الصوتي فلا تُحتسب درجة.',
               'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
@@ -932,7 +932,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           </div>
           <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
-            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `أُنجزت ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)} مهام`}
+            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
           </h2>
           <div className="mt-4 flex items-center gap-3 max-w-md">
             <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / Math.max(1, ageTasks.length)) * 100}%` }} /></div>

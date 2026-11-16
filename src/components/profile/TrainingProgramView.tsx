@@ -468,8 +468,37 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
     if (needsPlacement(current, skill)) {
-      // First time this skill is trained: a few items check the rule's starting level first.
+      // First time this skill is trained: teach first («أنا أعلّمك»), then a few unscored items
+      // check the rule's starting level, then practice. A session that opens with a test before any
+      // teaching felt like an exam to parents and children.
       const level = estimate.level;
+      if (!(current.lessonsSeen ?? []).includes(`${skill}:${level}`)) {
+        setRun({
+          ...(prev ?? ({} as Run)),
+          skills,
+          skillIndex,
+          tasks: [],
+          taskIndex: 0,
+          correct: 0,
+          phase: 'lesson',
+          lesson: lessonFor(skill, level, current.targets),
+          guided: 0,
+          stars: prev?.stars ?? 0,
+          change: null,
+          results: prev?.results ?? [],
+          probe: null,
+          todayProbe: prev?.todayProbe ?? null,
+          alloc: prev?.alloc ?? {},
+          blockStart: null,
+          promoted: prev?.promoted ?? [],
+          latencies: [],
+          fastCount: 0,
+          newBadges: prev?.newBadges ?? [],
+          transfer: null,
+          placement: null,
+        });
+        return;
+      }
       setRun({
         ...(prev ?? ({} as Run)),
         skills,
@@ -688,7 +717,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
-                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تزيد ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل كلها صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ أغلبها بدأنا بمستوى أسهل.
+                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تُضاف ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل عنها كلها إجابة صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ في أغلبها بدأنا بمستوى أسهل.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -742,7 +771,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   onClick={() => setRun({ ...run, phase: 'probe' })}
                   className="font-child bz-btn bz-btn-secondary text-sm px-4"
                 >
-                  <Play className="w-4 h-4" /> إجراء مقياس المتابعة أولاً ({toArabicDigits(PROBE_MINUTES)} د)
+                  <Play className="w-4 h-4" /> إجراء مقياس المتابعة أولًا ({toArabicDigits(PROBE_MINUTES)} د)
                 </button>
               </div>
             </div>
@@ -793,8 +822,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               lesson={run.lesson}
               onDone={() => {
                 const key = run.lesson!.key;
-                persistLocal({ ...progress, lessonsSeen: Array.from(new Set([...(progress.lessonsSeen ?? []), key])).slice(-30) });
-                setRun({ ...run, phase: 'task' });
+                const seen = { ...progress, lessonsSeen: Array.from(new Set([...(progress.lessonsSeen ?? []), key])).slice(-30) };
+                persistLocal(seen);
+                // A new skill: after the lesson comes the short starting-level check.
+                if (run.tasks.length === 0) beginSkill(run.skillIndex, run, seen);
+                else setRun({ ...run, phase: 'task' });
               }}
             />
           )}
@@ -845,7 +877,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 }
               />
               <p className="font-child text-2xl font-black text-slate-900">
-                {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)} إجابات صحيحة
+                الإجابات الصحيحة: {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)}
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
               {run.results.length > 0 && (
@@ -913,7 +945,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                         ? 'استجابات سريعة وتلقائية تدل على تمكّن وثقة ذهنية عالية ⚡'
                         : autoPct >= 40
                         ? 'دقة جيدة مع استغراق وقت للتفكير والتهجئة 🎯'
-                        : 'يحتاج مزيداً من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
+                        : 'يحتاج مزيدًا من التكرار والممارسة لاكتساب السرعة والطلاقة ⏳'}
                     </p>
                   </div>
                 ) : null;
@@ -926,7 +958,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                       <span className="font-bold">{SKILLS[r.skill].nameAr}</span>
                       <span>{toArabicDigits(r.correct)} من {toArabicDigits(r.total)}</span>
                     </div>
-                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · انتقل مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · عاد مستوى' : ''}</p>
+                    <p className="text-xs text-ink-2 mt-1">احتمال الإتقان: {pct(r.pBefore)}٪ ← {pct(r.pAfter)}٪{r.change === 'up' ? ' · صعد مستوى' : r.change === 'mastered' ? ' · أتقن المهارة' : r.change === 'down' ? ' · نزل مستوى' : ''}</p>
                   </li>
                 ))}
               </ul>
@@ -1008,7 +1040,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                       {setup && (
                         <div className="pt-2 border-t border-line/60 space-y-1 text-xs text-ink-2">
                           <p className="font-bold text-ink">
-                            مستوى البداية: المستوى {toArabicDigits(setup.level)} · جرعة الجلسة: {toArabicDigits(setup.sessionItems)} تمارين
+                            مستوى البداية: المستوى {toArabicDigits(setup.level)} · عدد تمارين الجلسة: {toArabicDigits(setup.sessionItems)}
                           </p>
                           {typeof setup.observedPercent === 'number' && (
                             <p>
@@ -1061,7 +1093,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <section className="joy-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج علاجي-تدريبي موجّه'}</p>
+          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
@@ -1120,7 +1152,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <Award className="w-4 h-4 text-amber-500" /> لوحة أوسمة الإتقان وجواز الإنجاز
           </h3>
           <span className="text-xs font-bold text-slate-500">
-            {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)} أوسمة
+            الأوسمة: {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
@@ -1274,9 +1306,9 @@ function ProgramRules() {
       <div>
         <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
-          <li><strong>درس قصير (أنا أعلّمك):</strong> عند أول لقاء بكل مستوى، وعند الرجوع مستوى: شرح بالصوت والصورة ونموذج ومثال مضاد.</li>
+          <li><strong>درس قصير (أنا أعلّمك):</strong> في أول مرة في كل مستوى، وعند النزول مستوى: شرح بالصوت والصورة، ونموذج، ومثال مضاد.</li>
           <li><strong>ممارسة موجّهة (نفعلها معًا):</strong> أول تمرينين بتلميح مسموع وخيار أقل، ثم تُسحب المساعدة.</li>
-          <li><strong>ممارسة مستقلة (افعلها وحدك):</strong> عند الخطأ يشرح التطبيق لماذا الإجابة الصحيحة صحيحة، ثم محاولة ثانية. عدد البنود (٤ إلى ١٢) يحدده نموذج تتبّع المعرفة.</li>
+          <li><strong>ممارسة مستقلة (افعلها وحدك):</strong> عند الخطأ يشرح التطبيق لماذا كانت الإجابة الصحيحة صحيحة، ثم يحاول الطفل مرة ثانية. عدد البنود (٤ إلى ١٢) يحدده نموذج تتبّع المعرفة.</li>
           <li><strong>مقياس التقدّم ({toArabicDigits(PROBE_MINUTES)} دقائق):</strong> في أول جلسة ثم مرة كل أسبوع وفي الجلسة الأخيرة، بلا تصحيح، مع مهارة غير مدرَّبة للمقارنة. التقدّم اليومي يظهر من تقدير النموذج بعد كل إجابة.</li>
           <li>تُرتَّب المهارات من الأسهل نمائيًا: التمييز السمعي ← القافية ← الأصوات ← التركيب ← الحروف.</li>
           <li>بنود التدريب تُولَّد جديدة في كل جلسة ولا تكرر بنود الفحص، كي لا يتدرّب الطفل على الاختبار نفسه.</li>

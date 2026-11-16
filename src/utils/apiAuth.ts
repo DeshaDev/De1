@@ -20,8 +20,8 @@ export interface BaseeraSessionInfo {
 }
 
 const TENANT_DISPLAY_FALLBACKS: Record<string, string> = {
-  platform: 'إدارة منصة بصيرة المركزية',
-  baseera_hq: 'المقر الرئيسي لمنصة بصيرة',
+  platform: 'إدارة منصة هَيَّا نَقْرَأْ المركزية',
+  baseera_hq: 'المقر الرئيسي لمنصة هَيَّا نَقْرَأْ',
   default: 'مدرسة الرواد الابتدائية',
   school_a: 'مدرسة الرواد الأولى (أ)',
   school_b: 'مدرسة النخبة الثانية (ب)',

@@ -91,7 +91,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
           {profile.ageOutOfRange && (
             <p className="flex gap-2 bz-small rounded-xl p-3 bg-warn-soft text-warn font-semibold">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-1" />
-              العمر خارج النطاق المصمم لهذه البطارية؛ لا تعتمد هذا التقرير أو أي تفسير للنتائج.
+              العمر خارج النطاق الذي صُمّم له هذا الفحص؛ لا تعتمد على هذا التقرير ولا على أي تفسير لنتائجه.
             </p>
           )}
 
@@ -189,7 +189,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             <section className="bz-card p-6 space-y-2" aria-labelledby="previous-title">
               <h2 id="previous-title" className="bz-h3">سجل فحص سابق</h2>
               <p className="bz-small text-ink-2">
-                يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}، وأُكمل فيه {toArabicDigits(previous.completedSubtests)} مهام.
+                يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}، وعدد المهام المكتملة فيه: {toArabicDigits(previous.completedSubtests)}.
               </p>
               <p className="text-xs text-ink-2">
                 لا تعرض المنصة حاليًا مقارنة معيارية أو فرقًا في المئينات بين الجلسات؛ فالجدول المرجعي مؤقت ولم يُقنّن. يجب تفسير كل نتيجة بوصفها أداءً داخل المهمة في ذلك اليوم.

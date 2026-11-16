@@ -151,7 +151,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
         setStory(exactFallback);
         setWizardStep('story');
       } else {
-        setPhonemeError(`لا تتوفر قصة مطابقة حاليًا للصوت «${phonemeSound}» دون اتصال بالخادم؛ اختر صوتًا آخر من القائمة أو فعّل الخادم.`);
+        setPhonemeError(`لا تتوفر قصة مطابقة حاليًا للصوت «${phonemeSound}» دون اتصال بالخادم؛ اختر صوتًا آخر من القائمة.`);
         setWizardStep('phoneme');
       }
     }
@@ -172,7 +172,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
         setWizardStep('celebrate');
       }, 1000);
     } else {
-      speakText('حاول مرة أخرى يا بطل، فكر في أحداث القصة');
+      speakText('حاول مرة أخرى يا بطل، وفكّر في أحداث القصة');
     }
   };
 
@@ -188,7 +188,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               <IconStoryBook size={38} />
             </div>
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
-              عن ماذا تحب أن نقرأ اليوم يا {activeStudent.name}؟
+              عمّ تحب أن نقرأ اليوم يا {activeStudent.name}؟
             </h2>
             <p className="font-child text-sm font-bold text-slate-600">
               اختر عالم مغامرتك المفضل بنقرة واحدة
@@ -230,7 +230,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               أيّ صوت سنتدرّب عليه في القصة؟
             </h2>
             <p className="font-child text-sm font-bold text-slate-600">
-              اختر تحدي الحروف لتبدأ كتابة القصة فوراً
+              اختر تحدي الحروف لتبدأ كتابة القصة فورًا
             </p>
             {phonemeError && (
               <p role="alert" className="text-sm font-bold text-amber-900 bg-amber-50 border border-amber-300 rounded-xl px-4 py-2">
@@ -310,7 +310,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               className="duo-btn-green py-3 px-5 text-sm flex items-center gap-2 cursor-pointer shrink-0"
             >
               <Volume2 className="w-4 h-4" />
-              <span>استمع للقصة كاملة</span>
+              <span>استمع إلى القصة كاملة</span>
             </button>
           </div>
 
@@ -369,7 +369,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
               <IconPuzzlePieces size={34} />
             </div>
             <span className="text-xs font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 inline-block">
-              سؤال الذكاء السريع
+              سؤال الفهم السريع
             </span>
             <h3 className="font-child text-xl sm:text-2xl font-black text-slate-900 pt-1">
               {story.questions[0]?.question || 'ماذا حدث في القصة؟'}
@@ -408,7 +408,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
             className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>قراءة القصة مجدداً</span>
+            <span>قراءة القصة مجددًا</span>
           </button>
         </div>
       )}
@@ -420,7 +420,7 @@ export const StoryGenStation: React.FC<StoryGenStationProps> = ({
 
           <div className="space-y-2">
             <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
-              مبـــارك يا بطل الأبطال {activeStudent.name}!
+              مبارك يا بطل الأبطال {activeStudent.name}!
             </h2>
             <p className="font-child text-sm sm:text-base font-bold text-emerald-700">
               أتممت قراءة القصة وفهمت تفاصيلها بنجاح باهر!

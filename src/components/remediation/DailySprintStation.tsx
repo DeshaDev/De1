@@ -148,7 +148,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         distractor: 'الصاد: يرتفع أقصى اللسان ويستعلي، فيمتلئ الفم بالصدى والتفخيم.',
       },
       feedbackSuccess: 'أَحْسَنْتَ! كَلِمَةُ «سَيْفٌ» تَبْدَأُ بِالسِّينِ المُرَقَّقَة المُنْبَسِطَة.',
-      feedbackRetry: 'اسْتَمِعْ جَيِّداً: «صَيْفٌ» تَبْدَأُ بِالصَّادِ المُفَخَّمَة، وَالمَطْلُوبُ السِّينُ المُرَقَّقَة!',
+      feedbackRetry: 'اسْتَمِعْ جَيِّدًا: «صَيْفٌ» تَبْدَأُ بِالصَّادِ المُفَخَّمَة، وَالمَطْلُوبُ السِّينُ المُرَقَّقَة!',
     },
     {
       id: 2,
@@ -252,7 +252,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
         target: 'الكاف: تخرج من أدنى اللسان باتجاه الأمام بهواء خفيف مهموس.',
         distractor: 'القاف: تخرج من أقصى اللسان مع الحنك الرخو عند اللهاة.',
       },
-      feedbackSuccess: 'ذَكِيٌّ جِدّاً! «كَلْبٌ» تَبْدَأُ بِالكَافِ المَهْمُوسَة الخَفِيفَة.',
+      feedbackSuccess: 'أَحْسَنْتَ! «كَلْبٌ» تَبْدَأُ بِالكَافِ المَهْمُوسَة الخَفِيفَة.',
       feedbackRetry: '«قَلْبٌ» تَبْدَأُ بِالقَافِ اللَّهَوِيَّة، وَالمَطْلُوبُ الكَافُ المَهْمُوسَة!',
     },
     {
@@ -291,10 +291,10 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       distractorAudio: 'ظَلَّ',
       distractorPhoneticTag: 'ظاءٌ مُفَخَّمَة',
       mirrorTip: {
-        target: 'الذال: يخرج طرف اللسان قليلاً بين الأسنان برقة واستفال.',
+        target: 'الذال: يخرج طرف اللسان قليلًا بين الأسنان برقة واستفال.',
         distractor: 'الظاء: يخرج طرف اللسان مع استعلاء أقصى اللسان وتفخيمه.',
       },
-      feedbackSuccess: 'عَبْقَرِيّ! «ذَلَّ» تَبْدَأُ بِالذَّالِ المُرَقَّقَة الرَّقِيقَة.',
+      feedbackSuccess: 'رَائِع! «ذَلَّ» تَبْدَأُ بِالذَّالِ المُرَقَّقَة الرَّقِيقَة.',
       feedbackRetry: '«ظَلَّ» تَبْدَأُ بِالظَّاءِ المُفَخَّمَة، وَالمَطْلُوبُ الذَّالُ المُرَقَّقَة!',
     },
   ];
@@ -328,7 +328,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       }, 1000);
     } else if (timerSeconds === 0 && isTimerRunning) {
       setIsTimerRunning(false);
-      triggerCelebration('انتهى تحدي اليوم بنجاح! أحسنت الالتزام (+50 نقطة)', 50);
+      triggerCelebration('انتهى تحدي اليوم بنجاح! أحسنت الالتزام (+٥٠ نقطة)', 50);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerSeconds]);
@@ -346,7 +346,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
     if (isCorrect) {
       setFeedbackMsg({ text: currentExercise.feedbackSuccess, isError: false });
       speakText(currentExercise.feedbackSuccess);
-      triggerCelebration('صوت سليم ومطابق! (+15 نقطة)', 15);
+      triggerCelebration('نطق سليم ومطابق! (+١٥ نقطة)', 15);
 
       setTimeout(() => {
         if (warmupIdx < warmupPairs.length - 1) {
@@ -355,7 +355,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
           setFeedbackMsg(null);
         } else {
           setSprintStep(2);
-          triggerCelebration('رائع! اكتمل إحماء الدقيقة الأولى بنجاح. الآن وقت قراءة القصة (+20 نقطة)', 20);
+          triggerCelebration('رائع! اكتمل إحماء الدقيقة الأولى. حان الآن وقت قراءة القصة (+٢٠ نقطة)', 20);
         }
       }, 1400);
     } else {
@@ -371,7 +371,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       speakText(storyWords[nextIdx]);
     } else {
       setSprintStep(3);
-      triggerCelebration('أتممت قراءة القصة بطلاقة ممتازة! بقي تلميح المخرج والسؤال النهائي (+25 نقطة)', 25);
+      triggerCelebration('أتممت قراءة القصة بطلاقة! بقي تلميح مخرج الحرف والسؤال الأخير (+٢٥ نقطة)', 25);
     }
   };
 
@@ -395,7 +395,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       );
       setStreakDays(nextStreak);
       setIsCompletedToday(true);
-      triggerCelebration(`أحسنت يا بطل! اكتملت جلسة اليوم وسُجّلت على هذا الجهاز. سلسلة الالتزام: ${nextStreak} يومًا (+50 نقطة)`, 50);
+      triggerCelebration(`أحسنت يا بطل! اكتملت جلسة اليوم وسُجّلت على هذا الجهاز. أيام التدريب المتتالية: ${toArabicNum(nextStreak)} (+٥٠ نقطة)`, 50);
     } catch {
       setStreakDays(0);
       setIsCompletedToday(true);
@@ -448,7 +448,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
       <div className="grid grid-cols-3 gap-2">
         {[
           { num: 1, title: 'الدقيقة ١: إحماء التمييز السمعي للأصوات', active: sprintStep === 1, done: sprintStep > 1 },
-          { num: 2, title: 'الدقائق ٢-٤: قراءة القصة الموجهة', active: sprintStep === 2, done: sprintStep > 2 },
+          { num: 2, title: 'الدقائق ٢–٤: قراءة القصة الموجّهة', active: sprintStep === 2, done: sprintStep > 2 },
           { num: 3, title: 'الدقيقة ٥: مخرج الحرف والفهم', active: sprintStep === 3, done: isCompletedToday },
         ].map((st) => (
           <div
@@ -505,7 +505,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
               {currentExercise.questionText}
             </h3>
             <p className="text-xs text-slate-500 font-bold">
-              استمع لنطق الكلمتين باهتمام، ثم انقر على الكلمة التي تبدأ بالصوت المستهدف
+              استمع إلى نطق الكلمتين جيدًا، ثم انقر على الكلمة التي تبدأ بالصوت المطلوب
             </p>
           </div>
 
@@ -690,7 +690,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             </button>
           </div>
           <p className="text-[11px] text-slate-500">
-            انقر على أي كلمة للاستماع لنطقها الفصيح الطبيعي، أو تقدم كلمة بكلمة
+            انقر على أي كلمة لتسمع نطقها الفصيح، أو تقدّم كلمةً كلمة
           </p>
         </div>
       )}
@@ -725,7 +725,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
                     onClick={() => {
                       setSelectedAnswer(oIdx);
                       if (isCorrect) {
-                        triggerCelebration('إجابة صحيحة وفهم دقيق! (+25 نقطة)', 25);
+                        triggerCelebration('إجابة صحيحة وفهم دقيق! (+٢٥ نقطة)', 25);
                       }
                     }}
                     className={`w-full p-3.5 rounded-xl text-xs font-bold text-right border transition-all cursor-pointer flex items-center justify-between ${
@@ -759,7 +759,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
             <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-2">
               <MascotMomentLive mood="proud" size={110} message={MASCOT_LINES.sprintDone} />
               <p className="text-xs text-emerald-700">
-                حافظت على وتيرة التدريب اليومية. موعدنا غداً في 5 دقائق جديدة!
+                حافظت على وتيرة التدريب اليومية. موعدنا غدًا مع ٥ دقائق جديدة!
               </p>
             </div>
           )}

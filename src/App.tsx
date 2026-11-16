@@ -309,7 +309,7 @@ export default function App() {
   };
 
   const handleDeleteLead = async (id: string) => {
-    if (!window.confirm('هل تؤكد حذف طلب التواصل من مخزن التطبيق النشط؟ هذا لا يؤكد محو أي نسخة احتياطية لدى مزود الاستضافة.')) return;
+    if (!window.confirm('هل تريد حذف طلب التواصل؟ لا يشمل الحذف النسخ الاحتياطية لدى مزوّد الاستضافة.')) return;
     try {
       const res = await authenticatedFetch(`/api/admin/school-demo-requests/${id}`, {
         method: 'DELETE',
@@ -365,7 +365,7 @@ export default function App() {
         setBaseeraSession(googleSession);
         storeBaseeraSession(googleSession);
         setShowBaseeraLogin(false);
-        setAiStatusBanner(`مرحباً بك، ${googleSession.accountName}! تم تسجيل الدخول بنجاح عبر Google.`);
+        setAiStatusBanner(`مرحبًا بك، ${googleSession.accountName}! سجّلت الدخول بنجاح عبر Google.`);
         void fetchStudentsFromSupabase(user.id).then((cloudStudents) => {
           if (cloudStudents.length > 0) {
             setStudents(cloudStudents);
@@ -382,7 +382,7 @@ export default function App() {
     try {
       const { user, session } = await signInWithEmail(email, pass);
       if (!user || !session?.access_token) {
-        throw new Error('لم يتم إنشاء جلسة مصادقة صالحة. تحقق من بيانات الدخول وإعدادات الحساب.');
+        throw new Error('تعذّر تسجيل الدخول. تحقّق من بيانات الدخول وإعدادات الحساب.');
       }
 
       setSupabaseUser(user);
@@ -398,7 +398,7 @@ export default function App() {
       };
       setBaseeraSession(parentSession);
       storeBaseeraSession(parentSession);
-      setAiStatusBanner('مرحباً بك! تم تسجيل الدخول بنجاح.');
+      setAiStatusBanner('مرحبًا بك! سجّلت الدخول بنجاح.');
       const cloudStudents = await fetchStudentsFromSupabase(user.id);
       if (cloudStudents.length > 0) {
         setStudents((prev) => {
@@ -410,7 +410,7 @@ export default function App() {
       return { success: true };
     } catch (err: any) {
       setSupabaseAuthLoading(false);
-      const msg = err?.message || 'تعذر تسجيل الدخول. يرجى التأكد من البريد وكلمة المرور.';
+      const msg = err?.message || 'تعذّر تسجيل الدخول. تأكّد من البريد الإلكتروني وكلمة المرور.';
       setSupabaseError(msg);
       return { success: false, error: msg };
     }
@@ -621,7 +621,7 @@ export default function App() {
     // Family oral-reading sessions must pass through the server receipt validator.
     // Never write Azure-derived fields directly from the browser into Supabase raw_data.
     if (supabaseUser && !baseeraSession && hasVoiceEvidence) {
-      setAiStatusBanner('يجري التحقق من إيصال التقييم الصوتي وملكية ملف الطفل قبل حفظ جلسة القراءة في حساب الأسرة…');
+      setAiStatusBanner('جارٍ التحقق من التقييم الصوتي قبل حفظ جلسة القراءة في حساب الأسرة…');
       void authenticatedFetch(
         `/api/parent/students/${encodeURIComponent(completedRecord.id)}/reading-session`,
         {
@@ -639,9 +639,9 @@ export default function App() {
         setStudents((prev) => prev.map((student) =>
           student.id === completedRecord.id ? { ...student, ...payload.student! } : student
         ));
-        setAiStatusBanner('تم حفظ جلسة القراءة في حساب الأسرة بعد التحقق الخادمي من الموافقة وإيصال الصوت.');
+        setAiStatusBanner('حُفظت جلسة القراءة في حساب الأسرة بعد التحقق من الموافقة ومن التقييم الصوتي.');
       }).catch(() => {
-        setAiStatusBanner('تعذر التحقق أو حفظ جلسة القراءة الصوتية بأمان؛ بقيت النتيجة محلية ولم تُعتمد سحابيًا.');
+        setAiStatusBanner('تعذّر التحقق من جلسة القراءة الصوتية أو حفظها بأمان؛ بقيت النتيجة على هذا الجهاز ولم تُحفظ في الحساب.');
       });
       return;
     }
@@ -664,7 +664,7 @@ export default function App() {
       return;
     }
     setAiStatusBanner(
-      `تم إنهاء جلسة الفحص للطالب (${completedRecord.name}) محليًا؛ جارٍ محاولة حفظها في الخادم.`
+      `انتهت جلسة الفحص للطالب (${completedRecord.name}) على هذا الجهاز؛ جارٍ حفظها في الخادم.`
     );
     try {
       const sendSave = (url: string, body: unknown) => authenticatedFetch(url, {
@@ -830,7 +830,7 @@ export default function App() {
           }
         } catch (authErr: any) {
           const msg = authErr?.message || signUpErr?.message || 'تعذر الاتصال بخدمة المصادقة السحابية';
-          throw new Error(`تعذر إنشاء أو تسجيل الدخول إلى حساب الأسرة السحابي: ${msg}`);
+          throw new Error(`تعذّر إنشاء حساب الأسرة أو تسجيل الدخول إليه: ${msg}`);
         }
       }
     }
@@ -914,11 +914,11 @@ export default function App() {
     if (currentUser) {
       const saved = await syncStudentToSupabase(newLearner, currentUser.id);
       if (!saved) {
-        throw new Error('فشل حفظ ملف الطفل في قاعدة البيانات السحابية (Supabase). يرجى التحقق من اتصال الشبكة وإعادة المحاولة.');
+        throw new Error('تعذّر حفظ ملف الطفل في حسابك. تحقّق من اتصال الإنترنت وأعد المحاولة.');
       }
-      setAiStatusBanner(`تم حفظ ملف الطفل «${child.name}» في قاعدة البيانات السحابية بنجاح ☁️`);
+      setAiStatusBanner(`حُفظ ملف الطفل «${child.name}» في حسابك بنجاح ☁️`);
     } else {
-      setAiStatusBanner(`تم تسجيل بيانات الطفل «${child.name}» بنجاح! جاهز لبدء رحلة التعلم.`);
+      setAiStatusBanner(`سُجّلت بيانات الطفل «${child.name}» بنجاح! كل شيء جاهز لبدء رحلة التعلّم.`);
     }
 
     setStudents((prev) => {
@@ -945,7 +945,7 @@ export default function App() {
       return { success: false, error: 'يرجى إدخال بريد إلكتروني صحيح.' };
     }
     if (pass.length < 6) {
-      return { success: false, error: 'كلمة المرور يجب أن لا تقل عن 6 خانات.' };
+      return { success: false, error: 'يجب ألّا تقل كلمة المرور عن ٦ خانات.' };
     }
 
     setSupabaseAuthLoading(true);
@@ -972,7 +972,7 @@ export default function App() {
 
     if (!currentUser) {
       setSupabaseAuthLoading(false);
-      return { success: false, error: 'تعذر توثيق الحساب. يرجى مراجعة البريد وكلمة المرور.' };
+      return { success: false, error: 'تعذّر التحقق من الحساب. راجع البريد الإلكتروني وكلمة المرور.' };
     }
 
     setSupabaseUser(currentUser);
@@ -1019,7 +1019,7 @@ export default function App() {
     }
 
     setSupabaseAuthLoading(false);
-    setAiStatusBanner(`تم ربط ملف طفلك بحسابك السحابي بنجاح ☁️ وحفظ بياناته في قاعدة البيانات.`);
+    setAiStatusBanner(`رُبط ملف طفلك بحسابك وحُفظت بياناته بنجاح ☁️`);
     return { success: true };
   };
 
@@ -1336,7 +1336,7 @@ export default function App() {
                 type="password"
                 value={baseeraAccessCode}
                 onChange={(event) => setBaseeraAccessCode(event.target.value)}
-                placeholder="أدخل رمز الوصول الخاص بمدرستك..."
+                placeholder="أدخل رمز الوصول الخاص بمدرستك…"
                 className="bz-input"
               />
               <span className="bz-hint">يسلّمه لك مسؤول النظام في مدرستك، وتُحدَّد صلاحياتك تلقائيًا.</span>
@@ -1599,7 +1599,7 @@ export default function App() {
 
               <div className="baseera-summary-grid">
                 <article className="baseera-summary-card baseera-summary-blue">
-                  <span className="baseera-summary-label">{selectedStudent.assessmentModality === 'voice_only' ? 'الطلاقة الشفوية' : selectedStudent.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'مؤشر القراءة'}</span>
+                  <span className="baseera-summary-label">{selectedStudent.assessmentModality === 'voice_only' ? 'الطلاقة الشفوية' : selectedStudent.assessmentModality === 'reading_only' ? 'معدل إتمام النص المَقيس' : 'مؤشر القراءة'}</span>
                   <strong>{selectedReadingRate === null ? 'لم يُقَس بعد' : toArabicNum(selectedReadingRate) + ' كلمة/دقيقة'}</strong>
                   <p>
                     {selectedStudent.sessionStatus !== 'completed'
@@ -1610,7 +1610,7 @@ export default function App() {
                           ? hasVerifiedOralAudio(selectedStudent)
                             ? 'تقييم صوتي آلي موثق المصدر؛ المؤشرات وصفية وليست تشخيصًا.'
                             : 'لا توجد نتيجة صوتية موثقة لهذه الجلسة؛ لم يُحتسب معدل قراءة جهرية.'
-                          : 'معدل مقاس لزمن إتمام النص؛ لا يقيس دقة الكلمات الفردية ولا يُقارن بمعيار الطلاقة الجهرية.'}
+                          : 'معدل مَقيس لزمن إتمام النص؛ لا يقيس دقة الكلمات الفردية ولا يُقارن بمعيار الطلاقة الجهرية.'}
                   </p>
                 </article>
                 <article className="baseera-summary-card baseera-summary-mint">
@@ -1793,7 +1793,7 @@ export default function App() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="ابحث باسم الطالب أو المدرسة..."
+                        placeholder="ابحث باسم الطالب أو المدرسة…"
                         aria-label="ابحث باسم الطالب أو المدرسة"
                         className="w-full pr-9 pl-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[#0284C7]"
                       />
@@ -1805,7 +1805,7 @@ export default function App() {
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                     >
                       {hideDemoRecords
-                        ? 'إظهار النماذج التوضيحية (4)'
+                        ? 'إظهار النماذج التوضيحية (٤)'
                         : 'عرض الجلسات الفعلية فقط'}
                     </button>
                   </div>
@@ -1814,7 +1814,7 @@ export default function App() {
                   {filteredStudents.length === 0 ? (
                     <div className="py-12 text-center space-y-2">
                       <p className="text-xs text-slate-500">
-                        لا توجد سجلات طلاب مطابقة لمعايير الفلترة الحالية.
+                        لا توجد سجلات طلاب تطابق عوامل التصفية الحالية.
                       </p>
                       <button
                         type="button"
@@ -1825,7 +1825,7 @@ export default function App() {
                         }}
                         className="px-3 py-1.5 text-xs font-semibold text-[#0284C7] hover:underline cursor-pointer"
                       >
-                        إعادة ضبط الفلاتر
+                        إعادة ضبط التصفية
                       </button>
                     </div>
                   ) : (
@@ -2069,7 +2069,7 @@ export default function App() {
                             </time>
                           </div>
                           <div className='mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-700'>
-                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المقاس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only'
+                            <span>{snapshot.assessmentModality === 'voice_only' ? 'WCPM الشفوية' : snapshot.assessmentModality === 'reading_only' ? 'معدل إتمام النص المَقيس' : 'معدل القراءة المسجل'}: <strong>{snapshot.assessmentModality === 'voice_only'
                               ? snapshot.aiAssessmentVerified === true && snapshot.evidenceProvenance === 'server-verified-audio'
                                 ? (snapshot.wcpm ?? 'غير متاح')
                                 : 'غير متاح'
@@ -2107,7 +2107,7 @@ export default function App() {
                           ? 'ستظهر الملاحظات بعد إكمال نشاط القراءة.'
                           : selectedStudent.assessmentModality === 'voice_only'
                             ? hasVerifiedOralAudio(selectedStudent)
-                              ? 'اكتمل التحليل الصوتي الآلي الموثق. سرعة الكلمات الصحيحة المقاسة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة. هذه مؤشرات وصفية ولا تشخّص عسر القراءة.'
+                              ? 'اكتمل التحليل الصوتي الآلي الموثّق. سرعة الكلمات الصحيحة المَقيسة: ' + (selectedStudent.wcpm ?? selectedStudent.oralWcpm ?? 'غير متاحة') + ' كلمة/دقيقة. هذه مؤشرات وصفية ولا تشخّص عسر القراءة.'
                               : 'لم تُحتسب درجة قراءة جهرية؛ لا يُستخدم تفريغ المتصفح أو التصحيح اليدوي لإثبات صحة الكلمات.'
                             : 'سرعة القراءة الموقوتة المسجّلة: ' + (selectedStudent.wpm > 0 ? selectedStudent.wpm : 'غير متاحة') + ' كلمة/دقيقة، ونتيجة الفهم: ' + selectedStudent.comprehensionScore + '%. هذه مؤشرات تعليمية مسجلة.'}
                       </p>
@@ -2223,7 +2223,7 @@ export default function App() {
                       <span>طلبات الشراكة والتجربة للمدارس والمراكز التعليمية</span>
                     </h2>
                     <p className="text-xs text-slate-500 mt-1">
-                      سجل آمن ومشفر بطلبات المدارس الواردة عبر النموذج الرسمي. راجع الطلبات من لوحة المنصة؛ لا يضمن النموذج موعداً ثابتاً للتواصل.
+                      سجل آمن ومشفّر لطلبات المدارس الواردة عبر نموذج الطلب. لا يضمن النموذج موعدًا ثابتًا للتواصل.
                     </p>
                   </div>
                   <button
@@ -2238,14 +2238,14 @@ export default function App() {
                 </div>
 
                 {isLoadingDemoRequests ? (
-                  <div className="py-12 text-center text-xs text-slate-500">جارٍ جلب وتفريغ الطلبات المشفرة...</div>
+                  <div className="py-12 text-center text-xs text-slate-500">جارٍ تحميل الطلبات…</div>
                 ) : demoRequestsError ? (
                   <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-medium">
                     {demoRequestsError}
                   </div>
                 ) : demoRequests.length === 0 ? (
                   <div className="py-12 text-center text-xs text-slate-500">
-                    لا توجد طلبات تجربة جديدة مسجلة حالياً في المخزن المشفر.
+                    لا توجد طلبات تجربة جديدة حاليًا.
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -2298,7 +2298,7 @@ export default function App() {
                                 onClick={() => handleUpdateLeadStatus(req.id, 'contacted')}
                                 className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition-colors cursor-pointer"
                               >
-                                تحديد كـ: تم التواصل
+                                تمييز الطلب: تم التواصل
                               </button>
                             )}
                             {req.status !== 'archived' && (
@@ -2315,7 +2315,7 @@ export default function App() {
                               onClick={() => handleDeleteLead(req.id)}
                               className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
                             >
-                              حذف وتطهير الطلب نهائياً
+                              حذف الطلب نهائيًا
                             </button>
                           </div>
                         </div>
@@ -2516,7 +2516,7 @@ export default function App() {
             </div>
             <p className="baseera-footer-note">
               <span>© ٢٠٢٦ هَيَّا نَقْرَأْ</span>
-              <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. التشخيص يتم لدى مختص مؤهل.</span>
+              <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. ولا يكون التشخيص إلا لدى مختص مؤهل.</span>
             </p>
           </div>
         </footer>

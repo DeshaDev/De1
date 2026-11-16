@@ -631,7 +631,7 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
     case 'soundPosition':
       return {
         titleAr: 'لعبة الصوت الأول والأخير السريع 🔊',
-        activityAr: 'أشر إلى أشياء حولكم في الغرفة واطلب من طفلك استخراج الصوت الأول أو الأخير فوراً بصوته الصافي (مثل: سَـرير / كُـرسي).',
+        activityAr: 'أشر إلى أشياء حولكم في الغرفة واطلب من طفلك استخراج الصوت الأول أو الأخير فورًا بصوته الصافي (مثل: سَـرير / كُـرسي).',
         exampleWords: ['سَرِير', 'كُرْسِي', 'طَاوِلَة'],
       };
     case 'blending':
@@ -645,13 +645,13 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
         const pair = targets.soundPairs[0];
         return {
           titleAr: `تحدي التمييز الصوتي (${pair.join(' / ')}) 👂`,
-          activityAr: `ضع يد طفلك أمام فمه ليميز الفارق الحركي؛ مثلاً الهواء الصافر الخفيف في حرف (${pair[0]}) مقابل الامتلاء والتفخيم في حرف (${pair[1]}).`,
+          activityAr: `ضع يد طفلك أمام فمه ليميز الفارق الحركي؛ مثلًا الهواء الصافر الخفيف في حرف (${pair[0]}) مقابل الامتلاء والتفخيم في حرف (${pair[1]}).`,
           exampleWords: pair[0] === 'س' ? ['سَيْف', 'صَيْف', 'سَبِيل', 'صَبْر'] : ['تِين', 'طِين', 'دَار', 'ضَار'],
         };
       }
       return {
         titleAr: 'لعبة الأذن الذكية والأصوات المتقاربة 👂',
-        activityAr: 'انطق كلمتين واسأل طفلك: هل سمعت نفس الصوت أم صوتاً مختلفاً؟ (مثل: تين / طين).',
+        activityAr: 'انطق كلمتين واسأل طفلك: هل سمعت نفس الصوت أم صوتًا مختلفًا؟ (مثل: تين / طين).',
         exampleWords: ['تِين', 'طِين', 'دَار', 'ضَار'],
       };
     case 'letterSound':
@@ -663,7 +663,7 @@ export function getHomeActivity(skill: SkillId, targets?: TrainingTargets): Home
     case 'visualDiscrimination':
       return {
         titleAr: 'لعبة النقطة الخفية وشكل الحرف 🦅',
-        activityAr: 'اكتب حروفاً متشابهة رسماً واسأل طفلك كالمحقق: أين هربت النقطة في الباء (تحت)؟ وكم نقطة في التاء (اثنتان فوق)؟',
+        activityAr: 'اكتب حروفًا متشابهة رسمًا واسأل طفلك كالمحقق: أين هربت النقطة في الباء (تحت)؟ وكم نقطة في التاء (اثنتان فوق)؟',
         exampleWords: ['بَيْت', 'تِين', 'ثَوْب'],
       };
     default:

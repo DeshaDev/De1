@@ -155,7 +155,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       if (!res.ok) throw new Error(data.error || 'تعذر إرسال طلب التجربة.');
       setDemoSubmitSuccess(true);
     } catch (err: any) {
-      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقاً.');
+      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقًا.');
     } finally {
       setIsSubmittingDemo(false);
     }
@@ -174,7 +174,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           <div className="relative z-10">
             <h1 className="hn-display">ننمّي مهارات القراءة لدى طفلك، ونساعده على تجاوز عسر القراءة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              ألعاب عربية قصيرة لأطفال ٤ إلى ٨ سنوات تكشف مبكرًا أين يتعثّر طفلك، ثم تدريب يومي على قدر مستواه يقوّي المهارات التي يحتاجها ليقرأ بثقة.
+              ألعاب عربية قصيرة لأطفال ٤ إلى ٨ سنوات تكشف مبكرًا أين يتعثّر طفلك، ثم تدريب يومي على قدر مستواه يقوّي المهارات التي يحتاج إليها ليقرأ بثقة.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -302,7 +302,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           <div>
             <h2 className="hn-h2">{ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة كل يوم، والمستوى يتبع طفلك</h2>
             <p className="hn-body mt-3">
-              {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة حين يحتاج، ثم يُعاد الفحص لنرى ما تغيّر.
+              {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
             </p>
             <p className="hn-small mt-5">
               المهارات في البرنامج: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}.
@@ -321,7 +321,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               </div>
             ))}
             <p className="hn-small sm:col-span-3 mt-2">
-              يصعد حين يقدّر النموذج أن احتمال إتقانه بلغ ٩٥٪ بعد ٥ إجابات على الأقل، وينزل وينبَّه المعلم إن بقي أقل من ٢٠٪ بعد ٨ إجابات.
+              يصعد حين يقدّر النموذج أن احتمال إتقانه بلغ ٩٥٪ بعد ٥ إجابات على الأقل، وينزل درجة ويُنبَّه المعلم إن بقي أقل من ٢٠٪ بعد ٨ إجابات.
             </p>
           </div>
         </div>
@@ -335,7 +335,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-sun)' }}>
               <span className="hn-who-icon" aria-hidden="true"><Users size={28} /></span>
               <h3 className="hn-h3">الأسرة</h3>
-              <p className="hn-body flex-1">اعرف أين يحتاج طفلك مساعدة، وتدرّب معه دقائق قليلة كل يوم.</p>
+              <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه دقائق قليلة كل يوم.</p>
               <button type="button" className="bz-btn bz-btn-primary hn-toy mt-5" onClick={() => onNavigateTab('parent-portal')}>ابدأ اللعب مع طفلك</button>
             </article>
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-leaf)' }}>
@@ -399,7 +399,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <MascotMomentLive mood="wave" size={160} className="mx-auto" />
             <div>
               <h2 className="hn-h2">هُدهُد ينتظر طفلك</h2>
-              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">أول جلسة من ١٠ إلى ١٥ دقيقة. اجلس بجانبه، واستمتعا باللعب معًا.</p>
+              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">تستغرق الجلسة الأولى من ١٠ إلى ١٥ دقيقة. اجلس بجانب طفلك، واستمتعا باللعب معًا.</p>
               <div className="mt-7 flex flex-wrap justify-center md:justify-start gap-3">
                 <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
                   ابدأ اللعب مع طفلك
@@ -432,7 +432,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <div className="py-6 text-center space-y-4">
                 <span className="mx-auto grid place-items-center w-16 h-16 rounded-full bg-brand-soft text-brand"><CheckCircle2 size={34} /></span>
                 <h4 className="bz-h3">تم استلام طلبكم بنجاح!</h4>
-                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. ستُستكمل آلية التواصل وجدولة الجلسات قبل بدء التجربة.</p>
+                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. سنتواصل معكم لجدولة الجلسات قبل بدء التجربة.</p>
                 <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-primary">إغلاق</button>
               </div>
             ) : (
@@ -449,7 +449,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                   </label>
                   <label className="bz-field">
                     <span className="bz-label">الصفة الوظيفية</span>
-                    <input type="text" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="منسق دعم / أخصائي تخاطب" className="bz-input" />
+                    <input type="text" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="منسّق دعم / أخصائي تخاطب" className="bz-input" />
                   </label>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">

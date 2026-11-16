@@ -45,7 +45,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
         <div>
           <p className="bz-small text-brand font-semibold">نتائج وصفية · آخر تحديث {updated}</p>
           <h2 id={`battery-summary-${student.id}`} className="bz-h3 mt-1">
-            أُكملت {ar(summary.completedSubtests)} من {ar(summary.totalSubtests ?? 9)} مهام
+            المهام المكتملة: {ar(summary.completedSubtests)} من {ar(summary.totalSubtests ?? 9)}
           </h2>
         </div>
         <span className="bz-badge bz-badge-neutral">لا توجد مقارنة معيارية</span>

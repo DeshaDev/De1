@@ -42,7 +42,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     assert.ok(derived.derivedFields.learningReport);
     assert.match(
       derived.derivedFields.learningReport.ocularMotorAnalysis,
-      /لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين/
+      /لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين/
     );
   });
 
@@ -84,7 +84,7 @@ test('Camera-Free Reading-Only Modality Integration', async (t) => {
     });
 
     assert.ok(report.learningSummary.includes('جلسة قراءة وفهم تعليمية'));
-    assert.ok(report.ocularMotorAnalysis.includes('لا تستخدم بصيرة الحالية الكاميرا أو تتبّع العين'));
+    assert.ok(report.ocularMotorAnalysis.includes('لا تستخدم هَيَّا نَقْرَأْ الكاميرا أو تتبّع العين'));
     assert.ok(report.interventionExercises.length > 0);
   });
 });

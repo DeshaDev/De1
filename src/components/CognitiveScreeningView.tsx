@@ -1518,7 +1518,7 @@ export const CognitiveScreeningView: React.FC<Props> = ({
                   {ar(phonemicMetrics.percent)}٪
                 </div>
                 <p className="text-[11px] text-indigo-900 font-semibold mt-1">
-                  أجاب إجابة صحيحة في {ar(phonemicMetrics.correctCount)} من {ar(phonemicMetrics.totalCount)} مهام صوتية
+                  الإجابات الصحيحة في المهام الصوتية: {ar(phonemicMetrics.correctCount)} من {ar(phonemicMetrics.totalCount)}
                 </p>
               </div>
             </div>

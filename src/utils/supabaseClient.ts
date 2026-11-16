@@ -25,7 +25,7 @@ const dummyClient = {
     getUser: async () => ({ data: { user: null }, error: null }),
     signInWithOAuth: async () => ({
       data: null,
-      error: new Error('يرجى إضافة VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في ملف .env أولاً')
+      error: new Error('يرجى إضافة VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في ملف .env أولًا')
     }),
     signOut: async () => ({ error: null }),
     onAuthStateChange: () => ({

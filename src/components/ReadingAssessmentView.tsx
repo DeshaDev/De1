@@ -8,6 +8,7 @@
  *  3. Comprehension-question performance for the selected passage
  */
 
+import { toArabicNum } from '../utils/arabicDigits';
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { MascotMomentLive } from './ui/MascotLive';
 import { MASCOT_LINES } from './ui/mascotLines';
@@ -69,7 +70,7 @@ export const getFluencyLevelInfo = (wcpm: number, gradeLevel: number = 3): Fluen
     label: 'مؤشر وصفي — بلا تصنيف معياري',
     color: 'sky',
     badgeClass: 'bg-sky-100 text-sky-950 border-sky-300',
-    description: `${rate}. لا تصنّف هذه القيمة مستوى الطفل بمفردها؛ لا تستخدم بصيرة هنا معيارًا عربيًا مقننًا بحسب الصف.`,
+    description: `${rate}. لا تصنّف هذه القيمة مستوى الطفل بمفردها؛ ولا تستخدم هَيَّا نَقْرَأْ هنا معيارًا عربيًا مقنّنًا بحسب الصف.`,
   };
 };
 
@@ -451,7 +452,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
         setAudioFailureReason(isPermissionDenied ? 'permission_denied' : 'empty_audio');
         fallBackToTimedSilent(
           isPermissionDenied
-            ? 'لم يتم منح إذن الميكروفون في المتصفح. يمكنك إكمال القراءة الموقوتة صامتاً، أو السماح بالوصول من إعدادات المتصفح ثم إعادة المحاولة.'
+            ? 'لم يُمنح إذن الميكروفون في المتصفح. يمكنك إكمال القراءة الموقوتة صامتًا، أو السماح بالوصول من إعدادات المتصفح ثم إعادة المحاولة.'
             : 'تعذّر تشغيل الميكروفون أو لم يتم العثور على جهاز إدخال صوتي. بدأ الاختبار بالقراءة الموقوتة دون تسجيل.'
         );
       });
@@ -560,7 +561,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           const locale: 'ar-SA' = 'ar-SA';
 
           if (locale) {
-            setReadingModeNotice('يجري إرسال التسجيل الصوتي للتحليل السحابي المتقدم في Azure…');
+            setReadingModeNotice('جارٍ تحليل التسجيل الصوتي…');
             const assessmentStudentId =
               activeStudent?.id && activeStudent.isDemoRecord !== true ? activeStudent.id : '';
             const guardianConsentAt = effectiveGuardianConsentTimestamp;
@@ -646,8 +647,8 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 setSpokenTranscript(result.transcript.trim());
                 spokenTranscriptRef.current = result.transcript.trim();
                 setAzureAssessmentMode(result.assessmentMode === 'short-audio-miscue'
-                  ? 'تقييم صوتي من Azure بالنص المرجعي ومقارنة الكلمات'
-                  : 'تقييم صوتي من Azure مع محاذاة النص المرجعي');
+                  ? 'تقييم صوتي آلي مع مقارنة الكلمات بالنص'
+                  : 'تقييم صوتي آلي مع مطابقة النص');
                 setAzureAssessmentComplete(assessmentComplete);
                 setMeasuredWcpm(assessmentComplete && Number.isFinite(result.wordsCorrectPerMinute)
                   ? Number(result.wordsCorrectPerMinute) : undefined);
@@ -682,7 +683,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           REAL_STUDENT_RECORD_REQUIRED: 'اختر ملف طفل حقيقي محفوظًا في حساب الأسرة أو المدرسة قبل إرسال التسجيل؛ لم نرسل صوتًا مرتبطًا بملف تجريبي.',
           GUARDIAN_CONSENT_NOT_STORED: 'موافقة ولي الأمر العامة غير محفوظة أو لا تطابق سجل الطفل. احفظ الموافقة في ملف الطفل ثم أعد المحاولة.',
           AUDIO_CONSENT_REQUIRED: 'يلزم تسجيل موافقة منفصلة ومؤرخة على معالجة الصوت قبل بدء التقييم.',
-          AZURE_SPEECH_NOT_CONFIGURED: 'خدمة Azure Speech غير مهيأة على الخادم. لم تُحتسب درجة صوتية.',
+          AZURE_SPEECH_NOT_CONFIGURED: 'خدمة التقييم الصوتي غير مهيّأة على الخادم، فلم تُحتسب درجة صوتية.',
           PARENT_STUDENT_NOT_OWNED: 'لم يمكن ربط التسجيل بملف الطفل في حساب الأسرة الحالي؛ لم يُرسل الصوت للتحليل.',
           PARENT_STUDENT_OWNERSHIP_UNVERIFIED: 'تعذر التحقق من ملكية ملف الطفل؛ سجّل الدخول إلى حساب الأسرة ثم أعد المحاولة.',
           PARENT_STUDENT_OWNERSHIP_CHECK_FAILED: 'تعذر التحقق من ملف الطفل لدى خدمة الحسابات؛ لم يُرسل التسجيل للتحليل.',
@@ -690,19 +691,19 @@ export const ReadingAssessmentView: React.FC<Props> = ({
           REFERENCE_PASSAGE_MISMATCH: 'النص المعروض لا يطابق النص المرجعي المعتمد على الخادم. حدّث الصفحة ثم أعد المحاولة.',
           INVALID_WAV_HEADER: 'تعذر قراءة ملف الصوت المحوّل إلى WAV. أعد التسجيل باستخدام ميكروفون ومتصفح مدعومين.',
           UNSUPPORTED_WAV_FORMAT: 'صيغة الصوت المحوّلة غير متوافقة مع خدمة التقييم. أعد التسجيل.',
-          INVALID_AUDIO_PAYLOAD: 'ملف التسجيل غير صالح أو كبير أكثر من الحد المسموح؛ أعد التسجيل.',
+          INVALID_AUDIO_PAYLOAD: 'ملف التسجيل غير صالح أو أكبر من الحد المسموح؛ أعد التسجيل.',
           INVALID_AUDIO_DURATION: 'مدة التسجيل الصوتي خارج النطاق المسموح؛ أعد قراءة النص ثم أرسل التسجيل.',
 
           INVALID_ASSESSMENT_INPUT: 'بيانات التسجيل أو النص المرجعي غير مكتملة؛ حدّث الصفحة وأعد المحاولة.',
-          AZURE_NO_RECOGNIZED_SPEECH: 'لم يستخرج Azure كلامًا واضحًا من التسجيل. تحقق من مستوى الصوت والميكروفون ثم أعد المحاولة.',
+          AZURE_NO_RECOGNIZED_SPEECH: 'لم يُلتقط كلام واضح في التسجيل. تحقق من مستوى الصوت والميكروفون ثم أعد المحاولة.',
           AZURE_NO_WORD_LEVEL_RESULTS: 'وصل التسجيل لكن خدمة الصوت لم تُرجع نتائج على مستوى الكلمات؛ لم نحتسب أخطاء قراءة.',
-          AZURE_SPEECH_ASSESSMENT_FAILED: 'تعذر إكمال تقييم الصوت لدى Azure. لم نستخدم تفريغ المتصفح بديلًا.',
+          AZURE_SPEECH_ASSESSMENT_FAILED: 'تعذّر إكمال التقييم الصوتي، ولم نستخدم تفريغ المتصفح بديلًا منه.',
           INVALID_AZURE_ASSESSMENT_RESPONSE: 'أعاد الخادم نتيجة صوتية غير مكتملة البنية؛ لم تُحتسب درجة.',
         };
 
         if (!recordedAudio || recordedAudio.size === 0) {
           reason = 'empty_audio';
-          errorMessage = 'لم يُلتقط تسجيل صوتي صالح (تسجيل فارغ أو مستوى صوت منخفض جداً). تحقق من الميكروفون ثم أعد القراءة.';
+          errorMessage = 'لم يُلتقط تسجيل صوتي صالح (تسجيل فارغ أو مستوى صوت منخفض جدًا). تحقق من الميكروفون ثم أعد القراءة.';
         } else if (studentDialect !== 'egyptian' && studentDialect !== 'gulf') {
           reason = 'unsupported_dialect';
           errorMessage = 'التقييم الصوتي الآلي في هذا المسار متاح حاليًا للمصرية والخليجية فقط. الفصحى واللهجات الأخرى تتابع دون درجة نطق، ولم نُحوّلها إلى نموذج آخر.';
@@ -1227,7 +1228,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
                 <span className="text-teal-400 font-bold shrink-0">معاينة التعرف الصوتي في المتصفح (للعرض فقط):</span>
                 <span className="text-slate-200 font-mono truncate max-w-xl">
-                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع؛ ستظهر معاينة أولية لا تدخل في التقييم...'}
+                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع؛ ستظهر معاينة أولية لا تدخل في التقييم…'}
                 </span>
               </div>
             </div>
@@ -1284,7 +1285,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               </button>
               {isAssessingPronunciation && (
                 <div role="status" aria-live="polite" className="mt-4 w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sky-950 text-sm font-bold text-center">
-                  جارٍ تحويل التسجيل النهائي وإرساله إلى Microsoft Azure لتقييم النطق الفعلي. لن يُستخدم تفريغ Chrome بديلاً عن التقييم.
+                  جارٍ تحليل التسجيل لتقييم النطق. لن يُستخدم تفريغ المتصفح بديلًا من التقييم.
                 </div>
               )}
               <p className="text-slate-500 text-xs mt-3 text-center">
@@ -1333,7 +1334,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <span className="text-[10px] text-emerald-600 block mt-1">
                   {azureAssessmentComplete && aiAssessmentReceipt
-                    ? `${wordStats.effectiveWords} كلمة احتسبها محرك التقييم بعد المطابقة الآلية خلال ${finalDurationSec} ثانية`
+                    ? `عدد الكلمات المحتسبة بعد المطابقة الآلية: ${toArabicNum(wordStats.effectiveWords)}، خلال ${toArabicNum(finalDurationSec)} ثانية`
                     : 'لا توجد درجة صوتية مكتملة موثقة المصدر'}
                 </span>
               </div>
@@ -1346,7 +1347,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {azureAssessmentComplete && aiAssessmentReceipt && measuredAccuracyPercent !== undefined ? measuredAccuracyPercent + '%' : 'غير متاح'}
                 </div>
                 <span className="text-[10px] text-teal-600">
-                  من إجمالي {verifiedWords.length} كلمة
+                  من إجمالي الكلمات: {toArabicNum(verifiedWords.length)}
                 </span>
               </div>
 
@@ -1433,17 +1434,17 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           لم يُرصد صوت واضح أثناء التسجيل
                         </strong>
                         <p>
-                          التسجيل الصوتي فارغ أو الصوت كان منخفضاً جداً. تأكد من توصيل الميكروفون، رفع مستوى الإدخال، واقتراب الطفل من الجهاز أثناء القراءة ثم أعد المحاولة.
+                          التسجيل الصوتي فارغ أو الصوت كان منخفضًا جدًا. تأكّد من توصيل الميكروفون ورفع مستوى الإدخال واقتراب الطفل من الجهاز أثناء القراءة ثم أعد المحاولة.
                         </p>
                       </>
                     )}
                     {audioFailureReason === 'service_unavailable' && (
                       <>
                         <strong className="block text-sm font-black text-sky-900">
-                          محرك التحليل الصوتي السحابي غير متاح حالياً
+                          محرك التحليل الصوتي السحابي غير متاح حاليًا
                         </strong>
                         <p>
-                          تعذر الاتصال بخدمة التحليل الصوتي السحابي أو لم يتم تهيئة مفتاح الخدمة. يمكنك إعادة المحاولة أو متابعة أسئلة الفهم دون درجة صوتية. لا تُستخدم معاينة المتصفح ولا التصحيح اليدوي بدلًا من المحرك.
+                          تعذر الاتصال بخدمة التحليل الصوتي السحابي أو لم يُهيَّأ مفتاح الخدمة. يمكنك إعادة المحاولة أو متابعة أسئلة الفهم دون درجة صوتية. لا تُستخدم معاينة المتصفح ولا التصحيح اليدوي بدلًا من المحرك.
                         </p>
                       </>
                     )}
@@ -1453,7 +1454,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                           تنبيه اللهجة المختارة
                         </strong>
                         <p>
-                          إعدادات Azure المتاحة هنا هي المصرية (ar-EG) والسعودية (ar-SA). هذا لا يثبت الدقة مع كل اللهجات الخليجية أو الفصحى لدى الأطفال؛ لا تُحتسب درجة للهجات غير المدعومة، ولا يوجد تأكيد يدوي للكلمات.
+                          التقييم الصوتي متاح هنا بإعدادَي العربية المصرية (ar-EG) والسعودية (ar-SA). هذا لا يثبت الدقة مع كل اللهجات الخليجية أو الفصحى لدى الأطفال؛ لا تُحتسب درجة للهجات غير المدعومة، ولا يوجد تأكيد يدوي للكلمات.
                         </p>
                       </>
                     )}
@@ -1537,7 +1538,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = item.spokenWord ? `اختلاف محتمل في النطق (التفريغ: "${item.spokenWord}")؛ أعد التسجيل إن لم يُحسم` : 'اختلاف محتمل؛ أعد التسجيل إن لزم';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
-                    statusTitle = 'غير محسومة آلياً';
+                    statusTitle = 'غير محسومة آليًا';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
                     statusTitle = 'حذف محتمل؛ أعد التسجيل لتأكيده';
@@ -1549,7 +1550,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       type="button"
                       onClick={() => handleSpeakWord(item.word)}
                       className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col items-center gap-0.5 ${badgeClass}`}
-                      title={`${item.word}: ${statusTitle} (انقر للاستماع للنطق السليم)`}
+                      title={`${item.word}: ${statusTitle} (انقر للاستماع إلى النطق السليم)`}
                     >
                       <span className="font-bold">{item.word}</span>
                       {item.status === 'phonetic_substitution' && item.spokenWord && (
@@ -1572,7 +1573,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
               <div>
                 <strong className="block text-slate-950 text-sm font-black mb-1">
                   {azureAssessmentComplete && aiAssessmentReceipt && measuredAccuracyPercent !== undefined
-                    ? `دقة الكلمات التي قيّمها محرك الصوت: ${measuredAccuracyPercent}%`
+                    ? `دقة الكلمات التي قيّمها محرك الصوت: ${toArabicNum(measuredAccuracyPercent)}٪`
                     : 'درجة النطق غير متاحة لهذه المحاولة'}
                 </strong>
                 <p className="text-xs text-slate-700 leading-relaxed">
@@ -1594,7 +1595,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <div className="flex items-center gap-2">
                   <span className={`inline-block w-2.5 h-2.5 rounded-full ${azureAssessmentComplete && aiAssessmentReceipt ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                   <span>{azureAssessmentComplete && aiAssessmentReceipt
-                    ? 'اكتملت العملية التقنية على الخادم؛ قد تقترح النتيجة نشاطًا للممارسة، لكنها تظل قابلة للخطأ ولا تثبت وجود صعوبة تعلم.'
+                    ? 'اكتمل التحليل على الخادم؛ قد تقترح النتيجة نشاطًا للممارسة، لكنها تظل قابلة للخطأ ولا تثبت وجود صعوبة تعلم.'
                     : 'لم تكتمل درجة النطق آليًا؛ يمكنك إعادة القراءة أو متابعة الفهم دون درجة صوتية.'}</span>
                 </div>
               </div>
@@ -1625,7 +1626,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 اختبار الفهم والاستيعاب القرائي
               </div>
               <h2 className="text-2xl font-black text-slate-900">
-                السؤال {currentQuestionIndex + 1} من {passage.comprehensionQuestions.length}
+                السؤال {toArabicNum(currentQuestionIndex + 1)} من {toArabicNum(passage.comprehensionQuestions.length)}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 المهارة المستهدفة: {passage.comprehensionQuestions[currentQuestionIndex]?.skillLabelAr}
@@ -1746,9 +1747,9 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 <p className="text-[11px] text-teal-800 mt-2 leading-relaxed">
                   {readingMode === 'oral_audio'
                     ? azureAssessmentComplete
-                      ? 'المعدل مستخرج من تقييم التسجيل الصوتي في Azure، وليس من المعاينة اللحظية للمتصفح.'
+                      ? 'المعدل محسوب من التقييم الصوتي للتسجيل، لا من المعاينة اللحظية في المتصفح.'
                       : 'لا يُعرض معدل صوتي؛ لم يكتمل تقييم التسجيل، لذلك لا نعتمد تقدير المتصفح.'
-                    : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معياراً تشخيصياً.'}
+                    : 'أكمل النص المرجعي خلال ' + finalDurationSec + ' ثانية. المعدل المعروض وصفي وليس معيارًا تشخيصيًا.'}
                 </p>
               </div>
 
@@ -1775,7 +1776,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {summaryStats.accuracyPercent === null ? 'غير متاح' : summaryStats.accuracyPercent + '%'}
                 </div>
                 <p className="text-[11px] text-emerald-800 mt-2">
-                  {summaryStats.correct} مطابقة نصية · {summaryStats.errors} اختلاف محتمل · {summaryStats.omitted} حذف محتمل · {summaryStats.unconfirmed} غير محسومة
+                  مطابقة: {toArabicNum(summaryStats.correct)} · اختلاف محتمل: {toArabicNum(summaryStats.errors)} · حذف محتمل: {toArabicNum(summaryStats.omitted)} · غير محسومة: {toArabicNum(summaryStats.unconfirmed)}
                 </p>
               </div>
 
@@ -1788,7 +1789,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                   {comprehensionScore}%
                 </div>
                 <p className="text-[11px] text-indigo-800 mt-2">
-                  أجاب بشكل سليم عن {Math.round((comprehensionScore / 100) * (passage.comprehensionQuestions?.length || 1))} من {passage.comprehensionQuestions?.length || 1} أسئلة
+                  الإجابات الصحيحة: {toArabicNum(Math.round((comprehensionScore / 100) * (passage.comprehensionQuestions?.length || 1)))} من {toArabicNum(passage.comprehensionQuestions?.length || 1)}
                 </p>
               </div>
             </div>
@@ -1806,7 +1807,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </div>
                 <div className="bg-white/95 p-3.5 rounded-xl border border-teal-100 shadow-2xs">
                   <strong className="text-teal-900 block mb-1">كيف نتابع التغير؟</strong>
-                  قارن جلسات متشابهة عند استخدام النص نفسه وظروف قراءة قريبة. لا يتيح التقرير تصحيح التصنيفات يدويًا، ولا تعرض بصيرة حاليًا نطاقًا معياريًا عربيًا مقننًا بحسب الصف.
+                  قارن جلسات متشابهة عند استخدام النص نفسه وظروف قراءة قريبة. لا يتيح التقرير تصحيح التصنيفات يدويًا، ولا تعرض هَيَّا نَقْرَأْ حاليًا نطاقًا معياريًا عربيًا مقنّنًا بحسب الصف.
                 </div>
               </div>
             </div>
@@ -1859,7 +1860,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                               type="button"
                               onClick={() => handleSpeakWord(item.word)}
                               className="p-1.5 rounded-xl bg-white hover:bg-slate-100 text-indigo-600 shadow-2xs transition-colors cursor-pointer"
-                              title="استمع للنطق الصحيح"
+                              title="استمع إلى النطق الصحيح"
                             >
                               <Volume2 className="w-4 h-4" />
                             </button>
@@ -1911,7 +1912,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-1"></span> تخطي محتمل: {summaryStats.omitted}
                   </span>
                   <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آلياً: {summaryStats.unconfirmed}
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 ml-1"></span> غير محسومة آليًا: {summaryStats.unconfirmed}
                   </span>
                 </div>
               </div>
@@ -1945,7 +1946,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     statusTitle = item.spokenWord ? `إبدال صوتي (نطق: "${item.spokenWord}")` : 'إبدال صوتي / تعثر';
                   } else if (item.status === 'unconfirmed') {
                     badgeClass = 'bg-slate-100 text-slate-800 border-slate-300';
-                    statusTitle = 'غير محسومة آلياً؛ قد يكون التعرّف الصوتي لم يلتقطها';
+                    statusTitle = 'غير محسومة آليًا؛ قد يكون التعرّف الصوتي لم يلتقطها';
                   } else if (item.status === 'omitted') {
                     badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 line-through opacity-75 hover:bg-rose-200';
                     statusTitle = 'تخطي / لم تُنطق';
@@ -1967,7 +1968,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                       )}
                       {item.status === 'unconfirmed' && (
                     <span className="text-[9px] font-mono text-slate-700">
-                      غير محسومة آلياً
+                      غير محسومة آليًا
                     </span>
                   )}
                   {item.status === 'omitted' && (
@@ -1996,7 +1997,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                             key={i}
                             onClick={() => handleSpeakWord(w.word)}
                             className="px-3 py-1 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs font-bold cursor-pointer hover:bg-amber-100 flex items-center gap-1 shadow-2xs"
-                            title="انقر للاستماع للنطق السليم"
+                            title="انقر للاستماع إلى النطق السليم"
                           >
                             <Volume2 className="w-3.5 h-3.5 text-amber-600" />
                             <span>{w.word}</span>
@@ -2029,7 +2030,7 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 onClick={handleCommitSession}
                 className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-lg py-4 px-10 rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>حفظ النتائج والانتقال للتقرير الشامل</span>
+                <span>حفظ النتائج والانتقال إلى التقرير الشامل</span>
                 <ChevronLeft className="w-5 h-5" />
               </button>
 

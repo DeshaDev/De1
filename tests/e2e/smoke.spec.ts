@@ -170,7 +170,7 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   ]) {
     await expect(page.getByText(game, { exact: true })).toBeVisible();
   }
-  await expect(page.getByText('أُنجزت ٠ من ١٥ مهام')).toBeVisible();
+  await expect(page.getByText('المهام المنجزة: ٠ من ١٥')).toBeVisible();
   await expect(page.getByRole('button', { name: 'النتيجة والتقرير' })).toBeDisabled();
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();
