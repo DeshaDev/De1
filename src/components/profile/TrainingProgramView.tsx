@@ -718,7 +718,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
-                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تُضاف ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل عنها كلها إجابة صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ في أغلبها بدأنا بمستوى أسهل.
+                سنجرّب كلمات قصيرة لنعرف من أين نبدأ. خذ وقتك؛ هذه مجرد بداية للتعلّم.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -755,9 +755,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {run.phase === 'probeIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
-              <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
+              <h2 className="font-child text-2xl font-black text-slate-900">نجرب ثم نتعلّم!</h2>
               <p className="text-sm text-slate-600">
-                أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
+                أسئلة قصيرة لنرى كيف تتقدم. وبعدها نبدأ درس اليوم.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
                 <button
@@ -939,11 +939,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 الإجابات الصحيحة: {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)}
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
-              {run.results.length > 0 && (
-                <p className="text-xs text-ink-2 max-w-sm">
-                  تقدير النموذج لإتقان المستوى الحالي: من {pct(run.results[run.results.length - 1].pBefore)}٪ إلى {pct(run.results[run.results.length - 1].pAfter)}٪
-                </p>
-              )}
+
               <button
                 type="button"
                 onClick={() => {
