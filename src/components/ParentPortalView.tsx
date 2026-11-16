@@ -736,7 +736,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق على إنشاء ملف الطفل وحفظ نتائجه وفق سياسة الخصوصية. يُحفظ الملف على هذا الجهاز ما لم أسجّل حسابًا سحابيًا.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي وفق سياسة الخصوصية.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
