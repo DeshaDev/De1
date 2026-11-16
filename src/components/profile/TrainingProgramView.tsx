@@ -1167,16 +1167,6 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </div>
       </section>
 
-      <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
-          <p className="text-xs text-ink-2 mt-1">تدريبات إضافية على فك الترميز والإملاء والوعي الصرفي والفهم والطلاقة، مع تدرّج بحسب عمر الطفل.</p>
-        </div>
-        <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
-          افتح المحطات
-        </button>
-      </section>
-
       {due && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-info">
@@ -1204,17 +1194,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         )}
       </section>
 
-      {/* لوحة أوسمة الإتقان وجواز الإنجاز */}
-      <section className="bz-card p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-black text-slate-900 flex items-center gap-2">
-            <Award className="w-4 h-4 text-amber-500" /> لوحة أوسمة الإتقان وجواز الإنجاز
-          </h3>
+      {/* تبقى تفاصيل الأوسمة خارج واجهة المتابعة الأساسية حتى لا تزاحم زر جلسة اليوم. */}
+      <details className="bz-card p-5 space-y-3">
+        <summary className="cursor-pointer font-black text-slate-900 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2"><Award className="w-4 h-4 text-amber-500" /> أوسمة المهارات</span>
           <span className="text-xs font-bold text-slate-500">
-            الأوسمة: {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)}
+            {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)}
           </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+        </summary>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-3">
           {progress.plan.focus.map((s) => {
             const badge = SKILL_BADGES[s];
             const isEarned = (progress.badges ?? []).includes(s) || progress.mastered.includes(s);
@@ -1240,7 +1228,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             );
           })}
         </div>
-      </section>
+      </details>
 
       {progress.targets && (progress.targets.soundPairs.length > 0 || progress.targets.letters.length > 0) && (
         <details className="bz-card-quiet p-4">
@@ -1291,6 +1279,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <summary className="cursor-pointer font-black text-slate-900">أنشطة إضافية اختيارية</summary>
           <p className="text-xs text-ink-2 mt-2">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
           <div className="flex flex-wrap gap-2 mt-3">
+            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>محطات القراءة واللغة</button>
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
             {(student?.ageYears ?? 0) >= 6 && (
@@ -1300,7 +1289,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </details>
       )}
 
-      {student && <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />}
+      {student && (
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">اقتراحات ممارسة إضافية لولي الأمر</summary>
+          <div className="mt-3">
+            <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />
+          </div>
+        </details>
+      )}
 
       <ProgramRules />
 
