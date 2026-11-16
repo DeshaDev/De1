@@ -1,8 +1,8 @@
-# بصيرة — Design System Master
+# هَيَّا نَقْرَأْ — Design System Master
 
 > **Source of truth:** Use this file for every page. Page-specific design rules may live under `design-system/baseera/pages/` only where an explicit page exception is needed.
 
-**Product:** Arabic reading, comprehension and numeracy learning space for primary-school children, with parent/teacher support.  
+**Product:** Arabic early-reading skills screening and learning support for children aged 4–8, with family and school reporting.  
 **Design intelligence:** UI UX Pro Max — Kids Learning + Educational App.  
 **Visual direction:** Softened Claymorphism combined with colorful block-based learning cards, clear hierarchy, calm backgrounds, and restrained motion.
 
@@ -34,7 +34,7 @@
 | Border | `#D6E4F8` | Card outlines and dividers |
 | Soft blue | `#DBEAFE` | Selected/active states |
 | Soft mint | `#D1FAE5` | Supportive callouts |
-| Soft yellow | `#FEF3C7` | Reward/number activities |
+| Soft yellow | `#FEF3C7` | Rewards and learning highlights |
 | Soft pink | `#FCE7F3` | Decorative accent surface |
 | Error | `#B91C1C` | Clear error text and icons |
 
@@ -76,8 +76,8 @@ Maintain at least 4.5:1 contrast for normal text. Use dark text on yellow and pi
 
 ## Shared components
 
-- Header: wordmark, five child-facing destinations, teacher access as a secondary action.
-- Mobile navigation: Home, Reading, Math, Accessible Reader, Practice (five items maximum).
+- Desktop header: wordmark and three primary destinations (Home, reading screening, guided programme); family registration is prominent and teacher access remains secondary.
+- Mobile navigation: Home, Child profile, Screening, Programme (four items). The accessible reader and optional practice games remain reachable from the relevant learning areas or footer.
 - Primary action: filled blue with white text, rounded corners and clear press/disabled states.
 - Secondary action: card surface, soft border and dark text.
 - Activity tile: large icon tile, direct label, one-sentence explanation, visible action.
