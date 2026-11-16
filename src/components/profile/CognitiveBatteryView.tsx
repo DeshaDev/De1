@@ -411,7 +411,6 @@ function SetupView({
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
-  const [examiner, setExaminer] = useState(supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر');
   const dialect: HomeDialect = 'msa';
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
@@ -493,10 +492,6 @@ function SetupView({
               <p className="rounded-xl bg-warn-soft p-3 bz-small text-ink-2">{ageCautionAr(years * 12 + months)}</p>
             )}
           </div>
-          <label className="bz-field">
-            <span className="bz-label">اسم ولي الأمر أو المرافق</span>
-            <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
-          </label>
         </div>
 
         <hr className="bz-divider" />
@@ -550,7 +545,7 @@ function SetupView({
               studentId: student.id,
               childName: name.trim(),
               ageMonths: years * 12 + months,
-              examinerName: examiner.trim(),
+              examinerName: supabaseUser?.user_metadata?.full_name || 'ولي الأمر',
               startedAt: new Date().toISOString(),
               dialect: 'msa',
               guardianConsentGiven: checks.consent,
