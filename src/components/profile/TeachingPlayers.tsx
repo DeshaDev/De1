@@ -168,7 +168,7 @@ function GuidedSyllableAssembly({
       {complete && (
         <div className="w-full rounded-3xl border-2 border-emerald-200 bg-emerald-50 p-5 space-y-3">
           <div className="flex items-center justify-center gap-3">
-            <Pic emoji={LEXICON[activity.pictureId].emoji} label={activity.word} />
+            <span className="text-5xl"><Pic emoji={LEXICON[activity.pictureId].emoji} label={activity.word} /></span>
             <span className="font-child text-3xl font-black text-emerald-900">{activity.word}</span>
           </div>
           <p className="font-child text-lg font-bold text-emerald-900">أَحْسَنْتَ! جَمَعْتَ الْمَقَاطِعَ وَصَنَعْتَ الْكَلِمَةَ.</p>
