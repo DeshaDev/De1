@@ -69,7 +69,7 @@ function GuidedSyllableAssembly({
 }) {
   const [placed, setPlaced] = useState<number[]>([]);
   const [hint, setHint] = useState('اختر الجزء الذي نسمعه أولًا.');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [complete, setComplete] = useState(false);
   const handle = useRef<PlaybackHandle | null>(null);
   const choices = activity.parts.map((part, index) => ({ part, index }));
@@ -81,7 +81,9 @@ function GuidedSyllableAssembly({
     void speakSegments([
       { text: 'هَيَّا نُرَكِّبُ الْكَلِمَةَ مَعًا.' },
       { text: activity.instructionAr },
-    ], h);
+    ], h).finally(() => {
+      if (!h.cancelled) setBusy(false);
+    });
     return () => {
       h.cancelled = true;
       stopSpeech();
