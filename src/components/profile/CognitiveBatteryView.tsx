@@ -570,8 +570,8 @@ function SetupView({
       </section>
 
       <aside className="space-y-4">
-        <div className="bz-card-quiet p-6">
-          <h2 className="bz-h3">كيف يسير الفحص؟</h2>
+        <details className="bz-card-quiet p-6">
+          <summary className="bz-h3 cursor-pointer">كيف يسير الفحص؟</summary>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
               `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
@@ -586,9 +586,9 @@ function SetupView({
               </li>
             ))}
           </ul>
-        </div>
-        <div className="bz-card p-6">
-          <h2 className="font-semibold text-ink">ما الذي نقيسه</h2>
+        </details>
+        <details className="bz-card p-6">
+          <summary className="font-semibold text-ink cursor-pointer">ما الذي نقيسه</summary>
           <ul className="mt-3 grid grid-cols-1 gap-2">
             {Object.values(DOMAINS).map((d) => (
               <li key={d.nameAr} className="flex items-center gap-2.5 bz-small text-ink-2">
@@ -597,7 +597,7 @@ function SetupView({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       </aside>
     </div>
   );
