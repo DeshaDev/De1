@@ -485,7 +485,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           taskIndex: 0,
           correct: 0,
           phase: 'lesson',
-          lesson: lessonFor(skill, level, current.targets),
+          lesson: lessonFor(skill, level, current.targets, childAgeYears),
           guided: 0,
           stars: prev?.stars ?? 0,
           change: null,
