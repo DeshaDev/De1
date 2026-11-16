@@ -717,9 +717,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'placementIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
-              <p className="text-sm text-slate-600">
-                سنجرّب كلمات قصيرة لنعرف من أين نبدأ. خذ وقتك؛ هذه مجرد بداية للتعلّم.
+              <p className="font-child text-lg font-bold text-slate-700">
+                سنجرّب بعض الكلمات بهدوء لنختار المستوى المناسب لك.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ

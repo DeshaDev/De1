@@ -75,6 +75,50 @@ describe('teaching curriculum: lessons ("I do")', () => {
     }
   });
 
+  it('teaches blending through several worked examples before handing over', () => {
+    const expected: Record<Level, string[]> = {
+      1: ['pen', 'rain', 'moon'],
+      2: ['fish', 'apple', 'orange'],
+      3: ['pen', 'fish', 'orange'],
+    };
+
+    for (const level of [1, 2, 3] as Level[]) {
+      const lesson = lessonFor('blending', level);
+      assert.ok(lesson);
+      const models = lesson.steps.flatMap((step) =>
+        step.visual?.kind === 'syllables' ? [step.visual] : []
+      );
+      assert.deepEqual(models.map((model) => model.pictureId), expected[level]);
+      assert.ok(lesson.steps.length >= 5, `blending/L${level} needs more than one explanation step`);
+
+      for (const model of models) {
+        const id = model.pictureId;
+        assert.ok(id);
+        assert.deepEqual(model.parts, LEXICON[id].syllables);
+        assert.equal(model.word, LEXICON[id].word);
+        assert.ok(model.parts.length >= 2 && model.parts.length <= 4);
+      }
+      assert.match(lesson.steps.at(-1)!.textAr, /دورك/);
+    }
+  });
+
+  it('keeps blending assessment items within the syllable count named by each level', () => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const twoPart = generateSession('blending', 1, seed);
+      const threeOrFourPart = generateSession('blending', 2, seed);
+
+      for (const task of twoPart) {
+        if (task.kind !== 'choice') continue;
+        assert.equal(LEXICON[task.item.correctId].syllables.length, 2);
+      }
+      for (const task of threeOrFourPart) {
+        if (task.kind !== 'choice') continue;
+        const count = LEXICON[task.item.correctId].syllables.length;
+        assert.ok(count === 3 || count === 4, `level 2 generated ${count} syllables`);
+      }
+    }
+  });
+
   it('keeps comprehension lessons matched to the child\u2019s reading stage', () => {
     for (const age of [4, 5]) {
       const listeningLesson = lessonFor('comprehension', 1, undefined, age);

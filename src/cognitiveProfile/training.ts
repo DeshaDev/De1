@@ -1090,7 +1090,11 @@ function blendingTask(random: () => number, level: Level, n: number): ChoiceItem
       tag: 'syllableCount',
     };
   }
-  const candidates = entries.filter((e) => (level === 1 ? e.syllables.length === 2 : e.syllables.length >= 3));
+  const candidates = entries.filter((e) =>
+    level === 1
+      ? e.syllables.length === 2
+      : e.syllables.length >= 3 && e.syllables.length <= 4
+  );
   const target = pick(candidates, random);
   // Distractors share the first syllable's onset or length so the child must blend, not guess.
   const distractors = shuffleWith(

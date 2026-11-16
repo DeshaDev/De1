@@ -57,6 +57,44 @@ export function shouldShowSkillLesson(lessonSeen: boolean, previousPhase?: strin
 const say = (...texts: string[]): AudioSegment[] => texts.map((text) => ({ text, pauseAfterMs: 350 }));
 const word = (id: string) => lex(id).word;
 
+/** One worked syllable-blending example, with the parts spoken before the complete word. */
+function syllableExample(id: string, textAr: string, spokenLead: string): LessonStep {
+  const entry = lex(id);
+  return {
+    textAr,
+    audio: [
+      ...say(spokenLead),
+      ...entry.syllables.map((part) => ({ text: part, pauseAfterMs: 650 })),
+      ...say('مَعًا:', entry.word),
+    ],
+    visual: {
+      kind: 'syllables',
+      parts: entry.syllables,
+      word: entry.word,
+      pictureId: id,
+    },
+  };
+}
+
+/** A counting model makes each spoken syllable visible as one clap. */
+function syllableCountExample(id: string, textAr: string, spokenCount: string): LessonStep {
+  const entry = lex(id);
+  return {
+    textAr,
+    audio: [
+      ...say('اِسْمَعِ الْكَلِمَةَ بِبُطْءٍ، وَصَفِّقْ مَعَ كُلِّ مَقْطَعٍ.'),
+      ...entry.syllables.map((part) => ({ text: part, pauseAfterMs: 650 })),
+      ...say(spokenCount),
+    ],
+    visual: {
+      kind: 'syllables',
+      parts: entry.syllables,
+      word: entry.word,
+      pictureId: id,
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Articulation cues for each confusable pair (letters sorted for lookup)
 // ---------------------------------------------------------------------------
@@ -387,26 +425,60 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         ],
       };
     case 'blending': {
-      if (level === 3) {
-        const e = lex('fish');
+      if (level === 1) {
         return {
           key, skill, level,
-          titleAr: 'نعدّ أجزاء الكلمة',
+          titleAr: 'نركّب مقطعين لنصنع كلمة',
           steps: [
-            { textAr: 'نعدّ أجزاء الكلمة بالتصفيق.', audio: say('نَعُدُّ أَجْزَاءَ الْكَلِمَةِ بِالتَّصْفِيقِ.') },
-            { textAr: `«${e.word}»: ${e.syllables.join(' | ')} — ثلاث تصفيقات.`, audio: [...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })), ...say('ثَلَاثُ تَصْفِيقَاتٍ.')], visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: 'fish' } },
-            closing('الآن دورك: صفّق مع كل جزء، ثم اختر العدد.', 'الْآنَ دَوْرُكَ: صَفِّقْ مَعَ كُلِّ جُزْءٍ، ثُمَّ اخْتَرِ الْعَدَدَ.'),
+            {
+              textAr: 'نسمع الكلمة في مقطعين. نقول الأول، ثم الثاني، وبعدها نضمهما معًا.',
+              audio: say('نَسْمَعُ الْكَلِمَةَ فِي مَقْطَعَيْنِ. نَقُولُ الْأَوَّلَ، ثُمَّ الثَّانِيَ، وَبَعْدَهَا نَضُمُّهُمَا مَعًا.'),
+            },
+            syllableExample('pen', 'نسمع المقطعين منفصلين، ثم نقولهما معًا.', 'اِسْمَعِ الْمَقْطَعَيْنِ، ثُمَّ قُلْهُمَا مَعًا.'),
+            syllableExample('rain', 'نجرّب كلمة أخرى، ونحافظ على ترتيب المقطعين.', 'نُكَرِّرُ الطَّرِيقَةَ نَفْسَهَا، مَعَ تَرْتِيبِ الْمَقْطَعَيْنِ.'),
+            syllableExample('moon', 'كل مقطع يأتي في مكانه؛ لا نبدّل الأول بالثاني.', 'نَسْمَعُ الْأَوَّلَ، ثُمَّ الثَّانِيَ، وَلَا نُبَدِّلُ مَكَانَهُمَا.'),
+            closing('الآن دورك: اسمع مقطعين، ثم ركّبهما بالترتيب واختر الصورة.', 'الْآنَ دَوْرُكَ: اِسْمَعْ مَقْطَعَيْنِ، ثُمَّ رَكِّبْهُمَا بِالتَّرْتِيبِ وَاخْتَرِ الصُّورَةَ.'),
           ],
         };
       }
-      const e = lex(level === 1 ? 'pen' : 'fish');
+
+      if (level === 2) {
+        return {
+          key, skill, level,
+          titleAr: 'نركّب ثلاثة أو أربعة مقاطع',
+          steps: [
+            {
+              textAr: 'نسمع المقاطع واحدًا بعد الآخر، ثم نضمها بالترتيب من أول مقطع إلى آخر مقطع.',
+              audio: say('نَسْمَعُ الْمَقَاطِعَ وَاحِدًا بَعْدَ الْآخَرِ، ثُمَّ نَضُمُّهَا بِالتَّرْتِيبِ مِنْ أَوَّلِ مَقْطَعٍ إِلَى آخِرِ مَقْطَعٍ.'),
+            },
+            syllableExample('fish', 'نبدأ بالمقطع الأول، ثم نضيف الثاني، ثم الثالث.', 'نَبْدَأُ بِالْمَقْطَعِ الْأَوَّلِ، ثُمَّ نُضِيفُ الثَّانِيَ، ثُمَّ الثَّالِثَ.'),
+            syllableExample('apple', 'نحافظ على ترتيب المقاطع كما سمعناها.', 'نُحَافِظُ عَلَى تَرْتِيبِ الْمَقَاطِعِ كَمَا سَمِعْنَاهَا.'),
+            syllableExample('orange', 'هذه الكلمة أطول؛ نصل المقاطع الأربعة بالترتيب نفسه.', 'هَذِهِ الْكَلِمَةُ أَطْوَلُ؛ نَصِلُ الْمَقَاطِعَ الْأَرْبَعَةَ بِالتَّرْتِيبِ نَفْسِهِ.'),
+            {
+              textAr: 'لا نقف طويلًا بين المقاطع؛ نقرّبها من بعضها حتى نسمع الكلمة كاملة.',
+              audio: say('لَا نَقِفُ طَوِيلًا بَيْنَ الْمَقَاطِعِ؛ نُقَرِّبُهَا مِنْ بَعْضِهَا حَتَّى نَسْمَعَ الْكَلِمَةَ كَامِلَةً.'),
+            },
+            closing('الآن دورك: اسمع ثلاثة أو أربعة مقاطع، ثم ركّب الكلمة واختر صورتها.', 'الْآنَ دَوْرُكَ: اِسْمَعْ ثَلَاثَةَ أَوْ أَرْبَعَةَ مَقَاطِعَ، ثُمَّ رَكِّبِ الْكَلِمَةَ وَاخْتَرْ صُورَتَهَا.'),
+          ],
+        };
+      }
+
       return {
         key, skill, level,
-        titleAr: 'نركّب الأجزاء لنصنع كلمة',
+        titleAr: 'نعدّ مقاطع الكلمة',
         steps: [
-          { textAr: 'الكلمة مصنوعة من أجزاء صغيرة. نصفّق مع كل جزء.', audio: say('الْكَلِمَةُ مَصْنُوعَةٌ مِنْ أَجْزَاءٍ صَغِيرَةٍ. نُصَفِّقُ مَعَ كُلِّ جُزْءٍ.') },
-          { textAr: `${e.syllables.join(' + ')} = «${e.word}»`, audio: [...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })), ...say('مَعًا:', e.word)], visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id } },
-          closing('الآن دورك: اسمع الأجزاء، وركّبها، ثم اختر الصورة.', 'الْآنَ دَوْرُكَ: اسْمَعِ الْأَجْزَاءَ، وَرَكِّبْهَا، ثُمَّ اخْتَرِ الصُّورَةَ.'),
+          {
+            textAr: 'نقول الكلمة ببطء. نصفّق مرة مع كل مقطع، ثم نعدّ التصفيقات.',
+            audio: say('نَقُولُ الْكَلِمَةَ بِبُطْءٍ. نُصَفِّقُ مَرَّةً مَعَ كُلِّ مَقْطَعٍ، ثُمَّ نَعُدُّ التَّصْفِيقَاتِ.'),
+          },
+          syllableCountExample('pen', 'في «قَلَم» مقطعان؛ لذلك نصفّق مرتين.', 'مَقْطَعَانِ، وَتَصْفِيقَتَانِ.'),
+          syllableCountExample('fish', 'في «سَمَكَة» ثلاثة مقاطع؛ لذلك نصفّق ثلاث مرات.', 'ثَلَاثَةُ مَقَاطِعَ، وَثَلَاثُ تَصْفِيقَاتٍ.'),
+          syllableCountExample('orange', 'في «بُرْتُقَالَة» أربعة مقاطع؛ لذلك نصفّق أربع مرات.', 'أَرْبَعَةُ مَقَاطِعَ، وَأَرْبَعُ تَصْفِيقَاتٍ.'),
+          {
+            textAr: 'نعدّ أجزاء النطق التي نسمعها، لا عدد الحروف المكتوبة.',
+            audio: say('نَعُدُّ أَجْزَاءَ النُّطْقِ الَّتِي نَسْمَعُهَا، لَا عَدَدَ الْحُرُوفِ الْمَكْتُوبَةِ.'),
+          },
+          closing('الآن دورك: قل الكلمة ببطء، وصفّق مع كل مقطع، ثم اختر العدد.', 'الْآنَ دَوْرُكَ: قُلِ الْكَلِمَةَ بِبُطْءٍ، وَصَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرِ الْعَدَدَ.'),
         ],
       };
     }
