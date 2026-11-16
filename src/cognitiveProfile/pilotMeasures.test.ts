@@ -64,10 +64,10 @@ describe('transfer measure (untrained words)', () => {
     ...PASSAGE_WORDS.map((w) => stripMarks(w).replace(/[.,،]/g, '')),
   ]);
   const trainingText = [
-    FOCUS_SKILLS.flatMap((skill) => ([1, 2, 3] as Level[]).flatMap((level) => [1, 2, 3, 4, 5].map((seed) => JSON.stringify(generateSession(skill, level, seed))))).join(' '),
+    FOCUS_SKILLS.flatMap((skill) => ([1, 2, 3] as Level[]).flatMap((level) => Array.from({ length: 32 }, (_, index) => JSON.stringify(generateSession(skill, level, index + 1))))).join(' '),
     FOCUS_SKILLS.map((skill) => JSON.stringify(getHomeActivity(skill))).join(' '),
     curriculumPhrases().join(' '),
-    [4, 8].map((age) => JSON.stringify(getStructuredLiteracyStations(age))).join(' '),
+    [4, 5, 6, 7, 8].map((age) => JSON.stringify(getStructuredLiteracyStations(age))).join(' '),
   ].join(' ');
   const all = (['A', 'B', 'C'] as const).flatMap((f) => [...TRANSFER_FORMS[f].real, ...TRANSFER_FORMS[f].nonword]);
   const passages = (['A', 'B', 'C'] as const).map((form) => TRANSFER_FORMS[form].passage);
@@ -86,31 +86,59 @@ describe('transfer measure (untrained words)', () => {
     const trainedContentTokens = new Set(
       trainingText.replace(/[ً-ْٰـ]/g, '').match(/[ء-ي]+/g) ?? []
     );
+    const passageContentTokens = passages.flatMap((p) => p.contentWords.map((word) => stripMarks(word).replace(/[.,،]/g, '')));
     for (const p of passages) {
+      assert.equal(p.words.length, 30, `${p.id} should contain exactly 30 words`);
+      assert.equal((p.text.match(/[.!؟]/g) ?? []).length, 5, `${p.id} should contain five short sentences`);
       for (const word of p.contentWords) {
         const bare = stripMarks(word).replace(/[.,،]/g, '');
+        assert.ok(p.words.some((token) => stripMarks(token).replace(/[.,،]/g, '') === bare), `content word ${word} must occur in its passage`);
         assert.ok(!used.has(bare), `passage word ${word} already appears in screening or reading material`);
         assert.ok(!trainedContentTokens.has(bare), `passage content word ${word} appears in training material`);
       }
     }
+    assert.equal(new Set(passageContentTokens).size, passageContentTokens.length, 'main content words do not repeat between forms');
     assert.equal(new Set(all.map((w) => stripMarks(w.text))).size, all.length, 'no word twice across all forms');
     assert.equal(new Set(passages.map((p) => p.text)).size, 3, 'each point uses a different passage');
   });
 
-  it('the three forms match slot by slot in level and size, with new parallel passages', () => {
-    for (const kind of ['real', 'nonword'] as const) {
-      const template = TRANSFER_FORMS.A[kind];
-      for (const form of ['B', 'C'] as const) {
-        assert.equal(TRANSFER_FORMS[form][kind].length, template.length);
-        template.forEach((a, i) => assert.equal(a.level, TRANSFER_FORMS[form][kind][i].level, `${form} ${kind} slot ${i}`));
+  it('the three forms match the same decoding patterns slot by slot', () => {
+    const expected: Record<'real' | 'nonword', Array<{ level: Level | 4; structureAr: string }>> = {
+      real: [
+        { level: 1, structureAr: 'مقطع واحد مغلق بسكون' },
+        { level: 1, structureAr: 'مقطعان بحركات قصيرة' },
+        { level: 2, structureAr: 'مقطعان؛ مدّ بالياء في المقطع الثاني' },
+        { level: 2, structureAr: 'مقطعان؛ سكون في المقطع الأول' },
+        { level: 3, structureAr: 'ثلاثة مقاطع؛ الأول مغلق وتنتهي بتاء مربوطة' },
+        { level: 3, structureAr: 'ثلاثة مقاطع وتنتهي بتاء مربوطة' },
+        { level: 4, structureAr: 'ثلاثة مقاطع؛ مدّ بالياء في المقطع الثاني وتنتهي بتاء مربوطة' },
+        { level: 4, structureAr: 'أل الشمسية مع شدة ومدّ طويل' },
+      ],
+      nonword: [
+        { level: 1, structureAr: 'مقطع واحد مغلق بسكون' },
+        { level: 1, structureAr: 'مقطعان بحركات قصيرة' },
+        { level: 2, structureAr: 'مقطعان؛ مدّ بالياء في المقطع الثاني' },
+        { level: 2, structureAr: 'مقطعان؛ سكون في المقطع الأول' },
+        { level: 3, structureAr: 'ثلاثة مقاطع؛ الأول مغلق وتنتهي بتاء مربوطة' },
+        { level: 3, structureAr: 'ثلاثة مقاطع؛ مدّ بالياء في الثاني وتنتهي بتاء مربوطة' },
+        { level: 4, structureAr: 'مقطعان؛ الأول مغلق والثاني فيه مدّ بالألف' },
+        { level: 4, structureAr: 'أل الشمسية مع شدة ومدّ بالألف' },
+      ],
+    };
+    for (const form of ['A', 'B', 'C'] as const) {
+      for (const kind of ['real', 'nonword'] as const) {
+        const items = TRANSFER_FORMS[form][kind];
+        assert.equal(items.length, 8, `${form} ${kind} should have eight items`);
+        items.forEach((actual, index) => {
+          assert.equal(actual.level, expected[kind][index].level, `${form} ${kind} level at slot ${index + 1}`);
+          assert.equal(actual.structureAr, expected[kind][index].structureAr, `${form} ${kind} pattern at slot ${index + 1}`);
+        });
       }
     }
     for (const w of all) assert.match(w.text, /[ً-ْ]/, w.text);
     for (const w of all.filter((x) => x.id.includes('-n'))) assert.doesNotMatch(w.text, /[ثذظق]/, w.text);
-    const counts = passages.map((p) => p.words.length);
-    assert.ok(Math.max(...counts) - Math.min(...counts) <= 5, `passages should be similar in length: ${counts.join(', ')}`);
-    assert.ok(passages.every((p) => p.words.length >= 30 && p.words.length <= 55));
-    assert.equal(new Set(passages.map((p) => p.words.length)).size >= 2, true, 'text forms have similar but not mechanically identical word counts');
+    assert.deepEqual(passages.map((p) => p.words.length), [30, 30, 30]);
+    assert.deepEqual(passages.map((p) => (p.text.match(/[.!؟]/g) ?? []).length), [5, 5, 5]);
   });
 
   it('counterbalances all three forms so a child never sees the same form twice', () => {
