@@ -14,7 +14,7 @@ describe('training dose and item identity', () => {
         for (const level of [1, 2, 3] as Level[]) {
           const capacity = availableTrainingItems(skill, level, ageMonths);
           if (capacity === 0) continue;
-          const tasks = generateItems(skill, level, 37, 12, undefined, ageMonths);
+          const tasks = generateItems(skill, level, 37, capacity, undefined, ageMonths);
           assert.equal(tasks.length, capacity, `${skill}/L${level}/age ${ageMonths}: generated count must match the distinct bank`);
           const keys = tasks.map((task) => trainingEvidenceKey(task));
           assert.equal(new Set(keys).size, tasks.length, `${skill}/L${level}: duplicate generated evidence`);
