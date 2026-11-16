@@ -637,16 +637,15 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
       if (level === 2) {
         const [a, b] = (targets?.soundPairs ?? []).find(([x, y]) => PAIR_CUES[pairKey(x, y)]) ?? CONFUSABLE_PHONEME_PAIRS[1];
         const cue = PAIR_CUES[pairKey(a, b)];
-        const soundA = `${a}َ`;
-        const soundB = `${b}َ`;
         return {
-          key, skill, level, titleAr: `ننتبه إلى أول صوتين متقاربين: ${a} و${b}`,
+          key, skill, level, titleAr: 'ننتبه إلى أول صوت في الكلمات',
           steps: [
             { textAr: 'قد يتقارب صوتان، لذلك ننصت إلى بداية الكلمة ولا نعتمد على تخمين الصورة.', audio: say('قَدْ يَتَقَارَبُ صَوْتَانِ، لِذَلِكَ نُنْصِتُ إِلَى بِدَايَةِ الْكَلِمَةِ وَلَا نَعْتَمِدُ عَلَى تَخْمِينِ الصُّورَةِ.') },
-            glyphModel([soundA, soundB], `نسمع ${soundA} و${soundB}. الحرف الأول هو الذي يغيّر الصوت.`, `نَسْمَعُ ${soundA}، ثُمَّ ${soundB}. ${cue?.audio ?? 'نُنْصِتُ إِلَى الْفَرْقِ بَيْنَ الصَّوْتَيْنِ.'}`),
-            glyphModel([soundA, soundA, soundB], 'الصوتان الأولان متشابهان، أما الثالث فمختلف.', `نَسْمَعُ ${soundA} مَرَّتَيْنِ، ثُمَّ ${soundB}. الْأَوَّلَانِ مُتَشَابِهَانِ وَالثَّالِثُ مُخْتَلِفٌ.`),
-            pictureModel(['sword', 'summer'], '«سَيْف» و«صَيْف» يبدآن بصوتين متقاربين؛ ننصت إلى الحرف الأول.', 'سَيْفٌ، صَيْفٌ. نُنْصِتُ إِلَى أَوَّلِ صَوْتٍ فِي كُلِّ كَلِمَةٍ.'),
-            closing('الآن دورك: ركّز على أول صوت، لا على بقية الكلمة.', 'الْآنَ دَوْرُكَ: رَكِّزْ عَلَى أَوَّلِ صَوْتٍ، لَا عَلَى بَقِيَّةِ الْكَلِمَةِ.'),
+            glyphModel([`${a}َ`, `${b}َ`], `نقارن ${a}َ و${b}َ؛ نركز على أول صوت.`, `نَسْمَعُ ${a}َ، ثُمَّ ${b}َ. ${cue?.audio ?? 'نُنْصِتُ إِلَى الْفَرْقِ بَيْنَ الصَّوْتَيْنِ.'}`),
+            pictureModel(['fish', 'car'], '«سَمَكَة» و«سَيَّارَة» تبدآن بالصوت نفسه: س.', 'سَمَكَةٌ، سَيَّارَةٌ. أَوَّلُ صَوْتٍ فِيهِمَا سَ.'),
+            pictureModel(['dog', 'ball'], '«كَلْب» و«كُرَة» تبدآن بالصوت نفسه: ك.', 'كَلْبٌ، كُرَةٌ. أَوَّلُ صَوْتٍ فِيهِمَا كَ.'),
+            pictureModel(['bee', 'banana'], '«نَحْلَة» و«مَوْز» لا تبدآن بالصوت نفسه.', 'نَحْلَةٌ، مَوْزٌ. أَوَّلُ صَوْتٍ فِيهِمَا مُخْتَلِفٌ.'),
+            closing('الآن دورك: اسمع أول صوت، ثم اختر كلمة تبدأ به.', 'الْآنَ دَوْرُكَ: اسْمَعْ أَوَّلَ صَوْتٍ، ثُمَّ اخْتَرْ كَلِمَةً تَبْدَأُ بِهِ.'),
           ],
         };
       }
@@ -764,13 +763,18 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
           glyphModel([first, second], `نقارن ${first} و${second}؛ المدّ بالياء في الاثنين.`, `نُقَارِنُ ${first} وَ${second}. الْمَدُّ بِالْيَاءِ فِي الِاثْنَيْنِ، وَالْحَرْفُ الْأَوَّلُ مُخْتَلِفٌ.`),
           glyphModel([firstU, secondU], `نقارن ${firstU} و${secondU}؛ المدّ بالواو في الاثنين.`, `نُقَارِنُ ${firstU} وَ${secondU}. الْمَدُّ بِالْوَاوِ فِي الِاثْنَيْنِ.`),
           pictureModel(['dog', 'heart'], '«كَلْب» و«قَلْب» يختلفان في الصوت الأول؛ ننصت إلى البداية.', 'كَلْبٌ، قَلْبٌ. نُنْصِتُ إِلَى الْحَرْفِ الَّذِي يَبْدَأُ بِهِ كُلُّ اسْمٍ.'),
+          pictureModel(['bee', 'palm'], '«نَحْلَة» و«نَخْلَة» مثال آخر؛ نقارن الصوت المسموع في الاسمين.', 'نَحْلَةٌ، نَخْلَةٌ. نُقَارِنُ الصَّوْتَ الْمَسْمُوعَ فِي الِاسْمَيْنِ.'),
+          pictureModel(['sword', 'summer'], '«سَيْف» و«صَيْف» مثال ثالث لتشابه الكلمتين واختلاف الصوت الأول.', 'سَيْفٌ، صَيْفٌ. نُنْصِتُ إِلَى أَوَّلِ صَوْتٍ فِي كُلِّ كَلِمَةٍ.'),
           closing('الآن دورك: اسمع المقطع كاملًا، ثم اختر الإجابة.', 'الْآنَ دَوْرُكَ: اسْمَعِ الْمَقْطَعَ كَامِلًا، ثُمَّ اخْتَرِ الْإِجَابَةَ.'),
         ],
       };
     }
     case 'letterSound': {
-      const own = (targets?.letters ?? []).filter((l) => LEVEL_LETTERS[level].includes(l));
-      const letters = Array.from(new Set([...own, ...LEVEL_LETTERS[level]])).slice(0, 3);
+      const letters = LEVEL_LETTERS[level];
+      const soundNotes = letters.map((l) => {
+        const example = exampleFor(l);
+        return example ? `مثل أول «${word(example)}»` : 'صوت الحرف';
+      });
       const steps: LessonStep[] = [
         {
           textAr: level === 1
@@ -786,22 +790,18 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
                 : 'قَدْ يَبْقَى الْحَرْفُ نَفْسُهُ وَيَتَغَيَّرُ صَوْتُهُ مَعَ الْفَتْحَةِ وَالْكَسْرَةِ وَالضَّمَّةِ.'
           ),
         },
+        glyphModel(letters.slice(0, 3).map((l) => `${l}َ`), `المجموعة الأولى: ${letters.slice(0, 3).join('، ')}.`, 'نَسْمَعُ صَوْتَ كُلِّ حَرْفٍ مَعَ الْفَتْحَةِ.', soundNotes.slice(0, 3)),
+        glyphModel(letters.slice(3).map((l) => `${l}َ`), `المجموعة الثانية: ${letters.slice(3).join('، ')}.`, 'نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ.', soundNotes.slice(3)),
       ];
-      for (const l of letters) {
-        const ex = exampleFor(l);
-        steps.push({
-          textAr: ex ? `هذا صوت «${l}َ» مثل أول كلمة «${word(ex)}».` : `هذا صوت الحرف «${l}َ».`,
-          audio: ex ? say('هَذَا صَوْتُ:', `${l}َ`, 'مِثْلُ أَوَّلِ:', word(ex)) : say('هَذَا صَوْتُ:', `${l}َ`),
-          visual: { kind: 'glyphs', letters: [l] },
-        });
-      }
       if (level === 3) {
-        for (const l of letters.slice(0, 2)) {
+        for (let i = 0; i < letters.length; i += 2) {
+          const group = letters.slice(i, i + 2);
+          const marked = group.flatMap((l) => [`${l}َ`, `${l}ِ`, `${l}ُ`]);
           steps.push(glyphModel(
-            [`${l}َ`, `${l}ِ`, `${l}ُ`],
-            `الحرف ${l} بقي كما هو، لكن الحركة غيّرت صوته.`,
-            `نَسْمَعُ ${l}َ، ${l}ِ، ${l}ُ. الْحَرْفُ وَاحِدٌ، وَالْحَرَكَاتُ مُخْتَلِفَةٌ.`,
-            ['فتحة', 'كسرة', 'ضمة']
+            marked,
+            `نسمع ${group.join('، ')} مع الفتحة والكسرة والضمة.`,
+            'نَسْمَعُ الْحَرْفَ بِالْفَتْحَةِ، ثُمَّ بِالْكَسْرَةِ، ثُمَّ بِالضَّمَّةِ.',
+            group.flatMap(() => ['فتحة', 'كسرة', 'ضمة'])
           ));
         }
       }
@@ -832,7 +832,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         };
       }
       if (level === 2) {
-        const initialLetters = group.slice(0, 3);
+        const initialLetters = group;
         const initialForms = initialLetters.map((l) => `${l}ـ`);
         const examples = initialLetters.map((l, index) => {
           const id = exampleFor(l);

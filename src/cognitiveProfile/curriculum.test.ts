@@ -146,6 +146,48 @@ describe('teaching curriculum: lessons ("I do")', () => {
     }
   });
 
+  it('keeps letter-sound tasks inside the full letter set taught at each level', () => {
+    const taught: Record<Level, string[]> = {
+      1: ['م', 'ب', 'س', 'ل', 'ر', 'ن'],
+      2: ['ت', 'د', 'ف', 'ك', 'ع', 'ح'],
+      3: ['ب', 'ت', 'ث', 'س', 'ص'],
+    };
+    for (const level of [1, 2, 3] as Level[]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        for (const task of generateSession('letterSound', level, seed)) {
+          if (task.kind !== 'choice') continue;
+          assert.ok(taught[level].includes(task.item.correctId), `L${level}: untaught letter ${task.item.correctId}`);
+        }
+      }
+    }
+  });
+
+  it('keeps Level 1 and Level 3 sound-position targets inside the modelled sounds', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      for (const level of [1, 3] as Level[]) {
+        for (const task of generateSession('soundPosition', level, seed)) {
+          if (task.kind !== 'choice' || !task.item.stimulus) continue;
+          const id = PICTURE_IDS.find((entry) => LEXICON[entry].emoji === task.item.stimulus!.value);
+          assert.ok(id);
+          const sound = level === 1 ? LEXICON[id].onset : LEXICON[id].coda;
+          assert.ok(level === 1 ? ['س', 'ن', 'م'].includes(sound ?? '') : ['ب', 'م'].includes(sound ?? ''), `L${level}: untaught sound ${sound}`);
+        }
+      }
+    }
+  });
+
+  it('keeps visual-discrimination targets inside the first worked group for Levels 1 and 2', () => {
+    const firstGroup = ['ب', 'ت', 'ث', 'ن', 'ي'];
+    for (const level of [1, 2] as Level[]) {
+      for (let seed = 1; seed <= 20; seed++) {
+        for (const task of generateSession('visualDiscrimination', level, seed)) {
+          if (task.kind !== 'choice') continue;
+          assert.ok(firstGroup.includes(task.item.correctId.replace('ـ', '')));
+        }
+      }
+    }
+  });
+
   it('keeps comprehension lessons matched to the child\u2019s reading stage', () => {
     for (const age of [4, 5]) {
       const listeningLesson = lessonFor('comprehension', 1, undefined, age);
