@@ -232,7 +232,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </section>
           )}
 
-                    <section aria-labelledby="tasks-title">
+          <section aria-labelledby="tasks-title">
             <div className="pb-4 border-b border-line">
               <h2 id="tasks-title" className="bz-h3" style={{ fontSize: 22 }}>{readingScored.length > 0 ? 'المهارات السابقة للقراءة' : 'نتائج المهام المكتملة'}</h2>
               <p className="bz-small bz-muted mt-1">النسبة = عدد الإجابات الصحيحة ÷ إجمالي بنود المهمة. لا تقارن النسب بين مهام مختلفة باعتبارها مقياسًا واحدًا.</p>
