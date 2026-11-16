@@ -692,7 +692,7 @@ export function ParentPortalView({
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
                       <option value="">اختر الدولة</option>
-                      {AR_COUNTRIES.map((c) => (
+                      {ARAB_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.name}>
                           {c.flag} {c.name}
                         </option>
@@ -900,7 +900,7 @@ export function ParentPortalView({
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
                       <option value="">اختر الدولة</option>
-                      {AR_COUNTRIES.map((c) => (
+                      {ARAB_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.name}>
                           {c.flag} {c.name}
                         </option>
