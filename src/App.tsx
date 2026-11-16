@@ -707,11 +707,12 @@ export default function App() {
   };
 
   /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
-  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }): string | null => {
+  const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; dialectCode?: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }): string | null => {
     if (baseeraSession?.role === 'educator_readonly') return null;
     const cleanName = input.name.trim().replace(/\s+/g, ' ');
     if (cleanName.length < 2) return null;
     const recordedAt = input.guardianConsentRecordedAt || new Date().toISOString();
+    const selectedDialect = normalizeHomeDialect(input.dialectCode, 'غير محددة');
     const learner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: cleanName,
@@ -725,8 +726,8 @@ export default function App() {
       gradeLevel: Math.max(0, input.ageYears - 6),
       ageYears: input.ageYears,
       country: 'غير محددة',
-      dialect: 'msa',
-      dialectCode: 'msa',
+      dialect: selectedDialect,
+      dialectCode: selectedDialect,
       schoolName: supabaseUser
         ? `حساب ولي الأمر (${supabaseUser.user_metadata?.full_name || supabaseUser.email || 'الأسرة'})`
         : 'على هذا الجهاز (محلي)',
