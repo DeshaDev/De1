@@ -174,7 +174,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           <div className="relative z-10">
             <h1 className="hn-display">ننمّي مهارات القراءة العربية لدى طفلك، خطوةً خطوة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              أنشطة عربية قصيرة للأطفال من ٤ إلى ٨ سنوات تساعد على استكشاف مهارات القراءة، ثم تقدّم ممارسة متدرجة بحسب أداء الطفل داخل الأنشطة.
+              أنشطة قراءة عربية للأطفال من ٤ إلى ٨ سنوات، مع تدريب يتدرّج بحسب أداء الطفل.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -235,12 +235,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <span className="hn-stop-name">التقرير</span>
             </li>
           </ol>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <button type="button" className="bz-btn bz-btn-primary hn-toy" onClick={() => onNavigateTab('parent-portal')}>
-              ابدأ اللعب مع طفلك
-            </button>
-            <p className="hn-small">يجلس بالغ بجانب الطفل. تُلعب الألعاب على جلسات قصيرة، ويُحفظ التقدّم بين الجلسات.</p>
-          </div>
+          <p className="hn-small mt-8">يجلس بالغ بجانب الطفل، ويمكن استكمال الرحلة على جلسات قصيرة.</p>
         </div>
       </section>
 
@@ -321,7 +316,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               </div>
             ))}
             <p className="hn-small sm:col-span-3 mt-2">
-              يصعد حين يقدّر النموذج أن احتمال إتقانه بلغ ٩٥٪ بعد ٥ إجابات على الأقل، وينزل درجة ويُنبَّه المعلم إن بقي أقل من ٢٠٪ بعد ٨ إجابات.
+              يتقدّم الطفل عندما تظهر إجاباته إتقان المهارة، ويعود إلى مستوى أبسط عندما يحتاج إلى مزيد من التدريب.
             </p>
           </div>
         </div>
@@ -335,8 +330,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-sun)' }}>
               <span className="hn-who-icon" aria-hidden="true"><Users size={28} /></span>
               <h3 className="hn-h3">الأسرة</h3>
-              <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه دقائق قليلة كل يوم.</p>
-              <button type="button" className="bz-btn bz-btn-primary hn-toy mt-5" onClick={() => onNavigateTab('parent-portal')}>ابدأ اللعب مع طفلك</button>
+              <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه في جلسات قصيرة خلال الأسبوع.</p>
             </article>
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-leaf)' }}>
               <span className="hn-who-icon" aria-hidden="true"><Building2 size={28} /></span>
@@ -377,7 +371,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <h2 className="hn-h2">خصوصية طفلك، وحدود ما نقيسه</h2>
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
-            { icon: Lock, t: 'صوت طفلك بإذنك', b: 'لا يُسجَّل صوته إلا بموافقة منفصلة منك، ويمكنك سحبها متى شئت.', tone: 'coral' },
+            { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت لمهام التقييم إلا بعد موافقة منفصلة؛ ويمكن متابعة الأنشطة دون درجة صوتية.', tone: 'coral' },
             { icon: Users, t: 'بيانات أقل', b: 'نحفظ ما يلزم للتقرير فقط، وسياسة الخصوصية تشرح أين يُحفظ.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
             { icon: GraduationCap, t: 'لا تشخيص', b: 'لا مئينات ولا تصنيف خطورة قبل دراسة تقنين مستقلة.', tone: 'leaf' },
