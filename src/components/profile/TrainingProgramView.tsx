@@ -471,12 +471,15 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const skill = skills[skillIndex];
     const estimate = masteryEstimate(current, skill);
     seed.current += 7919;
+    // Compare the versioned lesson key, not the legacy "skill:level" marker. This ensures
+    // children who completed the earlier, abbreviated lesson still receive the expanded teaching.
+    const levelLesson = lessonFor(skill, estimate.level, current.targets, childAgeYears);
+    const lessonSeen = !levelLesson || (current.lessonsSeen ?? []).includes(levelLesson.key);
     if (needsPlacement(current, skill)) {
-      // First time this skill is trained: teach first («أنا أعلّمك»), then a few unscored items
-      // check the rule's starting level, then practice. A session that opens with a test before any
-      // teaching felt like an exam to parents and children.
+      // First time this skill is trained: teach first, then check the rule's starting level,
+      // then practise. A session that opens with a test before any teaching feels like an exam.
       const level = estimate.level;
-      if (!(current.lessonsSeen ?? []).includes(`${skill}:${level}`)) {
+      if (!lessonSeen) {
         setRun({
           ...(prev ?? ({} as Run)),
           skills,
@@ -485,7 +488,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           taskIndex: 0,
           correct: 0,
           phase: 'lesson',
-          lesson: lessonFor(skill, level, current.targets),
+          lesson: levelLesson,
           guided: 0,
           stars: prev?.stars ?? 0,
           change: null,
@@ -527,7 +530,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       });
       return;
     }
-    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets, childAgeYears);
+    const lesson = lessonSeen ? null : levelLesson;
     const guided = lesson || estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
     const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets, childAgeMonths ?? 72);
     // "We do": the first items come with a hint and one fewer option.
@@ -672,7 +675,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
-                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تُضاف ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل عنها كلها إجابة صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ في أغلبها بدأنا بمستوى أسهل.
+                سنجرّب بضع بطاقات لنختار بداية مناسبة لك. لا مشكلة إذا كانت بعض البطاقات صعبة؛ بعدها نبدأ التعلّم مع هُدهُد.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -711,7 +714,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
               <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
               <p className="text-sm text-slate-600">
-                أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
+                قبل درس اليوم، يمكننا تجربة بطاقات قصيرة لنتابع ما تعلّمته. لا توجد درجات في هذه البطاقات، وبعدها نبدأ مغامرتنا مع هُدهُد.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
                 <button
@@ -802,21 +805,16 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
-          <p className="font-child font-black text-slate-900 flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">{def.icon}</span> وقت التعلّم: {def.nameAr}
-            <span className="text-xs font-bold text-slate-500">· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
-            {(() => {
-              const pl = (progress.placements ?? []).find((x) => x.skill === skill);
-              return pl ? (
-                <span className="text-xs font-bold text-slate-500" title="مستوى البداية الذي اقترحه الفحص، قبل التحقق بإجابات الطفل">
-                  · اقترح الفحص المستوى {toArabicDigits(pl.suggested)}
-                </span>
-              ) : null;
-            })()}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="font-child font-black text-slate-900 flex items-center gap-2">
+              <span className="text-2xl" aria-hidden="true">{def.icon}</span>
+              مغامرتنا اليوم: {def.nameAr}
+            </p>
+            <p className="text-xs font-bold text-slate-500">نتعلّم خطوة جديدة مع هُدهُد</p>
+          </div>
           <p className="text-xs font-bold text-slate-500 flex items-center gap-3">
             <span aria-label={`نجوم الجلسة: ${toArabicDigits(run.stars)}`}>⭐ {toArabicDigits(run.stars)}</span>
-            <span>المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
+            <span>المغامرة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
           </p>
         </div>
         {run.phase === 'task' && (
@@ -827,6 +825,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'lesson' && run.lesson && (
             <LessonPlayer
+              key={run.lesson.key}
               lesson={run.lesson}
               onDone={() => {
                 const key = run.lesson!.key;
@@ -891,11 +890,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 الإجابات الصحيحة: {toArabicDigits(run.correct)} من {toArabicDigits(run.tasks.length)}
               </p>
               <p className="text-sm font-bold text-slate-600">{CHANGE_TEXT[run.change]}</p>
-              {run.results.length > 0 && (
-                <p className="text-xs text-ink-2 max-w-sm">
-                  تقدير النموذج لإتقان المستوى الحالي: من {pct(run.results[run.results.length - 1].pBefore)}٪ إلى {pct(run.results[run.results.length - 1].pAfter)}٪
-                </p>
-              )}
+              <p className="text-sm text-slate-600">كل محاولة تعلّم جديد. خذ وقتك، ونحن نتقدّم خطوة خطوة.</p>
               <button
                 type="button"
                 onClick={() => {
@@ -1127,7 +1122,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
-            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
+            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION)} دقيقة للتدريب
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
           {childAgeYears >= 6 && (
@@ -1137,42 +1132,38 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => beginSession(true)}
+            onClick={() => beginSession(false)}
             className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
           >
             <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم
           </button>
-          <button
-            type="button"
-            onClick={() => beginSession(false)}
-            className="bz-btn bz-btn-secondary font-medium text-sm"
-          >
-            <TrendingUp className="w-4 h-4" /> مقياس المتابعة
-          </button>
+
         </div>
       </section>
 
-      <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
-          <p className="text-xs text-ink-2 mt-1">تدريبات إضافية على فك الترميز والإملاء والوعي الصرفي والفهم والطلاقة، مع تدرّج بحسب عمر الطفل.</p>
-        </div>
-        <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
-          افتح المحطات
-        </button>
-      </section>
-
-      {due && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-info">
-            <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص: في صفحة الفحص اضغط «فحص جديد»، فتُحفظ نتيجة الفحص الأول وتظهر المقارنة قبل وبعد في التقرير.
-          </p>
-          <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-sm">
-            الذهاب إلى الفحص
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-black text-slate-900">محطات القراءة واللغة الإضافية</summary>
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-sm text-ink-2">ألعاب قصيرة نعود إليها بعد درس اليوم، بحسب عمر الطفل.</p>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+            افتح المحطات
           </button>
         </div>
-      )}
+      </details>
 
+      <details className="bz-card p-5">
+        <summary className="cursor-pointer font-black text-slate-900">متابعة الأسرة: التقدّم والمهارات</summary>
+        <div className="mt-4 space-y-5">
+        {due && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-info">
+              <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص: يمكن لولي الأمر بدء فحص جديد للاحتفاظ بالنتيجة السابقة ومقارنة التغيّر.
+            </p>
+            <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-sm">
+              الذهاب إلى الفحص
+            </button>
+          </div>
+        )}
       <section className="bz-card p-5 space-y-3" aria-labelledby="progress-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id="progress-heading" className="font-black text-slate-900 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> التقدّم من جلسة إلى جلسة</h3>
@@ -1266,26 +1257,43 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         })}
       </div>
 
+
+        </div>
+      </details>
+
       {onOpenExtra && (
-        <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-black text-slate-900">أنشطة إضافية اختيارية</h3>
-            <p className="text-xs text-ink-2 mt-1">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
-            {(student?.ageYears ?? 0) >= 6 && (
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
-            )}
-          </div>
-        </section>
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">ألعاب وقراءات إضافية</summary>
+          <section className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="font-black text-slate-900">أنشطة اختيارية بعد درس اليوم</p>
+              <p className="text-xs text-ink-2 mt-1">القارئ الميسّر والأنشطة الأخرى للطفل الذي بدأ يقرأ.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
+              {(student?.ageYears ?? 0) >= 6 && (
+                <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
+              )}
+            </div>
+          </section>
+        </details>
       )}
 
-      {student && <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />}
+      {student && (
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">اقتراحات الممارسة للأسرة</summary>
+          <div className="mt-4">
+            <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />
+          </div>
+        </details>
+      )}
 
       <ProgramRules />
 
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-black text-slate-900">سجل الجلسات وإعدادات الخطة</summary>
+        <div className="mt-4 space-y-4">
       {recent.length > 0 && (
         <section className="bz-card p-5">
           <h3 className="font-black text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> سجل الجلسات الأخيرة</h3>
@@ -1325,6 +1333,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <RefreshCw className="w-3.5 h-3.5" /> إعادة بناء الخطة من آخر فحص
         </button>
       )}
+        </div>
+      </details>
+
     </div>
   );
 }
@@ -1351,7 +1362,7 @@ function TodayProbeCard({ today, probes }: { today: ProbeRecord; probes: ProbeRe
 function ProgramRules() {
   return (
     <details className="bz-card-quiet p-5 text-sm text-ink-2">
-      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (للمعلم والأخصائي)</summary>
+      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (لولي الأمر)</summary>
       <ProgramRulesBody />
     </details>
   );
@@ -1361,9 +1372,9 @@ function ProgramRulesBody() {
   return (
     <section className="mt-4 grid md:grid-cols-2 gap-6">
       <div>
-        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
+        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION)} دقيقة للتدريب)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
-          <li><strong>درس قصير (أنا أعلّمك):</strong> في أول مرة في كل مستوى، وعند النزول مستوى: شرح بالصوت والصورة، ونموذج، ومثال مضاد.</li>
+          <li><strong>درس هدهد (نتعلّم الفكرة):</strong> في أول مرة في كل مستوى، وعند الرجوع إلى مستوى أسهل: تمهيد بلغة الطفل، وشرح مسموع، ومثال واضح، ثم تجربة مشتركة قصيرة بلا درجات.</li>
           <li><strong>ممارسة موجّهة (نفعلها معًا):</strong> أول تمرينين بتلميح مسموع وخيار أقل، ثم تُسحب المساعدة.</li>
           <li><strong>ممارسة مستقلة (افعلها وحدك):</strong> عند الخطأ يشرح التطبيق لماذا كانت الإجابة الصحيحة صحيحة، ثم يحاول الطفل مرة ثانية. عدد البنود (٤ إلى ١٢) يحدده نموذج تتبّع المعرفة.</li>
           <li><strong>مقياس التقدّم ({toArabicDigits(PROBE_MINUTES)} دقائق):</strong> في أول جلسة ثم مرة كل أسبوع وفي الجلسة الأخيرة، بلا تصحيح، مع مهارة غير مدرَّبة للمقارنة. التقدّم اليومي يظهر من تقدير النموذج بعد كل إجابة.</li>
@@ -1378,7 +1389,7 @@ function ProgramRulesBody() {
           <li><strong>الإتقان:</strong> حين يبلغ الاحتمال ٩٥٪ بعد ٥ إجابات على الأقل ← المستوى التالي فورًا، ولو في منتصف التمرين.</li>
           <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وملاحظة داعمة في ملف التقدم.</li>
           <li><strong>مقياس التقدّم:</strong> إجاباته تحدّث تقدير المستوى الثاني دون تعلّم، فإن أظهر إتقانه انتقل الطفل إليه مباشرة.</li>
-          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم إعادة الفحص لقياس الأثر وتحديث الخطة. مجموعها نحو ٦ ساعات، في المدى الذي حقق فيه تدريب الوعي الصوتي أكبر أثر في التحليل البعدي للجنة القراءة الوطنية الأمريكية (٥ إلى ١٨ ساعة).</li>
+          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع). مدة التدريب نحو ١٥ دقيقة للجلسة، ويُضاف مقياس متابعة مدته {toArabicDigits(PROBE_MINUTES)} دقائق في الجلسات ١ و٦ و١١ و١٦ و٢٠؛ أي نحو ٥ ساعات و١٥ دقيقة إجمالًا. هذه مدة تنظيمية مقترحة وليست دليلًا على ثبوت أثر البرنامج أو كفاية جرعته. والنتائج المنشورة عن ٥–١٨ ساعة تخص تدريبًا محددًا للوعي الصوتي، ولا تثبت فعالية هذا البرنامج متعدد المهارات.</li>
         </ul>
       </div>
     </section>

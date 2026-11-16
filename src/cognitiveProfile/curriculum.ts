@@ -36,12 +36,33 @@ export interface LessonStep {
   visual?: LessonVisual;
 }
 
+export interface GuidedSyllableAssembly {
+  /** One spoken syllable per card, in Arabic reading order (right to left). */
+  parts: string[];
+  word: string;
+  pictureId: string;
+  instructionAr: string;
+}
+
+export interface GuidedLessonChoice {
+  promptAr: string;
+  promptAudio: AudioSegment[];
+  options: Array<{ id: string; labelAr: string; emoji?: string }>;
+  correctId: string;
+  hintAr: string;
+  hintAudio: AudioSegment[];
+  successAr: string;
+  successAudio: AudioSegment[];
+}
+
 export interface Lesson {
   key: string;
   skill: SkillId;
   level: Level;
   titleAr: string;
   steps: LessonStep[];
+  /** A non-scored, interactive worked example that happens before placement or practice. */
+  guidedAssembly?: GuidedSyllableAssembly;
 }
 
 const say = (...texts: string[]): AudioSegment[] => texts.map((text) => ({ text, pauseAfterMs: 350 }));
@@ -91,7 +112,9 @@ function closing(textAr: string, audio: string): LessonStep {
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
 export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 8): Lesson | null {
-  const key = `${skill}:${level}`;
+  // Version the child-facing lesson so saved `lessonsSeen` from the old, text-only lesson
+  // cannot skip the newly expanded explanation when a child returns to this skill.
+  const key = `${skill}:${level}:child-first-v2`;
   switch (skill) {
     case 'rhyme':
       return {
@@ -120,7 +143,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: 'أول صوت في الكلمة',
         steps: [
-          { textAr: 'كل كلمة تبدأ بصوت. نسمعه إذا قلنا الكلمة ببطء.', audio: say('كُلُّ كَلِمَةٍ تَبْدَأُ بِصَوْتٍ. نَسْمَعُهُ إِذَا قُلْنَا الْكَلِمَةَ بِبُطْءٍ.') },
+          { textAr: 'كُلُّ كَلِمَةٍ لَهَا صَوْتٌ فِي أَوَّلِهَا. نُبْطِئُ فِي نُطْقِهَا لِنَسْمَعَهُ.', audio: say('كُلُّ كَلِمَةٍ لَهَا صَوْتٌ فِي أَوَّلِهَا. نُبْطِئُ فِي نُطْقِهَا لِنَسْمَعَهُ.') },
           { textAr: `«${word('fish')}» أول صوت فيها «سَ».`, audio: say(word('fish'), 'أَوَّلُ صَوْتٍ فِيهَا: سَ.'), visual: { kind: 'pictures', ids: ['fish'] } },
           { textAr: `«${word('car')}» تبدأ بالصوت نفسه.`, audio: say(word('car'), 'تَبْدَأُ بِالصَّوْتِ نَفْسِهِ: سَ.'), visual: { kind: 'pictures', ids: ['fish', 'car'] } },
           closing('الآن دورك: قل الكلمة ببطء، واسمع أولها.', 'الْآنَ دَوْرُكَ: قُلِ الْكَلِمَةَ بِبُطْءٍ، وَاسْمَعْ أَوَّلَهَا.'),
@@ -142,12 +165,29 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
       const e = lex(level === 1 ? 'pen' : 'fish');
       return {
         key, skill, level,
-        titleAr: 'نركّب الأجزاء لنصنع كلمة',
+        titleAr: 'قِطَارُ الْكَلِمَاتِ: نُرَكِّبُ الْمَقَاطِعَ',
         steps: [
-          { textAr: 'الكلمة مصنوعة من أجزاء صغيرة. نصفّق مع كل جزء.', audio: say('الْكَلِمَةُ مَصْنُوعَةٌ مِنْ أَجْزَاءٍ صَغِيرَةٍ. نُصَفِّقُ مَعَ كُلِّ جُزْءٍ.') },
-          { textAr: `${e.syllables.join(' + ')} = «${e.word}»`, audio: [...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })), ...say('مَعًا:', e.word)], visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id } },
-          closing('الآن دورك: اسمع الأجزاء، وركّبها، ثم اختر الصورة.', 'الْآنَ دَوْرُكَ: اسْمَعِ الْأَجْزَاءَ، وَرَكِّبْهَا، ثُمَّ اخْتَرِ الصُّورَةَ.'),
+          {
+            textAr: 'وَجَدَ هُدْهُدٌ عَرَبَاتٍ صَغِيرَةً مُتَفَرِّقَةً. هَيَّا نُسَاعِدْهُ فِي جَمْعِهَا لِنَصْنَعَ كَلِمَةً!',
+            audio: say('وَجَدَ هُدْهُدٌ عَرَبَاتٍ صَغِيرَةً مُتَفَرِّقَةً.', 'هَيَّا نُسَاعِدْهُ فِي جَمْعِهَا لِنَصْنَعَ كَلِمَةً.'),
+          },
+          {
+            textAr: 'كُلُّ عَرَبَةٍ تَحْمِلُ جُزْءًا صَغِيرًا مِنَ الْكَلِمَةِ. نُسَمِّي هَذَا الْجُزْءَ «مَقْطَعًا». نَقْرَأُ الْأَجْزَاءَ مِنَ الْيَمِينِ إِلَى الْيَسَارِ، ثُمَّ نَصِلُهَا مَعًا.',
+            audio: say('كُلُّ عَرَبَةٍ تَحْمِلُ جُزْءًا صَغِيرًا مِنَ الْكَلِمَةِ.', 'نُسَمِّي هَذَا الْجُزْءَ مَقْطَعًا.', 'نَقْرَأُ الْأَجْزَاءَ مِنَ الْيَمِينِ إِلَى الْيَسَارِ، ثُمَّ نَصِلُهَا مَعًا.'),
+          },
+          {
+            textAr: `اِسْمَعْ مَعِي: ${e.syllables.join(' ... ')}. عِنْدَمَا نَصِلُهَا بِالتَّرْتِيبِ نَقُولُ: «${e.word}».`,
+            audio: [...e.syllables.map((part) => ({ text: part, pauseAfterMs: 700 })), ...say('نَصِلُهَا مَعًا:', e.word)],
+            visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id },
+          },
+          closing('الآن دورك: ساعد هدهد على ترتيب المقاطع، ثم اسمع الكلمة كاملة.', 'الْآنَ دَوْرُكَ: سَاعِدْ هُدْهُدًا عَلَى تَرْتِيبِ الْمَقَاطِعِ، ثُمَّ اسْمَعِ الْكَلِمَةَ كَامِلَةً.'),
         ],
+        guidedAssembly: {
+          parts: e.syllables,
+          word: e.word,
+          pictureId: e.id,
+          instructionAr: 'اِخْتَرِ الْجُزْءَ الَّذِي نَسْمَعُهُ أَوَّلًا، ثُمَّ أَكْمِلِ الْقِطَارَ.',
+        },
       };
     }
     case 'discrimination': {
@@ -160,7 +200,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: `أصوات متقاربة: ${a} و${b}`,
         steps: [
-          { textAr: 'بعض الأصوات تتشابه، فنسمعها بانتباه.', audio: say('بَعْضُ الْأَصْوَاتِ تَتَشَابَهُ، فَنَسْمَعُهَا بِانْتِبَاهٍ.') },
+          { textAr: 'بَعْضُ الْأَصْوَاتِ مُتَشَابِهَةٌ. سَنَسْمَعُ كُلَّ صَوْتٍ وَنُلَاحِظُ الْفَرْقَ بَيْنَهُمَا.', audio: say('بَعْضُ الْأَصْوَاتِ مُتَشَابِهَةٌ. سَنَسْمَعُ كُلَّ صَوْتٍ وَنُلَاحِظُ الْفَرْقَ بَيْنَهُمَا.') },
           { textAr: `${sa} — ${sb}. ${cue.textAr}`, audio: [...say(sa, sb), { text: cue.audio }], visual: { kind: 'glyphs', letters: [a, b] } },
           { textAr: `${sa} ${sa}: الصوت نفسه. ${sa} ${sb}: صوتان مختلفان.`, audio: say(sa, sa, 'الصَّوْتُ نَفْسُهُ.', sa, sb, 'صَوْتَانِ مُخْتَلِفَانِ.'), visual: { kind: 'glyphs', letters: [a, b] } },
           closing('الآن دورك: اسمع جيدًا، ثم اختر.', 'الْآنَ دَوْرُكَ: اسْمَعْ جَيِّدًا، ثُمَّ اخْتَرْ.'),
@@ -170,7 +210,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
     case 'letterSound': {
       const own = (targets?.letters ?? []).filter((l) => LEVEL_LETTERS[level].includes(l));
       const letters = Array.from(new Set([...own, ...LEVEL_LETTERS[level]])).slice(0, level === 3 ? 2 : 3);
-      const steps: LessonStep[] = [{ textAr: 'لكل حرف صوت. نسمع صوته ونرى شكله.', audio: say('لِكُلِّ حَرْفٍ صَوْتٌ. نَسْمَعُ صَوْتَهُ، وَنَرَى شَكْلَهُ.') }];
+      const steps: LessonStep[] = [{ textAr: 'لِلْحَرْفِ شَكْلٌ نَرَاهُ وَصَوْتٌ نَسْمَعُهُ. سَنَقُولُ صَوْتَهُ وَنَرَى شَكْلَهُ.', audio: say('لِلْحَرْفِ شَكْلٌ نَرَاهُ وَصَوْتٌ نَسْمَعُهُ. سَنَقُولُ صَوْتَهُ وَنَرَى شَكْلَهُ.') }];
       for (const l of letters) {
         const ex = exampleFor(l);
         steps.push({
@@ -193,7 +233,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: 'حروف تتشابه في الشكل',
         steps: [
-          { textAr: 'بعض الحروف شكلها واحد، والفرق في النقاط.', audio: say('بَعْضُ الْحُرُوفِ شَكْلُهَا وَاحِدٌ، وَالْفَرْقُ فِي النِّقَاطِ.') },
+          { textAr: 'بَعْضُ الْحُرُوفِ مُتَشَابِهَةٌ. لِنَنْظُرْ إِلَى النُّقَطِ: عَدَدُهَا وَمَكَانُهَا يُسَاعِدَانِنَا عَلَى مَعْرِفَةِ الْحَرْفِ.', audio: say('بَعْضُ الْحُرُوفِ مُتَشَابِهَةٌ. لِنَنْظُرْ إِلَى النُّقَطِ: عَدَدُهَا وَمَكَانُهَا يُسَاعِدَانِنَا عَلَى مَعْرِفَةِ الْحَرْفِ.') },
           { textAr: group.map((l) => `${l}: ${LETTER_DOTS[l] ?? ''}`).join(' · '), audio: say('انْظُرْ: عَدَدُ النِّقَاطِ وَمَكَانُهَا يُغَيِّرُ الْحَرْفَ.'), visual: { kind: 'glyphs', letters: group, notesAr: group.map((l) => LETTER_DOTS[l] ?? '') } },
           closing('الآن دورك: قارن النقاط قبل أن تختار.', 'الْآنَ دَوْرُكَ: قَارِنِ النِّقَاطَ قَبْلَ أَنْ تَخْتَارَ.'),
         ],
@@ -216,6 +256,213 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
     }
     default:
       return null; // memory skills are not trained as goals
+  }
+}
+
+
+/**
+ * One short, unscored "we do" item after the explanation and worked example.
+ * It checks whether the child can use the just-taught idea before placement/practice begins.
+ */
+export function guidedChoiceForLesson(lesson: Lesson): GuidedLessonChoice | null {
+  const make = (
+    promptAr: string,
+    promptAudio: AudioSegment[],
+    options: GuidedLessonChoice['options'],
+    correctId: string,
+    hintAr: string,
+    hintAudio: AudioSegment[],
+    successAr: string,
+    successAudio: AudioSegment[],
+  ): GuidedLessonChoice => ({ promptAr, promptAudio, options, correctId, hintAr, hintAudio, successAr, successAudio });
+
+  switch (lesson.skill) {
+    case 'rhyme':
+      return make(
+        'اِسْمَعْ: قَلَمٌ وَعَلَمٌ. هَلْ يَتَشَابَهَانِ فِي آخِرِهِمَا؟',
+        say('اِسْمَعْ: قَلَمٌ وَعَلَمٌ.', 'هَلْ يَتَشَابَهَانِ فِي آخِرِهِمَا؟'),
+        [{ id: 'same', labelAr: 'نَعَمْ، النِّهَايَةُ مُتَشَابِهَةٌ' }, { id: 'different', labelAr: 'لَا، النِّهَايَةُ مُخْتَلِفَةٌ' }],
+        'same',
+        'اِسْمَعْ آخِرَ الْكَلِمَتَيْنِ: لَمْ ... لَمْ.',
+        say('اِسْمَعْ آخِرَ الْكَلِمَتَيْنِ:', 'لَمْ.', 'لَمْ.'),
+        'أَحْسَنْتَ! قَلَمٌ وَعَلَمٌ يَتَشَابَهَانِ فِي النِّهَايَةِ.',
+        say('أَحْسَنْتَ!', 'قَلَمٌ وَعَلَمٌ يَتَشَابَهَانِ فِي النِّهَايَةِ.'),
+      );
+    case 'soundPosition':
+      if (lesson.level === 3) {
+        return make(
+          'مَا الصَّوْتُ الْأَخِيرُ فِي كَلِمَةِ بَابٍ؟',
+          say('كَلِمَةُ بَابٍ.', 'مَا الصَّوْتُ الْأَخِيرُ؟'),
+          [{ id: 'بْ', labelAr: 'بْ' }, { id: 'مْ', labelAr: 'مْ' }, { id: 'لْ', labelAr: 'لْ' }],
+          'بْ',
+          'قُلْ بَابْ بِبُطْءٍ، وَاسْمَعْ آخِرَ صَوْتٍ.',
+          say('قُلْ بَابْ بِبُطْءٍ، وَاسْمَعْ آخِرَ صَوْتٍ.'),
+          'صَحِيحٌ! آخِرُ صَوْتٍ فِي بَابْ هُوَ بْ.',
+          say('صَحِيحٌ!', 'آخِرُ صَوْتٍ فِي بَابْ هُوَ بْ.'),
+        );
+      }
+      return make(
+        'مَا الصَّوْتُ الْأَوَّلُ فِي كَلِمَةِ سَمَكَةٍ؟',
+        say('سَمَكَةٌ.', 'مَا الصَّوْتُ الْأَوَّلُ؟'),
+        [{ id: 'سَ', labelAr: 'سَ' }, { id: 'مَ', labelAr: 'مَ' }, { id: 'كَ', labelAr: 'كَ' }],
+        'سَ',
+        'اِسْمَعْ بَدْءَ الْكَلِمَةِ: سَ ... مَ ... كَة.',
+        say('اِسْمَعْ بَدْءَ الْكَلِمَةِ:', 'سَ.', 'مَ.', 'كَة.'),
+        'أَحْسَنْتَ! سَمَكَةٌ تَبْدَأُ بِصَوْتِ سَ.',
+        say('أَحْسَنْتَ!', 'سَمَكَةٌ تَبْدَأُ بِصَوْتِ سَ.'),
+      );
+    case 'blending':
+      if (lesson.level !== 3) return null;
+      return make(
+        'كَمْ مَقْطَعًا نَسْمَعُ فِي كَلِمَةِ سَمَكَةٍ؟',
+        say('سَمَكَةٌ.', 'كَمْ مَقْطَعًا نَسْمَعُ؟'),
+        [{ id: '2', labelAr: 'مَقْطَعَانِ' }, { id: '3', labelAr: 'ثَلَاثَةُ مَقَاطِعَ' }, { id: '4', labelAr: 'أَرْبَعَةُ مَقَاطِعَ' }],
+        '3',
+        'صَفِّقْ مَعِي مَرَّةً لِكُلِّ جُزْءٍ: سَ ... مَ ... كَة.',
+        say('صَفِّقْ مَعِي مَرَّةً لِكُلِّ جُزْءٍ:', 'سَ.', 'مَ.', 'كَة.'),
+        'رَائِعٌ! سَمَكَةٌ فِيهَا ثَلَاثَةُ مَقَاطِعَ.',
+        say('رَائِعٌ!', 'سَمَكَةٌ فِيهَا ثَلَاثَةُ مَقَاطِعَ.'),
+      );
+    case 'discrimination': {
+      if (lesson.level === 1) {
+        return make(
+          'اِسْمَعْ: سَ ... سَ. هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ؟',
+          say('سَ.', 'سَ.', 'هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ؟'),
+          [{ id: 'same', labelAr: 'الصَّوْتُ نَفْسُهُ' }, { id: 'different', labelAr: 'صَوْتَانِ مُخْتَلِفَانِ' }],
+          'same',
+          'اِسْمَعِ الْمَقْطَعَيْنِ مَرَّةً أُخْرَى.',
+          say('اِسْمَعِ الْمَقْطَعَيْنِ مَرَّةً أُخْرَى:', 'سَ.', 'سَ.'),
+          'صَحِيحٌ! سَ وَسَ هُمَا الصَّوْتُ نَفْسُهُ.',
+          say('صَحِيحٌ!', 'سَ وَسَ هُمَا الصَّوْتُ نَفْسُهُ.'),
+        );
+      }
+      const pairVisual = lesson.steps.find((step) => step.visual?.kind === 'glyphs')?.visual;
+      const letters = pairVisual?.kind === 'glyphs' ? pairVisual.letters : ['س', 'ص'];
+      const first = letters[0] + 'َ';
+      const second = letters[1] + 'َ';
+      return make(
+        'اِسْمَعْ: ' + first + ' ... ' + second + '. هَلْ هُمَا الصَّوْتُ نَفْسُهُ؟',
+        say('اِسْمَعْ:', first, second, 'هَلْ هُمَا الصَّوْتُ نَفْسُهُ؟'),
+        [{ id: 'same', labelAr: 'الصَّوْتُ نَفْسُهُ' }, { id: 'different', labelAr: 'صَوْتَانِ مُخْتَلِفَانِ' }],
+        'different',
+        'اِسْمَعْ كُلَّ مَقْطَعٍ وَحْدَهُ، ثُمَّ قَارِنْ بَيْنَهُمَا.',
+        say('اِسْمَعْ كُلَّ مَقْطَعٍ وَحْدَهُ، ثُمَّ قَارِنْ بَيْنَهُمَا.'),
+        'أَحْسَنْتَ! الْمَقْطَعَانِ مُخْتَلِفَانِ.',
+        say('أَحْسَنْتَ!', 'الْمَقْطَعَانِ مُخْتَلِفَانِ.'),
+      );
+    }
+    case 'letterSound': {
+      const glyphSteps = lesson.steps.filter((step) => step.visual?.kind === 'glyphs');
+      const glyphVisual = glyphSteps[0]?.visual;
+      const target = glyphVisual?.kind === 'glyphs' ? glyphVisual.letters[0] : 'م';
+      const distractors = ['م', 'ب', 'س', 'ل', 'ر'].filter((letter) => letter !== target).slice(0, 2);
+      return make(
+        'أَيُّ حَرْفٍ صَوْتُهُ ' + target + 'َ؟',
+        say('أَيُّ حَرْفٍ صَوْتُهُ:', target + 'َ؟'),
+        [{ id: target, labelAr: target }, ...distractors.map((letter) => ({ id: letter, labelAr: letter }))],
+        target,
+        'اِسْمَعْ صَوْتَ ' + target + 'َ، وَانْظُرْ إِلَى شَكْلِ الْحَرْفِ.',
+        say('اِسْمَعْ صَوْتَ:', target + 'َ،', 'وَانْظُرْ إِلَى شَكْلِ الْحَرْفِ.'),
+        'صَحِيحٌ! هَذَا هُوَ الْحَرْفُ ' + target + '.',
+        say('صَحِيحٌ!', 'هَذَا هُوَ الْحَرْفُ:', target),
+      );
+    }
+    case 'visualDiscrimination': {
+      const glyphVisual = lesson.steps.find((step) => step.visual?.kind === 'glyphs')?.visual;
+      const group = glyphVisual?.kind === 'glyphs' ? glyphVisual.letters : ['ب', 'ت', 'ث'];
+      const target = group[0];
+      const distractors = group.slice(1, 3);
+      return make(
+        'أَيْنَ حَرْفُ ' + target + '؟',
+        say('أَيْنَ حَرْفُ:', target),
+        [{ id: target, labelAr: target }, ...distractors.map((letter) => ({ id: letter, labelAr: letter }))],
+        target,
+        'اُنْظُرْ إِلَى عَدَدِ النُّقَطِ وَمَكَانِهَا.',
+        say('اُنْظُرْ إِلَى عَدَدِ النُّقَطِ وَمَكَانِهَا.'),
+        'أَحْسَنْتَ! هَذَا هُوَ حَرْفُ ' + target + '.',
+        say('أَحْسَنْتَ!', 'هَذَا هُوَ حَرْفُ:', target),
+      );
+    }
+    case 'decoding':
+      return make(
+        'اِقْرَأْ: قَلَمٌ. ثُمَّ اخْتَرْ صُورَتَهُ.',
+        say('اِقْرَأْ:', 'قَلَمٌ.', 'ثُمَّ اخْتَرْ صُورَتَهُ.'),
+        [
+          { id: 'pen', labelAr: 'قَلَمٌ', emoji: LEXICON.pen.emoji },
+          { id: 'key', labelAr: 'مِفْتَاحٌ', emoji: LEXICON.key.emoji },
+          { id: 'fish', labelAr: 'سَمَكَةٌ', emoji: LEXICON.fish.emoji },
+        ],
+        'pen',
+        'اِقْرَأْ كُلَّ حَرْفٍ مَعَ حَرَكَتِهِ، ثُمَّ اِجْمَعِ الْأَصْوَاتَ.',
+        say('اِقْرَأْ كُلَّ حَرْفٍ مَعَ حَرَكَتِهِ، ثُمَّ اِجْمَعِ الْأَصْوَاتَ.'),
+        'رَائِعٌ! قَلَمٌ هُوَ الصُّورَةُ الصَّحِيحَةُ.',
+        say('رَائِعٌ!', 'قَلَمٌ هُوَ الصُّورَةُ الصَّحِيحَةُ.'),
+      );
+    case 'spelling':
+      return make(
+        'أَيُّ كَلِمَةٍ كُتِبَتْ بِشَكْلٍ صَحِيحٍ؟',
+        say('أَيُّ كَلِمَةٍ كُتِبَتْ بِشَكْلٍ صَحِيحٍ؟', 'اِسْمَعْ: شَجَرَةٌ.'),
+        [
+          { id: 'correct', labelAr: 'شَجَرَةٌ' },
+          { id: 'wrong-h', labelAr: 'شَجَرَهْ' },
+          { id: 'wrong-t', labelAr: 'شَجَرَتْ' },
+        ],
+        'correct',
+        'اِسْمَعْ نِهَايَةَ الْكَلِمَةِ، وَتَذَكَّرْ أَنَّهَا تَنْتَهِي بِتَاءٍ مَرْبُوطَةٍ.',
+        say('اِسْمَعْ نِهَايَةَ الْكَلِمَةِ.', 'تَنْتَهِي شَجَرَةٌ بِتَاءٍ مَرْبُوطَةٍ.'),
+        'أَحْسَنْتَ! شَجَرَةٌ تَنْتَهِي بِالتَّاءِ الْمَرْبُوطَةِ.',
+        say('أَحْسَنْتَ!', 'شَجَرَةٌ تَنْتَهِي بِالتَّاءِ الْمَرْبُوطَةِ.'),
+      );
+    case 'comprehension': {
+      const listeningOnly = lesson.steps[0]?.textAr.startsWith('استمع إلى الجملة');
+      if (listeningOnly) {
+        return make(
+          'سَمِعْنَا: وَضَعَتْ نُورٌ الْحِذَاءَ فِي الْخِزَانَةِ. أَيْنَ الْحِذَاءُ؟',
+          say('وَضَعَتْ نُورٌ الْحِذَاءَ فِي الْخِزَانَةِ.', 'أَيْنَ الْحِذَاءُ؟'),
+          [
+            { id: 'closet', labelAr: 'فِي الْخِزَانَةِ' },
+            { id: 'bag', labelAr: 'فِي الْحَقِيبَةِ' },
+            { id: 'garden', labelAr: 'فِي الْحَدِيقَةِ' },
+          ],
+          'closet',
+          'اِسْمَعِ الْجُمْلَةَ مِنْ جَدِيدٍ، وَانْتَبِهْ إِلَى كَلِمَةِ «فِي».',
+          say('اِسْمَعِ الْجُمْلَةَ مِنْ جَدِيدٍ.', 'اِنْتَبِهْ إِلَى كَلِمَةِ فِي الْخِزَانَةِ.'),
+          'أَحْسَنْتَ! الْحِذَاءُ فِي الْخِزَانَةِ.',
+          say('أَحْسَنْتَ!', 'الْحِذَاءُ فِي الْخِزَانَةِ.'),
+        );
+      }
+      return make(
+        'هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ. مَا سَبَبُ حَمْلِ الْمِظَلَّةِ؟',
+        say('هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ.', 'مَا سَبَبُ حَمْلِ الْمِظَلَّةِ؟'),
+        [
+          { id: 'rain', labelAr: 'الْمَطَرُ' },
+          { id: 'play', labelAr: 'اللَّعِبُ' },
+          { id: 'outing', labelAr: 'النُّزْهَةُ' },
+        ],
+        'rain',
+        'اِبْحَثْ عَنِ الْحَدَثِ الَّذِي حَدَثَ أَوَّلًا فِي الْجُمْلَةِ.',
+        say('اِبْحَثْ عَنِ الْحَدَثِ الَّذِي حَدَثَ أَوَّلًا فِي الْجُمْلَةِ.'),
+        'صَحِيحٌ! الْمَطَرُ هُوَ السَّبَبُ.',
+        say('صَحِيحٌ!', 'الْمَطَرُ هُوَ السَّبَبُ.'),
+      );
+    }
+    case 'morphology':
+      return make(
+        'أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَةِ كَتَبَ؟',
+        say('أَيُّ كَلِمَةٍ تَنْتَمِي إِلَى عَائِلَةِ كَتَبَ؟'),
+        [
+          { id: 'book', labelAr: 'كِتَابٌ', emoji: LEXICON.book.emoji },
+          { id: 'sun', labelAr: 'شَمْسٌ', emoji: LEXICON.sun.emoji },
+          { id: 'fish', labelAr: 'سَمَكَةٌ', emoji: LEXICON.fish.emoji },
+        ],
+        'book',
+        'اِبْحَثْ عَنِ الْحُرُوفِ ك، ت، ب، وَتَذَكَّرِ الْمَعْنَى.',
+        say('اِبْحَثْ عَنِ الْحُرُوفِ:', 'كَاف، تَاء، بَاء.', 'وَتَذَكَّرِ الْمَعْنَى.'),
+        'أَحْسَنْتَ! كَتَبَ وَكِتَابٌ مِنْ عَائِلَةٍ وَاحِدَةٍ.',
+        say('أَحْسَنْتَ!', 'كَتَبَ وَكِتَابٌ مِنْ عَائِلَةٍ وَاحِدَةٍ.'),
+      );
+    default:
+      return null;
   }
 }
 
@@ -345,8 +592,18 @@ export function curriculumPhrases(): string[] {
   const groupTargets: TrainingTargets[] = CONFUSABLE_LETTER_GROUPS.map((g) => ({ soundPairs: [], letters: [g[0]] }));
   for (const skill of skills) {
     for (const level of [1, 2, 3] as Level[]) {
-      for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        lessonFor(skill, level, t ?? undefined, 8)?.steps.forEach((s) => addSegs(s.audio));
+      for (const ageYears of [4, 8]) {
+        for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
+          const lesson = lessonFor(skill, level, t ?? undefined, ageYears);
+          if (!lesson) continue;
+          lesson.steps.forEach((step) => addSegs(step.audio));
+          const guided = guidedChoiceForLesson(lesson);
+          if (guided) {
+            addSegs(guided.promptAudio);
+            addSegs(guided.hintAudio);
+            addSegs(guided.successAudio);
+          }
+        }
       }
     }
   }
@@ -355,16 +612,19 @@ export function curriculumPhrases(): string[] {
     'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.', 'تَبْدَأُ مِثْلَ:', 'تَنْتَهِي مِثْلَ:', 'مَعًا:', 'صَفِّقْ مَعِي.',
     'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', 'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.', 'الصَّوْتُ نَفْسُهُ.', 'صَوْتَانِ مُخْتَلِفَانِ.',
     'هَذِهِ:', 'انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.', 'حَاوِلْ مَرَّةً أُخْرَى.',
+    'هَيَّا نُرَكِّبُ الْكَلِمَةَ مَعًا.', 'جَمَعْنَا الْمَقَاطِعَ، فَظَهَرَتِ الْكَلِمَةُ كَامِلَةً.', 'اِسْمَعِ الْجُزْءَ الْأَوَّلَ، ثُمَّ ابْحَثْ عَنْهُ.', 'اِخْتَرِ الْجُزْءَ الَّذِي نَسْمَعُهُ أَوَّلًا، ثُمَّ أَكْمِلِ الْقِطَارَ.',
   ].forEach((p) => out.add(p));
   // Structured literacy stations share their explicit teaching and feedback language with BKT training.
-  const stations = getStructuredLiteracyStations(8);
-  for (const station of stations) {
-    out.add(station.teachAudioAr);
-    out.add(station.modelAudioAr);
-    station.questions.forEach((question) => {
-      question.audio.forEach((phrase) => out.add(phrase));
-      question.explanationAudio.forEach((phrase) => out.add(phrase));
-    });
+  for (const ageYears of [4, 8]) {
+    const stations = getStructuredLiteracyStations(ageYears);
+    for (const station of stations) {
+      out.add(station.teachAudioAr);
+      out.add(station.modelAudioAr);
+      station.questions.forEach((question) => {
+        question.audio.forEach((phrase) => out.add(phrase));
+        question.explanationAudio.forEach((phrase) => out.add(phrase));
+      });
+    }
   }
   // Phrase-cued fluency examples are spoken as a model, never timed or scored.
   getFluencyPassage(8).modelAudio.forEach((phrase) => out.add(phrase));

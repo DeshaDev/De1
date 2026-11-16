@@ -242,10 +242,10 @@ export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
 };
 
 /**
- * Programme dose: 20 sessions, 5 a week (about 4 weeks), 15 minutes of training plus a 2-minute
- * progress probe, about 5.7 hours in all. In the National Reading Panel meta-analysis, phonemic
- * awareness instruction had its largest effects at 5 to 18 hours in total; longer programmes were
- * less effective (Ehri et al., 2001, Reading Research Quarterly 36(3), 250-287).
+ * Programme dose: 20 sessions, 5 a week (about 4 weeks), with 15 minutes of practice each
+ * session. A 3-minute progress probe is scheduled on sessions 1, 6, 11, 16 and 20 (5.25 hours
+ * total when all sessions and probes are completed). This is an operational schedule, not evidence
+ * that this multi-skill Arabic programme has established efficacy or an optimal dose.
  */
 export const PROGRAM_SESSIONS = 20;
 export const SESSIONS_PER_WEEK = 5;
