@@ -300,7 +300,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
             </p>
             <p className="hn-small mt-5">
-              المهارات في البرنامج: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}.
+              المهارات في البرنامج: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}. وقد تطول بعض الجلسات عند قياس القراءة على كلمات ونصوص جديدة.
             </p>
           </div>
           <div className="hn-stairs" aria-label="مثال: مستويات مهارة القافية">
