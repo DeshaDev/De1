@@ -2370,9 +2370,7 @@ export default function App() {
             onNavigateTab={(tab) => setActiveTab(tab)}
             supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : { email: 'زائر للتجربة', id: 'guest-preview' })}
             initialSubTab={
-              activeTab === 'cognitive-lab'
-                ? 'cognitive-screening'
-                : activeTab === 'reading-lab'
+              activeTab === 'reading-lab'
                   ? 'oral-reading'
                   : activeTab === 'guided-program'
                     ? 'training'
@@ -2441,14 +2439,6 @@ export default function App() {
                     if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
                   });
                 }
-              }}
-              onCompleteCognitiveScreening={(cogData) => {
-                setStudents(prev => prev.map(student =>
-                  student.id === selectedStudent.id
-                    ? { ...student, cognitiveResults: cogData }
-                    : student
-                ));
-                setActiveTab('dashboard');
               }}
             />
         )}
@@ -2533,7 +2523,7 @@ export default function App() {
               <ul>
                 <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
                 <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
-                <li><button type="button" onClick={() => setActiveTab('cognitive-lab')}>التسمية السريعة</button></li>
+                
               </ul>
             </div>
             <div className="baseera-footer-col">
