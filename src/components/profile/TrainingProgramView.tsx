@@ -1311,19 +1311,17 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       </div>
 
       {onOpenExtra && (
-        <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-black text-slate-900">أنشطة إضافية اختيارية</h3>
-            <p className="text-xs text-ink-2 mt-1">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-black text-slate-900">أنشطة إضافية اختيارية</summary>
+          <p className="text-xs text-ink-2 mt-2">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
+          <div className="flex flex-wrap gap-2 mt-3">
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
             <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
             {(student?.ageYears ?? 0) >= 6 && (
               <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
             )}
           </div>
-        </section>
+        </details>
       )}
 
       {student && <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />}
@@ -1331,8 +1329,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       <ProgramRules />
 
       {recent.length > 0 && (
-        <section className="bz-card p-5">
-          <h3 className="font-black text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> سجل الجلسات الأخيرة</h3>
+        <details className="bz-card p-5">
+          <summary className="cursor-pointer font-black text-slate-900 flex items-center gap-2">
+            <Target className="w-4 h-4" /> سجل الجلسات الأخيرة ({toArabicDigits(recent.length)})
+          </summary>
           <table className="w-full text-sm mt-3">
             <thead>
               <tr className="text-slate-500 text-xs">
@@ -1355,7 +1355,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               ))}
             </tbody>
           </table>
-        </section>
+        </details>
       )}
 
       {proposedPlan && (
