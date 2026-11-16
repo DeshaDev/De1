@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { PAIR_CUES, curriculumPhrases, explainMistake, lessonFor, probeDueAt, scaffold } from './curriculum';
+import { PAIR_CUES, curriculumPhrases, explainMistake, lessonFor, probeDueAt, scaffold, shouldShowSkillLesson } from './curriculum';
 import { CONFUSABLE_PHONEME_PAIRS, LEXICON, PICTURE_IDS } from './lexicon';
 import { FOCUS_SKILLS, PROGRAM_SESSIONS, generateSession, type Level, SKILL_BADGES, awardBadge, getHomeActivity, createProgress } from './training';
 
@@ -8,6 +8,17 @@ const HAS_ARABIC = /[ء-ي]/;
 const HAS_MARKS = /[ً-ْ]/;
 
 describe('teaching curriculum: lessons ("I do")', () => {
+  it('repeats a seen lesson in a later session but not during the same lesson-to-practice hand-off', () => {
+    assert.equal(shouldShowSkillLesson(false, null), true);
+    assert.equal(shouldShowSkillLesson(true, 'result'), true);
+    assert.equal(shouldShowSkillLesson(true, 'intro'), true);
+    assert.equal(shouldShowSkillLesson(true, 'probe'), true);
+    assert.equal(shouldShowSkillLesson(true, 'lesson'), false);
+    assert.equal(shouldShowSkillLesson(true, 'placementIntro'), false);
+    assert.equal(shouldShowSkillLesson(true, 'placement'), false);
+  });
+
+
   it('every trainable skill and level has a short lesson that ends by handing over to the child', () => {
     for (const skill of FOCUS_SKILLS) {
       for (const level of [1, 2, 3] as Level[]) {
