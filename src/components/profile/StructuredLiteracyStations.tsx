@@ -92,6 +92,9 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     setStationId(next.id);
     setShowLesson(true);
     setQuestionIndex(0);
+    setBatchStartIndex(0);
+    setBatchEndIndex(Math.min(STATION_QUESTIONS_PER_ROUND, next.questions.length));
+    setBatchComplete(false);
     setSelectedId(null);
     setTextResponse('');
     setAnswerCorrect(null);
@@ -107,6 +110,9 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
     setStationId(null);
     setShowLesson(false);
     setQuestionIndex(0);
+    setBatchStartIndex(0);
+    setBatchEndIndex(STATION_QUESTIONS_PER_ROUND);
+    setBatchComplete(false);
     setSelectedId(null);
     setTextResponse('');
     setAnswerCorrect(null);
