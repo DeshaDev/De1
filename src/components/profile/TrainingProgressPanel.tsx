@@ -122,7 +122,7 @@ export function TrainingProgressPanel({ student, compact = false }: { student: S
             <summary className="cursor-pointer text-xs font-semibold text-ink-2">كيف نقرأ هذه النتيجة؟</summary>
             <p className="mt-2 text-xs leading-5 text-ink-2">
               {transfer.pre.sourceModel === 'azure_pronunciation_assessment'
-                ? 'الدرجة ناتجة عن تقييم صوتي آلي مكتمل للكلمات والنص الجديد. هي مؤشر وصفي لمقارنة أداء الطفل بمواد مختلفة، وليست تشخيصًا أو مقياسًا معياريًا أو إثباتًا لفاعلية البرنامج.'
+                ? 'الدرجة ناتجة عن تقييم صوتي آلي مكتمل للكلمات والنص الجديد. هي مؤشر وصفي لمقارنة قراءة الطفل لمواد مختلفة، وليست اختبارًا لفهم النص أو تشخيصًا أو مقياسًا معياريًا أو إثباتًا لفاعلية البرنامج.'
                 : 'هذا سجل سابق من نموذج قياس قديم، ولا يُعدّ تقييمًا صوتيًا آليًا موثّقًا.'}
               {transfer.points === 1 && ` نتيجة البداية للكلمات الحقيقية: ${ar(transferPercent(transfer.pre.real))}٪؛ سيُعاد القياس بمواد مختلفة في المنتصف والنهاية.`}
             </p>
