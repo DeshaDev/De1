@@ -672,7 +672,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.placementIntro} />
               <p className="text-sm text-slate-600">
-                للبالغ: {toArabicDigits(PLACEMENT_ITEMS_PER_LEVEL)} أسئلة بلا تصحيح، وقد تُضاف ٣ أخرى، نتحقق بها من مستوى البداية الذي اقترحه الفحص. إذا أجاب الطفل عنها كلها إجابة صحيحة جرّبنا المستوى الأعلى، وإذا أخطأ في أغلبها بدأنا بمستوى أسهل.
+                سنجرّب بضع بطاقات لنختار بداية مناسبة لك. لا مشكلة إذا كانت بعض البطاقات صعبة؛ بعدها نبدأ التعلّم مع هُدهُد.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -711,7 +711,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.probeIntro} />
               <h2 className="font-child text-2xl font-black text-slate-900">مقياس الأسبوع، ثم وقت التعلّم</h2>
               <p className="text-sm text-slate-600">
-                أسئلة قصيرة (نحو {toArabicDigits(PROBE_MINUTES)} دقائق) بالصعوبة نفسها في أول جلسة ثم مرة كل أسبوع، بلا تصحيح، لنقيس تقدّم {childName === GUEST_CHILD_NAME ? 'الطفل' : childName}. بعدها يبدأ التعلّم بالدروس والتمارين.
+                قبل درس اليوم، يمكننا تجربة بطاقات قصيرة لنتابع ما تعلّمته. لا توجد درجات في هذه البطاقات، وبعدها نبدأ مغامرتنا مع هُدهُد.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
                 <button
@@ -1128,18 +1128,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => beginSession(true)}
+            onClick={() => beginSession(false)}
             className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
           >
             <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم
           </button>
-          <button
-            type="button"
-            onClick={() => beginSession(false)}
-            className="bz-btn bz-btn-secondary font-medium text-sm"
-          >
-            <TrendingUp className="w-4 h-4" /> مقياس المتابعة
-          </button>
+
         </div>
       </section>
 
