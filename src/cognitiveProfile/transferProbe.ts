@@ -164,10 +164,10 @@ export function getTransferAudioTask(taskId: unknown): TransferAudioTask | null 
     id: `transfer-${form}-${kind}`,
     form,
     kind,
-    titleAr: kind === 'real' ? 'كلمات جديدة' : 'كلمات مصنوعة',
+    titleAr: kind === 'real' ? 'كلمات جديدة' : 'كلمات للتجربة',
     instructionAr: kind === 'real'
       ? 'اِقْرَأِ الكَلِمَاتِ وَاحِدَةً وَاحِدَةً، وَلَا تَسْتَعْجِلْ.'
-      : 'هَذِهِ كَلِمَاتٌ صَنَعْنَاهَا لِنُجَرِّبَ قِرَاءَةَ الْحُرُوفِ؛ اِقْرَأْهَا كَمَا تَرَاهَا.',
+      : 'هَذِهِ كَلِمَاتٌ لِلتَّدْرِيبِ عَلَى الْقِرَاءَةِ؛ اِقْرَأْهَا كَمَا تَرَاهَا، كَلِمَةً كَلِمَةً.',
     displayText: items.map((entry) => entry.text).join('   •   '),
     words: items.map((entry) => entry.text),
   };
