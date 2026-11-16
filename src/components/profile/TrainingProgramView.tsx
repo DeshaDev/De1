@@ -718,7 +718,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {run.phase === 'placementIntro' && (
             <div className="flex flex-col items-center text-center gap-4 max-w-md">
               <p className="font-child text-lg font-bold text-slate-700">
-                سنجرّب بعض الكلمات بهدوء لنختار المستوى المناسب لك.
+                سنجرّب أمثلة جديدة. وإذا احتجت مساعدة، سنشرح لك ثم تحاول مرة أخرى.
               </p>
               <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
                 <Play className="w-6 h-6" /> ابدأ
@@ -726,7 +726,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             </div>
           )}
           {run.phase === 'placement' && item && (
-            <ChoicePlayer key={`${pl.level}-${item.id}-${pl.answers.length}`} item={item} showFeedback={false} onDone={(r) => onPlacementItemDone(r.correct)} />
+            <TeachingChoicePlayer
+              key={`${pl.level}-${item.id}-${pl.answers.length}`}
+              item={item}
+              guided
+              onDone={(firstTryCorrect) => onPlacementItemDone(firstTryCorrect)}
+            />
           )}
         </div>
       </div>
