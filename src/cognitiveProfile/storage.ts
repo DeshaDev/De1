@@ -39,8 +39,6 @@ export interface BatterySession {
   guardianConsentRecordedAt?: string;
   guardianAudioConsentRecordedAt?: string;
   speechLocale?: 'ar-SA';
-  /** Accuracy study: the adult marks each voice-scored word before seeing the engine's result. */
-  verifyAudioByAdult?: boolean;
   results: Partial<Record<SubtestId, SubtestResult>>;
 }
 
