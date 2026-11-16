@@ -109,6 +109,20 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.ok(spelling.questions.some((question) => question.responseMode === 'text'));
   });
 
+  it('keeps every spoken practice prompt and explanation vowelled for Arabic speech', () => {
+    for (const age of [4, 5, 6, 7, 8]) {
+      for (const station of getStructuredLiteracyStations(age)) {
+        for (const question of station.questions) {
+          for (const phrase of [...question.audio, ...question.explanationAudio]) {
+            if (/[ء-ي]{2,}/.test(phrase)) {
+              assert.match(phrase, /[ً-ْ]/, `${station.id}/${question.id}: unvowelled spoken phrase: ${phrase}`);
+            }
+          }
+        }
+      }
+    }
+  });
+
   it('keeps fluency practice untimed and unscored', () => {
     const passage = getFluencyPassage(8);
     assert.ok(passage.linesAr.length >= 3);
