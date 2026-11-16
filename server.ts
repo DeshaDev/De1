@@ -2960,6 +2960,219 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     }
   );
 
+
+  // Family-account training progress is saved here, not directly from the browser.
+  // New transfer scores are recomputed from the same short-lived Azure receipts as screening.
+  app.put('/api/parent/students/:id/training-progress', requireAiAccess(), async (req, res) => {
+    const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+    const parentUserId = session?.parentUserId;
+    const authorization = String(req.headers.authorization || '');
+    if (String(session?.role) !== 'parent' || !parentUserId || !authorization.startsWith('Bearer ')) {
+      res.status(403).json({ error: 'هذا المسار مخصص لحساب ولي الأمر الموثّق.' });
+      return;
+    }
+
+    const studentId = String(req.params.id || '');
+    if (!/^[a-zA-Z0-9._:-]{1,120}$/.test(studentId)) {
+      res.status(400).json({ error: 'معرّف ملف الطفل غير صالح.' });
+      return;
+    }
+    const body = req.body || {};
+    const parsed = TrainingProgressUploadSchema.safeParse(body.progress);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: 'بيانات البرنامج التدريبي غير صالحة.',
+        issues: parsed.error.issues.slice(0, 10).map((issue) => issue.message),
+      });
+      return;
+    }
+
+    let owned: any;
+    try {
+      const ownerUrl =
+        `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at,guardian_audio_consent,guardian_audio_consent_recorded_at&limit=1`;
+      const ownerResponse = await fetch(ownerUrl, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: authorization,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!ownerResponse.ok) {
+        res.status(503).json({ error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات.' });
+        return;
+      }
+      const rows = await ownerResponse.json().catch(() => null);
+      owned = Array.isArray(rows) ? rows.find((row) => row?.id === studentId) : undefined;
+    } catch {
+      res.status(503).json({ error: 'تعذر الوصول إلى ملف الطفل؛ لم يُحفظ تقدم البرنامج.' });
+      return;
+    }
+
+    const current = owned?.raw_data && typeof owned.raw_data === 'object'
+      ? owned.raw_data as StudentRecord
+      : undefined;
+    if (!owned || !current) {
+      res.status(404).json({ error: 'ملف الطفل غير موجود في حساب الأسرة الحالي.' });
+      return;
+    }
+    const consentTimestamp = typeof current.guardianConsentRecordedAt === 'string'
+      ? Date.parse(current.guardianConsentRecordedAt)
+      : NaN;
+    if (
+      owned.guardian_consent !== true ||
+      current.guardianConsentGiven !== true ||
+      !Number.isFinite(consentTimestamp) ||
+      !owned.guardian_consent_recorded_at ||
+      String(owned.guardian_consent_recorded_at) !== String(current.guardianConsentRecordedAt)
+    ) {
+      res.status(403).json({ error: 'لا توجد موافقة ولي أمر محفوظة وصالحة في سجل الطفل.' });
+      return;
+    }
+
+    const currentTransfer = current.trainingProgress?.transfer ?? [];
+    const incomingTransfer = parsed.data.transfer ?? [];
+    const hasNewTransfer = incomingTransfer.some((record) =>
+      !currentTransfer.some((previous) => sameTransferRecord(previous, record))
+    );
+    const audioConsentTimestamp = typeof current.guardianAudioConsentRecordedAt === 'string'
+      ? Date.parse(current.guardianAudioConsentRecordedAt)
+      : NaN;
+    if (
+      hasNewTransfer &&
+      (owned.guardian_audio_consent !== true ||
+        current.guardianAudioConsentGiven !== true ||
+        !Number.isFinite(audioConsentTimestamp) ||
+        !owned.guardian_audio_consent_recorded_at ||
+        String(owned.guardian_audio_consent_recorded_at) !== String(current.guardianAudioConsentRecordedAt))
+    ) {
+      res.status(403).json({
+        code: 'AUDIO_CONSENT_REQUIRED',
+        error: 'يلزم وجود الموافقة المنفصلة والمؤرخة على معالجة صوت الطفل قبل حفظ قياس الانتقال.',
+      });
+      return;
+    }
+
+    const transferCheck = validateTransferRecords(
+      parsed.data.transfer,
+      session,
+      studentId,
+      currentTransfer
+    );
+    if (!transferCheck.valid) {
+      res.status(409).json({
+        code: 'TRANSFER_ASSESSMENT_RECEIPT_INVALID',
+        error: transferCheck.error || 'تعذر التحقق من قياس القراءة الجديدة؛ لم تُحفظ درجاته.',
+      });
+      return;
+    }
+
+    const progress = {
+      ...parsed.data,
+      ...(transferCheck.records
+        ? { transfer: transferCheck.records }
+        : currentTransfer.length > 0 ? { transfer: currentTransfer } : {}),
+    };
+    const updatedStudent: StudentRecord = {
+      ...current,
+      trainingProgress: { ...progress, updatedAt: new Date().toISOString() },
+    };
+
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      res.status(503).json({
+        code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
+        error: 'الحفظ الآمن لتقدم البرنامج غير مهيأ في الخادم؛ بقي التقدم على هذا الجهاز.',
+      });
+      return;
+    }
+
+    for (const receipt of transferCheck.receiptKeys) {
+      if (audioAssessmentReceiptsInFlight.has(receipt)) {
+        res.status(409).json({
+          code: 'TRANSFER_ASSESSMENT_RECEIPT_IN_USE',
+          error: 'يجري حفظ قياس القراءة بالفعل؛ أعد المحاولة بعد اكتمال الحفظ.',
+        });
+        return;
+      }
+    }
+    for (const receipt of transferCheck.receiptKeys) audioAssessmentReceiptsInFlight.add(receipt);
+
+    try {
+      const updateUrl =
+        `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}`;
+      const updateResponse = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          raw_data: updatedStudent,
+          guardian_consent: true,
+          guardian_consent_recorded_at: current.guardianConsentRecordedAt,
+          updated_at: new Date().toISOString(),
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!updateResponse.ok) {
+        res.status(503).json({ error: 'تعذر حفظ تقدم البرنامج في سجل الأسرة السحابي.' });
+        return;
+      }
+      const updatedRows = await updateResponse.json().catch(() => null);
+      if (!Array.isArray(updatedRows) || updatedRows.length !== 1) {
+        res.status(503).json({ error: 'لم يؤكد مخزن الأسرة حفظ تقدم البرنامج.' });
+        return;
+      }
+
+      const sessions = new Set(progress.history.map((entry) => entry.date.slice(0, 10))).size;
+      const trainingUpdate = await fetch(
+        `${SUPABASE_URL}/rest/v1/training_progress?on_conflict=id`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify({
+            id: `${studentId}:guided-program`,
+            student_id: studentId,
+            user_id: parentUserId,
+            station: 'guided-program',
+            progress_percent: Math.min(100, Math.round((sessions / PROGRAM_SESSIONS) * 100)),
+            completed_milestones: progress.mastered,
+            details: {
+              plan: progress.plan,
+              levels: progress.levels,
+              supportFlags: progress.supportFlags,
+              sessionsCompleted: sessions,
+              history: progress.history.slice(-400),
+              probes: progress.probes.slice(-200),
+              transfer: progress.transfer ?? [],
+            },
+            updated_at: new Date().toISOString(),
+          }),
+          signal: AbortSignal.timeout(5000),
+        }
+      );
+      if (!trainingUpdate.ok) {
+        res.status(503).json({ error: 'حُفظ سجل الطفل، لكن تعذّر تحديث ملخص تقدم البرنامج؛ أعد المزامنة.' });
+        return;
+      }
+
+      for (const receipt of transferCheck.receiptKeys) audioAssessmentReceipts.delete(receipt);
+      res.status(200).json({ student: updatedStudent, persisted: true });
+    } catch {
+      res.status(503).json({ error: 'تعذر الاتصال بمخزن الأسرة؛ بقي تقدم البرنامج محليًا.' });
+    } finally {
+      for (const receipt of transferCheck.receiptKeys) audioAssessmentReceiptsInFlight.delete(receipt);
+    }
+  });
+
   // Strict 4-field profile PATCH (`name`, `schoolName`, `gradeLevel`, `ageYears` only)
   app.patch(
     '/api/students/:id',
