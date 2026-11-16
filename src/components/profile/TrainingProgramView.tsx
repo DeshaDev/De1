@@ -22,6 +22,8 @@ import {
   chanceOf,
   createPersonalizedProgress,
   generateItems,
+  allocateTrainingItems,
+  trainingEvidenceKey,
   ageAppropriateLiteracySkills,
   getHomeActivity,
   isReassessmentDue,
@@ -33,7 +35,7 @@ import {
   type DictationTrainingItem,
   summarizePlanSetup,
 } from '../../cognitiveProfile/training';
-import { MASTERY_THRESHOLD, allocateItems } from '../../cognitiveProfile/knowledgeTracing';
+import { MASTERY_THRESHOLD } from '../../cognitiveProfile/knowledgeTracing';
 import { loadTrainingProgress, saveTrainingProgress } from '../../cognitiveProfile/storage';
 import { syncTrainingToSchool } from '../../cognitiveProfile/sync';
 import { trackUsage } from '../../utils/usageTracking';
@@ -359,7 +361,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const probedToday = (progress.probes ?? []).some((p) => p.date.slice(0, 10) === today);
     const session = (progress.probes?.length ?? 0) + 1;
     if (skipProbe || !probeDueAt(sessionNumber, PROGRAM_SESSIONS) || probedToday) {
-      const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })));
+      const alloc = allocateTrainingItems(todaySkills, todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })), progress.levels, childAgeMonths ?? 72);
       beginSkill(0, {
         skills: todaySkills, skillIndex: 0, tasks: [], taskIndex: 0, correct: 0, phase: 'intro', change: null, results: [],
         probe: null, todayProbe: null, alloc, blockStart: null, promoted: [], lesson: null, guided: 0, stars: 0,
@@ -401,13 +403,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const record = scoreProbe(run.probe.items, answers, session);
     // The probe also feeds the knowledge-tracing model (evidence only, no learning).
     const evidence = run.probe.items
-      .map((item, i) => ({ skill: item.skill, correct: answers[i] === true, guess: chanceOf(item.task), trained: item.role === 'trained' }))
+      .map((item, i) => ({ skill: item.skill, correct: answers[i] === true, guess: chanceOf(item.task), evidenceKey: trainingEvidenceKey(item.task), trained: item.role === 'trained' }))
       .filter((a) => a.trained);
     const { progress: traced, promoted } = applyProbeEvidence(progress, evidence);
     const next = { ...traced, probes: [...(progress.probes ?? []), record] };
     persist(next);
     // Practice time goes where the model is least sure the child has mastered the skill.
-    const alloc = allocateItems(todaySkills.map((skill) => ({ skill, p: masteryEstimate(next, skill).p })));
+    const alloc = allocateTrainingItems(todaySkills, todaySkills.map((skill) => ({ skill, p: masteryEstimate(next, skill).p })), next.levels, childAgeMonths ?? 72);
     beginSkill(0, { ...run, probe: null, todayProbe: record, alloc, promoted }, next);
   };
 
@@ -570,7 +572,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const nextLatencies = typeof rtMs === 'number' && rtMs > 0 ? [...run.latencies, rtMs] : run.latencies;
     const nextFastCount = run.fastCount + (isFast ? 1 : 0);
 
-    const { progress: updated, change } = recordAnswer(progress, skill, correct, chanceOf(task));
+    const { progress: updated, change } = recordAnswer(progress, skill, correct, chanceOf(task), trainingEvidenceKey(task));
     const nextCorrect = run.correct + (correct ? 1 : 0);
     const blockChange: LevelChange =
       change === 'mastered' || run.change === 'mastered' ? 'mastered' : change === 'up' || run.change === 'up' ? 'up' : change === 'down' || run.change === 'down' ? 'down' : 'stay';
