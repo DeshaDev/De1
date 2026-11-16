@@ -175,6 +175,25 @@ describe('age-appropriate structured literacy practice stations', () => {
     }
   });
 
+  it('progresses morphology from word-family meaning to active and passive participles', () => {
+    const station = getStructuredLiteracyStations(7).find((entry) => entry.id === 'morphology');
+    assert.ok(station);
+    const byId = (id: string) => station.questions.find((question) => question.id === id)!;
+
+    assert.equal(byId('morphology-farm').level, 1);
+    assert.equal(byId('morphology-farm').correctId, 'زراعة');
+    assert.equal(byId('morphology-remember').correctId, 'رحمة');
+    assert.equal(byId('morphology-succeed-family').correctId, 'نجاح');
+
+    assert.equal(byId('morphology-open').level, 2);
+    assert.equal(byId('morphology-open').correctId, 'فاتح');
+    assert.match(byId('morphology-open').explanationAr, /اسْمُ فَاعِلٍ/);
+
+    assert.equal(byId('morphology-write-passive').level, 3);
+    assert.equal(byId('morphology-write-passive').correctId, 'مكتوب');
+    assert.match(byId('morphology-write-passive').explanationAr, /اسْمُ مَفْعُولٍ/);
+  });
+
   it('keeps fluency practice untimed and unscored', () => {
     const passage = getFluencyPassage(8);
     assert.ok(passage.linesAr.length >= 3);
