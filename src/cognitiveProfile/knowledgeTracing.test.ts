@@ -111,6 +111,29 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
     assert.equal(TrainingProgressUploadSchema.safeParse(progress).success, true);
   });
 
+  it('does not count the same content fingerprint twice as independent BKT evidence', () => {
+    const key = 'item-a1-b2';
+    const first = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, key);
+    const repeated = recordAnswer(first.progress, 'rhyme', true, 1 / 3, key);
+    assert.equal(first.progress.bkt!['rhyme:1'].n, 1);
+    assert.equal(repeated.progress.bkt!['rhyme:1'].n, 1);
+    assert.equal(repeated.change, 'stay');
+    assert.deepEqual(repeated.progress.seenTrainingItems, [key]);
+    assert.equal(TrainingProgressUploadSchema.safeParse(repeated.progress).success, true);
+  });
+
+  it('does not reuse an item already seen in practice as fresh progress-probe evidence', () => {
+    const practiced = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, 'item-a1-b2').progress;
+    const before = practiced.bkt!['rhyme:2'].n;
+    const result = applyProbeEvidence(practiced, [
+      { skill: 'rhyme', correct: false, guess: 1 / 3, evidenceKey: 'item-c1-d2' },
+      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-c1-d2' },
+      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-a1-b2' },
+    ]);
+    assert.equal(result.progress.bkt!['rhyme:2'].n, before + 1);
+    assert.deepEqual(result.progress.seenTrainingItems, ['item-a1-b2', 'item-c1-d2']);
+  });
+
   it('gives more practice to the skill furthest from mastery, within 4 to 12 items', () => {
     const a = allocateItems([{ skill: 'weak', p: 0.1 }, { skill: 'strong', p: 0.9 }]);
     assert.ok(a.weak > a.strong);
