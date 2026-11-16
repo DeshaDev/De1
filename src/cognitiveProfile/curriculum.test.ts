@@ -2,10 +2,45 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PAIR_CUES, curriculumPhrases, explainMistake, lessonFor, probeDueAt, scaffold, shouldShowSkillLesson } from './curriculum';
 import { CONFUSABLE_PHONEME_PAIRS, LEXICON, PICTURE_IDS } from './lexicon';
-import { FOCUS_SKILLS, PROGRAM_SESSIONS, generateSession, type Level, SKILL_BADGES, awardBadge, getHomeActivity, createProgress } from './training';
+import { FOCUS_SKILLS, PROGRAM_SESSIONS, generateSession, generateItems, availableTrainingItems, allocateTrainingItems, trainingEvidenceKey, type Level, SKILL_BADGES, awardBadge, getHomeActivity, createProgress } from './training';
 
 const HAS_ARABIC = /[ء-ي]/;
 const HAS_MARKS = /[ً-ْ]/;
+
+describe('training dose and item identity', () => {
+  it('generates only distinct questions that belong to the requested skill level', () => {
+    for (const ageMonths of [48, 60, 72, 84, 96]) {
+      for (const skill of ['decoding', 'spelling', 'comprehension', 'morphology'] as const) {
+        for (const level of [1, 2, 3] as Level[]) {
+          const capacity = availableTrainingItems(skill, level, ageMonths);
+          if (capacity === 0) continue;
+          const tasks = generateItems(skill, level, 37, 12, undefined, ageMonths);
+          assert.equal(tasks.length, capacity, `${skill}/L${level}/age ${ageMonths}: generated count must match the distinct bank`);
+          const keys = tasks.map(trainingEvidenceKey);
+          assert.equal(new Set(keys).size, tasks.length, `${skill}/L${level}: duplicate generated evidence`);
+        }
+      }
+    }
+  });
+
+  it('caps adaptive allocations at the available level-matched question bank', () => {
+    const skills = ['decoding', 'spelling', 'comprehension', 'morphology'] as const;
+    const levels = { decoding: 1, spelling: 1, comprehension: 2, morphology: 1 };
+    const estimates = skills.map((skill) => ({ skill, p: 0.1 }));
+    const allocation = allocateTrainingItems([...skills], estimates, levels, 84);
+    for (const skill of skills) {
+      assert.ok((allocation[skill] ?? 0) <= availableTrainingItems(skill, levels[skill], 84), skill);
+    }
+  });
+
+  it('keeps generated evidence identity stable when answer options are reordered', () => {
+    const [task] = generateItems('decoding', 1, 19, 1, undefined, 72);
+    assert.ok(task && task.kind === 'choice');
+    if (!task || task.kind !== 'choice') return;
+    const reordered = { ...task, item: { ...task.item, options: [...task.item.options].reverse(), id: 'new-generated-id' } };
+    assert.equal(trainingEvidenceKey(task), trainingEvidenceKey(reordered));
+  });
+});
 
 describe('teaching curriculum: lessons ("I do")', () => {
   it('repeats a seen lesson in a later session but not during the same lesson-to-practice hand-off', () => {
