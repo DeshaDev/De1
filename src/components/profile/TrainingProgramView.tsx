@@ -822,6 +822,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'lesson' && run.lesson && (
             <LessonPlayer
+              key={run.lesson.key}
               lesson={run.lesson}
               onDone={() => {
                 const key = run.lesson!.key;
