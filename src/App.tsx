@@ -2361,7 +2361,7 @@ export default function App() {
           </div>
         )}
 
-        {/* UNIFIED DYSLEXIA SCREENING & DIAGNOSTIC HUB (All Reading Tests in One Creative Hub) */}
+        {/* Unified reading screening and training hub. */}
         {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
           <DyslexiaScreeningHub
             students={students}
