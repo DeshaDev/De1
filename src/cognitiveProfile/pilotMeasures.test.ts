@@ -6,6 +6,7 @@ import { LEXICON } from './lexicon';
 import { NONWORD_ITEMS, PASSAGE_WORDS, SPELL_ITEMS, WORD_ITEMS, stripMarks } from './readingTasks';
 import { buildTrainingPlan, createProgress, generateSession, getHomeActivity, FOCUS_SKILLS, masteryEstimate, type Level, type TrainingPlan } from './training';
 import { curriculumPhrases } from './curriculum';
+import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import { TrainingProgressUploadSchema } from './records';
 
 const plan: TrainingPlan = { createdAt: '2026-11-10T00:00:00.000Z', preventive: false, focus: ['rhyme', 'blending'], rationaleAr: [] };
@@ -66,6 +67,7 @@ describe('transfer measure (untrained words)', () => {
     FOCUS_SKILLS.flatMap((skill) => ([1, 2, 3] as Level[]).flatMap((level) => [1, 2, 3, 4, 5].map((seed) => JSON.stringify(generateSession(skill, level, seed))))).join(' '),
     FOCUS_SKILLS.map((skill) => JSON.stringify(getHomeActivity(skill))).join(' '),
     curriculumPhrases().join(' '),
+    [4, 8].map((age) => JSON.stringify(getStructuredLiteracyStations(age))).join(' '),
   ].join(' ');
   const all = (['A', 'B'] as const).flatMap((f) => [...TRANSFER_FORMS[f].real, ...TRANSFER_FORMS[f].nonword]);
 
