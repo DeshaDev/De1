@@ -160,6 +160,21 @@ describe('transfer measure (untrained words)', () => {
     assert.deepEqual(passages.map((p) => (p.text.match(/[.!؟]/g) ?? []).length), [5, 5, 5]);
   });
 
+  it('serves child-facing transfer tasks with clear names and no comprehension claim', () => {
+    for (const form of ['A', 'B', 'C'] as const) {
+      const real = getTransferAudioTask(`transfer-${form}-real`);
+      const nonword = getTransferAudioTask(`transfer-${form}-nonword`);
+      const passage = getTransferAudioTask(`transfer-${form}-passage`);
+      assert.equal(real?.words.length, 8);
+      assert.equal(nonword?.words.length, 8);
+      assert.equal(nonword?.titleAr, 'كلمات للتجربة');
+      assert.match(nonword?.instructionAr ?? '', /كلمات للتدريب على القراءة/);
+      assert.equal(passage?.words.length, 30);
+      assert.equal(passage?.titleAr, 'نص جديد');
+      assert.match(passage?.instructionAr ?? '', /اِقْرَأِ النَّصَّ/);
+    }
+  });
+
   it('counterbalances all three forms so a child never sees the same form twice', () => {
     for (const id of ['s1', 's2', 's3', 'child-x']) {
       assert.equal(new Set((['pre', 'mid', 'post'] as const).map((point) => formFor(id, point))).size, 3);
