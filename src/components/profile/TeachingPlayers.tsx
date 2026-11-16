@@ -215,15 +215,13 @@ function GuidedChoiceLesson({
     handle.current = h;
     setBusy(true);
 
-    if (id === activity.correctId) {
-      setComplete(true);
-      setMessage(activity.successAr);
-      await speakSegments(activity.successAudio, h);
-    } else {
-      setMessage(activity.hintAr);
-      await speakSegments(activity.hintAudio, h);
+    const correct = id === activity.correctId;
+    setMessage(correct ? activity.successAr : activity.hintAr);
+    await speakSegments(correct ? activity.successAudio : activity.hintAudio, h);
+    if (!h.cancelled) {
+      if (correct) setComplete(true);
+      setBusy(false);
     }
-    if (!h.cancelled) setBusy(false);
   };
 
   return (
