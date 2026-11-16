@@ -48,7 +48,7 @@ const passage = (form: TransferForm, text: string, contentWords: string[]): Tran
   const clean = text.replace(/[،؛.!؟]/g, ' ').replace(/\s+/g, ' ').trim();
   return {
     id: `transfer-${form}-passage`,
-    titleAr: 'قصة قصيرة',
+    titleAr: 'نص جديد',
     text,
     words: clean.split(' '),
     contentWords,
@@ -154,7 +154,7 @@ export function getTransferAudioTask(taskId: unknown): TransferAudioTask | null 
       form,
       kind,
       titleAr: list.passage.titleAr,
-      instructionAr: 'اِقْرَأِ القِصَّةَ بِصَوْتٍ وَاضِحٍ، وَخُذْ وَقْتَكَ.',
+      instructionAr: 'اِقْرَأِ النَّصَّ بِصَوْتٍ وَاضِحٍ، وَخُذْ وَقْتَكَ.',
       displayText: list.passage.text,
       words: [...list.passage.words],
     };
