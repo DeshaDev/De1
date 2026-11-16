@@ -113,7 +113,7 @@ describe('transfer measure (untrained words)', () => {
         .split(/[.!؟]/)
         .map((sentence) => sentence.replace(/[،؛]/g, ' ').trim())
         .filter(Boolean)
-        .map((sentence) => sentence.split(/\\s+/).length);
+        .map((sentence) => sentence.split(/\s+/).length);
       assert.deepEqual(sentenceWordCounts, [8, 7, 6, 4, 5], `${p.id} should keep the same short-sentence structure across forms`);
       for (const word of p.contentWords) {
         const bare = stripMarks(word).replace(/[.,،]/g, '');
