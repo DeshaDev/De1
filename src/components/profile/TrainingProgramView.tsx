@@ -64,6 +64,8 @@ import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, shouldShow
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
 import { StructuredLiteracyStations } from './StructuredLiteracyStations';
 import { getFluencyPassage } from '../../cognitiveProfile/structuredLiteracyStations';
+import { formFor, transferDueAt, type TransferPoint, type TransferRecord } from '../../cognitiveProfile/transferProbe';
+import TransferMeasureView from './TransferMeasureView';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
@@ -286,6 +288,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     return () => { cancelled = true; };
   }, [studentId]);
   const [run, setRun] = useState<Run | null>(null);
+  const [transferPoint, setTransferPoint] = useState<TransferPoint | null>(null);
   const [showStructuredLiteracyStations, setShowStructuredLiteracyStations] = useState(false);
   useEffect(() => {
     onRunningChange?.(run !== null);
@@ -353,13 +356,20 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
    */
   const childAgeMonths = profile?.ageMonths ?? (typeof student?.ageYears === 'number' ? student.ageYears * 12 : null);
   const childAgeYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? 48) / 12)));
-  const beginSession = (skipProbe = false) => {
+  const beginSession = (skipProbe = false, skipTransfer = false) => {
     if (!progress) return;
     const today = new Date().toISOString().slice(0, 10);
     const trainedToday = progress.history.some((h) => h.date.slice(0, 10) === today);
     const sessionNumber = sessionsCompleted(progress) + (trainedToday ? 0 : 1);
     const probedToday = (progress.probes ?? []).some((p) => p.date.slice(0, 10) === today);
     const session = (progress.probes?.length ?? 0) + 1;
+    if (!skipTransfer) {
+      const dueTransfer = transferDueAt(progress, sessionNumber, childAgeMonths);
+      if (dueTransfer) {
+        setTransferPoint(dueTransfer);
+        return;
+      }
+    }
     if (skipProbe || !probeDueAt(sessionNumber, PROGRAM_SESSIONS) || probedToday) {
       const alloc = allocateTrainingItems(todaySkills, todaySkills.map((skill) => ({ skill, p: masteryEstimate(progress, skill).p })), progress.levels, childAgeMonths ?? 72);
       beginSkill(0, {
@@ -651,6 +661,32 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   };
 
   // ---------------------------------------------------------------- running a session
+  if (transferPoint && progress) {
+    const transferSessionNumber = sessionsCompleted(progress) + 1;
+    return (
+      <TransferMeasureView
+        student={student}
+        point={transferPoint}
+        form={formFor(studentId, transferPoint)}
+        session={transferSessionNumber}
+        onComplete={(record: TransferRecord) => {
+          const next = {
+            ...progress,
+            transfer: [...(progress.transfer ?? []).filter((saved) => saved.point !== record.point), record],
+          };
+          persist(next);
+          setTransferPoint(null);
+          // The new-material measure replaces the ordinary weekly probe on this sitting.
+          beginSession(true, true);
+        }}
+        onSkip={() => {
+          setTransferPoint(null);
+          beginSession(true, true);
+        }}
+      />
+    );
+  }
+
   if (showStructuredLiteracyStations) {
     const ageYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? ((student?.ageYears ?? 4) * 12)) / 12)));
     return (
