@@ -1,6 +1,6 @@
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Zap, Home, GraduationCap } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Home, GraduationCap } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
 import {
   Level,
