@@ -52,7 +52,7 @@ import {
   saveActiveStudentId,
   loadActiveStudentId,
 } from './utils/cookiePersistence';
-import { saveBatterySession, clearLiteracyPracticeProgress, clearAllChildData, type BatterySession, type HomeDialect } from './cognitiveProfile/storage';
+import { saveBatterySession, clearLiteracyPracticeProgress, clearAllChildData, normalizeHomeDialect, pronunciationLocaleForDialect, type BatterySession } from './cognitiveProfile/storage';
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -841,7 +841,7 @@ export default function App() {
 
     const recordedAt = new Date().toISOString();
     const selectedCountry = child.country || 'غير محددة';
-    const selectedDialect = child.dialectCode || 'msa';
+    const selectedDialect = normalizeHomeDialect(child.dialectCode, selectedCountry);
     const newLearner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: child.name,
@@ -897,8 +897,8 @@ export default function App() {
     };
 
     // Pre-create battery session respecting explicit audio consent for Standard Arabic
-    const speechDialect = (['msa', 'gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other'].includes(selectedDialect) ? selectedDialect : 'other') as HomeDialect;
-    const speechLocale = selectedDialect === 'egyptian' ? 'ar-EG' as const : ['msa', 'gulf'].includes(selectedDialect) ? 'ar-SA' as const : undefined;
+    const speechDialect = selectedDialect;
+    const speechLocale = pronunciationLocaleForDialect(selectedDialect);
     const explicitAudioConsent = child.audioConsentGiven === true;
     const initialBatterySession: BatterySession = {
       studentId: newLearner.id,
