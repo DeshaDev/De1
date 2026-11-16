@@ -2915,9 +2915,28 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         });
         return;
       }
+      const currentRecord = studentsDb[found.idx];
+      const transferCheck = validateTransferRecords(
+        parsed.data.transfer,
+        found.session,
+        currentRecord.id,
+        currentRecord.trainingProgress?.transfer ?? []
+      );
+      if (!transferCheck.valid) {
+        res.status(409).json({
+          code: 'TRANSFER_ASSESSMENT_RECEIPT_INVALID',
+          error: transferCheck.error || 'تعذر التحقق من قياس القراءة الجديدة؛ لم تُحفظ درجاته.',
+        });
+        return;
+      }
+      const nextProgress = {
+        ...(parsed.data as Omit<NonNullable<StudentRecord['trainingProgress']>, 'updatedAt'>),
+        ...(transferCheck.records ? { transfer: transferCheck.records } : {}),
+        updatedAt: new Date().toISOString(),
+      };
       const updatedRecord: StudentRecord = {
-        ...studentsDb[found.idx],
-        trainingProgress: { ...(parsed.data as Omit<NonNullable<StudentRecord['trainingProgress']>, 'updatedAt'>), updatedAt: new Date().toISOString() },
+        ...currentRecord,
+        trainingProgress: nextProgress,
       };
       const nextRecords = [...studentsDb];
       nextRecords[found.idx] = updatedRecord;
@@ -2934,6 +2953,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
       studentsDb = committed.students;
+      for (const receipt of transferCheck.receiptKeys) audioAssessmentReceipts.delete(receipt);
       res.status(200).json({ student: updatedRecord, persisted: true });
     }
   );
