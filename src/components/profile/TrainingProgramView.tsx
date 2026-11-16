@@ -662,7 +662,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
   // ---------------------------------------------------------------- running a session
   if (transferPoint && progress) {
-    const transferSessionNumber = sessionsCompleted(progress) + 1;
+    const today = new Date().toISOString().slice(0, 10);
+    const alreadyTrainedToday = progress.history.some((entry) => entry.date.slice(0, 10) === today);
+    const transferSessionNumber = sessionsCompleted(progress) + (alreadyTrainedToday ? 0 : 1);
     return (
       <TransferMeasureView
         student={student}
