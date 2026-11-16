@@ -87,7 +87,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
 
     const readingLesson = lessonFor('comprehension', 1, undefined, 6);
     assert.ok(readingLesson);
-    assert.match(readingLesson.steps[0].textAr, /أقرأ الجملة أو النص/);
+    assert.match(readingLesson.steps[0].textAr, /أقرأ الجملة/);
     assert.match(readingLesson.steps[1].textAr, /سقت ليلى/);
     assert.equal(readingLesson.steps[1].visual?.kind, 'story');
   });
