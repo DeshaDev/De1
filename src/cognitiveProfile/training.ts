@@ -966,9 +966,15 @@ export function trainingEvidenceKey(task: TrainingTask, evidenceDate = localEvid
   } else {
     const item = task.item;
     source = [
-      item.tag ?? '', item.promptAr, item.expected ?? '', item.correctId,
-      item.stimulus?.value ?? '',
-      item.options.map((option) => option.id).sort().join(','),
+      item.tag ?? '',
+      item.promptAr,
+      item.expected ?? '',
+      item.correctId,
+      item.stimulus ? [item.stimulus.type, item.stimulus.value, item.stimulus.label].join(':') : '',
+      item.audio.map((segment) => [segment.text, segment.highlight ?? ''].join(':')).join('~'),
+      item.options.map((option) => [
+        option.id, option.visual.type, option.visual.value, option.visual.label,
+      ].join(':')).sort().join(','),
     ].join('|');
   }
   let first = 0x811c9dc5;
