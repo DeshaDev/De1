@@ -117,7 +117,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
   const [firstAnswers, setFirstAnswers] = useState<Record<string, number>>({});
   const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>({});
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
-  const [showTeachingModel, setShowTeachingModel] = useState(false);
+  const [showTeachingModel, setShowTeachingModel] = useState(true);
 
   const recommendation = useMemo(() => recommendCurriculumSkill(student, domain), [student, domain]);
   const lesson: CurriculumLesson | null = getCurriculumLesson(domain, skillId);
@@ -150,7 +150,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
     setFirstAnswers({});
     setAttemptCounts({});
     setRevealedAnswers({});
-    setShowTeachingModel(false);
+    setShowTeachingModel(true);
   };
 
   useEffect(() => {
@@ -162,7 +162,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
     setFirstAnswers({});
     setAttemptCounts({});
     setRevealedAnswers({});
-    setShowTeachingModel(false);
+    setShowTeachingModel(true);
   }, [student.id]);
 
   const startLesson = (nextSkill: CurriculumSkillId) => {
@@ -198,7 +198,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
   const goNextQuestion = () => {
     if (!question || !canAdvance) return;
     setQuestionIndex((previous) => previous + 1);
-    setShowTeachingModel(false);
+    setShowTeachingModel(true);
   };
 
   const nextSkill = lesson ? getNextCurriculumSkill(domain, lesson.id, grade) : null;
@@ -225,13 +225,11 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
               نتعلّم المهارة خطوةً خطوة
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 mt-0.5">
-              تدريب يومي سريع وممتع (٣ أسئلة فقط) لتقوية المهارة دون إرهاق.
+              نفهم الفكرة بمثال، ثم نجرّب بأنفسنا.
             </p>
           </div>
         </div>
-        <span className="shrink-0 self-start sm:self-center rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-1.5 text-xs font-black text-teal-900">
-          الصف {toArabicNum(grade)}
-        </span>
+
       </header>
 
 
@@ -251,7 +249,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
             )}
           </div>
           <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600">
-            {isRoundComplete ? 'اكتملت الجولة' : '٣ أسئلة'}
+            {isRoundComplete ? 'اكتملت الجولة' : `${toArabicNum(roundQuestions.length)} أسئلة`}
           </span>
         </div>
 
@@ -458,7 +456,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
                 </h3>
                 <p className="max-w-md mx-auto text-sm font-bold leading-6 text-slate-600">
                   {passedThisRound
-                    ? 'أحسنت يا بطل! أجبت عن أسئلة الجولة بنجاح تام، وأثبت فهمك للمهارة.'
+                    ? 'أحسنت! نجحت في هذه الجولة. نواصل التدرّب خطوةً خطوة.'
                     : 'محاولة رائعة! تدرّبنا على المهارة وسنعيد التحدي بأسئلة جديدة لترسيخ الفهم.'}
                 </p>
                 <div className="flex flex-col gap-3 max-w-sm mx-auto pt-2">
@@ -512,56 +510,34 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
         )}
       </div>
 
-      {/* 4. EDUCATOR & PARENT NOTES ACCORDION (Collapsible, zero distraction for the child) */}
-      <details className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm group">
-        <summary className="cursor-pointer text-xs font-black text-slate-600 hover:text-teal-800 flex items-center justify-between list-none">
-          <span className="flex items-center gap-2">
-            <Info size={16} className="text-teal-600" />
-            دليل المنهج والملاحظات التعليمية (للأهل والمعلم)
-          </span>
-          <span className="text-xs font-bold text-teal-700">اضغط لعرض التفاصيل ▼</span>
+      <details className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <summary className="cursor-pointer text-sm font-bold text-slate-700">
+          معلومة لولي الأمر
         </summary>
-        <div className="mt-4 pt-4 border-t border-slate-100 space-y-4 text-xs leading-6 text-slate-700">
-          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
-            <h4 className="font-black text-slate-900 mb-1">لماذا اخترنا هذا التدريب؟</h4>
-            <p>{isRecommendedLesson ? recommendation.reasonAr : 'هذا هو التدريب التالي في تسلسل المهارات، وليس حكمًا على مستوى الطفل.'}</p>
-            <p className="mt-2 text-slate-500 text-[11px] bg-white p-2.5 rounded-lg border border-slate-200">
-              {isRecommendedLesson ? recommendation.evidenceAr : 'تُستخدم نتيجة الجولة لاختيار ممارسة تعليمية تالية. لا تمثل ثلاث إجابات معيارًا عمريًا أو تشخيصًا.'}
+        <p className="mt-3 border-t border-slate-200 pt-3 text-sm leading-6 text-slate-600">
+          يعرض التطبيق شرحًا ومثالًا، ثم يتيح للطفل المحاولة مع تلميح وتصحيح فوري. نتيجة الجولة تساعد على اختيار التدريب التالي، ولا تمثل تشخيصًا أو مقارنة معيارية.
+        </p>
+        {showVerifiedWords && (
+          <div className="mt-3 border-t border-slate-200 pt-3">
+            <p className="text-sm font-bold text-slate-800">كلمات مقترحة للممارسة</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              استُخرجت من تقييم صوتي مكتمل؛ وقد تؤثر اللهجة أو دقة التعرف الصوتي في المطابقة.
             </p>
-          </div>
-
-          {showVerifiedWords && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5">
-              <h4 className="font-black text-amber-950 mb-1">كلمات لإعادة الممارسة</h4>
-              <p className="text-xs leading-5 text-amber-900 mb-2">
-                ظهرت هذه الكلمات في تقييم صوتي مكتمل موثّق المصدر. قد يؤثر التعرف الصوتي أو اللهجة في المطابقة؛ نستخدمها اقتراحًا للممارسة فقط.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {student.problematicWords.slice(0, 6).map((word, index) => (
-                  <button
-                    key={word + '-' + index}
-                    type="button"
-                    onClick={() => onSpeak?.(word)}
-                    disabled={!onSpeak}
-                    className="min-h-10 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold text-amber-950 disabled:opacity-60"
-                  >
-                    {word}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {student.problematicWords.slice(0, 6).map((word, index) => (
+                <button
+                  key={word + '-' + index}
+                  type="button"
+                  onClick={() => onSpeak?.(word)}
+                  disabled={!onSpeak}
+                  className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 disabled:opacity-60"
+                >
+                  {word}
+                </button>
+              ))}
             </div>
-          )}
-
-          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
-            <h4 className="font-black text-slate-900 mb-2">كيف يسير المنهج؟</h4>
-            <p className="text-slate-700 font-bold">
-              مسار مهارات القراءة واللغة: الوعي بالأصوات ← ربط الصوت بالحرف ← الحركات وفك الكلمات ← النص المتصل ← الفهم القرائي.
-            </p>
-            <p className="mt-3 text-[11px] leading-5 text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200">
-              الأمثلة مكتوبة بالفصحى، وقد تختلف بعض الكلمات عن لهجة الطفل المألوفة. يساعد المعلم أو ولي الأمر في وصل الكلمة المنطوقة المألوفة بالفصحى؛ ولا ينبغي اعتبار اختلاف اللهجة وحده خطأ. النسخة الحالية لا تضبط المحتوى تلقائيًا حسب اللهجة. ثلاث إجابات تقيس الجولة الحالية فقط، ويحتاج التحقق من التعلم إلى العودة للمهارة عبر جولات لاحقة.
-            </p>
           </div>
-        </div>
+        )}
       </details>
     </section>
   );
