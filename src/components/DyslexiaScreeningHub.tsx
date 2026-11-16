@@ -25,7 +25,7 @@ interface DyslexiaScreeningHubProps {
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
   { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
-  { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'أداة تكميلية · من الصف الأول', icon: BookOpen },
+  { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'قراءة وفهم · من ٦ سنوات', icon: BookOpen },
 ];
 
 export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
@@ -53,7 +53,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
         <header className="space-y-4">
           <KidPageHeader
             color={subTab === 'battery' ? 'sun' : 'sky'}
-            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من الصف الأول إلى السادس'}
+            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من ٦ سنوات'
             title={subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
             subtitle={
               subTab === 'battery'
