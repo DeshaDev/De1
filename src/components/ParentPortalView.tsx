@@ -426,7 +426,7 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>حفظ البيانات:</strong> لا يعني إنشاء ملف الطفل وحده أنه حُفظ سحابيًا؛ ستظهر رسالة بعد نجاح الحفظ في الحساب، أو تنبيه إذا بقي الملف على هذا الجهاز فقط. موافقة تسجيل الصوت ومعالجته منفصلة واختيارية.
+            <strong>حفظ البيانات:</strong> يُحفظ الملف في حساب الأسرة بعد نجاح التسجيل، أو على هذا الجهاز في وضع الزائر. تسجيل الصوت اختياري وبموافقة منفصلة.
           </div>
         </div>
 
@@ -711,22 +711,22 @@ export function ParentPortalView({
                       <option value="egyptian">المصرية</option>
                       <option value="saudi">السعودية</option>
                     </select>
-                    <span className="text-xs text-slate-500 leading-5">نصوص الفحص بالفصحى. يحدد هذا الاختيار نموذج تقييم النطق فقط؛ المتاح حاليًا المصرية والسعودية، وتستمر الأنشطة لبقية اللهجات دون درجة صوتية.</span>
+                    <span className="text-xs text-slate-500 leading-5">النصوص بالفصحى. التقييم الصوتي متاح حاليًا للمصرية والسعودية فقط؛ بقية اللهجات تتابع الأنشطة دون درجة صوتية.</span>
                   </label>
 
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-amber-500" />
-                      <span>ملاحظات خاصة عن الطفل (اختياري)</span>
-                    </span>
-                    <input
-                      type="text"
-                      value={parentNotes}
-                      onChange={(e) => setParentNotes(e.target.value)}
-                      placeholder="مثال: يفضّل الاستماع إلى الكلمة قبل قراءتها..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800 text-sm"
-                    />
-                  </label>
+                  <details className="rounded-xl border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-slate-700">ملاحظة إضافية عن الطفل (اختياري)</summary>
+                    <label className="block mt-3">
+                      <input
+                        type="text"
+                        value={parentNotes}
+                        onChange={(e) => setParentNotes(e.target.value)}
+                        placeholder="معلومة تساعدنا على فهم احتياجه"
+                        aria-label="ملاحظة إضافية عن الطفل"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800 text-sm"
+                      />
+                    </label>
+                  </details>
 
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
@@ -736,7 +736,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ أنشطته التعليمية وفق سياسة الخصوصية. أفهم أن وضع الزائر يحفظ الملف على هذا الجهاز فقط.
+                      أوافق على إنشاء ملف الطفل وحفظ نتائجه وفق سياسة الخصوصية. يُحفظ الملف على هذا الجهاز ما لم أسجّل حسابًا سحابيًا.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -747,7 +747,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإن لم توافق، تُحفظ هذه المهام دون درجة صوتية).
+                      أوافق اختياريًا على تسجيل صوت الطفل ومعالجته لتقييم القراءة الجهرية والتسمية السريعة. عدم الموافقة لا يمنع استخدام بقية الأنشطة.
                     </span>
                   </label>
 
@@ -918,18 +918,19 @@ export function ParentPortalView({
                       <option value="egyptian">المصرية</option>
                       <option value="saudi">السعودية</option>
                     </select>
-                    <span className="text-xs text-slate-500 leading-5">نصوص الفحص بالفصحى. يحدد هذا الاختيار نموذج تقييم النطق فقط؛ المتاح حاليًا المصرية والسعودية، وتستمر الأنشطة لبقية اللهجات دون درجة صوتية.</span>
+                    <span className="text-xs text-slate-500 leading-5">النصوص بالفصحى. التقييم الصوتي متاح حاليًا للمصرية والسعودية فقط؛ بقية اللهجات تتابع الأنشطة دون درجة صوتية.</span>
                   </label>
 
                   {/* Parent Credentials */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
                       <Mail size={16} className="text-teal-600" />
-                      <span>بيانات حساب ولي الأمر (لحفظ ملف الطفل في حسابك)</span>
+                      <span>حساب ولي الأمر (اختياري)</span>
                     </div>
+                    <p className="text-xs leading-5 text-slate-600">أدخل البريد وكلمة المرور معًا لحفظ الملف في حسابك السحابي، أو اتركهما فارغين لاستخدام وضع الزائر.</p>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">بريدك الإلكتروني (اختياري للتجربة)</span>
+                        <span className="text-xs font-bold text-slate-700">البريد الإلكتروني</span>
                         <input
                           type="email"
                           value={parentEmail}
@@ -940,7 +941,7 @@ export function ParentPortalView({
                         />
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">كلمة المرور (اختياري للتجربة)</span>
+                        <span className="text-xs font-bold text-slate-700">كلمة المرور</span>
                         <input
                           type="password"
                           value={parentPassword}
@@ -955,19 +956,19 @@ export function ParentPortalView({
                   </div>
 
                   {/* Optional notes */}
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-amber-500" />
-                      <span>ملاحظات خاصة عن الطفل (اختياري)</span>
-                    </span>
-                    <input
-                      type="text"
-                      value={parentNotes}
-                      onChange={(e) => setParentNotes(e.target.value)}
-                      placeholder="مثال: يفضّل الاستماع إلى الكلمة قبل قراءتها..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800 text-sm"
-                    />
-                  </label>
+                  <details className="rounded-xl border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-slate-700">ملاحظة إضافية عن الطفل (اختياري)</summary>
+                    <label className="block mt-3">
+                      <input
+                        type="text"
+                        value={parentNotes}
+                        onChange={(e) => setParentNotes(e.target.value)}
+                        placeholder="معلومة تساعدنا على فهم احتياجه"
+                        aria-label="ملاحظة إضافية عن الطفل"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800 text-sm"
+                      />
+                    </label>
+                  </details>
 
                   {/* Consent Checkboxes */}
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -978,7 +979,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي وفق سياسة الخصوصية.
+                      أوافق على إنشاء ملف الطفل وحفظ نتائجه وفق سياسة الخصوصية. يُحفظ الملف على هذا الجهاز ما لم أسجّل حسابًا سحابيًا.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -989,7 +990,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      موافقة منفصلة واختيارية: أوافق على تسجيل صوت الطفل ومعالجته عبر الخادم في مهام القراءة الجهرية والتسمية السريعة (وإن لم توافق، تُحفظ هذه المهام دون درجة صوتية).
+                      أوافق اختياريًا على تسجيل صوت الطفل ومعالجته لتقييم القراءة الجهرية والتسمية السريعة. عدم الموافقة لا يمنع استخدام بقية الأنشطة.
                     </span>
                   </label>
 
