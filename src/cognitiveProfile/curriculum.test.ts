@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PAIR_CUES, curriculumPhrases, explainMistake, lessonFor, probeDueAt, scaffold, shouldShowSkillLesson } from './curriculum';
 import { CONFUSABLE_PHONEME_PAIRS, LEXICON, PICTURE_IDS } from './lexicon';
-import { FOCUS_SKILLS, PROGRAM_SESSIONS, generateSession, generateItems, availableTrainingItems, allocateTrainingItems, trainingEvidenceKey, type Level, SKILL_BADGES, awardBadge, getHomeActivity, createProgress } from './training';
+import { FOCUS_SKILLS, PROGRAM_SESSIONS, generateSession, generateItems, availableTrainingItems, allocateTrainingItems, trainingEvidenceKey, type Level, type SkillId, SKILL_BADGES, awardBadge, getHomeActivity, createProgress } from './training';
 
 const HAS_ARABIC = /[ء-ي]/;
 const HAS_MARKS = /[ً-ْ]/;
@@ -16,7 +16,7 @@ describe('training dose and item identity', () => {
           if (capacity === 0) continue;
           const tasks = generateItems(skill, level, 37, 12, undefined, ageMonths);
           assert.equal(tasks.length, capacity, `${skill}/L${level}/age ${ageMonths}: generated count must match the distinct bank`);
-          const keys = tasks.map(trainingEvidenceKey);
+          const keys = tasks.map((task) => trainingEvidenceKey(task));
           assert.equal(new Set(keys).size, tasks.length, `${skill}/L${level}: duplicate generated evidence`);
         }
       }
@@ -25,7 +25,7 @@ describe('training dose and item identity', () => {
 
   it('caps adaptive allocations at the available level-matched question bank', () => {
     const skills = ['decoding', 'spelling', 'comprehension', 'morphology'] as const;
-    const levels = { decoding: 1, spelling: 1, comprehension: 2, morphology: 1 };
+    const levels: Partial<Record<SkillId, Level>> = { decoding: 1, spelling: 1, comprehension: 2, morphology: 1 };
     const estimates = skills.map((skill) => ({ skill, p: 0.1 }));
     const allocation = allocateTrainingItems([...skills], estimates, levels, 84);
     for (const skill of skills) {
