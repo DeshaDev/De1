@@ -380,10 +380,12 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   return (
     <div className="space-y-5 max-w-4xl mx-auto pb-12 animate-fade-slide-up" dir="rtl">
       {/* Header: who is training, and their points */}
-      <KidPageHeader color="coral" mood="cheer" title="صالة التدريب" subtitle={`تدريب ${activeStudent.name}: تمرين يومي قصير، وألعاب لكل مهارة.`}>
-        <span className="joy-chip mt-3 text-base font-bold">
-          <IconStar size={18} /> {xpPoints > 0 ? <><span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة</> : 'لا نقاط بعد'}
-        </span>
+      <KidPageHeader color="coral" title="صالة التدريب">
+        {xpPoints > 0 && (
+          <span className="joy-chip mt-2 text-sm font-bold">
+            <IconStar size={16} /> <span className="bz-num">{toEasternArabicDigits(xpPoints)}</span> نقطة
+          </span>
+        )}
       </KidPageHeader>
 
       {/* Two ways to train */}
@@ -425,16 +427,15 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
       {gymMode === 'stations' && (
         <>
-      <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5" aria-label="ألعاب المهارات">
+      <nav className="flex flex-wrap justify-center gap-2" aria-label="ألعاب المهارات">
         {[
-          { id: 'phonics', label: 'صائد الحروف', hint: 'أكمل الحرف الناقص', icon: IconLettersBlock },
-          { id: 'syllables', label: 'تركيب المقاطع', hint: 'ابنِ الكلمة من مقاطعها', icon: IconPuzzlePieces },
-          { id: 'storygen', label: 'قصص الأبطال', hint: 'قصة قصيرة حول صوت واحد', icon: IconStoryBook },
-          { id: 'sprint', label: 'تحدي الدقائق الخمس', hint: 'قراءة كلمات متتابعة', icon: IconLightningBolt },
-          { id: 'pacer', label: 'طلاقة القراءة', hint: 'نص بإيقاع مريح', icon: IconStoryBook },
+          { id: 'phonics', label: 'صائد الحروف' },
+          { id: 'syllables', label: 'تركيب المقاطع' },
+          { id: 'storygen', label: 'قصص الأبطال' },
+          { id: 'sprint', label: 'تحدي القراءة' },
+          { id: 'pacer', label: 'طلاقة القراءة' },
         ].map((st) => {
           const isActive = activeStation === st.id;
-          const IconComp = st.icon;
           return (
             <button
               key={st.id}
@@ -445,11 +446,9 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                 setActiveScaffold(null);
                 exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
               }}
-              className={'text-right rounded-2xl border p-3 transition flex flex-col gap-1.5 ' + (isActive ? 'border-brand bg-brand-soft' : 'border-line bg-card hover:border-line-strong')}
+              className={'rounded-xl border px-3 py-2 text-sm font-bold transition ' + (isActive ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-card text-ink hover:border-line-strong')}
             >
-              <IconComp size={26} className="shrink-0" />
-              <span className="font-semibold text-ink">{st.label}</span>
-              <span className="bz-small bz-muted">{st.hint}</span>
+              {st.label}
             </button>
           );
         })}
@@ -463,7 +462,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
             <Trophy className="w-5 h-5 text-amber-300 fill-current" />
             <span>{celebrationMessage}</span>
           </div>
-          <span className="text-emerald-100 text-xs font-bold">أحسنت يا بطل!</span>
         </div>
       )}
 

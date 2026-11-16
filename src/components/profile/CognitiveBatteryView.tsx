@@ -198,18 +198,14 @@ function SubtestRunner({
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
-          <div className="flex flex-col items-center text-center gap-5 max-w-xl">
-            <MascotMomentLive mood="wave" size={150} message={MASCOT_LINES.welcomeGame(subtest.gameNameAr)} />
-            <h2 className="font-child text-4xl font-bold text-ink flex items-center gap-3" style={{ fontFamily: 'var(--font-child)' }}>
-              <span className="grid place-items-center w-14 h-14 rounded-2xl bg-sun-soft text-4xl" aria-hidden="true">{subtest.icon}</span>
-              {subtest.gameNameAr}
-            </h2>
+          <div className="flex flex-col items-center text-center gap-3 max-w-xl">
             <button
               type="button"
               onClick={() => speak(subtest.introAudio)}
-              className="bz-btn bz-btn-secondary"
+              className="bz-btn bz-btn-ghost bz-btn-sm"
+              aria-label="إعادة سماع التعليمات"
             >
-              <Volume2 className="w-4 h-4" /> استمع للتعليمات
+              <Volume2 className="w-4 h-4" /> استمع
             </button>
             <button
               type="button"
@@ -261,10 +257,8 @@ function SubtestRunner({
         )}
 
         {stage === 'transition' && (
-          <div className="flex flex-col items-center gap-5 text-center">
-            <MascotMomentLive mood="cheer" size={130} message={MASCOT_LINES.ready} />
-            <p className="font-child text-3xl font-bold text-ink">رائع! الآن نبدأ اللعبة</p>
-            <p className="bz-body max-w-sm">لن تظهر الإجابة الصحيحة الآن؛ حاول أفضل ما تستطيع.</p>
+          <div className="flex flex-col items-center gap-4 text-center">
+            <p className="font-child text-xl font-bold text-ink">حاول أفضل ما تستطيع.</p>
             <button
               type="button"
               onClick={() => {
@@ -273,7 +267,7 @@ function SubtestRunner({
               }}
               className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
             >
-              <Play className="w-6 h-6" /> هيا بنا
+              <Play className="w-6 h-6" /> ابدأ الاختبار
             </button>
           </div>
         )}
@@ -372,7 +366,8 @@ function SubtestRunner({
               </>
             ) : (
               <>
-                <MascotMomentLive mood="proud" size={160} message={MASCOT_LINES.gameDone(subtest.gameNameAr)} />
+                <CheckCircle2 className="h-14 w-14 text-emerald-600" aria-hidden="true" />
+                <p className="font-child text-xl font-bold text-ink">أحسنت! انتهت المهمة.</p>
               </>
             )}
             <button

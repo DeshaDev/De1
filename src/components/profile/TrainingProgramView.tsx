@@ -848,23 +848,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const task = run.tasks[run.taskIndex];
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
-          <p className="font-child font-black text-slate-900 flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">{def.icon}</span> وقت التعلّم: {def.nameAr}
-            <span className="text-xs font-bold text-slate-500">· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
-            {(() => {
-              const pl = (progress.placements ?? []).find((x) => x.skill === skill);
-              return pl ? (
-                <span className="text-xs font-bold text-slate-500" title="مستوى البداية الذي اقترحه الفحص، قبل التحقق بإجابات الطفل">
-                  · اقترح الفحص المستوى {toArabicDigits(pl.suggested)}
-                </span>
-              ) : null;
-            })()}
-          </p>
-          <p className="text-xs font-bold text-slate-500 flex items-center gap-3">
-            <span aria-label={`نجوم الجلسة: ${toArabicDigits(run.stars)}`}>⭐ {toArabicDigits(run.stars)}</span>
-            <span>المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
-          </p>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-soft text-xs font-bold text-slate-500">
+          <span>المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
+          <span>المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
         </div>
         {run.phase === 'task' && (
           <div className="px-6 pt-4">
@@ -888,12 +874,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             />
           )}
           {run.phase === 'intro' && (
-            <div className="flex flex-col items-center text-center gap-4 max-w-md">
-              <MascotMomentLive mood="wave" size={130} message={MASCOT_LINES.skillIntro(def.nameAr)} />
-              <h2 className="font-child text-2xl font-black text-slate-900 flex items-center gap-2">
-                <span className="text-3xl" aria-hidden="true">{def.icon}</span> {def.nameAr}
-              </h2>
-              <p className="text-sm text-slate-600">{SKILLS[skill].levels[(progress.levels[skill] ?? 1) as Level]}</p>
+            <div className="flex flex-col items-center text-center gap-3 max-w-md">
+              <h2 className="font-child text-2xl font-black text-slate-900">{def.nameAr}</h2>
               <button
                 type="button"
                 onClick={() => setRun({ ...run, phase: 'task' })}
@@ -907,7 +889,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   className="bz-btn bz-btn-ghost bz-btn-sm"
                   onClick={() => setRun({ ...run, phase: 'lesson', lesson: lessonFor(skill, (progress.levels[skill] ?? 1) as Level, progress.targets, childAgeYears) })}
                 >
-                  شاهد الدرس مرة أخرى
+                  إعادة الشرح
                 </button>
               )}
             </div>

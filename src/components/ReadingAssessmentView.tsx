@@ -10,8 +10,6 @@
 
 import { toArabicNum } from '../utils/arabicDigits';
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
-import { MascotMomentLive } from './ui/MascotLive';
-import { MASCOT_LINES } from './ui/mascotLines';
 import {
   BookOpen,
   Clock,
@@ -1006,14 +1004,12 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* Welcome before reading; the reading screen itself has no mascot. */}
-              <div className="space-y-3">
-                <MascotMomentLive mood="wave" size={120} message={MASCOT_LINES.readyToRead} className="mx-auto" />
-                <h1 className="font-child text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
+              <div className="space-y-2 text-center">
+                <h1 className="font-child text-2xl sm:text-3xl font-black text-slate-900">
                   جاهزون للقراءة
                 </h1>
-                <p className="font-child text-slate-600 text-sm sm:text-base max-w-md mx-auto font-bold leading-relaxed">
-                  يقرأ الطفل بصوته الطبيعي. في القراءة الجهرية يحلل النظام التسجيل مقابل النص ويعرض الكلمات التي حسمها أو لم يحسمها؛ لا تُستكمل النتائج بتصحيح بشري، ولا تُعدّ مؤشرًا تشخيصيًا.
+                <p className="font-child text-slate-600 text-sm sm:text-base font-bold">
+                  {readingMode === 'oral_audio' ? 'اقرأ النص بصوتك الطبيعي.' : 'اقرأ النص بهدوء.'}
                 </p>
               </div>
 
@@ -1185,51 +1181,6 @@ export const ReadingAssessmentView: React.FC<Props> = ({
                     أ-
                   </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Prominent Live Voice AI & Recording HUD */}
-            <div className="mb-6 p-4 md:p-5 bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl border border-teal-500/40 shadow-xl space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <Mic className="w-5 h-5 text-emerald-400 relative z-10" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-sm text-emerald-300">
-                        تسجيل صوت الطفل — المعاينة النصية أولية
-                      </span>
-                      <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        تسجيل جارٍ
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 mt-0.5">
-                      يجري حفظ التسجيل. نص المتصفح الظاهر أدناه للمعاينة فقط؛ لا يثبت صحة الكلمات ولا يدخل في الدرجة.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Recording level bars: static, so nothing moves beside the text being read */}
-                <div className="flex items-center gap-1 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700">
-                  <span className="w-1 bg-emerald-400 rounded-full h-3"></span>
-                  <span className="w-1 bg-teal-400 rounded-full h-5" style={{ animationDelay: '0.15s' }}></span>
-                  <span className="w-1 bg-emerald-300 rounded-full h-4" style={{ animationDelay: '0.3s' }}></span>
-                  <span className="w-1 bg-teal-300 rounded-full h-6" style={{ animationDelay: '0.45s' }}></span>
-                  <span className="w-1 bg-emerald-400 rounded-full h-3" style={{ animationDelay: '0.2s' }}></span>
-                  <span className="text-[11px] font-mono text-emerald-300 font-bold mr-2">
-                    {spokenTranscript ? spokenTranscript.split(/\s+/).filter(Boolean).length : 0} كلمة في المعاينة
-                  </span>
-                </div>
-              </div>
-
-              {/* Real-time Spoken Transcript Readout */}
-              <div className="flex items-center gap-2 bg-slate-800/90 p-3 rounded-2xl border border-slate-700/80 text-xs text-right">
-                <span className="text-teal-400 font-bold shrink-0">معاينة التعرف الصوتي في المتصفح (للعرض فقط):</span>
-                <span className="text-slate-200 font-mono truncate max-w-xl">
-                  {spokenTranscript ? `"${spokenTranscript.split(/\s+/).slice(-10).join(' ')}"` : 'ابدأ القراءة بصوت مسموع؛ ستظهر معاينة أولية لا تدخل في التقييم…'}
-                </span>
               </div>
             </div>
 

@@ -84,16 +84,14 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
   const handle = useRef<PlaybackHandle | null>(null);
   const current = lesson.steps[step];
   const last = step === lesson.steps.length - 1;
-  const stage = step === 0
-    ? isReview
-      ? { label: 'تذكّر الفكرة', cue: 'لنراجع ما تعلّمناه قبل أن نبدأ التدريب.' }
-      : { label: 'اكتشف الفكرة', cue: 'هيا نفهم الفكرة معًا، خطوةً خطوة.' }
-    : last
-      ? { label: 'استعد للتطبيق', cue: 'أصبحت تعرف الفكرة. الآن جرّبها بنفسك!' }
-      : { label: 'شاهد المثال', cue: 'انظر إلى المثال، وسنحلّه معًا.' };
-  const explanationLabel = step === 0
-    ? isReview ? 'تذكّر ببساطة' : 'الفكرة ببساطة'
-    : last ? 'تذكّر قبل أن تبدأ' : 'مثال نطبّقه معًا';
+  // Some syllable lessons display the same equation in both the visual and the text.
+  // Show it only once, while retaining explanations that add different information.
+  const visualTextIsRedundant =
+    current.visual?.kind === 'syllables' &&
+    (
+      current.textAr.trim() === `${current.visual.parts.join(' + ')} = «${current.visual.word}»` ||
+      current.textAr.trim().startsWith(`«${current.visual.word}»: ${current.visual.parts.join(' | ')}`)
+    );
 
   const play = async () => {
     if (handle.current) handle.current.cancelled = true;
@@ -135,26 +133,22 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
         <div className="h-2 w-full overflow-hidden rounded-full bg-soft" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={1} aria-valuemax={lesson.steps.length} aria-valuenow={step + 1}>
           <span className="block h-full rounded-full bg-brand transition-all duration-300" style={{ width: `${((step + 1) / lesson.steps.length) * 100}%` }} />
         </div>
-        <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:text-right">
-          <MascotMoment mood={last ? 'cheer' : 'wave'} size={84} layout="row" message={stage.cue} />
-          <div className="min-w-0 flex-1 text-center sm:text-right" aria-live="polite">
-            <p className="font-child text-sm font-black text-brand">{stage.label}</p>
-            <h2 className="mt-1 font-child text-xl font-black leading-relaxed text-slate-900 sm:text-2xl">{lesson.titleAr}</h2>
-          </div>
-        </div>
+        <h2 className="mt-4 text-center font-child text-xl font-black leading-relaxed text-slate-900 sm:text-2xl" aria-live="polite">
+          {lesson.titleAr}
+        </h2>
       </section>
 
       {current.visual && (
-        <section className="w-full space-y-3" aria-label="المثال المرئي">
-          <p className="font-child text-sm font-black text-slate-700">لنرَ الفكرة معًا 👀</p>
+        <section className="w-full" aria-label="المثال المرئي">
           <Visual visual={current.visual} />
         </section>
       )}
 
-      <section className="w-full rounded-3xl border-2 border-brand/15 bg-brand-tint p-5 sm:p-6 text-right">
-        <p className="mb-2 font-child text-xs font-black text-brand">{explanationLabel}</p>
-        <p className="font-child text-lg leading-loose text-ink sm:text-xl">{current.textAr}</p>
-      </section>
+      {!visualTextIsRedundant && (
+        <p className="max-w-2xl rounded-2xl bg-soft px-4 py-3 text-center font-child text-base leading-relaxed text-ink sm:text-lg">
+          {current.textAr}
+        </p>
+      )}
 
       <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
         {step > 0 && (
@@ -168,7 +162,7 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
           </button>
         ) : (
           <button type="button" className="bz-btn bz-btn-ghost" onClick={play}>
-            <Volume2 className="h-5 w-5" /> استمع إلى الشرح
+            <Volume2 className="h-5 w-5" /> استمع
           </button>
         )}
         <button
