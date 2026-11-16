@@ -36,12 +36,22 @@ export interface LessonStep {
   visual?: LessonVisual;
 }
 
+export interface GuidedSyllableAssembly {
+  /** One spoken syllable per card, in Arabic reading order (right to left). */
+  parts: string[];
+  word: string;
+  pictureId: string;
+  instructionAr: string;
+}
+
 export interface Lesson {
   key: string;
   skill: SkillId;
   level: Level;
   titleAr: string;
   steps: LessonStep[];
+  /** A non-scored, interactive worked example that happens before placement or practice. */
+  guidedAssembly?: GuidedSyllableAssembly;
 }
 
 const say = (...texts: string[]): AudioSegment[] => texts.map((text) => ({ text, pauseAfterMs: 350 }));
@@ -120,7 +130,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: 'أول صوت في الكلمة',
         steps: [
-          { textAr: 'كل كلمة تبدأ بصوت. نسمعه إذا قلنا الكلمة ببطء.', audio: say('كُلُّ كَلِمَةٍ تَبْدَأُ بِصَوْتٍ. نَسْمَعُهُ إِذَا قُلْنَا الْكَلِمَةَ بِبُطْءٍ.') },
+          { textAr: 'كُلُّ كَلِمَةٍ لَهَا صَوْتٌ فِي أَوَّلِهَا. نُبْطِئُ فِي نُطْقِهَا لِنَسْمَعَهُ.', audio: say('كُلُّ كَلِمَةٍ تَبْدَأُ بِصَوْتٍ. نَسْمَعُهُ إِذَا قُلْنَا الْكَلِمَةَ بِبُطْءٍ.') },
           { textAr: `«${word('fish')}» أول صوت فيها «سَ».`, audio: say(word('fish'), 'أَوَّلُ صَوْتٍ فِيهَا: سَ.'), visual: { kind: 'pictures', ids: ['fish'] } },
           { textAr: `«${word('car')}» تبدأ بالصوت نفسه.`, audio: say(word('car'), 'تَبْدَأُ بِالصَّوْتِ نَفْسِهِ: سَ.'), visual: { kind: 'pictures', ids: ['fish', 'car'] } },
           closing('الآن دورك: قل الكلمة ببطء، واسمع أولها.', 'الْآنَ دَوْرُكَ: قُلِ الْكَلِمَةَ بِبُطْءٍ، وَاسْمَعْ أَوَّلَهَا.'),
@@ -142,12 +152,24 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
       const e = lex(level === 1 ? 'pen' : 'fish');
       return {
         key, skill, level,
-        titleAr: 'نركّب الأجزاء لنصنع كلمة',
+        titleAr: 'هَيَّا نُعِيدُ أَجْزَاءَ الْكَلِمَةِ إِلَى مَكَانِهَا',
         steps: [
-          { textAr: 'الكلمة مصنوعة من أجزاء صغيرة. نصفّق مع كل جزء.', audio: say('الْكَلِمَةُ مَصْنُوعَةٌ مِنْ أَجْزَاءٍ صَغِيرَةٍ. نُصَفِّقُ مَعَ كُلِّ جُزْءٍ.') },
-          { textAr: `${e.syllables.join(' + ')} = «${e.word}»`, audio: [...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })), ...say('مَعًا:', e.word)], visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id } },
-          closing('الآن دورك: اسمع الأجزاء، وركّبها، ثم اختر الصورة.', 'الْآنَ دَوْرُكَ: اسْمَعِ الْأَجْزَاءَ، وَرَكِّبْهَا، ثُمَّ اخْتَرِ الصُّورَةَ.'),
+          {
+            textAr: 'تَخَيَّلْ أَنَّ الْكَلِمَةَ قِطَارٌ صَغِيرٌ! كُلُّ مَقْطَعٍ عَرَبَةٌ. نَسْمَعُ الْعَرَبَاتِ وَاحِدَةً بَعْدَ أُخْرَى، ثُمَّ نَصِلُهَا لِنَسْمَعَ اسْمَ الْكَلِمَةِ كَامِلًا.',
+            audio: say('تَخَيَّلْ أَنَّ الْكَلِمَةَ قِطَارٌ صَغِيرٌ.', 'كُلُّ مَقْطَعٍ عَرَبَةٌ.', 'نَسْمَعُ الْعَرَبَاتِ وَاحِدَةً بَعْدَ أُخْرَى، ثُمَّ نَصِلُهَا لِنَسْمَعَ اسْمَ الْكَلِمَةِ كَامِلًا.'),
+          },
+          {
+            textAr: `اِسْمَعْ مَعِي: ${e.syllables.join(' ... ')}. عِنْدَمَا نَصِلُ الْأَجْزَاءَ بِالتَّرْتِيبِ نَقُولُ: «${e.word}».`,
+            audio: [...e.syllables.map((part) => ({ text: part, pauseAfterMs: 700 })), ...say('نَصِلُهَا مَعًا:', e.word)],
+            visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id },
+          },
         ],
+        guidedAssembly: {
+          parts: e.syllables,
+          word: e.word,
+          pictureId: e.id,
+          instructionAr: 'اِخْتَرِ الْمَقْطَعَ الَّذِي نَسْمَعُهُ أَوَّلًا، ثُمَّ أَكْمِلِ الْقِطَارَ.',
+        },
       };
     }
     case 'discrimination': {
@@ -160,7 +182,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: `أصوات متقاربة: ${a} و${b}`,
         steps: [
-          { textAr: 'بعض الأصوات تتشابه، فنسمعها بانتباه.', audio: say('بَعْضُ الْأَصْوَاتِ تَتَشَابَهُ، فَنَسْمَعُهَا بِانْتِبَاهٍ.') },
+          { textAr: 'بَعْضُ الْأَصْوَاتِ مُتَشَابِهَةٌ. سَنَسْمَعُ كُلَّ صَوْتٍ وَنُلَاحِظُ الْفَرْقَ بَيْنَهُمَا.', audio: say('بَعْضُ الْأَصْوَاتِ تَتَشَابَهُ، فَنَسْمَعُهَا بِانْتِبَاهٍ.') },
           { textAr: `${sa} — ${sb}. ${cue.textAr}`, audio: [...say(sa, sb), { text: cue.audio }], visual: { kind: 'glyphs', letters: [a, b] } },
           { textAr: `${sa} ${sa}: الصوت نفسه. ${sa} ${sb}: صوتان مختلفان.`, audio: say(sa, sa, 'الصَّوْتُ نَفْسُهُ.', sa, sb, 'صَوْتَانِ مُخْتَلِفَانِ.'), visual: { kind: 'glyphs', letters: [a, b] } },
           closing('الآن دورك: اسمع جيدًا، ثم اختر.', 'الْآنَ دَوْرُكَ: اسْمَعْ جَيِّدًا، ثُمَّ اخْتَرْ.'),
@@ -170,7 +192,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
     case 'letterSound': {
       const own = (targets?.letters ?? []).filter((l) => LEVEL_LETTERS[level].includes(l));
       const letters = Array.from(new Set([...own, ...LEVEL_LETTERS[level]])).slice(0, level === 3 ? 2 : 3);
-      const steps: LessonStep[] = [{ textAr: 'لكل حرف صوت. نسمع صوته ونرى شكله.', audio: say('لِكُلِّ حَرْفٍ صَوْتٌ. نَسْمَعُ صَوْتَهُ، وَنَرَى شَكْلَهُ.') }];
+      const steps: LessonStep[] = [{ textAr: 'لِلْحَرْفِ شَكْلٌ نَرَاهُ وَصَوْتٌ نَسْمَعُهُ. سَنَقُولُ صَوْتَهُ وَنَرَى شَكْلَهُ.', audio: say('لِكُلِّ حَرْفٍ صَوْتٌ. نَسْمَعُ صَوْتَهُ، وَنَرَى شَكْلَهُ.') }];
       for (const l of letters) {
         const ex = exampleFor(l);
         steps.push({
@@ -193,7 +215,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         key, skill, level,
         titleAr: 'حروف تتشابه في الشكل',
         steps: [
-          { textAr: 'بعض الحروف شكلها واحد، والفرق في النقاط.', audio: say('بَعْضُ الْحُرُوفِ شَكْلُهَا وَاحِدٌ، وَالْفَرْقُ فِي النِّقَاطِ.') },
+          { textAr: 'بَعْضُ الْحُرُوفِ مُتَشَابِهَةٌ. لِنَنْظُرْ إِلَى النُّقَطِ: عَدَدُهَا وَمَكَانُهَا يُسَاعِدَانِنَا عَلَى مَعْرِفَةِ الْحَرْفِ.', audio: say('بَعْضُ الْحُرُوفِ شَكْلُهَا وَاحِدٌ، وَالْفَرْقُ فِي النِّقَاطِ.') },
           { textAr: group.map((l) => `${l}: ${LETTER_DOTS[l] ?? ''}`).join(' · '), audio: say('انْظُرْ: عَدَدُ النِّقَاطِ وَمَكَانُهَا يُغَيِّرُ الْحَرْفَ.'), visual: { kind: 'glyphs', letters: group, notesAr: group.map((l) => LETTER_DOTS[l] ?? '') } },
           closing('الآن دورك: قارن النقاط قبل أن تختار.', 'الْآنَ دَوْرُكَ: قَارِنِ النِّقَاطَ قَبْلَ أَنْ تَخْتَارَ.'),
         ],
@@ -355,6 +377,7 @@ export function curriculumPhrases(): string[] {
     'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.', 'تَبْدَأُ مِثْلَ:', 'تَنْتَهِي مِثْلَ:', 'مَعًا:', 'صَفِّقْ مَعِي.',
     'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', 'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.', 'الصَّوْتُ نَفْسُهُ.', 'صَوْتَانِ مُخْتَلِفَانِ.',
     'هَذِهِ:', 'انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.', 'حَاوِلْ مَرَّةً أُخْرَى.',
+    'هَيَّا نُرَكِّبُ الْكَلِمَةَ مَعًا.', 'جَمَعْنَا الْمَقَاطِعَ، فَظَهَرَتِ الْكَلِمَةُ كَامِلَةً.', 'اِسْمَعِ الْمَقْطَعَ الْأَوَّلَ، ثُمَّ ابْحَثْ عَنْهُ.',
   ].forEach((p) => out.add(p));
   // Structured literacy stations share their explicit teaching and feedback language with BKT training.
   const stations = getStructuredLiteracyStations(8);
