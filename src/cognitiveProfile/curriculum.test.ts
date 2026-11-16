@@ -29,7 +29,7 @@ describe('training dose and item identity', () => {
     const estimates = skills.map((skill) => ({ skill, p: 0.1 }));
     const allocation = allocateTrainingItems([...skills], estimates, levels, 84);
     for (const skill of skills) {
-      assert.ok((allocation[skill] ?? 0) <= availableTrainingItems(skill, levels[skill], 84), skill);
+      assert.ok((allocation[skill] ?? 0) <= availableTrainingItems(skill, levels[skill] ?? 1, 84), skill);
     }
   });
 
