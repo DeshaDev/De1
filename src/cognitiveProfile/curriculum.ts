@@ -107,7 +107,7 @@ function stationModelVisual(skill: SkillId, ageYears: number): LessonVisual | un
         kind: 'story',
         frames: [
           { symbol: '🔤', titleAr: 'أقرأ الحروف', detailAr: 'قَ  لَ  مْ' },
-          { symbol: '🧩', titleAr: 'أجمع الأصوات', detailAr: 'قَ + لَ + مْ' },
+          { symbol: '🧩', titleAr: 'أجمع الأصوات', detailAr: 'قَ + لَ + مٌ' },
           { symbol: '🖊️', titleAr: 'أقرأ الكلمة', detailAr: 'قَلَم' },
         ],
         relationAr: 'نقرأ من اليمين إلى اليسار، ثم نجمع الأصوات بالترتيب.',
