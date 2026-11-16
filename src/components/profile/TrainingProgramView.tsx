@@ -58,7 +58,7 @@ import IndividualPlanPanel from './IndividualPlanPanel';
 import { LessonPlayer, TeachingChoicePlayer } from './TeachingPlayers';
 import { MascotMomentLive } from '../ui/MascotLive';
 import { MASCOT_LINES } from '../ui/mascotLines';
-import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, type Lesson } from '../../cognitiveProfile/curriculum';
+import { GUIDED_BELOW, GUIDED_ITEMS, lessonFor, probeDueAt, scaffold, shouldShowSkillLesson, type Lesson } from '../../cognitiveProfile/curriculum';
 import { applyPlacement, needsPlacement, nextPlacementStep, PLACEMENT_ITEMS_PER_LEVEL, type PlacementAnswer } from '../../cognitiveProfile/placement';
 import { StructuredLiteracyStations } from './StructuredLiteracyStations';
 import { getFluencyPassage } from '../../cognitiveProfile/structuredLiteracyStations';
@@ -527,8 +527,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       });
       return;
     }
-    const lesson = (current.lessonsSeen ?? []).includes(`${skill}:${estimate.level}`) ? null : lessonFor(skill, estimate.level, current.targets, childAgeYears);
-    const guided = lesson || estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
+    const lessonKey = `${skill}:${estimate.level}`;
+    const lessonSeen = (current.lessonsSeen ?? []).includes(lessonKey);
+    // Revisit the explanation at the start of each later session; skip it only when this same
+    // session has just completed the lesson and is continuing into placement or practice.
+    const lesson = shouldShowSkillLesson(lessonSeen, prev?.phase)
+      ? lessonFor(skill, estimate.level, current.targets, childAgeYears)
+      : null;
+    const guided = estimate.p < GUIDED_BELOW ? GUIDED_ITEMS : 0;
     const raw = generateItems(skill, estimate.level, seed.current, prev?.alloc[skill] ?? 8, current.targets, childAgeMonths ?? 72);
     // "We do": the first items come with a hint and one fewer option.
     const tasks = raw.map((t, i) => (i < guided && t.kind === 'choice' ? { ...t, item: scaffold(t.item, i) } : t));
@@ -828,6 +834,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {run.phase === 'lesson' && run.lesson && (
             <LessonPlayer
               lesson={run.lesson}
+              isReview={(progress.lessonsSeen ?? []).includes(run.lesson.key)}
               onDone={() => {
                 const key = run.lesson!.key;
                 const seen = { ...progress, lessonsSeen: Array.from(new Set([...(progress.lessonsSeen ?? []), key])).slice(-30) };
