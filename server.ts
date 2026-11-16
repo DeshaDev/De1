@@ -20,7 +20,7 @@ import {
 } from './src/cognitiveProfile/individualPlan';
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
-import { getTransferAudioTask, scoreVerifiedTransferAudio, TRANSFER_WINDOWS } from './src/cognitiveProfile/transferProbe';
+import { getTransferAudioTask, scoreVerifiedTransferAudio, TRANSFER_WINDOWS, formFor } from './src/cognitiveProfile/transferProbe';
 import {
   aggregateCognitiveWordAssessments,
   applyRanNameVariants,
@@ -1352,7 +1352,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     records: any[] | undefined,
     session: VerifiedBaseeraSession,
     studentId: string,
-    existingRecords: any[] = []
+    existingRecords: any[] = [],
+    programmeId = ''
   ): { valid: boolean; records?: any[]; receiptKeys: string[]; error?: string } => {
     if (!records) return { valid: true, records: undefined, receiptKeys: [] };
     const points = new Set<string>();
@@ -1386,8 +1387,19 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
 
       const window = TRANSFER_WINDOWS[incoming.point as keyof typeof TRANSFER_WINDOWS];
-      if (!window || !Number.isInteger(incoming.session) || incoming.session < window[0] || incoming.session > window[1]) {
-        return { valid: false, receiptKeys, error: 'نقطة القياس لا تطابق جلسة البرنامج المحددة لها.' };
+      if (
+        !window ||
+        !Number.isInteger(incoming.session) ||
+        incoming.session < window[0] ||
+        incoming.session > window[1] ||
+        incoming.form !== formFor(studentId, incoming.point, programmeId)
+      ) {
+        return { valid: false, receiptKeys, error: 'نقطة القياس أو النموذج لا يطابقان ترتيب البرنامج المحدد لهذا الطفل.' };
+      }
+      const hasBaseline = existingRecords.some((entry) => entry?.point === 'pre') ||
+        records.some((entry) => entry?.point === 'pre');
+      if (incoming.point !== 'pre' && !hasBaseline) {
+        return { valid: false, receiptKeys, error: 'يجب حفظ قياس البداية قبل قياس منتصف البرنامج أو نهايته.' };
       }
 
       const kinds = ['real', 'nonword', 'passage'] as const;
@@ -2918,11 +2930,29 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
       const currentRecord = studentsDb[found.idx];
+      const currentRecord = studentsDb[found.idx];
+      const incomingTransfer = parsed.data.transfer ?? [];
+      const hasNewTransfer = incomingTransfer.some((record) =>
+        !(currentRecord.trainingProgress?.transfer ?? []).some((previous) => sameTransferRecord(previous, record))
+      );
+      if (
+        hasNewTransfer &&
+        (currentRecord.guardianAudioConsentGiven !== true ||
+          typeof currentRecord.guardianAudioConsentRecordedAt !== 'string' ||
+          !Number.isFinite(Date.parse(currentRecord.guardianAudioConsentRecordedAt)))
+      ) {
+        res.status(403).json({
+          code: 'AUDIO_CONSENT_REQUIRED',
+          error: 'يلزم وجود الموافقة المنفصلة والمؤرخة على معالجة صوت الطفل قبل حفظ قياس الانتقال.',
+        });
+        return;
+      }
       const transferCheck = validateTransferRecords(
         parsed.data.transfer,
         found.session,
         currentRecord.id,
-        currentRecord.trainingProgress?.transfer ?? []
+        currentRecord.trainingProgress?.transfer ?? [],
+        parsed.data.plan.createdAt
       );
       if (!transferCheck.valid) {
         res.status(409).json({
@@ -3058,7 +3088,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       parsed.data.transfer,
       session,
       studentId,
-      currentTransfer
+      currentTransfer,
+      parsed.data.plan.createdAt
     );
     if (!transferCheck.valid) {
       res.status(409).json({
