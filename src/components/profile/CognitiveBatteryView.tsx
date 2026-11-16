@@ -42,6 +42,7 @@ import {
   DIALECT_LABELS_AR,
   normalizeHomeDialect,
   pronunciationLocaleForDialect,
+  type HomeDialect,
   BatterySession,
   clearBatterySession,
   loadBatterySession,
@@ -412,7 +413,10 @@ function SetupView({
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
-  const dialect = normalizeHomeDialect(student.dialectCode || student.dialect, student.country);
+  const savedDialect = normalizeHomeDialect(student.dialectCode || student.dialect, student.country);
+  const [dialect, setDialect] = useState<HomeDialect>(
+    savedDialect === 'egyptian' || savedDialect === 'saudi' ? savedDialect : 'other'
+  );
   const speechLocale = pronunciationLocaleForDialect(dialect);
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
@@ -508,6 +512,15 @@ function SetupView({
               <Headphones className="w-4 h-4" /> اختبار الصوت
             </button>
           </div>
+          <label className="bz-field">
+            <span className="bz-label">لهجة الطفل المعتادة</span>
+            <select value={dialect} onChange={(e) => setDialect(e.target.value as HomeDialect)} className="bz-input">
+              <option value="other">لهجة عربية أخرى أو غير محددة</option>
+              <option value="egyptian">المصرية</option>
+              <option value="saudi">السعودية</option>
+            </select>
+            <span className="bz-hint">نصوص الفحص بالفصحى. يتاح تقييم النطق الآلي حاليًا بنموذجي مصر والسعودية فقط؛ بقية اللهجات تتابع المهام دون درجة صوتية.</span>
+          </label>
           <div className="grid sm:grid-cols-2 gap-2">
             {([
               ['quiet', 'المكان هادئ'],
@@ -638,7 +651,7 @@ interface Props {
   /** Open an optional extra activity (practice games or the reader). */
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
   /** Create a real learner record (used when the active record is a demo); returns its id. */
-  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }) => string | null;
+  onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; dialectCode?: HomeDialect; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }) => string | null;
   supabaseUser?: any;
   onNavigateTab?: (tab: string) => void;
 }
@@ -677,12 +690,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        dialect: 'msa',
+        dialect: normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country),
         guardianConsentGiven: true,
         guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
         guardianAudioConsentGiven: explicitAudioConsent,
         ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt } : {}),
-        speechLocale: 'ar-SA',
+        ...(pronunciationLocaleForDialect(normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country))
+          ? { speechLocale: pronunciationLocaleForDialect(normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country)) }
+          : {}),
         results: {},
       };
       void saveBatterySession(initialSession).catch((error) => console.error('Unable to persist battery session:', error));
@@ -835,6 +850,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               name: s.childName,
               ageYears: Math.floor(s.ageMonths / 12),
               examinerName: s.examinerName,
+              dialectCode: s.dialect,
               guardianConsentRecordedAt: s.guardianConsentRecordedAt,
               guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
               guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
@@ -846,6 +862,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 .finally(() => startedSessions.delete(newId));
               return; // the host selects the new learner and this view reloads their session
             }
+          }
+          if (activeStudent.dialectCode !== s.dialect || activeStudent.dialect !== s.dialect) {
+            onRecordUpdated?.({ ...activeStudent, dialect: s.dialect, dialectCode: s.dialect });
           }
           setSession(s);
           void saveBatterySession(s).catch((error) => console.error('Unable to persist battery session:', error));
