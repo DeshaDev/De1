@@ -60,6 +60,11 @@ describe('teaching curriculum: lessons ("I do")', () => {
       const lesson = lessonFor(skill, 1, undefined, age);
       assert.ok(lesson, `${skill} at age ${age}`);
       assert.equal(lesson.steps[1].visual?.kind, 'story', `${skill} should have a visual worked example`);
+      if (skill === 'decoding') {
+        const visual = lesson.steps[1].visual;
+        assert.ok(visual?.kind === 'story');
+        assert.equal(visual.frames[1].detailAr, 'قَ + لَ + مٌ');
+      }
     }
   });
 
