@@ -101,7 +101,9 @@ function closing(textAr: string, audio: string): LessonStep {
 
 /** The lesson for one skill level. Targets (from oral reading) choose the pair or letters shown. */
 export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTargets, ageYears = 8): Lesson | null {
-  const key = `${skill}:${level}`;
+  // Version the child-facing lesson so saved `lessonsSeen` from the old, text-only lesson
+  // cannot skip the newly expanded explanation when a child returns to this skill.
+  const key = `${skill}:${level}:child-first-v2`;
   switch (skill) {
     case 'rhyme':
       return {
@@ -167,6 +169,7 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
             audio: [...e.syllables.map((part) => ({ text: part, pauseAfterMs: 700 })), ...say('نَصِلُهَا مَعًا:', e.word)],
             visual: { kind: 'syllables', parts: e.syllables, word: e.word, pictureId: e.id },
           },
+          closing('الآن دورك: ساعد هدهد على ترتيب المقاطع، ثم اسمع الكلمة كاملة.', 'الْآنَ دَوْرُكَ: سَاعِدْ هُدْهُدًا عَلَى تَرْتِيبِ الْمَقَاطِعِ، ثُمَّ اسْمَعِ الْكَلِمَةَ كَامِلَةً.'),
         ],
         guidedAssembly: {
           parts: e.syllables,
