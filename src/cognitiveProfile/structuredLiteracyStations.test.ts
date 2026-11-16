@@ -146,6 +146,35 @@ describe('age-appropriate structured literacy practice stations', () => {
     }
   });
 
+  it('keeps revised picture clues and inference prompts identical across visible and spoken feedback', () => {
+    const find = (age: number, stationId: string, questionId: string) =>
+      getStructuredLiteracyStations(age)
+        .find((station) => station.id === stationId)!
+        .questions.find((question) => question.id === questionId)!;
+
+    const fan = find(8, 'decoding', 'decode-fan');
+    assert.ok(fan);
+    assert.equal(fan.correctId, 'fan');
+    assert.ok(fan.options.some((option) => option.id === fan.correctId));
+    assert.equal(fan.explanationAudio[0], fan.explanationAr);
+    assert.match(fan.explanationAr, /الْفَتْحَةِ عَلَى الْوَاوِ/);
+
+    for (const [age, stationId] of [[4, 'comprehension'], [8, 'comprehension']] as const) {
+      const bellId = age < 6 ? 'listen-bell-line' : 'read-bell-line';
+      const bell = find(age, stationId, bellId);
+      assert.ok(bell);
+      assert.match(bell.audio[0], /جَرَسَ الِانْصِرَافِ/);
+      assert.equal(bell.explanationAudio[0], bell.explanationAr);
+    }
+
+    for (const [age, questionId] of [[4, 'listen-plant-droop'], [8, 'read-plant-droop']] as const) {
+      const station = find(age, 'comprehension', questionId);
+      assert.equal(station.correctId, 'water');
+      assert.ok(station.options.some((option) => option.id === station.correctId));
+      assert.equal(station.explanationAudio[0], station.explanationAr);
+    }
+  });
+
   it('keeps fluency practice untimed and unscored', () => {
     const passage = getFluencyPassage(8);
     assert.ok(passage.linesAr.length >= 3);
