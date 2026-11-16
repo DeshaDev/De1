@@ -127,11 +127,11 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
     const before = practiced.bkt!['rhyme:2'].n;
     const result = applyProbeEvidence(practiced, [
       { skill: 'rhyme', correct: false, guess: 1 / 3, evidenceKey: 'item-c1-d2@2026-11-16' },
-      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-c1-d2' },
-      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-a1-b2' },
+      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-c1-d2@2026-11-16' },
+      { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-a1-b2@2026-11-16' },
     ]);
     assert.equal(result.progress.bkt!['rhyme:2'].n, before + 1);
-    assert.deepEqual(result.progress.seenTrainingItems, ['item-a1-b2', 'item-c1-d2']);
+    assert.deepEqual(result.progress.seenTrainingItems, ['item-a1-b2@2026-11-16', 'item-c1-d2@2026-11-16']);
   });
 
   it('gives more practice to the skill furthest from mastery, within 4 to 12 items', () => {
