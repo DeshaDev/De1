@@ -104,35 +104,14 @@ export function prepareStudentRecordForGenericSupabaseSync(
     } else {
       delete mergedTraining.transfer;
     }
-    safe.trainingProgress = mergedTraining as StudentRecord['trainingProgress'];
+    safe.trainingProgress = mergedTraining as unknown as StudentRecord['trainingProgress'];
   } else if (safe.trainingProgress) {
     const incomingTraining = { ...safe.trainingProgress } as Record<string, unknown>;
     delete incomingTraining.transfer;
-    safe.trainingProgress = incomingTraining as StudentRecord['trainingProgress'];
+    safe.trainingProgress = incomingTraining as unknown as StudentRecord['trainingProgress'];
   }
 
-  // Transfer evidence may only be written by the receipt-validating training-progress route.
-  // Generic profile sync can update other programme fields but preserves the server's last
-  // accepted transfer records, and strips any newly supplied client-only transfer object.
-  const rawTraining = raw?.trainingProgress as
-    | (Partial<NonNullable<StudentRecord['trainingProgress']>> & Record<string, unknown>)
-    | undefined;
-  if (rawTraining) {
-    const incomingTraining = safe.trainingProgress as
-      | (NonNullable<StudentRecord['trainingProgress']> & Record<string, unknown>)
-      | undefined;
-    const mergedTraining = { ...(incomingTraining ?? rawTraining) } as Record<string, unknown>;
-    if (Object.prototype.hasOwnProperty.call(rawTraining, 'transfer')) {
-      mergedTraining.transfer = rawTraining.transfer;
-    } else {
-      delete mergedTraining.transfer;
-    }
-    safe.trainingProgress = mergedTraining as StudentRecord['trainingProgress'];
-  } else if (safe.trainingProgress) {
-    const incomingTraining = { ...safe.trainingProgress } as Record<string, unknown>;
-    delete incomingTraining.transfer;
-    safe.trainingProgress = incomingTraining as StudentRecord['trainingProgress'];
-  }
+
 
   if (existing) {
     // Database consent columns are authoritative once a row exists.
