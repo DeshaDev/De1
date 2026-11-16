@@ -88,10 +88,7 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
   // Show it only once, while retaining explanations that add different information.
   const visualTextIsRedundant =
     current.visual?.kind === 'syllables' &&
-    (
-      current.textAr.trim() === `${current.visual.parts.join(' + ')} = «${current.visual.word}»` ||
-      current.textAr.trim().startsWith(`«${current.visual.word}»: ${current.visual.parts.join(' | ')}`)
-    );
+    current.textAr.trim() === `${current.visual.parts.join(' + ')} = «${current.visual.word}»`;
 
   const play = async () => {
     if (handle.current) handle.current.cancelled = true;
