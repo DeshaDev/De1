@@ -20,7 +20,7 @@ import {
 } from './src/cognitiveProfile/individualPlan';
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
-import { getTransferAudioTask } from './src/cognitiveProfile/transferProbe';
+import { getTransferAudioTask, scoreVerifiedTransferAudio, TRANSFER_WINDOWS } from './src/cognitiveProfile/transferProbe';
 import {
   aggregateCognitiveWordAssessments,
   applyRanNameVariants,
@@ -1324,6 +1324,116 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       stored.passageId !== passageId
     ) return { valid: false };
     return { valid: true, assessment: stored.assessment, receiptKey: key };
+  };
+
+
+  const sameTransferRecord = (a: any, b: any): boolean => {
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    const pick = (value: any) => ({
+      point: value.point,
+      form: value.form,
+      session: value.session,
+      date: value.date,
+      real: value.real,
+      nonword: value.nonword,
+      passage: value.passage,
+      sourceModel: value.sourceModel,
+    });
+    return JSON.stringify(pick(a)) === JSON.stringify(pick(b));
+  };
+
+  /**
+   * A browser may display a score only after receiving the Azure result, but its local
+   * progress object is still untrusted. Re-derive every new transfer score from the
+   * short-lived server receipt before allowing it into a school or family cloud record.
+   */
+  const validateTransferRecords = (
+    records: any[] | undefined,
+    session: VerifiedBaseeraSession,
+    studentId: string,
+    existingRecords: any[] = []
+  ): { valid: boolean; records?: any[]; receiptKeys: string[]; error?: string } => {
+    if (!records) return { valid: true, records: undefined, receiptKeys: [] };
+    const points = new Set<string>();
+    const receiptKeys: string[] = [];
+    const normalized: any[] = [];
+
+    for (const incoming of records) {
+      if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
+        return { valid: false, receiptKeys, error: 'سجل قياس الانتقال غير صالح.' };
+      }
+      if (points.has(incoming.point)) {
+        return { valid: false, receiptKeys, error: 'يوجد أكثر من سجل لنقطة القياس نفسها.' };
+      }
+      points.add(incoming.point);
+
+      const previous = existingRecords.find((entry) => entry?.point === incoming.point);
+      // Existing server-saved records remain readable after their 10-minute receipts expire.
+      // A client can keep them, but cannot edit their scores without submitting three fresh receipts.
+      if (previous && sameTransferRecord(previous, incoming)) {
+        normalized.push(previous);
+        continue;
+      }
+
+      if (
+        incoming.sourceModel !== 'azure_pronunciation_assessment' ||
+        !Array.isArray(incoming.assessmentReceipts) ||
+        incoming.assessmentReceipts.length !== 3 ||
+        new Set(incoming.assessmentReceipts).size !== 3
+      ) {
+        return { valid: false, receiptKeys, error: 'لا يمكن اعتماد قياس جديد من دون ثلاثة إيصالات صوتية آلية مكتملة.' };
+      }
+
+      const window = TRANSFER_WINDOWS[incoming.point as keyof typeof TRANSFER_WINDOWS];
+      if (!window || !Number.isInteger(incoming.session) || incoming.session < window[0] || incoming.session > window[1]) {
+        return { valid: false, receiptKeys, error: 'نقطة القياس لا تطابق جلسة البرنامج المحددة لها.' };
+      }
+
+      const kinds = ['real', 'nonword', 'passage'] as const;
+      const derived: Record<string, any> = {};
+      for (let index = 0; index < kinds.length; index++) {
+        const kind = kinds[index];
+        const receipt = incoming.assessmentReceipts[index];
+        const taskId = `transfer-${incoming.form}-${kind}`;
+        const task = getTransferAudioTask(taskId);
+        const stored = typeof receipt === 'string' ? audioAssessmentReceipts.get(receipt) : undefined;
+        if (
+          !task ||
+          !stored ||
+          stored.expiresAt <= Date.now() ||
+          stored.sessionId !== session.sessionId ||
+          stored.tenantId !== session.tenantId ||
+          stored.studentId !== studentId ||
+          stored.passageId !== task.id ||
+          stored.assessment.sourceModel !== 'azure_pronunciation_assessment' ||
+          stored.assessment.assessmentComplete !== true ||
+          stored.assessment.words.length !== task.words.length ||
+          stored.assessment.words.some((word, wordIndex) => word.word !== task.words[wordIndex])
+        ) {
+          return { valid: false, receiptKeys, error: 'انتهى إيصال إحدى مهام القراءة أو لا يخص هذا الطفل وهذه الجلسة والنموذج.' };
+        }
+        const score = scoreVerifiedTransferAudio(
+          stored.assessment.words.map((word) => ({ errorType: word.errorType, accuracyScore: word.accuracyScore })),
+          stored.assessment.durationSeconds
+        );
+        if (!score) {
+          return { valid: false, receiptKeys, error: 'لم تكتمل مطابقة كلمات إحدى المهام؛ لم تُحفظ درجة غير مؤكدة.' };
+        }
+        derived[kind] = score;
+        receiptKeys.push(receipt);
+      }
+
+      normalized.push({
+        ...incoming,
+        real: derived.real,
+        nonword: derived.nonword,
+        passage: derived.passage,
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentReceipts: [...incoming.assessmentReceipts],
+      });
+    }
+
+    return { valid: true, records: normalized, receiptKeys };
   };
 
   loadSecurityState();
