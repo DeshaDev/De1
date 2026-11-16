@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { CognitiveProfile } from './scoring';
+import { lessonFor } from './curriculum';
+import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import {
   ageAppropriateLiteracySkills,
   buildTrainingPlan,
@@ -31,6 +33,29 @@ function profile(ageMonths: number): CognitiveProfile {
 }
 
 describe('age-appropriate structured literacy training', () => {
+  it('teaches syllable blending with a spoken model and a non-scored interactive assembly', () => {
+    const lesson = lessonFor('blending', 2, undefined, 6);
+    assert.ok(lesson);
+    assert.equal(lesson.steps.length, 2);
+    assert.match(lesson.steps[0].textAr, /قِطَارٌ صَغِيرٌ/);
+    assert.deepEqual(lesson.guidedAssembly?.parts, ['سَ', 'مَ', 'كَة']);
+    assert.equal(lesson.guidedAssembly?.word, 'سَمَكَة');
+    assert.equal(lesson.guidedAssembly?.pictureId, 'fish');
+  });
+
+  it('uses child-directed explanations for the main Arabic literacy pillars', () => {
+    const stations = getStructuredLiteracyStations(8);
+    const byId = Object.fromEntries(stations.map((station) => [station.id, station]));
+    for (const id of ['decoding', 'spelling', 'comprehension', 'morphology']) {
+      assert.ok(byId[id], `missing lesson station: ${id}`);
+      assert.ok(byId[id].teachAr.length > 20, `missing child explanation: ${id}`);
+      assert.ok(byId[id].modelAr.length > 20, `missing worked example: ${id}`);
+      assert.ok(byId[id].teachAudioAr.length > 20, `missing spoken explanation: ${id}`);
+      assert.ok(byId[id].modelAudioAr.length > 20, `missing spoken model: ${id}`);
+    }
+  });
+
+
   it('gates print skills and morphology at the intended developmental ages', () => {
     assert.deepEqual(ageAppropriateLiteracySkills(60), ['comprehension']);
     assert.deepEqual(ageAppropriateLiteracySkills(71), ['comprehension']);
