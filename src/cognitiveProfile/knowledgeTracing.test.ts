@@ -112,7 +112,7 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
   });
 
   it('does not count the same content fingerprint twice as independent BKT evidence', () => {
-    const key = 'item-a1-b2';
+    const key = 'item-a1-b2@2026-11-16';
     const first = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, key);
     const repeated = recordAnswer(first.progress, 'rhyme', true, 1 / 3, key);
     assert.equal(first.progress.bkt!['rhyme:1'].n, 1);
@@ -123,10 +123,10 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
   });
 
   it('does not reuse an item already seen in practice as fresh progress-probe evidence', () => {
-    const practiced = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, 'item-a1-b2').progress;
+    const practiced = recordAnswer(createProgress(plan), 'rhyme', true, 1 / 3, 'item-a1-b2@2026-11-16').progress;
     const before = practiced.bkt!['rhyme:2'].n;
     const result = applyProbeEvidence(practiced, [
-      { skill: 'rhyme', correct: false, guess: 1 / 3, evidenceKey: 'item-c1-d2' },
+      { skill: 'rhyme', correct: false, guess: 1 / 3, evidenceKey: 'item-c1-d2@2026-11-16' },
       { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-c1-d2' },
       { skill: 'rhyme', correct: true, guess: 1 / 3, evidenceKey: 'item-a1-b2' },
     ]);
