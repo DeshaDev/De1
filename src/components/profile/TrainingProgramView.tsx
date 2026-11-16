@@ -1084,7 +1084,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                           </p>
                           {typeof setup.observedPercent === 'number' && (
                             <p>
-                              أداء المهمة الملاحظ: {toArabicDigits(setup.observedPercent)}٪ · تقدير البداية: {pct(setup.initialP)}٪
+                              نتيجة الطفل في الفحص: {toArabicDigits(setup.observedPercent)}٪
                             </p>
                           )}
                         </div>
@@ -1094,15 +1094,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 })}
               </div>
               {profile?.readingTargets && (profile.readingTargets.soundPairs.length > 0 || profile.readingTargets.letters.length > 0) && (
-                <p className="rounded-2xl border border-line bg-soft px-4 py-3 text-sm text-ink">
-                  تخصيص إضافي من أخطاء القراءة الجهرية:
-                  {profile.readingTargets.soundPairs.length > 0 && <> أصوات {profile.readingTargets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
-                  {profile.readingTargets.letters.length > 0 && <> حروف {profile.readingTargets.letters.join(' ')}.</>}
-                </p>
+                <details className="rounded-2xl border border-line bg-soft px-4 py-3 text-sm text-ink">
+                  <summary className="cursor-pointer font-bold">أصوات وحروف نركّز عليها</summary>
+                  <p className="mt-2">
+                    {profile.readingTargets.soundPairs.length > 0 && <>أصوات {profile.readingTargets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
+                    {profile.readingTargets.letters.length > 0 && <> حروف {profile.readingTargets.letters.join(' ')}.</>}
+                  </p>
+                </details>
               )}
-              <ul className="bz-small text-ink-2 list-disc pr-5 space-y-1">
-                {plan.rationaleAr.map((r) => <li key={r}>{r}</li>)}
-              </ul>
+              {plan.rationaleAr.length > 0 && (
+                <details className="bz-card-quiet p-4">
+                  <summary className="cursor-pointer font-bold text-slate-900">لماذا اختيرت هذه المهارات؟</summary>
+                  <ul className="bz-small text-ink-2 list-disc pr-5 space-y-1 mt-2">
+                    {plan.rationaleAr.map((r) => <li key={r}>{r}</li>)}
+                  </ul>
+                </details>
+              )}
               <ProgramRules />
               <button type="button" onClick={() => startProgram(plan)} className="bz-btn bz-btn-primary bz-btn-lg">
                 اعتماد الخطة وبدء البرنامج
@@ -1142,7 +1149,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <section className="joy-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج وقائي' : 'برنامج تدريبي موجّه'}</p>
+          <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج استعداد للقراءة' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
