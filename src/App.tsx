@@ -1997,7 +1997,7 @@ export default function App() {
               <BatterySummaryPanel student={selectedStudent} onOpen={() => setActiveTab('dyslexia-lab')} />
             )}
             {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
-              <TrainingProgressPanel student={selectedStudent} />
+              <TrainingProgressPanel student={selectedStudent} compact />
             )}
             {dashboardSubView === 'report' && !selectedStudent.isDemoRecord && (
               <IndividualPlanPanel
