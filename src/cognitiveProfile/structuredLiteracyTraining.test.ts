@@ -37,10 +37,18 @@ describe('age-appropriate structured literacy training', () => {
     const lesson = lessonFor('blending', 2, undefined, 6);
     assert.ok(lesson);
     assert.equal(lesson.steps.length, 4);
+    assert.match(lesson.key, /child-first-v2/);
     assert.match(lesson.steps[0].textAr, /وَجَدَ هُدْهُدٌ/);
     assert.deepEqual(lesson.guidedAssembly?.parts, ['سَ', 'مَ', 'كَة']);
     assert.equal(lesson.guidedAssembly?.word, 'سَمَكَة');
     assert.equal(lesson.guidedAssembly?.pictureId, 'fish');
+  });
+
+  it('keeps younger children on listening-comprehension lessons rather than print instruction', () => {
+    const listeningLesson = lessonFor('comprehension', 1, undefined, 4);
+    assert.ok(listeningLesson);
+    assert.match(listeningLesson.steps[0].textAr, /استمع إلى الجملة/);
+    assert.equal(lessonFor('decoding', 1, undefined, 4), null);
   });
 
   it('uses child-directed explanations for the main Arabic literacy pillars', () => {
