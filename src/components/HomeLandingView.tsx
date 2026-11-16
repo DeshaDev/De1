@@ -189,7 +189,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               {[
                 { t: 'من ٤ إلى ٨ سنوات', icon: Users },
                 { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
-                { t: `مدة الجلسة ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, icon: Timer },
+                { t: `جلسة التدريب نحو ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
@@ -372,9 +372,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
             { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت لمهام التقييم إلا بعد موافقة منفصلة؛ ويمكن متابعة الأنشطة دون درجة صوتية.', tone: 'coral' },
-            { icon: Users, t: 'بيانات أقل', b: 'نحفظ ما يلزم للتقرير فقط، وسياسة الخصوصية تشرح أين يُحفظ.', tone: 'grape' },
+            { icon: Users, t: 'بيانات طفلك', b: 'تُحفظ بيانات الملف والنتائج في حساب الأسرة أو على الجهاز حسب طريقة الاستخدام.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
-            { icon: GraduationCap, t: 'لا تشخيص', b: 'لا مئينات ولا تصنيف خطورة قبل دراسة تقنين مستقلة.', tone: 'leaf' },
+            { icon: GraduationCap, t: 'لا تشخيص', b: 'التقرير يصف أداء الطفل في أنشطة المنصة، ولا يثبت وجود عسر القراءة.', tone: 'leaf' },
           ].map((x) => (
             <li key={x.t}>
               <span className={`joy-tile joy-tile-${x.tone} w-12 h-12`} aria-hidden="true"><x.icon size={22} /></span>
@@ -393,13 +393,10 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <MascotMomentLive mood="wave" size={160} className="mx-auto" />
             <div>
               <h2 className="hn-h2">هُدهُد ينتظر طفلك</h2>
-              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">تستغرق الجلسة الأولى من ١٠ إلى ١٥ دقيقة. اجلس بجانب طفلك، واستمتعا باللعب معًا.</p>
+              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">ابدأ بإنشاء ملف طفلك، ثم أكملوا الأنشطة معًا في جلسات قصيرة.</p>
               <div className="mt-7 flex flex-wrap justify-center md:justify-start gap-3">
                 <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
-                  ابدأ اللعب مع طفلك
-                </button>
-                <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg hn-toy-soft" onClick={() => onNavigateTab('remediation-gym')}>
-                  افتح صالة التدريب
+                  سجّل طفلك وابدأ
                 </button>
               </div>
             </div>
