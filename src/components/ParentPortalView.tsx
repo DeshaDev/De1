@@ -154,7 +154,7 @@ export function ParentPortalView({
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
   const [country, setCountry] = useState<string>('');
-  const [readingDialect, setReadingDialect] = useState<'msa' | 'egyptian' | 'gulf' | 'other'>('msa');
+  const [readingDialect, setReadingDialect] = useState<'egyptian' | 'saudi' | 'other'>('other');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
@@ -700,19 +700,18 @@ export function ParentPortalView({
                     </select>
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">لهجة القراءة الجهرية *</span>
+                    <span className="text-xs font-bold text-slate-700">لهجة الطفل المعتادة *</span>
                     <select
                       required
                       value={readingDialect}
                       onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
-                      <option value="msa">الفصحى</option>
+                      <option value="other">لهجة عربية أخرى أو غير محددة</option>
                       <option value="egyptian">المصرية</option>
-                      <option value="gulf">الخليجية</option>
-                      <option value="other">لهجة عربية أخرى</option>
+                      <option value="saudi">السعودية</option>
                     </select>
-                    <span className="text-xs text-slate-500 leading-5">هذا الاختيار يضبط تقييم الصوت فقط؛ عند اختيار لهجة أخرى، يستمر التدريب دون درجة صوتية.</span>
+                    <span className="text-xs text-slate-500 leading-5">نصوص الفحص بالفصحى. يحدد هذا الاختيار نموذج تقييم النطق فقط؛ المتاح حاليًا المصرية والسعودية، وتستمر الأنشطة لبقية اللهجات دون درجة صوتية.</span>
                   </label>
 
                   <label className="block space-y-1.5">
@@ -908,19 +907,18 @@ export function ParentPortalView({
                     </select>
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">لهجة القراءة الجهرية *</span>
+                    <span className="text-xs font-bold text-slate-700">لهجة الطفل المعتادة *</span>
                     <select
                       required
                       value={readingDialect}
                       onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
                     >
-                      <option value="msa">الفصحى</option>
+                      <option value="other">لهجة عربية أخرى أو غير محددة</option>
                       <option value="egyptian">المصرية</option>
-                      <option value="gulf">الخليجية</option>
-                      <option value="other">لهجة عربية أخرى</option>
+                      <option value="saudi">السعودية</option>
                     </select>
-                    <span className="text-xs text-slate-500 leading-5">هذا الاختيار يضبط تقييم الصوت فقط؛ عند اختيار لهجة أخرى، يستمر التدريب دون درجة صوتية.</span>
+                    <span className="text-xs text-slate-500 leading-5">نصوص الفحص بالفصحى. يحدد هذا الاختيار نموذج تقييم النطق فقط؛ المتاح حاليًا المصرية والسعودية، وتستمر الأنشطة لبقية اللهجات دون درجة صوتية.</span>
                   </label>
 
                   {/* Parent Credentials */}
