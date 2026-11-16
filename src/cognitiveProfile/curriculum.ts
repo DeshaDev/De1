@@ -592,15 +592,17 @@ export function curriculumPhrases(): string[] {
   const groupTargets: TrainingTargets[] = CONFUSABLE_LETTER_GROUPS.map((g) => ({ soundPairs: [], letters: [g[0]] }));
   for (const skill of skills) {
     for (const level of [1, 2, 3] as Level[]) {
-      for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        const lesson = lessonFor(skill, level, t ?? undefined, 8);
-        if (!lesson) continue;
-        lesson.steps.forEach((step) => addSegs(step.audio));
-        const guided = guidedChoiceForLesson(lesson);
-        if (guided) {
-          addSegs(guided.promptAudio);
-          addSegs(guided.hintAudio);
-          addSegs(guided.successAudio);
+      for (const ageYears of [4, 8]) {
+        for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
+          const lesson = lessonFor(skill, level, t ?? undefined, ageYears);
+          if (!lesson) continue;
+          lesson.steps.forEach((step) => addSegs(step.audio));
+          const guided = guidedChoiceForLesson(lesson);
+          if (guided) {
+            addSegs(guided.promptAudio);
+            addSegs(guided.hintAudio);
+            addSegs(guided.successAudio);
+          }
         }
       }
     }
@@ -613,14 +615,16 @@ export function curriculumPhrases(): string[] {
     'هَيَّا نُرَكِّبُ الْكَلِمَةَ مَعًا.', 'جَمَعْنَا الْمَقَاطِعَ، فَظَهَرَتِ الْكَلِمَةُ كَامِلَةً.', 'اِسْمَعِ الْمَقْطَعَ الْأَوَّلَ، ثُمَّ ابْحَثْ عَنْهُ.', 'اِخْتَرِ الْمَقْطَعَ الَّذِي نَسْمَعُهُ أَوَّلًا، ثُمَّ أَكْمِلِ الْقِطَارَ.',
   ].forEach((p) => out.add(p));
   // Structured literacy stations share their explicit teaching and feedback language with BKT training.
-  const stations = getStructuredLiteracyStations(8);
-  for (const station of stations) {
-    out.add(station.teachAudioAr);
-    out.add(station.modelAudioAr);
-    station.questions.forEach((question) => {
-      question.audio.forEach((phrase) => out.add(phrase));
-      question.explanationAudio.forEach((phrase) => out.add(phrase));
-    });
+  for (const ageYears of [4, 8]) {
+    const stations = getStructuredLiteracyStations(ageYears);
+    for (const station of stations) {
+      out.add(station.teachAudioAr);
+      out.add(station.modelAudioAr);
+      station.questions.forEach((question) => {
+        question.audio.forEach((phrase) => out.add(phrase));
+        question.explanationAudio.forEach((phrase) => out.add(phrase));
+      });
+    }
   }
   // Phrase-cued fluency examples are spoken as a model, never timed or scored.
   getFluencyPassage(8).modelAudio.forEach((phrase) => out.add(phrase));
