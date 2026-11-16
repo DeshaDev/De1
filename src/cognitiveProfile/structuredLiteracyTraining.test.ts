@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { CognitiveProfile } from './scoring';
-import { lessonFor } from './curriculum';
+import { guidedChoiceForLesson, lessonFor } from './curriculum';
 import { getStructuredLiteracyStations } from './structuredLiteracyStations';
 import {
   ageAppropriateLiteracySkills,
@@ -49,6 +49,29 @@ describe('age-appropriate structured literacy training', () => {
     assert.ok(listeningLesson);
     assert.match(listeningLesson.steps[0].textAr, /استمع إلى الجملة/);
     assert.equal(lessonFor('decoding', 1, undefined, 4), null);
+  });
+
+  it('gives every literacy lesson an unscored guided example before placement or practice', () => {
+    const skills = ['rhyme', 'soundPosition', 'blending', 'discrimination', 'letterSound', 'visualDiscrimination', 'decoding', 'spelling', 'comprehension', 'morphology'] as const;
+    for (const skill of skills) {
+      for (const level of [1, 2, 3] as const) {
+        const lesson = lessonFor(skill, level, undefined, 8);
+        assert.ok(lesson, `missing lesson: ${skill}:${level}`);
+        assert.ok(
+          lesson.guidedAssembly || guidedChoiceForLesson(lesson),
+          `missing guided worked example: ${skill}:${level}`,
+        );
+      }
+    }
+  });
+
+  it('keeps the age-four comprehension guide listening-based and child friendly', () => {
+    const lesson = lessonFor('comprehension', 1, undefined, 4);
+    assert.ok(lesson);
+    const guided = guidedChoiceForLesson(lesson);
+    assert.ok(guided);
+    assert.match(guided.promptAr, /الْحِذَاءُ/);
+    assert.ok(guided.options.some((option) => option.labelAr.includes('الْخِزَانَةِ')));
   });
 
   it('uses child-directed explanations for the main Arabic literacy pillars', () => {
