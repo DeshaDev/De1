@@ -1143,16 +1143,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </div>
       </section>
 
-      <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="font-black text-slate-900">محطات القراءة واللغة</h3>
-          <p className="text-xs text-ink-2 mt-1">تدريبات إضافية على فك الترميز والإملاء والوعي الصرفي والفهم والطلاقة، مع تدرّج بحسب عمر الطفل.</p>
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-black text-slate-900">محطات القراءة واللغة الإضافية</summary>
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-sm text-ink-2">ألعاب قصيرة نعود إليها بعد درس اليوم، بحسب عمر الطفل.</p>
+          <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
+            افتح المحطات
+          </button>
         </div>
-        <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>
-          افتح المحطات
-        </button>
-      </section>
+      </details>
 
+      <details className="bz-card p-5">
+        <summary className="cursor-pointer font-black text-slate-900">متابعة تقدّم طفلك والمهارات التي يتعلّمها</summary>
+        <div className="mt-4 space-y-5">
       {due && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-info">
@@ -1164,8 +1167,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </div>
       )}
 
-      <details className="bz-card p-5">
-        <summary className="cursor-pointer font-black text-slate-900">متابعة تقدّم طفلك والمهارات التي يتعلّمها</summary>
+        </div>
+        <div className="mt-4 space-y-5">
         <div className="mt-4 space-y-5">
       <section className="bz-card p-5 space-y-3" aria-labelledby="progress-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -1266,23 +1269,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       {onOpenExtra && (
         <details className="bz-card-quiet p-4">
           <summary className="cursor-pointer font-black text-slate-900">ألعاب وقراءات إضافية</summary>
-          <section className="bz-card-quiet p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-black text-slate-900">أنشطة إضافية اختيارية</h3>
-            <p className="text-xs text-ink-2 mt-1">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
-            {(student?.ageYears ?? 0) >= 6 && (
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
-            )}
-          </div>
+          <section className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="font-black text-slate-900">أنشطة اختيارية بعد درس اليوم</p>
+              <p className="text-xs text-ink-2 mt-1">القارئ الميسّر والأنشطة الأخرى للطفل الذي بدأ يقرأ.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
+              {(student?.ageYears ?? 0) >= 6 && (
+                <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
+              )}
+            </div>
           </section>
-      )}
-
         </details>
       )}
+
       {student && (
         <details className="bz-card-quiet p-4">
           <summary className="cursor-pointer font-black text-slate-900">اقتراحات الممارسة للأسرة</summary>
@@ -1294,6 +1296,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       <ProgramRules />
 
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-black text-slate-900">سجل الجلسات وإعدادات الخطة</summary>
+        <div className="mt-4 space-y-4">
       {recent.length > 0 && (
         <section className="bz-card p-5">
           <h3 className="font-black text-slate-900 flex items-center gap-2"><Target className="w-4 h-4" /> سجل الجلسات الأخيرة</h3>
@@ -1333,6 +1338,9 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <RefreshCw className="w-3.5 h-3.5" /> إعادة بناء الخطة من آخر فحص
         </button>
       )}
+        </div>
+      </details>
+
     </div>
   );
 }
