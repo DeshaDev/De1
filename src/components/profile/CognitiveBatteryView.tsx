@@ -78,13 +78,11 @@ type Stage = 'intro' | 'practice' | 'transition' | 'test' | 'done';
 function SubtestRunner({
   subtest,
   audioSession,
-  verifyAudioByAdult = false,
   onFinish,
   onExit,
 }: {
   subtest: Subtest;
   audioSession: CognitiveAudioSessionContext;
-  verifyAudioByAdult?: boolean;
   onFinish: (result: SubtestResult) => void;
   onExit: () => void;
 }) {
@@ -299,7 +297,6 @@ function SubtestRunner({
             items={subtest.items}
             taskId={subtest.id === 'wordReading' ? 'wordReading' : 'nonwordReading'}
             audioSession={audioSession}
-            verifyByAdult={verifyAudioByAdult}
             onDone={(rs, durationMs, audioAssessment) => {
               responses.current = rs;
               finish(false, {
@@ -419,7 +416,6 @@ function SetupView({
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
     audioConsent: false,
-    verifyAudio: false,
     quiet: true,
     headphones: true,
     ready: true,
@@ -498,7 +494,7 @@ function SetupView({
             )}
           </div>
           <label className="bz-field">
-            <span className="bz-label">اسم الفاحص <span className="bz-muted font-normal">(المعلم أو الأخصائي أو ولي الأمر)</span></span>
+            <span className="bz-label">اسم ولي الأمر أو المرافق</span>
             <input value={examiner} onChange={(e) => setExaminer(e.target.value)} className="bz-input" />
           </label>
         </div>
@@ -542,17 +538,7 @@ function SetupView({
                 </span>
               </span>
             </label>
-            {checks.audioConsent && (
-              <label className="bz-check sm:col-span-2">
-                <input type="checkbox" checked={checks.verifyAudio} onChange={(e) => setChecks({ ...checks, verifyAudio: e.target.checked })} />
-                <span className="text-ink-2">
-                  <span className="font-semibold text-ink">تحقق البالغ من التقييم الصوتي <span className="bz-muted font-normal">(اختياري، للتجارب الميدانية)</span></span>
-                  <span className="block bz-small bz-muted">
-                    بعد كل كلمة يقرؤها الطفل، تسجّل أنت ما سمعته قبل أن ترى نتيجة التقييم الآلي. يحسب التطبيق نسبة الاتفاق بينكما، فنعرف مدى دقة التقييم الصوتي على أصوات الأطفال. يضيف ثوانيَ قليلة لكل كلمة، ولا يغيّر الدرجة.
-                  </span>
-                </span>
-              </label>
-            )}
+
           </div>
         </div>
 
@@ -573,7 +559,6 @@ function SetupView({
                 : new Date().toISOString(),
               guardianAudioConsentGiven: checks.audioConsent,
               ...(checks.audioConsent ? { guardianAudioConsentRecordedAt: new Date().toISOString() } : {}),
-              ...(checks.audioConsent && checks.verifyAudio ? { verifyAudioByAdult: true } : {}),
               speechLocale: 'ar-SA' as const,
               results: {},
             })
@@ -879,7 +864,6 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         key={view.id}
         subtest={SUBTESTS_BY_ID[view.id]}
         audioSession={session}
-        verifyAudioByAdult={session.verifyAudioByAdult === true}
         onFinish={saveResult}
         onExit={() => setView({ name: 'map' })}
       />
