@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MascotMoment } from '../ui/Mascot';
 import { MASCOT_LINES } from '../ui/mascotLines';
 import { ArrowLeft, Play, RotateCcw, Volume2 } from 'lucide-react';
-import type { ChoiceItem } from '../../cognitiveProfile/battery';
+import type { AudioSegment, ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
 import { explainMistake, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
 import { ChoicePlayer, Pic } from './TaskPlayers';
@@ -110,7 +110,7 @@ function GuidedSyllableAssembly({
     const next = [...placed, index];
     setPlaced(next);
     setHint(next.length === activity.parts.length ? 'رائع! لنصل الأجزاء ونقرأ الكلمة كاملة.' : 'أحسنت! اختر الجزء التالي.');
-    const narration = [{ text: activity.parts[index], pauseAfterMs: 450 }];
+    const narration: AudioSegment[] = [{ text: activity.parts[index], pauseAfterMs: 450 }];
     if (next.length === activity.parts.length) {
       narration.push(
         { text: 'جَمَعْنَا الْمَقَاطِعَ، فَظَهَرَتِ الْكَلِمَةُ كَامِلَةً.' },
