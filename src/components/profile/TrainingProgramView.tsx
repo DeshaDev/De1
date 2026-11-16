@@ -1154,22 +1154,18 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       </details>
 
       <details className="bz-card p-5">
-        <summary className="cursor-pointer font-black text-slate-900">متابعة تقدّم طفلك والمهارات التي يتعلّمها</summary>
+        <summary className="cursor-pointer font-black text-slate-900">متابعة الأسرة: التقدّم والمهارات</summary>
         <div className="mt-4 space-y-5">
-      {due && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-info">
-            <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص: في صفحة الفحص اضغط «فحص جديد»، فتُحفظ نتيجة الفحص الأول وتظهر المقارنة قبل وبعد في التقرير.
-          </p>
-          <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-sm">
-            الذهاب إلى الفحص
-          </button>
-        </div>
-      )}
-
-        </div>
-        <div className="mt-4 space-y-5">
-        <div className="mt-4 space-y-5">
+        {due && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-info">
+              <CalendarCheck className="w-5 h-5" /> حان وقت إعادة الفحص: يمكن لولي الأمر بدء فحص جديد للاحتفاظ بالنتيجة السابقة ومقارنة التغيّر.
+            </p>
+            <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-sm">
+              الذهاب إلى الفحص
+            </button>
+          </div>
+        )}
       <section className="bz-card p-5 space-y-3" aria-labelledby="progress-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id="progress-heading" className="font-black text-slate-900 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> التقدّم من جلسة إلى جلسة</h3>
@@ -1262,6 +1258,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           );
         })}
       </div>
+
 
         </div>
       </details>
