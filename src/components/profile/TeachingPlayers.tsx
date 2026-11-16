@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MascotMoment } from '../ui/Mascot';
 import { MASCOT_LINES } from '../ui/mascotLines';
-import { ArrowLeft, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, RotateCcw, Volume2 } from 'lucide-react';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
 import { explainMistake, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
@@ -17,7 +17,7 @@ function Visual({ visual }: { visual: LessonVisual }) {
         {visual.ids.map((id) => (
           <div
             key={id}
-            className={`grid place-items-center rounded-3xl border-2 p-4 text-7xl ${visual.highlight === id ? 'border-warn bg-warn-soft opacity-80' : 'border-brand bg-brand-tint'}`}
+            className={`grid place-items-center rounded-3xl border-2 p-4 text-7xl shadow-sm ${visual.highlight === id ? 'border-warn bg-warn-soft opacity-80' : 'border-brand bg-brand-tint'}`}
           >
             <Pic emoji={LEXICON[id].emoji} label={LEXICON[id].word} />
             <span className="mt-2 font-child text-xl font-bold text-ink">{LEXICON[id].word}</span>
@@ -30,11 +30,31 @@ function Visual({ visual }: { visual: LessonVisual }) {
     return (
       <div className="flex flex-wrap justify-center gap-4" dir="rtl">
         {visual.letters.map((l, i) => (
-          <div key={l + i} className="grid place-items-center rounded-3xl border-2 border-brand bg-brand-tint px-6 py-4 min-w-[96px]">
+          <div key={l + i} className="grid place-items-center rounded-3xl border-2 border-brand bg-brand-tint px-6 py-4 min-w-[96px] shadow-sm">
             <span className="font-child text-7xl font-bold text-ink leading-none">{l}</span>
             {visual.notesAr?.[i] && <span className="mt-2 text-sm text-ink-2">{visual.notesAr[i]}</span>}
           </div>
         ))}
+      </div>
+    );
+  }
+  if (visual.kind === 'story') {
+    return (
+      <div className="w-full rounded-3xl border border-line bg-soft p-3 sm:p-4" data-testid="lesson-visual-story">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {visual.frames.map((frame, index) => (
+            <div key={`${frame.titleAr}-${index}`} className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-card px-3 py-4 text-center shadow-xs">
+              <span className="grid place-items-center min-h-16 text-5xl font-child font-black text-brand" aria-hidden="true">{frame.symbol}</span>
+              <p className="font-child text-base font-black text-slate-900">{frame.titleAr}</p>
+              <p className="font-child text-lg leading-relaxed text-ink">{frame.detailAr}</p>
+            </div>
+          ))}
+        </div>
+        {visual.relationAr && (
+          <p className="mt-3 rounded-2xl bg-brand-tint px-4 py-3 text-center font-child text-sm font-bold leading-relaxed text-ink">
+            💡 {visual.relationAr}
+          </p>
+        )}
       </div>
     );
   }
@@ -57,12 +77,19 @@ function Visual({ visual }: { visual: LessonVisual }) {
   );
 }
 
-/** "I do": the app teaches the skill step by step before the child practises it. */
+/** "I do": a child-facing lesson with one clear idea, a visible example, and a calm hand-off. */
 export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const handle = useRef<PlaybackHandle | null>(null);
   const current = lesson.steps[step];
+  const last = step === lesson.steps.length - 1;
+  const stage = step === 0
+    ? { label: 'اكتشف الفكرة', cue: 'هيا نفهم الفكرة معًا، خطوةً خطوة.' }
+    : last
+      ? { label: 'استعد للتطبيق', cue: 'أصبحت تعرف الفكرة. الآن جرّبها بنفسك!' }
+      : { label: 'شاهد المثال', cue: 'انظر إلى المثال، وسنحلّه معًا.' };
+  const explanationLabel = step === 0 ? 'الفكرة ببساطة' : last ? 'تذكّر قبل أن تبدأ' : 'مثال نطبّقه معًا';
 
   const play = async () => {
     if (handle.current) handle.current.cancelled = true;
@@ -83,34 +110,69 @@ export function LessonPlayer({ lesson, onDone }: { lesson: Lesson; onDone: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  const last = step === lesson.steps.length - 1;
+  const moveTo = (nextStep: number) => {
+    if (handle.current) handle.current.cancelled = true;
+    stopSpeech();
+    setStep(nextStep);
+  };
+
   return (
-    <div className="flex flex-col items-center text-center gap-6 w-full max-w-2xl" dir="rtl">
-      <p className="bz-badge bz-badge-brand">درس قصير · {ar(step + 1)} من {ar(lesson.steps.length)}</p>
-      <h2 className="font-child text-2xl font-black text-slate-900">{lesson.titleAr}</h2>
-      {current.visual && <Visual visual={current.visual} />}
-      <p className="font-child text-xl leading-relaxed text-ink">{current.textAr}</p>
-      <div className="flex flex-wrap justify-center gap-3">
+    <div className="flex w-full max-w-3xl flex-col items-center gap-5 text-center" dir="rtl" data-testid="lesson-player">
+      <section className="w-full rounded-3xl border border-line bg-card p-4 sm:p-6 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="rounded-full bg-brand-tint px-3 py-1.5 font-child text-sm font-black text-brand">نتعلّم مع هُدهُد</span>
+          <span className="text-xs font-bold text-slate-500">الخطوة {ar(step + 1)} من {ar(lesson.steps.length)}</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-soft" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={1} aria-valuemax={lesson.steps.length} aria-valuenow={step + 1}>
+          <span className="block h-full rounded-full bg-brand transition-all duration-300" style={{ width: `${((step + 1) / lesson.steps.length) * 100}%` }} />
+        </div>
+        <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:text-right">
+          <MascotMoment mood={last ? 'cheer' : 'wave'} size={84} layout="row" message={stage.cue} />
+          <div className="min-w-0 flex-1 text-center sm:text-right" aria-live="polite">
+            <p className="font-child text-sm font-black text-brand">{stage.label}</p>
+            <h2 className="mt-1 font-child text-xl font-black leading-relaxed text-slate-900 sm:text-2xl">{lesson.titleAr}</h2>
+          </div>
+        </div>
+      </section>
+
+      {current.visual && (
+        <section className="w-full space-y-3" aria-label="المثال المرئي">
+          <p className="font-child text-sm font-black text-slate-700">لنرَ الفكرة معًا 👀</p>
+          <Visual visual={current.visual} />
+        </section>
+      )}
+
+      <section className="w-full rounded-3xl border-2 border-brand/15 bg-brand-tint p-5 sm:p-6 text-right">
+        <p className="mb-2 font-child text-xs font-black text-brand">{explanationLabel}</p>
+        <p className="font-child text-lg leading-loose text-ink sm:text-xl">{current.textAr}</p>
+      </section>
+
+      <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
+        {step > 0 && (
+          <button type="button" className="bz-btn bz-btn-secondary" onClick={() => moveTo(step - 1)}>
+            <ArrowRight className="h-4 w-4" /> السابق
+          </button>
+        )}
         <button type="button" className="bz-btn bz-btn-ghost" onClick={play} disabled={playing}>
-          <Volume2 className="w-5 h-5" /> أعد الاستماع
+          <Volume2 className="h-5 w-5" /> أعد الاستماع
         </button>
         <button
           type="button"
-          className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
+          className="font-child bz-btn bz-btn-sun bz-btn-lg px-8 text-lg"
           onClick={() => {
             if (handle.current) handle.current.cancelled = true;
             stopSpeech();
             if (last) onDone();
-            else setStep(step + 1);
+            else moveTo(step + 1);
           }}
         >
           {last ? (
             <>
-              <Play className="w-6 h-6" /> هيا نتدرّب
+              <Play className="h-5 w-5" /> هيا نتدرّب
             </>
           ) : (
             <>
-              التالي <ArrowLeft className="w-5 h-5" />
+              التالي <ArrowLeft className="h-5 w-5" />
             </>
           )}
         </button>
