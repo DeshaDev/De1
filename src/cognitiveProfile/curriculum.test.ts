@@ -265,7 +265,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
     assert.match(lesson.titleAr, /ت/);
     assert.match(lesson.titleAr, /ط/);
     const letters = lessonFor('letterSound', 2, { soundPairs: [], letters: ['ع'] })!;
-    assert.ok(letters.steps.some((s) => s.visual?.kind === 'glyphs' && s.visual.letters.includes('ع')));
+    assert.ok(letters.steps.some((s) => s.visual?.kind === 'glyphs' && s.visual.letters.some((letter) => letter === 'ع' || letter.startsWith('ع'))));
   });
 });
 

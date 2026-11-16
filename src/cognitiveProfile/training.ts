@@ -1154,7 +1154,9 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
   const ownPairs = level === 1 ? [] : (targets?.soundPairs ?? []).filter(([x, y]) => CONFUSABLE_PHONEME_PAIRS.some(([p, q]) => (p === x && q === y) || (p === y && q === x)));
   const pairs = level === 1
     ? [DISTANT_PHONEME_PAIRS[0], DISTANT_PHONEME_PAIRS[1]]
-    : [ownPairs[0] ?? CONFUSABLE_PHONEME_PAIRS[1]];
+    : level === 2
+      ? [ownPairs[0] && random() < TARGET_SHARE ? ownPairs[0] : CONFUSABLE_PHONEME_PAIRS[0]]
+      : [ownPairs[0] ?? CONFUSABLE_PHONEME_PAIRS[1]];
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
   const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
   const same = random() < 0.3;
