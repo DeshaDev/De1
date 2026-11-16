@@ -683,7 +683,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         }}
         onSkip={() => {
           setTransferPoint(null);
-          beginSession(true, true);
+          // When voice assessment is unavailable or declined, keep the non-audio probe if due.
+          beginSession(false, true);
         }}
       />
     );
@@ -1174,24 +1175,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
-          {childAgeYears >= 6 && (
-            <p className="text-xs text-slate-600 mt-3">قراءات الطلاقة المتكررة المكتملة: {toArabicDigits(progress.fluencyPractice?.readingsCompleted ?? 0)} · من دون توقيت أو تسجيل صوتي</p>
-          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => beginSession(true)}
+            onClick={() => beginSession(false)}
             className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
           >
-            <GraduationCap className="w-5 h-5" /> ابدأ درس اليوم
-          </button>
-          <button
-            type="button"
-            onClick={() => beginSession(false)}
-            className="bz-btn bz-btn-secondary font-medium text-sm"
-          >
-            <TrendingUp className="w-4 h-4" /> مقياس المتابعة
+            <GraduationCap className="w-5 h-5" /> ابدأ جلسة اليوم
           </button>
         </div>
       </section>
@@ -1272,15 +1263,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       </section>
 
       {progress.targets && (progress.targets.soundPairs.length > 0 || progress.targets.letters.length > 0) && (
-        <p className="rounded-2xl border border-line bg-brand-tint px-4 py-3 text-sm text-ink">
-          تمارين موجّهة لأخطاء القراءة الجهرية:
-          {progress.targets.soundPairs.length > 0 && <> أصوات {progress.targets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
-          {progress.targets.letters.length > 0 && <> حروف {progress.targets.letters.join(' ')}.</>}
-          {' '}نصف تمارين هذه المهارات تركّز عليها.
-        </p>
+        <details className="bz-card-quiet p-4">
+          <summary className="cursor-pointer font-bold text-slate-900">أصوات وحروف نركّز عليها</summary>
+          <p className="mt-2 text-sm text-ink-2">
+            {progress.targets.soundPairs.length > 0 && <>أصوات {progress.targets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
+            {progress.targets.letters.length > 0 && <> حروف {progress.targets.letters.join(' ')}.</>}
+            {' '}تظهر هذه الأهداف في جزء من تمارين المهارات المرتبطة بها.
+          </p>
+        </details>
       )}
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-bold text-slate-900">تفاصيل تقدّم المهارات</summary>
+        <div className="grid md:grid-cols-3 gap-4 mt-3">
         {progress.plan.focus.map((s) => {
           const level = (progress.levels[s] ?? 1) as Level;
           const isMastered = progress.mastered.includes(s);
@@ -1308,7 +1303,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             </div>
           );
         })}
-      </div>
+        </div>
+      </details>
 
       {onOpenExtra && (
         <details className="bz-card-quiet p-4">
