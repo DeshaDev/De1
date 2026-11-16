@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyPlacement, needsPlacement, nextPlacementStep, placementAgreement, type PlacementAnswer } from './placement';
-import { TRANSFER_FORMS, formFor, scoreTransferList, summarizeTransfer, transferDueAt, type TransferRecord } from './transferProbe';
+import { TRANSFER_FORMS, formFor, getTransferAudioTask, scoreVerifiedTransferAudio, summarizeTransfer, transferDueAt, type TransferRecord } from './transferProbe';
 import { LEXICON } from './lexicon';
 import { NONWORD_ITEMS, PASSAGE_WORDS, SPELL_ITEMS, WORD_ITEMS, stripMarks } from './readingTasks';
 import { buildTrainingPlan, createProgress, generateSession, getHomeActivity, FOCUS_SKILLS, masteryEstimate, type Level, type TrainingPlan } from './training';
@@ -69,7 +69,8 @@ describe('transfer measure (untrained words)', () => {
     curriculumPhrases().join(' '),
     [4, 8].map((age) => JSON.stringify(getStructuredLiteracyStations(age))).join(' '),
   ].join(' ');
-  const all = (['A', 'B'] as const).flatMap((f) => [...TRANSFER_FORMS[f].real, ...TRANSFER_FORMS[f].nonword]);
+  const all = (['A', 'B', 'C'] as const).flatMap((f) => [...TRANSFER_FORMS[f].real, ...TRANSFER_FORMS[f].nonword]);
+  const passages = (['A', 'B', 'C'] as const).map((form) => TRANSFER_FORMS[form].passage);
 
   it('no word appears in the screening, the story, the lexicon or the training items', () => {
     const trainedTokens = new Set(
@@ -82,23 +83,45 @@ describe('transfer measure (untrained words)', () => {
       assert.ok(!used.has(bare), `${w.text} is already used`);
       assert.ok(!trainedTokens.has(bare), `${w.text} appears as a trained word`);
     }
-    assert.equal(new Set(all.map((w) => stripMarks(w.text))).size, all.length, 'no word twice');
+    const trainedContentTokens = new Set(
+      trainingText.replace(/[ً-ْٰـ]/g, '').match(/[ء-ي]+/g) ?? []
+    );
+    for (const p of passages) {
+      for (const word of p.contentWords) {
+        const bare = stripMarks(word).replace(/[.,،]/g, '');
+        assert.ok(!used.has(bare), `passage word ${word} already appears in screening or reading material`);
+        assert.ok(!trainedContentTokens.has(bare), `passage content word ${word} appears in training material`);
+      }
+    }
+    assert.equal(new Set(all.map((w) => stripMarks(w.text))).size, all.length, 'no word twice across all forms');
+    assert.equal(new Set(passages.map((p) => p.text)).size, 3, 'each point uses a different passage');
   });
 
-  it('the two forms match slot by slot in level and size, and every word is vowelled', () => {
+  it('the three forms match slot by slot in level and size, with new parallel passages', () => {
     for (const kind of ['real', 'nonword'] as const) {
-      assert.equal(TRANSFER_FORMS.A[kind].length, TRANSFER_FORMS.B[kind].length);
-      TRANSFER_FORMS.A[kind].forEach((a, i) => assert.equal(a.level, TRANSFER_FORMS.B[kind][i].level, `${kind} slot ${i}`));
+      const template = TRANSFER_FORMS.A[kind];
+      for (const form of ['B', 'C'] as const) {
+        assert.equal(TRANSFER_FORMS[form][kind].length, template.length);
+        template.forEach((a, i) => assert.equal(a.level, TRANSFER_FORMS[form][kind][i].level, `${form} ${kind} slot ${i}`));
+      }
     }
     for (const w of all) assert.match(w.text, /[ً-ْ]/, w.text);
     for (const w of all.filter((x) => x.id.includes('-n'))) assert.doesNotMatch(w.text, /[ثذظق]/, w.text);
+    const counts = passages.map((p) => p.words.length);
+    assert.ok(Math.max(...counts) - Math.min(...counts) <= 5, `passages should be similar in length: ${counts.join(', ')}`);
+    assert.ok(passages.every((p) => p.words.length >= 30 && p.words.length <= 55));
+    assert.equal(new Set(passages.map((p) => p.words.length)).size >= 2, true, 'text forms have similar but not mechanically identical word counts');
   });
 
-  it('is counterbalanced: the end uses the other form than the start, and forms split across children', () => {
-    for (const id of ['s1', 's2', 's3', 'child-x']) assert.notEqual(formFor(id, 'pre'), formFor(id, 'post'));
-    const firsts = Array.from({ length: 200 }, (_, i) => formFor(`student-${i}`, 'pre'));
-    const a = firsts.filter((f) => f === 'A').length;
-    assert.ok(a > 70 && a < 130, `about half start on A (${a}/200)`);
+  it('counterbalances all three forms so a child never sees the same form twice', () => {
+    for (const id of ['s1', 's2', 's3', 'child-x']) {
+      assert.equal(new Set((['pre', 'mid', 'post'] as const).map((point) => formFor(id, point))).size, 3);
+    }
+    const firsts = Array.from({ length: 300 }, (_, i) => formFor(`student-${i}`, 'pre'));
+    for (const form of ['A', 'B', 'C'] as const) {
+      const n = firsts.filter((value) => value === form).length;
+      assert.ok(n > 70 && n < 130, `about one third start on ${form} (${n}/300)`);
+    }
   });
 
   it('is due at the start, middle and end, only from six, and the end needs a start to compare with', () => {
@@ -115,12 +138,22 @@ describe('transfer measure (untrained words)', () => {
     assert.ok(TrainingProgressUploadSchema.safeParse({ ...withPre }).success);
   });
 
-  it('summarises the change on untrained words from the start', () => {
-    const pre: TransferRecord = { point: 'pre', form: 'A', session: 1, date: '2026-11-10T00:00:00.000Z', real: scoreTransferList([true, true, false, false, true, false, false, false].map((c) => ({ correct: c, rtMs: 5000 }))), nonword: { correct: 1, total: 8, ms: 60_000 } };
+  it('scores only complete server-resolved audio and summarises change on unseen material', () => {
+    const measured = scoreVerifiedTransferAudio(
+      [{ errorType: 'None', accuracyScore: 95 }, { errorType: 'Substitution', accuracyScore: 20 }],
+      4
+    );
+    assert.deepEqual(measured, { correct: 1, total: 2, ms: 4000 });
+    assert.equal(scoreVerifiedTransferAudio([{ errorType: 'Unconfirmed', accuracyScore: null }], 4), null);
+    assert.equal(scoreVerifiedTransferAudio([{ errorType: 'Insertion', accuracyScore: 90 }, { errorType: 'None', accuracyScore: 90 }], 4), null);
+    assert.equal(getTransferAudioTask('transfer-C-passage')?.words.length, TRANSFER_FORMS.C.passage.words.length);
+    assert.equal(getTransferAudioTask('transfer-C-unknown'), null);
+    const pre: TransferRecord = { point: 'pre', form: 'A', session: 1, date: '2026-11-10T00:00:00.000Z', real: { correct: 3, total: 8, ms: 40_000 }, nonword: { correct: 1, total: 8, ms: 60_000 } };
     const post: TransferRecord = { ...pre, point: 'post', form: 'B', session: 20, real: { correct: 6, total: 8, ms: 30_000 }, nonword: { correct: 4, total: 8, ms: 50_000 } };
     const s = summarizeTransfer([pre, post])!;
     assert.equal(s.realChange, 75 - 38);
     assert.equal(s.nonwordChange, 50 - 13);
+    assert.equal(s.passageChange, null, 'legacy transfer records without passages remain readable');
     assert.deepEqual(s.realRate, [5, 12]);
     assert.equal(summarizeTransfer([]), null);
   });
