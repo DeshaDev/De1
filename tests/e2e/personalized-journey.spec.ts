@@ -121,7 +121,13 @@ async function completeOralReadingTask(page: Page) {
 
 async function completeFirstSessionExercises(page: Page) {
   await page.getByRole('button', { name: 'اعتماد الخطة وبدء البرنامج' }).click();
-  await page.getByRole('button', { name: /ابدأ درس اليوم/ }).click();
+  await page.getByRole('button', { name: /ابدأ جلسة اليوم/ }).click();
+
+  // Session 1 may first show the unseen-material transfer station. This spec
+  // focuses on the lesson/practice journey; the transfer station has its own
+  // data and server-scoring tests.
+  const transferSkip = page.getByRole('button', { name: 'تابع التدريب دون قياس' });
+  if (await transferSkip.isVisible().catch(() => false)) await transferSkip.click();
 
   const seenHeaders: string[] = [];
   let sawPlacement = false;
@@ -141,6 +147,13 @@ async function completeFirstSessionExercises(page: Page) {
     if ((await headerLocator.count()) > 0) {
       const text = (await headerLocator.innerText({ timeout: 250 }).catch(() => '')).trim();
       if (text && !seenHeaders.includes(text)) seenHeaders.push(text);
+    }
+
+    const skipDueProbeBtn = page.getByRole('button', { name: /ابدأ الدرس مباشرة/ });
+    if (await skipDueProbeBtn.isVisible().catch(() => false)) {
+      await skipDueProbeBtn.click();
+      lastActionAt = Date.now();
+      continue;
     }
 
     const nextLessonBtn = page.getByRole('button', { name: 'التالي', exact: true });
