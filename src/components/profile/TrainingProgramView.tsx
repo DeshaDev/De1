@@ -1274,20 +1274,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         </div>
       </details>
 
-      {onOpenExtra && (
-        <details className="bz-card-quiet p-4">
-          <summary className="cursor-pointer font-black text-slate-900">أنشطة إضافية اختيارية</summary>
-          <p className="text-xs text-ink-2 mt-2">بعد جلسة اليوم، لا بدلًا منها. القارئ الميسّر للطفل الذي بدأ يقرأ.</p>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>محطات القراءة واللغة</button>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
-            <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
-            {(student?.ageYears ?? 0) >= 6 && (
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
-            )}
-          </div>
-        </details>
-      )}
+      <details className="bz-card-quiet p-4">
+        <summary className="cursor-pointer font-black text-slate-900">أنشطة إضافية اختيارية</summary>
+        <p className="text-xs text-ink-2 mt-2">أنشطة بعد جلسة اليوم، وليست بديلًا عنها.</p>
+        <div className="flex flex-wrap gap-2 mt-3">
+          <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>محطات القراءة واللغة</button>
+          {onOpenExtra && (
+            <>
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
+              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
+              {(student?.ageYears ?? 0) >= 6 && (
+                <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
+              )}
+            </>
+          )}
+        </div>
+      </details>
 
       {student && (
         <details className="bz-card-quiet p-4">
