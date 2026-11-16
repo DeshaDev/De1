@@ -148,7 +148,7 @@ function GuidedSyllableAssembly({
         </div>
       </div>
 
-      {hint && <p className="font-child text-base font-bold text-slate-700" aria-live="polite">{hint}</p>}
+      {!complete && hint && <p className="font-child text-base font-bold text-slate-700" aria-live="polite">{hint}</p>}
       <div className="flex flex-wrap justify-center gap-3" dir="rtl">
         {displayChoices.map(({ part, index }) => (
           <button
@@ -230,7 +230,7 @@ function GuidedChoiceLesson({
       <MascotMoment mood={complete ? 'cheer' : 'wave'} size={78} layout="row" message={complete ? 'أحسنت! عرفت الفكرة. هيا نكمل.' : 'جرّب معي. لا بأس أن نعيد المحاولة.'} />
       <section className="w-full rounded-3xl border-2 border-amber-100 bg-amber-50/70 p-5 space-y-3">
         <p className="font-child text-2xl sm:text-3xl font-black text-slate-900">{activity.promptAr}</p>
-        {message && <p className="font-child text-base font-bold text-slate-600" aria-live="polite">{message}</p>}
+        {!complete && message && <p className="font-child text-base font-bold text-slate-600" aria-live="polite">{message}</p>}
       </section>
 
       {!complete ? (
