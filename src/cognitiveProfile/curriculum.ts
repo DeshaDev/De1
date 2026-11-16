@@ -45,6 +45,15 @@ export interface Lesson {
   steps: LessonStep[];
 }
 
+/**
+ * Repeat the short teaching sequence at the start of a later session, but do not show it twice
+ * while the same session moves from lesson -> placement -> practice.
+ */
+export function shouldShowSkillLesson(lessonSeen: boolean, previousPhase?: string | null): boolean {
+  if (!lessonSeen) return true;
+  return previousPhase !== 'lesson' && previousPhase !== 'placementIntro' && previousPhase !== 'placement';
+}
+
 const say = (...texts: string[]): AudioSegment[] => texts.map((text) => ({ text, pauseAfterMs: 350 }));
 const word = (id: string) => lex(id).word;
 
