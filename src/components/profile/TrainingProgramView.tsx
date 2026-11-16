@@ -1074,7 +1074,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">
-                يُبنى البرنامج من نتيجة فحص مؤشرات عسر القراءة: يختار المهارات الأضعف ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا (ولو جزئيًا) للحصول على برنامج مخصص.
+                يُبنى البرنامج من نتيجة فحص مهارات القراءة: يختار المهارات التي تحتاج إلى تدريب ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا (ولو جزئيًا) للحصول على برنامج مخصص.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-lg">
@@ -1395,7 +1395,7 @@ function TodayProbeCard({ today, probes }: { today: ProbeRecord; probes: ProbeRe
 function ProgramRules() {
   return (
     <details className="bz-card-quiet p-5 text-sm text-ink-2">
-      <summary className="cursor-pointer font-black text-slate-900">كيف يعمل البرنامج؟ (للمعلم والأخصائي)</summary>
+      <summary className="cursor-pointer font-black text-slate-900">تفاصيل طريقة التدريب</summary>
       <ProgramRulesBody />
     </details>
   );
@@ -1420,9 +1420,9 @@ function ProgramRulesBody() {
         <ul className="list-disc pr-5 mt-2 space-y-1 leading-relaxed">
           <li><strong>نموذج تتبّع المعرفة (Bayesian Knowledge Tracing):</strong> بعد كل إجابة يحدّث احتمال أن الطفل أتقن المستوى، مع احتساب احتمال التخمين (حسب عدد الخيارات) واحتمال الخطأ رغم الإتقان. يبدأ التقدير من نتيجة الفحص.</li>
           <li><strong>الإتقان:</strong> حين يبلغ الاحتمال ٩٥٪ بعد ٥ إجابات على الأقل ← المستوى التالي فورًا، ولو في منتصف التمرين.</li>
-          <li><strong>الرجوع خطوة:</strong> حين يبقى الاحتمال أقل من ٢٠٪ بعد ٨ إجابات ← مستوى أسهل وملاحظة داعمة في ملف التقدم.</li>
+          <li><strong>الرجوع إلى مستوى أبسط:</strong> إذا أظهرت الإجابات أن المهارة ما زالت صعبة، يعود البرنامج إلى تدريب أسهل.</li>
           <li><strong>مقياس التقدّم:</strong> إجاباته تحدّث تقدير المستوى الثاني دون تعلّم، فإن أظهر إتقانه انتقل الطفل إليه مباشرة.</li>
-          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم إعادة الفحص لقياس الأثر وتحديث الخطة. مجموعها نحو ٦ ساعات، في المدى الذي حقق فيه تدريب الوعي الصوتي أكبر أثر في التحليل البعدي للجنة القراءة الوطنية الأمريكية (٥ إلى ١٨ ساعة).</li>
+          <li><strong>المدة:</strong> {toArabicDigits(PROGRAM_SESSIONS)} جلسة، {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا (نحو {toArabicDigits(PROGRAM_WEEKS)} أسابيع)، ثم يُعاد الفحص الوصفي لمراجعة ما تغيّر وتحديث خطة التدريب.</li>
         </ul>
       </div>
     </section>
