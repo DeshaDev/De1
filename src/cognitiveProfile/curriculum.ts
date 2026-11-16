@@ -605,10 +605,12 @@ export function curriculumPhrases(): string[] {
   const pairTargets: TrainingTargets[] = [undefined as unknown as TrainingTargets, ...CONFUSABLE_PHONEME_PAIRS.map((p) => ({ soundPairs: [p], letters: [] }))];
   const letterTargets: TrainingTargets[] = Object.values(LEVEL_LETTERS).flat().map((l) => ({ soundPairs: [], letters: [l] }));
   const groupTargets: TrainingTargets[] = CONFUSABLE_LETTER_GROUPS.map((g) => ({ soundPairs: [], letters: [g[0]] }));
-  for (const skill of skills) {
-    for (const level of [1, 2, 3] as Level[]) {
-      for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
-        lessonFor(skill, level, t ?? undefined, 8)?.steps.forEach((s) => addSegs(s.audio));
+  for (const age of [4, 8]) {
+    for (const skill of skills) {
+      for (const level of [1, 2, 3] as Level[]) {
+        for (const t of [undefined, ...pairTargets, ...letterTargets, ...groupTargets]) {
+          lessonFor(skill, level, t ?? undefined, age)?.steps.forEach((s) => addSegs(s.audio));
+        }
       }
     }
   }
@@ -619,7 +621,7 @@ export function curriculumPhrases(): string[] {
     'هَذِهِ:', 'انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.', 'حَاوِلْ مَرَّةً أُخْرَى.',
   ].forEach((p) => out.add(p));
   // Structured literacy stations share their explicit teaching and feedback language with BKT training.
-  const stations = getStructuredLiteracyStations(8);
+  const stations = [...getStructuredLiteracyStations(4), ...getStructuredLiteracyStations(8)];
   for (const station of stations) {
     out.add(station.teachAudioAr);
     out.add(station.modelAudioAr);
