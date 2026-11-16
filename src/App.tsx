@@ -724,9 +724,9 @@ export default function App() {
       trainingProgress: null,
       gradeLevel: Math.max(0, input.ageYears - 6),
       ageYears: input.ageYears,
-      country: 'قطر',
-      dialect: 'قطر',
-      dialectCode: 'قطر',
+      country: 'غير محددة',
+      dialect: 'msa',
+      dialectCode: 'msa',
       schoolName: supabaseUser
         ? `حساب ولي الأمر (${supabaseUser.user_metadata?.full_name || supabaseUser.email || 'الأسرة'})`
         : 'على هذا الجهاز (محلي)',
@@ -840,7 +840,8 @@ export default function App() {
     }
 
     const recordedAt = new Date().toISOString();
-    const selectedCountry = child.country || (child.dialectCode && child.dialectCode !== 'msa' ? child.dialectCode : 'قطر');
+    const selectedCountry = child.country || 'غير محددة';
+    const selectedDialect = child.dialectCode || 'msa';
     const newLearner: StudentRecord = {
       id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
       name: child.name,
@@ -854,8 +855,8 @@ export default function App() {
       gradeLevel: child.gradeLevel,
       ageYears: child.ageYears,
       country: selectedCountry,
-      dialectCode: selectedCountry,
-      dialect: selectedCountry,
+      dialectCode: selectedDialect,
+      dialect: selectedDialect,
       schoolName: currentUser
         ? `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`
         : 'حساب الأسرة',
@@ -896,8 +897,8 @@ export default function App() {
     };
 
     // Pre-create battery session respecting explicit audio consent for Standard Arabic
-    const speechDialect: HomeDialect = 'msa';
-    const speechLocale = 'ar-SA' as const;
+    const speechDialect = (['msa', 'gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other'].includes(selectedDialect) ? selectedDialect : 'other') as HomeDialect;
+    const speechLocale = selectedDialect === 'egyptian' ? 'ar-EG' as const : ['msa', 'gulf'].includes(selectedDialect) ? 'ar-SA' as const : undefined;
     const explicitAudioConsent = child.audioConsentGiven === true;
     const initialBatterySession: BatterySession = {
       studentId: newLearner.id,
