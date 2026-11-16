@@ -53,8 +53,8 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
         <header className="space-y-4">
           <KidPageHeader
             color={subTab === 'battery' ? 'sun' : 'sky'}
-            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من ٦ سنوات'
-            title={subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : subTab === 'oral-reading' ? 'قراءة نص وفهمه' : 'التسمية السريعة والكلمات غير الحقيقية'}
+            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من ٦ سنوات'}
+            title={subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : 'قراءة نص وفهمه'}
             subtitle={
               subTab === 'battery'
                 ? `ألعاب قصيرة للمهارات السابقة للقراءة والتسمية السريعة، ومن سن السادسة مهام قراءة وإملاء مباشرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة موزّعة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
