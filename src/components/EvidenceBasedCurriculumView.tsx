@@ -34,53 +34,33 @@ const INITIAL_ATTEMPT_HELP = 'اقرأ السؤال مرة أخرى، ثم اس�
 function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
   if (lesson.id === 'phonological-awareness') {
     return (
-      <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50 p-4 text-center space-y-3" aria-label="نموذج الوعي الصوتي وتقسيم الأصوات">
-        <p className="text-xs font-black text-teal-950">تقسيم الكلمة إلى أصواتها الفونيمية المستقلة:</p>
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
-            <span className="text-xl font-black text-teal-800">كَـ</span>
-            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ١</span>
-          </div>
-          <span className="text-slate-400 font-black">+</span>
-          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
-            <span className="text-xl font-black text-teal-800">تَـ</span>
-            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ٢</span>
-          </div>
-          <span className="text-slate-400 font-black">+</span>
-          <div className="flex flex-col items-center p-2.5 rounded-xl bg-white border border-teal-200 shadow-xs min-w-[50px]">
-            <span className="text-xl font-black text-teal-800">بَ</span>
-            <span className="text-[10px] text-slate-500 font-bold mt-1">صوت ٣</span>
-          </div>
-          <span className="text-teal-700 font-black text-lg">←</span>
-          <div className="flex flex-col items-center p-2.5 rounded-xl bg-teal-600 text-white shadow-xs min-w-[65px]">
-            <span className="text-xl font-black">كَتَبَ</span>
-            <span className="text-[10px] text-teal-100 font-bold mt-1">كلمة تامة</span>
-          </div>
+      <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50 p-4 text-center space-y-3" aria-label="مثال على سماع الصوت الأول في الكلمة">
+        <p className="text-xs font-black text-teal-950">ما أول صوت نسمعه في كلمة «فَمٌ»؟</p>
+        <div className="flex items-center justify-center gap-2" dir="rtl">
+          <span className="rounded-xl border-2 border-teal-500 bg-teal-600 px-5 py-3 text-3xl font-black text-white">فَ</span>
+          <span className="rounded-xl border border-teal-200 bg-white px-5 py-3 text-3xl font-black text-teal-900">مٌ</span>
         </div>
-        <p className="text-xs text-slate-600">استمع إلى كل صوت على حدة، ثم اجمع الأصوات معًا بسلاسة.</p>
+        <p className="text-xs text-slate-600">نسمع صوت الفاء في بداية الكلمة. جرّب أن تقول الصوت وحده.</p>
       </div>
     );
   }
 
   if (lesson.id === 'short-vowel-decoding') {
     return (
-      <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center space-y-3" aria-label="نموذج الحركات القصيرة الثلاث">
-        <p className="text-xs font-black text-amber-950">الحركات القصيرة الثلاث ومخارجها الصوتية:</p>
+      <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center space-y-3" aria-label="مثال على الحركات القصيرة">
+        <p className="text-xs font-black text-amber-950">لاحظ الفرق بين الحركات على حرف الفاء:</p>
         <div className="grid grid-cols-3 gap-2.5 max-w-sm mx-auto">
           <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
-            <span className="text-2xl font-black text-amber-800">فَـ</span>
+            <span className="text-2xl font-black text-amber-800">فَ</span>
             <strong className="block text-xs text-slate-800 mt-1">الفَتْحَة</strong>
-            <span className="text-[10px] text-slate-500">افتح الفم لأعلى</span>
           </div>
           <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
-            <span className="text-2xl font-black text-amber-800">فُـ</span>
+            <span className="text-2xl font-black text-amber-800">فُ</span>
             <strong className="block text-xs text-slate-800 mt-1">الضَّمَّة</strong>
-            <span className="text-[10px] text-slate-500">ضم الشفتين</span>
           </div>
           <div className="p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
-            <span className="text-2xl font-black text-amber-800">فِـ</span>
+            <span className="text-2xl font-black text-amber-800">فِ</span>
             <strong className="block text-xs text-slate-800 mt-1">الكَسْرَة</strong>
-            <span className="text-[10px] text-slate-500">اخفض الفك لأسفل</span>
           </div>
         </div>
       </div>
@@ -89,18 +69,16 @@ function LessonVisual({ lesson }: { lesson: CurriculumLesson }) {
 
   if (lesson.id === 'syllable-blending') {
     return (
-      <div className="mt-4 rounded-2xl border border-purple-100 bg-purple-50 p-4 text-center space-y-3" aria-label="نموذج تركيب المقاطع الصوتية">
-        <p className="text-xs font-black text-purple-950">دمج المقاطع لتكوين الكلمة التامة:</p>
-        <div className="flex items-center justify-center gap-2">
-          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">مَسْـ</span>
+      <div className="mt-4 rounded-2xl border border-purple-100 bg-purple-50 p-4 text-center space-y-3" aria-label="نموذج دمج مقطعين">
+        <p className="text-xs font-black text-purple-950">نصل المقطعين لتكوين كلمة:</p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">مَسْ</span>
           <span className="text-purple-400 font-bold">+</span>
-          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">جِـ</span>
-          <span className="text-purple-400 font-bold">+</span>
-          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">دٌ</span>
+          <span className="px-3 py-2 bg-white rounded-xl border border-purple-300 font-black text-lg text-purple-800 shadow-xs">جِدْ</span>
           <span className="text-purple-600 font-bold text-lg">←</span>
-          <span className="px-4 py-2 bg-purple-600 text-white rounded-xl font-black text-lg shadow-sm">مَسْجِدٌ</span>
+          <span className="px-4 py-2 bg-purple-600 text-white rounded-xl font-black text-lg shadow-sm">مَسْجِدْ</span>
         </div>
-        <p className="text-xs text-slate-600">المقطع الساكن يُقرأ دفعة واحدة مع الحرف الذي قبله.</p>
+        <p className="text-xs text-slate-600">اقرأ «مَسْ» ثم «جِدْ»، وبعدها اقرأ الكلمة كاملة.</p>
       </div>
     );
   }
@@ -219,13 +197,13 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
           </div>
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-black text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full mb-1">
-              <span>خطوة بخطوة · تدريب مخصص</span>
+              <span>درس اليوم</span>
             </div>
             <h2 id="evidence-curriculum-title" className="text-xl sm:text-2xl font-black text-slate-900">
               نتعلّم المهارة خطوةً خطوة
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 mt-0.5">
-              نفهم الفكرة بمثال، ثم نجرّب بأنفسنا.
+              شاهد المثال، ثم جرّب بنفسك.
             </p>
           </div>
         </div>
