@@ -1,5 +1,5 @@
 /**
- * Daily progress probe: a short, fixed-difficulty check at the start of every training session.
+ * Scheduled progress probe: a short, fixed-difficulty check at the start of selected sessions.
  *
  * Why: the training score of a session cannot show progress, because the level changes as the
  * child improves. Progress monitoring uses equivalent short forms at one fixed difficulty, given
@@ -197,8 +197,8 @@ const measures = (n: number) => counted(n, 'قياس', 'قياسين', 'قياس
 
 /** One plain sentence for parents and teachers. Never claims more than the data shows. */
 export function describeProgressAr(summary: ProbeSummary | null): string {
-  if (!summary) return 'يبدأ قياس التقدّم مع أول جلسة: مقياس قصير ثابت الصعوبة، يُعاد مرة كل أسبوع.';
-  if (summary.count === 1) return `نتيجة البداية: ${arDigits(summary.baseline)}٪. تظهر المقارنة في مقياس الأسبوع القادم، وتقدير الإتقان أدناه يتحدّث بعد كل إجابة.`;
+  if (!summary) return 'يبدأ قياس التقدّم مع الجلسة الأولى، ثم يُعاد كل خمس جلسات وفي الجلسة الأخيرة.';
+  if (summary.count === 1) return `نتيجة البداية: ${arDigits(summary.baseline)}٪. تظهر المقارنة في القياس التالي بعد خمس جلسات، وتقدير مستوى التدريب يتحدّث بعد كل إجابة.`;
   if (!summary.reliable) {
     return `من ${arDigits(summary.baseline)}٪ في البداية إلى ${arDigits(summary.latest)}٪ في آخر جلسة. النتائج تتذبذب من يوم لآخر، ويصبح الاتجاه موثوقًا بعد ${measures(RELIABLE_TREND_PROBES)}.`;
   }
