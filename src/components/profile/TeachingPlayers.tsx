@@ -129,7 +129,7 @@ function GuidedSyllableAssembly({
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-2xl text-center" dir="rtl">
       <span className="bz-badge bz-badge-sun">هَيَّا نَتَعَلَّمُ مَعًا</span>
-      <MascotMoment mood="wave" size={76} layout="row" message="ساعدني يا صديقي! لنرتّب أجزاء الكلمة." />
+      <MascotMoment mood={complete ? 'cheer' : 'wave'} size={76} layout="row" message={complete ? 'أَحْسَنْتَ! اكْتَمَلَ قِطَارُ الْكَلِمَةِ.' : 'ساعدني يا صديقي! لنرتّب أجزاء الكلمة.'} />
       <h2 className="font-child text-2xl sm:text-3xl font-black text-slate-900">هَيَّا نُرَتِّبُ عَرَبَاتِ الْكَلِمَةِ</h2>
       <p className="font-child text-lg leading-relaxed text-ink">{activity.instructionAr}</p>
 
