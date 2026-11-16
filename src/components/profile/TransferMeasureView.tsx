@@ -67,7 +67,7 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
   const validAudioConsent = student?.guardianAudioConsentGiven === true &&
     typeof audioConsentAt === 'string' && Number.isFinite(Date.parse(audioConsentAt));
   const dialect = student?.dialectCode || student?.dialect || 'msa';
-  const language = dialect === 'egyptian' ? 'ar-EG' : dialect === 'msa' ? 'ar-SA' : null;
+  const language = dialect === 'egyptian' ? 'ar-EG' : ['msa', 'gulf', 'faseeh'].includes(dialect) ? 'ar-SA' : null;
   const canAssess = Boolean(
     student && !student.isDemoRecord && validGuardianConsent && validAudioConsent && language
   );
