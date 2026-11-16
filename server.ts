@@ -4031,6 +4031,55 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
+    // Tier 0: ElevenLabs V4 Arabic Neural Speech (Studio Classical Fusha Teacher - Suhair Al Abtah)
+    const elevenKey = process.env.ELEVENLABS_API_KEY?.trim();
+    if (elevenKey) {
+      try {
+        const elevenVoiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || 'ML7jGRDg4E9hIl5qEm1Z'; // Suhair Al Abtah
+        const elevenModel = process.env.ELEVENLABS_MODEL_ID?.trim() || 'eleven_v4';
+
+        // Detect emotional/pedagogical context
+        const isPraise = /أَحْسَنْتَ|مُمْتَاز|رَائِع|بَطَل|ذَكِيّ|عَبْقَرِيّ|فَوْز|نَجَحْتَ/i.test(cleanText);
+        const isShort = cleanText.replace(/[ً-ْٰ\s.؟?!،,…]/g, '').length <= 3;
+
+        const stability = isShort ? 0.80 : isPraise ? 0.50 : 0.70;
+        const style = isPraise ? 0.20 : 0.05;
+
+        const endpoint = `https://api.elevenlabs.io/v1/text-to-speech/${elevenVoiceId}`;
+        const elevenRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': elevenKey,
+            'Content-Type': 'application/json',
+            Accept: 'audio/mpeg',
+          },
+          body: JSON.stringify({
+            text: cleanText,
+            model_id: elevenModel,
+            voice_settings: {
+              stability,
+              similarity_boost: 0.90,
+              style,
+              use_speaker_boost: true,
+            },
+          }),
+        });
+
+        if (elevenRes.ok) {
+          const arrayBuffer = await elevenRes.arrayBuffer();
+          const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+          const payload = { audioBase64, mimeType: 'audio/mp3', source: 'elevenlabs_v4' };
+          cacheTtsAudio(cacheKey, payload);
+          res.json(payload);
+          return;
+        } else {
+          console.warn('[ElevenLabs TTS] Unfulfilled status:', elevenRes.status, await elevenRes.text());
+        }
+      } catch (elevenErr) {
+        console.warn('[ElevenLabs TTS] Request error:', elevenErr);
+      }
+    }
+
     // Tier 1: Microsoft Azure Arabic Neural Speech (Studio-quality human pronunciation with flawless makharij)
     const azureKey = process.env.AZURE_SPEECH_KEY?.trim();
     const azureRegion = process.env.AZURE_SPEECH_REGION?.trim();

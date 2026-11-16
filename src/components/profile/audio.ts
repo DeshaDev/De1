@@ -56,6 +56,8 @@ async function playRecordedClip(text: string): Promise<boolean> {
  * reports the end (some browsers, or no Arabic voice installed).
  */
 export async function speak(text: string): Promise<void> {
+  const played = await playRecordedClip(text);
+  if (played) return;
   await new Promise<void>((resolve) => {
     let settled = false;
     const done = () => {

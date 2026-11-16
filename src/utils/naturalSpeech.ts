@@ -192,7 +192,7 @@ export async function playNaturalArabicAudio(
   // 2. Pre-recorded clips (public/audio/v1/) first — verified, offline-friendly, zero keys
   try {
     const manifest = await getAudioManifest();
-    const clip = manifest?.clips?.[audioKey(preparedText)];
+    const clip = manifest?.clips?.[audioKey(text)] || manifest?.clips?.[audioKey(preparedText)];
     if (clip?.file) {
       const audioUrl = `/audio/v1/${clip.file}`;
       cacheAudio(cacheKey, audioUrl);
