@@ -40,7 +40,8 @@ import {
 } from '../../cognitiveProfile/scoring';
 import {
   DIALECT_LABELS_AR,
-  type HomeDialect,
+  normalizeHomeDialect,
+  pronunciationLocaleForDialect,
   BatterySession,
   clearBatterySession,
   loadBatterySession,
@@ -411,17 +412,8 @@ function SetupView({
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
-  const storedDialect = student.dialectCode || student.dialect || 'msa';
-  // Older child records stored the country name in the dialect field; the reading tasks are in MSA.
-  const selectedDialect = student.country && storedDialect === student.country ? 'msa' : storedDialect;
-  const dialect = (['msa', 'gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other'].includes(selectedDialect)
-    ? selectedDialect
-    : 'other') as HomeDialect;
-  const speechLocale = selectedDialect === 'egyptian'
-    ? 'ar-EG' as const
-    : ['msa', 'gulf'].includes(selectedDialect)
-      ? 'ar-SA' as const
-      : undefined;
+  const dialect = normalizeHomeDialect(student.dialectCode || student.dialect, student.country);
+  const speechLocale = pronunciationLocaleForDialect(dialect);
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
     audioConsent: false,
