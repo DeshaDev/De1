@@ -684,20 +684,20 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         activeStudent.guardianAudioConsentGiven === true &&
         typeof activeStudent.guardianAudioConsentRecordedAt === 'string' &&
         activeStudent.guardianAudioConsentRecordedAt.trim().length > 0;
+      const dialect = normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country);
+      const speechLocale = pronunciationLocaleForDialect(dialect);
       const initialSession: BatterySession = {
         studentId: activeStudent.id,
         childName: activeStudent.name,
         ageMonths: activeStudent.ageYears * 12,
         examinerName: activeStudent.sessionRoleLabel || (supabaseUser?.user_metadata?.full_name || supabaseUser?.email || 'ولي الأمر'),
         startedAt: new Date().toISOString(),
-        dialect: normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country),
+        dialect,
         guardianConsentGiven: true,
         guardianConsentRecordedAt: activeStudent.guardianConsentRecordedAt,
         guardianAudioConsentGiven: explicitAudioConsent,
         ...(explicitAudioConsent ? { guardianAudioConsentRecordedAt: activeStudent.guardianAudioConsentRecordedAt } : {}),
-        ...(pronunciationLocaleForDialect(normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country))
-          ? { speechLocale: pronunciationLocaleForDialect(normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country)) }
-          : {}),
+        ...(speechLocale ? { speechLocale } : {}),
         results: {},
       };
       void saveBatterySession(initialSession).catch((error) => console.error('Unable to persist battery session:', error));
@@ -718,7 +718,22 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     void loadBatterySession(activeStudent.id)
       .then((existing) => {
         if (cancelled) return;
-        const initial = existing ?? createInitialSession();
+        const profileDialect = normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country);
+        const profileSpeechLocale = pronunciationLocaleForDialect(profileDialect);
+        const restored = existing
+          ? {
+              ...existing,
+              dialect: profileDialect,
+              ...(profileSpeechLocale ? { speechLocale: profileSpeechLocale } : { speechLocale: undefined }),
+            }
+          : null;
+        const initial = restored ?? createInitialSession();
+        if (restored && (
+          existing?.dialect !== profileDialect ||
+          existing?.speechLocale !== profileSpeechLocale
+        )) {
+          void saveBatterySession(restored).catch((error) => console.error('Unable to update stored speech dialect:', error));
+        }
         setSession(initial);
       })
       .catch((error) => {
