@@ -189,7 +189,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               {[
                 { t: 'من ٤ إلى ٨ سنوات', icon: Users },
                 { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
-                { t: `تدريب ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة يوميًا`, icon: Timer },
+                { t: `مدة الجلسة ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
