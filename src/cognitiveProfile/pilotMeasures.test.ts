@@ -168,7 +168,7 @@ describe('transfer measure (untrained words)', () => {
       assert.equal(real?.words.length, 8);
       assert.equal(nonword?.words.length, 8);
       assert.equal(nonword?.titleAr, 'كلمات للتجربة');
-      assert.match(nonword?.instructionAr ?? '', /كلمات للتدريب على القراءة/);
+      assert.equal(nonword?.instructionAr, 'هَذِهِ كَلِمَاتٌ لِلتَّدْرِيبِ عَلَى الْقِرَاءَةِ؛ اِقْرَأْهَا كَمَا تَرَاهَا، كَلِمَةً كَلِمَةً.');
       assert.equal(passage?.words.length, 30);
       assert.equal(passage?.titleAr, 'نص جديد');
       assert.match(passage?.instructionAr ?? '', /اِقْرَأِ النَّصَّ/);
