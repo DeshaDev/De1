@@ -201,7 +201,7 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
       <header className="border-b border-line bg-soft p-5">
         <p className="bz-small text-brand font-bold">محطة قصيرة · {point === 'pre' ? 'بداية البرنامج' : point === 'mid' ? 'منتصف البرنامج' : 'نهاية البرنامج'}</p>
         <h2 id="transfer-measure-title" className="mt-1 font-child text-2xl font-black text-slate-900">تحدّي قراءة جديدة</h2>
-        <p className="mt-1 text-sm text-slate-600">اقرأ بهدوء؛ أمامك كلمات جديدة وقصة قصيرة مختلفة عن أنشطة التدريب.</p>
+        <p className="mt-1 text-sm text-slate-600">اقرأ الكلمات الجديدة، ثم اقرأ النص القصير بهدوء.</p>
         <div className="mt-3 flex items-center justify-between text-xs font-bold text-slate-500">
           <span>المحطة {ARABIC_DIGITS(index + 1)} من {ARABIC_DIGITS(tasks.length)}</span>
           <span>اقرأ على مهل</span>
