@@ -46,7 +46,6 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
   const playback = useRef<PlaybackHandle | null>(null);
 
   const station = stations.find((item) => item.id === stationId) ?? null;
-  const visibleProgress = practiceReady ? practiceProgress : emptyLiteracyPracticeProgress();
   const question = station?.questions[questionIndex] ?? null;
   const fluencyPassage = getFluencyPassage(safeAgeYears);
 
@@ -195,16 +194,13 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
-              <p className="text-xs text-slate-500 mt-2">{item.id === 'fluency' ? `قراءات مكتملة: ${ageLabel(visibleProgress.fluencyReadingsCompleted)}` : `محاولات سابقة: ${ageLabel(visibleProgress.stations[item.id].attemptedQuestions)}`} · مرات الإكمال: {ageLabel(visibleProgress.stations[item.id].completedSessions)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500 leading-6">
-          هذه أنشطة تعليمية قصيرة للممارسة، ولا تنتج درجة معيارية أو حكمًا على الطفل. لا يُقاس أداء الطلاقة آليًا ولا يُسجّل صوت الطفل في هذه المحطة.
-        </p>
+        <p className="text-xs text-slate-500">هذه محطات تدريبية وليست تشخيصًا، ولا تسجّل صوت الطفل.</p>
       </section>
     );
   }
