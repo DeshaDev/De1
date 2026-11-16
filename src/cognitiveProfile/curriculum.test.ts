@@ -126,7 +126,7 @@ describe('teaching curriculum: lessons ("I do")', () => {
       if (skill === 'decoding') {
         const visual = lesson.steps[1].visual;
         assert.ok(visual?.kind === 'story');
-        assert.equal(visual.relationAr, 'قَ + لَ + مٌ. نجمع الأصوات بالترتيب.');
+        assert.equal(visual.relationAr, 'قَ + لَ + مٌ = قَلَمٌ. نجمع الأصوات بالترتيب.');
       }
     }
   });
