@@ -232,9 +232,10 @@ const hash = (s: string): number => {
 };
 
 /** Rotate A→B→C (or B→C→A / C→A→B) so no child repeats a form at a measurement point. */
-export function formFor(studentId: string, point: TransferPoint): TransferForm {
+export function formFor(studentId: string, point: TransferPoint, programmeId = ''): TransferForm {
   const order: TransferForm[] = ['A', 'B', 'C'];
-  const offset = hash(studentId) % 3;
+  // A new programme gets a new starting form; this reduces accidental reuse if a plan is rebuilt.
+  const offset = hash(`${studentId}:${programmeId}`) % 3;
   const pointIndex: Record<TransferPoint, number> = { pre: 0, mid: 1, post: 2 };
   return order[(offset + pointIndex[point]) % order.length];
 }
