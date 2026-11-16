@@ -784,7 +784,7 @@ export function ParentPortalView({
                 }`}
               >
                 <UserPlus size={16} />
-                <span>📝 تسجيل طفل وحساب جديد</span>
+                <span>📝 تسجيل طفل</span>
               </button>
               <button
                 type="button"
@@ -806,10 +806,10 @@ export function ParentPortalView({
                 <div className="border-b border-slate-100 pb-4">
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <UserPlus size={20} className="text-teal-600" />
-                    <span>تسجيل طفل وإنشاء حساب عائلي سحابي</span>
+                    <span>تسجيل طفل</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    أدخل بيانات طفلك لتهيئة ألعاب الفحص والبرنامج المخصص له، وإنشاء حساب تُحفظ فيه نتائجه لتتابعها دائمًا.
+                    أدخل بيانات طفلك. يمكنك حفظ ملفه على هذا الجهاز أو إنشاء حساب للأسرة لمتابعة نتائجه من أي جهاز.
                   </p>
                 </div>
 
@@ -1009,7 +1009,7 @@ export function ParentPortalView({
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                     >
                       <Brain size={18} />
-                      <span>{isSubmitting ? 'جارٍ إنشاء الحساب…' : '🚀 إنشاء الحساب وبدء فحص القراءة الآن ←'}</span>
+                      <span>{isSubmitting ? 'جارٍ حفظ الملف…' : parentEmail.trim() && parentPassword ? 'حفظ ملف الطفل في حساب الأسرة وبدء الفحص ←' : 'حفظ ملف الطفل على هذا الجهاز وبدء الفحص ←'}</span>
                     </button>
                   </div>
                 </form>
