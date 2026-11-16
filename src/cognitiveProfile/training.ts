@@ -473,7 +473,7 @@ export interface TrainingProgress {
   targets?: TrainingTargets;
   /** Lessons (skill:level) the child has been taught; a lesson repeats after stepping back. */
   lessonsSeen?: string[];
-  /** Stable fingerprints of practice/probe items already used as evidence; legacy records omit this. */
+  /** Content fingerprints already counted on their local calendar day; legacy records omit this. */
   seenTrainingItems?: string[];
   /** Earned mastery badge skill ids. */
   badges?: string[];
@@ -777,7 +777,7 @@ export function recordAnswer(
   const p = ensureBkt(progress);
   const seen = p.seenTrainingItems ?? [];
   if (evidenceKey && seen.includes(evidenceKey)) {
-    // Repeated content remains practice, but cannot masquerade as a new independent observation.
+    // Same-day repeats remain practice, but are not counted twice as fresh evidence. A later-day repeat is a spaced-retrieval observation.
     return { progress: p, change: 'stay' };
   }
   const seenTrainingItems = evidenceKey
@@ -950,8 +950,16 @@ export function allocateTrainingItems(
   return capped;
 }
 
+/** Local calendar date keeps same-day repeats from becoming extra BKT evidence; later-day retrieval remains practice. */
+function localEvidenceDate(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** Stable identity based on task content, not a generated React/task id or option order. */
-export function trainingEvidenceKey(task: TrainingTask): string {
+export function trainingEvidenceKey(task: TrainingTask, evidenceDate = localEvidenceDate()): string {
   let source: string;
   if (task.kind === 'span') {
     source = `span|${task.modality}|${task.trial.sequence.join('|')}`;
@@ -970,7 +978,7 @@ export function trainingEvidenceKey(task: TrainingTask): string {
     first = Math.imul(first ^ code, 0x01000193) >>> 0;
     second = Math.imul(second ^ (code + i), 0x85ebca6b) >>> 0;
   }
-  return `item-${first.toString(36)}-${second.toString(36)}`;
+  return `item-${first.toString(36)}-${second.toString(36)}@${evidenceDate}`;
 }
 
 const pic = (id: string): ChoiceOption => {
