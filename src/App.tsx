@@ -1411,7 +1411,7 @@ export default function App() {
               // One journey: register the child (header button), screen, then train.
               // Practice games and the reader are optional extras inside the programme and the footer.
               { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'dyslexia-lab', label: 'فحص مؤشرات عسر القراءة', icon: Brain },
+              { id: 'dyslexia-lab', label: 'فحص مهارات القراءة', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
             ] as const).map((item) => {
               const Icon = item.icon;
@@ -1772,7 +1772,7 @@ export default function App() {
                       </p>
                       {baseeraSession && schoolRosterEmpty && (
                         <p className="mt-3 rounded-xl bg-sun-soft p-3 text-xs leading-relaxed text-ink-2">
-                          لا يوجد طلاب في سجل المدرسة بعد. الصفوف أدناه أمثلة توضيحية وسجل هذا الجهاز، ولا تُحفظ في سجل المدرسة. أضف طالبًا من الصفحة الرئيسية أو أجرِ له فحص مؤشرات عسر القراءة ليظهر هنا.
+                          لا يوجد طلاب في سجل المدرسة بعد. الصفوف أدناه أمثلة توضيحية وسجل هذا الجهاز، ولا تُحفظ في سجل المدرسة. أضف طالبًا من الصفحة الرئيسية أو أجرِ له فحص مهارات القراءة ليظهر هنا.
                         </p>
                       )}
                     </div>
@@ -2163,7 +2163,7 @@ export default function App() {
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {selectedStudent.sessionStatus === 'completed'
                           ? 'تمرين يومي قصير لربط الحروف بحركاتها القصيرة، ثم قراءة نصوص مشكولة في القارئ الميسّر، مع تحدي الدقائق الخمس لبناء الطلاقة.'
-                          : 'تظهر التوصيات بعد أول نشاط قراءة أو بعد فحص مؤشرات عسر القراءة.'}
+                          : 'تظهر التوصيات بعد أول نشاط قراءة أو بعد فحص مهارات القراءة.'}
                       </p>
                     </div>
                   </div>
@@ -2513,7 +2513,7 @@ export default function App() {
             <div className="baseera-footer-col">
               <h2>المنصة</h2>
               <ul>
-                <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مؤشرات عسر القراءة</button></li>
+                <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مهارات القراءة</button></li>
                 <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
                 <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>ألعاب إضافية (صالة التدريب)</button></li>
                 <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر (لمن يقرأ)</button></li>
