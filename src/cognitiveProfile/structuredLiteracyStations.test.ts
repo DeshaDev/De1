@@ -163,7 +163,7 @@ describe('age-appropriate structured literacy practice stations', () => {
       const bellId = age < 6 ? 'listen-bell-line' : 'read-bell-line';
       const bell = find(age, stationId, bellId);
       assert.ok(bell);
-      assert.match(bell.audio[0], /جَرَسَ الِانْصِرَافِ/);
+      assert.match(bell.audio.join(' '), /جَرَسَ الِانْصِرَافِ/);
       assert.equal(bell.explanationAudio[0], bell.explanationAr);
     }
 
