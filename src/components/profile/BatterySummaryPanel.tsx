@@ -24,7 +24,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
         <div className="flex items-start gap-3">
           <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand shrink-0"><Brain size={22} aria-hidden="true" /></span>
           <div>
-            <h2 className="bz-h3">فحص مؤشرات عسر القراءة</h2>
+            <h2 className="bz-h3">ملخص فحص مهارات القراءة</h2>
             <p className="bz-small text-ink-2 mt-1">لم تُحفظ نتائج فحص لهذا الطالب في سجل المدرسة بعد.</p>
           </div>
         </div>
@@ -63,7 +63,7 @@ export function BatterySummaryPanel({ student, onOpen }: { student: StudentRecor
           ))}
         </ul>
         <p className="bz-small text-ink-2 mt-4">
-          النسبة تصف الأداء في المهمة المعروضة فقط. لا تمثل مئينًا أو مقارنة بالأقران أو مؤشرًا لوجود عسر القراءة.
+          تصف النسبة أداء الطفل في هذه المهمة فقط؛ ولا تمثل مقارنة بالأقران أو تشخيصًا لعسر القراءة.
         </p>
         <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm mt-4" onClick={onOpen}>
           فتح التقرير الكامل <ArrowLeft size={15} aria-hidden="true" />
