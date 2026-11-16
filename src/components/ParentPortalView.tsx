@@ -747,7 +747,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق اختياريًا على تسجيل صوت الطفل ومعالجته لتقييم القراءة الجهرية والتسمية السريعة. عدم الموافقة لا يمنع استخدام بقية الأنشطة.
+                      أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة Microsoft Azure AI Speech لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
                     </span>
                   </label>
 
@@ -990,7 +990,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق اختياريًا على تسجيل صوت الطفل ومعالجته لتقييم القراءة الجهرية والتسمية السريعة. عدم الموافقة لا يمنع استخدام بقية الأنشطة.
+                      أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة Microsoft Azure AI Speech لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
                     </span>
                   </label>
 
