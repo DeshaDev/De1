@@ -1,15 +1,14 @@
 import { toArabicNum } from '../utils/arabicDigits';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { KidPageHeader } from './ui/Playful';
-import { BookOpen, Brain, Dumbbell, Timer } from 'lucide-react';
-import { StudentRecord, CognitiveScreeningData } from '../data/seedData';
+import { BookOpen, Brain, Dumbbell } from 'lucide-react';
+import { StudentRecord } from '../data/seedData';
 const ReadingAssessmentView = lazy(() => import('./ReadingAssessmentView'));
-const CognitiveScreeningView = lazy(() => import('./CognitiveScreeningView'));
 import CognitiveBatteryView from './profile/CognitiveBatteryView';
 import { AppTabId } from './HomeLandingView';
 import { TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 
-export type ScreeningSubTab = 'battery' | 'training' | 'oral-reading' | 'cognitive-screening';
+export type ScreeningSubTab = 'battery' | 'training' | 'oral-reading';
 
 interface DyslexiaScreeningHubProps {
   students: StudentRecord[];
@@ -17,7 +16,6 @@ interface DyslexiaScreeningHubProps {
   onSelectStudent: (id: string) => void;
   onNavigateTab: (tab: AppTabId) => void;
   onCompleteOralSession: (record: StudentRecord) => void;
-  onCompleteCognitiveScreening: (cogData: CognitiveScreeningData) => void;
   initialSubTab?: ScreeningSubTab;
   onStudentUpdated?: (student: StudentRecord) => void;
   onCreateLearner?: (input: { name: string; ageYears: number; examinerName: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }) => string | null;
@@ -28,14 +26,12 @@ const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: type
   { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
   { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'أداة تكميلية · من الصف الأول', icon: BookOpen },
-  { id: 'cognitive-screening', label: 'التسمية السريعة', hint: 'التسمية السريعة والكلمات غير الحقيقية · أداة تكميلية', icon: Timer },
 ];
 
 export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
   activeStudent,
   onNavigateTab,
   onCompleteOralSession,
-  onCompleteCognitiveScreening,
   initialSubTab = 'battery',
   onStudentUpdated,
   onCreateLearner,
@@ -62,7 +58,7 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
             subtitle={
               subTab === 'battery'
                 ? `ألعاب قصيرة للمهارات السابقة للقراءة والتسمية السريعة، ومن سن السادسة مهام قراءة وإملاء مباشرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة موزّعة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
-                : (subTab === 'oral-reading' ? 'يقرأ الطفل نصًّا مناسبًا لصفه بصوت مسموع، ثم يجيب عن أسئلة الفهم. ' : 'يسمّي الطفل صورًا وألوانًا بسرعة، ويقرأ كلمات لا معنى لها. ') + 'أداة تكميلية للأخصائي بعد بدء تعلّم القراءة، تُستخدم إلى جانب فحص مؤشرات عسر القراءة لا بديلًا عنه.'
+                : 'يقرأ الطفل نصًا مناسبًا لعمره ثم يجيب عن أسئلة الفهم. يمكن تحليل القراءة الصوتية آليًا بموافقة منفصلة؛ وإذا تعذّر التقييم يكمل الطفل دون درجة صوتية.'
             }
           />
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
@@ -71,8 +67,8 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
                 العودة إلى فحص مؤشرات عسر القراءة
               </button>
             )}
-            {subTab === 'battery' && <span className="bz-muted">أدوات تكميلية للأخصائي:</span>}
-            {TABS.filter((t) => t.id === 'oral-reading' || t.id === 'cognitive-screening').map((tab) => {
+            {subTab === 'battery' && <span className="bz-muted">أداة إضافية:</span>}
+            {TABS.filter((t) => t.id === 'oral-reading').map((tab) => {
               const Icon = tab.icon;
               const active = subTab === tab.id;
               return (
@@ -123,13 +119,6 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
         />
       )}
 
-      {subTab === 'cognitive-screening' && (
-        <CognitiveScreeningView
-          student={activeStudent}
-          onNavigateTab={(tab) => onNavigateTab(tab as AppTabId)}
-          onCompleteScreening={onCompleteCognitiveScreening}
-        />
-      )}
       </Suspense>
     </div>
   );
