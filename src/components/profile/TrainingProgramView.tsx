@@ -669,7 +669,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
       <TransferMeasureView
         student={student}
         point={transferPoint}
-        form={formFor(studentId, transferPoint)}
+        form={formFor(studentId, transferPoint, progress.plan.createdAt)}
         session={transferSessionNumber}
         onComplete={(record: TransferRecord) => {
           const next = {
