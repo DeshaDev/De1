@@ -109,6 +109,12 @@ describe('transfer measure (untrained words)', () => {
     for (const p of passages) {
       assert.equal(p.words.length, 30, `${p.id} should contain exactly 30 words`);
       assert.equal((p.text.match(/[.!؟]/g) ?? []).length, 5, `${p.id} should contain five short sentences`);
+      const sentenceWordCounts = p.text
+        .split(/[.!؟]/)
+        .map((sentence) => sentence.replace(/[،؛]/g, ' ').trim())
+        .filter(Boolean)
+        .map((sentence) => sentence.split(/\\s+/).length);
+      assert.deepEqual(sentenceWordCounts, [8, 7, 6, 4, 5], `${p.id} should keep the same short-sentence structure across forms`);
       for (const word of p.contentWords) {
         const bare = stripMarks(word).replace(/[.,،]/g, '');
         assert.ok(p.words.some((token) => stripMarks(token).replace(/[.,،]/g, '') === bare), `content word ${word} must occur in its passage`);
@@ -155,6 +161,7 @@ describe('transfer measure (untrained words)', () => {
       }
     }
     for (const w of all) assert.match(w.text, /[ً-ْ]/, w.text);
+    assert.equal(TRANSFER_FORMS.B.real[4].text, 'مِلْعَقَة', 'spoon is written with kasra under meem');
     for (const w of all.filter((x) => x.id.includes('-n'))) assert.doesNotMatch(w.text, /[ثذظق]/, w.text);
     assert.deepEqual(passages.map((p) => p.words.length), [30, 30, 30]);
     assert.deepEqual(passages.map((p) => (p.text.match(/[.!؟]/g) ?? []).length), [5, 5, 5]);
