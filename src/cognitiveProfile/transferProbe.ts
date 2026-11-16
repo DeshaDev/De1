@@ -1,35 +1,61 @@
 /**
- * Transfer measure: does the child read better on words they never practised?
+ * Transfer measure: can the child read unfamiliar words and a short unseen text?
  *
- * The weekly progress probe measures the trained pre-reading skills. Improvement there does not show
- * that reading itself improved, or that it carries over to new material (the "transfer" question in
- * intervention research). This measure answers that question directly, with the child's own reading:
- * - two equivalent forms (A and B), each 8 real words and 8 made-up words, graded the same way;
- * - none of the words is used in the screening, the training items, the lessons or the story;
- * - the adult marks each word as the child reads aloud (no speech engine involved), so the result is
- *   independent of the automatic voice scoring and can also serve as a human reference for it;
- * - given at the start (sessions 1–2), the middle (10–12) and the end (19–20) of the programme.
- *   Forms are counterbalanced: half the children read A first and B at the end, half the reverse, so a
- *   difference in form difficulty averages out across a pilot group.
+ * Three counterbalanced forms keep every measurement point (start, middle, end) fresh:
+ * 8 real words, 8 pronounceable nonwords, and one short parallel passage per form.
+ * Audio is assessed only by the server-side Azure pronunciation service. No adult marks
+ * individual words; an incomplete or unresolved assessment is not scored.
  *
- * Only for children from six (when reading is taught). The forms are candidates: equivalence of A and
- * B, and the lexical status of the made-up words in each dialect, are checked in the pilot
- * (docs/VALIDATION_PLAN_AR.md, docs/PILOT_PROTOCOL_AR.md).
+ * This is a descriptive, uncalibrated product measure, not an age-normed test or proof
+ * of programme efficacy. Candidate nonwords and parallel passages still need pilot review
+ * across Arabic dialects and reading backgrounds (see docs/ARABIC_CONTENT_REVIEW.md).
  */
 import { READING_MIN_AGE_MONTHS, type ReadItem, perMinute } from './readingTasks';
 import type { TrainingProgress } from './training';
 
-export type TransferForm = 'A' | 'B';
+export type TransferForm = 'A' | 'B' | 'C';
 export type TransferPoint = 'pre' | 'mid' | 'post';
+export type TransferTaskKind = 'real' | 'nonword' | 'passage';
+
+export interface TransferPassage {
+  id: string;
+  titleAr: string;
+  text: string;
+  words: string[];
+  /** Main content words reserved for the overlap audit (function words are intentionally excluded). */
+  contentWords: string[];
+}
 
 export interface TransferList {
   real: ReadItem[];
   nonword: ReadItem[];
+  passage: TransferPassage;
+}
+
+export interface TransferAudioTask {
+  id: string;
+  form: TransferForm;
+  kind: TransferTaskKind;
+  titleAr: string;
+  instructionAr: string;
+  displayText: string;
+  words: string[];
 }
 
 const item = (id: string, text: string, level: ReadItem['level'], structureAr: string): ReadItem => ({ id, text, level, structureAr });
 
-/** Slot by slot the two forms have the same syllable structure. */
+const passage = (form: TransferForm, text: string, contentWords: string[]): TransferPassage => {
+  const clean = text.replace(/[،؛.!؟]/g, ' ').replace(/\s+/g, ' ').trim();
+  return {
+    id: `transfer-${form}-passage`,
+    titleAr: 'قصة قصيرة',
+    text,
+    words: clean.split(' '),
+    contentWords,
+  };
+};
+
+/** Each form follows the same progression: two items at each of four decoding levels. */
 export const TRANSFER_FORMS: Record<TransferForm, TransferList> = {
   A: {
     real: [
@@ -52,6 +78,11 @@ export const TRANSFER_FORMS: Record<TransferForm, TransferList> = {
       item('tA-n7', 'سُبْدَال', 4, 'سكون ومدّ'),
       item('tA-n8', 'دَنْكَمَة', 4, 'ثلاثة مقاطع وتاء مربوطة'),
     ],
+    passage: passage(
+      'A',
+      'فِي يَوْمِ الرِّحْلَةِ، وَصَلَتْ نُورَةُ إِلَى المَرْسَى مَعَ خَالَتِهَا. رَأَتْ قَارِبًا قَدِيمًا، وَسَأَلَتْ عَنْ مِرْسَاتِهِ الثَّقِيلَةِ. أَشَارَتِ الخَالَةُ إِلَى حَبْلٍ مُحْكَمٍ، وَقَالَتْ إِنَّهُ يُثَبِّتُ القَارِبَ عِنْدَ الشَّاطِئِ. ثُمَّ رَسَمَتْ نُورَةُ المَشْهَدَ فِي كُرَّاسَةٍ صَغِيرَةٍ.',
+      ['المَرْسَى', 'قَارِبًا', 'مِرْسَاتِهِ', 'حَبْلٍ', 'مُحْكَمٍ', 'الشَّاطِئِ', 'المَشْهَدَ', 'كُرَّاسَةٍ']
+    ),
   },
   B: {
     real: [
@@ -74,13 +105,74 @@ export const TRANSFER_FORMS: Record<TransferForm, TransferList> = {
       item('tB-n7', 'شُنْدَاف', 4, 'سكون ومدّ'),
       item('tB-n8', 'تَرْمَكَة', 4, 'ثلاثة مقاطع وتاء مربوطة'),
     ],
+    passage: passage(
+      'B',
+      'بَعْدَ المَطَرِ، تَفَقَّدَ سَامِرٌ أَصْصَ النَّبَاتِ فَوْقَ الشُّرْفَةِ. وَجَدَ تُرَابًا جَافًّا فِي أَحَدِهَا، فَأَضَافَ قَلِيلًا مِنَ المَاءِ. ثُمَّ نَقَلَ أَصِيصًا بَعِيدًا عَنِ الشَّمْسِ القَوِيَّةِ، لِأَنَّ أَوْرَاقَهُ بَدَأَتْ تَذْبُلُ. فَرِحَ حِينَ رَآهَا تَسْتَعِيدُ نَضَارَتَهَا.',
+      ['أَصْصَ', 'النَّبَاتِ', 'الشُّرْفَةِ', 'تُرَابًا', 'أَصِيصًا', 'القَوِيَّةِ', 'تَذْبُلُ', 'نَضَارَتَهَا']
+    ),
+  },
+  C: {
+    real: [
+      item('tC-r1', 'خَوْخ', 1, 'مقطع واحد بحرف لين'),
+      item('tC-r2', 'فَأْر', 1, 'مقطع واحد بهمزة وسكون'),
+      item('tC-r3', 'صَدَفَة', 2, 'ثلاثة مقاطع قصيرة'),
+      item('tC-r4', 'غَزَال', 2, 'مقطعان ومدّ'),
+      item('tC-r5', 'مِرْآة', 3, 'سكون وهمزة ومدّ'),
+      item('tC-r6', 'خُوذَة', 3, 'مدّ وتاء مربوطة'),
+      item('tC-r7', 'قِنْدِيل', 4, 'سكون ومدّ في المقطع الأخير'),
+      item('tC-r8', 'مِظَلَّة', 4, 'ثلاثة مقاطع وشدّة وتاء مربوطة'),
+    ],
+    nonword: [
+      item('tC-n1', 'رَفْج', 1, 'مقطع واحد بسكونين'),
+      item('tC-n2', 'تُسَم', 1, 'مقطعان بحركات قصيرة'),
+      item('tC-n3', 'نُدَف', 2, 'مقطعان بحركات قصيرة'),
+      item('tC-n4', 'كَانِب', 2, 'مدّ في المقطع الأول'),
+      item('tC-n5', 'مَدِيك', 3, 'مدّ في المقطع الثاني'),
+      item('tC-n6', 'مَشْقُوم', 3, 'سكون ومدّ'),
+      item('tC-n7', 'زُنْدَاف', 4, 'سكون ومدّ'),
+      item('tC-n8', 'فَرْبَمَة', 4, 'ثلاثة مقاطع وتاء مربوطة'),
+    ],
+    passage: passage(
+      'C',
+      'عِنْدَ الفَجْرِ، فَتَحَ الخَبَّازُ فُرْنَهُ قَبْلَ وُصُولِ الزَّبَائِنِ. عَجَنَ الدَّقِيقَ بِمَاءٍ دَافِئٍ، وَشَكَّلَ قُرْصًا مُدَوَّرًا. وَضَعَ القُرْصَ فِي صَاجٍ وَانْتَظَرَ حَتَّى احْمَرَّ وَجْهُهُ. بَعْدَ قَلِيلٍ، مَلَأَتْ رَائِحَةُ الخُبْزِ الزُّقَاقَ، وَابْتَسَمَ الخَبَّازُ.',
+      ['الخَبَّازُ', 'فُرْنَهُ', 'الزَّبَائِنِ', 'عَجَنَ', 'الدَّقِيقَ', 'قُرْصًا', 'صَاجٍ', 'رَائِحَةُ', 'الزُّقَاقَ']
+    ),
   },
 };
 
-/** Seconds without an attempt after which the adult marks the word wrong and moves on. */
-export const TRANSFER_HESITATION_SEC = 5;
+/** Server-side allow-list for transfer recordings. The browser sends IDs, never trusted reference text. */
+export function getTransferAudioTask(taskId: unknown): TransferAudioTask | null {
+  if (typeof taskId !== 'string') return null;
+  const match = /^transfer-([ABC])-(real|nonword|passage)$/.exec(taskId);
+  if (!match) return null;
+  const form = match[1] as TransferForm;
+  const kind = match[2] as TransferTaskKind;
+  const list = TRANSFER_FORMS[form];
+  if (kind === 'passage') {
+    return {
+      id: list.passage.id,
+      form,
+      kind,
+      titleAr: list.passage.titleAr,
+      instructionAr: 'اِقْرَأِ القِصَّةَ بِصَوْتٍ وَاضِحٍ، وَخُذْ وَقْتَكَ.',
+      displayText: list.passage.text,
+      words: [...list.passage.words],
+    };
+  }
+  const items = list[kind];
+  return {
+    id: `transfer-${form}-${kind}`,
+    form,
+    kind,
+    titleAr: kind === 'real' ? 'كلمات جديدة' : 'كلمات غير مألوفة',
+    instructionAr: kind === 'real'
+      ? 'اِقْرَأِ الكَلِمَاتِ وَاحِدَةً وَاحِدَةً، وَلَا تَسْتَعْجِلْ.'
+      : 'حَاوِلْ قِرَاءَةَ هَذِهِ الكَلِمَاتِ كَمَا تَرَاهَا، حَتَّى إِنْ لَمْ تَعْرِفْ مَعْنَاهَا.',
+    displayText: items.map((entry) => entry.text).join('   •   '),
+    words: items.map((entry) => entry.text),
+  };
+}
 
-/** Sessions in which each measurement point can be given; a missed point is offered again within its window. */
 export const TRANSFER_WINDOWS: Record<TransferPoint, [number, number]> = {
   pre: [1, 2],
   mid: [10, 12],
@@ -90,7 +182,7 @@ export const TRANSFER_WINDOWS: Record<TransferPoint, [number, number]> = {
 export interface TransferListScore {
   correct: number;
   total: number;
-  /** Time from the first word shown to the last word marked. */
+  /** Duration of the captured recording in milliseconds. */
   ms: number;
 }
 
@@ -101,21 +193,50 @@ export interface TransferRecord {
   date: string;
   real: TransferListScore;
   nonword: TransferListScore;
+  /** Added in the audio-only implementation; absent in older records. */
+  passage?: TransferListScore;
+  /** Present only when all three parts were resolved by the server pronunciation service. */
+  sourceModel?: 'azure_pronunciation_assessment';
+  assessmentReceipts?: string[];
 }
 
-function hash(s: string): number {
+export function scoreVerifiedTransferAudio(
+  words: Array<{ errorType: string; accuracyScore: number | null }>,
+  durationSeconds: number
+): TransferListScore | null {
+  if (
+    words.length < 2 ||
+    words.length > 80 ||
+    !Number.isFinite(durationSeconds) ||
+    durationSeconds < 1 ||
+    durationSeconds > 88 ||
+    words.some((word) =>
+      !['None', 'DialectVariant', 'Omission', 'Mispronunciation', 'Substitution'].includes(word.errorType) ||
+      typeof word.accuracyScore !== 'number' ||
+      !Number.isFinite(word.accuracyScore) ||
+      word.accuracyScore < 0 ||
+      word.accuracyScore > 100
+    )
+  ) return null;
+  return {
+    correct: words.filter((word) => word.errorType === 'None' || word.errorType === 'DialectVariant').length,
+    total: words.length,
+    ms: Math.round(durationSeconds * 1000),
+  };
+}
+
+const hash = (s: string): number => {
   let h = 2166136261;
   for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
   return h >>> 0;
-}
+};
 
-/** Counterbalanced: the first form is A for about half the children and B for the others. */
+/** Rotate A→B→C (or B→C→A / C→A→B) so no child repeats a form at a measurement point. */
 export function formFor(studentId: string, point: TransferPoint): TransferForm {
-  const first: TransferForm = hash(studentId) % 2 === 0 ? 'A' : 'B';
-  const second: TransferForm = first === 'A' ? 'B' : 'A';
-  // Start and middle on the first form, end on the other: start-to-end change is not inflated by
-  // having read the same words before; the middle point tracks the trend on familiar difficulty.
-  return point === 'post' ? second : first;
+  const order: TransferForm[] = ['A', 'B', 'C'];
+  const offset = hash(studentId) % 3;
+  const pointIndex: Record<TransferPoint, number> = { pre: 0, mid: 1, post: 2 };
+  return order[(offset + pointIndex[point]) % order.length];
 }
 
 /** The measurement point due in this session, if the child is old enough and has not done it yet. */
@@ -125,7 +246,6 @@ export function transferDueAt(progress: TrainingProgress, sessionNumber: number,
   for (const point of ['pre', 'mid', 'post'] as TransferPoint[]) {
     const [from, to] = TRANSFER_WINDOWS[point];
     if (sessionNumber >= from && sessionNumber <= to && !done.has(point)) {
-      // The end point is only meaningful with a start point to compare against.
       if (point !== 'pre' && !done.has('pre')) return null;
       return point;
     }
@@ -133,26 +253,17 @@ export function transferDueAt(progress: TrainingProgress, sessionNumber: number,
   return null;
 }
 
-export function scoreTransferList(answers: Array<{ correct: boolean; rtMs: number }>): TransferListScore {
-  return {
-    correct: answers.filter((a) => a.correct).length,
-    total: answers.length,
-    ms: answers.reduce((sum, a) => sum + a.rtMs, 0),
-  };
-}
-
-const pct = (s: TransferListScore) => (s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0);
-
 export interface TransferSummary {
   pre: TransferRecord;
   latest: TransferRecord;
-  /** Percentage-point change from the start, on untrained words. */
   realChange: number;
   nonwordChange: number;
-  /** Correct words per minute at the start and now (real words). */
+  passageChange: number | null;
   realRate: [number, number];
   points: number;
 }
+
+const pct = (s: TransferListScore) => (s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0);
 
 export function summarizeTransfer(records: TransferRecord[]): TransferSummary | null {
   const pre = records.find((r) => r.point === 'pre');
@@ -164,6 +275,7 @@ export function summarizeTransfer(records: TransferRecord[]): TransferSummary | 
     latest,
     realChange: pct(latest.real) - pct(pre.real),
     nonwordChange: pct(latest.nonword) - pct(pre.nonword),
+    passageChange: pre.passage && latest.passage ? pct(latest.passage) - pct(pre.passage) : null,
     realRate: [perMinute(pre.real.correct, pre.real.ms), perMinute(latest.real.correct, latest.real.ms)],
     points: records.length,
   };
