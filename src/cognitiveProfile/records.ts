@@ -217,6 +217,7 @@ export const TrainingProgressUploadSchema = z
       .refine((r) => Object.keys(r).length <= 30, 'حالات كثيرة')
       .optional(),
     lessonsSeen: z.array(z.string().regex(/^[a-zA-Z]+:[123]$/)).max(30).optional(),
+    seenTrainingItems: z.array(z.string().regex(/^item-[a-z0-9]+-[a-z0-9]+$/)).max(2000).optional(),
     badges: z.array(z.string().max(60)).max(30).optional(),
     fluencyPractice: z.object({
       sessionsCompleted: z.number().int().min(0).max(500),
