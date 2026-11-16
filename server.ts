@@ -2930,7 +2930,6 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
       const currentRecord = studentsDb[found.idx];
-      const currentRecord = studentsDb[found.idx];
       const incomingTransfer = parsed.data.transfer ?? [];
       const hasNewTransfer = incomingTransfer.some((record) =>
         !(currentRecord.trainingProgress?.transfer ?? []).some((previous) => sameTransferRecord(previous, record))
