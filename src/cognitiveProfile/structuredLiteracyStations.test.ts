@@ -68,6 +68,20 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.ok(later.find((s) => s.id === 'comprehension')!.questions.length >= 5);
   });
 
+  it('provides at least five distinct practice items for every available skill level', () => {
+    for (const age of [4, 5, 6, 7, 8]) {
+      for (const station of getStructuredLiteracyStations(age)) {
+        if (station.questions.length === 0) continue;
+        const ids = station.questions.map((question) => question.id);
+        assert.equal(new Set(ids).size, ids.length, `${station.id}: duplicate question ID`);
+        for (const level of [1, 2, 3] as const) {
+          const items = station.questions.filter((question) => (question.level ?? 1) === level);
+          assert.ok(items.length >= 5, `${station.id}/age ${age}/L${level}: expected at least five distinct items, got ${items.length}`);
+        }
+      }
+    }
+  });
+
   it('gives every multiple-choice question unique options and exactly one correct answer', () => {
     for (const age of [4, 5, 6, 7, 8]) {
       for (const station of getStructuredLiteracyStations(age)) {
