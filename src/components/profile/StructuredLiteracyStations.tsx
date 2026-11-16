@@ -252,7 +252,7 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
         <div className="text-center space-y-2">
           <span className="text-4xl" aria-hidden="true">📖</span>
           <h2 className="bz-h2">{fluencyPassage.titleAr}</h2>
-          <p className="bz-body">نستمع إلى النموذج، ثم نقرأ النص أكثر من مرة. نركّز على صحة الكلمات، وتجميعها في عبارات، والوقوف عند علامات الترقيم؛ لا على سرعة القراءة.</p>
+          <p className="bz-body">استمع إلى القراءة النموذجية، ثم اقرأ النص ثلاث مرات. ركّز على الكلمات واجمعها في عبارات، وانتبه إلى علامات الوقف.</p>
         </div>
         <div className="rounded-2xl border border-line bg-soft p-5 space-y-4 text-right">
           {fluencyPassage.linesAr.map((line, index) => (
@@ -295,13 +295,14 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
           {readCount === 3 && (
             <div className="flex items-start gap-2 text-sm font-semibold text-emerald-800" aria-live="polite">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
-              اكتملت القراءات الثلاث. اسأل الطفل عمّا فهمه من النص، واحتفل بمحاولته.
+              رائع! قرأت النص ثلاث مرات. هل تستطيع أن تحكي فكرته؟
             </div>
           )}
         </div>
-        <p className="text-xs text-slate-500 leading-6">
-          لا نستخدم مؤقتًا أو معدل كلمات في الدقيقة هنا؛ الغرض هو ممارسة القراءة الدقيقة المعبّرة. لا يسجّل هذا النشاط صوت الطفل ولا يحكم آليًا على نطقه.
-        </p>
+        <details className="rounded-xl border border-slate-200 p-3">
+          <summary className="cursor-pointer text-xs font-bold text-slate-600">معلومة لولي الأمر</summary>
+          <p className="mt-2 text-xs text-slate-500 leading-6">هذا النشاط للممارسة فقط؛ لا يستخدم مؤقتًا أو تسجيلًا للصوت، ولا يصدر حكمًا آليًا على القراءة.</p>
+        </details>
       </section>
     );
   }
