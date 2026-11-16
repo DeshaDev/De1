@@ -3158,6 +3158,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
 
       const sessions = new Set(progress.history.map((entry) => entry.date.slice(0, 10))).size;
+      const probes = progress.probes ?? [];
       const trainingUpdate = await fetch(
         `${SUPABASE_URL}/rest/v1/training_progress?on_conflict=id`,
         {
@@ -3181,7 +3182,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
               supportFlags: progress.supportFlags,
               sessionsCompleted: sessions,
               history: progress.history.slice(-400),
-              probes: progress.probes.slice(-200),
+              probes: probes.slice(-200),
               transfer: progress.transfer ?? [],
             },
             updated_at: new Date().toISOString(),
