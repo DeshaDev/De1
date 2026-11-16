@@ -750,6 +750,9 @@ export function ParentPortalView({
                       أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة Microsoft Azure AI Speech لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
                     </span>
                   </label>
+                  <p className="text-[11px] text-slate-500">
+                    راجع <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold text-teal-700 underline underline-offset-2">سياسة الخصوصية</a> لمعرفة كيفية معالجة بيانات الطفل وصوته.
+                  </p>
 
                   <div className="pt-2">
                     <button
@@ -993,6 +996,9 @@ export function ParentPortalView({
                       أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة Microsoft Azure AI Speech لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
                     </span>
                   </label>
+                  <p className="text-[11px] text-slate-500">
+                    راجع <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold text-teal-700 underline underline-offset-2">سياسة الخصوصية</a> لمعرفة كيفية معالجة بيانات الطفل وصوته.
+                  </p>
 
                   {/* Submit Button */}
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
