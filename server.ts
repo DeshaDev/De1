@@ -20,6 +20,7 @@ import {
 } from './src/cognitiveProfile/individualPlan';
 import { pickBestModel, runPlanAgent } from './src/cognitiveProfile/planAgent';
 import { ARABIC_READING_PASSAGES, INITIAL_STUDENTS, StudentRecord } from './src/data/seedData';
+import { getTransferAudioTask } from './src/cognitiveProfile/transferProbe';
 import {
   aggregateCognitiveWordAssessments,
   applyRanNameVariants,
@@ -4097,9 +4098,13 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
     // Score only the exact text configured by the product; the browser cannot submit
     // arbitrary target text and later associate that result with a different passage.
-    const trustedPassage = ARABIC_READING_PASSAGES.find(
+    const storedReadingPassage = ARABIC_READING_PASSAGES.find(
       (item) => item.id === body.passageId
     );
+    const transferTask = getTransferAudioTask(body.passageId);
+    const trustedPassage = storedReadingPassage ?? (transferTask
+      ? { id: transferTask.id, words: transferTask.words }
+      : undefined);
     if (
       !trustedPassage ||
       referenceWords.length !== trustedPassage.words.length ||
