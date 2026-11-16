@@ -162,6 +162,8 @@ describe('transfer measure (untrained words)', () => {
     }
     for (const w of all) assert.match(w.text, /[ً-ْ]/, w.text);
     assert.equal(TRANSFER_FORMS.B.real[4].text, 'مِلْعَقَة', 'spoon is written with kasra under meem');
+    assert.ok(TRANSFER_FORMS.B.passage.text.includes('إِنَاءٍ'), 'the sheep feeding scene uses a clear container');
+    assert.ok(!TRANSFER_FORMS.C.passage.text.includes('الْمَدْخَلِ'), 'the courtyard story avoids the unexplained entrance');
     for (const w of all.filter((x) => x.id.includes('-n'))) assert.doesNotMatch(w.text, /[ثذظق]/, w.text);
     assert.deepEqual(passages.map((p) => p.words.length), [30, 30, 30]);
     assert.deepEqual(passages.map((p) => (p.text.match(/[.!؟]/g) ?? []).length), [5, 5, 5]);
