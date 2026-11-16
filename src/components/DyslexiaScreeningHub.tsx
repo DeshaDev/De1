@@ -23,7 +23,7 @@ interface DyslexiaScreeningHubProps {
 }
 
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
-  { id: 'battery', label: 'فحص مؤشرات عسر القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
+  { id: 'battery', label: 'فحص مهارات القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
   { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'قراءة وفهم · من ٦ سنوات', icon: BookOpen },
 ];
@@ -54,17 +54,17 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           <KidPageHeader
             color={subTab === 'battery' ? 'sun' : 'sky'}
             eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من ٦ سنوات'}
-            title={subTab === 'battery' ? 'فحص مؤشرات عسر القراءة' : 'قراءة نص وفهمه'}
+            title={subTab === 'battery' ? 'فحص مهارات القراءة' : 'قراءة نص وفهمه'}
             subtitle={
               subTab === 'battery'
-                ? `ألعاب قصيرة للمهارات السابقة للقراءة والتسمية السريعة، ومن سن السادسة مهام قراءة وإملاء مباشرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة موزّعة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
+                ? `ألعاب قصيرة لمهارات القراءة الأساسية، ومن سن السادسة مهام قراءة وإملاء مباشرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة موزّعة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
                 : 'يقرأ الطفل نصًا مناسبًا لعمره ثم يجيب عن أسئلة الفهم. يمكن تحليل القراءة الصوتية آليًا بموافقة منفصلة؛ وإذا تعذّر التقييم يكمل الطفل دون درجة صوتية.'
             }
           />
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
             {subTab !== 'battery' && (
               <button type="button" className="bz-link" onClick={() => setSubTab('battery')}>
-                العودة إلى فحص مؤشرات عسر القراءة
+                العودة إلى فحص مهارات القراءة
               </button>
             )}
             {subTab === 'battery' && <span className="bz-muted">أداة إضافية:</span>}
