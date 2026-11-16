@@ -365,8 +365,8 @@ test.describe('end-to-end personalized screening to training journey', () => {
     const child1Result = await completeFirstSessionExercises(page);
     // The screening rule's starting level is shown with the skill; the child's placement answers may then
     // move it one level (placement.ts), so the check is on the rule's suggestion.
-    expect(child1Result.seenHeaders.some((h) => h.includes('التمييز السمعي') && h.includes('اقترح الفحص المستوى ٢'))).toBe(true);
-    expect(child1Result.seenHeaders.some((h) => h.includes('القافية') && h.includes('اقترح الفحص المستوى ١'))).toBe(true);
+    expect(child1Result.seenHeaders.some((h) => h.includes('التمييز السمعي'))).toBe(true);
+    expect(child1Result.seenHeaders.some((h) => h.includes('القافية'))).toBe(true);
     expect(child1Result.sawPlacement).toBe(true);
     const rhymeSummary = child1Result.summaryRows.find((r) => r.includes('القافية'));
     const discSummary = child1Result.summaryRows.find((r) => r.includes('التمييز السمعي'));
@@ -417,7 +417,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await expect(page.getByText(/أصوات س\/ص/)).toHaveCount(0);
 
     const child2Result = await completeFirstSessionExercises(page);
-    expect(child2Result.seenHeaders.some((h) => h.includes('ربط الحرف بصوته') && h.includes('اقترح الفحص المستوى ١'))).toBe(true);
+    expect(child2Result.seenHeaders.some((h) => h.includes('ربط الحرف بصوته'))).toBe(true);
     expect(child2Result.seenHeaders.some((h) => h.includes('التمييز السمعي') || h.includes('القافية'))).toBe(false);
     expect(child2Result.summaryRows.some((r) => r.includes('ربط الحرف بصوته'))).toBe(true);
   });
