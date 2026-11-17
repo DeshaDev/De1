@@ -4,7 +4,7 @@ import { MASCOT_LINES } from '../ui/mascotLines';
 import { ArrowLeft, ArrowRight, Play, RotateCcw, Square, Volume2 } from 'lucide-react';
 import type { ChoiceItem } from '../../cognitiveProfile/battery';
 import { LEXICON } from '../../cognitiveProfile/lexicon';
-import { explainMistake, type Lesson, type LessonVisual } from '../../cognitiveProfile/curriculum';
+import { explainMistake, type Lesson, type LessonVisual, HINTS } from '../../cognitiveProfile/curriculum';
 import { ChoicePlayer, Pic } from './TaskPlayers';
 import { speakSegments, stopSpeech, type PlaybackHandle } from './audio';
 
@@ -220,7 +220,16 @@ export function TeachingChoicePlayer({
 
   return (
     <div className="flex flex-col items-center gap-4 w-full" dir="rtl">
-      {guided && phase === 'try' && <span className="bz-badge bz-badge-sun">تمرين بمساعدة 🤝</span>}
+      {guided && phase === 'try' && (
+        <div className="flex flex-col items-center gap-2 max-w-lg text-center">
+          <span className="bz-badge bz-badge-sun">تمرين بمساعدة 🤝</span>
+          {HINTS[item.tag || ''] && (
+            <span className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-amber-900 shadow-xs">
+              💡 {HINTS[item.tag || '']}
+            </span>
+          )}
+        </div>
+      )}
       {phase === 'retry' && <span className="bz-badge bz-badge-brand">حاول مرة أخرى</span>}
       {phase === 'try' && (
         <ChoicePlayer

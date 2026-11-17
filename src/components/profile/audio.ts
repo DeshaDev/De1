@@ -1,6 +1,6 @@
 import type { AudioSegment } from '../../cognitiveProfile/battery';
 import { playNaturalArabicAudio, stopNaturalArabicAudio, prepareArabicTtsText } from '../../utils/naturalSpeech';
-import { audioKey } from '../../cognitiveProfile/audioCatalog';
+import { audioKey, normalizeSpokenText } from '../../cognitiveProfile/audioCatalog';
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -31,12 +31,31 @@ export function preloadAudioManifest(): void {
 /** Play the recorded clip for this exact text, if one exists. Resolves false when there is none. */
 async function playRecordedClip(text: string): Promise<boolean> {
   const manifest = await loadManifest();
+  if (!manifest) return false;
   const prepared = prepareArabicTtsText(text);
-  // Prioritize authentic waqf pronunciations (e.g. كَهْ over raw كَة, and سُلَحْفَاهْ over raw سُلَحْفَاة)
-  const clip = (prepared ? manifest?.clips[audioKey(prepared)] : undefined) || manifest?.clips[audioKey(text)];
-  if (!clip) return false;
+  // Also strip trailing short vowels (dammah/fatha/kasrah) for pausal match (e.g. قَلَمُ -> قَلَم, سَيَّارَةُ -> سَيَّارَة)
+  const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
+
+  const keysToTry = [
+    prepared ? audioKey(prepared) : undefined,
+    audioKey(text),
+    pausal ? audioKey(pausal) : undefined,
+    prepared ? audioKey(normalizeSpokenText(prepared)) : undefined,
+    audioKey(normalizeSpokenText(text)),
+    pausal ? audioKey(normalizeSpokenText(pausal)) : undefined,
+  ].filter(Boolean) as string[];
+
+  let file: string | undefined;
+  for (const k of keysToTry) {
+    if (manifest.clips[k]?.file) {
+      file = manifest.clips[k].file;
+      break;
+    }
+  }
+  if (!file) return false;
+
   return new Promise<boolean>((resolve) => {
-    const audio = new Audio(AUDIO_BASE + clip.file);
+    const audio = new Audio(AUDIO_BASE + file);
     currentClip = audio;
     let settled = false;
     const finish = (played: boolean) => {

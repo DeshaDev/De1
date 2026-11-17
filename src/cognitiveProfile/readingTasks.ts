@@ -62,11 +62,11 @@ export const WORD_ITEMS: ReadItem[] = [
   { id: 'wr-8', text: 'كِتَابُ', level: 2, structureAr: 'مقطعان بمدّ وضمة' },
   { id: 'wr-9', text: 'سَمَكَةُ', level: 3, structureAr: 'ثلاثة مقاطع بتاء مربوطة مضمومة' },
   { id: 'wr-10', text: 'شَجَرَةُ', level: 3, structureAr: 'ثلاثة مقاطع بتاء مربوطة مضمومة' },
-  { id: 'wr-11', text: 'مَدْرَسَةُ', level: 3, structureAr: 'ثلاثة مقاطع بسكون وسط الكلمة وتاء مربوطة' },
-  { id: 'wr-12', text: 'حَدِيقَةُ', level: 3, structureAr: 'ثلاثة مقاطع بمدّ وتاء مربوطة مضمومة' },
+  { id: 'wr-11', text: 'تُفَّاحَةُ', level: 3, structureAr: 'ثلاثة مقاطع بشدّة ومدّ وتاء مربوطة مضمومة' },
+  { id: 'wr-12', text: 'دَجَاجَةُ', level: 3, structureAr: 'ثلاثة مقاطع بمدّ وتاء مربوطة مضمومة' },
   { id: 'wr-13', text: 'الشَّمْسُ', level: 4, structureAr: 'لام شمسية مشددة وسكون وضمة' },
   { id: 'wr-14', text: 'سَيَّارَةُ', level: 4, structureAr: 'شدّة ومدّ وتاء مربوطة مضمومة' },
-  { id: 'wr-15', text: 'الْمُعَلِّمُ', level: 4, structureAr: 'لام قمرية ساكنة وشدّة وضمة' },
+  { id: 'wr-15', text: 'عُصْفُورُ', level: 4, structureAr: 'ثلاثة مقاطع بسكون ومدّ وضمة' },
   { id: 'wr-16', text: 'مُسْتَشْفَى', level: 4, structureAr: 'أربعة مقاطع بسكونين وألف مقصورة' },
 ];
 

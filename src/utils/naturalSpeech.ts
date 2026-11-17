@@ -192,13 +192,29 @@ export async function playNaturalArabicAudio(
   // 2. Pre-recorded clips (public/audio/v1/) first — verified, offline-friendly, zero keys
   try {
     const manifest = await getAudioManifest();
-    const clip = manifest?.clips?.[audioKey(text)] || manifest?.clips?.[audioKey(preparedText)];
-    if (clip?.file) {
-      const audioUrl = `/audio/v1/${clip.file}`;
-      cacheAudio(cacheKey, audioUrl);
-      const audio = new Audio(audioUrl);
-      await playElement(audio);
-      return;
+    if (manifest?.clips) {
+      const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
+      const keysToTry = [
+        preparedText ? audioKey(preparedText) : undefined,
+        audioKey(text),
+        pausal ? audioKey(pausal) : undefined,
+      ].filter(Boolean) as string[];
+
+      let clip: { file: string } | undefined;
+      for (const k of keysToTry) {
+        if (manifest.clips[k]?.file) {
+          clip = manifest.clips[k];
+          break;
+        }
+      }
+
+      if (clip?.file) {
+        const audioUrl = `/audio/v1/${clip.file}`;
+        cacheAudio(cacheKey, audioUrl);
+        const audio = new Audio(audioUrl);
+        await playElement(audio);
+        return;
+      }
     }
   } catch {}
 

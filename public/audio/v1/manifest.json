@@ -3148,12 +3148,12 @@
       "bytes": 30554
     },
     "d2e445ff8e76f419": {
-      "file": "d2e445ff8e76f419.mp3",
+      "file": "806f643d23575005.mp3",
       "text": "سُلَحْفَاة",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 23030
+      "bytes": 21358
     },
     "d2f1357a84eebca9": {
       "file": "d2f1357a84eebca9.mp3",
@@ -6906,6 +6906,126 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 157195
+    },
+    "8a159d2a67e45d1a": {
+      "file": "98ccc4b2de3dc1a2.mp3",
+      "text": "مَاء",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 16343
+    },
+    "563a67af3fa55ad6": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فُوب",
+      "voice": "ar-SA-ZariyahNeural (pure faa)",
+      "model": "neural_v2",
+      "context": "single_word",
+      "bytes": 11232
+    },
+    "2a8d0d6a54d41509": {
+      "file": "dbc6486fa358bd6d.mp3",
+      "text": "قَلَمُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 16343
+    },
+    "21b7b37a5ee54bce": {
+      "file": "73aad2de91c83cee.mp3",
+      "text": "جَمَلُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
+    },
+    "35d21130e8cdace8": {
+      "file": "4210eb2db7353274.mp3",
+      "text": "وَلَدُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
+    },
+    "99807bf6157d0c34": {
+      "file": "8890f2803f318698.mp3",
+      "text": "كِتَابُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
+    },
+    "32f2d7c5f8f25ac7": {
+      "file": "b4eec08c68b7527f.mp3",
+      "text": "بَابُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "phoneme",
+      "bytes": 13835
+    },
+    "90d3fd109646387c": {
+      "file": "e1282bea9dc9b820.mp3",
+      "text": "فِيلُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 13835
+    },
+    "a70b1b377b9c3010": {
+      "file": "ba6e29c650df469c.mp3",
+      "text": "بَيْتُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "phoneme",
+      "bytes": 15089
+    },
+    "cfcef924370604a4": {
+      "file": "d76898a98eb7b9e8.mp3",
+      "text": "يَدُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "phoneme",
+      "bytes": 15089
+    },
+    "7f615f6018500836": {
+      "file": "2e7b9a71b1c4a2d6.mp3",
+      "text": "شَجَرَةُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
+    },
+    "cd722e6a1c1d83a4": {
+      "file": "124adaf3e51a20e8.mp3",
+      "text": "الشَّمْسُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 17597
+    },
+    "9f43df52701af8f3": {
+      "file": "95e0c8fb053cd4a3.mp3",
+      "text": "سَيَّارَةُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 17597
+    },
+    "2d1e119e629a6906": {
+      "file": "178d12ebd07d6686.mp3",
+      "text": "عُصْفُورُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 17597
+    },
+    "a19eb83b344c97a9": {
+      "file": "374488e547311f8d.mp3",
+      "text": "دَجَاجَةُ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 17597
     }
   },
   "model": "eleven_v4"
