@@ -115,14 +115,6 @@
       "context": "single_word",
       "bytes": 17597
     },
-    "072d12b5fe571504": {
-      "file": "072d12b5fe571504.mp3",
-      "text": "أَيْنَ نِيكُو؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 17597
-    },
     "07f19e3c5cb573ec": {
       "file": "07f19e3c5cb573ec.mp3",
       "text": "قِي",
@@ -130,14 +122,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 12581
-    },
-    "092a228f839d934d": {
-      "file": "092a228f839d934d.mp3",
-      "text": "هَذَا زُوبَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 24284
     },
     "096ad60627acabf7": {
       "file": "096ad60627acabf7.mp3",
@@ -206,10 +190,10 @@
     "0cc229a5d11bab62": {
       "file": "0cc229a5d11bab62.mp3",
       "text": "دُبّ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "0dd389a620896c68": {
       "file": "0dd389a620896c68.mp3",
@@ -318,26 +302,26 @@
     "14ba538285619a71": {
       "file": "14ba538285619a71.mp3",
       "text": "كُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "14ba5c828561a9bc": {
       "file": "14ba5c828561a9bc.mp3",
       "text": "كِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "150b5b905576442b": {
       "file": "150b5b905576442b.mp3",
       "text": "أَرْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "155450fed81bde6b": {
       "file": "155450fed81bde6b.mp3",
@@ -422,10 +406,10 @@
     "1caa7447fea6004a": {
       "file": "1caa7447fea6004a.mp3",
       "text": "ثِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "1dd4fa0934617ce5": {
       "file": "1dd4fa0934617ce5.mp3",
@@ -710,10 +694,10 @@
     "30924bf048a1c5af": {
       "file": "30924bf048a1c5af.mp3",
       "text": "كِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "3137a687cd7fc459": {
       "file": "3137a687cd7fc459.mp3",
@@ -746,14 +730,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 81545
-    },
-    "3474324be6dda487": {
-      "file": "3474324be6dda487.mp3",
-      "text": "أَيْنَ طَافِي؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 20105
     },
     "351bf47b2c036d32": {
       "file": "351bf47b2c036d32.mp3",
@@ -790,10 +766,10 @@
     "36d565eed599d15e": {
       "file": "36d565eed599d15e.mp3",
       "text": "فَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 18851
+      "bytes": 11232
     },
     "36f54dcd6332b7ec": {
       "file": "36f54dcd6332b7ec.mp3",
@@ -854,10 +830,10 @@
     "3a101a739b7ca5a0": {
       "file": "3a101a739b7ca5a0.mp3",
       "text": "سِيّ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "3a1a322dca88d036": {
       "file": "3a1a322dca88d036.mp3",
@@ -942,10 +918,10 @@
     "3e147b0443ac12e3": {
       "file": "3e147b0443ac12e3.mp3",
       "text": "ضِفْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "3e3b9e7805b5f09b": {
       "file": "3e3b9e7805b5f09b.mp3",
@@ -1030,18 +1006,10 @@
     "43543e0deb00909d": {
       "file": "43543e0deb00909d.mp3",
       "text": "غِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
-    },
-    "4384330463bb51d5": {
-      "file": "4384330463bb51d5.mp3",
-      "text": "أَيْنَ زُوبَا؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 20105
+      "bytes": 11232
     },
     "43938d6be701ddd7": {
       "file": "43938d6be701ddd7.mp3",
@@ -1166,18 +1134,18 @@
     "4e2cc38588f1cc30": {
       "file": "4e2cc38588f1cc30.mp3",
       "text": "سُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "4e2cc48588f1cde3": {
       "file": "4e2cc48588f1cde3.mp3",
       "text": "سَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "4e8f6bf05f89f01a": {
       "file": "4e8f6bf05f89f01a.mp3",
@@ -1294,10 +1262,10 @@
     "56de271cc8765849": {
       "file": "56de271cc8765849.mp3",
       "text": "أُو",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "56e8ce106fecaca0": {
       "file": "56e8ce106fecaca0.mp3",
@@ -1347,14 +1315,6 @@
       "context": "phoneme",
       "bytes": 11327
     },
-    "5932603b3017fd12": {
-      "file": "5932603b3017fd12.mp3",
-      "text": "نَعَمْ، هَذَا بِيرُو!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 31807
-    },
     "599e0523eb70f687": {
       "file": "599e0523eb70f687.mp3",
       "text": "أَحْسَنْتَ!",
@@ -1390,10 +1350,10 @@
     "5c7ec9115b26d126": {
       "file": "5c7ec9115b26d126.mp3",
       "text": "حَة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "5c7ed3115b26e224": {
       "file": "5c7ed3115b26e224.mp3",
@@ -1510,10 +1470,10 @@
     "66a6de8596627851": {
       "file": "66a6de8596627851.mp3",
       "text": "ذُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "66ef4212c00c5433": {
       "file": "66ef4212c00c5433.mp3",
@@ -1534,10 +1494,10 @@
     "679e2f5d09d21c17": {
       "file": "679e2f5d09d21c17.mp3",
       "text": "طَرْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "67f8309c27752b7f": {
       "file": "67f8309c27752b7f.mp3",
@@ -1562,14 +1522,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 58557
-    },
-    "6be17a01f5b116a6": {
-      "file": "6be17a01f5b116a6.mp3",
-      "text": "هَذَا بِيرُو.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 21358
     },
     "6bfc0c43b6fdc786": {
       "file": "6bfc0c43b6fdc786.mp3",
@@ -1646,10 +1598,10 @@
     "715b73b4eaaffc92": {
       "file": "715b73b4eaaffc92.mp3",
       "text": "سِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "72503e37ad7a7584": {
       "file": "72503e37ad7a7584.mp3",
@@ -1723,14 +1675,6 @@
       "context": "phoneme",
       "bytes": 63990
     },
-    "76fa7de529757dd6": {
-      "file": "76fa7de529757dd6.mp3",
-      "text": "نَعَمْ، هَذَا نِيكُو!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 33061
-    },
     "77145d80c387b97f": {
       "file": "77145d80c387b97f.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: مَطَر؟",
@@ -1798,10 +1742,10 @@
     "7df80ff9641b0233": {
       "file": "7df80ff9641b0233.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: ثِ ... ثِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 59811
+      "bytes": 22608
     },
     "7dfc515f67a7b035": {
       "file": "7dfc515f67a7b035.mp3",
@@ -1918,10 +1862,10 @@
     "884670f0d8535d02": {
       "file": "884670f0d8535d02.mp3",
       "text": "رَة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "884672f0d8536068": {
       "file": "884672f0d8536068.mp3",
@@ -2014,10 +1958,10 @@
     "8a965eb01343351b": {
       "file": "8a965eb01343351b.mp3",
       "text": "ثَعْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "8b7c1e7aec9e6ca6": {
       "file": "8b7c1e7aec9e6ca6.mp3",
@@ -2038,10 +1982,10 @@
     "8c0b4b5098c6f729": {
       "file": "8c0b4b5098c6f729.mp3",
       "text": "فَا",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 16343
+      "bytes": 11232
     },
     "8c0d8d5098c7ea26": {
       "file": "8c0d8d5098c7ea26.mp3",
@@ -2094,10 +2038,10 @@
     "911180656bed3725": {
       "file": "911180656bed3725.mp3",
       "text": "طُو",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 10074
+      "bytes": 11232
     },
     "91680ccde989ea84": {
       "file": "91680ccde989ea84.mp3",
@@ -2134,18 +2078,18 @@
     "9430ba656c1f4f26": {
       "file": "9430ba656c1f4f26.mp3",
       "text": "طَا",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "9430c4656c1f6024": {
       "file": "9430c4656c1f6024.mp3",
       "text": "طَة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "94d032cefc344b21": {
       "file": "94d032cefc344b21.mp3",
@@ -2262,10 +2206,10 @@
     "99efbb0e1c0dc3d1": {
       "file": "99efbb0e1c0dc3d1.mp3",
       "text": "غَا",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "9a13542d9c7e47b9": {
       "file": "9a13542d9c7e47b9.mp3",
@@ -2310,10 +2254,10 @@
     "9cbc1e31d5a1b261": {
       "file": "9cbc1e31d5a1b261.mp3",
       "text": "خِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "9d4f1dcc778e784d": {
       "file": "9d4f1dcc778e784d.mp3",
@@ -2398,18 +2342,18 @@
     "a4b6790e22c264de": {
       "file": "a4b6790e22c264de.mp3",
       "text": "غُو",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "a4cc9085ba03702b": {
       "file": "a4cc9085ba03702b.mp3",
       "text": "عِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "a4cc9e85ba0387f5": {
       "file": "a4cc9e85ba0387f5.mp3",
@@ -2426,14 +2370,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 59811
-    },
-    "a5a0a39e510c2caa": {
-      "file": "a5a0a39e510c2caa.mp3",
-      "text": "هَذَا نِيكُو.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 20105
     },
     "a5e179f8aa3e180b": {
       "file": "a5e179f8aa3e180b.mp3",
@@ -2622,10 +2558,10 @@
     "b351c0118c641618": {
       "file": "b351c0118c641618.mp3",
       "text": "حِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "b362f336854c4bb6": {
       "file": "b362f336854c4bb6.mp3",
@@ -2666,14 +2602,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 57303
-    },
-    "b5e6ff998572a5c9": {
-      "file": "b5e6ff998572a5c9.mp3",
-      "text": "نَعَمْ، هَذَا زُوبَا!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 34315
     },
     "b62f62f5a1eb8c21": {
       "file": "b62f62f5a1eb8c21.mp3",
@@ -2894,18 +2822,18 @@
     "c402d3853acff9a0": {
       "file": "c402d3853acff9a0.mp3",
       "text": "أُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "c402d4853acffb53": {
       "file": "c402d4853acffb53.mp3",
       "text": "أَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "c4656d0a03d40949": {
       "file": "c4656d0a03d40949.mp3",
@@ -3123,14 +3051,6 @@
       "context": "instruction",
       "bytes": 61065
     },
-    "d16c78f68ec73e58": {
-      "file": "d16c78f68ec73e58.mp3",
-      "text": "أَيْنَ بِيرُو؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 20105
-    },
     "d16e78ec22c0c43a": {
       "file": "d16e78ec22c0c43a.mp3",
       "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: كِتَاب؟",
@@ -3347,21 +3267,13 @@
       "context": "phoneme",
       "bytes": 16343
     },
-    "df24c3e5389bbf33": {
-      "file": "df24c3e5389bbf33.mp3",
-      "text": "نَعَمْ، هَذَا طَافِي!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 34315
-    },
     "df454c4c69759f83": {
       "file": "df454c4c69759f83.mp3",
       "text": "هِي",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "e021cd99b0ec9585": {
       "file": "e021cd99b0ec9585.mp3",
@@ -3414,10 +3326,10 @@
     "e12f3a82684fc9da": {
       "file": "e12f3a82684fc9da.mp3",
       "text": "مِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 10074
+      "bytes": 11232
     },
     "e130c1c09d7dcc51": {
       "file": "e130c1c09d7dcc51.mp3",
@@ -3550,18 +3462,18 @@
     "e7ef18854f854e27": {
       "file": "e7ef18854f854e27.mp3",
       "text": "دَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 10074
+      "bytes": 11232
     },
     "e868a5cb97d8d4cd": {
       "file": "e868a5cb97d8d4cd.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: لُ ... لُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 59811
+      "bytes": 22032
     },
     "e918e740f9030ce6": {
       "file": "e918e740f9030ce6.mp3",
@@ -3738,14 +3650,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 18851
-    },
-    "f3ca4be78ede62a7": {
-      "file": "f3ca4be78ede62a7.mp3",
-      "text": "هَذَا طَافِي.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 24284
     },
     "f41d963d31561483": {
       "file": "f41d963d31561483.mp3",
@@ -3934,10 +3838,10 @@
     "021b12855e65a3b5": {
       "file": "021b12855e65a3b5.mp3",
       "text": "جُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 16343
+      "bytes": 11232
     },
     "0551c0827d331c44": {
       "file": "0551c0827d331c44.mp3",
@@ -3974,18 +3878,18 @@
     "0cea1c85651fb46b": {
       "file": "0cea1c85651fb46b.mp3",
       "text": "ثَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "0cea2a85651fcc35": {
       "file": "0cea2a85651fcc35.mp3",
       "text": "ثِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "0feb6a8283c0ad6a": {
       "file": "0feb6a8283c0ad6a.mp3",
@@ -4070,10 +3974,10 @@
     "27eda18e64aae1bb": {
       "file": "27eda18e64aae1bb.mp3",
       "text": "تَبْدَأُ مِثْلَ:",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (SSML)",
       "model": "eleven_v4",
       "context": "instruction",
-      "bytes": 23030
+      "bytes": 13536
     },
     "28d7c75d743a53c1": {
       "file": "28d7c75d743a53c1.mp3",
@@ -4102,10 +4006,10 @@
     "2a0a5685740ea441": {
       "file": "2a0a5685740ea441.mp3",
       "text": "طِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 11327
+      "bytes": 11232
     },
     "2d0d58bf1b7902b6": {
       "file": "2d0d58bf1b7902b6.mp3",
@@ -4142,10 +4046,10 @@
     "344556dc9228631d": {
       "file": "344556dc9228631d.mp3",
       "text": "أَمَّا",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 17597
+      "bytes": 11232
     },
     "34cda7857ac05640": {
       "file": "34cda7857ac05640.mp3",
@@ -4270,10 +4174,10 @@
     "48a76ba229f2e648": {
       "file": "48a76ba229f2e648.mp3",
       "text": "تَنْتَهِي مِثْلَ:",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (SSML)",
       "model": "eleven_v4",
       "context": "instruction",
-      "bytes": 25538
+      "bytes": 13968
     },
     "49503b85874546a0": {
       "file": "49503b85874546a0.mp3",
@@ -4430,18 +4334,18 @@
     "66a6dd859662769e": {
       "file": "66a6dd859662769e.mp3",
       "text": "ذَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "66a6e7859662879c": {
       "file": "66a6e7859662879c.mp3",
       "text": "ذِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "6a111559b6fbc383": {
       "file": "6a111559b6fbc383.mp3",
@@ -4542,10 +4446,10 @@
     "81af119cf9ef26b2": {
       "file": "81af119cf9ef26b2.mp3",
       "text": "طَبْلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 12581
+      "bytes": 11232
     },
     "821c3074fecfb47b": {
       "file": "821c3074fecfb47b.mp3",
@@ -4678,26 +4582,26 @@
     "a0256985b8836bde": {
       "file": "a0256985b8836bde.mp3",
       "text": "غِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "a0257385b8837cdc": {
       "file": "a0257385b8837cdc.mp3",
       "text": "غَ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "a0257485b8837e8f": {
       "file": "a0257485b8837e8f.mp3",
       "text": "غُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 8784
     },
     "a2708c4599dc842b": {
       "file": "a2708c4599dc842b.mp3",
@@ -4750,10 +4654,10 @@
     "af8dff85c0b1ef24": {
       "file": "af8dff85c0b1ef24.mp3",
       "text": "ظِ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11376
     },
     "af8e0585c0b1f956": {
       "file": "af8e0585c0b1f956.mp3",
@@ -4806,10 +4710,10 @@
     "bdd3cf621389148e": {
       "file": "bdd3cf621389148e.mp3",
       "text": "سَيْفْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 15089
+      "bytes": 11232
     },
     "c394242e93b239bc": {
       "file": "c394242e93b239bc.mp3",
@@ -5006,10 +4910,10 @@
     "f5ba76f19363b7ed": {
       "file": "f5ba76f19363b7ed.mp3",
       "text": "فَمْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 11232
     },
     "f763b082764468c0": {
       "file": "f763b082764468c0.mp3",
@@ -5110,10 +5014,10 @@
     "3a1031739b7cccb5": {
       "file": "3a1031739b7cccb5.mp3",
       "text": "سِين",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11520
     },
     "4210eb2db7353274": {
       "file": "4210eb2db7353274.mp3",
@@ -5198,10 +5102,10 @@
     "b4eec78c68b75e64": {
       "file": "b4eec78c68b75e64.mp3",
       "text": "بَاء",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "c995901a6034b294": {
       "file": "c995901a6034b294.mp3",
@@ -5254,10 +5158,10 @@
     "d31ea9d2478bed02": {
       "file": "d31ea9d2478bed02.mp3",
       "text": "فَاهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 18851
+      "bytes": 11232
     },
     "43870a82c2ec182d": {
       "file": "43870a82c2ec182d.mp3",
@@ -5270,10 +5174,10 @@
     "620791e6239b5a2a": {
       "file": "620791e6239b5a2a.mp3",
       "text": "حَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 10656
     },
     "bc15d32e9febc432": {
       "file": "bc15d32e9febc432.mp3",
@@ -5286,10 +5190,10 @@
     "3a64d02b160ad10a": {
       "file": "3a64d02b160ad10a.mp3",
       "text": "تُفَّاحَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (IPA)",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 18851
+      "bytes": 12240
     },
     "d70b76a1fcf8beb0": {
       "file": "d70b76a1fcf8beb0.mp3",
@@ -5302,18 +5206,18 @@
     "1ec33359fe137810": {
       "file": "1ec33359fe137810.mp3",
       "text": "طَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 13835
+      "bytes": 11232
     },
     "62784afd98f1d4be": {
       "file": "62784afd98f1d4be.mp3",
       "text": "رَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-HamedNeural",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 15089
+      "bytes": 11232
     },
     "4e7cd777f31d9839": {
       "file": "4e7cd777f31d9839.mp3",
@@ -5374,10 +5278,10 @@
     "d3cfbed630dc0e4a": {
       "file": "d3cfbed630dc0e4a.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: بَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "voice": "ar-SA-ZariyahNeural (SSML)",
       "model": "eleven_v4",
       "context": "instruction",
-      "bytes": 43510
+      "bytes": 17424
     },
     "d7e28cd6c43a1fb0": {
       "file": "d7e28cd6c43a1fb0.mp3",
@@ -7026,6 +6930,102 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 17597
+    },
+    "f05425a73543b98b": {
+      "file": "f05425a73543b98b.mp3",
+      "text": "أَيْنَ مِيمُو؟",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 12528
+    },
+    "c82aab1a8472ff3b": {
+      "file": "c82aab1a8472ff3b.mp3",
+      "text": "هَذَا مِيمُو.",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 13104
+    },
+    "808052af21bad1c7": {
+      "file": "808052af21bad1c7.mp3",
+      "text": "نَعَمْ، هَذَا مِيمُو!",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 18432
+    },
+    "7cbb94b52e4d2f99": {
+      "file": "7cbb94b52e4d2f99.mp3",
+      "text": "أَيْنَ رَافِي؟",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 12528
+    },
+    "196da05c9ddfad39": {
+      "file": "196da05c9ddfad39.mp3",
+      "text": "هَذَا رَافِي.",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 13392
+    },
+    "aca575d8d0d1ecc1": {
+      "file": "aca575d8d0d1ecc1.mp3",
+      "text": "نَعَمْ، هَذَا رَافِي!",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 18576
+    },
+    "35c23f42b09847e2": {
+      "file": "35c23f42b09847e2.mp3",
+      "text": "أَيْنَ كُودَا؟",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 13104
+    },
+    "756041c85f3a5b10": {
+      "file": "756041c85f3a5b10.mp3",
+      "text": "هَذَا كُودَا.",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 13104
+    },
+    "2d250b1d9d406130": {
+      "file": "2d250b1d9d406130.mp3",
+      "text": "نَعَمْ، هَذَا كُودَا!",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 18288
+    },
+    "94216fdb62db3e34": {
+      "file": "94216fdb62db3e34.mp3",
+      "text": "أَيْنَ سَالِي؟",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 12672
+    },
+    "bb82616784e3e672": {
+      "file": "bb82616784e3e672.mp3",
+      "text": "هَذَا سَالِي.",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 13104
+    },
+    "0f105889dfe779de": {
+      "file": "0f105889dfe779de.mp3",
+      "text": "نَعَمْ، هَذَا سَالِي!",
+      "voice": "ar-SA-ZariyahNeural",
+      "model": "azure-neural",
+      "context": "pal",
+      "bytes": 17856
     }
   },
   "model": "eleven_v4"
