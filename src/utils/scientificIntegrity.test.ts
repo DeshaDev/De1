@@ -364,3 +364,17 @@ test('Scientific & Pedagogical Integrity of Baseera Platform', async (t) => {
     assert.ok(Number.isFinite(Date.parse(validConsentStudent.guardianAudioConsentRecordedAt!)));
   });
 });
+
+import { mapAzureAssessmentToReferenceWords as mapSingleWord } from './azurePronunciationAssessment';
+
+test('single-word reading: a case ending or pausal taa marbuta is correct, a dropped letter is not', () => {
+  const score = (target: string, heard: string) =>
+    mapSingleWord({ referenceWords: [target], transcript: heard, durationSeconds: 1.5, enableMiscue: true, providerWords: [] }).correctWordsCount;
+  assert.equal(score('بَيْتٌ', 'بيتا'), 1);
+  assert.equal(score('سَمَكَةٌ', 'سمكه'), 1);
+  assert.equal(score('سَمَكَةٌ', 'سمكت'), 1);
+  assert.equal(score('الشَّمْسُ', 'شمس'), 1);
+  assert.equal(score('سَمَكَةٌ', 'سمك'), 0, 'سمك is a different word');
+  assert.equal(score('بَابٌ', 'با'), 0, 'a dropped letter is an error');
+  assert.equal(score('فِيلٌ', 'فول'), 0);
+});

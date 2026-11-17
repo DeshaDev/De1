@@ -1454,7 +1454,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold"
+              className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold baseera-topbar-cta"
               onClick={() => setActiveTab('parent-portal')}
             >
               <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي 👶' : 'تسجيل طفل / حساب الأسرة 👨‍👩‍👧'}</span>

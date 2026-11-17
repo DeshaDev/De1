@@ -165,12 +165,12 @@ for (const p of ARABIC_READING_PASSAGES) {
   for (const w of p.words) {
     auditArabicString(w, `PASSAGE.${p.id}.word`, 'passage');
   }
-  for (const q of p.comprehensionQuestions) {
-    auditArabicString(q.question, `PASSAGE.${p.id}.question.${q.id}`, 'passage');
+  p.comprehensionQuestions.forEach((q, qi) => {
+    auditArabicString(q.question, `PASSAGE.${p.id}.question.${qi + 1}`, 'passage');
     for (const o of q.options) {
       auditArabicString(o, `PASSAGE.${p.id}.option`, 'passage');
     }
-  }
+  });
 }
 
 // -------------------------------------------------------------

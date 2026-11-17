@@ -14,6 +14,10 @@ export interface AzureAudioAssessmentResult {
   sourceModel: 'azure_pronunciation_assessment';
   assessmentMode: 'short-audio-miscue' | 'continuous-audio-alignment';
   assessmentComplete: boolean;
+  /** The speech variety the result was assessed against, for the report (e.g. «الفصحى المعيارية»). */
+  dialectLabel?: string;
+  /** Length of the assessed recording in seconds, when known. */
+  durationSeconds?: number;
   transcript: string;
   accuracyScore: number | null;
   wordAccuracyPercent: number | null;
@@ -165,10 +169,13 @@ export function mapAzureAssessmentToReferenceWords(args: {
     // Exact or inflectional match:
     // e.g. بَيْتُ vs بيتاً (tanween fat-h), بيتو (dammah elongation), بيت (waqf sukun), سمكة vs سمكه (taa marbuta), الشمس vs شمس
     const isExactMatch = transNorm === targetNorm;
-    const isInflectionalMatch =
-      transNorm.replace(/[اوية]$/, '') === targetNorm.replace(/[اوية]$/, '') ||
-      transNorm.replace(/^ال/, '') === targetNorm.replace(/^ال/, '') ||
-      transNorm.replace(/ه$/, 'ة') === targetNorm.replace(/ه$/, 'ة');
+    // Accepted: the whole target plus a case ending (بيتا، بيتو، بيتي)، taa marbuta in pause or
+    // liaison (سمكه، سمكت)، or the article added or dropped. Not accepted: dropping a letter of the
+    // target (سمكة → سمك is a different word), which stripping the last letter of both used to allow.
+    const sameWithoutArticle = transNorm.replace(/^ال/, '') === targetNorm.replace(/^ال/, '');
+    const withCaseEnding = transNorm.length === targetNorm.length + 1 && transNorm.startsWith(targetNorm) && /[اوي]$/.test(transNorm);
+    const taaMarbutaRead = targetNorm.endsWith('ة') && (transNorm === `${targetNorm.slice(0, -1)}ه` || transNorm === `${targetNorm.slice(0, -1)}ت`);
+    const isInflectionalMatch = !isExactMatch && (sameWithoutArticle || withCaseEnding || taaMarbutaRead);
 
     if (isExactMatch || isInflectionalMatch) {
       const scored = providerWords.find(w => canonicalErrorType(w.errorType) !== 'Omission' && canonicalErrorType(w.errorType) !== 'Insertion') || providerWords[0];

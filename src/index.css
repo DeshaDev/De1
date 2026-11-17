@@ -1752,3 +1752,8 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   .mascot-animated .m-body, .mascot-animated .m-head, .mascot-animated .m-eyes, .mascot-animated .m-wing,
   .mascot-animated .m-feather, .mascot-animated .m-sparkles { animation: none !important; }
 }
+
+/* On phones the bottom bar already has «طفلي»; the wide register button in the top bar was cut off. */
+@media (max-width: 639px) {
+  .baseera-topbar-cta { display: none !important; }
+}

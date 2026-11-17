@@ -84,7 +84,7 @@ const NAME_OF_SOUND: Record<string, string> = Object.fromEntries(HERO_LETTERS.ma
  * recorded clip), «هُدهُد» hops, and the bubble names the letter. Drawn SVG with CSS motion, so it
  * works the same on every device. The bubble sits above the scene, never over the bird.
  */
-export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! أهلاً بكم في هيّا نقرأ.' }: { message?: string }) {
+export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! أهلًا بكم في هَيَّا نَقْرَأْ.' }: { message?: string }) {
   const scene = (
     <div className="relative h-full w-full">
       {HERO_LETTERS.map((l) => (

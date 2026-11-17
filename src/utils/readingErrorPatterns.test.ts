@@ -64,8 +64,8 @@ describe('reading errors turned into exercises', () => {
     const progress = createProgress({ createdAt: new Date().toISOString(), preventive: false, focus: ['rhyme', 'blending'], rationaleAr: [] });
     const { progress: next, added } = applyReadingTargets(progress, {
       skills: ['discrimination', 'visualDiscrimination', 'letterSound'],
-      soundPairs: [['س', 'ص']],
-      letters: ['س', 'ص'],
+      soundPairs: [['د', 'ض']],
+      letters: ['د', 'ض'],
       passageId: 'p-1',
       analysedAt: new Date().toISOString(),
     });
@@ -74,13 +74,44 @@ describe('reading errors turned into exercises', () => {
     assert.ok(next.bkt?.['discrimination:1']);
 
     const hasPair = (t: { kind: string; item?: { audio: Array<{ text: string }> } }) =>
-      t.kind === 'choice' && t.item!.audio.slice(0, 2).some((a) => a.text.startsWith('س')) && t.item!.audio.slice(0, 2).some((a) => a.text.startsWith('ص'));
+      t.kind === 'choice' && t.item!.audio.slice(0, 2).some((a) => a.text.startsWith('د') || a.text.startsWith('ض'));
+    // د/ض is not one of the default level-2 pairs, so without targets it barely appears; with the
+    // child's own confusion it fills about half of each session (TARGET_SHARE).
     let targeted = 0;
     let baseline = 0;
+    let total = 0;
     for (let seed = 1; seed <= 60; seed++) {
-      targeted += generateItems('discrimination', 2, seed, 8, next.targets).filter(hasPair).length;
+      const items = generateItems('discrimination', 2, seed, 8, next.targets);
+      total += items.length;
+      targeted += items.filter(hasPair).length;
       baseline += generateItems('discrimination', 2, seed, 8).filter(hasPair).length;
     }
     assert.ok(targeted > baseline * 2, `targeted ${targeted} vs baseline ${baseline}`);
+    assert.ok(targeted / total > 0.35, `own pair in ${targeted}/${total} items`);
+  });
+});
+
+describe('training items stay varied without a guessable answer pattern', () => {
+  it('never repeats an exercise back to back, and the answer is not forced to alternate', async () => {
+    const { generateItems, trainingEvidenceKey } = await import('../cognitiveProfile/training');
+    let sameAsPrevious = 0;
+    let pairs = 0;
+    for (let seed = 1; seed <= 80; seed++) {
+      const items = generateItems('discrimination', 2, seed, 10);
+      for (let i = 1; i < items.length; i++) {
+        assert.notEqual(trainingEvidenceKey(items[i]), trainingEvidenceKey(items[i - 1]), 'no identical exercise twice in a row');
+        const answer = (t: (typeof items)[number]) => (t.kind === 'choice' ? t.item.correctId : '');
+        const a = answer(items[i]);
+        const b = answer(items[i - 1]);
+        if (i >= 2) {
+          const c = answer(items[i - 2]);
+          assert.ok(!(a === b && b === c), 'the same answer at most twice in a row');
+        }
+        pairs++;
+        if (a === b) sameAsPrevious++;
+      }
+    }
+    // With two answers, strict alternation would make this 0; real variety keeps it well above.
+    assert.ok(sameAsPrevious / pairs > 0.15, `answer repeats ${sameAsPrevious}/${pairs}`);
   });
 });

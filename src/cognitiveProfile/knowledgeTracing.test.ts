@@ -181,3 +181,25 @@ describe('Bayesian Knowledge Tracing (Corbett & Anderson, 1995)', () => {
     assert.ok(fit.logLikelihood >= logLikelihood({ pInit: 0.5, pTransit: 0.3, pSlip: 0.2 }, data));
   });
 });
+
+describe('stepping back is not undone a few answers later', () => {
+  it('after a step back the easier level is re-earned over more answers, so the child is not bounced', async () => {
+    const { createProgress, recordAnswer } = await import('./training');
+    let p = createProgress({ createdAt: new Date().toISOString(), preventive: false, focus: ['blending'], rationaleAr: [] }, 2);
+    // Struggles at level 2 until stepped back.
+    let n = 0;
+    while ((p.levels.blending ?? 2) === 2 && n < 40) {
+      p = recordAnswer(p, 'blending', n % 4 === 0, 1 / 3).progress;
+      n++;
+    }
+    assert.equal(p.levels.blending, 1, 'stepped back to level 1');
+    // Then answers every level-1 item correctly: the climb back needs at least 10 answers, not 5.
+    let answers = 0;
+    while ((p.levels.blending ?? 1) === 1 && answers < 30) {
+      p = recordAnswer(p, 'blending', true, 1 / 3).progress;
+      answers++;
+    }
+    assert.ok(answers >= 10, `re-promoted after ${answers} answers`);
+    assert.equal(p.stepBacks?.['blending:2'], 1);
+  });
+});

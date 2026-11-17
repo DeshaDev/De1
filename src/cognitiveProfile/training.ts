@@ -475,6 +475,12 @@ export interface TrainingProgress {
   lessonsSeen?: string[];
   /** Content fingerprints already counted on their local calendar day; legacy records omit this. */
   seenTrainingItems?: string[];
+  /**
+   * How many times the child stepped back from each level ("skill:level"). After a step back the
+   * easier level must be re-earned over more answers before the harder one is tried again, so a
+   * child at the boundary is not bounced up and down every few answers.
+   */
+  stepBacks?: Record<string, number>;
   /** Earned mastery badge skill ids. */
   badges?: string[];
   /** Starting-level checks: the rule's suggestion and where the child's answers placed them (placement.ts). */
@@ -792,7 +798,11 @@ export function recordAnswer(
   let supportFlags = [...p.supportFlags];
   let change: LevelChange = 'stay';
 
-  if (isMastered(state)) {
+  const stepBacks = { ...(p.stepBacks ?? {}) };
+  const backsFromAbove = stepBacks[`${skill}:${level + 1}`] ?? 0;
+  const reEarnAnswers = backsFromAbove === 0 ? 0 : Math.min(20, 5 + 5 * backsFromAbove);
+
+  if (isMastered(state) && state.n >= reEarnAnswers) {
     supportFlags = supportFlags.filter((s) => s !== skill);
     if (level < 3) {
       levels[skill] = (level + 1) as Level;
@@ -808,6 +818,7 @@ export function recordAnswer(
     bkt[lower] = { ...bkt[lower], p: Math.min(bkt[lower]?.p ?? 0.5, 0.6), n: 0 };
     bkt[key] = { ...state, n: 0 };
     if (!supportFlags.includes(skill)) supportFlags.push(skill);
+    stepBacks[`${skill}:${level}`] = (stepBacks[`${skill}:${level}`] ?? 0) + 1;
     change = 'down';
   } else if (level === 1 && state.n >= SUPPORT_MIN_ATTEMPTS && state.p < STEP_BACK_BELOW && !supportFlags.includes(skill)) {
     supportFlags.push(skill);
@@ -815,6 +826,7 @@ export function recordAnswer(
   return {
     progress: {
       ...p, bkt, levels, mastered, supportFlags,
+      ...(Object.keys(stepBacks).length > 0 ? { stepBacks } : {}),
       ...(seenTrainingItems ? { seenTrainingItems } : {}),
     },
     change,
@@ -1163,7 +1175,9 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
       ? (ownPairs[0] && random() < TARGET_SHARE ? [ownPairs[0]] : [CONFUSABLE_PHONEME_PAIRS[0], CONFUSABLE_PHONEME_PAIRS[1]])
       : [ownPairs[0] ?? CONFUSABLE_PHONEME_PAIRS[1]];
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
-  const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
+  // All three short vowels, so each pair (and the child's own confused pair) has enough distinct
+  // exercises for a session: with fatha alone a level had only 8, and sessions repeated them.
+  const vowel = level === 3 ? pick(['i', 'u'] as const, random) : pick(['a', 'i', 'u'] as const, random);
   const same = random() < 0.3;
   const first = cvSyllable(a, vowel);
   const second = cvSyllable(same ? a : b, vowel);
@@ -1354,15 +1368,21 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     );
     if (showsSynonymPair(pictureIds)) continue;
 
+    // Items whose answers are fixed categories («الصوت نفسه / صوتان مختلفان») always show the same
+    // options and repeat their answers by design. The picture rules below would force those answers
+    // to alternate, a pattern a child can follow without listening; their variety comes from the
+    // sounds instead (every item still differs, by its signature).
+    const fixedAnswers = item.options.every((o) => o.visual.type === 'sameDifferent');
+
     // Never repeat the exact same correct target in consecutive items
-    if (item.correctId === lastCorrectId) continue;
+    if (!fixedAnswers && item.correctId === lastCorrectId) continue;
 
     // Prefer distinct targets across the session while candidates remain
-    if (usedCorrectIds.has(item.correctId) && n < ITEMS_PER_SESSION * 8) continue;
+    if (!fixedAnswers && usedCorrectIds.has(item.correctId) && n < ITEMS_PER_SESSION * 8) continue;
 
     // Prevent near-identical consecutive option sets (e.g. car + turtle repeated)
     const currentOptionIds = new Set(item.options.map((o) => o.id));
-    if (lastOptionIds.size > 0 && currentOptionIds.size > 1) {
+    if (!fixedAnswers && lastOptionIds.size > 0 && currentOptionIds.size > 1) {
       let overlap = 0;
       for (const optId of currentOptionIds) {
         if (lastOptionIds.has(optId)) overlap++;
@@ -1385,22 +1405,26 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
 /** `count` practice items for one skill and level (more or fewer than one standard block). */
 export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageMonths = 72): TrainingTask[] {
   const out: TrainingTask[] = [];
-  const seen = new Set<string>();
-  let lastTargetId: string | null = null;
+  // Every exercise in a session is different, and the same correct answer comes at most twice in a
+  // row. Forbidding any repeat of the answer made two-option items strictly alternate, so a child
+  // could answer by the pattern without listening.
+  const uses = new Map<string, number>();
+  let lastSignature: string | null = null;
+  const recentAnswers: string[] = [];
 
   for (let k = 0; out.length < count && k < 32; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
       const signature = trainingEvidenceKey(task);
-      if (seen.has(signature)) continue;
-
+      if (signature === lastSignature || uses.has(signature)) continue;
       if (task.kind === 'choice') {
-        // Enforce no back-to-back target repetition across batches
-        if (lastTargetId && task.item.correctId === lastTargetId) continue;
-        lastTargetId = task.item.correctId;
+        const answer = task.item.correctId;
+        if (recentAnswers.length >= 2 && recentAnswers.every((a) => a === answer)) continue;
+        recentAnswers.push(answer);
+        if (recentAnswers.length > 2) recentAnswers.shift();
       }
-
-      seen.add(signature);
+      uses.set(signature, (uses.get(signature) ?? 0) + 1);
+      lastSignature = signature;
       out.push(
         task.kind === 'choice'
           ? { ...task, item: { ...task.item, id: `${task.item.id}-b${k}` } }
