@@ -136,7 +136,7 @@ test('parent registration limits the screening age range and requires explicit g
   await page.getByRole('button', { name: /٦ سنوات/ }).click();
   await page.getByPlaceholder('parent@example.com').fill('parent@example.test');
   await page.locator('input[type="password"]').first().fill('safe-test-password');
-  await page.locator('select', { has: page.locator('option', { hasText: 'اختر الدولة' }) }).selectOption({ label: 'قطر' });
+  await page.locator('select').first().selectOption('قطر');
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق (بصفتي ولي أمر الطفل|على إنشاء ملف الطفل)/ }).locator('input[type="checkbox"]').first();
   await expect(guardianConsent).not.toBeChecked();
   await page.getByRole('button', { name: /حفظ ملف الطفل .*وبدء الفحص/ }).click();
