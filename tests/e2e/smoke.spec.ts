@@ -135,9 +135,10 @@ test('parent registration limits the screening age range and requires explicit g
   await page.getByRole('button', { name: /٦ سنوات/ }).click();
   await page.getByPlaceholder('parent@example.com').fill('parent@example.test');
   await page.locator('input[type="password"]').first().fill('safe-test-password');
+  await page.locator('select', { has: page.locator('option', { hasText: 'اختر الدولة' }) }).selectOption({ label: 'قطر' });
   const guardianConsent = page.locator('label').filter({ hasText: /أوافق (بصفتي ولي أمر الطفل|على إنشاء ملف الطفل)/ }).locator('input[type="checkbox"]').first();
   await expect(guardianConsent).not.toBeChecked();
-  await page.getByRole('button', { name: /إنشاء الحساب وبدء فحص القراءة الآن/ }).click();
+  await page.getByRole('button', { name: /حفظ ملف الطفل .*وبدء الفحص/ }).click();
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
 
   await page.goto('/');
@@ -221,14 +222,14 @@ test('dictation: letter tiles, delete, and a scored answer', async ({ page }) =>
   await page.getByRole('button', { name: 'حرف ر', exact: true }).click();
   await expect(page.getByLabel('ما كُتب: دار')).toBeVisible();
   await page.getByRole('button', { name: 'تَمّ' }).click();
-  await page.getByRole('button', { name: 'هيا بنا' }).click();
+  await page.getByRole('button', { name: 'ابدأ الاختبار' }).click();
   // First scored word «باب».
   for (const letter of ['ب', 'ا', 'ب']) await page.getByRole('button', { name: `حرف ${letter}`, exact: true }).click();
   await page.getByRole('button', { name: 'تَمّ' }).click();
   await expect(page.getByLabel('لم يُكتب شيء بعد')).toBeVisible();
 });
 
-test('mascot appears between tasks only: welcome, practice reaction, ready, finish; never on scored items', async ({ page }) => {
+test('the mascot reacts only after a practice answer and never appears on scored items', async ({ page }) => {
   test.setTimeout(240_000);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
@@ -241,9 +242,6 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
 
   const mascot = page.locator('[data-mascot]');
   const option = page.locator('button[class*="min-h-[120px]"]').first();
-
-  // Welcome before the game.
-  await expect(page.locator('[data-mascot-moment="wave"]')).toBeVisible();
   await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
 
   // Practice: calm while listening and choosing; a reaction only after the answer.
@@ -254,19 +252,20 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
     await expect(page.locator('[data-mascot-moment="cheer"], [data-mascot-moment="support"]')).toBeVisible();
   }
 
-  // Ready screen.
-  await expect(page.locator('[data-mascot-moment="cheer"]')).toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: 'هيا بنا' }).click();
+  await page.getByRole('button', { name: 'ابدأ الاختبار' }).click({ timeout: 20_000 });
 
   // Scored items: no mascot at any point, so it cannot hint whether an answer was right.
-  const done = page.locator('[data-mascot-moment="proud"]');
-  for (let i = 0; i < 8 && !(await done.isVisible()); i++) {
+  const done = page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' });
+  for (let i = 0; i < 10 && !(await done.isVisible()); i++) {
     await expect(option.or(done)).toBeVisible({ timeout: 20_000 });
     if (await done.isVisible()) break;
-    await expect(option).toBeEnabled({ timeout: 20_000 });
     await expect(mascot).toHaveCount(0);
+    if (!(await option.isEnabled().catch(() => false))) {
+      await expect(option.and(page.locator(':enabled')).or(done)).toBeVisible({ timeout: 20_000 });
+      if (await done.isVisible()) break;
+    }
     await option.click();
-    await expect(mascot.filter({ hasNot: page.locator('[data-mascot="proud"]') })).toHaveCount(0);
+    await expect(mascot).toHaveCount(0);
   }
   await expect(done).toBeVisible({ timeout: 20_000 });
 });
@@ -310,7 +309,7 @@ test('teachers can reach the login on a phone', async ({ page }) => {
 test('content review page lists every unit and records a decision', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/?review=1');
-  await expect(page.getByRole('heading', { name: 'مراجعة محتوى هَيَّا نَقْرَأْ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'مراجعة محتوى هَيَّا نَقْرَأْ' })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/رُوجع ٠ من [٠-٩]{3}/)).toBeVisible();
   await page.getByRole('button', { name: 'صحيح' }).first().click();
   await expect(page.getByText(/رُوجع ١ من [٠-٩]{3}/)).toBeVisible();

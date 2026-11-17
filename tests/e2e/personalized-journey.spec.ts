@@ -288,7 +288,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
       await expect(optBtn).toBeEnabled({ timeout: 15_000 });
       await optBtn.click();
     }
-    await page.getByRole('button', { name: 'هيا بنا' }).click();
+    await page.getByRole('button', { name: 'ابدأ الاختبار' }).click();
 
     const child1RhymeWrongClicks = ['كَلْب', 'فِيل', 'بَيْت', 'أَرْنَب'];
     for (const wordLabel of child1RhymeWrongClicks) {
@@ -298,7 +298,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
       await expect(targetOption).toBeEnabled({ timeout: 15_000 });
       await targetOption.click();
     }
-    await expect(page.locator('[data-mascot-moment="proud"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' })).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
 
     // Open Report -> Training Plan Proposal
@@ -356,7 +356,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await page.getByRole('button', { name: 'لنتدرّب أولًا' }).click();
     await expect(optBtn).toBeEnabled({ timeout: 15_000 });
     await optBtn.click();
-    await page.getByRole('button', { name: 'هيا بنا' }).click();
+    await page.getByRole('button', { name: 'ابدأ الاختبار' }).click();
 
     for (const wrongLetter of ['ت', 'ش', 'ذ', 'ق', 'خ']) {
       const targetOption = page.locator('button[class*="min-h-[120px]"]').filter({
@@ -365,7 +365,7 @@ test.describe('end-to-end personalized screening to training journey', () => {
       await expect(targetOption).toBeEnabled({ timeout: 15_000 });
       await targetOption.click();
     }
-    await expect(page.locator('[data-mascot-moment="proud"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' })).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: 'العودة إلى خريطة الألعاب' }).click();
 
     await page.getByRole('button', { name: 'النتيجة والتقرير' }).click();

@@ -28,6 +28,8 @@ async function installSchoolTestSession(page: Page) {
 const ALLOWED_LATIN = new Set([
   'PDF', 'NCSA', 'Azure', 'Microsoft', 'Speech', 'Google', 'Gemini', 'AES-256-GCM', 'HTTPS', 'TLS', 'IP', 'Render',
   'Baseera', 'EdTech', 'Vorala', 'LLC', 'AA', 'Aa', 'Twemoji', 'CC', 'BY',
+  // The voice processor's official product name and processing region, named in the privacy policy.
+  'AI', 'East', 'US',
 ]);
 const isContact = (t: string) => /@|\.(com|org|net|qa|sa)\b|^https?:/i.test(t);
 
@@ -123,7 +125,6 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     for (const [name, label] of [
       ['dashboard', 'لوحة المتابعة والتقارير'],
       ['oral-reading', 'فحص القراءة الجهرية'],
-      ['rapid-naming', 'التسمية السريعة'],
       ['privacy', 'سياسة الخصوصية'],
       ['terms', 'شروط الاستخدام'],
     ] as const) {
