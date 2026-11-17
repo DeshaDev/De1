@@ -1155,7 +1155,7 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
   const pairs = level === 1
     ? [DISTANT_PHONEME_PAIRS[0], DISTANT_PHONEME_PAIRS[1]]
     : level === 2
-      ? [ownPairs[0] && random() < TARGET_SHARE ? ownPairs[0] : CONFUSABLE_PHONEME_PAIRS[0]]
+      ? (ownPairs[0] && random() < TARGET_SHARE ? [ownPairs[0]] : [CONFUSABLE_PHONEME_PAIRS[0], CONFUSABLE_PHONEME_PAIRS[1]])
       : [ownPairs[0] ?? CONFUSABLE_PHONEME_PAIRS[1]];
   const [a, b] = shuffleWith([...pick(pairs, random)], random);
   const vowel = level === 3 ? pick(['i', 'u'] as const, random) : 'a';
@@ -1193,12 +1193,17 @@ function letterSoundTask(random: () => number, level: Level, n: number, targets?
   const farPool = (level === 3 ? ALL_LETTERS : set).filter((l) => l !== letter && !close.includes(l));
   const distractors = [...shuffleWith(close, random), ...shuffleWith(farPool, random)].slice(0, 3);
   const vowel = level === 3 ? pick(['a', 'i', 'u'] as const, random) : 'a';
-  const sound = letter + SHORT_VOWEL[vowel];
+  const mark = SHORT_VOWEL[vowel];
+  const sound = letter + mark;
+  const glyphWithMark = (l: string): ChoiceOption => ({
+    id: l,
+    visual: { type: 'glyph', value: l + mark, label: l + mark },
+  });
   return {
     id: `tr-ls-${n}`,
     promptAr: 'أيّ حرف له هذا الصوت؟',
-    audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound} ... ${sound}؟` }],
-    options: shuffleWith([letter, ...distractors], random).map(glyph),
+    audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound}؟` }],
+    options: shuffleWith([letter, ...distractors], random).map(glyphWithMark),
     correctId: letter,
     tag: 'letterSound',
   };

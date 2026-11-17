@@ -1,4 +1,5 @@
 import { formatArabicTextWithPhonemes } from './src/utils/arabicPhonemeBank';
+import { prepareArabicTtsText } from './src/utils/naturalSpeech';
 import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -1143,7 +1144,7 @@ function aiRateLimiter(
   const clientIp = req.ip || req.socket.remoteAddress || 'local';
   const now = Date.now();
   const windowMs = 60_000;
-  const maxRequestsPerMinute = Math.max(1, Number(process.env.AI_RATE_LIMIT_PER_MINUTE ?? 20) || 20);
+  const maxRequestsPerMinute = Math.max(1, Number(process.env.AI_RATE_LIMIT_PER_MINUTE ?? 120) || 120);
 
   // Bound the number of attacker-controlled IP keys as well as each sliding window.
   const history = (aiRateLimitBuckets.get(clientIp) || []).filter(
@@ -4014,9 +4015,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
-    let cleanText = text.trim();
-    cleanText = cleanText.replace(/ـ+/g, '');
-    cleanText = cleanText.replace(/\s+/g, ' ');
+    let cleanText = prepareArabicTtsText(text);
     const selectedVoice = voice === 'ar-SA-ZariyahNeural' ? 'ar-SA-ZariyahNeural' :
                          voice === 'ar-AE-FatimaNeural' ? 'ar-AE-FatimaNeural' :
                          voice === 'ar-KW-NouraNeural' ? 'ar-KW-NouraNeural' :

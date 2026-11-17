@@ -128,6 +128,42 @@ const LEVEL_LETTERS: Record<Level, string[]> = {
   3: ['ب', 'ت', 'ث', 'س', 'ص'],
 };
 
+/**
+ * Pedagogically vetted exemplar words for teaching letter sounds with Fat'ha (َ).
+ * Every word strictly begins with the target letter carrying a Fat'ha (/a/),
+ * preventing phonemic vowel mismatch (e.g. avoiding «تُفَّاحَة» /tu/ for «تَ» /ta/).
+ */
+export const LETTER_FATHA_EXEMPLARS: Record<string, string> = {
+  أ: 'أَرْنَب',
+  ب: 'بَطَّة',
+  ت: 'تَمْر',
+  ث: 'ثَلْج',
+  ج: 'جَمَل',
+  ح: 'حَلِيب',
+  خ: 'خَرُوف',
+  د: 'دَجَاجَة',
+  ذ: 'ذَهَب',
+  ر: 'رَأْس',
+  ز: 'زَهْرَة',
+  س: 'سَمَكَة',
+  ش: 'شَمْس',
+  ص: 'صَيْف',
+  ض: 'ضَوْء',
+  ط: 'طَبْل',
+  ظ: 'ظَبْي',
+  ع: 'عَسَل',
+  غ: 'غَزَال',
+  ف: 'فَم',
+  ق: 'قَلَم',
+  ك: 'كَلْب',
+  ل: 'لَيْمُون',
+  م: 'مَطَر',
+  ن: 'نَحْلَة',
+  ه: 'هَرَم',
+  و: 'وَرْدَة',
+  ي: 'يَد',
+};
+
 /** A picturable word that starts with this letter, to anchor its sound. */
 function exampleFor(letter: string): string | null {
   return PICTURE_IDS.find((id) => LEXICON[id].onset === letter) ?? null;
@@ -776,9 +812,11 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
     case 'letterSound': {
       const letters = LEVEL_LETTERS[level];
       const soundNotes = letters.map((l) => {
-        const example = exampleFor(l);
-        return example ? `مثل أول «${word(example)}»` : 'صوت الحرف';
+        const exemplar = LETTER_FATHA_EXEMPLARS[l] || (exampleFor(l) ? word(exampleFor(l)!) : null);
+        return exemplar ? `مثل أول «${exemplar}»` : 'صوت الحرف';
       });
+      const firstGroup = letters.slice(0, 3).map((l) => `${l}َ`);
+      const secondGroup = letters.slice(3).map((l) => `${l}َ`);
       const steps: LessonStep[] = [
         {
           textAr: level === 1
@@ -794,8 +832,18 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
                 : 'قَدْ يَبْقَى الْحَرْفُ نَفْسُهُ وَيَتَغَيَّرُ صَوْتُهُ مَعَ الْفَتْحَةِ وَالْكَسْرَةِ وَالضَّمَّةِ.'
           ),
         },
-        glyphModel(letters.slice(0, 3).map((l) => `${l}َ`), `المجموعة الأولى: ${letters.slice(0, 3).join('، ')}.`, 'نَسْمَعُ صَوْتَ كُلِّ حَرْفٍ مَعَ الْفَتْحَةِ.', soundNotes.slice(0, 3)),
-        glyphModel(letters.slice(3).map((l) => `${l}َ`), `المجموعة الثانية: ${letters.slice(3).join('، ')}.`, 'نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ.', soundNotes.slice(3)),
+        glyphModel(
+          firstGroup,
+          `المجموعة الأولى: ${firstGroup.join('، ')}.`,
+          `نَسْمَعُ صَوْتَ كُلِّ حَرْفٍ مَعَ الْفَتْحَةِ: ${firstGroup.join('، ')}.`,
+          soundNotes.slice(0, 3)
+        ),
+        glyphModel(
+          secondGroup,
+          `المجموعة الثانية: ${secondGroup.join('، ')}.`,
+          `نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ: ${secondGroup.join('، ')}.`,
+          soundNotes.slice(3)
+        ),
       ];
       if (level === 3) {
         for (let i = 0; i < letters.length; i += 2) {
@@ -839,8 +887,8 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         const initialLetters = group;
         const initialForms = initialLetters.map((l) => `${l}ـ`);
         const examples = initialLetters.map((l, index) => {
-          const id = exampleFor(l);
-          return { symbol: initialForms[index], titleAr: id ? `أول كلمة ${word(id)}` : 'شكل الحرف في البداية', detailAr: LETTER_DOTS[l] ?? '' };
+          const exemplarWord = LETTER_FATHA_EXEMPLARS[l] || (exampleFor(l) ? word(exampleFor(l)!) : null);
+          return { symbol: initialForms[index], titleAr: exemplarWord ? `أول كلمة ${exemplarWord}` : 'شكل الحرف في البداية', detailAr: LETTER_DOTS[l] ?? '' };
         });
         return {
           key, skill, level, titleAr: 'نلاحظ الحرف في أول الكلمة',
@@ -975,8 +1023,9 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
       return { textAr: `${e.syllables.join(' | ')}: ${e.syllables.length} أجزاء`.replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]), audio: [...say('صَفِّقْ مَعِي.'), ...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 }))], pictureIds: [e.id], glyphs: [] };
     }
     case 'letterSound': {
-      const sound = item.audio.map((s) => s.text.match(/صَوْتُهُ: (\S+)/)?.[1]).find(Boolean);
-      return { textAr: `هذا هو الحرف الصحيح: ${correct}`, audio: sound ? say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', sound) : say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.'), pictureIds: [], glyphs: [correct] };
+      const sound = item.audio.map((s) => s.text.match(/صَوْتُهُ:\s*([^\s؟?]+)/)?.[1]).find(Boolean);
+      const displayed = labelOf(item, correct);
+      return { textAr: `هذا هو الحرف الصحيح: ${displayed}`, audio: sound ? say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', sound) : say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.'), pictureIds: [], glyphs: [displayed] };
     }
     case 'contrast':
     case 'catch': {

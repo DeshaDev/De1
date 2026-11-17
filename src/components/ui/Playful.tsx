@@ -84,33 +84,21 @@ const NAME_OF_SOUND: Record<string, string> = Object.fromEntries(HERO_LETTERS.ma
  * recorded clip), «هُدهُد» hops, and the bubble names the letter. Drawn SVG with CSS motion, so it
  * works the same on every device. The bubble sits above the scene, never over the bird.
  */
-export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! المس حرفًا لأُسمعك صوته.' }: { message?: string }) {
-  const [said, setSaid] = useState<string | null>(null);
-  const [hops, setHops] = useState(0);
-  const onSay = useCallback((sound: string) => {
-    setSaid(sound);
-    setHops((n) => n + 1);
-    void import('../profile/audio').then(({ speak, stopSpeech }) => {
-      stopSpeech();
-      return speak(sound);
-    });
-  }, []);
+export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! أهلاً بكم في هيّا نقرأ.' }: { message?: string }) {
   const scene = (
     <div className="relative h-full w-full">
       {HERO_LETTERS.map((l) => (
-        <button
+        <div
           key={l.letter}
-          type="button"
-          onClick={() => onSay(l.sound)}
-          className={`hn-letter absolute ${l.pos}`}
-          aria-label={`اسمع صوت ${l.name}`}
+          className={`hn-letter pointer-events-none select-none absolute ${l.pos}`}
+          aria-hidden="true"
         >
           <LetterBlock letter={l.letter} color={l.color} size={78} rotate={l.rotate} />
-        </button>
+        </div>
       ))}
       <div className="absolute inset-x-0 bottom-[2%] flex justify-center">
-        <div key={hops} className={`hn-bird w-[54%] ${hops ? 'hn-bird-hop' : ''}`}>
-          <Mascot mood={said ? 'cheer' : 'wave'} size={230} className="h-auto w-full" animated />
+        <div className="hn-bird w-[54%]">
+          <Mascot mood="wave" size={230} className="h-auto w-full" animated />
         </div>
       </div>
     </div>
@@ -119,14 +107,7 @@ export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! ال�
     <div className="relative mx-auto flex w-full max-w-[560px] flex-col items-center">
       <div className="relative z-10 w-[88%] max-w-[23rem]">
         <p className="mascot-bubble mascot-bubble-down font-child text-center" role="status" aria-live="polite">
-          {said ? (
-            <>
-              <span className="text-3xl font-black align-middle" style={{ color: 'var(--joy-coral-deep)' }}>{said}</span>
-              {'  '}هذا صوت {NAME_OF_SOUND[said] ?? 'الحرف'}. جرّب حرفًا آخر!
-            </>
-          ) : (
-            message
-          )}
+          {message}
         </p>
       </div>
       <div className="joy-decor relative -mt-1 w-full aspect-[1.1]">

@@ -339,14 +339,22 @@ export function formatArabicTextWithPhonemes(rawText: string): string {
     return expandArabicPhonemeSound(clean);
   }
 
-  // Handle letter-sound prompt patterns like: 'أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟'
-  const promptMatch = clean.match(/^(.*?صَوْتُهُ\s*:?\s*)([^\s.]+)(\s*\.\.\.\s*|\s*،\s*)([^\s؟?]+)(\s*[؟?]?.*)$/);
-  if (promptMatch) {
-    const [, prefix, sound1, , sound2, suffix] = promptMatch;
+  // Handle letter-sound prompt patterns like: 'أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟' (double) or 'أَيُّ حَرْفٍ صَوْتُهُ: تُ؟' (single)
+  const promptMatchDouble = clean.match(/^(.*?صَوْتُهُ\s*:?\s*)([^\s.]+)(\s*\.\.\.\s*|\s*،\s*)([^\s؟?]+)(\s*[؟?]?.*)$/);
+  if (promptMatchDouble) {
+    const [, prefix, sound1, , sound2, suffix] = promptMatchDouble;
     const formattedSound1 = expandArabicPhonemeSound(sound1);
     const formattedSound2 = expandArabicPhonemeSound(sound2);
     const cleanPrefix = prefix.replace(/:\s*$/, ' ');
     return `${cleanPrefix}${formattedSound1}، ${formattedSound2}${suffix || '؟'}`;
+  }
+
+  const promptMatchSingle = clean.match(/^(.*?صَوْتُهُ\s*:?\s*)([^\s؟?]+)(\s*[؟?]?.*)$/);
+  if (promptMatchSingle) {
+    const [, prefix, sound, suffix] = promptMatchSingle;
+    const formattedSound = expandArabicPhonemeSound(sound);
+    const cleanPrefix = prefix.replace(/:\s*$/, ' ');
+    return `${cleanPrefix}${formattedSound}${suffix || '؟'}`;
   }
 
   return clean;

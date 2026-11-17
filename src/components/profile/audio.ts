@@ -1,5 +1,5 @@
 import type { AudioSegment } from '../../cognitiveProfile/battery';
-import { playNaturalArabicAudio, stopNaturalArabicAudio } from '../../utils/naturalSpeech';
+import { playNaturalArabicAudio, stopNaturalArabicAudio, prepareArabicTtsText } from '../../utils/naturalSpeech';
 import { audioKey } from '../../cognitiveProfile/audioCatalog';
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -31,7 +31,8 @@ export function preloadAudioManifest(): void {
 /** Play the recorded clip for this exact text, if one exists. Resolves false when there is none. */
 async function playRecordedClip(text: string): Promise<boolean> {
   const manifest = await loadManifest();
-  const clip = manifest?.clips[audioKey(text)];
+  const prepared = prepareArabicTtsText(text);
+  const clip = manifest?.clips[audioKey(text)] || (prepared ? manifest?.clips[audioKey(prepared)] : undefined);
   if (!clip) return false;
   return new Promise<boolean>((resolve) => {
     const audio = new Audio(AUDIO_BASE + clip.file);

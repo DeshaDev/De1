@@ -77,7 +77,7 @@ describe('calm reading canvas', () => {
 
   it('the moving mascot stays still when the device asks for reduced motion', () => {
     const css = fs.readFileSync('src/index.css', 'utf8');
-    assert.match(css, /prefers-reduced-motion: reduce\) \{\n  \.mascot-animated \.m-body[^}]*animation: none !important;/);
+    assert.match(css, /prefers-reduced-motion: reduce\)\s*\{\r?\n  \.mascot-animated \.m-body[^}]*animation: none !important;/);
   });
 
   it('every moving part turns around its own joint, separate from its pose', () => {
@@ -125,7 +125,7 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     assert.match(html, /role="status"[^>]*aria-live="polite"[^>]*>مرحبًا</);
     assert.equal((html.match(/data-mascot=/g) ?? []).length, 1);
     assert.match(html, /data-hero-game="true"/);
-    assert.match(html, /aria-label="اسمع صوت الباء"/);
+    assert.match(html, /pointer-events-none/);
   });
 
   it('no looping animation anywhere in the joyful layer', () => {
@@ -142,6 +142,6 @@ describe('joyful layer: joyful edges, calm centre', async () => {
     for (const rule of home.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)) {
       assert.match(rule[1], /\.hn-bird|\.mascot-animated/, `only the moving mascot may loop: ${rule[1].trim()}`);
     }
-    assert.match(home, /prefers-reduced-motion: reduce\) \{\n  \.hn-bird, \.hn-bird-hop \{ animation: none; \}/);
+    assert.match(home, /prefers-reduced-motion: reduce\)\s*\{\r?\n  \.hn-bird, \.hn-bird-hop \{ animation: none; \}/);
   });
 });
