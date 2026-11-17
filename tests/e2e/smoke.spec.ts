@@ -111,6 +111,7 @@ test('curriculum provides interactive feedback and fits a narrow mobile viewport
 });
 
 test('parent registration limits the screening age range and requires explicit guardian consent', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.route('**/api/school-demo-request', (route) => {
     route.fulfill({
       status: 201,

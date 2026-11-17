@@ -306,6 +306,11 @@ test.describe('end-to-end personalized screening to training journey', () => {
     await page.getByRole('button', { name: 'الانتقال إلى البرنامج التدريبي' }).click();
     await expect(page.getByRole('heading', { name: 'الخطة المقترحة من نتائج الفحص' })).toBeVisible();
 
+    // The plan keeps details in collapsed sections; open them before reading.
+    for (const section of ['أصوات وحروف نركّز عليها', 'لماذا اختيرت هذه المهارات؟']) {
+      const summary = page.locator('summary', { hasText: section });
+      if (await summary.isVisible().catch(() => false)) await summary.click();
+    }
     await expect(page.getByText(/أصوات س\/ص/)).toBeVisible();
     await expect(page.getByText('التمييز السمعي', { exact: true })).toBeVisible();
     await expect(page.getByText('القافية', { exact: true })).toBeVisible();
