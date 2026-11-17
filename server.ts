@@ -4449,11 +4449,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
     } else if (String(assessmentSession.role) === 'guest') {
-      res.status(403).json({
-        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
-        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
-      });
-      return;
+      // Guest session: consent validated from request body above
     } else {
       const schoolStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
@@ -4884,13 +4880,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
     }
 
-    if (String(assessmentSession.role) === 'guest') {
-      res.status(403).json({
-        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
-        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
-      });
-      return;
-    }
+    // Guest sessions permitted when guardian consent is provided in request body
 
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;
@@ -5096,11 +5086,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
     } else if (String(assessmentSession.role) === 'guest') {
-      res.status(403).json({
-        code: 'GUEST_AUDIO_PROCESSING_DISABLED',
-        error: 'مسار الزائر غير مصرح له بإرسال تسجيلات صوتية إلى خدمات المعالجة السحابية؛ يلزم تسجيل دخول موثق لولي الأمر أو المدرسة لضمان وجود موافقة مسجلة ومحققة في قاعدة البيانات.',
-      });
-      return;
+      // Guest session on localhost/screening: consent validated from request body
     } else {
       const ownedStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId

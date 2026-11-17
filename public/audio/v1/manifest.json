@@ -5222,18 +5222,18 @@
     "58b8eecb84758036": {
       "file": "58b8eecb84758036.mp3",
       "text": "فُوبُ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "voice": "ar-SA-ZariyahNeural (pure faa)",
+      "model": "neural_v2",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 11232
     },
     "98ccc4b2de3dc1a2": {
       "file": "98ccc4b2de3dc1a2.mp3",
       "text": "مَاءُ",
-      "voice": "ar-AE-FatimaNeural (damma-preserved)",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 30528
+      "bytes": 16343
     },
     "4a51e0ebf311ad43": {
       "file": "4a51e0ebf311ad43.mp3",

@@ -129,6 +129,7 @@ function audioFailureMessage(error: unknown): string {
   if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم يتمكن محرك الصوت من حسم جميع الكلمات. لم نحسب الأخطاء أو الدرجة.';
   if (code === 'AUDIO_SERVER_UNAVAILABLE') return 'خادم التقييم الصوتي غير متصل الآن، لذلك ستبقى المهمة دون درجة.';
   if (code === 'COGNITIVE_AUDIO_WORD_UNCONFIRMED') return 'لم يتمكن محرك الصوت من حسم نطق هذه الكلمة. لم نُسجّلها خطأ؛ أعد تسجيل الكلمة وحدها.';
+  if (code && /[\u0600-\u06FF]/.test(code)) return code;
   return 'تعذر إكمال التقييم الصوتي عبر الخدمة. يمكنك حفظ المهمة دون درجة وإعادة المحاولة لاحقًا.';
 }
 
