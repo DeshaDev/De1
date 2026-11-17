@@ -124,7 +124,7 @@ export function LessonPlayer({ lesson, onDone, isReview = false }: { lesson: Les
     <div className="flex w-full max-w-3xl flex-col items-center gap-5 text-center" dir="rtl" data-testid="lesson-player">
       <section className="w-full rounded-3xl border border-line bg-card p-4 sm:p-6 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="rounded-full bg-brand-tint px-3 py-1.5 font-child text-sm font-black text-brand">{isReview ? 'نراجع مع هُدهُد' : 'نتعلّم مع هُدهُد'}</span>
+          <span className="rounded-full bg-brand-tint px-3 py-1.5 font-child text-sm font-black text-brand">{isReview ? 'مراجعة المهارة' : 'شرح المهارة'}</span>
           <span className="text-xs font-bold text-slate-500">الخطوة {ar(step + 1)} من {ar(lesson.steps.length)}</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-soft" role="progressbar" aria-label="تقدّم الدرس" aria-valuemin={1} aria-valuemax={lesson.steps.length} aria-valuenow={step + 1}>
