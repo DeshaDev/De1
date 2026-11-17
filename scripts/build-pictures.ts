@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { LEXICON } from '../src/cognitiveProfile/lexicon';
-import { pictureFile, UI_PICTURES } from '../src/cognitiveProfile/pictures';
+import { twemojiFilename, UI_PICTURES } from '../src/cognitiveProfile/pictures';
 
 const SRC = path.resolve('node_modules/@twemoji/svg');
 const OUT = path.resolve('public/pictures');
@@ -17,7 +17,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const wanted = new Set([...Object.values(LEXICON).map((e) => e.emoji), ...UI_PICTURES]);
 const missing: string[] = [];
 for (const emoji of wanted) {
-  const file = pictureFile(emoji);
+  const file = twemojiFilename(emoji);
   const from = path.join(SRC, file);
   if (!fs.existsSync(from)) {
     missing.push(`${emoji} (${file})`);

@@ -507,15 +507,9 @@ function SetupView({
               <Headphones className="w-4 h-4" /> اختبار الصوت
             </button>
           </div>
-          <label className="bz-field">
-            <span className="bz-label">لهجة الطفل المعتادة</span>
-            <select value={dialect} onChange={(e) => setDialect(e.target.value as HomeDialect)} className="bz-input">
-              <option value="other">لهجة عربية أخرى أو غير محددة</option>
-              <option value="egyptian">المصرية</option>
-              <option value="saudi">السعودية</option>
-            </select>
-            <span className="bz-hint">نصوص الفحص بالفصحى. يتاح تقييم النطق الآلي حاليًا بنموذجي مصر والسعودية فقط؛ بقية اللهجات تتابع المهام دون درجة صوتية.</span>
-          </label>
+          <div className="rounded-xl bg-brand-soft p-3 bz-small text-ink-2">
+            <span>يعتمد التقييم الصوتي والقراءة الجهرية الفصحى المعيارية، وهو متاح لجميع الأطفال دون شروط لهجة.</span>
+          </div>
           <div className="grid sm:grid-cols-2 gap-2">
             {([
               ['quiet', 'المكان هادئ'],

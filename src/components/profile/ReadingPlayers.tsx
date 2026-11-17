@@ -116,9 +116,6 @@ function audioAvailabilityMessage(session: CognitiveAudioSessionContext): string
   if (session.guardianAudioConsentGiven !== true) {
     return 'لم تُمنح موافقة منفصلة على تسجيل صوت الطفل ومعالجته. يمكنك متابعة المهمة دون درجة.';
   }
-  if (!session.speechLocale) {
-    return 'لم يُحدَّد نموذج مدعوم لتقييم النطق. يتوفر حاليًا نموذجا مصر والسعودية فقط؛ يمكنك متابعة المهمة دون درجة صوتية، ولن نفترض لهجة أخرى.';
-  }
   return 'التقييم الصوتي غير متاح حاليًا لهذه الجلسة؛ ستبقى المهمة دون درجة.';
 }
 
@@ -258,8 +255,7 @@ export function ReadListAudioPlayer({
   const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>([]);
   const maxWordDurationSeconds = 30;
   const supported = audioSession.guardianConsentGiven === true &&
-    audioSession.guardianAudioConsentGiven === true &&
-    Boolean(audioSession.speechLocale);
+    audioSession.guardianAudioConsentGiven === true;
   const currentItem = items[currentItemIndex];
 
   useEffect(() => {
@@ -659,8 +655,7 @@ export function PassagePlayer({
   const cachedDurationMsRef = useRef(0);
 
   const supported = audioSession.guardianConsentGiven === true &&
-    audioSession.guardianAudioConsentGiven === true &&
-    Boolean(audioSession.speechLocale);
+    audioSession.guardianAudioConsentGiven === true;
 
   useEffect(() => {
     if (phase !== 'recording') return;
@@ -1094,8 +1089,7 @@ export function RanPlayer({
   const startingRef = useRef(false);
   const finalizingRef = useRef(false);
   const supported = audioSession.guardianConsentGiven === true &&
-    audioSession.guardianAudioConsentGiven === true &&
-    Boolean(audioSession.speechLocale);
+    audioSession.guardianAudioConsentGiven === true;
   const taskId: CognitiveAudioTaskId = display === 'picture' ? 'ranObjects' : 'ranLetters';
   const byId = new Map(symbols.map((symbol) => [symbol.id, symbol]));
 

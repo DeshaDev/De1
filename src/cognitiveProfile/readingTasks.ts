@@ -81,7 +81,7 @@ export const NONWORD_PRACTICE: ReadItem[] = [
 ];
 
 export const NONWORD_ITEMS: ReadItem[] = [
-  { id: 'nw-1', text: 'فَزَبُ', level: 1, structureAr: 'مقطعان بحركات قصيرة وضمة' },
+  { id: 'nw-1', text: 'بَتَمُ', level: 1, structureAr: 'مقطعان بحركات قصيرة وضمة' },
   { id: 'nw-2', text: 'دُمَكُ', level: 1, structureAr: 'مقطعان بحركات قصيرة وضمة' },
   { id: 'nw-3', text: 'شِدَفُ', level: 1, structureAr: 'مقطعان بحركات قصيرة وضمة' },
   { id: 'nw-4', text: 'زَفَكُ', level: 1, structureAr: 'مقطعان بحركات قصيرة وضمة' },

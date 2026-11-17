@@ -184,7 +184,7 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
           <h2 className="font-child text-xl font-black text-slate-900">تحدّي قراءة جديدة</h2>
         </div>
         <p className="text-sm leading-6 text-slate-600">
-          يحتاج القياس إلى موافقة ولي الأمر المسجّلة على حفظ ملف الطفل ومعالجة صوته، وإلى لهجة يدعمها التقييم الآلي حاليًا.
+          يحتاج القياس إلى موافقة ولي الأمر المسجّلة على حفظ ملف الطفل ومعالجة صوته.
         </p>
         <p className="text-xs leading-5 text-slate-500">
           لا نستخدم تصحيحًا يدويًا بديلًا، ولا نحسب درجة عندما لا تتوفر شروط التقييم.

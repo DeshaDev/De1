@@ -404,7 +404,7 @@ function letterSoundItem(id: string, sound: string, letter: string, options: str
   return {
     id,
     promptAr: 'أيّ حرف له هذا الصوت؟',
-    audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound} ... ${sound}؟` }],
+    audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound}؟` }],
     options: options.map(glyph),
     correctId: letter,
     tag: 'letterSound',

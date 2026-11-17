@@ -38,7 +38,6 @@ function assertAudioSession(session: CognitiveAudioSessionContext): void {
   ) {
     throw new Error('AUDIO_CONSENT_REQUIRED');
   }
-  if (!session.speechLocale) throw new Error('UNSUPPORTED_SPEECH_DIALECT');
 }
 
 async function readError(response: Response): Promise<never> {
@@ -78,7 +77,7 @@ export async function assessCognitiveAudio(args: {
       studentId: session.studentId,
       audioWavBase64: recording.audioWavBase64,
       durationSeconds: recording.durationSeconds,
-      language: session.speechLocale,
+      language: session.speechLocale || 'ar-SA',
       guardianConsentGiven: session.guardianConsentGiven,
       guardianAudioConsentGiven: session.guardianAudioConsentGiven,
       guardianConsentRecordedAt: session.guardianConsentRecordedAt,
@@ -130,7 +129,7 @@ export async function assessCognitiveAudioWord(args: {
       studentId: session.studentId,
       audioWavBase64: recording.audioWavBase64,
       durationSeconds: recording.durationSeconds,
-      language: session.speechLocale,
+      language: session.speechLocale || 'ar-SA',
       guardianConsentGiven: session.guardianConsentGiven,
       guardianAudioConsentGiven: session.guardianAudioConsentGiven,
       guardianConsentRecordedAt: session.guardianConsentRecordedAt,

@@ -21,11 +21,9 @@ export function normalizeHomeDialect(value: unknown, country?: string): HomeDial
   return HOME_DIALECTS.includes(value as HomeDialect) ? value as HomeDialect : 'other';
 }
 
-/** Azure pronunciation assessment currently has Arabic regional models for Egypt and Saudi Arabia only. */
-export function pronunciationLocaleForDialect(dialect: HomeDialect): PronunciationLocale | undefined {
-  if (dialect === 'egyptian') return 'ar-EG';
-  if (dialect === 'saudi') return 'ar-SA';
-  return undefined;
+/** Standard Arabic (الفصحى المعيارية - ar-SA) is the unified evaluation benchmark for all children. */
+export function pronunciationLocaleForDialect(_dialect?: HomeDialect): PronunciationLocale {
+  return 'ar-SA';
 }
 
 export const DIALECT_LABELS_AR: Record<HomeDialect, string> = {

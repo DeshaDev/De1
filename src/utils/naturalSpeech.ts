@@ -90,8 +90,8 @@ export function prepareArabicTtsText(text: string): string {
   s = s.replace(/:\s*/g, ' ');
 
   // 3. At pause (end of string or before . ؟ ? ! ، …):
-  //    a) Convert taa marbuta (ة) after long alif (ا) to اه (e.g. سُلَحْفَاة -> سُلَحْفَاه)
-  s = s.replace(/اة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'اه');
+  //    a) Convert taa marbuta (ة) after long alif (ا) to اهْ (e.g. سُلَحْفَاة -> سُلَحْفَاهْ)
+  s = s.replace(/اة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'اهْ');
   //    b) Convert other taa marbuta (ة) at pause to هْ (e.g. سَمَكَة -> سَمَكَهْ)
   s = s.replace(/ة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'هْ');
 

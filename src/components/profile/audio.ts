@@ -32,7 +32,8 @@ export function preloadAudioManifest(): void {
 async function playRecordedClip(text: string): Promise<boolean> {
   const manifest = await loadManifest();
   const prepared = prepareArabicTtsText(text);
-  const clip = manifest?.clips[audioKey(text)] || (prepared ? manifest?.clips[audioKey(prepared)] : undefined);
+  // Prioritize authentic waqf pronunciations (e.g. كَهْ over raw كَة, and سُلَحْفَاهْ over raw سُلَحْفَاة)
+  const clip = (prepared ? manifest?.clips[audioKey(prepared)] : undefined) || manifest?.clips[audioKey(text)];
   if (!clip) return false;
   return new Promise<boolean>((resolve) => {
     const audio = new Audio(AUDIO_BASE + clip.file);

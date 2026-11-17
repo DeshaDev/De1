@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { audioKey, normalizeSpokenText } from '../src/cognitiveProfile/audioCatalog';
-import { lessonFor, SkillId, Level } from '../src/cognitiveProfile/curriculum';
+import { lessonFor } from '../src/cognitiveProfile/curriculum';
+import type { SkillId, Level } from '../src/cognitiveProfile/training';
 import { prepareArabicTtsText } from '../src/utils/naturalSpeech';
 
 const envContent = fs.readFileSync('.env', 'utf8');

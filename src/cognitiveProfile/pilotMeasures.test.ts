@@ -58,11 +58,11 @@ describe('starting-level check (placement)', () => {
 });
 
 describe('Arabic pronunciation model selection', () => {
-  it('maps only explicitly selected Egyptian and Saudi dialects to Azure pronunciation models', () => {
-    assert.equal(pronunciationLocaleForDialect('egyptian'), 'ar-EG');
+  it('unifies pronunciation models under Standard Arabic benchmark for all children', () => {
+    assert.equal(pronunciationLocaleForDialect('egyptian'), 'ar-SA');
     assert.equal(pronunciationLocaleForDialect('saudi'), 'ar-SA');
     for (const dialect of ['msa', 'gulf', 'levantine', 'iraqi', 'maghrebi', 'sudanese', 'other'] as const) {
-      assert.equal(pronunciationLocaleForDialect(dialect), undefined, dialect);
+      assert.equal(pronunciationLocaleForDialect(dialect), 'ar-SA', dialect);
     }
   });
 
