@@ -154,8 +154,13 @@ export function mapAzureAssessmentToReferenceWords(args: {
       };
     }
 
+    const rawTokens = transTrim.split(/\s+/).filter(Boolean);
     const targetNorm = normalizeArabicToken(targetWord);
-    const transNorm = normalizeArabicToken(transTrim);
+    
+    // If the acoustic aligner repeated the target word (e.g. "فيل فيل" for "فِيلُ"):
+    const isTargetRepetition = rawTokens.length > 1 && rawTokens.every(t => normalizeArabicToken(t) === targetNorm);
+    const cleanSpoken = isTargetRepetition ? rawTokens[0] : rawTokens.filter((t, i) => i === 0 || t !== rawTokens[i - 1]).join(' ');
+    const transNorm = normalizeArabicToken(cleanSpoken);
 
     // Exact or inflectional match:
     // e.g. بَيْتُ vs بيتاً (tanween fat-h), بيتو (dammah elongation), بيت (waqf sukun), سمكة vs سمكه (taa marbuta), الشمس vs شمس
@@ -176,7 +181,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
         assessmentMode: 'short-audio-miscue',
         dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
         durationSeconds,
-        transcript: transTrim,
+        transcript: cleanSpoken,
         wordsCount: 1,
         correctWordsCount: isCorrect ? 1 : 0,
         substitutionsCount: isCorrect ? 0 : 1,
@@ -190,7 +195,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
           word: targetWord,
           errorType,
           accuracyScore: score,
-          spokenWord: transTrim,
+          spokenWord: cleanSpoken,
           notesAr: errorType === 'None' ? 'نطق مطابق للنص المرجعي.' : errorType === 'DialectVariant' ? 'قراءة صحيحة للكلمة مع تنوين أو حركة إعراب أو وقف.' : 'انخفاض في دقة نطق بعض الحروف.',
         }],
         accuracyScore: score,
@@ -200,13 +205,13 @@ export function mapAzureAssessmentToReferenceWords(args: {
       };
     }
 
-    // Divergent word spoken (e.g. child said "كتاب" instead of target "قلم")
+    // Divergent word spoken (e.g. child said "دارفيل" or "كتاب" instead of target "فيل" or "قلم")
     return {
       sourceModel: 'azure_pronunciation_assessment',
       assessmentMode: 'short-audio-miscue',
       dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
       durationSeconds,
-      transcript: transTrim,
+      transcript: cleanSpoken,
       wordsCount: 1,
       correctWordsCount: 0,
       substitutionsCount: 1,
@@ -220,8 +225,8 @@ export function mapAzureAssessmentToReferenceWords(args: {
         word: targetWord,
         errorType: 'Substitution',
         accuracyScore: 0,
-        spokenWord: transTrim,
-        notesAr: `استبدال كلمة: نطق الطفل «${transTrim}» بدلًا من «${targetWord}».`,
+        spokenWord: cleanSpoken,
+        notesAr: `استبدال كلمة: نطق الطفل «${cleanSpoken}» بدلًا من «${targetWord}».`,
       }],
       accuracyScore: 0,
       fluencyScore: 70,
@@ -516,25 +521,65 @@ export async function assessReadingAudioWithAzure(args: {
     const pronunciationHeader = Buffer.from(JSON.stringify(pronunciationParameters)).toString('base64');
     const endpoint =
       `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(args.language)}&format=detailed`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Pronunciation-Assessment': pronunciationHeader,
-        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-        Accept: 'application/json',
-      },
-      body: wav,
-    });
-    if (!response.ok) {
-      throw new Error(`AZURE_SHORT_AUDIO_HTTP_${response.status}`);
+    // For single-word screening items, run unconstrained ASR in parallel so that
+    // if the child speaks a different word (e.g. "دارفيل" or "كتاب" instead of "فيل"),
+    // Azure's forced-alignment language model doesn't loop or hallucinate repetitions of the reference word.
+    const runUnconstrainedAsr = args.referenceWords.length === 1;
+
+    const [pronResponse, freeResponse] = await Promise.all([
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': key,
+          'Pronunciation-Assessment': pronunciationHeader,
+          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+          Accept: 'application/json',
+        },
+        body: wav,
+      }),
+      runUnconstrainedAsr
+        ? fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': key,
+              'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+              Accept: 'application/json',
+            },
+            body: wav,
+          }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (!pronResponse.ok) {
+      throw new Error(`AZURE_SHORT_AUDIO_HTTP_${pronResponse.status}`);
     }
 
-    const payload: any = await response.json();
+    const payload: any = await pronResponse.json();
     const nBest = payload?.NBest?.[0] ?? payload?.nBest?.[0];
-    const transcript = String(
+    let transcript = String(
       payload?.DisplayText ?? nBest?.Display ?? nBest?.Lexical ?? nBest?.ITN ?? ''
     ).trim();
+
+    if (freeResponse && freeResponse.ok) {
+      const freePayload: any = await freeResponse.json().catch(() => null);
+      const freeNBest = freePayload?.NBest?.[0] ?? freePayload?.nBest?.[0];
+      const freeText = String(
+        freePayload?.DisplayText ?? freeNBest?.Display ?? freeNBest?.Lexical ?? freeNBest?.ITN ?? ''
+      ).replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+
+      if (freeText) {
+        const targetClean = normalizeArabicToken(args.referenceWords[0]);
+        const freeClean = normalizeArabicToken(freeText);
+        const pronClean = normalizeArabicToken(transcript);
+
+        // If forced alignment echoed or repeated the reference word (e.g. "فيل فيل") while free ASR
+        // recognized what was actually spoken (e.g. "درفيل" or "كتاب"):
+        if (freeClean !== targetClean || pronClean !== targetClean || pronClean.split(/\s+/).length > 1) {
+          transcript = freeText;
+        }
+      }
+    }
+
     if (!transcript) throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
 
     const provider = extractWordsAndMetrics([payload]);

@@ -281,3 +281,36 @@ test('Azure single word assessment accepts case endings and tanween without misc
   assert.ok(dammahResult.words[0].errorType === 'None' || dammahResult.words[0].errorType === 'DialectVariant');
   assert.equal(dammahResult.assessmentComplete, true);
 });
+
+test('Azure single word assessment detects compound/substituted word darfeel vs feel', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['فِيلُ'],
+    transcript: 'دارفيل',
+    durationSeconds: 1.0,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'فيل', errorType: 'Mispronunciation', accuracyScore: 25 },
+    ],
+  });
+  assert.equal(result.words[0].word, 'فِيلُ');
+  assert.equal(result.words[0].spokenWord, 'دارفيل');
+  assert.equal(result.words[0].errorType, 'Substitution');
+  assert.equal(result.assessmentComplete, true);
+  assert.equal(result.correctWordsCount, 0);
+});
+
+test('Azure single word assessment deduplicates looped reference words like feel feel', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['فِيلُ'],
+    transcript: 'فيل فيل',
+    durationSeconds: 1.0,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'فيل', errorType: 'None', accuracyScore: 95 },
+    ],
+  });
+  assert.equal(result.words[0].word, 'فِيلُ');
+  assert.equal(result.words[0].spokenWord, 'فيل');
+  assert.equal(result.words[0].errorType, 'None');
+  assert.equal(result.assessmentComplete, true);
+});
