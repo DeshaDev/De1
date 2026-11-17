@@ -167,32 +167,34 @@ function isInflectionalOrPauseMatch(cleanSpoken: string, refClean: string): bool
   return false;
 }
 
-function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string): { diagnosis: string; isCorrect: boolean } {
+function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string, serverNotesAr?: string): { diagnosis: string; isCorrect: boolean } {
   const cleanSpoken = (spokenRaw || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
   const refClean = stripHarakat(expectedVowelled);
   const spkClean = stripHarakat(cleanSpoken);
+  const cleanServerNote = (serverNotesAr || '').trim();
 
   // 1. Silent or no voice captured
   if (!spkClean || cleanSpoken === 'SILENCE' || cleanSpoken === '.' || cleanSpoken === 'صمت' || (errorType === 'Omission' && !cleanSpoken)) {
     return {
       isCorrect: false,
-      diagnosis: 'لم نلتقط صوتًا واضحًا أو كافيًا للكلمة؛ تحدّث بوضوح قرب الميكروفون.',
+      diagnosis: cleanServerNote || 'لم نلتقط صوتًا واضحًا أو كافيًا للكلمة؛ تحدّث بوضوح قرب الميكروفون.',
     };
   }
 
-  // 2. Exact match or inflectional/vowel variant (e.g. بيتاً / بيتو / بيت for بَيْتُ)
+  // 2. Exact match or inflectional/vowel variant
   if (isInflectionalOrPauseMatch(spkClean, refClean)) {
     if (errorType === 'None' || errorType === 'DialectVariant') {
       return {
         isCorrect: true,
-        diagnosis: spkClean === refClean
+        diagnosis: cleanServerNote || (spkClean === refClean
           ? 'مطابقة صوتية واضحة للكلمة المطلوبة على مستوى الكلمة.'
-          : 'قراءة صحيحة للكلمة مع مراعاة التنوين أو الحركة الإعرابية أو الوقف.',
+          : 'قراءة صحيحة للكلمة مع مراعاة التنوين أو الحركة الإعرابية أو الوقف.'),
       };
     }
+    // Preserve server-detected short-vowel / tashkeel / case-ending mispronunciation (e.g. كُتُب vs كَتَبَ or بَيْتًا vs بَيْتُ)
     return {
-      isCorrect: true,
-      diagnosis: `قراءة مقبولة للكلمة («${cleanSpoken || expectedVowelled}») مع اختلاف طفيف في نبرة الصوت.`,
+      isCorrect: false,
+      diagnosis: cleanServerNote || `تطابقت الحروف مع اختلاف في الحركات أو التشكيل (سُمع «${cleanSpoken}» بدلًا من «${expectedVowelled}»).`,
     };
   }
 
@@ -200,7 +202,7 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
   if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
     return {
       isCorrect: false,
-      diagnosis: `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلًا من الكلمة المطلوبة «${expectedVowelled}».`,
+      diagnosis: cleanServerNote || `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلًا من الكلمة المطلوبة «${expectedVowelled}».`,
     };
   }
 
@@ -361,7 +363,8 @@ export function ReadListAudioPlayer({
         currentItem.text,
         wordReceipt.word.spokenWord || wordReceipt.transcript,
         wordReceipt.word.accuracyScore,
-        wordReceipt.word.errorType
+        wordReceipt.word.errorType,
+        wordReceipt.word.notesAr
       );
       setLastWordFeedback({
         word: currentItem.text,

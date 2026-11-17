@@ -26,6 +26,7 @@ export interface CognitiveAudioWordReceipt {
     errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
     accuracyScore: number;
     spokenWord: string | null;
+    notesAr?: string;
   };
 }
 

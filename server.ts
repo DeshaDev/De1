@@ -12,6 +12,11 @@ import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionP
 import { assessReadingAudioWithAzure, getAzureSpeechCredentials, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
 import { assessReadingAudioWithGemini, getGeminiApiKey, getOpenRouterApiKey } from './src/utils/geminiAudioAssessment';
 import {
+  buildSingleWordAssessmentFromBlindScore,
+  scoreBlindSingleWordArabic,
+  transcribeArabicBlindWithGemini,
+} from './src/utils/blindVowelledScoring';
+import {
   ACTIVITY_IDS,
   DraftPlanSchema,
   PlanFactsSchema,
@@ -5140,14 +5145,46 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
     try {
       const requestStartedAt = Date.now();
-      let result = await assessReadingAudioWithAzure({
-        referenceText: wordItem ? wordItem.referenceWord : task.referenceWords.join(' '),
-        referenceWords: wordItem ? [wordItem.referenceWord] : task.referenceWords,
-        audioWavBase64: body.audioWavBase64,
-        durationSeconds,
-        language: body.language,
-        dialectLabel: 'الفصحى المعيارية (ar-SA)',
-      });
+      let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>>;
+
+      if (wordItem && (getOpenRouterApiKey() || getGeminiApiKey())) {
+        // Two-stage Blind Vowelled Transcription for isolated word & nonword reading:
+        // Stage 1 listens blindly (zero reference text -> zero confirmation bias).
+        // Stage 2 scores consonants, internal short vowels (e.g. كَتَبَ vs كُتُب),
+        // Arabic pausal reading, and final case/tanween endings deterministically.
+        try {
+          const blind = await transcribeArabicBlindWithGemini({
+            audioWavBase64: body.audioWavBase64,
+          });
+          const blindScore = scoreBlindSingleWordArabic(
+            wordItem.referenceWord,
+            blind.isSilent ? null : blind.transcript
+          );
+          result = buildSingleWordAssessmentFromBlindScore({
+            score: blindScore,
+            durationSeconds,
+          });
+        } catch (blindErr) {
+          console.warn('[CognitiveAudio] Blind vowelled transcription unavailable, falling back to Azure:', blindErr);
+          result = await assessReadingAudioWithAzure({
+            referenceText: wordItem.referenceWord,
+            referenceWords: [wordItem.referenceWord],
+            audioWavBase64: body.audioWavBase64,
+            durationSeconds,
+            language: body.language,
+            dialectLabel: 'الفصحى المعيارية (ar-SA)',
+          });
+        }
+      } else {
+        result = await assessReadingAudioWithAzure({
+          referenceText: wordItem ? wordItem.referenceWord : task.referenceWords.join(' '),
+          referenceWords: wordItem ? [wordItem.referenceWord] : task.referenceWords,
+          audioWavBase64: body.audioWavBase64,
+          durationSeconds,
+          language: body.language,
+          dialectLabel: 'الفصحى المعيارية (ar-SA)',
+        });
+      }
 
       if (wordItem) {
         const assessedWord = result.words[0];
@@ -5205,6 +5242,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
               errorType: assessedWord.errorType,
               accuracyScore: assessedWord.accuracyScore,
               spokenWord: assessedWord.spokenWord,
+              notesAr: assessedWord.notesAr,
             },
           },
           receiptExpiresAt: new Date(expiresAt).toISOString(),
