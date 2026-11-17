@@ -91,7 +91,7 @@ function buildPassageAssessmentPayload(opts: {
 
 async function startBatteryWithAudioConsent(page: Page, childName: string) {
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill(childName);
   await page.getByLabel('السنوات').selectOption('7');
   for (const label of [

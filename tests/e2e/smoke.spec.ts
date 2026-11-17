@@ -38,8 +38,8 @@ test('screening, accessible-reader, and training views open from primary navigat
   await page.goto('/');
 
   // 1. Reading screening / diagnostic hub
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
-  await expect(page.getByRole('heading', { name: /فحص مؤشرات عسر القراءة/ }).first()).toBeVisible();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
+  await expect(page.getByRole('heading', { name: /فحص مهارات القراءة/ }).first()).toBeVisible();
 
   // Return to home
   await page.getByRole('link', { name: /الصفحة الرئيسية/ }).click();
@@ -65,7 +65,7 @@ test('daily sprint can reach its finish card without a Trophy runtime error or f
 
   await page.getByRole('button', { name: /صالة التدريب/ }).last().click();
   await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
-  await page.getByRole('button', { name: /تحدي الدقائق الخمس/ }).click();
+  await page.getByRole('button', { name: /^تحدي القراءة$/ }).click();
   await expect(page.getByRole('heading', { name: 'تحدي الدقائق الخمس اليومي' })).toBeVisible();
   await expect(page.getByText(/سلسلة الالتزام:\s*[4٤]/)).toHaveCount(0);
 
@@ -135,7 +135,7 @@ test('parent registration limits the screening age range and requires explicit g
   await page.getByRole('button', { name: /٦ سنوات/ }).click();
   await page.getByPlaceholder('parent@example.com').fill('parent@example.test');
   await page.locator('input[type="password"]').first().fill('safe-test-password');
-  const guardianConsent = page.locator('label').filter({ hasText: /أوافق بصفتي ولي أمر الطفل/ }).locator('input[type="checkbox"]');
+  const guardianConsent = page.locator('label').filter({ hasText: /أوافق (بصفتي ولي أمر الطفل|على إنشاء ملف الطفل)/ }).locator('input[type="checkbox"]').first();
   await expect(guardianConsent).not.toBeChecked();
   await page.getByRole('button', { name: /إنشاء الحساب وبدء فحص القراءة الآن/ }).click();
   await expect(page.getByRole('alert')).toContainText('يرجى تأكيد موافقة ولي الأمر');
@@ -155,7 +155,7 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   const start = page.getByRole('button', { name: 'بدء الفحص' });
   await expect(start).toBeDisabled();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
@@ -183,7 +183,7 @@ test('voice reading requires separate audio consent and never offers adult word 
   await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   await page.getByLabel('السنوات').selectOption('7');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {
@@ -208,7 +208,7 @@ test('dictation: letter tiles, delete, and a scored answer', async ({ page }) =>
   await installSchoolTestSession(page);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   await page.getByLabel('السنوات').selectOption('7');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
@@ -232,7 +232,7 @@ test('mascot appears between tasks only: welcome, practice reaction, ready, fini
   test.setTimeout(240_000);
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
   await page.getByLabel('السنوات').selectOption('5');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
@@ -338,7 +338,7 @@ test('training gym opens on the daily curriculum and switches to skill stations'
 test('a parent can permanently delete a child file kept on this device', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
   await page.goto('/');
-  await page.getByRole('button', { name: /فحص مؤشرات عسر القراءة/ }).first().click();
+  await page.getByRole('button', { name: /فحص مهارات القراءة/ }).first().click();
   await page.getByLabel('اسم الطفل أو لقبه').fill('ريم');
   await page.getByLabel('السنوات').selectOption('5');
   for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) {

@@ -76,7 +76,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await audit(page, 'sample-report', findings);
     await page.goto('/');
 
-    await nav(page, mobile ? /^الفحص$/ : /فحص مؤشرات عسر القراءة/, mobile);
+    await nav(page, mobile ? /^الفحص$/ : /فحص مهارات القراءة/, mobile);
     await audit(page, 'battery-setup', findings);
     await page.getByLabel('اسم الطفل أو لقبه').fill('سارة');
     for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
@@ -94,7 +94,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await page.goto('/gym');
     await audit(page, 'gym-today', findings);
     await page.getByRole('tab', { name: /ألعاب المهارات/ }).click();
-    for (const station of ['صائد الحروف', 'تركيب المقاطع', 'قصص الأبطال', 'تحدي الدقائق الخمس', 'طلاقة القراءة']) {
+    for (const station of ['صائد الحروف', 'تركيب المقاطع', 'قصص الأبطال', 'تحدي القراءة', 'طلاقة القراءة']) {
       await page.getByRole('button', { name: new RegExp(station) }).first().click();
       await audit(page, `gym-${station}`, findings);
     }
