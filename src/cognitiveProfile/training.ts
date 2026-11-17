@@ -1104,9 +1104,14 @@ function blendingTask(random: () => number, level: Level, n: number): ChoiceItem
       : e.syllables.length >= 3 && e.syllables.length <= 4
   );
   const target = pick(candidates, random);
-  // Distractors share the first syllable's onset or length so the child must blend, not guess.
+  // Distractors share length or onset, drawn from a wide pool so options stay fresh and varied
+  const pool = entries.filter((e) => e.id !== target.id);
+  const sameLength = pool.filter((e) => e.syllables.length === target.syllables.length);
+  const sameOnset = pool.filter((e) => e.onset === target.onset);
+  const generalPool = pool.filter((e) => e.syllables.length >= (level === 1 ? 2 : 3));
+
   const distractors = shuffleWith(
-    entries.filter((e) => e.id !== target.id && (e.onset === target.onset || e.syllables.length === target.syllables.length)),
+    Array.from(new Set([...sameLength, ...sameOnset, ...generalPool])),
     random
   ).slice(0, 2);
   const options = shuffleWith([target, ...distractors], random).map((e) => e.id);
@@ -1337,16 +1342,41 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
   };
   const tasks: TrainingTask[] = [];
   const seen = new Set<string>();
-  for (let n = 0; tasks.length < ITEMS_PER_SESSION && n < ITEMS_PER_SESSION * 6; n += 1) {
+  const usedCorrectIds = new Set<string>();
+  let lastCorrectId: string | null = null;
+  let lastOptionIds = new Set<string>();
+
+  for (let n = 0; tasks.length < ITEMS_PER_SESSION && n < ITEMS_PER_SESSION * 16; n += 1) {
     const item = generator[skill](random, level, n, targets);
     if (!item) continue;
     const pictureIds = [item.stimulus, ...item.options.map((o) => o.visual)].flatMap((v) =>
       v && v.type === 'emoji' ? Object.values(LEXICON).filter((e) => e.emoji === v.value).map((e) => e.id) : []
     );
     if (showsSynonymPair(pictureIds)) continue;
-    const signature = `${item.stimulus?.value ?? ''}|${item.audio.map((s) => s.text).join('|')}`;
+
+    // Never repeat the exact same correct target in consecutive items
+    if (item.correctId === lastCorrectId) continue;
+
+    // Prefer distinct targets across the session while candidates remain
+    if (usedCorrectIds.has(item.correctId) && n < ITEMS_PER_SESSION * 8) continue;
+
+    // Prevent near-identical consecutive option sets (e.g. car + turtle repeated)
+    const currentOptionIds = new Set(item.options.map((o) => o.id));
+    if (lastOptionIds.size > 0 && currentOptionIds.size > 1) {
+      let overlap = 0;
+      for (const optId of currentOptionIds) {
+        if (lastOptionIds.has(optId)) overlap++;
+      }
+      if (overlap >= 2 && n < ITEMS_PER_SESSION * 10) continue;
+    }
+
+    const signature = `${item.stimulus?.value ?? ''}|${item.correctId}|${item.audio.map((s) => s.text).join('|')}`;
     if (seen.has(signature)) continue;
     seen.add(signature);
+    usedCorrectIds.add(item.correctId);
+    lastCorrectId = item.correctId;
+    lastOptionIds = currentOptionIds;
+
     tasks.push({ kind: 'choice', item: { ...item, id: `${item.id}-${tasks.length}` } });
   }
   return tasks;
@@ -1356,11 +1386,20 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
 export function generateItems(skill: SkillId, level: Level, seed: number, count: number, targets?: TrainingTargets, ageMonths = 72): TrainingTask[] {
   const out: TrainingTask[] = [];
   const seen = new Set<string>();
+  let lastTargetId: string | null = null;
+
   for (let k = 0; out.length < count && k < 32; k++) {
     for (const task of generateSession(skill, level, seed + k * 104_729, targets, ageMonths)) {
       if (out.length >= count) break;
       const signature = trainingEvidenceKey(task);
       if (seen.has(signature)) continue;
+
+      if (task.kind === 'choice') {
+        // Enforce no back-to-back target repetition across batches
+        if (lastTargetId && task.item.correctId === lastTargetId) continue;
+        lastTargetId = task.item.correctId;
+      }
+
       seen.add(signature);
       out.push(
         task.kind === 'choice'

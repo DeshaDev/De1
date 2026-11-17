@@ -939,21 +939,21 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
 // Guided practice: a spoken hint and one fewer option
 // ---------------------------------------------------------------------------
 export const HINTS: Record<string, string> = {
-  rhyme: 'رَكِّزْ عَلَى آخِرِ الْكَلِمَةِ.',
-  onset: 'رَكِّزْ عَلَى أَوَّلِ صَوْتٍ.',
-  coda: 'رَكِّزْ عَلَى آخِرِ صَوْتٍ.',
-  blending: 'صَفِّقْ مَعَ كُلِّ جُزْءٍ.',
-  syllableCount: 'صَفِّقْ مَعَ كُلِّ جُزْءٍ.',
-  letterSound: 'قُلِ الصَّوْتَ مَعِي.',
-  contrast: 'اسْمَعْ بِانْتِبَاهٍ.',
-  catch: 'اسْمَعْ بِانْتِبَاهٍ.',
-  minimalPair: 'اسْمَعْ بِانْتِبَاهٍ.',
-  letter: 'قَارِنِ النِّقَاطَ.',
-  word: 'قَارِنِ النِّقَاطَ.',
-  'structured-decoding': 'اِنْتَبِهْ إِلَى الْحَرَكَاتِ، وَاجْمَعِ الْأَصْوَاتَ بِالتَّرْتِيبِ.',
-  'structured-spelling': 'اِسْمَعِ الْكَلِمَةَ، وَفَكِّرْ فِي الْحُرُوفِ الَّتِي تَسْمَعُهَا.',
-  'structured-comprehension': 'تَذَكَّرْ مَا حَدَثَ، وَابْحَثْ عَنِ الْكَلِمَاتِ الَّتِي تُسَاعِدُكَ.',
-  'structured-morphology': 'ابْحَثْ عَنِ الْحُرُوفِ الْأَصْلِيَّةِ وَمَعْنَى الْكَلِمَةِ.',
+  rhyme: 'اِسْتَمِعْ إِلَى آخِرِ الْكَلِمَةِ، وَابْحَثْ عَنِ النَّغْمَةِ نَفْسِهَا فِي النِّهَايَةِ.',
+  onset: 'اِنْطِقِ الْكَلِمَةَ بِهُدُوءٍ، وَرَكِّزْ عَلَى أَوَّلِ صَوْتٍ يَخْرُجُ مِنْ فَمِكَ.',
+  coda: 'اِنْطِقِ الْكَلِمَةَ بِبُطْءٍ، وَانْتَبِهْ لآخِرِ صَوْتٍ يَقِفُ عِنْدَهُ لِسَانُكَ.',
+  blending: 'اِسْمَعِ الْأَجْزَاءَ بِالتَّرْتِيبِ، ثُمَّ ضُمَّهَا مَعًا بِسُرْعَةٍ لِتَصْنَعَ الْكَلِمَةَ.',
+  syllableCount: 'اِنْطِقِ الْكَلِمَةَ بِبُطْءٍ، وَصَفِّقْ مَعَ كُلِّ جُزْءٍ تَفْتَحُ فِيهِ فَمَكَ.',
+  letterSound: 'اُنْظُرْ إِلَى شَكْلِ الْحَرْفِ وَحَرَكَتِهِ، وَتَذَكَّرْ صَوْتَهُ لَا اسْمَهُ.',
+  contrast: 'اُنْصُتْ إِلَى مَوْضِعِ خُرُوجِ الصَّوْتِ: هَلْ هُوَ الصَّوْتُ نَفْسُهُ أَمْ تَغَيَّرَ؟',
+  catch: 'اُنْصُتْ إِلَى مَوْضِعِ خُرُوجِ الصَّوْتِ: هَلْ هُوَ الصَّوْتُ نَفْسُهُ أَمْ تَغَيَّرَ؟',
+  minimalPair: 'اِسْتَمِعْ إِلَى الْكَلِمَةِ جَيِّدًا، وَاخْتَرِ الصُّورَةَ الَّتِي سَمِعْتَ اسْمَهَا.',
+  letter: 'قَارِنْ جِسْمَ الْحَرْفِ أَوَّلًا، ثُمَّ عُدَّ النِّقَاطَ: هَلْ هِيَ فَوْقَهُ أَمْ تَحْتَهُ؟',
+  word: 'اِقْرَأِ الْكَلِمَةَ حَرْفًا حَرْفًا مِنَ الْيَمِينِ، وَقَارِنِ الْحُرُوفَ وَالنِّقَاطَ.',
+  'structured-decoding': 'اِقْرَأِ الْأَصْوَاتَ بِحَرَكَاتِهَا حَرْفًا حَرْفًا مِنَ الْيَمِينِ إِلَى الْيَسَارِ، ثُمَّ اصْنَعِ الْكَلِمَةَ.',
+  'structured-spelling': 'اِنْطِقِ الْكَلِمَةَ بِبُطْءٍ، وَقَطِّعْهَا إِلَى أَصْوَاتِهَا، ثُمَّ اكْتُبْ حَرْفَ كُلِّ صَوْتٍ.',
+  'structured-comprehension': 'تَذَكَّرْ مَا حَدَثَ فِي الْقِصَّةِ، وَابْحَثْ عَنِ الْكَلِمَةِ الَّتِي تُجِيبُ عَنِ السُّؤَالِ.',
+  'structured-morphology': 'ابْحَثْ عَنِ الْحُرُوفِ الْأَصْلِيَّةِ الَّتِي تَتَشَابَهُ بَيْنَ الْكَلِمَاتِ.',
 };
 /** Guided items at the start of a block while the model's estimate is below this. */
 export const GUIDED_BELOW = 0.5;
@@ -985,6 +985,8 @@ export interface Explanation {
   audio: AudioSegment[];
   pictureIds: string[];
   glyphs: string[];
+  methodTipAr?: string;
+  syllables?: { parts: string[]; word: string; pictureId?: string };
 }
 
 const labelOf = (item: ChoiceItem, id: string) => item.options.find((o) => o.id === id)?.visual.label ?? id;
@@ -1007,37 +1009,127 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
   const targetId = item.stimulus ? PICTURE_IDS.find((id) => LEXICON[id].emoji === item.stimulus!.value) : undefined;
   switch (item.tag) {
     case 'rhyme':
-      return { textAr: `«${target}» و«${labelOf(item, correct)}» تنتهيان بالصوت نفسه.`, audio: say(target!, labelOf(item, correct), 'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.'), pictureIds: [targetId!, correct].filter(Boolean), glyphs: [] };
+      return {
+        textAr: `طَرِيقَةُ القَافِيَةِ: نُنْصِتُ لآخِرِ صَوْتٍ فِي الكَلِمَتَيْنِ: «${target}» وَ«${labelOf(item, correct)}» لَهُمَا النَّغْمَةُ نَفْسُهَا فِي النِّهَايَةِ.`,
+        methodTipAr: '💡 طريقة القافية: ركّز على نغمة الحرف الأخير في الكلمة، وابحث عن كلمة تنتهي بالنغمة نفسها.',
+        audio: say(target!, labelOf(item, correct), 'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.'),
+        pictureIds: [targetId!, correct].filter(Boolean),
+        glyphs: [],
+      };
     case 'onset':
-      return { textAr: `«${labelOf(item, correct)}» تبدأ مثل «${target}».`, audio: say(labelOf(item, correct), 'تَبْدَأُ مِثْلَ:', target!), pictureIds: [correct, targetId!].filter(Boolean), glyphs: [] };
+      return {
+        textAr: `طَرِيقَةُ الصَّوْتِ الأَوَّلِ: نَنْطِقُ بِبُطْءٍ وَنُرَكِّزُ عَلَى أَوَّلِ صَوْتٍ يَخْرُجُ مِنْ فَمِنَا: «${labelOf(item, correct)}» تَبْدَأُ بِالصَّوْتِ نَفْسِهِ مِثْلَ «${target}».`,
+        methodTipAr: '💡 طريقة الصوت الأول: اِبدأ نطق الكلمة بهدوء، ولاحظ أول صوت تسمعه.',
+        audio: say(labelOf(item, correct), 'تَبْدَأُ مِثْلَ:', target!),
+        pictureIds: [correct, targetId!].filter(Boolean),
+        glyphs: [],
+      };
     case 'coda':
-      return { textAr: `«${labelOf(item, correct)}» تنتهي مثل «${target}».`, audio: say(labelOf(item, correct), 'تَنْتَهِي مِثْلَ:', target!), pictureIds: [correct, targetId!].filter(Boolean), glyphs: [] };
+      return {
+        textAr: `طَرِيقَةُ الصَّوْتِ الأَخِيرِ: نَنْتَبِهُ لآخِرِ صَوْتٍ نَقِفُ عِنْدَهُ: «${labelOf(item, correct)}» تَنْتَهِي بِالصَّوْتِ نَفْسِهِ مِثْلَ «${target}».`,
+        methodTipAr: '💡 طريقة الصوت الأخير: قُل الكلمة بهدوء حتى تصل إلى الحرف الأخير الذي ينتهي به النطق.',
+        audio: say(labelOf(item, correct), 'تَنْتَهِي مِثْلَ:', target!),
+        pictureIds: [correct, targetId!].filter(Boolean),
+        glyphs: [],
+      };
     case 'blending': {
       const e = LEXICON[correct];
       if (!e) return null;
-      return { textAr: `${e.syllables.join(' + ')} = «${e.word}»`, audio: [...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })), ...say('مَعًا:', e.word)], pictureIds: [correct], glyphs: [] };
+      return {
+        textAr: `طَرِيقَةُ التَّرْكِيبِ: نَسْمَعُ الأَصْوَاتَ بِالتَّرْتِيبِ، ثُمَّ نَضُمُّهَا مَعًا: ${e.syllables.join(' + ')} = «${e.word}».`,
+        methodTipAr: '💡 طريقة التركيب: اِسمع المقاطع واحدًا تلو الآخر، ثم قرّبها من بعضها لتسمع الكلمة كاملة.',
+        audio: [
+          ...say('اِسْتَمِعْ لِلْمَقَاطِعِ بِالتَّرْتِيبِ:'),
+          ...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 })),
+          ...say('مَعًا:', e.word),
+        ],
+        pictureIds: [correct],
+        glyphs: [],
+        syllables: {
+          parts: e.syllables,
+          word: e.word,
+          pictureId: correct,
+        },
+      };
     }
     case 'syllableCount': {
       const e = targetId ? LEXICON[targetId] : null;
       if (!e) return null;
-      return { textAr: `${e.syllables.join(' | ')}: ${e.syllables.length} أجزاء`.replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]), audio: [...say('صَفِّقْ مَعِي.'), ...e.syllables.map((s) => ({ text: s, pauseAfterMs: 600 }))], pictureIds: [e.id], glyphs: [] };
+      const count = e.syllables.length;
+      const countAr =
+        count === 1
+          ? 'مَقْطَعٌ وَاحِدٌ (صَفْقَةٌ وَاحِدَةٌ 👏)'
+          : count === 2
+          ? 'مَقْطَعَانِ (صَفْقَتَانِ 👏👏)'
+          : count === 3
+          ? 'ثَلَاثَةُ مَقَاطِعَ (٣ صَفْقَاتٍ 👏👏👏)'
+          : 'أَرْبَعَةُ مَقَاطِعَ (٤ صَفْقَاتٍ 👏👏👏👏)';
+
+      const methodText =
+        count === 1
+          ? `طَرِيقَةُ الْعَدِّ: نَنْطِقُ بِبُطْءٍ وَنُصَفِّقُ مَعَ كُلِّ حَرَكَةِ فَمٍ: كَلِمَةُ «${e.word}» نَنْطِقُهَا دَفْعَةً وَاحِدَةً: ${e.syllables.join(' 👏 ')} 👏 = ${countAr}.`
+          : `طَرِيقَةُ الْعَدِّ: نَنْطِقُ بِبُطْءٍ وَنُصَفِّقُ مَعَ كُلِّ مَقْطَعٍ: ${e.syllables.join(' 👏 ')} 👏 = ${countAr}.`;
+
+      return {
+        textAr: methodText,
+        methodTipAr: '💡 طريقة العدّ: اِفتح فمك وانطق ببطء، وصفّق مع كل مقطع صوتي تسمعه.',
+        audio: [
+          ...say('كَيْفَ نَعْرِفُ عَدَدَ الْمَقَاطِعِ؟ نَنْطِقُ بِبُطْءٍ وَنُصَفِّقُ مَعَ كُلِّ حَرَكَةِ فَمٍ.'),
+          ...say('صَفِّقْ مَعِي:'),
+          ...e.syllables.map((s) => ({ text: s, pauseAfterMs: 650 })),
+          ...say(count === 1 ? 'مَقْطَعٌ وَاحِدٌ.' : count === 2 ? 'مَقْطَعَانِ.' : count === 3 ? 'ثَلَاثَةُ مَقَاطِعَ.' : 'أَرْبَعَةُ مَقَاطِعَ.'),
+        ],
+        pictureIds: [e.id],
+        glyphs: [],
+        syllables: {
+          parts: e.syllables,
+          word: e.word,
+          pictureId: e.id,
+        },
+      };
     }
     case 'letterSound': {
       const sound = item.audio.map((s) => s.text.match(/صَوْتُهُ:\s*([^\s؟?]+)/)?.[1]).find(Boolean);
       const displayed = labelOf(item, correct);
-      return { textAr: `هذا هو الحرف الصحيح: ${displayed}`, audio: sound ? say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', sound) : say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.'), pictureIds: [], glyphs: [displayed] };
+      return {
+        textAr: `طَرِيقَةُ صَوْتِ الحَرْفِ: نَنْظُرُ إِلَى شَكْلِ الحَرْفِ وَحَرَكَتِهِ، وَنَقُولُ صَوْتَهُ القَصِيرَ لَا اسْمَهُ: هَذَا ${displayed} صَوْتُهُ [${sound ?? displayed}].`,
+        methodTipAr: '💡 طريقة صوت الحرف: تذكّر صوت الحرف مع حركته ولا تَقُل اسم الحرف.',
+        audio: sound ? say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', sound) : say('هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.'),
+        pictureIds: [],
+        glyphs: [displayed],
+      };
     }
     case 'contrast':
     case 'catch': {
       const [first, second] = item.audio;
       const same = correct === 'same';
-      return { textAr: same ? 'الصوت نفسه مرتين.' : 'صوتان مختلفان.', audio: [...say(first.text, second.text), { text: same ? 'الصَّوْتُ نَفْسُهُ.' : 'صَوْتَانِ مُخْتَلِفَانِ.' }], pictureIds: [], glyphs: [] };
+      return {
+        textAr: same
+          ? 'طَرِيقَةُ التَّمْيِيزِ: اسْتَمَعْنَا إِلَى الصَّوْتَيْنِ فَوَجَدْنَاهُمَا مُتَطَابِقَيْنِ: الصَّوْتُ نَفْسُهُ مَرَّتَيْنِ.'
+          : 'طَرِيقَةُ التَّمْيِيزِ: اسْتَمَعْنَا إِلَى مَوْضِعِ اللِّسَانِ وَشَكْلِ الصَّوْتِ فَوَجَدْنَاهُمَا صَوْتَيْنِ مُخْتَلِفَيْنِ.',
+        methodTipAr: '💡 طريقة التمييز: أنصت إلى موضع خروج الصوت من فمك، هل تغيّر الحرف أم تكرر نفسه؟',
+        audio: [...say(first.text, second.text), { text: same ? 'الصَّوْتُ نَفْسُهُ.' : 'صَوْتَانِ مُخْتَلِفَانِ.' }],
+        pictureIds: [],
+        glyphs: [],
+      };
     }
     case 'minimalPair':
-      return { textAr: `هذه «${labelOf(item, correct)}».`, audio: say('هَذِهِ:', labelOf(item, correct)), pictureIds: [correct], glyphs: [] };
+      return {
+        textAr: `طَرِيقَةُ الْمُقَارَنَةِ: هذه «${labelOf(item, correct)}» — نُنْصِتُ إِلَى الْحَرْفِ الَّذِي يُمَيِّزُهَا.`,
+        methodTipAr: '💡 استمع إلى الكلمة بدقة ولاحظ الفرق الصغير في أول الحرف.',
+        audio: say('هَذِهِ:', labelOf(item, correct)),
+        pictureIds: [correct],
+        glyphs: [],
+      };
     case 'letter':
     case 'word':
-      return { textAr: `الصحيح: ${labelOf(item, correct)} — انظر إلى النقاط.`, audio: say('انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.'), pictureIds: [], glyphs: [labelOf(item, correct)] };
+      return {
+        textAr: `طَرِيقَةُ التَّمْيِيزِ البَصَرِيِّ: الصَّحِيحُ هُوَ «${labelOf(item, correct)}» — نَنْظُرُ أَوَّلًا إِلَى شَكْلِ الْحَرْفِ، ثُمَّ نَعُدُّ النِّقَاطَ وَنُلَاحِظُ مَكَانَهَا.`,
+        methodTipAr: '💡 طريقة المقارنة: قارن جسم الحرف أولًا، ثم عدّ النقاط وتأكد إن كانت فوق أم تحت.',
+        audio: say('انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.'),
+        pictureIds: [],
+        glyphs: [labelOf(item, correct)],
+      };
     default:
       return null;
   }
@@ -1071,7 +1163,10 @@ export function curriculumPhrases(): string[] {
   }
   Object.values(HINTS).forEach((h) => out.add(h));
   [
-    'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.', 'تَبْدَأُ مِثْلَ:', 'تَنْتَهِي مِثْلَ:', 'مَعًا:', 'صَفِّقْ مَعِي.',
+    'تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.', 'تَبْدَأُ مِثْلَ:', 'تَنْتَهِي مِثْلَ:', 'مَعًا:', 'صَفِّقْ مَعِي.', 'صَفِّقْ مَعِي:',
+    'كَيْفَ نَعْرِفُ عَدَدَ الْمَقَاطِعِ؟ نَنْطِقُ بِبُطْءٍ وَنُصَفِّقُ مَعَ كُلِّ حَرَكَةِ فَمٍ.',
+    'اِسْتَمِعْ لِلْمَقَاطِعِ بِالتَّرْتِيبِ:',
+    'مَقْطَعٌ وَاحِدٌ.', 'مَقْطَعَانِ.', 'ثَلَاثَةُ مَقَاطِعَ.', 'أَرْبَعَةُ مَقَاطِعَ.',
     'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:', 'هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.', 'الصَّوْتُ نَفْسُهُ.', 'صَوْتَانِ مُخْتَلِفَانِ.',
     'هَذِهِ:', 'انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.', 'حَاوِلْ مَرَّةً أُخْرَى.',
   ].forEach((p) => out.add(p));

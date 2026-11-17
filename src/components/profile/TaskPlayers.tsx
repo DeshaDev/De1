@@ -39,7 +39,8 @@ const PRAISE = PHRASES.praise;
 /** A fixed drawing (same on every device), sized by the surrounding font size like an emoji. */
 export function Pic({ emoji, label }: { emoji: string; label?: string }) {
   const [failed, setFailed] = useState(false);
-  if (failed) {
+  const url = pictureUrl(emoji);
+  if (!url || failed) {
     return (
       <span role="img" aria-label={label ?? ''} className="inline-block align-middle select-none text-[0.85em]">
         {emoji}
@@ -48,7 +49,7 @@ export function Pic({ emoji, label }: { emoji: string; label?: string }) {
   }
   return (
     <img
-      src={pictureUrl(emoji)}
+      src={url}
       alt={label ?? ''}
       aria-hidden={label ? undefined : true}
       draggable={false}

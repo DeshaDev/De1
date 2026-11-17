@@ -238,9 +238,36 @@ export function TeachingChoicePlayer({
         <div className="flex flex-col items-center text-center gap-5 max-w-xl">
           {/* Support after a mistake: static, beside the heading, before the explanation starts. */}
           <MascotMoment mood="support" size={72} layout="row" message={MASCOT_LINES.explainMistake} />
-          {explanation.pictureIds.length > 0 && <Visual visual={{ kind: 'pictures', ids: explanation.pictureIds }} />}
-          {explanation.glyphs.length > 0 && <Visual visual={{ kind: 'glyphs', letters: explanation.glyphs }} />}
-          <p className="font-child text-xl text-ink">{explanation.textAr}</p>
+          {explanation.syllables ? (
+            <div className="flex flex-col items-center gap-3">
+              {explanation.syllables.pictureId && (
+                <span className="text-7xl">
+                  <Pic emoji={LEXICON[explanation.syllables.pictureId].emoji} label={explanation.syllables.word} />
+                </span>
+              )}
+              <div className="flex items-center gap-2" dir="rtl">
+                {explanation.syllables.parts.map((p, i) => (
+                  <span key={i} className="rounded-2xl bg-sun-soft border-2 border-sun px-4 py-2 font-child text-2xl sm:text-3xl font-bold text-ink shadow-xs">
+                    👏 {p}
+                  </span>
+                ))}
+              </div>
+              <span className="font-child text-2xl sm:text-3xl font-black text-brand">= {explanation.syllables.word}</span>
+            </div>
+          ) : (
+            <>
+              {explanation.pictureIds.length > 0 && <Visual visual={{ kind: 'pictures', ids: explanation.pictureIds }} />}
+              {explanation.glyphs.length > 0 && <Visual visual={{ kind: 'glyphs', letters: explanation.glyphs }} />}
+            </>
+          )}
+          {explanation.methodTipAr && (
+            <div className="w-full rounded-2xl bg-brand-tint border border-brand/20 p-3 sm:p-4 text-center">
+              <p className="font-child text-base sm:text-lg font-bold text-brand leading-relaxed">{explanation.methodTipAr}</p>
+            </div>
+          )}
+          <p className="font-child text-lg sm:text-xl text-ink leading-relaxed max-w-lg bg-soft p-4 rounded-2xl border border-line">
+            {explanation.textAr}
+          </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button type="button" className="bz-btn bz-btn-ghost" onClick={() => setReplay((n) => n + 1)}>
               <Volume2 className="w-5 h-5" /> اسمع الشرح

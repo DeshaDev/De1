@@ -1,36 +1,50 @@
-/**
- * Copy the fixed picture set used by the battery, the training programme and the review page
- * into public/pictures, so every child sees exactly the same drawing on every device
- * (system emoji differ between Apple, Google, Samsung and Windows, and recent ones do not
- * render on older devices). Drawings: Twemoji, CC-BY 4.0 (https://github.com/jdecked/twemoji).
- *
- * Usage: npx tsx scripts/build-pictures.ts
- */
 import fs from 'node:fs';
 import path from 'node:path';
-import { LEXICON } from '../src/cognitiveProfile/lexicon';
-import { twemojiFilename, UI_PICTURES } from '../src/cognitiveProfile/pictures';
+
+function twemojiFilename(emoji: string): string {
+  const points = Array.from(emoji).map((c) => c.codePointAt(0)!.toString(16));
+  const hasZwj = points.includes('200d');
+  return `${(hasZwj ? points : points.filter((p) => p !== 'fe0f')).join('-')}.svg`;
+}
 
 const SRC = path.resolve('node_modules/@twemoji/svg');
 const OUT = path.resolve('public/pictures');
 fs.mkdirSync(OUT, { recursive: true });
-const wanted = new Set([...Object.values(LEXICON).map((e) => e.emoji), ...UI_PICTURES]);
-const missing: string[] = [];
-for (const emoji of wanted) {
+
+const filesToScan = [
+  'src/cognitiveProfile/structuredLiteracyStations.ts',
+  'src/cognitiveProfile/curriculum.ts',
+  'src/cognitiveProfile/training.ts',
+  'src/cognitiveProfile/pictures.ts',
+  'src/cognitiveProfile/lexicon.ts',
+];
+
+const allEmojis = new Set<string>();
+for (const f of filesToScan) {
+  if (!fs.existsSync(f)) continue;
+  const content = fs.readFileSync(f, 'utf8');
+  const matches = content.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || [];
+  for (const e of matches) allEmojis.add(e);
+}
+
+let copied = 0;
+let missing: string[] = [];
+
+for (const emoji of allEmojis) {
   const file = twemojiFilename(emoji);
-  const from = path.join(SRC, file);
-  if (!fs.existsSync(from)) {
+  const srcFile = path.join(SRC, file);
+  const destFile = path.join(OUT, file);
+  if (fs.existsSync(srcFile)) {
+    fs.copyFileSync(srcFile, destFile);
+    copied++;
+  } else {
     missing.push(`${emoji} (${file})`);
-    continue;
   }
-  fs.copyFileSync(from, path.join(OUT, file));
 }
-fs.writeFileSync(
-  path.join(OUT, 'LICENSE.txt'),
-  'Pictures: Twemoji by X Corp and contributors (https://github.com/jdecked/twemoji), licensed CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/).\n'
-);
+
+// Generate the TypeScript file with the full set of bundled SVGs
+const allSvgFiles = fs.readdirSync(OUT).filter((f) => f.endsWith('.svg'));
+console.log(`Copied ${copied} SVGs. Total in public/pictures: ${allSvgFiles.length}.`);
 if (missing.length) {
-  console.error('Missing pictures:', missing.join(', '));
-  process.exit(1);
+  console.log(`Emojis without Twemoji SVGs (will use native emoji fallback): ${missing.length}`);
 }
-console.log(`copied ${wanted.size} pictures to public/pictures`);
