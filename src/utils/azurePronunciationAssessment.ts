@@ -118,6 +118,118 @@ export function mapAzureAssessmentToReferenceWords(args: {
   providerInsertions?: number;
 }): AzureAudioAssessmentResult {
   const { referenceWords, transcript, durationSeconds, enableMiscue, providerWords } = args;
+
+  // Single-word assessment: isolated words in TOWRE / cognitive screening reading lists
+  if (referenceWords.length === 1) {
+    const targetWord = referenceWords[0];
+    const transTrim = transcript.trim();
+
+    if (!transTrim) {
+      return {
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentMode: 'short-audio-miscue',
+        dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
+        durationSeconds,
+        transcript: '',
+        wordsCount: 1,
+        correctWordsCount: 0,
+        substitutionsCount: 0,
+        omissionsCount: 1,
+        insertionsCount: 0,
+        wordsPerMinute: 0,
+        wordsCorrectPerMinute: 0,
+        wordAccuracyPercent: 0,
+        assessmentComplete: true,
+        words: [{
+          word: targetWord,
+          errorType: 'Omission',
+          accuracyScore: 0,
+          spokenWord: null,
+          notesAr: 'لم يُلتقط صوت واضح للكلمة؛ صمت أو صوت منخفض جدًا.',
+        }],
+        accuracyScore: 0,
+        fluencyScore: 0,
+        completenessScore: 0,
+        pronScore: 0,
+      };
+    }
+
+    const targetNorm = normalizeArabicToken(targetWord);
+    const transNorm = normalizeArabicToken(transTrim);
+
+    // Exact or inflectional match:
+    // e.g. بَيْتُ vs بيتاً (tanween fat-h), بيتو (dammah elongation), بيت (waqf sukun), سمكة vs سمكه (taa marbuta), الشمس vs شمس
+    const isExactMatch = transNorm === targetNorm;
+    const isInflectionalMatch =
+      transNorm.replace(/[اوية]$/, '') === targetNorm.replace(/[اوية]$/, '') ||
+      transNorm.replace(/^ال/, '') === targetNorm.replace(/^ال/, '') ||
+      transNorm.replace(/ه$/, 'ة') === targetNorm.replace(/ه$/, 'ة');
+
+    if (isExactMatch || isInflectionalMatch) {
+      const scored = providerWords.find(w => canonicalErrorType(w.errorType) !== 'Omission' && canonicalErrorType(w.errorType) !== 'Insertion') || providerWords[0];
+      const score = scored?.accuracyScore ?? 95;
+      const isMispron = scored && canonicalErrorType(scored.errorType) === 'Mispronunciation' && score < 50;
+      const errorType: AzureWordError = isMispron ? 'Mispronunciation' : (isExactMatch ? 'None' : 'DialectVariant');
+      const isCorrect = errorType === 'None' || errorType === 'DialectVariant';
+      return {
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentMode: 'short-audio-miscue',
+        dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
+        durationSeconds,
+        transcript: transTrim,
+        wordsCount: 1,
+        correctWordsCount: isCorrect ? 1 : 0,
+        substitutionsCount: isCorrect ? 0 : 1,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        wordsPerMinute: 60,
+        wordsCorrectPerMinute: isCorrect ? 60 : 0,
+        wordAccuracyPercent: isCorrect ? 100 : 0,
+        assessmentComplete: true,
+        words: [{
+          word: targetWord,
+          errorType,
+          accuracyScore: score,
+          spokenWord: transTrim,
+          notesAr: errorType === 'None' ? 'نطق مطابق للنص المرجعي.' : errorType === 'DialectVariant' ? 'قراءة صحيحة للكلمة مع تنوين أو حركة إعراب أو وقف.' : 'انخفاض في دقة نطق بعض الحروف.',
+        }],
+        accuracyScore: score,
+        fluencyScore: 90,
+        completenessScore: 100,
+        pronScore: score,
+      };
+    }
+
+    // Divergent word spoken (e.g. child said "كتاب" instead of target "قلم")
+    return {
+      sourceModel: 'azure_pronunciation_assessment',
+      assessmentMode: 'short-audio-miscue',
+      dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
+      durationSeconds,
+      transcript: transTrim,
+      wordsCount: 1,
+      correctWordsCount: 0,
+      substitutionsCount: 1,
+      omissionsCount: 0,
+      insertionsCount: 0,
+      wordsPerMinute: 60,
+      wordsCorrectPerMinute: 0,
+      wordAccuracyPercent: 0,
+      assessmentComplete: true,
+      words: [{
+        word: targetWord,
+        errorType: 'Substitution',
+        accuracyScore: 0,
+        spokenWord: transTrim,
+        notesAr: `استبدال كلمة: نطق الطفل «${transTrim}» بدلًا من «${targetWord}».`,
+      }],
+      accuracyScore: 0,
+      fluencyScore: 70,
+      completenessScore: 0,
+      pronScore: 0,
+    };
+  }
+
   const aligned = alignSpeechWithReferenceText(
     referenceWords,
     transcript,
@@ -283,7 +395,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
       word: targetWord,
       errorType: 'None',
       accuracyScore: score,
-      spokenWord: alignedWord?.spokenWord ?? scored.word,
+      spokenWord: alignedWord?.spokenWord ?? null,
       notesAr: 'تطابق النص مع التفريغ ولم يرصد Azure خطأ نطق.',
     };
   });

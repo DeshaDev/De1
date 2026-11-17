@@ -233,3 +233,51 @@ test('Azure word alignment supports an independently recorded single Arabic word
   assert.equal(result.assessmentComplete, true);
   assert.equal(result.correctWordsCount, 1);
 });
+
+test('Azure single word assessment detects divergent word as Substitution and never echoes target word', () => {
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['قَلَمُ'],
+    transcript: 'كتاب',
+    durationSeconds: 1.2,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'قلم', errorType: 'Mispronunciation', accuracyScore: 20 },
+    ],
+  });
+  assert.equal(result.words.length, 1);
+  assert.equal(result.words[0].word, 'قَلَمُ');
+  assert.equal(result.words[0].errorType, 'Substitution');
+  assert.equal(result.words[0].spokenWord, 'كتاب');
+  assert.equal(result.assessmentComplete, true);
+  assert.equal(result.correctWordsCount, 0);
+});
+
+test('Azure single word assessment accepts case endings and tanween without misclassifying as substitution', () => {
+  const tanweenResult = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['بَيْتُ'],
+    transcript: 'بيتاً',
+    durationSeconds: 1.0,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'بيت', errorType: 'None', accuracyScore: 92 },
+    ],
+  });
+  assert.equal(tanweenResult.words[0].word, 'بَيْتُ');
+  assert.equal(tanweenResult.words[0].spokenWord, 'بيتاً');
+  assert.ok(tanweenResult.words[0].errorType === 'None' || tanweenResult.words[0].errorType === 'DialectVariant');
+  assert.equal(tanweenResult.assessmentComplete, true);
+
+  const dammahResult = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['بَيْتُ'],
+    transcript: 'بيتو',
+    durationSeconds: 1.0,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'بيت', errorType: 'None', accuracyScore: 90 },
+    ],
+  });
+  assert.equal(dammahResult.words[0].word, 'بَيْتُ');
+  assert.equal(dammahResult.words[0].spokenWord, 'بيتو');
+  assert.ok(dammahResult.words[0].errorType === 'None' || dammahResult.words[0].errorType === 'DialectVariant');
+  assert.equal(dammahResult.assessmentComplete, true);
+});

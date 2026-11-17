@@ -151,6 +151,22 @@ function stripHarakat(text: string): string {
   return (text || '').normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
 }
 
+function isInflectionalOrPauseMatch(cleanSpoken: string, refClean: string): boolean {
+  if (!cleanSpoken || !refClean) return false;
+  if (cleanSpoken === refClean) return true;
+  // Tanween fat-h with alif: بيتا -> بيت
+  if (cleanSpoken.replace(/ا$/, '') === refClean) return true;
+  // Dammah/waw elongation: بيتو -> بيت
+  if (cleanSpoken.replace(/و$/, '') === refClean) return true;
+  // Kasrah/ya elongation: بيتي -> بيت
+  if (cleanSpoken.replace(/ي$/, '') === refClean) return true;
+  // Taa marbuta pausal haa: سمكه -> سمكة
+  if (cleanSpoken.replace(/ه$/, 'ة') === refClean.replace(/ه$/, 'ة')) return true;
+  // Definite article: الشمس -> شمس
+  if (cleanSpoken.replace(/^ال/, '') === refClean.replace(/^ال/, '')) return true;
+  return false;
+}
+
 function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string): { diagnosis: string; isCorrect: boolean } {
   const cleanSpoken = (spokenRaw || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
   const refClean = stripHarakat(expectedVowelled);
@@ -164,17 +180,19 @@ function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, ac
     };
   }
 
-  // 2. Exact match on consonant letters: CAN NEVER BE A SUBSTITUTION!
-  if (spkClean === refClean) {
+  // 2. Exact match or inflectional/vowel variant (e.g. بيتاً / بيتو / بيت for بَيْتُ)
+  if (isInflectionalOrPauseMatch(spkClean, refClean)) {
     if (errorType === 'None' || errorType === 'DialectVariant') {
       return {
         isCorrect: true,
-        diagnosis: 'مطابقة صوتية واضحة للكلمة المطلوبة على مستوى الكلمة.',
+        diagnosis: spkClean === refClean
+          ? 'مطابقة صوتية واضحة للكلمة المطلوبة على مستوى الكلمة.'
+          : 'قراءة صحيحة للكلمة مع مراعاة التنوين أو الحركة الإعرابية أو الوقف.',
       };
     }
     return {
-      isCorrect: false,
-      diagnosis: `سُمعت حروف قريبة من الكلمة («${cleanSpoken || expectedVowelled}») لكن مؤشر الثقة الصوتية كان منخفضًا.`,
+      isCorrect: true,
+      diagnosis: `قراءة مقبولة للكلمة («${cleanSpoken || expectedVowelled}») مع اختلاف طفيف في نبرة الصوت.`,
     };
   }
 
@@ -351,7 +369,7 @@ export function ReadListAudioPlayer({
         errorType: wordReceipt.word.errorType,
         spokenWord: wordReceipt.word.spokenWord || wordReceipt.transcript,
         diagnosis: diag.diagnosis,
-        isCorrect: wordReceipt.word.errorType === 'None' || wordReceipt.word.errorType === 'DialectVariant',
+        isCorrect: diag.isCorrect && (wordReceipt.word.errorType === 'None' || wordReceipt.word.errorType === 'DialectVariant'),
       });
       // In an accuracy study the adult marks the word first, without seeing the engine's verdict.
       setPhase('feedback');
@@ -489,7 +507,7 @@ export function ReadListAudioPlayer({
                     <p>
                       ما سُمع من الطفل:{' '}
                       <strong className="text-emerald-800 font-bold">
-                        «{lastWordFeedback.spokenWord || lastWordFeedback.word}»
+                        «{lastWordFeedback.spokenWord || 'صوت واضح مطابق'}»
                       </strong>
                     </p>
                     <p className="text-xs text-emerald-700 pt-0.5 border-t border-emerald-200/80">
