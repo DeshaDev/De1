@@ -1110,8 +1110,8 @@ function guestAudioRateLimiter(
   next();
 }
 
-/** School sessions as before; otherwise a verified parent account, or rate-limited guest preview for audio assessment. */
-function requireAiAccess(options: { allowGuestAudio?: boolean } = {}) {
+/** School sessions or verified parent accounts only — guest mode is disabled. */
+function requireAiAccess() {
   const school = requireBaseeraAuth('ai:analyze');
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const rawHeader = (req.headers.authorization as string) || '';
@@ -1121,18 +1121,6 @@ function requireAiAccess(options: { allowGuestAudio?: boolean } = {}) {
       if (parent) {
         (req as any).baseeraSession = parent;
         aiRateLimiter(req, res, next);
-        return;
-      }
-      if (options.allowGuestAudio) {
-        const clientIp = String(req.ip || req.socket.remoteAddress || 'local').replace(/[^a-zA-Z0-9]/g, '_');
-        (req as any).baseeraSession = {
-          role: 'guest',
-          tenantId: 'demo_guest_tenant',
-          sessionId: `guest_${clientIp}`,
-          accountName: 'زائر التجربة',
-          scopes: ['ai:analyze'],
-        };
-        guestAudioRateLimiter(req, res, next);
         return;
       }
     }
@@ -4333,7 +4321,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
   // Real audio-based Azure pronunciation assessment. No browser transcript/local
   // aligner fallback is allowed to masquerade as an acoustic assessment.
-  app.post('/api/ai/pronunciation-assessment', requireAiAccess({ allowGuestAudio: true }), async (req, res) => {
+  app.post('/api/ai/pronunciation-assessment', requireAiAccess(), async (req, res) => {
     const body = req.body || {};
     const {
       referenceText,
@@ -4453,8 +4441,6 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         });
         return;
       }
-    } else if (String(assessmentSession.role) === 'guest') {
-      // Guest session: consent validated from request body above
     } else {
       const schoolStudent = studentsDb.find((student) =>
         student.id === studentId && student.tenantId === assessmentSession.tenantId
@@ -4643,7 +4629,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
 
   // Finalize a word-list task only after every canonical word has its own server receipt.
-  app.post('/api/ai/cognitive-audio-assessment/finalize', requireAiAccess({ allowGuestAudio: true }), (req, res) => {
+  app.post('/api/ai/cognitive-audio-assessment/finalize', requireAiAccess(), (req, res) => {
     const body = req.body || {};
     const session = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
@@ -4804,7 +4790,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
   // Cognitive battery audio: task references are resolved on the server and never accepted from the browser.
   // Only a complete Azure word-level assessment receives a short-lived receipt.
-  app.post('/api/ai/cognitive-audio-assessment', requireAiAccess({ allowGuestAudio: true }), async (req, res) => {
+  app.post('/api/ai/cognitive-audio-assessment', requireAiAccess(), async (req, res) => {
     const body = req.body || {};
     const assessmentSession = (req as any).baseeraSession as VerifiedBaseeraSession;
     const studentId = typeof body.studentId === 'string' ? body.studentId.trim() : '';
@@ -4884,8 +4870,6 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
     }
-
-    // Guest sessions permitted when guardian consent is provided in request body
 
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;

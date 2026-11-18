@@ -54,7 +54,8 @@ export const supabase: SupabaseClient = isSupabaseConfigured()
 export async function signUpWithEmail(
   email: string,
   password: string,
-  fullName?: string
+  fullName?: string,
+  extraMetadata?: Record<string, unknown>
 ): Promise<{ user: User | null; session: Session | null }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!isSupabaseConfigured()) {
@@ -65,7 +66,10 @@ export async function signUpWithEmail(
     email: cleanEmail,
     password,
     options: {
-      data: { full_name: fullName || cleanEmail.split('@')[0] },
+      data: {
+        full_name: fullName || cleanEmail.split('@')[0],
+        ...(extraMetadata || {}),
+      },
     },
   });
 
@@ -139,13 +143,33 @@ export function onSupabaseAuthChange(
   };
 }
 
+let lastSupabaseSyncError = '';
+
+export function getLastSupabaseSyncError(): string {
+  return lastSupabaseSyncError;
+}
+
 /**
  * Sync a student record to Supabase database
  */
 export async function syncStudentToSupabase(student: StudentRecord, userId: string): Promise<boolean> {
-  if (!isSupabaseConfigured() || !userId) return false;
+  lastSupabaseSyncError = '';
+  if (!isSupabaseConfigured() || !userId) {
+    lastSupabaseSyncError = 'SUPABASE_NOT_CONFIGURED';
+    return false;
+  }
 
   try {
+    // Verify the browser holds a live authenticated session for this user before writing.
+    // When Supabase "Confirm email" is enabled, signUp returns a user with session=null,
+    // which causes RLS (auth.uid() = user_id) to reject inserts until email confirmation.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session || sessionData.session.user?.id !== userId) {
+      lastSupabaseSyncError = 'SESSION_PENDING_EMAIL_CONFIRMATION';
+      console.warn('Cannot sync student without an active authenticated Supabase session (email confirmation may be pending).');
+      return false;
+    }
+
     // Generic profile sync is not allowed to write assessment evidence. First read
     // the same user's stored row, then preserve its server-owned assessment fields.
     let existingRow: {
@@ -175,11 +199,13 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
           .eq('user_id', userId)
           .maybeSingle();
         if (legacyReadError) {
+          lastSupabaseSyncError = legacyReadError.message || 'READ_FAILED';
           console.warn('Failed to read existing student before safe sync:', legacyReadError.message);
           return false;
         }
         existingRow = legacyExisting;
       } else {
+        lastSupabaseSyncError = readError.message || 'READ_FAILED';
         console.warn('Failed to read existing student before safe sync:', readError.message);
         return false;
       }
@@ -195,7 +221,8 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
       name: safeStudent.name,
       grade: Number.isFinite(safeStudent.gradeLevel) ? String(safeStudent.gradeLevel) : 'غير محدد',
       age: Number.isFinite(safeStudent.ageYears) ? safeStudent.ageYears : null,
-      dialect: safeStudent.country || safeStudent.dialect || safeStudent.dialectCode || 'faseeh',
+      country: safeStudent.country || null,
+      dialect: safeStudent.country || 'msa',
       guardian_consent: safeStudent.guardianConsentGiven === true,
       guardian_consent_source: safeStudent.guardianConsentSource || null,
       guardian_consent_recorded_at: safeStudent.guardianConsentRecordedAt || null,
@@ -211,18 +238,31 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
 
     let { error } = await supabase.from('students').upsert(upsertPayload);
 
-    if (error && (error.message?.includes('guardian_audio_consent') || error.code === '42703')) {
-      delete upsertPayload.guardian_audio_consent;
-      delete upsertPayload.guardian_audio_consent_recorded_at;
+    // Gracefully strip optional schema-migration columns if the live DB hasn't applied them yet
+    for (let attempt = 0; attempt < 2 && error && (error.code === '42703' || error.message?.includes('column') || error.message?.includes('schema cache')); attempt++) {
+      let stripped = false;
+      if (error.message?.includes('country') && 'country' in upsertPayload) {
+        delete upsertPayload.country;
+        stripped = true;
+      }
+      if (error.message?.includes('guardian_audio_consent') && 'guardian_audio_consent' in upsertPayload) {
+        delete upsertPayload.guardian_audio_consent;
+        delete upsertPayload.guardian_audio_consent_recorded_at;
+        stripped = true;
+      }
+      if (!stripped) break;
       const retryResult = await supabase.from('students').upsert(upsertPayload);
       error = retryResult.error;
     }
+
     if (error) {
+      lastSupabaseSyncError = error.message || error.code || 'UPSERT_FAILED';
       console.warn('Failed to sync student to Supabase:', error.message);
       return false;
     }
     return true;
   } catch (err) {
+    lastSupabaseSyncError = err instanceof Error ? err.message : String(err);
     console.warn('Supabase sync exception:', err);
     return false;
   }
@@ -309,8 +349,13 @@ export async function fetchStudentsFromSupabase(userId: string): Promise<Student
             student.guardianAudioConsentRecordedAt = row.guardian_audio_consent_recorded_at;
           }
         }
-        if (!student.country && row.dialect && row.dialect !== 'faseeh' && row.dialect !== 'msa') {
+        if (row.country) {
+          student.country = row.country;
+        } else if (!student.country && row.dialect && row.dialect !== 'faseeh' && row.dialect !== 'msa') {
           student.country = row.dialect;
+        }
+        if (!student.parentNotes && typeof row.notes === 'string' && row.notes.trim()) {
+          student.parentNotes = row.notes.trim();
         }
         return student;
       });

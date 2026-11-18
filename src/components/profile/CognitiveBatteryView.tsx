@@ -403,13 +403,13 @@ function SetupView({
   onStart: (s: BatterySession) => void;
   onNavigateTab?: (tab: string) => void;
 }) {
-  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
-  const defaultYears = ageIsSupported ? student.ageYears : 6;
+  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 13;
+  const defaultYears = ageIsSupported ? Math.min(9, student.ageYears) : 6;
   const [name, setName] = useState(needsOwnRecord(student) ? '' : student.name);
   const [years, setYears] = useState(defaultYears);
   const [months, setMonths] = useState(0);
   const savedDialect = normalizeHomeDialect(student.dialectCode || student.dialect, student.country);
-  const [dialect, setDialect] = useState<HomeDialect>(
+  const [dialect] = useState<HomeDialect>(
     savedDialect === 'egyptian' || savedDialect === 'saudi' ? savedDialect : 'other'
   );
   const speechLocale = pronunciationLocaleForDialect(dialect);
@@ -426,8 +426,8 @@ function SetupView({
     return (
       <section className="bz-card bz-card-pad max-w-2xl mx-auto space-y-3" dir="rtl" role="alert">
         <h2 className="bz-h3">هذا الفحص غير متاح لهذا العمر</h2>
-        <p className="bz-body">الفحص الحالي مصمم للأطفال من ٤ إلى ٨ سنوات. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات؛ لن نستبدل العمر تلقائيًا بعمر افتراضي، ولا ينبغي اختيار عمر أصغر لتجاوز هذا القيد.</p>
-        <p className="bz-small bz-muted">يمكن استخدام القارئ الميسّر والأنشطة التعليمية العامة، أو تصحيح العمر المسجل إذا كان غير دقيق.</p>
+        <p className="bz-body">الفحص الحالي مصمم للأطفال من ٤ سنوات فأكثر. العمر المسجل لهذا الملف هو {toArabicDigits(student.ageYears)} سنوات.</p>
+        <p className="bz-small bz-muted">يمكن تصحيح العمر المسجل من بوابة الأسرة إذا كان غير دقيق.</p>
       </section>
     );
   }
@@ -436,31 +436,10 @@ function SetupView({
     <div className="grid lg:grid-cols-[1.35fr_1fr] gap-6 items-start" dir="rtl">
       <section className="bz-card bz-card-pad space-y-8">
         <div className="space-y-5">
-          {supabaseUser ? (
+          {supabaseUser && (
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 font-bold flex items-center gap-2">
               <Cloud className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>متصل بحساب الأسرة ({supabaseUser.email}) — ستُحفظ نتائج الفحص تلقائيًا في حسابك ☁️</span>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-amber-50/80 border border-amber-200 p-3.5 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">وضع الفحص السريع على هذا المتصفح (محلي)</p>
-                  <p className="text-[11px] text-amber-800 mt-0.5">
-                    لن يُحفظ ملف الطفل في حساب إلا إذا سجّل ولي الأمر حسابًا.
-                  </p>
-                </div>
-              </div>
-              {onNavigateTab && (
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('parent-portal')}
-                  className="bz-btn bz-btn-secondary bz-btn-sm whitespace-nowrap self-start sm:self-center font-bold text-xs"
-                >
-                  تسجيل حساب الأسرة لحفظ النتائج ☁️
-                </button>
-              )}
             </div>
           )}
 
@@ -469,7 +448,7 @@ function SetupView({
             <h2 className="bz-h3">بيانات الطفل</h2>
           </div>
           <label className="bz-field">
-            <span className="bz-label">اسم الطفل أو لقبه</span>
+            <span className="bz-label">اسم الطفل</span>
             <input value={name} onChange={(e) => setName(e.target.value)} className="bz-input" />
           </label>
           <div className="bz-field">
@@ -478,7 +457,11 @@ function SetupView({
               <label className="bz-field">
                 <span className="bz-hint">السنوات</span>
                 <select value={years} onChange={(e) => setYears(Number(e.target.value))} className="bz-input">
-                  {[4, 5, 6, 7, 8].map((y) => <option key={y} value={y}>{toArabicDigits(y)} سنوات</option>)}
+                  {[4, 5, 6, 7, 8, 9].map((y) => (
+                    <option key={y} value={y}>
+                      {y >= 9 ? '+٨ سنوات' : `${toArabicDigits(y)} سنوات`}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="bz-field">
@@ -566,11 +549,6 @@ function SetupView({
         >
           <Play className="w-5 h-5" /> بدء الفحص
         </button>
-        {!supabaseUser && (
-          <p className="text-xs text-slate-500 text-center mt-2">
-            ملاحظة: هذا فحص سريع على هذا الجهاز؛ يمكنك لاحقًا ربطه وحفظه في السحابة من بوابة الأسرة.
-          </p>
-        )}
       </section>
 
       <aside className="space-y-4">
@@ -660,7 +638,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const syncEnabled = canSyncToSchool(activeStudent);
   const [syncState, setSyncState] = useState<SyncState>(syncEnabled && activeStudent.cognitiveBattery ? 'saved' : 'local');
   const createInitialSession = (): BatterySession | null => {
-    const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 8;
+    const isValidAge = Number.isInteger(activeStudent.ageYears) && activeStudent.ageYears >= 4 && activeStudent.ageYears <= 13;
     const explicitGeneralConsent =
       activeStudent.guardianConsentGiven === true &&
       typeof activeStudent.guardianConsentRecordedAt === 'string' &&
@@ -935,7 +913,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               </button>
             </div>
           </div>
-          <p className="bz-small text-brand font-semibold mt-2">فحص {session.childName} · {toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و{toArabicDigits(session.ageMonths % 12)} أشهر</p>
+          <p className="bz-small text-brand font-semibold mt-2">
+            فحص {session.childName} · {session.ageMonths >= 108 ? '+٨ سنوات' : `${toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و${toArabicDigits(session.ageMonths % 12)} أشهر`}
+          </p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
             {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
           </h2>

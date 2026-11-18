@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.students (
     name TEXT NOT NULL,
     grade TEXT NOT NULL DEFAULT 'غير محدد',
     age INTEGER,
+    country TEXT,
     dialect TEXT DEFAULT 'faseeh',
     guardian_consent BOOLEAN DEFAULT FALSE,
     guardian_consent_source TEXT,

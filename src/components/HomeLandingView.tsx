@@ -372,7 +372,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
             { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت لمهام التقييم إلا بعد موافقة منفصلة؛ ويمكن متابعة الأنشطة دون درجة صوتية.', tone: 'coral' },
-            { icon: Users, t: 'بيانات طفلك', b: 'تُحفظ بيانات الملف والنتائج في حساب الأسرة أو على الجهاز حسب طريقة الاستخدام.', tone: 'grape' },
+            { icon: Users, t: 'بيانات طفلك', b: 'تُحفظ بيانات الملف والنتائج بأمان في حساب الأسرة المسجّل فقط.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
             { icon: GraduationCap, t: 'لا تشخيص', b: 'التقرير يصف أداء الطفل في أنشطة المنصة، ولا يثبت وجود عسر القراءة.', tone: 'leaf' },
           ].map((x) => (

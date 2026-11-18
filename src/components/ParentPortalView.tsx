@@ -30,7 +30,37 @@ import { BrandMark } from './ui/BrandMark';
 import { JoyCorners } from './ui/Playful';
 import { MascotLive } from './ui/MascotLive';
 
-const GRADE_ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+export const GRADE_OPTIONS = [
+  { val: 0, label: 'الروضة (التمهيدي)' },
+  { val: 1, label: 'الصف الأول الابتدائي' },
+  { val: 2, label: 'الصف الثاني الابتدائي' },
+  { val: 3, label: 'الصف الثالث الابتدائي' },
+  { val: 4, label: 'الصف الرابع الابتدائي' },
+  { val: 5, label: 'الصف الخامس الابتدائي' },
+  { val: 6, label: 'الصف السادس الابتدائي' },
+  { val: 7, label: 'الصف الأول المتوسط' },
+] as const;
+
+export const AGE_OPTIONS = [
+  { val: 4, label: '٤ سنوات' },
+  { val: 5, label: '٥ سنوات' },
+  { val: 6, label: '٦ سنوات' },
+  { val: 7, label: '٧ سنوات' },
+  { val: 8, label: '٨ سنوات' },
+  { val: 9, label: '+٨ سنوات' },
+] as const;
+
+function gradeLabelAr(gradeLevel: number): string {
+  const found = GRADE_OPTIONS.find((g) => g.val === gradeLevel);
+  if (found) return found.label;
+  if (gradeLevel >= 7) return 'الصف الأول المتوسط';
+  return 'الروضة (التمهيدي)';
+}
+
+function ageLabelAr(ageYears: number): string {
+  if (ageYears > 8) return '+٨ سنوات';
+  return `${toArabicNum(ageYears)} سنوات`;
+}
 
 export const ARAB_COUNTRIES = [
   { code: 'QA', name: 'قطر', flag: '🇶🇦' },
@@ -67,18 +97,19 @@ interface NextStep {
 
 /** The one thing a parent should do next for this child: screening, then the programme. */
 function nextStepFor(child: StudentRecord): NextStep {
-  const isInScreeningAgeRange = Number.isInteger(child.ageYears) && child.ageYears >= 4 && child.ageYears <= 8;
+  const isInScreeningAgeRange = Number.isInteger(child.ageYears) && child.ageYears >= 4 && child.ageYears <= 13;
   if (!isInScreeningAgeRange) {
     return {
       stageAr: 'خارج نطاق الفحص الحالي',
       actionAr: 'عرض الملف والأنشطة الميسّرة',
-      progressAr: 'الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات، ولن نغيّر العمر تلقائيًا لتجاوز هذا النطاق.',
+      progressAr: 'الفحص الحالي مخصص للأطفال من ٤ سنوات فأكثر.',
       tab: 'dashboard',
     };
   }
   const stored = child.cognitiveBattery ?? null;
   const battery = stored?.results ?? {};
-  const tasks = subtestsForAge(stored?.ageMonths ?? child.ageYears * 12);
+  const effectiveAgeMonths = Math.min(96, stored?.ageMonths ?? child.ageYears * 12);
+  const tasks = subtestsForAge(effectiveAgeMonths);
   const done = tasks.filter((s) => battery[s.id]).length;
   const training = child.trainingProgress ?? null;
   if (done === 0) {
@@ -154,13 +185,13 @@ export function ParentPortalView({
   const [ageYears, setAgeYears] = useState<number>(6);
   const [gradeLevel, setGradeLevel] = useState<number>(1);
   const [country, setCountry] = useState<string>('');
-  const [readingDialect, setReadingDialect] = useState<'egyptian' | 'saudi' | 'other'>('other');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [parentNotes, setParentNotes] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
   const [audioConsentChecked, setAudioConsentChecked] = useState(false);
   const [formError, setFormError] = useState('');
+  const [formNotice, setFormNotice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Deleting a child's file: which child awaits confirmation, and any error.
@@ -247,32 +278,44 @@ export function ParentPortalView({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setFormNotice('');
 
     const cleanName = childName.trim();
     if (cleanName.length < 2) {
-      setFormError('أدخل اسمًا مستعارًا أو لقبًا للطفل لا يقل عن حرفين.');
+      setFormError('أدخل اسم الطفل (حرفين على الأقل).');
       return;
     }
 
-    if (!Number.isInteger(ageYears) || ageYears < 4 || ageYears > 8) {
-      setFormError('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
+    if (!Number.isInteger(ageYears) || ageYears < 4 || ageYears > 13) {
+      setFormError('اختر عمر الطفل من ٤ سنوات حتى +٨ سنوات.');
       return;
     }
+
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 0 || gradeLevel > 7) {
+      setFormError('اختر المرحلة الدراسية الحالية من القائمة.');
+      return;
+    }
+
+    if (!country.trim()) {
+      setFormError('يرجى اختيار دولة الطفل.');
+      return;
+    }
+
     if (!consentChecked) {
       setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
       return;
     }
 
-    const cleanEmail = parentEmail.trim();
-    const hasEmail = cleanEmail.length > 0;
-    const hasPassword = parentPassword.length > 0;
-    if (hasEmail !== hasPassword) {
-      setFormError('لإنشاء حساب الأسرة، أدخل البريد وكلمة المرور معًا، أو اتركهما فارغين لاستخدام وضع الزائر.');
-      return;
-    }
-    if (hasEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.') || parentPassword.length < 6)) {
-      setFormError('أدخل بريدًا إلكترونيًا صحيحًا وكلمة مرور من ٦ خانات على الأقل، أو اترك الحقلين فارغين.');
-      return;
+    if (!supabaseUser) {
+      const cleanEmail = parentEmail.trim();
+      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+        setFormError('يجب إدخال بريد إلكتروني صحيح لولي الأمر.');
+        return;
+      }
+      if (!parentPassword || parentPassword.length < 6) {
+        setFormError('يجب إدخال كلمة مرور لا تقل عن ٦ خانات لحساب ولي الأمر.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -281,13 +324,23 @@ export function ParentPortalView({
         name: cleanName,
         ageYears,
         gradeLevel,
-        country,
-        dialectCode: readingDialect,
+        country: country.trim(),
+        dialectCode: 'msa',
         audioConsentGiven: audioConsentChecked,
         notes: parentNotes.trim(),
         parentEmail: parentEmail.trim(),
         parentPassword: parentPassword,
       });
+
+      if (newId === 'PENDING_EMAIL_CONFIRMATION') {
+        setFormNotice(
+          `تم إنشاء حسابك وحفظ بيانات «${cleanName}» مؤقتًا في انتظار التفعيل. أرسلنا رسالة تأكيد إلى بريدك الإلكتروني (${parentEmail.trim()}) — افتح رابط التفعيل ثم سجّل الدخول وسيُحفظ ملف طفلك تلقائيًا في قاعدة البيانات فورًا.`
+        );
+        setParentPassword('');
+        setPortalMode('login');
+        setLoginEmail(parentEmail.trim());
+        return;
+      }
 
       if (newId) {
         setChildName('');
@@ -413,8 +466,8 @@ export function ParentPortalView({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">
-                    وضع الزائر (غير مسجل)
+                  <div className="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold">
+                    🔒 يلزم تسجيل الدخول أو إنشاء حساب
                   </div>
                 </div>
               )}
@@ -426,85 +479,14 @@ export function ParentPortalView({
         <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>حفظ البيانات:</strong> يُحفظ الملف في حساب الأسرة بعد نجاح التسجيل، أو على هذا الجهاز في وضع الزائر. تسجيل الصوت اختياري وبموافقة منفصلة.
+            <strong>حفظ البيانات:</strong> تُحفظ بيانات طفلك ونتائجه بأمان في حساب الأسرة السحابي بعد تسجيل الدخول. تسجيل الصوت اختياري وبموافقة منفصلة.
           </div>
         </div>
 
-        {/* UN-SYNCED LOCAL CHILDREN ALERT BANNER (When visitor has local screening records on this browser) */}
-        {!supabaseUser && localGuestChildren.length > 0 && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="p-2.5 bg-amber-100 text-amber-800 rounded-2xl shrink-0 mt-0.5 sm:mt-0">
-                  <AlertTriangle size={24} />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-black text-amber-950 flex flex-wrap items-center gap-2">
-                    <span>ملف الطفل «{localGuestChildren[0].name}» محفوظ على هذا الجهاز فقط!</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
-                      غير محفوظ في السحابة ⚠️
-                    </span>
-                  </h2>
-                  <p className="text-xs text-amber-900/80 mt-1">
-                    العمر: {toArabicNum(localGuestChildren[0].ageYears)} سنوات · أُنشئ هذا الملف أثناء الفحص السريع على هذا المتصفح، وإذا مُسحت بيانات المتصفح فقد تضيع نتائجه.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => onSelectStudent(localGuestChildren[0].id, 'dyslexia-lab')}
-                className="bz-btn bz-btn-secondary bz-btn-sm whitespace-nowrap text-xs font-bold self-start sm:self-center"
-              >
-                متابعة الفحص كزائر ←
-              </button>
-            </div>
-            <div className="max-w-sm">{deleteControls(localGuestChildren[0])}</div>
-
-            <div className="bg-white/90 backdrop-blur-xs rounded-2xl p-4 sm:p-5 border border-amber-200/80 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                <Cloud size={16} className="text-teal-600" />
-                <span>احفظ ملف «{localGuestChildren[0].name}» في حسابك الآن بضغطة واحدة:</span>
-              </div>
-              <p className="text-xs text-slate-600">
-                أدخل بريدك الإلكتروني وكلمة المرور لإنشاء حساب للأسرة (أو للدخول إلى حسابك)، فتُحفظ نتائج الطفل تلقائيًا:
-              </p>
-
-              {linkError && (
-                <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
-                  {linkError}
-                </div>
-              )}
-
-              <form onSubmit={(e) => handleLinkLocalSubmit(e, localGuestChildren[0].id)} className="grid sm:grid-cols-3 gap-3 pt-1">
-                <input
-                  type="email"
-                  required
-                  value={linkEmail}
-                  onChange={(e) => setLinkEmail(e.target.value)}
-                  placeholder="بريدك الإلكتروني (parent@example.com)"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 font-medium bg-white"
-                  dir="ltr"
-                />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={linkPassword}
-                  onChange={(e) => setLinkPassword(e.target.value)}
-                  placeholder="كلمة المرور (٦ خانات على الأقل)"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 font-medium bg-white"
-                  dir="ltr"
-                />
-                <button
-                  type="submit"
-                  disabled={isLinking}
-                  className="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <Cloud size={16} />
-                  <span>{isLinking ? 'جارٍ الحفظ في السحابة…' : `☁️ حفظ «${localGuestChildren[0].name}» في السحابة`}</span>
-                </button>
-              </form>
-            </div>
+        {formNotice && (
+          <div role="status" className="p-4 bg-teal-50 border-2 border-teal-300 rounded-2xl text-xs sm:text-sm text-teal-950 font-bold leading-relaxed flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+            <span>{formNotice}</span>
           </div>
         )}
 
@@ -547,8 +529,13 @@ export function ParentPortalView({
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                          العمر: {toArabicNum(child.ageYears)} {child.ageYears >= 3 && child.ageYears <= 10 ? 'سنوات' : 'سنة'} · {child.gradeLevel === 0 ? 'الروضة / تمهيدي' : child.gradeLevel >= 6 ? 'الصف السادس فما فوق' : `الصف ${GRADE_ORDINALS[child.gradeLevel] ?? toArabicNum(child.gradeLevel)} الابتدائي`}{(child.country || (child.dialect && child.dialect !== 'faseeh' && child.dialect !== 'msa')) ? ` · الدولة: ${child.country || child.dialect}` : ''}
+                          العمر: {ageLabelAr(child.ageYears)} · {gradeLabelAr(child.gradeLevel)}{(child.country || (child.dialect && child.dialect !== 'faseeh' && child.dialect !== 'msa')) ? ` · الدولة: ${child.country || child.dialect}` : ''}
                         </p>
+                        {child.parentNotes && (
+                          <p className="text-xs text-slate-600 mt-1.5 bg-slate-50 border border-slate-200/80 rounded-lg px-2.5 py-1.5">
+                            <span className="font-bold text-slate-700">ملاحظة ولي الأمر:</span> {child.parentNotes}
+                          </p>
+                        )}
                       </div>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800">
                         {nextStepFor(child).stageAr}
@@ -617,7 +604,7 @@ export function ParentPortalView({
                   )}
 
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">اسم الطفل المستعار أو اللقب *</span>
+                    <span className="text-xs font-bold text-slate-700">اسم الطفل *</span>
                     <input
                       type="text"
                       required
@@ -633,52 +620,42 @@ export function ParentPortalView({
                       <Calendar size={14} className="text-slate-400" />
                       <span>عمر الطفل بالسنوات *</span>
                     </span>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[4, 5, 6, 7, 8].map((age) => (
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {AGE_OPTIONS.map((age) => (
                         <button
-                          key={age}
+                          key={age.val}
                           type="button"
-                          onClick={() => setAgeYears(age)}
+                          onClick={() => setAgeYears(age.val)}
                           className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            ageYears === age
+                            ageYears === age.val
                               ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          {toArabicNum(age)} سنوات
+                          {age.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <BookOpen size={14} className="text-slate-400" />
                       <span>المرحلة الدراسية الحالية *</span>
                     </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { val: 0, label: 'تمهيدي / روضة' },
-                        { val: 1, label: 'الصف الأول' },
-                        { val: 2, label: 'الصف الثاني' },
-                        { val: 3, label: 'الصف الثالث' },
-                      ].map((g) => (
-                        <button
-                          key={g.val}
-                          type="button"
-                          onClick={() => setGradeLevel(g.val)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            gradeLevel === g.val
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
+                    <select
+                      required
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(Number(e.target.value))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {GRADE_OPTIONS.map((g) => (
+                        <option key={g.val} value={g.val}>
                           {g.label}
-                        </button>
+                        </option>
                       ))}
-                    </div>
-                  </div>
-
+                    </select>
+                  </label>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -698,20 +675,6 @@ export function ParentPortalView({
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">لهجة الطفل المعتادة *</span>
-                    <select
-                      required
-                      value={readingDialect}
-                      onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
-                    >
-                      <option value="other">لهجة عربية أخرى أو غير محددة</option>
-                      <option value="egyptian">المصرية</option>
-                      <option value="saudi">السعودية</option>
-                    </select>
-                    <span className="text-xs text-slate-500 leading-5">النصوص بالفصحى. التقييم الصوتي متاح حاليًا للمصرية والسعودية فقط؛ بقية اللهجات تتابع الأنشطة دون درجة صوتية.</span>
                   </label>
 
                   <details className="rounded-xl border border-slate-200 p-3">
@@ -812,7 +775,7 @@ export function ParentPortalView({
                     <span>تسجيل طفل</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    أدخل بيانات طفلك. يمكنك حفظ ملفه على هذا الجهاز أو إنشاء حساب للأسرة لمتابعة نتائجه من أي جهاز.
+                    أنشئ حساب الأسرة وأدخل بيانات طفلك لحفظ ملفه ونتائجه في قاعدة البيانات بأمان والبدء فورًا.
                   </p>
                 </div>
 
@@ -823,9 +786,9 @@ export function ParentPortalView({
                     </div>
                   )}
 
-                  {/* Child pseudonym */}
+                  {/* Child name */}
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">اسم الطفل المستعار أو اللقب *</span>
+                    <span className="text-xs font-bold text-slate-700">اسم الطفل *</span>
                     <input
                       type="text"
                       required
@@ -842,53 +805,43 @@ export function ParentPortalView({
                       <Calendar size={14} className="text-slate-400" />
                       <span>عمر الطفل بالسنوات *</span>
                     </span>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[4, 5, 6, 7, 8].map((age) => (
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {AGE_OPTIONS.map((age) => (
                         <button
-                          key={age}
+                          key={age.val}
                           type="button"
-                          onClick={() => setAgeYears(age)}
+                          onClick={() => setAgeYears(age.val)}
                           className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            ageYears === age
+                            ageYears === age.val
                               ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
                               : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          {toArabicNum(age)} سنوات
+                          {age.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Grade options */}
-                  <div className="space-y-2">
+                  {/* Grade dropdown */}
+                  <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <BookOpen size={14} className="text-slate-400" />
                       <span>المرحلة الدراسية الحالية *</span>
                     </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { val: 0, label: 'تمهيدي / روضة' },
-                        { val: 1, label: 'الصف الأول' },
-                        { val: 2, label: 'الصف الثاني' },
-                        { val: 3, label: 'الصف الثالث' },
-                      ].map((g) => (
-                        <button
-                          key={g.val}
-                          type="button"
-                          onClick={() => setGradeLevel(g.val)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer ${
-                            gradeLevel === g.val
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
+                    <select
+                      required
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(Number(e.target.value))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
+                      {GRADE_OPTIONS.map((g) => (
+                        <option key={g.val} value={g.val}>
                           {g.label}
-                        </button>
+                        </option>
                       ))}
-                    </div>
-                  </div>
-
+                    </select>
+                  </label>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -909,33 +862,20 @@ export function ParentPortalView({
                       ))}
                     </select>
                   </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">لهجة الطفل المعتادة *</span>
-                    <select
-                      required
-                      value={readingDialect}
-                      onChange={(e) => setReadingDialect(e.target.value as typeof readingDialect)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
-                    >
-                      <option value="other">لهجة عربية أخرى أو غير محددة</option>
-                      <option value="egyptian">المصرية</option>
-                      <option value="saudi">السعودية</option>
-                    </select>
-                    <span className="text-xs text-slate-500 leading-5">النصوص بالفصحى. التقييم الصوتي متاح حاليًا للمصرية والسعودية فقط؛ بقية اللهجات تتابع الأنشطة دون درجة صوتية.</span>
-                  </label>
 
-                  {/* Parent Credentials */}
+                  {/* Parent Credentials (REQUIRED) */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
                       <Mail size={16} className="text-teal-600" />
-                      <span>حساب ولي الأمر (اختياري)</span>
+                      <span>حساب ولي الأمر (مطلوب) *</span>
                     </div>
-                    <p className="text-xs leading-5 text-slate-600">أدخل البريد وكلمة المرور معًا لحفظ الملف في حسابك السحابي، أو اتركهما فارغين لاستخدام وضع الزائر.</p>
+                    <p className="text-xs leading-5 text-slate-600">يجب إدخال البريد الإلكتروني وكلمة المرور لإنشاء حساب الأسرة وحفظ ملف طفلك ونتائجه بأمان في قاعدة البيانات.</p>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">البريد الإلكتروني</span>
+                        <span className="text-xs font-bold text-slate-700">البريد الإلكتروني *</span>
                         <input
                           type="email"
+                          required
                           value={parentEmail}
                           onChange={(e) => setParentEmail(e.target.value)}
                           placeholder="parent@example.com"
@@ -944,12 +884,13 @@ export function ParentPortalView({
                         />
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-slate-700">كلمة المرور</span>
+                        <span className="text-xs font-bold text-slate-700">كلمة المرور *</span>
                         <input
                           type="password"
+                          required
                           value={parentPassword}
                           onChange={(e) => setParentPassword(e.target.value)}
-                          placeholder="••••••••"
+                          placeholder="٦ خانات على الأقل"
                           minLength={6}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-medium text-slate-800"
                           dir="ltr"
@@ -982,7 +923,7 @@ export function ParentPortalView({
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق على إنشاء ملف الطفل وحفظ نتائجه وفق سياسة الخصوصية. يُحفظ الملف على هذا الجهاز ما لم أسجّل حسابًا سحابيًا.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي السحابي وفق سياسة الخصوصية.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
@@ -1015,7 +956,7 @@ export function ParentPortalView({
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                     >
                       <Brain size={18} />
-                      <span>{isSubmitting ? 'جارٍ حفظ الملف…' : parentEmail.trim() && parentPassword ? 'حفظ ملف الطفل في حساب الأسرة وبدء الفحص ←' : parentEmail.trim() || parentPassword ? 'أكمل البريد وكلمة المرور معًا' : 'حفظ ملف الطفل على هذا الجهاز وبدء الفحص ←'}</span>
+                      <span>{isSubmitting ? 'جارٍ إنشاء الحساب وحفظ الملف…' : 'إنشاء الحساب وحفظ ملف الطفل وبدء الفحص ←'}</span>
                     </button>
                   </div>
                 </form>

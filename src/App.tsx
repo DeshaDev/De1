@@ -61,6 +61,7 @@ import {
   isSupabaseConfigured,
   fetchStudentsFromSupabase,
   syncStudentToSupabase,
+  getLastSupabaseSyncError,
   syncTrainingProgressToSupabase,
   deleteStudentFromSupabase,
 } from './utils/supabaseClient';
@@ -339,7 +340,28 @@ export default function App() {
   const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(false);
   const [supabaseError, setSupabaseError] = useState<string>('');
 
+  const PUBLIC_TABS: ReadonlySet<ActiveTab> = new Set([
+    'home',
+    'parent-portal',
+    'privacy',
+    'terms',
+  ]);
+  const isAuthenticated = Boolean(supabaseUser || baseeraSession);
+
   const setActiveTab = (tab: ActiveTab) => {
+    // Strictly block guest access: all learning, screening, reading, and report tabs require login.
+    if (!PUBLIC_TABS.has(tab) && !supabaseUser && !baseeraSession) {
+      setActiveTabState('parent-portal');
+      setAiStatusBanner('يرجى تسجيل الدخول أو إنشاء حساب ولي أمر أولًا؛ لا يمكن استخدام المنصة في وضع الزائر.');
+      const portalPath = tabToUrlPath('parent-portal');
+      if (typeof window !== 'undefined' && window.location.pathname !== portalPath) {
+        window.history.pushState(null, '', portalPath);
+      }
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+      return;
+    }
     setAiStatusBanner('');
     setActiveTabState(tab);
     const newPath = tabToUrlPath(tab);
@@ -351,29 +373,142 @@ export default function App() {
     }
   };
 
+  // Enforce no-guest-mode on direct URL navigation (e.g. /screening, /training, /reading)
+  useEffect(() => {
+    if (!PUBLIC_TABS.has(activeTab) && !isAuthenticated) {
+      setActiveTabState('parent-portal');
+      setAiStatusBanner('يرجى تسجيل الدخول أو إنشاء حساب ولي أمر أولًا؛ لا يمكن استخدام المنصة في وضع الزائر.');
+      if (typeof window !== 'undefined') {
+        const portalPath = tabToUrlPath('parent-portal');
+        if (window.location.pathname !== portalPath) {
+          window.history.replaceState(null, '', portalPath);
+        }
+      }
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const flushPendingChildForUser = async (user: any): Promise<StudentRecord | null> => {
+    if (!user?.id) return null;
+    let pendingLearner: StudentRecord | null = null;
+    try {
+      const rawLocal = typeof localStorage !== 'undefined' ? localStorage.getItem('hn_pending_child_registration') : null;
+      if (rawLocal) {
+        const parsed = JSON.parse(rawLocal) as { userId?: string; student?: StudentRecord };
+        if (parsed?.userId === user.id && parsed.student) {
+          pendingLearner = parsed.student;
+        }
+      }
+    } catch {
+      // ignore corrupted local cache
+    }
+
+    if (!pendingLearner && user.user_metadata?.pending_child && typeof user.user_metadata.pending_child === 'object') {
+      const meta = user.user_metadata.pending_child as Record<string, any>;
+      const recordedAt = typeof meta.guardianConsentRecordedAt === 'string' ? meta.guardianConsentRecordedAt : new Date().toISOString();
+      const childName = typeof meta.name === 'string' && meta.name.trim().length >= 2 ? meta.name.trim() : '';
+      if (childName) {
+        pendingLearner = {
+          id: typeof meta.id === 'string' && meta.id ? meta.id : `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
+          name: childName,
+          parentAccount: user.id,
+          isDemoRecord: false,
+          sessionStatus: 'in_progress',
+          sessionRoleLabel: 'ولي الأمر / فحص منزلي',
+          assessmentHistory: [],
+          cognitiveBattery: null,
+          trainingProgress: null,
+          gradeLevel: Number.isInteger(meta.gradeLevel) ? meta.gradeLevel : 1,
+          ageYears: Number.isInteger(meta.ageYears) ? meta.ageYears : 6,
+          country: typeof meta.country === 'string' ? meta.country : 'غير محددة',
+          dialectCode: 'msa',
+          dialect: 'msa',
+          schoolName: `حساب ولي الأمر (${user.user_metadata?.full_name || user.email || 'الأسرة'})`,
+          lastScreenedDate: '—',
+          passageId: ARABIC_READING_PASSAGES[0].id,
+          guardianConsentGiven: true,
+          guardianConsentRecordedAt: recordedAt,
+          guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})`,
+          guardianAudioConsentGiven: meta.audioConsentGiven === true,
+          ...(meta.audioConsentGiven === true ? { guardianAudioConsentRecordedAt: recordedAt } : {}),
+          parentNotes: typeof meta.notes === 'string' && meta.notes.trim() ? meta.notes.trim() : undefined,
+          speechRecognitionUsed: false,
+          wpm: 0,
+          dyslexiaRiskScore: null,
+          readingHeuristicIndicator: null,
+          readingRiskLevel: 'unassessed',
+          readingRiskLabelAr: 'جاهز لبدء الفحص المنزلي.',
+          problematicWords: [],
+          comprehensionScore: 0,
+          dyscalculiaAssessed: false,
+          subitizingAccuracy: null,
+          avgSubitizingMs: null,
+          numberLinePAE: null,
+          transcodingAccuracy: null,
+          reversalErrorCount: null,
+          dyscalculiaRiskScore: null,
+          mathHeuristicIndicator: null,
+          mathRiskLevel: 'unassessed',
+          mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
+          learningReport: {
+            learningSummary: `ملف جديد للطفل «${childName}»؛ تظهر المؤشرات فور إكمال أول تمرين أو فحص.`,
+            ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع العين.',
+            orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+            dyscalculiaSpatialAnalysis: 'غير منطبق.',
+            interventionExercises: [],
+            classroomAccommodations: [],
+          },
+        };
+      }
+    }
+
+    if (!pendingLearner) return null;
+    pendingLearner.parentAccount = user.id;
+    const saved = await syncStudentToSupabase(pendingLearner, user.id);
+    if (saved) {
+      try {
+        localStorage.removeItem('hn_pending_child_registration');
+      } catch {}
+      return pendingLearner;
+    }
+    return null;
+  };
+
   useEffect(() => {
     const unsubscribe = onSupabaseAuthChange((user, session) => {
-      setSupabaseUser(user);
-      if (user) {
-        const googleSession: BaseeraSessionInfo = {
-          token: session?.access_token || `google-${user.id}`,
-          role: 'school_admin',
-          accountName: user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'معلم Google',
-          tenantId: `google_${user.id.slice(0, 8)}`,
-          tenantDisplayNameAr: 'حساب Google التعليمي',
+      if (user && session?.access_token) {
+        setSupabaseUser(user);
+        const parentSession: BaseeraSessionInfo = {
+          token: session.access_token,
+          role: 'parent',
+          accountName: user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'ولي أمر',
+          tenantId: `parent_${user.id.slice(0, 8)}`,
+          tenantDisplayNameAr: 'حساب ولي الأمر',
           sessionId: user.id.replace(/-/g, '').slice(0, 32),
-          scopes: ['students:read', 'students:write', 'assessments:all'],
-          expiresAt: session?.expires_at ? session.expires_at * 1000 : Date.now() + 86400000,
+          scopes: ['students:read', 'students:write'],
+          expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + 86400000,
         };
-        setBaseeraSession(googleSession);
-        storeBaseeraSession(googleSession);
+        setBaseeraSession(parentSession);
+        storeBaseeraSession(parentSession);
         setShowBaseeraLogin(false);
-        setAiStatusBanner(`مرحبًا بك، ${googleSession.accountName}! سجّلت الدخول بنجاح عبر Google.`);
-        void fetchStudentsFromSupabase(user.id).then((cloudStudents) => {
-          if (cloudStudents.length > 0) {
-            setStudents(cloudStudents);
+        void (async () => {
+          const existingCloud = await fetchStudentsFromSupabase(user.id);
+          let merged = existingCloud;
+          if (existingCloud.length === 0) {
+            const flushed = await flushPendingChildForUser(user);
+            if (flushed) {
+              merged = [flushed];
+              setAiStatusBanner(`تم تفعيل حسابك وحفظ ملف الطفل «${flushed.name}» في قاعدة البيانات بنجاح ☁️`);
+            }
+          } else {
+            try { localStorage.removeItem('hn_pending_child_registration'); } catch {}
           }
-        });
+          if (merged.length > 0) {
+            setStudents(merged);
+            selectStudent(merged[0].id);
+          }
+        })();
+      } else {
+        setSupabaseUser(null);
       }
     });
     return () => unsubscribe();
@@ -402,18 +537,29 @@ export default function App() {
       setBaseeraSession(parentSession);
       storeBaseeraSession(parentSession);
       setAiStatusBanner('مرحبًا بك! سجّلت الدخول بنجاح.');
-      const cloudStudents = await fetchStudentsFromSupabase(user.id);
+      const existingCloud = await fetchStudentsFromSupabase(user.id);
+      let cloudStudents = existingCloud;
+      if (existingCloud.length === 0) {
+        const flushed = await flushPendingChildForUser(user);
+        if (flushed) {
+          cloudStudents = [flushed];
+          setAiStatusBanner(`مرحبًا بك! تم حفظ ملف الطفل «${flushed.name}» في حسابك السحابي بنجاح ☁️`);
+        }
+      }
       if (cloudStudents.length > 0) {
-        setStudents((prev) => {
-          const ids = new Set(cloudStudents.map((s) => s.id));
-          return [...cloudStudents, ...prev.filter((p) => !ids.has(p.id))];
-        });
+        setStudents(cloudStudents);
+        selectStudent(cloudStudents[0].id);
       }
       setSupabaseAuthLoading(false);
       return { success: true };
     } catch (err: any) {
       setSupabaseAuthLoading(false);
-      const msg = err?.message || 'تعذّر تسجيل الدخول. تأكّد من البريد الإلكتروني وكلمة المرور.';
+      const rawMsg = String(err?.message || '');
+      const msg = rawMsg.toLowerCase().includes('email not confirmed')
+        ? 'يرجى تأكيد بريدك الإلكتروني أولًا عبر رابط التفعيل المُرسل إلى بريدك، ثم أعد تسجيل الدخول.'
+        : rawMsg.toLowerCase().includes('invalid login credentials')
+        ? 'البريد الإلكتروني أو كلمة المرور غير صحيحين.'
+        : rawMsg || 'تعذّر تسجيل الدخول. تأكّد من البريد الإلكتروني وكلمة المرور.';
       setSupabaseError(msg);
       return { success: false, error: msg };
     }
@@ -710,6 +856,7 @@ export default function App() {
 
   /** Battery setup on a demo record creates a real learner so results never mix with demo data. */
   const handleCreateBatteryLearner = (input: { name: string; ageYears: number; examinerName: string; dialectCode?: string; guardianConsentRecordedAt?: string; guardianAudioConsentGiven?: boolean; guardianAudioConsentRecordedAt?: string }): string | null => {
+    if (!supabaseUser && !baseeraSession) return null;
     if (baseeraSession?.role === 'educator_readonly') return null;
     const cleanName = input.name.trim().replace(/\s+/g, ' ');
     if (cleanName.length < 2) return null;
@@ -800,7 +947,7 @@ export default function App() {
     return learner.id;
   };
 
-  /** Parent portal child registration handler */
+  /** Parent portal child registration handler (no guest mode — requires authenticated parent account) */
   const handleRegisterChildByParent = async (child: {
     name: string;
     ageYears: number;
@@ -812,43 +959,113 @@ export default function App() {
     parentEmail?: string;
     parentPassword?: string;
   }): Promise<string | null> => {
-    if (!Number.isInteger(child.ageYears) || child.ageYears < 4 || child.ageYears > 8) {
-      throw new Error('الفحص الحالي مخصص للأطفال من ٤ إلى ٨ سنوات فقط.');
+    if (!Number.isInteger(child.ageYears) || child.ageYears < 4 || child.ageYears > 13) {
+      throw new Error('اختر عمر الطفل من ٤ سنوات حتى +٨ سنوات.');
     }
-    if (!Number.isInteger(child.gradeLevel) || child.gradeLevel < 0 || child.gradeLevel > 3) {
-      throw new Error('اختر المرحلة من الروضة حتى الصف الثالث.');
+    if (!Number.isInteger(child.gradeLevel) || child.gradeLevel < 0 || child.gradeLevel > 7) {
+      throw new Error('اختر المرحلة الدراسية من الروضة حتى الصف الأول المتوسط.');
     }
-    let currentUser = supabaseUser;
+    const selectedCountry = (child.country || '').trim();
+    if (!selectedCountry) {
+      throw new Error('يرجى اختيار دولة الطفل.');
+    }
 
-    // Cloud sign-up / sign-in if parent credentials were provided
-    if (!currentUser && child.parentEmail && child.parentPassword) {
-      try {
-        const res = await signUpWithEmail(child.parentEmail, child.parentPassword);
-        if (res.user) {
-          currentUser = res.user;
-          setSupabaseUser(res.user);
-        }
-      } catch (signUpErr: any) {
-        try {
-          const res = await signInWithEmail(child.parentEmail, child.parentPassword);
-          if (res.user) {
-            currentUser = res.user;
-            setSupabaseUser(res.user);
-          }
-        } catch (authErr: any) {
-          const msg = authErr?.message || signUpErr?.message || 'تعذر الاتصال بخدمة المصادقة السحابية';
-          throw new Error(`تعذّر إنشاء حساب الأسرة أو تسجيل الدخول إليه: ${msg}`);
-        }
+    let currentUser = supabaseUser;
+    let activeSession: any = null;
+
+    // Enforce authenticated account: guest mode is disabled.
+    if (!currentUser) {
+      const cleanEmail = (child.parentEmail || '').trim().toLowerCase();
+      const pass = child.parentPassword || '';
+      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.') || pass.length < 6) {
+        throw new Error('يجب إدخال بريد إلكتروني صحيح وكلمة مرور (٦ خانات على الأقل) لحساب ولي الأمر.');
       }
     }
 
     const recordedAt = new Date().toISOString();
-    const selectedCountry = child.country || 'غير محددة';
-    const selectedDialect = normalizeHomeDialect(child.dialectCode, selectedCountry);
+    const newLearnerId = `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`;
+    const selectedDialect = 'msa' as const;
+
+    const pendingChildMeta = {
+      id: newLearnerId,
+      name: child.name.trim(),
+      ageYears: child.ageYears,
+      gradeLevel: child.gradeLevel,
+      country: selectedCountry,
+      notes: (child.notes || '').trim(),
+      audioConsentGiven: child.audioConsentGiven === true,
+      guardianConsentRecordedAt: recordedAt,
+    };
+
+    // Cloud sign-up / sign-in when parent is not yet signed in
+    if (!currentUser && child.parentEmail && child.parentPassword) {
+      try {
+        const res = await signUpWithEmail(
+          child.parentEmail,
+          child.parentPassword,
+          undefined,
+          { pending_child: pendingChildMeta }
+        );
+        if (res.user) {
+          currentUser = res.user;
+          activeSession = res.session;
+          if (res.session?.access_token) {
+            setSupabaseUser(res.user);
+            const parentSession: BaseeraSessionInfo = {
+              token: res.session.access_token,
+              role: 'parent',
+              accountName: res.user.user_metadata?.full_name || res.user.email || 'ولي أمر',
+              tenantId: `parent_${res.user.id.slice(0, 8)}`,
+              tenantDisplayNameAr: 'حساب ولي الأمر',
+              sessionId: res.user.id.replace(/-/g, '').slice(0, 32),
+              scopes: ['students:read', 'students:write'],
+              expiresAt: (res.session.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
+            };
+            setBaseeraSession(parentSession);
+            storeBaseeraSession(parentSession);
+          }
+        }
+      } catch (signUpErr: any) {
+        try {
+          const res = await signInWithEmail(child.parentEmail, child.parentPassword);
+          if (res.user && res.session?.access_token) {
+            currentUser = res.user;
+            activeSession = res.session;
+            setSupabaseUser(res.user);
+            const parentSession: BaseeraSessionInfo = {
+              token: res.session.access_token,
+              role: 'parent',
+              accountName: res.user.user_metadata?.full_name || res.user.email || 'ولي أمر',
+              tenantId: `parent_${res.user.id.slice(0, 8)}`,
+              tenantDisplayNameAr: 'حساب ولي الأمر',
+              sessionId: res.user.id.replace(/-/g, '').slice(0, 32),
+              scopes: ['students:read', 'students:write'],
+              expiresAt: (res.session.expires_at ?? Math.floor(Date.now() / 1000 + 3600)) * 1000,
+            };
+            setBaseeraSession(parentSession);
+            storeBaseeraSession(parentSession);
+          }
+        } catch (authErr: any) {
+          const rawMsg = String(authErr?.message || signUpErr?.message || '');
+          if (rawMsg.toLowerCase().includes('email not confirmed')) {
+            throw new Error('هذا البريد مسجل بالفعل لكنه بانتظار التفعيل. افتح رابط التفعيل في بريدك الإلكتروني ثم سجّل الدخول.');
+          }
+          if (rawMsg.toLowerCase().includes('invalid login credentials') || rawMsg.toLowerCase().includes('already registered')) {
+            throw new Error('هذا البريد الإلكتروني مسجل بالفعل؛ أدخل كلمة المرور الصحيحة أو سجّل الدخول من تبويب «دخول ولي أمر مسجل».');
+          }
+          throw new Error(`تعذّر إنشاء حساب الأسرة أو تسجيل الدخول إليه: ${rawMsg || 'تعذر الاتصال بخدمة المصادقة السحابية'}`);
+        }
+      }
+    }
+
+    if (!currentUser) {
+      throw new Error('تعذّر التحقق من حساب ولي الأمر. يرجى تسجيل الدخول والمحاولة مرة أخرى.');
+    }
+
     const newLearner: StudentRecord = {
-      id: `stu-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)}`,
-      name: child.name,
-      parentAccount: currentUser?.id,
+      id: newLearnerId,
+      name: child.name.trim(),
+      parentAccount: currentUser.id,
       isDemoRecord: false,
       sessionStatus: 'in_progress',
       sessionRoleLabel: 'ولي الأمر / فحص منزلي',
@@ -860,9 +1077,7 @@ export default function App() {
       country: selectedCountry,
       dialectCode: selectedDialect,
       dialect: selectedDialect,
-      schoolName: currentUser
-        ? `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`
-        : 'حساب الأسرة',
+      schoolName: `حساب ولي الأمر (${currentUser.user_metadata?.full_name || currentUser.email || 'الأسرة'})`,
       lastScreenedDate: '—',
       passageId: ARABIC_READING_PASSAGES[0].id,
       guardianConsentGiven: true,
@@ -870,7 +1085,7 @@ export default function App() {
       guardianConsentSource: `إقرار ذاتي من مستخدم بوابة الأسرة (${recordedAt.split('T')[0]})${child.audioConsentGiven === true ? ' مع موافقة صوتية منفصلة' : ''}`,
       guardianAudioConsentGiven: child.audioConsentGiven === true,
       ...(child.audioConsentGiven === true ? { guardianAudioConsentRecordedAt: recordedAt } : {}),
-      parentNotes: child.notes || undefined,
+      parentNotes: (child.notes || '').trim() || undefined,
       speechRecognitionUsed: false,
       wpm: 0,
       dyslexiaRiskScore: null,
@@ -890,7 +1105,7 @@ export default function App() {
       mathRiskLevel: 'unassessed',
       mathRiskLabelAr: 'لم تبدأ مهام التقييم بعد.',
       learningReport: {
-        learningSummary: `ملف جديد للطفل «${child.name}»؛ تظهر المؤشرات فور إكمال أول تمرين أو فحص.`,
+        learningSummary: `ملف جديد للطفل «${child.name.trim()}»؛ تظهر المؤشرات فور إكمال أول تمرين أو فحص.`,
         ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع العين.',
         orthographicAndPhonologicalPatterns: 'ستظهر الكلمات المستهدفة بعد إتمام أنشطة القراءة.',
         dyscalculiaSpatialAnalysis: 'غير منطبق.',
@@ -899,17 +1114,29 @@ export default function App() {
       },
     };
 
+    // If Supabase Auth requires email confirmation (mailer_autoconfirm = false), signUp returns
+    // user without an active JWT session yet. Save the child record in pending storage + user_metadata
+    // so it auto-writes to public.students the moment the parent confirms their email and logs in.
+    if (!supabaseUser && !activeSession) {
+      try {
+        localStorage.setItem(
+          'hn_pending_child_registration',
+          JSON.stringify({ userId: currentUser.id, student: newLearner })
+        );
+      } catch {}
+      return 'PENDING_EMAIL_CONFIRMATION';
+    }
+
     // Pre-create battery session respecting explicit audio consent for Standard Arabic
-    const speechDialect = selectedDialect;
     const speechLocale = pronunciationLocaleForDialect(selectedDialect);
     const explicitAudioConsent = child.audioConsentGiven === true;
     const initialBatterySession: BatterySession = {
       studentId: newLearner.id,
       childName: newLearner.name,
-      ageMonths: newLearner.ageYears * 12,
+      ageMonths: Math.min(96, newLearner.ageYears * 12),
       examinerName: newLearner.sessionRoleLabel || 'ولي الأمر',
       startedAt: recordedAt,
-      dialect: speechDialect,
+      dialect: selectedDialect,
       guardianConsentGiven: true,
       guardianConsentRecordedAt: recordedAt,
       guardianAudioConsentGiven: explicitAudioConsent,
@@ -919,15 +1146,21 @@ export default function App() {
     };
     void saveBatterySession(initialBatterySession).catch((error) => console.error('Unable to persist encrypted battery session:', error));
 
-    if (currentUser) {
-      const saved = await syncStudentToSupabase(newLearner, currentUser.id);
-      if (!saved) {
-        throw new Error('تعذّر حفظ ملف الطفل في حسابك. تحقّق من اتصال الإنترنت وأعد المحاولة.');
+    const saved = await syncStudentToSupabase(newLearner, currentUser.id);
+    if (!saved) {
+      const reason = getLastSupabaseSyncError();
+      if (reason === 'SESSION_PENDING_EMAIL_CONFIRMATION') {
+        try {
+          localStorage.setItem(
+            'hn_pending_child_registration',
+            JSON.stringify({ userId: currentUser.id, student: newLearner })
+          );
+        } catch {}
+        return 'PENDING_EMAIL_CONFIRMATION';
       }
-      setAiStatusBanner(`حُفظ ملف الطفل «${child.name}» في حسابك بنجاح ☁️`);
-    } else {
-      setAiStatusBanner(`سُجّلت بيانات الطفل «${child.name}» بنجاح! كل شيء جاهز لبدء رحلة التعلّم.`);
+      throw new Error(`تعذّر حفظ ملف الطفل في قاعدة البيانات (${reason || 'خطأ غير متوقع'}). أعد المحاولة.`);
     }
+    setAiStatusBanner(`حُفظ ملف الطفل «${newLearner.name}» في حسابك السحابي بنجاح ☁️`);
 
     setStudents((prev) => {
       const next = [newLearner, ...prev.filter((s) => s.id !== newLearner.id)];
@@ -1585,7 +1818,7 @@ export default function App() {
           )}
 
         {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && isAuthenticated && (
           <div className="space-y-8">
             {/* Unified Executive Header & 4-Metric Hairline Ribbon (Single-Elevation, Zero Card-in-Card) */}
             <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
@@ -1594,7 +1827,19 @@ export default function App() {
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span>لوحة المتابعة</span>
                     <span aria-hidden="true">·</span>
-                    <span>الصف {toArabicNum(selectedStudent.gradeLevel)}</span>
+                    <span>
+                      {selectedStudent.gradeLevel === 0
+                        ? 'الروضة (التمهيدي)'
+                        : selectedStudent.gradeLevel === 7
+                          ? 'الصف الأول المتوسط'
+                          : `الصف ${toArabicNum(selectedStudent.gradeLevel)} الابتدائي`}
+                    </span>
+                    {selectedStudent.country && selectedStudent.country !== 'غير محددة' && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{selectedStudent.country}</span>
+                      </>
+                    )}
                     {selectedStudent.schoolName && selectedStudent.schoolName !== 'مدرستي' && (
                       <>
                         <span aria-hidden="true">·</span>
@@ -2031,6 +2276,11 @@ export default function App() {
                     <h2 className="text-xl font-bold text-slate-900">
                       {selectedStudent.name}: النتائج وما نتدرّب عليه
                     </h2>
+                    {selectedStudent.parentNotes && selectedStudent.parentNotes.trim().length > 0 && (
+                      <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-950">
+                        <strong className="font-bold">ملاحظة ولي الأمر:</strong> {selectedStudent.parentNotes.trim()}
+                      </p>
+                    )}
                   </div>
 
                   <div className="no-print flex flex-wrap gap-2">
@@ -2372,14 +2622,14 @@ export default function App() {
           </div>
         )}
 
-        {/* Unified reading screening and training hub. */}
-        {(activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
+        {/* Unified reading screening and training hub — strictly requires authenticated session (no guest mode). */}
+        {isAuthenticated && (activeTab === 'dyslexia-lab' || activeTab === 'reading-lab' || activeTab === 'cognitive-lab' || activeTab === 'guided-program') && (
           <DyslexiaScreeningHub
             students={students}
             activeStudent={selectedStudent}
             onSelectStudent={selectStudent}
             onNavigateTab={(tab) => setActiveTab(tab)}
-            supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : { email: 'زائر للتجربة', id: 'guest-preview' })}
+            supabaseUser={supabaseUser || (baseeraSession ? { email: baseeraSession.accountName, id: baseeraSession.sessionId } : null)}
             initialSubTab={
               activeTab === 'reading-lab'
                   ? 'oral-reading'
@@ -2391,9 +2641,9 @@ export default function App() {
               onCreateLearner={handleCreateBatteryLearner}
               onStudentUpdated={(updated) => {
                 const existing = students.find((student) => student.id === updated.id);
+                const isParentCloudSession = Boolean(supabaseUser && (!baseeraSession || baseeraSession.role === 'parent'));
                 const batteryChanged = Boolean(
-                  supabaseUser &&
-                  !baseeraSession &&
+                  isParentCloudSession &&
                   updated.cognitiveBattery &&
                   JSON.stringify(updated.cognitiveBattery) !== JSON.stringify(existing?.cognitiveBattery)
                 );
@@ -2445,7 +2695,7 @@ export default function App() {
                 }
 
                 setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
-                if (supabaseUser && !baseeraSession) {
+                if (isParentCloudSession && supabaseUser) {
                   void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
                     if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);
                   });
@@ -2459,7 +2709,7 @@ export default function App() {
 
 
         {/* VIEW 4: REMEDIATION GYM & STATIONS */}
-        {activeTab === 'remediation-gym' && (
+        {isAuthenticated && activeTab === 'remediation-gym' && (
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
@@ -2472,7 +2722,7 @@ export default function App() {
         )}
 
         {/* ⚡ DIRECT ACCESS: 5-MINUTE DAILY SPRINT (timed fluency drill) */}
-        {activeTab === 'sprint' && (
+        {isAuthenticated && activeTab === 'sprint' && (
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
@@ -2485,7 +2735,7 @@ export default function App() {
         )}
 
         {/* 📖 DIRECT ACCESS: AI DECODABLE STORIES (generated decodable stories) */}
-        {activeTab === 'storygen' && (
+        {isAuthenticated && activeTab === 'storygen' && (
           <RemediationGymView
             students={students}
             activeStudent={selectedStudent}
@@ -2497,7 +2747,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'adaptive-reader' && (
+        {isAuthenticated && activeTab === 'adaptive-reader' && (
           <ReaderPage
             problematicWords={selectedStudent.sessionStatus === 'completed' && hasVerifiedOralAudio(selectedStudent) ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}

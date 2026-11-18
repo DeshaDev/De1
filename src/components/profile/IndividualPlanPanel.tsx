@@ -62,11 +62,11 @@ export function IndividualPlanPanel({ student, progress, onRecordUpdated }: Prop
   const [record, setRecord] = useState<IndividualPlanRecord | null>(student.individualPlan ?? null);
   const [note, setNote] = useState<{ text: string; errors: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
-  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 8;
+  const ageIsSupported = Number.isInteger(student.ageYears) && student.ageYears >= 4 && student.ageYears <= 13;
 
   const generate = async () => {
     if (!ageIsSupported) {
-      setNote({ text: 'اقتراحات الممارسة المرتبطة بالفحص الحالي مخصصة للأطفال من ٤ إلى ٨ سنوات. لن ننشئ خطة آلية لطفل خارج هذا النطاق.', errors: [] });
+      setNote({ text: 'اقتراحات الممارسة المرتبطة بالفحص الحالي مخصصة للأطفال من ٤ سنوات فأكثر. لن ننشئ خطة آلية لطفل خارج هذا النطاق.', errors: [] });
       return;
     }
     setBusy(true);
