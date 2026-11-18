@@ -985,7 +985,7 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
   .baseera-desktop-nav { display: none !important; }
   .baseera-header-actions .bz-hide-sm { display: none; }
   .baseera-brand-copy small { display: none; }
-  .baseera-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .baseera-footer-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .baseera-footer-brand { grid-column: 1 / -1; }
   .baseera-mobile-nav {
     position: fixed;
@@ -993,7 +993,7 @@ body.baseera-reading-focus .baseera-main { padding-top: 8px !important; padding-
     bottom: 0;
     z-index: 35;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     background: color-mix(in srgb, var(--card) 96%, transparent);
     border-top: 1px solid var(--line);

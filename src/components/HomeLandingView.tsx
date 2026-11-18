@@ -314,7 +314,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                 <span className="hn-step-text">{SKILLS.rhyme.levels[lvl as 1 | 2 | 3]}</span>
               </div>
             ))}
-            <p className="hn-small sm:col-span-3 mt-2">
+            <p className="hn-small col-span-3 mt-2">
               يتقدّم الطفل عندما تظهر إجاباته إتقان المهارة، ويعود إلى مستوى أبسط عندما يحتاج إلى مزيد من التدريب.
             </p>
           </div>

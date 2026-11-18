@@ -110,6 +110,7 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
   }
   if (
     rawPath === '/parent' ||
+    rawPath === '/parent-portal' ||
     rawPath === '/register-child' ||
     rawPath === '/child' ||
     rawPath === '/family'
@@ -2809,7 +2810,7 @@ export default function App() {
         <aside
           role="region"
           aria-label="إشعار ملفات تعريف الارتباط"
-          className="no-print fixed bottom-4 inset-x-4 z-50 mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-700"
+          className="no-print fixed bottom-[78px] xl:bottom-4 inset-x-3 sm:inset-x-4 z-50 mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs text-slate-700"
           dir="rtl"
         >
           <p className="leading-relaxed">
