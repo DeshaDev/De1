@@ -828,8 +828,20 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         studentId={activeStudent.id}
         childName={session?.childName ?? activeStudent.name}
         profile={profile}
-        onBack={() => setView(!session ? { name: 'setup' } : profile ? { name: 'report' } : { name: 'map' })}
-        onGoToBattery={() => setView(session ? { name: 'map' } : { name: 'setup' })}
+        onBack={() => {
+          if (initialView === 'training' && onNavigateTab) {
+            onNavigateTab('dyslexia-lab');
+            return;
+          }
+          setView(!session ? { name: 'setup' } : profile ? { name: 'report' } : { name: 'map' });
+        }}
+        onGoToBattery={() => {
+          if (onNavigateTab) {
+            onNavigateTab('dyslexia-lab');
+          } else {
+            setView(session ? { name: 'map' } : { name: 'setup' });
+          }
+        }}
         onRunningChange={setTrainingRunning}
         serverProgress={trainingFromRecord(activeStudent)}
         syncEnabled={syncEnabled}
@@ -899,7 +911,13 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         session={session}
         previous={previousScreenings[previousScreenings.length - 1] ?? null}
         onBack={() => setView({ name: 'map' })}
-        onStartTraining={() => setView({ name: 'training' })}
+        onStartTraining={() => {
+          if (onNavigateTab) {
+            onNavigateTab('guided-program');
+          } else {
+            setView({ name: 'training' });
+          }
+        }}
       />
       </ReportViewTracker>
     );
@@ -1018,9 +1036,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
       ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={() => setView({ name: 'training' })} className="bz-link">
-          الانتقال إلى البرنامج التدريبي الموجّه <ArrowLeftIcon className="w-4 h-4" />
-        </button>
+        {profile ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (onNavigateTab) {
+                onNavigateTab('guided-program');
+              } else {
+                setView({ name: 'training' });
+              }
+            }}
+            className="bz-link"
+          >
+            الانتقال إلى البرنامج التدريبي الموجّه <ArrowLeftIcon className="w-4 h-4" />
+          </button>
+        ) : (
+          <span className="bz-small bz-muted">
+            يُفتح البرنامج التدريبي المخصّص بعد إنجاز الفحص.
+          </span>
+        )}
         <button
           type="button"
           onClick={() => {

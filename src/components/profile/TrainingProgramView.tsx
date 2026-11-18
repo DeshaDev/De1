@@ -354,10 +354,12 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
    * A session: the progress measure when it is due (first session, then weekly, and the last),
    * then for each skill a lesson when new, guided practice, and independent practice.
    */
+  const hasCompletedAnyScreening = Boolean(profile && profile.subtests.length > 0);
   const childAgeMonths = profile?.ageMonths ?? (typeof student?.ageYears === 'number' ? student.ageYears * 12 : null);
   const childAgeYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? 48) / 12)));
   const beginSession = (skipProbe = false, skipTransfer = false) => {
     if (!progress) return;
+    if (!hasCompletedAnyScreening && progress.history.length === 0) return;
     const today = new Date().toISOString().slice(0, 10);
     const trainedToday = progress.history.some((h) => h.date.slice(0, 10) === today);
     const sessionNumber = sessionsCompleted(progress) + (trainedToday ? 0 : 1);
@@ -661,7 +663,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   };
 
   // ---------------------------------------------------------------- running a session
-  if (transferPoint && progress) {
+  if (transferPoint && progress && (hasCompletedAnyScreening || progress.history.length > 0)) {
     const today = new Date().toISOString().slice(0, 10);
     const alreadyTrainedToday = progress.history.some((entry) => entry.date.slice(0, 10) === today);
     const transferSessionNumber = sessionsCompleted(progress) + (alreadyTrainedToday ? 0 : 1);
@@ -1017,6 +1019,38 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     );
   }
 
+  // ---------------------------------------------------------------- require screening first
+  // Never let a child without any screening results jump into a training session or transfer challenge.
+  if (!hasCompletedAnyScreening && (!progress || (progress.history.length === 0 && progress.plan.preventive))) {
+    return (
+      <div className="space-y-6" dir="rtl">
+        {showBack && (
+          <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
+            <ArrowRight className="w-4 h-4" /> العودة
+          </button>
+        )}
+        <section className="joy-card bz-card-pad space-y-5 max-w-2xl mx-auto">
+          <div>
+            <p className="bz-small text-brand font-semibold">
+              {childName === GUEST_CHILD_NAME ? childName : `الطفل: ${childName}`}
+            </p>
+            <h2 className="bz-h3 mt-1" style={{ fontSize: 22 }}>
+              أكمل الفحص أولًا لفتح البرنامج التدريبي المخصّص
+            </h2>
+          </div>
+          <p className="bz-body text-ink-2">
+            يُبنى البرنامج التدريبي بناءً على نتائج طفلك في فحص مهارات القراءة، حتى يركّز على المهارات التي يحتاجها فعلًا ويحدّد المستوى المناسب له. ابدأ بألعاب الفحص أولًا ثم عُد إلى هنا لبدء التدريب.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-lg">
+              الانتقال إلى فحص مهارات القراءة ←
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   // ---------------------------------------------------------------- plan proposal (no program yet)
   if (!progress) {
     const plan = proposedPlan;
@@ -1034,22 +1068,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           {!plan ? (
             <div className="space-y-4">
               <p className="bz-body">
-                يُبنى البرنامج من نتيجة فحص مهارات القراءة: يختار المهارات التي تحتاج إلى تدريب ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا (ولو جزئيًا) للحصول على برنامج مخصص.
+                يُبنى البرنامج من نتيجة فحص مهارات القراءة: يختار المهارات التي تحتاج إلى تدريب ويحدد مستوى البداية لكل منها. أكمل الفحص أولًا للحصول على برنامج مخصص.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={onGoToBattery} className="bz-btn bz-btn-primary bz-btn-lg">
                   الذهاب إلى الفحص
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const ageMonths = childAgeMonths ?? 72;
-                    const foundation: SkillId[] = ageMonths < 60 ? ['blending'] : ['blending', 'letterSound'];
-                    startProgram({ createdAt: new Date().toISOString(), ageMonths, preventive: true, focus: [...foundation, ...ageAppropriateLiteracySkills(ageMonths)], rationaleAr: ['برنامج عام للاستعداد للقراءة دون فحص مسبق، مع مكونات قراءة ولغة مناسبة للعمر.'] });
-                  }}
-                  className="bz-btn bz-btn-secondary bz-btn-lg"
-                >
-                  برنامج عام للاستعداد للقراءة
                 </button>
               </div>
             </div>
