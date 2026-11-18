@@ -65,6 +65,22 @@ import TrainingProgramView from './TrainingProgramView';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
+/** Round estimates > 10 min to clean multiples of 5 (15, 20, 30, 45) instead of awkward numbers like 51 or 24. */
+function roundEstimateMinutes(mins: number): number {
+  if (mins <= 0) return 0;
+  if (mins <= 10) return mins;
+  return Math.round(mins / 5) * 5;
+}
+
+/** Grammatically natural Arabic duration phrase. */
+function formatMinutesAr(mins: number): string {
+  const m = Math.max(1, Math.round(mins));
+  if (m === 1) return 'دقيقة واحدة';
+  if (m === 2) return 'دقيقتان';
+  if (m >= 3 && m <= 10) return `${toArabicDigits(m)} دقائق`;
+  return `${toArabicDigits(m)} دقيقة`;
+}
+
 /**
  * The games in short sittings of about 10-15 minutes (three before six, four from six with the
  * reading sitting first), so a young child is never asked for half an hour of attention at once.
@@ -556,11 +572,11 @@ function SetupView({
           <summary className="bz-h3 cursor-pointer">كيف يسير الفحص؟</summary>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
-              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ثلاث جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS - 1))} دقيقة).`,
-              `من السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في أربع جلسات (نحو ${toArabicDigits(minutesForAge(READING_MIN_AGE_MONTHS))} دقيقة)، أولها جلسة القراءة: كلمات حقيقية، وكلمات مصنوعة، وقصة قصيرة، والتسمية السريعة. أما الإملاء ففي الجلسة الأخيرة.`,
-              'كل لعبة تبدأ بتدريب قصير مع تصحيح، ثم بنود الفحص دون تصحيح.',
-              'يجلس ولي الأمر بالقرب من الطفل لمساندته فقط، ولا يصحّح القراءة أو يعدّ الأخطاء. تُحلَّل القصة والتسمية السريعة عبر تسجيل صوتي بموافقة منفصلة، وإذا لم يكتمل التحليل الصوتي فلا تُحتسب درجة.',
-              'إذا تعب الطفل أو تشتّت، أوقف اللعبة وأكملها لاحقًا. يُحفظ التقدّم تلقائيًا.',
+              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ٣ جلسات (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS - 1)))} إجمالًا).`,
+              `من السادسة فأكثر: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في ٤ جلسات (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS)))} إجمالًا)، تبدأ بالقراءة ثم الذاكرة والأصوات والإملاء.`,
+              'كل لعبة تبدأ بمثال تدريبي قصير مع تصحيح، ثم تبدأ اللعبة الفعلية.',
+              'يجلس ولي الأمر بجانب الطفل لتشجيعه فقط، دون تصحيح قراءته أو التلميح بالإجابة.',
+              'إذا تعب الطفل، أوقف اللعبة في أي وقت وأكملها لاحقًا؛ يُحفظ التقدّم تلقائيًا في حسابك.',
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
                 <CheckCircle2 className="w-[18px] h-[18px] text-brand shrink-0 mt-1" aria-hidden="true" />
@@ -590,17 +606,24 @@ function ReportViewTracker({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function SyncBadge({ state, onRetry }: { state: SyncState; onRetry: () => void }) {
+function SyncBadge({ state, isParentCloud, onRetry }: { state: SyncState; isParentCloud?: boolean; onRetry: () => void }) {
   if (state === 'saved') return <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> محفوظ في سجل المدرسة</span>;
-  if (state === 'saving') return <span className="bz-badge bz-badge-neutral">جارٍ الحفظ في سجل المدرسة…</span>;
+  if (state === 'saving') return <span className="bz-badge bz-badge-neutral">جارٍ الحفظ…</span>;
   if (state === 'error')
     return (
       <span className="inline-flex items-center gap-2">
-        <span className="bz-badge bz-badge-warn">تعذّر الحفظ في سجل المدرسة · النتائج محفوظة على هذا الجهاز</span>
+        <span className="bz-badge bz-badge-warn">تعذّر الحفظ السحابي</span>
         <button type="button" className="bz-link bz-small" onClick={onRetry}>إعادة المحاولة</button>
       </span>
     );
-  return <span className="bz-badge bz-badge-neutral" title="سجّل دخول المدرسة لحفظ النتائج في سجل الطالب">محفوظ على هذا الجهاز فقط</span>;
+  if (isParentCloud) {
+    return (
+      <span className="bz-badge bz-badge-brand">
+        <Cloud className="w-3.5 h-3.5" /> محفوظ في حساب الأسرة
+      </span>
+    );
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -895,39 +918,39 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         )}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <SyncBadge state={syncEnabled ? syncState : 'local'} onRetry={() => pushToSchool(session)} />
+            <SyncBadge state={syncEnabled ? syncState : 'local'} isParentCloud={Boolean(supabaseUser)} onRetry={() => pushToSchool(session)} />
             <div className="inline-flex rounded-xl bg-soft p-1 border border-line text-xs font-bold" role="group" aria-label="نطاق الفحص">
               <button
                 type="button"
                 onClick={() => setScreeningMode('fast')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'fast' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
               >
-                المسار السريع (نحو {toArabicDigits(minutesForAge(session.ageMonths, 'fast'))} دقيقة)
+                المسار السريع (نحو {formatMinutesAr(roundEstimateMinutes(minutesForAge(session.ageMonths, 'fast')))})
               </button>
               <button
                 type="button"
                 onClick={() => setScreeningMode('comprehensive')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'comprehensive' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
               >
-                الملف الشامل ({toArabicDigits(sittingsForAge(session.ageMonths, 'comprehensive').length)} جلسات)
+                الفحص الشامل ({toArabicDigits(sittingsForAge(session.ageMonths, 'comprehensive').length)} جلسات)
               </button>
             </div>
           </div>
           <p className="bz-small text-brand font-semibold mt-2">
-            فحص {session.childName} · {session.ageMonths >= 108 ? '+٨ سنوات' : `${toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات و${toArabicDigits(session.ageMonths % 12)} أشهر`}
+            فحص {session.childName} · {session.ageMonths >= 108 ? '+٨ سنوات' : `${toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات${session.ageMonths % 12 > 0 ? ` و${toArabicDigits(session.ageMonths % 12)} أشهر` : ''}`}
           </p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
             {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
           </h2>
           <div className="mt-4 flex items-center gap-3 max-w-md">
             <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / Math.max(1, ageTasks.length)) * 100}%` }} /></div>
-            {remainingMinutes > 0 && <span className="bz-small bz-muted shrink-0">بقي نحو {toArabicDigits(remainingMinutes)} دقيقة</span>}
+            {remainingMinutes > 0 && <span className="bz-small bz-muted shrink-0">الوقت المتبقي: نحو {formatMinutesAr(roundEstimateMinutes(remainingMinutes))}</span>}
           </div>
           {nextSitting >= 0 && (
             <p className="bz-small text-ink-2 mt-3">
               {sittingJustFinished
-                ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ${toArabicDigits(sittings.length)}. يمكن إكمال الجلسة التالية الآن أو في يوم آخر؛ التقدّم محفوظ.`
-                : `جلسة اليوم: الجلسة ${toArabicDigits(nextSitting + 1)} من ${toArabicDigits(sittings.length)} (${toArabicDigits(sittings[nextSitting].length)} مهام، نحو ${toArabicDigits(sittingMinutes(sittings[nextSitting]))} دقيقة). يمكن التوقف بعدها وإكمال الباقي في يوم آخر.`}
+                ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ${toArabicDigits(sittings.length)}. يمكنك إكمال الجلسة التالية الآن أو في يوم آخر.`
+                : `الجلسة الحالية: الجلسة ${toArabicDigits(nextSitting + 1)} من ${toArabicDigits(sittings.length)} (${toArabicDigits(sittings[nextSitting].length)} مهام · نحو ${formatMinutesAr(roundEstimateMinutes(sittingMinutes(sittings[nextSitting])))}). يمكنك التوقّف بعد أي لعبة وإكمال الباقي لاحقًا.`}
             </p>
           )}
         </div>
@@ -948,7 +971,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
             الجلسة {toArabicDigits(sitting + 1)}
             {games.some((g) => g.domain === 'reading') && sitting === 0 && <span className="bz-small text-brand font-semibold">القراءة</span>}
-            <span className="bz-small bz-muted font-normal">نحو {toArabicDigits(sittingMinutes(games))} دقيقة</span>
+            <span className="bz-small bz-muted font-normal">نحو {formatMinutesAr(roundEstimateMinutes(sittingMinutes(games)))}</span>
             {games.every((g) => session.results[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
           </h3>
       <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -984,7 +1007,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 </div>
                 <div className="mt-auto w-full flex items-center justify-between text-[12px] font-semibold pt-3 border-t border-line">
                   <span style={{ color: domain.color }}>{domain.nameAr}</span>
-                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${toArabicDigits(s.minutes)} دقائق`}</span>
+                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${formatMinutesAr(s.minutes)}`}</span>
                 </div>
               </button>
             </li>

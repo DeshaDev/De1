@@ -6,7 +6,6 @@ import { StudentRecord } from '../data/seedData';
 const ReadingAssessmentView = lazy(() => import('./ReadingAssessmentView'));
 import CognitiveBatteryView from './profile/CognitiveBatteryView';
 import { AppTabId } from './HomeLandingView';
-import { TOTAL_BATTERY_MINUTES } from '../cognitiveProfile/battery';
 
 export type ScreeningSubTab = 'battery' | 'training' | 'oral-reading';
 
@@ -23,7 +22,7 @@ interface DyslexiaScreeningHubProps {
 }
 
 const TABS: Array<{ id: ScreeningSubTab; label: string; hint: string; icon: typeof Brain }> = [
-  { id: 'battery', label: 'فحص مهارات القراءة', hint: 'ألعاب ومهام قراءة · ٤–٨ سنوات', icon: Brain },
+  { id: 'battery', label: 'فحص مهارات القراءة', hint: 'ألعاب ومهام قراءة · من ٤ سنوات فأكثر', icon: Brain },
   { id: 'training', label: 'البرنامج التدريبي', hint: 'مبني على نتائج الفحص', icon: Dumbbell },
   { id: 'oral-reading', label: 'قراءة نص وفهمه', hint: 'قراءة وفهم · من ٦ سنوات', icon: BookOpen },
 ];
@@ -53,12 +52,12 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
         <header className="space-y-4">
           <KidPageHeader
             color={subTab === 'battery' ? 'sun' : 'sky'}
-            eyebrow={subTab === 'battery' ? 'من ٤ إلى ٨ سنوات' : 'من ٦ سنوات'}
+            eyebrow={subTab === 'battery' ? 'من ٤ سنوات فأكثر' : 'من ٦ سنوات'}
             title={subTab === 'battery' ? 'فحص مهارات القراءة' : 'قراءة نص وفهمه'}
             subtitle={
               subTab === 'battery'
-                ? `ألعاب قصيرة لمهارات القراءة الأساسية، ومن سن السادسة مهام قراءة وإملاء مباشرة (نحو ${toArabicNum(TOTAL_BATTERY_MINUTES)} دقيقة موزّعة على عدة جلسات). يعرض التقرير أداء الطفل في كل مهمة، ثم يقترح أنشطة وبرنامجًا تدريبيًا.`
-                : 'يقرأ الطفل نصًا مناسبًا لعمره ثم يجيب عن أسئلة الفهم. يمكن تحليل القراءة الصوتية آليًا بموافقة منفصلة؛ وإذا تعذّر التقييم يكمل الطفل دون درجة صوتية.'
+                ? 'ألعاب قصيرة وممتعة لقياس مهارات القراءة، موزّعة على جلسات يمكنك إيقافها وإكمالها في أي وقت، تليها نتائج واضحة وبرنامج تدريبي مخصّص لطفلك.'
+                : 'يقرأ الطفل نصًا قصيرًا بصوت عالٍ ثم يجيب عن أسئلة فهم بسيطة.'
             }
           />
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">

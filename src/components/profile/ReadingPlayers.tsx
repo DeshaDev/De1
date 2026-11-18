@@ -802,7 +802,7 @@ export function PassagePlayer({
               ? 'اقرأ القصة بصوتك الطبيعي. انقر على الكلمة أو اضغط زر المسافة لتحريك التظليل مع قراءتك.'
               : phase === 'review'
               ? 'اكتمل تقييم القصة. انقر على أي كلمة لترى نتيجتها وما سُمع منها.'
-              : 'سجّل قراءة القصة كاملة. يُقارَن التسجيل بنص القصة، وإذا تعذّر الحسم في الكلمات بقيت المهمة دون درجة.'}
+              : 'اضغط بدء التسجيل، ثم اقرأ القصة كاملةً بصوت عالٍ وواضح كما تقرأ في الصف.'}
           </p>
         </div>
 
@@ -1186,7 +1186,9 @@ export function RanPlayer({
       {phase === 'names' && (
         <div className="w-full max-w-2xl flex flex-col items-center gap-5 text-center">
           <p className="font-child text-2xl font-black text-ink">{display === 'picture' ? 'ما أسماء هذه الصور؟' : 'ما أسماء هذه الحروف؟'}</p>
-          <p className="bz-small text-ink-2">تعرّف إلى الرموز أولًا، ثم سمّها في السباق من اليمين إلى اليسار. ولا يضع البالغ أي علامات أثناء التقييم.</p>
+          <p className="bz-small text-ink-2">
+            يتعرّف الطفل على أسماء هذه {display === 'picture' ? 'الصور الخمس' : 'الحروف الخمسة'} أولًا، ثم يسمّيها في السباق بصوت عالٍ من اليمين إلى اليسار.
+          </p>
           <div className="flex flex-wrap justify-center gap-3">
             {symbols.map((symbol) => (
               <div key={symbol.id} className="grid place-items-center w-24 h-24 rounded-3xl border-[3px] border-line bg-card">
