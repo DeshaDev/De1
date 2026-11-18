@@ -144,15 +144,16 @@ export async function authenticatedFetch(
   const session = await ensureBaseeraSession();
   const headers = new Headers(init.headers || {});
   let usedParentToken = false;
-  if (session?.token) {
-    headers.set('Authorization', `Bearer ${session.token}`);
-  } else {
-    // Family accounts: the current Supabase access token, which the server verifies with Supabase.
+  if (!session?.token || session.role === 'parent') {
+    // Family accounts: prefer the live auto-refreshed Supabase access token over cached cookie copy.
     const parentToken = await parentAccessToken();
-    if (parentToken) {
-      headers.set('Authorization', `Bearer ${parentToken}`);
+    const effectiveToken = parentToken || (session?.role === 'parent' ? session.token : null);
+    if (effectiveToken) {
+      headers.set('Authorization', `Bearer ${effectiveToken}`);
       usedParentToken = true;
     }
+  } else {
+    headers.set('Authorization', `Bearer ${session.token}`);
   }
   const response = await fetch(input, { ...init, headers });
   if (response.status === 401 && !usedParentToken) clearBaseeraSession();

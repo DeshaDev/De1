@@ -12,18 +12,23 @@ const SESSION_STORAGE_KEY = 'baseera_session_v1';
 const STUDENTS_STORAGE_KEY = 'hn_stored_students_v1';
 const ACTIVE_STUDENT_STORAGE_KEY = 'hn_active_student_id';
 const ACTIVE_STUDENT_COOKIE_NAME = 'hn_active_student_id';
+const COOKIE_NOTICE_NAME = 'hn_cookie_notice';
 let studentSaveQueue: Promise<void> = Promise.resolve();
+
+function secureCookieFlag(): string {
+  return typeof window !== 'undefined' && window.location?.protocol === 'https:' ? '; Secure' : '';
+}
 
 /**
  * Set a browser cookie with standard security attributes.
- * Defaults to 30 days expiration and SameSite=Lax.
+ * Defaults to 30 days expiration, SameSite=Lax, and Secure on HTTPS.
  */
 export function setCookie(name: string, value: string, days = 30): void {
   if (typeof document === 'undefined') return;
   try {
     const maxAge = days * 24 * 60 * 60;
     const encoded = encodeURIComponent(value);
-    document.cookie = `${name}=${encoded}; path=/; max-age=${maxAge}; SameSite=Lax`;
+    document.cookie = `${name}=${encoded}; path=/; max-age=${maxAge}; SameSite=Lax${secureCookieFlag()}`;
   } catch {
     // Ignore storage/cookie errors in restricted contexts
   }
@@ -54,7 +59,7 @@ export function getCookie(name: string): string | null {
 export function deleteCookie(name: string): void {
   if (typeof document === 'undefined') return;
   try {
-    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax${secureCookieFlag()}`;
   } catch {
     // Ignore errors
   }
@@ -187,5 +192,40 @@ export function loadActiveStudentId(): string | null {
     return window.localStorage.getItem(ACTIVE_STUDENT_STORAGE_KEY) || getCookie(ACTIVE_STUDENT_COOKIE_NAME);
   } catch {
     return null;
+  }
+}
+
+/** Clear all cached local child records and cookies on explicit sign-out. */
+export function clearStoredClientState(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(STUDENTS_STORAGE_KEY);
+    window.localStorage.removeItem(ACTIVE_STUDENT_STORAGE_KEY);
+    window.localStorage.removeItem('hn_parent_account');
+    window.localStorage.removeItem('hn_pending_child_registration');
+    deleteCookie(ACTIVE_STUDENT_COOKIE_NAME);
+    deleteCookie('hn_children_summary');
+  } catch {
+    // Ignore errors
+  }
+}
+
+/** Essential cookies notice acknowledgment (cookie + localStorage). */
+export function hasAcceptedCookieNotice(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    return getCookie(COOKIE_NOTICE_NAME) === 'essential' || window.localStorage.getItem(COOKIE_NOTICE_NAME) === 'essential';
+  } catch {
+    return false;
+  }
+}
+
+export function acceptCookieNotice(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    setCookie(COOKIE_NOTICE_NAME, 'essential', 180);
+    window.localStorage.setItem(COOKIE_NOTICE_NAME, 'essential');
+  } catch {
+    // Ignore errors
   }
 }

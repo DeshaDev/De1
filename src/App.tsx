@@ -51,9 +51,13 @@ import {
   loadStoredStudents,
   saveActiveStudentId,
   loadActiveStudentId,
+  clearStoredClientState,
+  hasAcceptedCookieNotice,
+  acceptCookieNotice,
 } from './utils/cookiePersistence';
 import { saveBatterySession, clearLiteracyPracticeProgress, clearAllChildData, normalizeHomeDialect, pronunciationLocaleForDialect, type BatterySession } from './cognitiveProfile/storage';
 import {
+  supabase,
   signInWithEmail,
   signUpWithEmail,
   signOutSupabase,
@@ -337,8 +341,9 @@ export default function App() {
 
   // Supabase User & Auth State
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
-  const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(false);
+  const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(() => isSupabaseConfigured());
   const [supabaseError, setSupabaseError] = useState<string>('');
+  const [cookieNoticeAccepted, setCookieNoticeAccepted] = useState<boolean>(() => hasAcceptedCookieNotice());
 
   const PUBLIC_TABS: ReadonlySet<ActiveTab> = new Set([
     'home',
@@ -374,7 +379,9 @@ export default function App() {
   };
 
   // Enforce no-guest-mode on direct URL navigation (e.g. /screening, /training, /reading)
+  // Wait for initial Supabase session hydration before redirecting so reloads keep logged-in parents on their page.
   useEffect(() => {
+    if (supabaseAuthLoading) return;
     if (!PUBLIC_TABS.has(activeTab) && !isAuthenticated) {
       setActiveTabState('parent-portal');
       setAiStatusBanner('يرجى تسجيل الدخول أو إنشاء حساب ولي أمر أولًا؛ لا يمكن استخدام المنصة في وضع الزائر.');
@@ -385,7 +392,7 @@ export default function App() {
         }
       }
     }
-  }, [activeTab, isAuthenticated]);
+  }, [activeTab, isAuthenticated, supabaseAuthLoading]);
 
   const flushPendingChildForUser = async (user: any): Promise<StudentRecord | null> => {
     if (!user?.id) return null;
@@ -474,7 +481,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = onSupabaseAuthChange((user, session) => {
+    let active = true;
+    const hydrateParentSession = (user: any, session: any) => {
+      if (!active) return;
       if (user && session?.access_token) {
         setSupabaseUser(user);
         const parentSession: BaseeraSessionInfo = {
@@ -502,16 +511,45 @@ export default function App() {
           } else {
             try { localStorage.removeItem('hn_pending_child_registration'); } catch {}
           }
-          if (merged.length > 0) {
+          if (merged.length > 0 && active) {
             setStudents(merged);
-            selectStudent(merged[0].id);
+            const savedActiveId = loadActiveStudentId();
+            const preferred = savedActiveId && merged.some((s) => s.id === savedActiveId)
+              ? savedActiveId
+              : merged[0].id;
+            selectStudent(preferred);
           }
         })();
       } else {
         setSupabaseUser(null);
+        const currentStored = getStoredBaseeraSession();
+        if (currentStored?.role === 'parent') {
+          clearBaseeraSession();
+          setBaseeraSession(null);
+        }
       }
+      setSupabaseAuthLoading(false);
+    };
+
+    if (isSupabaseConfigured()) {
+      void supabase.auth.getSession()
+        .then(({ data }) => {
+          hydrateParentSession(data.session?.user ?? null, data.session ?? null);
+        })
+        .catch(() => {
+          if (active) setSupabaseAuthLoading(false);
+        });
+    } else {
+      setSupabaseAuthLoading(false);
+    }
+
+    const unsubscribe = onSupabaseAuthChange((user, session) => {
+      hydrateParentSession(user, session);
     });
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const handleEmailSignIn = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
@@ -1803,8 +1841,11 @@ export default function App() {
                   setSupabaseUser(null);
                 }
                 await logoutBaseeraSession();
+                clearStoredClientState();
                 setBaseeraSession(null);
-                setAiStatusBanner('تم تسجيل الخروج بنجاح.');
+                setStudents(INITIAL_STUDENTS);
+                setSelectedStudentId(INITIAL_STUDENTS[0].id);
+                setAiStatusBanner('تم تسجيل الخروج وحذف بيانات الجلسة من هذا المتصفح بنجاح.');
               }}
               onRegisterChild={handleRegisterChildByParent}
               onLinkLocalChild={handleLinkLocalChild}
@@ -2757,11 +2798,44 @@ export default function App() {
 
         {activeTab === 'privacy' && <PrivacyPolicyView />}
         {activeTab === 'terms' && <TermsOfUseView />}
-        {activeTab === 'content-review' && <ContentReviewView />}
-        {activeTab === 'audio-lab' && <AudioComparisonLabView />}
+        {isAuthenticated && activeTab === 'content-review' && <ContentReviewView />}
+        {isAuthenticated && activeTab === 'audio-lab' && <AudioComparisonLabView />}
         </div>
         </Suspense>
       </main>
+
+      {!cookieNoticeAccepted && (
+        <aside
+          role="region"
+          aria-label="إشعار ملفات تعريف الارتباط"
+          className="no-print fixed bottom-4 inset-x-4 z-50 mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-700"
+          dir="rtl"
+        >
+          <p className="leading-relaxed">
+            <strong className="font-bold text-slate-900">ملفات تعريف الارتباط الأساسية (Cookies):</strong>{' '}
+            نستخدم ملفات تعريف الارتباط الأساسية فقط لإبقاء جلسة تسجيل الدخول نشطة وتذكّر الطفل المختار بأمان، دون أي ملفات تتبّع إعلانية أو تجارية.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('privacy')}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold cursor-pointer"
+            >
+              سياسة الخصوصية
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                acceptCookieNotice();
+                setCookieNoticeAccepted(true);
+              }}
+              className="px-4 py-1.5 rounded-lg bg-brand text-white hover:opacity-95 font-bold cursor-pointer"
+            >
+              موافق
+            </button>
+          </div>
+        </aside>
+      )}
 
       {['home', 'privacy', 'terms', 'content-review'].includes(activeTab) && (
         <footer className="baseera-footer">
