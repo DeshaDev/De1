@@ -337,9 +337,11 @@ const BLIND_CHILD_SPEECH_PROMPT = `أنت خبير صوتيات ولغة عرب�
   "isSilent": false
 }`;
 
+let geminiDisabledUntil = 0;
+
 /**
- * Calls Gemini Multimodal Audio (OpenRouter primary, direct Gemini fallback) strictly BLIND
- * — ZERO reference text is sent to the model.
+ * Calls Gemini Multimodal Audio (Direct Google Generative Language API primary, OpenRouter fallback)
+ * strictly BLIND — ZERO reference text is sent to the model.
  */
 export async function transcribeArabicBlindWithGemini(args: {
   audioWavBase64: string;
@@ -351,7 +353,8 @@ export async function transcribeArabicBlindWithGemini(args: {
 
   const userKey = (args.apiKey && args.apiKey.trim()) || '';
   const openRouterKey = userKey.startsWith('sk-or-') ? userKey : getOpenRouterApiKey();
-  const geminiKey = userKey && !userKey.startsWith('sk-or-') ? userKey : getGeminiApiKey();
+  const rawGeminiKey = userKey && !userKey.startsWith('sk-or-') ? userKey : getGeminiApiKey();
+  const geminiKey = rawGeminiKey && Date.now() > geminiDisabledUntil ? rawGeminiKey : null;
 
   if (!openRouterKey && !geminiKey) {
     throw new Error('BLIND_ASR_KEY_NOT_CONFIGURED');
@@ -390,7 +393,7 @@ export async function transcribeArabicBlindWithGemini(args: {
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(6000),
       });
 
       if (res.ok) {
@@ -399,6 +402,11 @@ export async function transcribeArabicBlindWithGemini(args: {
         if (typeof rawText === 'string' && rawText.trim()) {
           return parsePayload(rawText, 'blind:google/gemini-2.5-flash');
         }
+      }
+      if (res.status === 402 || res.status === 401 || res.status === 403) {
+        // Prepayment depleted or invalid key; bypass Gemini for 10 minutes to avoid per-word delays
+        geminiDisabledUntil = Date.now() + 10 * 60 * 1000;
+        console.warn(`[BlindASR] Gemini API returned HTTP ${res.status}. Bypassing Gemini for 10 minutes, using Azure directly.`);
       }
       if (!openRouterKey) {
         throw new Error(`BLIND_GEMINI_HTTP_${res.status}`);

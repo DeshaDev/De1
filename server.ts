@@ -1283,6 +1283,11 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
   // Parent-account persistence awaits Supabase; reserve receipts during that write so
   // concurrent requests cannot replay the same one-use receipt before it is consumed.
   const cognitiveAudioAssessmentReceiptsInFlight = new Set<string>();
+  const parentStudentOwnershipCache = new Map<string, {
+    expiresAt: number;
+    guardianConsentAt: string;
+    guardianAudioConsentAt: string;
+  }>();
 
   const pruneAudioAssessmentReceipts = () => {
     const now = Date.now();
@@ -4941,71 +4946,92 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         });
         return;
       }
-      try {
-        const ownerUrl =
-          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at&limit=1`;
-        const ownerResponse = await fetch(ownerUrl, {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: authorization,
-            Accept: 'application/json',
-          },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (!ownerResponse.ok) {
-          res.status(503).json({
-            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
-            error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
-          });
-          return;
-        }
-        const rows = await ownerResponse.json().catch(() => null);
-        const owned = Array.isArray(rows) ? rows.find((row) => row?.id === studentId) : undefined;
-        const storedStudent = owned?.raw_data && typeof owned.raw_data === 'object'
-          ? (owned.raw_data as StudentRecord)
-          : undefined;
-        if (!owned || !storedStudent) {
-          res.status(404).json({
-            code: 'PARENT_STUDENT_NOT_OWNED',
-            error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
-          });
-          return;
-        }
+      const cacheKey = `${parentUserId}:${studentId}`;
+      const cached = parentStudentOwnershipCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
         if (
-          owned.guardian_consent !== true ||
-          storedStudent.guardianConsentGiven !== true ||
-          !owned.guardian_consent_recorded_at ||
-          !storedStudent.guardianConsentRecordedAt ||
-          String(owned.guardian_consent_recorded_at) !== String(storedStudent.guardianConsentRecordedAt) ||
-          body.guardianConsentRecordedAt !== storedStudent.guardianConsentRecordedAt
+          body.guardianConsentRecordedAt !== cached.guardianConsentAt ||
+          body.guardianAudioConsentRecordedAt !== cached.guardianAudioConsentAt
         ) {
           res.status(403).json({
             code: 'GUARDIAN_CONSENT_NOT_STORED',
-            error: 'موافقة ولي الأمر غير موجودة أو لا تطابق سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+            error: 'موافقة ولي الأمر لا تطابق سجل الطفل الموثق؛ لم نرسل التسجيل للتحليل.',
           });
           return;
         }
-        const storedAudioConsentGiven =
-          storedStudent.guardianAudioConsentGiven === true;
-        const storedAudioConsentAt =
-          storedStudent.guardianAudioConsentRecordedAt;
-        if (
-          !storedAudioConsentGiven ||
-          !storedAudioConsentAt ||
-          body.guardianAudioConsentRecordedAt !== storedAudioConsentAt
-        ) {
-          res.status(403).json({
-            code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
-            error: 'الموافقة الصوتية المستقلة لولي الأمر غير مسجلة في ملف الطفل المحفوظ؛ لم نرسل التسجيل للتحليل.',
+      } else {
+        try {
+          const ownerUrl =
+            `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at&limit=1`;
+          const ownerResponse = await fetch(ownerUrl, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: authorization,
+              Accept: 'application/json',
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!ownerResponse.ok) {
+            res.status(503).json({
+              code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+              error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
+            });
+            return;
+          }
+          const rows = await ownerResponse.json().catch(() => null);
+          const owned = Array.isArray(rows) ? rows.find((row) => row?.id === studentId) : undefined;
+          const storedStudent = owned?.raw_data && typeof owned.raw_data === 'object'
+            ? (owned.raw_data as StudentRecord)
+            : undefined;
+          if (!owned || !storedStudent) {
+            res.status(404).json({
+              code: 'PARENT_STUDENT_NOT_OWNED',
+              error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
+            });
+            return;
+          }
+          if (
+            owned.guardian_consent !== true ||
+            storedStudent.guardianConsentGiven !== true ||
+            !owned.guardian_consent_recorded_at ||
+            !storedStudent.guardianConsentRecordedAt ||
+            String(owned.guardian_consent_recorded_at) !== String(storedStudent.guardianConsentRecordedAt) ||
+            body.guardianConsentRecordedAt !== storedStudent.guardianConsentRecordedAt
+          ) {
+            res.status(403).json({
+              code: 'GUARDIAN_CONSENT_NOT_STORED',
+              error: 'موافقة ولي الأمر غير موجودة أو لا تطابق سجل الطفل؛ لم يُرسل الصوت للتحليل.',
+            });
+            return;
+          }
+          const storedAudioConsentGiven =
+            storedStudent.guardianAudioConsentGiven === true;
+          const storedAudioConsentAt =
+            storedStudent.guardianAudioConsentRecordedAt;
+          if (
+            !storedAudioConsentGiven ||
+            !storedAudioConsentAt ||
+            body.guardianAudioConsentRecordedAt !== storedAudioConsentAt
+          ) {
+            res.status(403).json({
+              code: 'GUARDIAN_AUDIO_CONSENT_NOT_STORED',
+              error: 'الموافقة الصوتية المستقلة لولي الأمر غير مسجلة في ملف الطفل المحفوظ؛ لم نرسل التسجيل للتحليل.',
+            });
+            return;
+          }
+          // Cache verified consent for 3 minutes so subsequent words in the list do not block on Supabase
+          parentStudentOwnershipCache.set(cacheKey, {
+            expiresAt: Date.now() + 3 * 60 * 1000,
+            guardianConsentAt: String(storedStudent.guardianConsentRecordedAt),
+            guardianAudioConsentAt: String(storedAudioConsentAt),
+          });
+        } catch {
+          res.status(503).json({
+            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
+            error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
           });
           return;
         }
-      } catch {
-        res.status(503).json({
-          code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
-          error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
-        });
-        return;
       }
     } else if (String(assessmentSession.role) === 'guest') {
       // Guest session on localhost/screening: consent validated from request body
