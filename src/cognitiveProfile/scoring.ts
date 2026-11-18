@@ -529,7 +529,6 @@ export const CORE_PHONOLOGICAL_SUBTESTS: SubtestId[] = [
   'auditoryDiscrimination',
   'letterSound',
 ];
-const VISUAL_SUBTESTS: SubtestId[] = ['visualSequential', 'visualAssociative', 'visualDiscrimination'];
 
 /** Letter knowledge is only expected from about age 5; before that it is reported but not used for risk. */
 const LETTER_SOUND_RISK_MIN_AGE_MONTHS = 60;

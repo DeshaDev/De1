@@ -579,8 +579,9 @@ function SetupView({
           <summary className="bz-h3 cursor-pointer">كيف يسير الفحص؟</summary>
           <ul className="mt-4 space-y-3 bz-small text-ink-2">
             {[
-              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ٣ جلسات (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS - 1)))} إجمالًا).`,
-              `من السادسة فأكثر: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في ٤ جلسات (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS)))} إجمالًا)، تبدأ بالقراءة ثم الذاكرة والأصوات والإملاء.`,
+              `قبل السادسة: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS - 1).length)} ألعاب قصيرة في ${sittingsLabelAr(sittingsForAge(READING_MIN_AGE_MONTHS - 1).length)} (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS - 1)))} إجمالًا).`,
+              `من السادسة فأكثر: ${toArabicDigits(subtestsForAge(READING_MIN_AGE_MONTHS).length)} مهمة في ${sittingsLabelAr(sittingsForAge(READING_MIN_AGE_MONTHS).length)} (نحو ${formatMinutesAr(roundEstimateMinutes(minutesForAge(READING_MIN_AGE_MONTHS)))} إجمالًا)، تبدأ بالقراءة ثم الأصوات والإملاء.`,
+              'نُبقي فقط المهام التي ثبت في البحوث أنها تكشف صعوبة القراءة أو عسرها، وتُحذف تلقائيًا المهام التي لم تعد تفرّق بين القرّاء في عمر الطفل.',
               'كل لعبة تبدأ بمثال تدريبي قصير مع تصحيح، ثم تبدأ اللعبة الفعلية.',
               'يجلس ولي الأمر بجانب الطفل لتشجيعه فقط، دون تصحيح قراءته أو التلميح بالإجابة.',
               'إذا تعب الطفل، أوقف اللعبة في أي وقت وأكملها لاحقًا؛ يُحفظ التقدّم تلقائيًا في حسابك.',

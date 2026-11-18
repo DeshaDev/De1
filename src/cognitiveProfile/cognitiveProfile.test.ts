@@ -39,12 +39,12 @@ const choiceItems = (id: SubtestId): ChoiceItem[] => {
   return s.kind === 'choice' ? [...s.practice, ...s.items] : [];
 };
 
-test('battery: nine precursor subtests in five domains, plus six direct reading and naming measures', () => {
-  assert.equal(BATTERY.length, 15);
-  assert.deepEqual(BATTERY.map((s) => s.order), Array.from({ length: 15 }, (_, i) => i + 1));
+test('battery: seven precursor subtests in four domains, plus six direct reading and naming measures', () => {
+  assert.equal(BATTERY.length, 13);
+  assert.deepEqual(BATTERY.map((s) => s.order), Array.from({ length: 13 }, (_, i) => i + 1));
   const precursor = BATTERY.filter((s) => s.domain !== 'reading' && s.domain !== 'naming');
-  assert.equal(precursor.length, 9);
-  assert.equal(new Set(precursor.map((s) => s.domain)).size, 5);
+  assert.equal(precursor.length, 7);
+  assert.equal(new Set(precursor.map((s) => s.domain)).size, 4);
   for (const s of BATTERY) {
     assert.ok(scoredItemCount(s) >= 8, `${s.id} needs enough scored items for a stable score`);
     assert.ok(SUBTEST_GUIDANCE[s.id].strategiesAr.length >= 3, `${s.id} needs teaching strategies`);
@@ -205,11 +205,11 @@ test('letter knowledge is reported without age-based risk classification', () =>
 });
 
 test('missing tasks are identified without generating a risk classification', () => {
-  const profile = profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 78);
+  const profile = profileFor({ auditorySequential: 50, pairedAssociate: 60, rhyme: 70 }, 78);
   assert.equal(profile.risk, 'insufficient');
   assert.equal(profile.referenceStatus, 'disabled');
-  assert.equal(profile.missing.length, 12);
-  assert.equal(profileFor({ visualSequential: 50, visualAssociative: 60, rhyme: 70 }, 54).missing.length, 7);
+  assert.equal(profile.missing.length, 9);
+  assert.equal(profileFor({ auditorySequential: 50, pairedAssociate: 60, rhyme: 70 }, 54).missing.length, 5);
 });
 
 test('validity flags: near-chance and discontinued results are flagged', () => {

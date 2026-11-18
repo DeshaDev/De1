@@ -84,7 +84,7 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     for (const label of [/المكان هادئ/, /الصوت واضح/, /الطفل مرتاح ومستعد/, /موافقة ولي الأمر/]) await page.getByLabel(label).check();
     await page.getByRole('button', { name: 'بدء الفحص' }).click();
     await audit(page, 'battery-map', findings);
-    await page.getByText('نوافذ القلعة', { exact: true }).click();
+    await page.getByText('ببغاء الحديقة', { exact: true }).click();
     await audit(page, 'battery-first-game', findings);
     await page.goto('/');
 

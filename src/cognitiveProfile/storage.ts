@@ -2,9 +2,9 @@
  * Browser persistence for battery sessions and training progress.
  * Sensitive child data is encrypted at rest using AES-256-GCM and a non-extractable IndexedDB key.
  */
-import type { SubtestId } from './battery';
+import { SUBTESTS_BY_ID, type SubtestId } from './battery';
 import type { SubtestResult } from './scoring';
-import type { TrainingProgress } from './training';
+import { SKILLS, type TrainingProgress } from './training';
 import { emptyLiteracyPracticeProgress, sanitizeLiteracyPracticeProgress, type LiteracyPracticeProgress } from './literacyPracticeProgress';
 import { secureStorage } from '../utils/secureLocalStorage';
 
@@ -75,11 +75,43 @@ function remove(key: string): void {
   secureStorage.removeItem(key);
 }
 
-export const loadBatterySession = (studentId: string) => read<BatterySession>(SESSION_KEY(studentId));
+/**
+ * Results of tasks that are no longer in the battery (for example the visual memory games,
+ * removed because they do not predict reading difficulty) are dropped when an older session is read.
+ */
+export function sanitizeBatterySession(session: BatterySession): BatterySession {
+  const results = Object.fromEntries(
+    Object.entries(session.results ?? {}).filter(([id]) => id in SUBTESTS_BY_ID)
+  ) as BatterySession['results'];
+  // «أصدقاء الفضاء» grew from three rounds to six; a three-round result would be scored out of
+  // the longer total, so the game is offered again instead.
+  const pal = results.pairedAssociate;
+  if (pal && !pal.responses?.some((r) => /^pal-[4-9]/.test(r.itemId))) delete results.pairedAssociate;
+  return { ...session, results };
+}
+
+export const loadBatterySession = async (studentId: string) => {
+  const stored = await read<BatterySession>(SESSION_KEY(studentId));
+  return stored ? sanitizeBatterySession(stored) : null;
+};
 export const saveBatterySession = (session: BatterySession) => write(SESSION_KEY(session.studentId), session);
 export const clearBatterySession = (studentId: string) => remove(SESSION_KEY(studentId));
 
-export const loadTrainingProgress = (studentId: string) => read<TrainingProgress>(TRAINING_KEY(studentId));
+/** Skills that are no longer trained (for example visual memory) are dropped from older progress. */
+export function sanitizeTrainingProgress(progress: TrainingProgress): TrainingProgress {
+  const known = <T extends string>(list: T[] | undefined) => (list ?? []).filter((id) => id in SKILLS);
+  return {
+    ...progress,
+    plan: { ...progress.plan, focus: known(progress.plan.focus) },
+    mastered: known(progress.mastered),
+    supportFlags: known(progress.supportFlags),
+  };
+}
+
+export const loadTrainingProgress = async (studentId: string) => {
+  const stored = await read<TrainingProgress>(TRAINING_KEY(studentId));
+  return stored ? sanitizeTrainingProgress(stored) : null;
+};
 export const saveTrainingProgress = (studentId: string, progress: TrainingProgress) =>
   write(TRAINING_KEY(studentId), progress);
 export const clearTrainingProgress = (studentId: string) => remove(TRAINING_KEY(studentId));

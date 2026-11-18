@@ -37,8 +37,6 @@ import {
 } from './readingTasks';
 
 export type SubtestId =
-  | 'visualSequential'
-  | 'visualAssociative'
   | 'auditorySequential'
   | 'pairedAssociate'
   | 'rhyme'
@@ -54,7 +52,6 @@ export type SubtestId =
   | 'spelling';
 
 export type DomainId =
-  | 'visualMemory'
   | 'auditoryMemory'
   | 'phonological'
   | 'perceptual'
@@ -143,6 +140,8 @@ interface SubtestBase {
   chance: number;
   /** Youngest age (months) the task is given at; absent = every age the battery covers. */
   minAgeMonths?: number;
+  /** Oldest age (months) the task is given at; absent = no upper limit. */
+  maxAgeMonths?: number;
   /** The adult scores each item while the child reads or names aloud. */
   adultScored?: boolean;
 }
@@ -219,11 +218,6 @@ export type Subtest =
   | SpellingSubtest;
 
 export const DOMAINS: Record<DomainId, { nameAr: string; descriptionAr: string; color: string }> = {
-  visualMemory: {
-    nameAr: 'الذاكرة البصرية',
-    descriptionAr: 'الاحتفاظ بما يراه الطفل وترتيبه وربطه بمكانه؛ تدعم تذكّر أشكال الحروف والكلمات.',
-    color: '#2F6DB5',
-  },
   auditoryMemory: {
     nameAr: 'الذاكرة السمعية والتعلّم الترابطي',
     descriptionAr: 'الاحتفاظ بتسلسل ما يُسمع وربط الأسماء بالرموز؛ أساس ربط الحرف بصوته.',
@@ -445,21 +439,7 @@ export function buildSpanTrial(id: string, sequence: string[], pool: string[], s
   return { id, sequence, choices: shuffleWith([...sequence, ...distractors], random) };
 }
 
-const VISUAL_SPAN_POOL = ['apple', 'star', 'key', 'car', 'tree', 'fish', 'bell', 'pen', 'carrot'];
 const AUDITORY_SPAN_POOL = ['door', 'sun', 'dog', 'elephant', 'moon', 'banana', 'house', 'hand', 'rooster'];
-
-const VISUAL_SEQUENCES: string[][] = [
-  ['star', 'fish'],
-  ['car', 'apple'],
-  ['tree', 'key', 'bell'],
-  ['pen', 'star', 'carrot'],
-  ['fish', 'car', 'tree', 'apple'],
-  ['bell', 'carrot', 'key', 'star'],
-  ['apple', 'pen', 'fish', 'bell', 'car'],
-  ['key', 'tree', 'carrot', 'star', 'pen'],
-  ['car', 'bell', 'apple', 'key', 'fish', 'tree'],
-  ['carrot', 'star', 'pen', 'tree', 'car', 'apple'],
-];
 
 const AUDITORY_SEQUENCES: string[][] = [
   ['sun', 'dog'],
@@ -482,52 +462,12 @@ export const PAL_CREATURES: PalCreature[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// The nine subtests
+// The screening tasks
 // ---------------------------------------------------------------------------
 export const BATTERY: Subtest[] = [
   {
-    id: 'visualSequential',
-    order: 1,
-    kind: 'span',
-    modality: 'visual',
-    domain: 'visualMemory',
-    gameNameAr: 'نوافذ القلعة',
-    skillNameAr: 'الذاكرة البصرية التسلسلية',
-    icon: '🏰',
-    minutes: 3,
-    chance: 0,
-    examinerNoteAr:
-      'ستظهر صور في نافذة القلعة واحدة تلو الأخرى ثم تختفي، والمطلوب أن يلمس الطفل الصور نفسها بالترتيب الذي رآه. يبدأ التمرين بصورتين ويزيد تدريجيًا، ويتوقف تلقائيًا عند الحاجة. دورك: الجلوس بجانبه فقط دون تسمية الصور له.',
-    introAudio:
-      'سَتَظْهَرُ صُوَرٌ فِي نَافِذَةِ القَلْعَةِ وَاحِدَةً بَعْدَ وَاحِدَةٍ. انْظُرْ جَيِّدًا، ثُمَّ الْمِسِ الصُّوَرَ بِالتَّرْتِيبِ نَفْسِهِ.',
-    practice: [buildSpanTrial('vs-p1', ['apple', 'key'], VISUAL_SPAN_POOL, 101)],
-    trials: VISUAL_SEQUENCES.map((seq, i) => buildSpanTrial(`vs-${i + 1}`, seq, VISUAL_SPAN_POOL, 200 + i)),
-  },
-  {
-    id: 'visualAssociative',
-    order: 2,
-    kind: 'association',
-    domain: 'visualMemory',
-    gameNameAr: 'بيوت الحيوانات',
-    skillNameAr: 'الذاكرة البصرية الترابطية (الشيء ومكانه)',
-    icon: '🏘️',
-    minutes: 3,
-    chance: 0.3,
-    examinerNoteAr:
-      'ستُفتح أبواب البيوت واحدًا تلو الآخر ليظهر حيوان داخل كل بيت ثم تُغلق الأبواب. بعدها يظهر حيوان ويلمس الطفل باب البيت الذي يسكن فيه. دورك: تشجيع الطفل دون الإشارة إلى الباب الصحيح.',
-    introAudio:
-      'فِي كُلِّ بَيْتٍ حَيَوَانٌ صَغِيرٌ. انْظُرْ أَيْنَ يَسْكُنُ كُلُّ حَيَوَانٍ، ثُمَّ سَاعِدْهُ عَلَى الرُّجُوعِ إِلَى بَيْتِهِ.',
-    practice: [{ id: 'va-p1', residents: ['dog', 'cat'], queryOrder: ['cat', 'dog'] }],
-    blocks: [
-      { id: 'va-1', residents: ['rabbit', 'lion'], queryOrder: ['lion', 'rabbit'] },
-      { id: 'va-2', residents: ['bear', 'fox', 'frog'], queryOrder: ['frog', 'bear', 'fox'] },
-      { id: 'va-3', residents: ['turtle', 'chicken', 'horse', 'elephant'], queryOrder: ['horse', 'turtle', 'elephant', 'chicken'] },
-      { id: 'va-4', residents: ['mouse', 'camel', 'cow', 'duck', 'fish'], queryOrder: ['cow', 'fish', 'mouse', 'duck', 'camel'] },
-    ],
-  },
-  {
     id: 'auditorySequential',
-    order: 3,
+    order: 1,
     kind: 'span',
     modality: 'auditory',
     domain: 'auditoryMemory',
@@ -545,16 +485,16 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'pairedAssociate',
-    order: 4,
+    order: 2,
     kind: 'pal',
     domain: 'auditoryMemory',
     gameNameAr: 'أصدقاء الفضاء',
     skillNameAr: 'التعلّم الترابطي السمعي-البصري (اسم ↔ رمز)',
     icon: '👾',
-    minutes: 3,
+    minutes: 5,
     chance: 0.25,
     examinerNoteAr:
-      'سيتعرّف الطفل على ٤ شخصيات فضائية لكل منها اسم جديد، ثم يسمع اسمًا ويلمس الشخصية صاحبة الاسم عبر ثلاث جولات قصيرة. يصحّح التطبيق الإجابة تلقائيًا بعد كل محاولة لمساعدته على الحفظ. دورك: لا تلمّح له بالإجابة.',
+      'سيتعرّف الطفل على ٤ شخصيات فضائية لكل منها اسم جديد، ثم يسمع اسمًا ويلمس الشخصية صاحبة الاسم عبر ست جولات قصيرة. يصحّح التطبيق الإجابة تلقائيًا بعد كل محاولة لمساعدته على الحفظ. دورك: لا تلمّح له بالإجابة.',
     introAudio:
       'هَؤُلَاءِ أَصْدِقَاءُ مِنَ الفَضَاءِ، وَلِكُلٍّ مِنْهُمُ اسْمٌ. احْفَظْ أَسْمَاءَهُمْ، ثُمَّ الْمِسْ مَنْ تَسْمَعُ اسْمَهُ.',
     creatures: PAL_CREATURES,
@@ -562,16 +502,21 @@ export const BATTERY: Subtest[] = [
       { id: 'pal-1', order: ['c3', 'c1', 'c4', 'c2'] },
       { id: 'pal-2', order: ['c2', 'c4', 'c1', 'c3'] },
       { id: 'pal-3', order: ['c4', 'c3', 'c2', 'c1'] },
+      { id: 'pal-4', order: ['c1', 'c3', 'c2', 'c4'] },
+      { id: 'pal-5', order: ['c3', 'c2', 'c4', 'c1'] },
+      { id: 'pal-6', order: ['c2', 'c1', 'c3', 'c4'] },
     ],
   },
   {
     id: 'rhyme',
-    order: 5,
+    order: 3,
     kind: 'choice',
     domain: 'phonological',
     gameNameAr: 'كلمات تتشابه',
     skillNameAr: 'الوعي بالقافية',
     icon: '🎵',
+    // Rhyme predicts reading before school; from six, phoneme-level tasks predict better.
+    maxAgeMonths: 71,
     minutes: 3,
     chance: 1 / 3,
     discontinueAfter: 4,
@@ -597,7 +542,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'phonological',
-    order: 6,
+    order: 4,
     kind: 'choice',
     domain: 'phonological',
     gameNameAr: 'مختبر الأصوات',
@@ -634,7 +579,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'auditoryDiscrimination',
-    order: 7,
+    order: 5,
     kind: 'choice',
     domain: 'perceptual',
     gameNameAr: 'الأذن الذهبية',
@@ -666,12 +611,14 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'visualDiscrimination',
-    order: 8,
+    order: 6,
     kind: 'choice',
     domain: 'perceptual',
     gameNameAr: 'عين الصقر',
     skillNameAr: 'التمييز البصري للحروف والكلمات',
     icon: '🦅',
+    // Letter-shape discrimination reaches ceiling by about age seven.
+    maxAgeMonths: 83,
     minutes: 3,
     chance: 0.25,
     discontinueAfter: 5,
@@ -696,12 +643,14 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'letterSound',
-    order: 9,
+    order: 7,
     kind: 'choice',
     domain: 'alphabetic',
     gameNameAr: 'صندوق الحروف',
     skillNameAr: 'معرفة أصوات الحروف',
     icon: '📦',
+    // Letter-sound knowledge reaches ceiling by about age seven; later it no longer separates readers.
+    maxAgeMonths: 83,
     minutes: 3,
     chance: 0.25,
     discontinueAfter: 5,
@@ -726,13 +675,15 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'ranObjects',
-    order: 10,
+    order: 8,
     kind: 'ran',
     display: 'picture',
     domain: 'naming',
     gameNameAr: 'سباق الصور',
     skillNameAr: 'التسمية السريعة للصور',
     icon: '🏁',
+    // From six, letter naming (ranLetters) is the stronger RAN predictor of reading.
+    maxAgeMonths: 71,
     minutes: 1,
     chance: 0,
     adultScored: false,
@@ -745,7 +696,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'ranLetters',
-    order: 11,
+    order: 9,
     kind: 'ran',
     display: 'letter',
     domain: 'naming',
@@ -764,7 +715,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'wordReading',
-    order: 12,
+    order: 10,
     kind: 'readList',
     domain: 'reading',
     gameNameAr: 'قارئ الكلمات',
@@ -784,7 +735,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'nonwordReading',
-    order: 13,
+    order: 11,
     kind: 'readList',
     domain: 'reading',
     gameNameAr: 'كلمات من كوكب آخر',
@@ -805,7 +756,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'oralReading',
-    order: 14,
+    order: 12,
     kind: 'passage',
     domain: 'reading',
     gameNameAr: 'قصة سامي',
@@ -824,7 +775,7 @@ export const BATTERY: Subtest[] = [
   },
   {
     id: 'spelling',
-    order: 15,
+    order: 13,
     kind: 'spelling',
     domain: 'reading',
     gameNameAr: 'الكاتب الصغير',
@@ -886,7 +837,8 @@ export function scoredItemIds(subtest: Subtest): string[] {
   }
 }
 
-export const appliesAtAge = (subtest: Subtest, ageMonths: number) => ageMonths >= (subtest.minAgeMonths ?? 0);
+export const appliesAtAge = (subtest: Subtest, ageMonths: number) =>
+  ageMonths >= (subtest.minAgeMonths ?? 0) && ageMonths <= (subtest.maxAgeMonths ?? Infinity);
 
 /** Age tiers for adaptive screening (4:0 to 5:11, 6:0 to 7:5, 7:6 to 8:11+) */
 export const AGE_PRE_READING_MAX_MONTHS = 71;
@@ -923,20 +875,23 @@ export function sittingsForAge(ageMonths: number, mode: ScreeningMode = 'compreh
   if (mode === 'fast') {
     return [fastTrackSubtestsForAge(ageMonths)];
   }
+  // Only tasks with published evidence that they predict or reveal reading difficulty or dyslexia.
+  // Age limits (minAgeMonths / maxAgeMonths on each task) drop the ones that stop separating
+  // readers at this age; an emptied sitting is removed below.
   const ids: SubtestId[][] =
     ageMonths >= READING_MIN_AGE_MONTHS
       ? [
-          ['wordReading', 'nonwordReading', 'oralReading', 'ranObjects', 'ranLetters'],
-          ['visualSequential', 'visualAssociative', 'auditorySequential'],
-          ['pairedAssociate', 'rhyme', 'phonological'],
-          ['auditoryDiscrimination', 'visualDiscrimination', 'letterSound', 'spelling'],
+          ['wordReading', 'nonwordReading', 'oralReading', 'ranLetters'],
+          ['phonological', 'spelling', 'letterSound', 'auditoryDiscrimination'],
+          ['pairedAssociate', 'auditorySequential', 'visualDiscrimination'],
         ]
       : [
-          ['visualSequential', 'visualAssociative', 'auditorySequential'],
-          ['pairedAssociate', 'rhyme', 'phonological'],
-          ['auditoryDiscrimination', 'visualDiscrimination', 'letterSound', 'ranObjects'],
+          ['phonological', 'rhyme', 'letterSound', 'auditoryDiscrimination'],
+          ['ranObjects', 'pairedAssociate', 'auditorySequential', 'visualDiscrimination'],
         ];
-  return ids.map((sitting) => sitting.map((id) => SUBTESTS_BY_ID[id]).filter((s) => appliesAtAge(s, ageMonths)));
+  return ids
+    .map((sitting) => sitting.map((id) => SUBTESTS_BY_ID[id]).filter((s) => appliesAtAge(s, ageMonths)))
+    .filter((sitting) => sitting.length > 0);
 }
 
 /** Every task this child is given, in the order they are given. */

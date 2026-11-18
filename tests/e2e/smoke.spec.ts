@@ -166,13 +166,17 @@ test('cognitive battery: setup, game map with the reading sitting first at six, 
   }
   await start.click();
   for (const game of [
-    'قارئ الكلمات', 'كلمات من كوكب آخر', 'قصة سامي', 'سباق الصور', 'سباق الحروف',
-    'نوافذ القلعة', 'بيوت الحيوانات', 'ببغاء الحديقة', 'أصدقاء الفضاء', 'كلمات تتشابه', 'مختبر الأصوات',
-    'الأذن الذهبية', 'عين الصقر', 'صندوق الحروف', 'الكاتب الصغير',
+    'قارئ الكلمات', 'كلمات من كوكب آخر', 'قصة سامي', 'سباق الحروف',
+    'مختبر الأصوات', 'الكاتب الصغير', 'صندوق الحروف', 'الأذن الذهبية',
+    'أصدقاء الفضاء', 'ببغاء الحديقة', 'عين الصقر',
   ]) {
     await expect(page.getByText(game, { exact: true })).toBeVisible();
   }
-  await expect(page.getByText('المهام المنجزة: ٠ من ١٥')).toBeVisible();
+  // Removed (no evidence they reveal reading difficulty) or below this age's range.
+  for (const game of ['نوافذ القلعة', 'بيوت الحيوانات', 'سباق الصور', 'كلمات تتشابه']) {
+    await expect(page.getByText(game, { exact: true })).toHaveCount(0);
+  }
+  await expect(page.getByText('المهام المنجزة: ٠ من ١١')).toBeVisible();
   await expect(page.getByRole('button', { name: 'النتيجة والتقرير' })).toHaveCount(0);
   await page.getByRole('button', { name: 'البرنامج التدريبي' }).first().click();
   await expect(page.getByRole('heading', { name: /البرنامج التدريبي الموجّه/ }).first()).toBeVisible();

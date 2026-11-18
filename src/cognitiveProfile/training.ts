@@ -57,8 +57,7 @@ export type SkillId =
   | 'spelling'
   | 'comprehension'
   | 'morphology'
-  | 'auditoryMemory'
-  | 'visualMemory';
+  | 'auditoryMemory';
 
 export type Level = 1 | 2 | 3;
 
@@ -124,13 +123,6 @@ export const SKILLS: Record<SkillId, SkillDefinition> = {
     goalAr: 'يحتفظ بتسلسل ما يسمعه ويسترجعه بالترتيب.',
     levels: { 1: 'سلاسل من ٢–٣ كلمات', 2: 'سلاسل من ٣–٤ كلمات', 3: 'سلاسل من ٤–٥ كلمات' },
   },
-  visualMemory: {
-    id: 'visualMemory',
-    nameAr: 'الذاكرة البصرية',
-    icon: '🏰',
-    goalAr: 'يتذكّر تسلسل ما يراه ويعيد ترتيبه.',
-    levels: { 1: 'سلاسل من ٢–٣ صور', 2: 'سلاسل من ٣–٤ صور', 3: 'سلاسل من ٤–٥ صور' },
-  },
 };
 
 export interface MasteryBadge {
@@ -195,13 +187,6 @@ export const SKILL_BADGES: Record<SkillId, MasteryBadge> = {
     icon: '🦜',
     descriptionAr: 'يسترجع تسلسل الكلمات المسموعة بالترتيب الصحيح.',
   },
-  visualMemory: {
-    id: 'visualMemory',
-    skill: 'visualMemory',
-    titleAr: 'مهندس الذاكرة البصرية',
-    icon: '🏰',
-    descriptionAr: 'يتذكر ترتيب الأشكال والرموز بدقة ممتازة.',
-  },
 };
 
 /** Developmental order used to sequence focus skills inside a session. */
@@ -217,12 +202,9 @@ const SKILL_ORDER: SkillId[] = [
   'morphology',
   'visualDiscrimination',
   'auditoryMemory',
-  'visualMemory',
 ];
 
 export const SUBTEST_TO_SKILLS: Record<SubtestId, SkillId[]> = {
-  visualSequential: ['visualMemory'],
-  visualAssociative: ['visualMemory'],
   auditorySequential: ['auditoryMemory'],
   pairedAssociate: ['letterSound'],
   rhyme: ['rhyme'],
@@ -283,7 +265,7 @@ export function sessionSkillsFor(progress: Pick<TrainingProgress, 'plan' | 'mast
  * report with teaching accommodations; training time goes to phonological and letter skills.
  * The definitions remain so plans created before this rule still run.
  */
-export const NOT_TRAINED_AS_FOCUS: ReadonlySet<SkillId> = new Set<SkillId>(['auditoryMemory', 'visualMemory']);
+export const NOT_TRAINED_AS_FOCUS: ReadonlySet<SkillId> = new Set<SkillId>(['auditoryMemory']);
 export const FOCUS_SKILLS = (Object.keys(SKILLS) as SkillId[]).filter((id) => !NOT_TRAINED_AS_FOCUS.has(id));
 
 export interface TrainingPlan {
@@ -943,7 +925,7 @@ export function availableTrainingItems(skill: SkillId, level: Level, ageMonths =
       (question.options.length >= 2 || (skill === 'spelling' && question.responseMode === 'text'))
     ).length;
   }
-  return skill === 'auditoryMemory' || skill === 'visualMemory' ? SPAN_TRIALS_PER_SESSION : ITEMS_PER_SESSION;
+  return skill === 'auditoryMemory' ? SPAN_TRIALS_PER_SESSION : ITEMS_PER_SESSION;
 }
 
 /** Allocate the adaptive budget, then cap each skill at its real distinct-item capacity. */
@@ -1338,7 +1320,7 @@ export function generateSession(skill: SkillId, level: Level, seed: number, targ
     });
   }
 
-  if (skill === 'auditoryMemory' || skill === 'visualMemory') {
+  if (skill === 'auditoryMemory') {
     return Array.from({ length: SPAN_TRIALS_PER_SESSION }, (_, n) => ({
       kind: 'span' as const,
       modality: skill === 'auditoryMemory' ? ('auditory' as const) : ('visual' as const),

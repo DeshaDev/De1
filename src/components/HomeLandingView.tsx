@@ -57,7 +57,7 @@ const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣�
 const SAMPLE_PROFILE = [
   { domain: 'phonological', correct: 7, total: 10 },
   { domain: 'auditoryMemory', correct: 5, total: 10 },
-  { domain: 'visualMemory', correct: 8, total: 10 },
+  { domain: 'naming', correct: 8, total: 10 },
 ] as const;
 
 function SampleProfileCard({ compact = false }: { compact?: boolean }) {
@@ -224,6 +224,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
                   <span className="hn-stop-name">{s.gameNameAr}</span>
                   <span className="hn-stop-skill">{s.skillNameAr}</span>
                   {s.minAgeMonths ? <span className="hn-stop-age">من ٦ سنوات</span> : null}
+                  {s.maxAgeMonths ? <span className="hn-stop-age">قبل {ar(Math.floor((s.maxAgeMonths + 1) / 12))} سنوات</span> : null}
                 </li>
               );
             })}

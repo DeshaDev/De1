@@ -343,21 +343,34 @@ describe('scoring of the reading and naming measures', () => {
   });
 });
 describe('age rules and sittings', () => {
-  it('before six: precursor tasks and rapid naming of pictures, in three sittings', () => {
+  it('before six: precursor tasks and rapid naming of pictures, in two sittings', () => {
     const tasks = subtestsForAge(READING_MIN_AGE_MONTHS - 1).map((s) => s.id);
-    assert.equal(sittingsForAge(READING_MIN_AGE_MONTHS - 1).length, 3);
-    assert.ok(tasks.includes('ranObjects'));
+    assert.equal(sittingsForAge(READING_MIN_AGE_MONTHS - 1).length, 2);
+    assert.ok(tasks.includes('ranObjects') && tasks.includes('rhyme'));
     for (const id of ['ranLetters', 'wordReading', 'nonwordReading', 'oralReading', 'spelling']) assert.ok(!tasks.includes(id as never), id);
   });
 
-  it('from six: every task once, in four sittings, starting with reading', () => {
+  it('from six: reading first, in three sittings, without tasks that no longer separate readers', () => {
     const sittings = sittingsForAge(READING_MIN_AGE_MONTHS);
-    assert.equal(sittings.length, 4);
-    assert.deepEqual(sittings[0].map((s) => s.id), ['wordReading', 'nonwordReading', 'oralReading', 'ranObjects', 'ranLetters']);
+    assert.equal(sittings.length, 3);
+    assert.deepEqual(sittings[0].map((s) => s.id), ['wordReading', 'nonwordReading', 'oralReading', 'ranLetters']);
     const all = sittings.flat().map((s) => s.id);
-    assert.equal(all.length, BATTERY.length);
-    assert.equal(new Set(all).size, BATTERY.length);
+    assert.equal(new Set(all).size, all.length);
+    for (const id of ['ranObjects', 'rhyme']) assert.ok(!all.includes(id as never), id);
+    assert.ok(all.includes('letterSound') && all.includes('visualDiscrimination'));
     for (const sitting of sittings) assert.ok(sitting.reduce((n, s) => n + s.minutes, 0) <= 16, 'short sittings');
+  });
+
+  it('from seven: letter-sound and letter-shape tasks drop out (ceiling)', () => {
+    const all = subtestsForAge(84).map((s) => s.id);
+    for (const id of ['letterSound', 'visualDiscrimination', 'ranObjects', 'rhyme']) assert.ok(!all.includes(id as never), id);
+    assert.equal(all.length, 9);
+    assert.equal(sittingsForAge(156).length, 3);
+  });
+
+  it('every task in the battery is given at some age', () => {
+    const given = new Set([48, 60, 71, 72, 83, 84, 120, 156].flatMap((age) => subtestsForAge(age).map((s) => s.id)));
+    assert.equal(given.size, BATTERY.length);
   });
 });
 
@@ -424,5 +437,26 @@ describe('audio', () => {
     for (const s of [...RAN_OBJECTS, ...RAN_LETTERS]) assert.ok(has(s.nameAr), s.nameAr);
     for (const i of [...WORD_PRACTICE, ...NONWORD_PRACTICE]) assert.ok(has(i.text), i.text);
     for (const i of NONWORD_ITEMS) assert.ok(!has(i.text), `scored made-up word ${i.text} must not be recorded`);
+  });
+});
+
+describe('older saved sessions', () => {
+  it('drop removed tasks and three-round paired-associate results on load', async () => {
+    const { sanitizeBatterySession } = await import('./storage');
+    const response = (itemId: string) => ({ itemId, correct: true, rtMs: 900 });
+    const session = sanitizeBatterySession({
+      studentId: 's1', childName: 'x', ageMonths: 80, examinerName: '', startedAt: now,
+      results: {
+        visualSequential: { subtestId: 'visualSequential', responses: [], completedAt: now },
+        pairedAssociate: { subtestId: 'pairedAssociate', responses: ['pal-1-c1', 'pal-3-c4'].map(response), completedAt: now },
+        rhyme: { subtestId: 'rhyme', responses: [response('rh-1')], completedAt: now },
+      },
+    } as never);
+    assert.deepEqual(Object.keys(session.results), ['rhyme']);
+    const longer = sanitizeBatterySession({
+      studentId: 's1', childName: 'x', ageMonths: 80, examinerName: '', startedAt: now,
+      results: { pairedAssociate: { subtestId: 'pairedAssociate', responses: ['pal-1-c1', 'pal-6-c4'].map(response), completedAt: now } },
+    } as never);
+    assert.ok(longer.results.pairedAssociate);
   });
 });
