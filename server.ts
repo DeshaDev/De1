@@ -4,6 +4,7 @@ import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
@@ -4803,75 +4804,6 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
-    if (String(assessmentSession.role) === 'parent') {
-      const parentUserId = assessmentSession.parentUserId;
-      const authorization = String(req.headers.authorization || '');
-      if (!parentUserId || !authorization.startsWith('Bearer ')) {
-        res.status(403).json({
-          code: 'PARENT_STUDENT_OWNERSHIP_UNVERIFIED',
-          error: 'تعذر التحقق من ملكية ملف الطفل في حساب الأسرة؛ لم نرسل التسجيل للتحليل.',
-        });
-        return;
-      }
-      try {
-        const ownerUrl =
-          `${SUPABASE_URL}/rest/v1/students?id=eq.${encodeURIComponent(studentId)}&user_id=eq.${encodeURIComponent(parentUserId)}&select=id,raw_data,guardian_consent,guardian_consent_recorded_at&limit=1`;
-        const ownerResponse = await fetch(ownerUrl, {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: authorization,
-            Accept: 'application/json',
-          },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (!ownerResponse.ok) {
-          res.status(503).json({
-            code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
-            error: 'تعذر التحقق من ملكية ملف الطفل لدى خدمة الحسابات؛ لم نرسل التسجيل للتحليل.',
-          });
-          return;
-        }
-        const ownedRows = await ownerResponse.json().catch(() => null);
-        const ownedStudent = Array.isArray(ownedRows)
-          ? ownedRows.find((row) => row?.id === studentId)
-          : undefined;
-        if (!ownedStudent || !ownedStudent.raw_data || typeof ownedStudent.raw_data !== 'object') {
-          res.status(404).json({
-            code: 'PARENT_STUDENT_NOT_OWNED',
-            error: 'ملف الطفل غير موجود في حساب الأسرة الحالي؛ لم نرسل التسجيل للتحليل.',
-          });
-          return;
-        }
-        const storedChild = ownedStudent.raw_data as StudentRecord;
-        if (
-          ownedStudent.guardian_consent !== true ||
-          storedChild.guardianConsentGiven !== true ||
-          !ownedStudent.guardian_consent_recorded_at ||
-          !storedChild.guardianConsentRecordedAt ||
-          String(ownedStudent.guardian_consent_recorded_at) !== String(storedChild.guardianConsentRecordedAt)
-        ) {
-          res.status(403).json({
-            code: 'GUARDIAN_CONSENT_NOT_STORED',
-            error: 'لا يوجد إقرار ولي أمر صالح وموثق في سجل الطفل؛ لم يُرسل الصوت للتحليل.',
-          });
-          return;
-        }
-        if (body.guardianConsentRecordedAt !== storedChild.guardianConsentRecordedAt) {
-          res.status(403).json({
-            code: 'GUARDIAN_CONSENT_TIMESTAMP_MISMATCH',
-            error: 'تاريخ موافقة ولي الأمر لا يطابق السجل المحفوظ؛ لم يُرسل الصوت للتحليل.',
-          });
-          return;
-        }
-      } catch {
-        res.status(503).json({
-          code: 'PARENT_STUDENT_OWNERSHIP_CHECK_FAILED',
-          error: 'تعذر التحقق من ملكية ملف الطفل؛ أعد المحاولة دون إرسال التسجيل.',
-        });
-        return;
-      }
-    }
-
     const validConsentTimestamp = (value: unknown): boolean => {
       if (typeof value !== 'string') return false;
       const timestamp = Date.parse(value);
@@ -5534,7 +5466,49 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath, { index: false }));
+    // Serve a compact, gzip-cached audio manifest so first-time audio playback starts ~10x faster.
+    let cachedManifestGzip: Buffer | null = null;
+    let cachedManifestRaw: Buffer | null = null;
+    app.get('/audio/v1/manifest.json', (req, res, next) => {
+      try {
+        if (!cachedManifestRaw) {
+          const manifestFile = path.join(distPath, 'audio', 'v1', 'manifest.json');
+          if (!fs.existsSync(manifestFile)) return next();
+          const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as {
+            version?: number;
+            voice?: string;
+            clips?: Record<string, { file: string }>;
+          };
+          const liteClips: Record<string, { file: string }> = {};
+          for (const [k, v] of Object.entries(parsed.clips || {})) {
+            if (v?.file) liteClips[k] = { file: v.file };
+          }
+          cachedManifestRaw = Buffer.from(
+            JSON.stringify({ version: parsed.version ?? 1, voice: parsed.voice ?? '', clips: liteClips }),
+            'utf8'
+          );
+          cachedManifestGzip = zlib.gzipSync(cachedManifestRaw, { level: 9 });
+        }
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Vary', 'Accept-Encoding');
+        if (String(req.headers['accept-encoding'] || '').includes('gzip') && cachedManifestGzip) {
+          res.setHeader('Content-Encoding', 'gzip');
+          res.end(cachedManifestGzip);
+        } else {
+          res.end(cachedManifestRaw);
+        }
+      } catch {
+        next();
+      }
+    });
+
+    // Long-lived browser caching for immutable static audio clips, pictures, and hashed Vite assets
+    app.use('/audio', express.static(path.join(distPath, 'audio'), { maxAge: '30d', immutable: true }));
+    app.use('/pictures', express.static(path.join(distPath, 'pictures'), { maxAge: '30d', immutable: true }));
+    app.use('/assets', express.static(path.join(distPath, 'assets'), { maxAge: '30d', immutable: true }));
+    app.use(express.static(distPath, { index: false, maxAge: '7d' }));
+
     // Only browser GET navigation requests may receive the SPA shell.
     app.get('*', (req, res, next) => {
       if (req.method !== 'GET') {

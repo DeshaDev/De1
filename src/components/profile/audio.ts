@@ -13,6 +13,8 @@ interface AudioManifest {
 }
 let manifestPromise: Promise<AudioManifest | null> | null = null;
 let currentClip: HTMLAudioElement | null = null;
+const preloadedClips = new Map<string, HTMLAudioElement>();
+const MAX_PRELOADED_CLIPS = 48;
 
 function loadManifest(): Promise<AudioManifest | null> {
   if (!manifestPromise) {
@@ -23,15 +25,7 @@ function loadManifest(): Promise<AudioManifest | null> {
   return manifestPromise;
 }
 
-/** Start fetching the manifest early so the first instruction plays without delay. */
-export function preloadAudioManifest(): void {
-  void loadManifest();
-}
-
-/** Play the recorded clip for this exact text, if one exists. Resolves false when there is none. */
-async function playRecordedClip(text: string): Promise<boolean> {
-  const manifest = await loadManifest();
-  if (!manifest) return false;
+function resolveClipFile(manifest: AudioManifest, text: string): string | undefined {
   const prepared = prepareArabicTtsText(text);
   // Also strip trailing short vowels (dammah/fatha/kasrah) for pausal match (e.g. قَلَمُ -> قَلَم, سَيَّارَةُ -> سَيَّارَة)
   const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
@@ -45,22 +39,76 @@ async function playRecordedClip(text: string): Promise<boolean> {
     pausal ? audioKey(normalizeSpokenText(pausal)) : undefined,
   ].filter(Boolean) as string[];
 
-  let file: string | undefined;
   for (const k of keysToTry) {
     if (manifest.clips[k]?.file) {
-      file = manifest.clips[k].file;
-      break;
+      return manifest.clips[k].file;
     }
   }
+  return undefined;
+}
+
+function getOrCreateAudioElement(file: string): HTMLAudioElement {
+  const existing = preloadedClips.get(file);
+  if (existing) {
+    // Refresh LRU order
+    preloadedClips.delete(file);
+    preloadedClips.set(file, existing);
+    return existing;
+  }
+  const audio = new Audio(AUDIO_BASE + file);
+  audio.preload = 'auto';
+  if (preloadedClips.size >= MAX_PRELOADED_CLIPS) {
+    const oldestKey = preloadedClips.keys().next().value;
+    if (oldestKey) preloadedClips.delete(oldestKey);
+  }
+  preloadedClips.set(file, audio);
+  return audio;
+}
+
+/** Start fetching the manifest early so the first instruction plays without delay. */
+export function preloadAudioManifest(): void {
+  void loadManifest();
+}
+
+/** Warm upcoming MP3 clips into browser cache + memory so playback starts instantaneously. */
+export function preloadAudioClips(texts: string[]): void {
+  if (typeof window === 'undefined' || texts.length === 0) return;
+  void loadManifest().then((manifest) => {
+    if (!manifest) return;
+    for (const text of texts) {
+      if (!text) continue;
+      const file = resolveClipFile(manifest, text);
+      if (file) {
+        const audio = getOrCreateAudioElement(file);
+        try {
+          if (audio.readyState < 2) audio.load();
+        } catch {}
+      }
+    }
+  });
+}
+
+/** Play the recorded clip for this exact text, if one exists. Resolves false when there is none. */
+async function playRecordedClip(text: string): Promise<boolean> {
+  const manifest = await loadManifest();
+  if (!manifest) return false;
+  const file = resolveClipFile(manifest, text);
   if (!file) return false;
 
   return new Promise<boolean>((resolve) => {
-    const audio = new Audio(AUDIO_BASE + file);
+    const audio = getOrCreateAudioElement(file);
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {}
     currentClip = audio;
     let settled = false;
     const finish = (played: boolean) => {
       if (settled) return;
       settled = true;
+      audio.onended = null;
+      audio.onpause = null;
+      audio.onerror = null;
       if (currentClip === audio) currentClip = null;
       resolve(played);
     };

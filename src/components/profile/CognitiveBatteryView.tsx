@@ -59,7 +59,7 @@ import { MASCOT_LINES } from '../ui/mascotLines';
 import { trackUsage } from '../../utils/usageTracking';
 import { SyncState, batterySessionFromRecord, canSyncToSchool, syncBatteryToSchool, trainingFromRecord } from '../../cognitiveProfile/sync';
 import { summarizeBattery } from '../../cognitiveProfile/records';
-import { speak, stopSpeech } from './audio';
+import { preloadAudioClips, preloadAudioManifest, speak, stopSpeech } from './audio';
 import ProfileReportView from './ProfileReportView';
 import TrainingProgramView from './TrainingProgramView';
 
@@ -111,6 +111,13 @@ function SubtestRunner({
   const responses = useRef<ItemResponse[]>([]);
 
   useEffect(() => {
+    const upcoming: string[] = [subtest.introAudio, PHRASES.testStarts, PHRASES.gameOver];
+    if (subtest.kind === 'readList') {
+      for (const p of subtest.practice) upcoming.push(p.text);
+    } else if (subtest.kind === 'spelling') {
+      for (const p of subtest.practice) upcoming.push(p.spoken);
+    }
+    preloadAudioClips(upcoming);
     speak(subtest.introAudio);
     return () => stopSpeech();
   }, [subtest.id]);
@@ -656,6 +663,9 @@ interface Props {
 const startedSessions = new Map<string, BatterySession>();
 
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
+  useEffect(() => {
+    preloadAudioManifest();
+  }, []);
   const [trainingRunning, setTrainingRunning] = useState(false);
   const [screeningMode, setScreeningMode] = useState<ScreeningMode>('comprehensive');
   const syncEnabled = canSyncToSchool(activeStudent);

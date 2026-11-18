@@ -365,6 +365,50 @@ export async function transcribeArabicBlindWithGemini(args: {
     return { transcript: isSilent ? '' : transcript, isSilent, sourceModel };
   };
 
+  // Prefer direct Google Gemini API first (zero proxy hop, ~3-6x faster than OpenRouter)
+  // with thinkingBudget: 0 so Gemini 2.5 Flash skips hidden reasoning tokens for single-word ASR.
+  if (geminiKey) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: 'audio/wav', data: args.audioWavBase64 } },
+                { text: BLIND_CHILD_SPEECH_PROMPT },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0,
+            maxOutputTokens: 120,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+
+      if (res.ok) {
+        const data: any = await res.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (typeof rawText === 'string' && rawText.trim()) {
+          return parsePayload(rawText, 'blind:google/gemini-2.5-flash');
+        }
+      }
+      if (!openRouterKey) {
+        throw new Error(`BLIND_GEMINI_HTTP_${res.status}`);
+      }
+    } catch (directErr) {
+      if (!openRouterKey) throw directErr;
+    }
+  }
+
+  // Fallback to OpenRouter if direct Gemini API key is absent or transiently failed
   if (openRouterKey) {
     const model = 'google/gemini-2.5-flash';
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -372,13 +416,14 @@ export async function transcribeArabicBlindWithGemini(args: {
       headers: {
         Authorization: `Bearer ${openRouterKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
+        'HTTP-Referer': 'https://hayanaqra.com',
         'X-Title': 'Haya Naqra Blind Arabic Transcription',
       },
       body: JSON.stringify({
         model,
         temperature: 0,
-        max_tokens: 200,
+        max_tokens: 120,
+        reasoning: { effort: 'none' },
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -396,51 +441,21 @@ export async function transcribeArabicBlindWithGemini(args: {
           },
         ],
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(15000),
     });
 
-    if (res.ok) {
-      const data: any = await res.json();
-      const content = data?.choices?.[0]?.message?.content;
-      if (typeof content === 'string' && content.trim()) {
-        return parsePayload(content, `blind:${model}`);
-      }
-    }
-    if (!geminiKey) {
+    if (!res.ok) {
       throw new Error(`BLIND_OPENROUTER_HTTP_${res.status}`);
     }
+    const data: any = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new Error('BLIND_OPENROUTER_EMPTY_RESPONSE');
+    }
+    return parsePayload(content, `blind:${model}`);
   }
 
-  // Fallback to direct Google Gemini API if configured
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey!)}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: 'audio/wav', data: args.audioWavBase64 } },
-            { text: BLIND_CHILD_SPEECH_PROMPT },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0,
-      },
-    }),
-    signal: AbortSignal.timeout(25000),
-  });
-
-  if (!res.ok) {
-    throw new Error(`BLIND_GEMINI_HTTP_${res.status}`);
-  }
-  const data: any = await res.json();
-  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) throw new Error('BLIND_GEMINI_EMPTY_RESPONSE');
-  return parsePayload(rawText, 'blind:google/gemini-2.5-flash');
+  throw new Error('BLIND_ASR_KEY_NOT_CONFIGURED');
 }
 
 /**

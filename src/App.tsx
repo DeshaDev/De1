@@ -46,6 +46,7 @@ import {
   getTenantDisplayLabelAr,
   BaseeraSessionInfo,
 } from './utils/apiAuth';
+import { preloadAudioManifest } from './components/profile/audio';
 import {
   saveStoredStudents,
   loadStoredStudents,
@@ -345,6 +346,10 @@ export default function App() {
   const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(() => isSupabaseConfigured());
   const [supabaseError, setSupabaseError] = useState<string>('');
   const [cookieNoticeAccepted, setCookieNoticeAccepted] = useState<boolean>(() => hasAcceptedCookieNotice());
+
+  useEffect(() => {
+    preloadAudioManifest();
+  }, []);
 
   const PUBLIC_TABS: ReadonlySet<ActiveTab> = new Set([
     'home',
