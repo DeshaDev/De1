@@ -60,29 +60,13 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
                 : 'يقرأ الطفل نصًا قصيرًا بصوت عالٍ ثم يجيب عن أسئلة فهم بسيطة.'
             }
           />
-          <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
-            {subTab !== 'battery' && (
+          {subTab !== 'battery' && (
+            <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 bz-small" aria-label="أدوات الفحص">
               <button type="button" className="bz-link" onClick={() => setSubTab('battery')}>
                 العودة إلى فحص مهارات القراءة
               </button>
-            )}
-            {subTab === 'battery' && <span className="bz-muted">أداة إضافية:</span>}
-            {TABS.filter((t) => t.id === 'oral-reading').map((tab) => {
-              const Icon = tab.icon;
-              const active = subTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSubTab(tab.id)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`bz-btn bz-btn-sm ${active ? 'bz-btn-secondary' : 'bz-btn-ghost'}`}
-                >
-                  <Icon className="w-4 h-4" aria-hidden="true" /> {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+            </nav>
+          )}
         </header>
       )}
 
@@ -107,6 +91,15 @@ export const DyslexiaScreeningHub: React.FC<DyslexiaScreeningHubProps> = ({
           supabaseUser={supabaseUser}
           onNavigateTab={(tab) => onNavigateTab(tab as any)}
         />
+      )}
+
+      {!focused && subTab === 'battery' && (
+        <nav className="flex flex-wrap items-center gap-2 bz-small pt-2 border-t border-line" aria-label="أدوات الفحص">
+          <span className="bz-muted">للمعلم والأخصائي:</span>
+          <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={() => setSubTab('oral-reading')}>
+            قراءة نص وفهمه
+          </button>
+        </nav>
       )}
 
       <Suspense fallback={<div className="py-16 text-center bz-muted" role="status">جارٍ التحميل…</div>}>

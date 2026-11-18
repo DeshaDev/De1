@@ -662,6 +662,13 @@ interface Props {
  */
 const startedSessions = new Map<string, BatterySession>();
 
+/** «جلسة واحدة» / «جلستان» / «٣ جلسات». */
+function sittingsLabelAr(n: number): string {
+  if (n === 1) return 'جلسة واحدة';
+  if (n === 2) return 'جلستان';
+  return `${toArabicDigits(n)} جلسات`;
+}
+
 export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFocusModeChange, onRecordUpdated, onCreateLearner, onOpenExtra, supabaseUser, onNavigateTab }: Props) {
   useEffect(() => {
     preloadAudioManifest();
@@ -953,14 +960,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                 onClick={() => setScreeningMode('fast')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'fast' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
               >
-                المسار السريع (نحو {formatMinutesAr(roundEstimateMinutes(minutesForAge(session.ageMonths, 'fast')))})
+                سريع: نحو {formatMinutesAr(roundEstimateMinutes(minutesForAge(session.ageMonths, 'fast')))} · {sittingsLabelAr(sittingsForAge(session.ageMonths, 'fast').length)}
               </button>
               <button
                 type="button"
                 onClick={() => setScreeningMode('comprehensive')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${screeningMode === 'comprehensive' ? 'bg-brand text-white shadow-2xs' : 'text-ink-2 hover:text-ink'}`}
               >
-                الفحص الشامل ({toArabicDigits(sittingsForAge(session.ageMonths, 'comprehensive').length)} جلسات)
+                شامل: نحو {formatMinutesAr(roundEstimateMinutes(minutesForAge(session.ageMonths, 'comprehensive')))} · {sittingsLabelAr(sittingsForAge(session.ageMonths, 'comprehensive').length)}
               </button>
             </div>
           </div>
@@ -978,7 +985,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             <p className="bz-small text-ink-2 mt-3">
               {sittingJustFinished
                 ? `أحسنت! انتهت الجلسة ${toArabicDigits(nextSitting)} من ${toArabicDigits(sittings.length)}. يمكنك إكمال الجلسة التالية الآن أو في يوم آخر.`
-                : `الجلسة الحالية: الجلسة ${toArabicDigits(nextSitting + 1)} من ${toArabicDigits(sittings.length)} (${toArabicDigits(sittings[nextSitting].length)} مهام · نحو ${formatMinutesAr(roundEstimateMinutes(sittingMinutes(sittings[nextSitting])))}). يمكنك التوقّف بعد أي لعبة وإكمال الباقي لاحقًا.`}
+                : `الجلسة الحالية: ${toArabicDigits(nextSitting + 1)} من ${toArabicDigits(sittings.length)}.`}
             </p>
           )}
         </div>
@@ -988,9 +995,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               <Play className="w-5 h-5" /> {completed.length === 0 ? 'ابدأ اللعبة الأولى' : 'اللعبة التالية'}
             </button>
           )}
-          <button type="button" disabled={!profile} onClick={() => setView({ name: 'report' })} className="bz-btn bz-btn-secondary bz-btn-lg">
-            <FileBarChart className="w-5 h-5" /> النتيجة والتقرير
-          </button>
+          {profile && completed.length > 0 && (
+            <button type="button" onClick={() => setView({ name: 'report' })} className="bz-btn bz-btn-secondary bz-btn-lg">
+              <FileBarChart className="w-5 h-5" /> النتيجة والتقرير
+            </button>
+          )}
         </div>
       </section>
 
@@ -998,11 +1007,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">
           <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
             الجلسة {toArabicDigits(sitting + 1)}
-            {games.some((g) => g.domain === 'reading') && sitting === 0 && <span className="bz-small text-brand font-semibold">القراءة</span>}
             <span className="bz-small bz-muted font-normal">نحو {formatMinutesAr(roundEstimateMinutes(sittingMinutes(games)))}</span>
             {games.every((g) => session.results[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
           </h3>
-      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
         {games.map((s) => {
           const done = Boolean(session.results[s.id]);
           const isNext = nextSubtest?.id === s.id;
@@ -1033,10 +1041,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                   <p className="font-child text-[22px] font-bold text-ink leading-snug">{s.gameNameAr}</p>
                   <p className="bz-small text-ink-2 mt-1">{s.skillNameAr}</p>
                 </div>
-                <div className="mt-auto w-full flex items-center justify-between text-[12px] font-semibold pt-3 border-t border-line">
-                  <span style={{ color: domain.color }}>{domain.nameAr}</span>
-                  <span className="bz-muted">{done ? 'إعادة اللعبة' : `≈ ${formatMinutesAr(s.minutes)}`}</span>
-                </div>
+                {done && (
+                  <div className="mt-auto w-full text-[12px] font-semibold pt-3 border-t border-line bz-muted">إعادة اللعبة</div>
+                )}
               </button>
             </li>
           );
@@ -1065,6 +1072,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             يُفتح البرنامج التدريبي المخصّص بعد إنجاز الفحص.
           </span>
         )}
+        {completed.length === ageTasks.length && ageTasks.length > 0 && (
         <button
           type="button"
           onClick={() => {
@@ -1090,6 +1098,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         >
           <RotateCcw className="w-3.5 h-3.5" /> فحص جديد
         </button>
+        )}
       </div>
     </div>
   );
