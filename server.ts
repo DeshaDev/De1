@@ -4030,7 +4030,47 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
-    // Tier 0: ElevenLabs V4 Arabic Neural Speech (Studio Classical Fusha Teacher - Suhair Al Abtah)
+    // Tier 0: Microsoft Azure Arabic Neural Speech (Studio Classical Arabic Teacher - ar-AE-FatimaNeural)
+    const azureKey = process.env.AZURE_SPEECH_KEY?.trim();
+    const azureRegion = process.env.AZURE_SPEECH_REGION?.trim();
+
+    if (azureKey && azureRegion) {
+      try {
+        const escaped = cleanText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const formattedBody = formatArabicTextWithPhonemes(escaped);
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-AE"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="${prosodyPitch}">${formattedBody}</prosody></voice></speak>`;
+
+        const endpoint = `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
+        const azureRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+            'User-Agent': 'Baseera-Pedagogical-Audio',
+          },
+          body: ssml,
+        });
+
+        if (azureRes.ok) {
+          const arrayBuffer = await azureRes.arrayBuffer();
+          const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
+          const payload = { audioBase64, mimeType: 'audio/mp3', source: 'azure_neural_arabic' };
+          cacheTtsAudio(cacheKey, payload);
+          res.json(payload);
+          return;
+        } else {
+          console.warn('[Azure TTS] Unfulfilled status:', azureRes.status);
+        }
+      } catch (azureErr) {
+        console.warn('[Azure TTS] Request error:', azureErr);
+      }
+    }
+
+    // Tier 1: ElevenLabs V4 Arabic Neural Speech (Fallback)
     const elevenKey = process.env.ELEVENLABS_API_KEY?.trim();
     if (elevenKey) {
       try {
@@ -4076,46 +4116,6 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         }
       } catch (elevenErr) {
         console.warn('[ElevenLabs TTS] Request error:', elevenErr);
-      }
-    }
-
-    // Tier 1: Microsoft Azure Arabic Neural Speech (Studio-quality human pronunciation with flawless makharij)
-    const azureKey = process.env.AZURE_SPEECH_KEY?.trim();
-    const azureRegion = process.env.AZURE_SPEECH_REGION?.trim();
-
-    if (azureKey && azureRegion) {
-      try {
-        const escaped = cleanText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        const formattedBody = formatArabicTextWithPhonemes(escaped);
-        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ar-SA"><voice name="${selectedVoice}"><prosody rate="${prosodyRate}" pitch="${prosodyPitch}">${formattedBody}</prosody></voice></speak>`;
-
-        const endpoint = `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`;
-        const azureRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Ocp-Apim-Subscription-Key': azureKey,
-            'Content-Type': 'application/ssml+xml',
-            'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
-            'User-Agent': 'Baseera-Pedagogical-Audio',
-          },
-          body: ssml,
-        });
-
-        if (azureRes.ok) {
-          const arrayBuffer = await azureRes.arrayBuffer();
-          const audioBase64 = Buffer.from(arrayBuffer).toString('base64');
-          const payload = { audioBase64, mimeType: 'audio/mp3', source: 'azure_neural_arabic' };
-          cacheTtsAudio(cacheKey, payload);
-          res.json(payload);
-          return;
-        } else {
-          console.warn('[Azure TTS] Unfulfilled status:', azureRes.status);
-        }
-      } catch (azureErr) {
-        console.warn('[Azure TTS] Request error:', azureErr);
       }
     }
 

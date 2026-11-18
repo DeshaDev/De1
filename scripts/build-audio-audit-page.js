@@ -4,28 +4,50 @@ import path from 'node:path';
 const manifestPath = path.resolve('public/audio/v1/manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-const entries = Object.entries(manifest.clips).map(([key, clip]) => {
+// Group and de-duplicate by unique physical audio file (clip.file)
+const fileMap = new Map();
+
+for (const [key, clip] of Object.entries(manifest.clips)) {
+  const file = clip.file;
+  if (!file) continue;
+
   let categoryLabel = 'أخرى';
   let categoryKey = clip.context || 'other';
   if (categoryKey === 'single_word') categoryLabel = 'كلمات الفحص والقراءة';
   else if (categoryKey === 'instruction') categoryLabel = 'تعليمات الألعاب والفحص';
   else if (categoryKey === 'phoneme') categoryLabel = 'أصوات الحروف والمقاطع الفونيمية';
-  else if (categoryKey === 'praise') categoryLabel = 'عبارات المديح والتشجيع';
+  else if (categoryKey === 'praise') categoryLabel = 'عبارات التشجيع والمديح';
   else if (categoryKey === 'pal') categoryLabel = 'التعلم المقترن (تسمية الكائنات)';
 
-  return {
-    key,
-    file: clip.file,
-    text: clip.text,
-    categoryKey,
-    categoryLabel,
-    voice: clip.voice || 'ar-AE-FatimaNeural',
-    sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
-    audioUrl: `/audio/v1/${clip.file}`,
-  };
-});
+  if (!fileMap.has(file)) {
+    fileMap.set(file, {
+      key,
+      file,
+      text: clip.text,
+      categoryKey,
+      categoryLabel,
+      voice: clip.voice || 'ar-AE-FatimaNeural',
+      sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
+      audioUrl: `/audio/v1/${file}`,
+      aliases: [clip.text]
+    });
+  } else {
+    const existing = fileMap.get(file);
+    if (!existing.aliases.includes(clip.text)) {
+      existing.aliases.push(clip.text);
+    }
+    // Prefer fully vowelled text as the primary displayed text
+    const curHasVowels = /[\u064B-\u0652]/.test(clip.text || '');
+    const exHasVowels = /[\u064B-\u0652]/.test(existing.text || '');
+    if ((curHasVowels && !exHasVowels) || (curHasVowels && clip.text.length >= existing.text.length)) {
+      existing.text = clip.text;
+    }
+  }
+}
 
-// Compute dynamic counts
+const entries = Array.from(fileMap.values());
+
+// Compute dynamic counts based on unique audio files
 const singleWordCount = entries.filter(e => e.categoryKey === 'single_word').length;
 const phonemeCount = entries.filter(e => e.categoryKey === 'phoneme').length;
 const instructionCount = entries.filter(e => e.categoryKey === 'instruction').length;
@@ -308,9 +330,14 @@ const html = `<!DOCTYPE html>
 
     <div class="grid" id="clipsGrid">
       ${entries.map((c) => `
-        <div class="card" data-category="${c.categoryKey}" data-text="${c.text.replace(/"/g, '&quot;')}">
+        <div class="card" data-category="${c.categoryKey}" data-text="${(c.text + ' ' + (c.aliases || []).join(' ')).replace(/"/g, '&quot;')}">
           <div>
-            <span class="card-category ${c.categoryKey}">${c.categoryLabel}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="card-category ${c.categoryKey}">${c.categoryLabel}</span>
+              <span style="font-size: 0.72rem; color: #0d9488; font-weight: bold; background: #f0fdfa; padding: 0.15rem 0.5rem; border-radius: 0.35rem; border: 1px solid #ccfbf1;">
+                ${c.voice && c.voice.includes('Fatima') ? '🎙️ فاطمة (معلمة فصحى)' : c.voice && c.voice.includes('Zariyah') ? '🎙️ زارية (فصحى)' : '🎙️ صوت تعليمي'}
+              </span>
+            </div>
             <div class="card-text arabic-text" lang="ar">${c.text}</div>
           </div>
           <div>
