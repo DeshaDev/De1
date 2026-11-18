@@ -25,6 +25,13 @@ const entries = Object.entries(manifest.clips).map(([key, clip]) => {
   };
 });
 
+// Compute dynamic counts
+const singleWordCount = entries.filter(e => e.categoryKey === 'single_word').length;
+const phonemeCount = entries.filter(e => e.categoryKey === 'phoneme').length;
+const instructionCount = entries.filter(e => e.categoryKey === 'instruction').length;
+const praiseCount = entries.filter(e => e.categoryKey === 'praise').length;
+const palCount = entries.filter(e => e.categoryKey === 'pal').length;
+
 // Sort with priority to single_word and praise first, then instruction, then phoneme
 const categoryOrder = { single_word: 1, praise: 2, instruction: 3, pal: 4, phoneme: 5, other: 6 };
 entries.sort((a, b) => {
@@ -268,10 +275,11 @@ const html = `<!DOCTYPE html>
       <h1>🎙️ مختبر مراجعة واستماع المقاطع الصوتية</h1>
       <p>هذه الصفحة التجريبية تتيح لك الاستماع المباشر لكل المقاطع الصوتية في منصة «هَيَّا نَقْرَأْ»، مع فحص مخارج الحروف، الكلمات المبتكرة، وبنود الفحص والتدريب.</p>
       <div class="stats-bar">
-        <span class="stat-pill">📊 إجمالي المقاطع: ${entries.length} مقطعًا</span>
-        <span class="stat-pill">✨ كلمات الفحص: 114</span>
-        <span class="stat-pill">📖 أصوات الحروف: 302</span>
-        <span class="stat-pill">🎯 التوجيهات والتعليمات: 454</span>
+        <span class="stat-pill">📊 إجمالي المقاطع المتاحة: ${entries.length} مقطعًا</span>
+        <span class="stat-pill">✨ كلمات الفحص والقراءة: ${singleWordCount}</span>
+        <span class="stat-pill">📖 أصوات ومقاطع الحروف: ${phonemeCount}</span>
+        <span class="stat-pill">🎯 التوجيهات والتعليمات: ${instructionCount}</span>
+        <span class="stat-pill">🌟 عبارات التشجيع: ${praiseCount}</span>
       </div>
     </header>
 
@@ -289,11 +297,11 @@ const html = `<!DOCTYPE html>
       <input type="text" id="searchInput" class="search-box" placeholder="🔎 ابحث عن أي كلمة أو عبارة (مثال: فوب، سامي، إليه، شمس، أحسنت)..." oninput="filterClips()">
       <div class="filters">
         <button class="filter-btn active" onclick="setCategory('all', this)">الكل (${entries.length})</button>
-        <button class="filter-btn" onclick="setCategory('single_word', this)">كلمات الفحص والقراءة</button>
-        <button class="filter-btn" onclick="setCategory('praise', this)">عبارات التشجيع والمديح</button>
-        <button class="filter-btn" onclick="setCategory('instruction', this)">تعليمات الألعاب والفحص</button>
-        <button class="filter-btn" onclick="setCategory('phoneme', this)">أصوات الحروف والمقاطع</button>
-        <button class="filter-btn" onclick="setCategory('pal', this)">التعلم المقترن</button>
+        <button class="filter-btn" onclick="setCategory('single_word', this)">كلمات الفحص والقراءة (${singleWordCount})</button>
+        <button class="filter-btn" onclick="setCategory('praise', this)">عبارات التشجيع (${praiseCount})</button>
+        <button class="filter-btn" onclick="setCategory('instruction', this)">تعليمات الألعاب والفحص (${instructionCount})</button>
+        <button class="filter-btn" onclick="setCategory('phoneme', this)">أصوات الحروف والمقاطع (${phonemeCount})</button>
+        <button class="filter-btn" onclick="setCategory('pal', this)">التعلم المقترن (${palCount})</button>
       </div>
       <div class="counter" id="counterText">عرض ${entries.length} مقطعًا صوتيًا</div>
     </div>

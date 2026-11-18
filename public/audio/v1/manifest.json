@@ -3,14 +3,6 @@
   "voice": "ML7jGRDg4E9hIl5qEm1Z",
   "generatedAt": "2026-11-15T15:45:11.631Z",
   "clips": {
-    "0047436ce600f5f0": {
-      "file": "0047436ce600f5f0.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: شَمْس؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
-    },
     "01edd852f8ffd109": {
       "file": "01edd852f8ffd109.mp3",
       "text": "قِطْ",
@@ -26,22 +18,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 12581
-    },
-    "0287463c89878af5": {
-      "file": "0287463c89878af5.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جِ ... جِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "0364c0b52b780e5f": {
-      "file": "0364c0b52b780e5f.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: نَ ... نَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "0387e243cd039298": {
       "file": "0387e243cd039298.mp3",
@@ -67,14 +43,6 @@
       "context": "instruction",
       "bytes": 59811
     },
-    "05340d4cc4484cb3": {
-      "file": "05340d4cc4484cb3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: فُ ... فُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "06096291ed0514da": {
       "file": "06096291ed0514da.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: أَسَد؟",
@@ -90,14 +58,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 81545
-    },
-    "069e917a8d5ee8ed": {
-      "file": "069e917a8d5ee8ed.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: أَرْنَب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 98263
     },
     "06d09e95d111be20": {
       "file": "06d09e95d111be20.mp3",
@@ -171,14 +131,6 @@
       "context": "instruction",
       "bytes": 93247
     },
-    "0bc61dd0872335c3": {
-      "file": "0bc61dd0872335c3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: سَ ... سَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "0c67ec0bddc53e8f": {
       "file": "0c67ec0bddc53e8f.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: عَلَم؟",
@@ -202,22 +154,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 15089
-    },
-    "0e03a84cf67d6209": {
-      "file": "0e03a84cf67d6209.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: تِ ... تِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
-    },
-    "0e14626f69a9ff53": {
-      "file": "0e14626f69a9ff53.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: نَمِر؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
     },
     "0f4932962f29f163": {
       "file": "0f4932962f29f163.mp3",
@@ -267,22 +203,6 @@
       "context": "phoneme",
       "bytes": 11327
     },
-    "1125204377166a03": {
-      "file": "1125204377166a03.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غُ ... غُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "11d32c39ff8f4379": {
-      "file": "11d32c39ff8f4379.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جَ ... جَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "13085f41378e29be": {
       "file": "13085f41378e29be.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: كُرْسِيّ؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -323,14 +243,6 @@
       "context": "phoneme",
       "bytes": 11232
     },
-    "155450fed81bde6b": {
-      "file": "155450fed81bde6b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: صَ ... صَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "16c6a9838244a18f": {
       "file": "16c6a9838244a18f.mp3",
       "text": "ذِي",
@@ -338,30 +250,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 12581
-    },
-    "17581191084a63dd": {
-      "file": "17581191084a63dd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يُ ... يُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "17f7c6d4b2beefab": {
-      "file": "17f7c6d4b2beefab.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: دِ ... دِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "1830da557719e0cb": {
-      "file": "1830da557719e0cb.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: رَ ... رَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
     },
     "19c9e1c29be63018": {
       "file": "19c9e1c29be63018.mp3",
@@ -379,22 +267,6 @@
       "context": "instruction",
       "bytes": 81545
     },
-    "1a5d562b5b01f257": {
-      "file": "1a5d562b5b01f257.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: لِ ... لِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "1bb4562368b4f96d": {
-      "file": "1bb4562368b4f96d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قُ ... قُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 57303
-    },
     "1c16f1feb14e8e9a": {
       "file": "1c16f1feb14e8e9a.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: كِتَاب؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -410,30 +282,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 11232
-    },
-    "1dd4fa0934617ce5": {
-      "file": "1dd4fa0934617ce5.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: فِ ... فِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
-    "1e11060ad09113ce": {
-      "file": "1e11060ad09113ce.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: مَوْز؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
-    },
-    "1e1864ca859c734b": {
-      "file": "1e1864ca859c734b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذُ ... ذُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "1e6661581a7c58bb": {
       "file": "1e6661581a7c58bb.mp3",
@@ -483,14 +331,6 @@
       "context": "instruction",
       "bytes": 82798
     },
-    "24ca9bfa7cd85a31": {
-      "file": "24ca9bfa7cd85a31.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذَ ... ذَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "25816b31e9f4e592": {
       "file": "25816b31e9f4e592.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: نَحْلَة؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -515,22 +355,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "26e9ace0b9829781": {
-      "file": "26e9ace0b9829781.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: عِنَب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
-    },
-    "27d8b205157c5d67": {
-      "file": "27d8b205157c5d67.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وِ ... وِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "27de562c0441c533": {
       "file": "27de562c0441c533.mp3",
       "text": "سَنَبْحَثُ عَنْ كَلِمَاتٍ تَتَشَابَهُ فِي آخِرِهَا، مِثْلَ: قَلَم وَعَلَم.",
@@ -546,14 +370,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 15089
-    },
-    "2810bccf1021b8da": {
-      "file": "2810bccf1021b8da.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: أَسَد؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
     },
     "281e89bb664adb1e": {
       "file": "281e89bb664adb1e.mp3",
@@ -587,14 +403,6 @@
       "context": "instruction",
       "bytes": 59811
     },
-    "2b5f5d1a3f8b0417": {
-      "file": "2b5f5d1a3f8b0417.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هُ ... هُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "2b9a208c1b4a0fc8": {
       "file": "2b9a208c1b4a0fc8.mp3",
       "text": "بَطْ",
@@ -611,14 +419,6 @@
       "context": "praise",
       "bytes": 54795
     },
-    "2bfad50677ef7d87": {
-      "file": "2bfad50677ef7d87.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: حِصَان؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
-    },
     "2cb57a3f9a2c5d73": {
       "file": "2cb57a3f9a2c5d73.mp3",
       "text": "أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: نَار؟",
@@ -627,14 +427,6 @@
       "context": "instruction",
       "bytes": 62318
     },
-    "2d68a472b3a00207": {
-      "file": "2d68a472b3a00207.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يَ ... يَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "2d76ed9b0e6e8092": {
       "file": "2d76ed9b0e6e8092.mp3",
       "text": "دِيك",
@@ -642,14 +434,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 13835
-    },
-    "2e6f464900e1e28f": {
-      "file": "2e6f464900e1e28f.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: عَلَم؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
     },
     "2e7b9a71b1c4a2d6": {
       "file": "2e7b9a71b1c4a2d6.mp3",
@@ -674,14 +458,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 12581
-    },
-    "303124263816547e": {
-      "file": "303124263816547e.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: يَد؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 95755
     },
     "304e7ad5499393e1": {
       "file": "304e7ad5499393e1.mp3",
@@ -787,14 +563,6 @@
       "context": "single_word",
       "bytes": 17597
     },
-    "378c33550845455b": {
-      "file": "378c33550845455b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضُ ... ضُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "37db77709daa238e": {
       "file": "37db77709daa238e.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: يَد؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -810,14 +578,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 82798
-    },
-    "38f14392a2ee07c4": {
-      "file": "38f14392a2ee07c4.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: عَيْن؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
     },
     "39306d196b0a0ec2": {
       "file": "39306d196b0a0ec2.mp3",
@@ -851,14 +611,6 @@
       "context": "phoneme",
       "bytes": 15089
     },
-    "3b3376e46e16363d": {
-      "file": "3b3376e46e16363d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خَ ... خَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "3b522e5d2a625211": {
       "file": "3b522e5d2a625211.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: بَاب؟",
@@ -883,14 +635,6 @@
       "context": "instruction",
       "bytes": 79037
     },
-    "3b83f2ae19d33f38": {
-      "file": "3b83f2ae19d33f38.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: قَارِب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
-    },
     "3bedf8d550ffb8ee": {
       "file": "3bedf8d550ffb8ee.mp3",
       "text": "تُو",
@@ -898,22 +642,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "3c9065686d4b7dbb": {
-      "file": "3c9065686d4b7dbb.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: مُ ... مُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "3d1c90bdb7bb2f5b": {
-      "file": "3d1c90bdb7bb2f5b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طِ ... طِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "3e147b0443ac12e3": {
       "file": "3e147b0443ac12e3.mp3",
@@ -931,22 +659,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "3edd773dbf0cbe6b": {
-      "file": "3edd773dbf0cbe6b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظُ ... ظُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "3f1aee5dadcc3d43": {
-      "file": "3f1aee5dadcc3d43.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: دَ ... دَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "3fea37d4bf105bf1": {
       "file": "3fea37d4bf105bf1.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: مَطَر؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -962,14 +674,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 82798
-    },
-    "406dbb953d98fcbb": {
-      "file": "406dbb953d98fcbb.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: قَلَم؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
     },
     "408705dace65cc70": {
       "file": "408705dace65cc70.mp3",
@@ -1107,14 +811,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "4ab6ce7f6967b509": {
-      "file": "4ab6ce7f6967b509.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: قَمَر؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
-    },
     "4bf5f8139f11c13d": {
       "file": "4bf5f8139f11c13d.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: سَيْف؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -1155,22 +851,6 @@
       "context": "instruction",
       "bytes": 58557
     },
-    "4feb5f97aaba3bb1": {
-      "file": "4feb5f97aaba3bb1.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: بَ ... بَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "510a12eab8285633": {
-      "file": "510a12eab8285633.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ثَ ... ثَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "5133349a61c2259e": {
       "file": "5133349a61c2259e.mp3",
       "text": "مِظَلَّة",
@@ -1178,14 +858,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 16343
-    },
-    "515c98179ea241a7": {
-      "file": "515c98179ea241a7.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: كُ ... كُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "51c0a244f70b6e52": {
       "file": "51c0a244f70b6e52.mp3",
@@ -1219,14 +891,6 @@
       "context": "phoneme",
       "bytes": 15089
     },
-    "538aa08f5aa65785": {
-      "file": "538aa08f5aa65785.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هِ ... هِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "53a9ed306766d8d9": {
       "file": "53a9ed306766d8d9.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: بَقَرَة؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -1242,14 +906,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 16343
-    },
-    "54da8ba4f8fff165": {
-      "file": "54da8ba4f8fff165.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: نَار؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
     },
     "56c82365db7bf3a6": {
       "file": "56c82365db7bf3a6.mp3",
@@ -1282,14 +938,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 80291
-    },
-    "58159cad10fef883": {
-      "file": "58159cad10fef883.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: ثَعْلَب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
     },
     "5852a18727b7400c": {
       "file": "5852a18727b7400c.mp3",
@@ -1331,22 +979,6 @@
       "context": "instruction",
       "bytes": 58557
     },
-    "5b264a634613f075": {
-      "file": "5b264a634613f075.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هَ ... هَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "5b37c7568e26b2c2": {
-      "file": "5b37c7568e26b2c2.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: كَلْب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 98263
-    },
     "5c7ec9115b26d126": {
       "file": "5c7ec9115b26d126.mp3",
       "text": "حَة",
@@ -1370,14 +1002,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "5e56910256fc6bfb": {
-      "file": "5e56910256fc6bfb.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خُ ... خُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "5f8bedf570d694d7": {
       "file": "5f8bedf570d694d7.mp3",
@@ -1450,14 +1074,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 63990
-    },
-    "667638c709b2f984": {
-      "file": "667638c709b2f984.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: فُسْتَان؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
     },
     "66a57b8af2ea938d": {
       "file": "66a57b8af2ea938d.mp3",
@@ -1579,14 +1195,6 @@
       "context": "instruction",
       "bytes": 81545
     },
-    "7099fd4ef7fc36ad": {
-      "file": "7099fd4ef7fc36ad.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: بِ ... بِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "70e15c55a6e4352a": {
       "file": "70e15c55a6e4352a.mp3",
       "text": "عَيْن",
@@ -1667,14 +1275,6 @@
       "context": "phoneme",
       "bytes": 13835
     },
-    "766d6b5848c1296d": {
-      "file": "766d6b5848c1296d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذِ ... ذِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 63990
-    },
     "77145d80c387b97f": {
       "file": "77145d80c387b97f.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: مَطَر؟",
@@ -1707,14 +1307,6 @@
       "context": "instruction",
       "bytes": 59811
     },
-    "7bf4510d0cb669bd": {
-      "file": "7bf4510d0cb669bd.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: حَبْل؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
-    },
     "7bf518b4f13d8539": {
       "file": "7bf518b4f13d8539.mp3",
       "text": "سُو",
@@ -1730,22 +1322,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "7caef7fb90c813ad": {
-      "file": "7caef7fb90c813ad.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: كِ ... كِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
-    },
-    "7df80ff9641b0233": {
-      "file": "7df80ff9641b0233.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ثِ ... ثِ؟",
-      "voice": "ar-SA-ZariyahNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 22608
     },
     "7dfc515f67a7b035": {
       "file": "7dfc515f67a7b035.mp3",
@@ -1819,22 +1395,6 @@
       "context": "instruction",
       "bytes": 81545
     },
-    "83bc4ed29cb52421": {
-      "file": "83bc4ed29cb52421.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: جَرَس؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
-    },
-    "83fa1111116ad4bd": {
-      "file": "83fa1111116ad4bd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: مِ ... مِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 63990
-    },
     "846b6b462f57f6de": {
       "file": "846b6b462f57f6de.mp3",
       "text": "أَحْسَنْتَ! انْتَهَتِ اللُّعْبَةُ.",
@@ -1907,14 +1467,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "88f498e58fd7c6bd": {
-      "file": "88f498e58fd7c6bd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: دُ ... دُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 57303
-    },
     "89039b6d98c12de7": {
       "file": "89039b6d98c12de7.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: حَبْل؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -1962,22 +1514,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 11232
-    },
-    "8b7c1e7aec9e6ca6": {
-      "file": "8b7c1e7aec9e6ca6.mp3",
-      "text": "سَتَظْهَرُ صُوَرٌ فِي نَافِذَةِ القَلْعَةِ وَاحِدَةً بَعْدَ وَاحِدَةٍ. انْظُرْ جَيِّدًا، ثُمَّ الْمِسِ الصُّوَرَ بِالتَّرْتِيبِ نَفْسِهِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 148418
-    },
-    "8b81a02c8f65546c": {
-      "file": "8b81a02c8f65546c.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: عَسَل؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 99517
     },
     "8c0b4b5098c6f729": {
       "file": "8c0b4b5098c6f729.mp3",
@@ -2027,14 +1563,6 @@
       "context": "instruction",
       "bytes": 62318
     },
-    "90f7c355c86c42d3": {
-      "file": "90f7c355c86c42d3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زُ ... زُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "911180656bed3725": {
       "file": "911180656bed3725.mp3",
       "text": "طُو",
@@ -2058,22 +1586,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 62318
-    },
-    "9366ef126033cb2d": {
-      "file": "9366ef126033cb2d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: فَ ... فَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "93e040a0ce870429": {
-      "file": "93e040a0ce870429.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خِ ... خِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "9430ba656c1f4f26": {
       "file": "9430ba656c1f4f26.mp3",
@@ -2107,22 +1619,6 @@
       "context": "instruction",
       "bytes": 122505
     },
-    "952d2acc2f4eedf3": {
-      "file": "952d2acc2f4eedf3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: صِ ... صِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "953c008885afad2e": {
-      "file": "953c008885afad2e.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: فِيل؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
-    },
     "95cb09f0ebf19784": {
       "file": "95cb09f0ebf19784.mp3",
       "text": "أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: فِيل؟",
@@ -2146,14 +1642,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 17597
-    },
-    "963c472490e62a8d": {
-      "file": "963c472490e62a8d.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: أُذُن؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
     },
     "9725a947b200c8a1": {
       "file": "9725a947b200c8a1.mp3",
@@ -2179,30 +1667,6 @@
       "context": "instruction",
       "bytes": 82798
     },
-    "97fd1576a0e8dc93": {
-      "file": "97fd1576a0e8dc93.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: نِ ... نِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "9902baa5f59ccd9c": {
-      "file": "9902baa5f59ccd9c.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: دُبّ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
-    },
-    "991bb7bde6a45d7f": {
-      "file": "991bb7bde6a45d7f.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: مَطَر؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 100771
-    },
     "99efbb0e1c0dc3d1": {
       "file": "99efbb0e1c0dc3d1.mp3",
       "text": "غَا",
@@ -2210,14 +1674,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 11232
-    },
-    "9a13542d9c7e47b9": {
-      "file": "9a13542d9c7e47b9.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: عُ ... عُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "9af438ea8b217113": {
       "file": "9af438ea8b217113.mp3",
@@ -2242,14 +1698,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "9c064b7db264a9f3": {
-      "file": "9c064b7db264a9f3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: لَ ... لَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "9cbc1e31d5a1b261": {
       "file": "9cbc1e31d5a1b261.mp3",
@@ -2283,14 +1731,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "9dd229cd6acd6fb1": {
-      "file": "9dd229cd6acd6fb1.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: قَلْب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
-    },
     "a18e77a46ea7edb7": {
       "file": "a18e77a46ea7edb7.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: أَرْنَب؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -2322,14 +1762,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 59811
-    },
-    "a3bb6f8d2c95d885": {
-      "file": "a3bb6f8d2c95d885.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شِ ... شِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "a458f18298b6b9eb": {
       "file": "a458f18298b6b9eb.mp3",
@@ -2363,22 +1795,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "a59f0e246c48afe9": {
-      "file": "a59f0e246c48afe9.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غِ ... غِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
-    "a5e179f8aa3e180b": {
-      "file": "a5e179f8aa3e180b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: عَ ... عَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 63990
-    },
     "a6b00c41534e2e2f": {
       "file": "a6b00c41534e2e2f.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: بَقَرَة؟",
@@ -2394,22 +1810,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 84470
-    },
-    "a843a61d94e2a92d": {
-      "file": "a843a61d94e2a92d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: مَ ... مَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "a93790d7dce707d3": {
-      "file": "a93790d7dce707d3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شُ ... شُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "a94c738968b2eb53": {
       "file": "a94c738968b2eb53.mp3",
@@ -2442,14 +1842,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 66498
-    },
-    "ab3be9d417ee5ecd": {
-      "file": "ab3be9d417ee5ecd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زَ ... زَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "ab7b35852d53e48a": {
       "file": "ab7b35852d53e48a.mp3",
@@ -2491,22 +1883,6 @@
       "context": "instruction",
       "bytes": 62318
     },
-    "b02ee646ac8ca960": {
-      "file": "b02ee646ac8ca960.mp3",
-      "text": "فِي كُلِّ بَيْتٍ حَيَوَانٌ صَغِيرٌ. انْظُرْ أَيْنَ يَسْكُنُ كُلُّ حَيَوَانٍ، ثُمَّ سَاعِدْهُ عَلَى الرُّجُوعِ إِلَى بَيْتِهِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 141731
-    },
-    "b09b466a946744cd": {
-      "file": "b09b466a946744cd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضَ ... ضَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "b0a825e7226cff28": {
       "file": "b0a825e7226cff28.mp3",
       "text": "أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: مِفْتَاح؟",
@@ -2515,14 +1891,6 @@
       "context": "instruction",
       "bytes": 65244
     },
-    "b114e3300de4a3c7": {
-      "file": "b114e3300de4a3c7.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قَ ... قَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "b1431a91dfe1f07e": {
       "file": "b1431a91dfe1f07e.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: يَد؟",
@@ -2530,22 +1898,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 57303
-    },
-    "b153e1c157a72afd": {
-      "file": "b153e1c157a72afd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غَ ... غَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "b177db189b9d921b": {
-      "file": "b177db189b9d921b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قِ ... قِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "b261b7f5a1244b48": {
       "file": "b261b7f5a1244b48.mp3",
@@ -2619,30 +1971,6 @@
       "context": "single_word",
       "bytes": 16343
     },
-    "b6bfd1fbb21fdfeb": {
-      "file": "b6bfd1fbb21fdfeb.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يِ ... يِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "b73d01d37f951459": {
-      "file": "b73d01d37f951459.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: رُ ... رُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "b8f15e0afbdfa3f9": {
-      "file": "b8f15e0afbdfa3f9.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زِ ... زِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "ba126a3823f72ddb": {
       "file": "ba126a3823f72ddb.mp3",
       "text": "هَؤُلَاءِ أَصْدِقَاءُ مِنَ الفَضَاءِ، وَلِكُلٍّ مِنْهُمُ اسْمٌ. احْفَظْ أَسْمَاءَهُمْ، ثُمَّ الْمِسْ مَنْ تَسْمَعُ اسْمَهُ.",
@@ -2650,14 +1978,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 149672
-    },
-    "ba17aa354b41775d": {
-      "file": "ba17aa354b41775d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: تَ ... تَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "ba63996b9e90ca10": {
       "file": "ba63996b9e90ca10.mp3",
@@ -2699,14 +2019,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "bc21ae2937edc76d": {
-      "file": "bc21ae2937edc76d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظِ ... ظِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "bc59ddc4d66f1c1c": {
       "file": "bc59ddc4d66f1c1c.mp3",
       "text": "أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: شَجَرَة؟",
@@ -2714,22 +2026,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 59811
-    },
-    "bcfb9327ae3e1513": {
-      "file": "bcfb9327ae3e1513.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: طَبْل؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 99517
-    },
-    "bd5eb0b66b724409": {
-      "file": "bd5eb0b66b724409.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: صُ ... صُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "bdfae00789dcc5b6": {
       "file": "bdfae00789dcc5b6.mp3",
@@ -2747,14 +2043,6 @@
       "context": "instruction",
       "bytes": 82798
     },
-    "bfa0b57f0639b7cd": {
-      "file": "bfa0b57f0639b7cd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طُ ... طُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
-    },
     "c0236283512ff86f": {
       "file": "c0236283512ff86f.mp3",
       "text": "ذَا",
@@ -2762,14 +2050,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 15089
-    },
-    "c0f0f1be87725611": {
-      "file": "c0f0f1be87725611.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: بَاب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
     },
     "c13f3f3eb961295c": {
       "file": "c13f3f3eb961295c.mp3",
@@ -2779,14 +2059,6 @@
       "context": "instruction",
       "bytes": 82798
     },
-    "c179d8dec858d509": {
-      "file": "c179d8dec858d509.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شَ ... شَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "c1ca51f5a952d55a": {
       "file": "c1ca51f5a952d55a.mp3",
       "text": "نَجْ",
@@ -2794,22 +2066,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "c1ef8ab32a527079": {
-      "file": "c1ef8ab32a527079.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضِ ... ضِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "c2252ec51158896b": {
-      "file": "c2252ec51158896b.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: فَأْر؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
     },
     "c2780dfeb85ec93d": {
       "file": "c2780dfeb85ec93d.mp3",
@@ -2859,14 +2115,6 @@
       "context": "instruction",
       "bytes": 81545
     },
-    "c54a739cf3c034b3": {
-      "file": "c54a739cf3c034b3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وَ ... وَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "c5cf4eb9e2c7aa53": {
       "file": "c5cf4eb9e2c7aa53.mp3",
       "text": "ضَة",
@@ -2907,22 +2155,6 @@
       "context": "instruction",
       "bytes": 65244
     },
-    "c7c015b9328663f3": {
-      "file": "c7c015b9328663f3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طَ ... طَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
-    "c82c5d2791f7d903": {
-      "file": "c82c5d2791f7d903.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جُ ... جُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
     "c840aaa199493ef3": {
       "file": "c840aaa199493ef3.mp3",
       "text": "أُذُن",
@@ -2946,14 +2178,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 16343
-    },
-    "ca062e44ac40a443": {
-      "file": "ca062e44ac40a443.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: تُ ... تُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "ca6172e0372a8c33": {
       "file": "ca6172e0372a8c33.mp3",
@@ -2995,22 +2219,6 @@
       "context": "phoneme",
       "bytes": 15089
     },
-    "cd66929c4b538d74": {
-      "file": "cd66929c4b538d74.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: خُبْز؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 102025
-    },
-    "cdb44adf6389541b": {
-      "file": "cdb44adf6389541b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: رِ ... رِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "ce31d5c066962e8d": {
       "file": "ce31d5c066962e8d.mp3",
       "text": "أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: مَطَر؟",
@@ -3051,14 +2259,6 @@
       "context": "instruction",
       "bytes": 61065
     },
-    "d16e78ec22c0c43a": {
-      "file": "d16e78ec22c0c43a.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: كِتَاب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
-    },
     "d18bc06255123f3a": {
       "file": "d18bc06255123f3a.mp3",
       "text": "أَيْنَ: صَيْف؟",
@@ -3074,14 +2274,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 21358
-    },
-    "d2f1357a84eebca9": {
-      "file": "d2f1357a84eebca9.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: حُ ... حُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "d3b5fa988bac2749": {
       "file": "d3b5fa988bac2749.mp3",
@@ -3162,14 +2354,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "daa44f6ea78780b1": {
-      "file": "daa44f6ea78780b1.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظَ ... ظَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "dbc6486fa358bd6d": {
       "file": "dbc6486fa358bd6d.mp3",
@@ -3283,14 +2467,6 @@
       "context": "instruction",
       "bytes": 62318
     },
-    "e052437c175ea673": {
-      "file": "e052437c175ea673.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: حِ ... حِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 63990
-    },
     "e0b0f42a98f14fbc": {
       "file": "e0b0f42a98f14fbc.mp3",
       "text": "مَرْ",
@@ -3354,14 +2530,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 15089
-    },
-    "e1631bc73b53e4f5": {
-      "file": "e1631bc73b53e4f5.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: نُ ... نُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "e250f7a87d51ea63": {
       "file": "e250f7a87d51ea63.mp3",
@@ -3467,14 +2635,6 @@
       "context": "phoneme",
       "bytes": 11232
     },
-    "e868a5cb97d8d4cd": {
-      "file": "e868a5cb97d8d4cd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: لُ ... لُ؟",
-      "voice": "ar-SA-ZariyahNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 22032
-    },
     "e918e740f9030ce6": {
       "file": "e918e740f9030ce6.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: فِيل؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -3491,14 +2651,6 @@
       "context": "instruction",
       "bytes": 54795
     },
-    "e9588a25082665f5": {
-      "file": "e9588a25082665f5.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وُ ... وُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
-    },
     "e975b1e05c75a81d": {
       "file": "e975b1e05c75a81d.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: نَمِر؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -3506,14 +2658,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 79037
-    },
-    "e9a3502a71d98f55": {
-      "file": "e9a3502a71d98f55.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: كَ ... كَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
     },
     "e9d7683a9ca97ce2": {
       "file": "e9d7683a9ca97ce2.mp3",
@@ -3523,22 +2667,6 @@
       "context": "instruction",
       "bytes": 63990
     },
-    "ea512fb8c803144b": {
-      "file": "ea512fb8c803144b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: عِ ... عِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
-    },
-    "eaa7286bca593be0": {
-      "file": "eaa7286bca593be0.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: جَمَل؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
-    },
     "eb4d8b473544e8c6": {
       "file": "eb4d8b473544e8c6.mp3",
       "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: مِفْتَاح؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.",
@@ -3546,22 +2674,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 84470
-    },
-    "eb691da05c508c64": {
-      "file": "eb691da05c508c64.mp3",
-      "text": "أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: حَلِيب؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 103278
-    },
-    "eb8399c05743052b": {
-      "file": "eb8399c05743052b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: حَ ... حَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 62318
     },
     "ec34b0859178e6e2": {
       "file": "ec34b0859178e6e2.mp3",
@@ -3731,14 +2843,6 @@
       "context": "instruction",
       "bytes": 59811
     },
-    "f8f6425ad0696915": {
-      "file": "f8f6425ad0696915.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: سُ ... سُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 63990
-    },
     "f964d13c5540b9c8": {
       "file": "f964d13c5540b9c8.mp3",
       "text": "قَا",
@@ -3746,14 +2850,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 13835
-    },
-    "fa1f0f16e21e52b3": {
-      "file": "fa1f0f16e21e52b3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: سِ ... سِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 61065
     },
     "fa5177e24e29dff3": {
       "file": "fa5177e24e29dff3.mp3",
@@ -3795,22 +2891,6 @@
       "context": "instruction",
       "bytes": 66498
     },
-    "fe0327468c78c16b": {
-      "file": "fe0327468c78c16b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: بُ ... بُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 58557
-    },
-    "fefa376f4fe5fdd5": {
-      "file": "fefa376f4fe5fdd5.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ثُ ... ثُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 59811
-    },
     "a8409bc4213cf015": {
       "file": "a8409bc4213cf015.mp3",
       "text": "الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ؟",
@@ -3818,14 +2898,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 57303
-    },
-    "0075511d37f086d8": {
-      "file": "0075511d37f086d8.mp3",
-      "text": "كُلُّ كَلِمَةٍ تَبْدَأُ بِصَوْتٍ. نَسْمَعُهُ إِذَا قُلْنَا الْكَلِمَةَ بِبُطْءٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 104950
     },
     "021b03855e658a38": {
       "file": "021b03855e658a38.mp3",
@@ -3923,14 +2995,6 @@
       "context": "phoneme",
       "bytes": 11327
     },
-    "11d5495e3c3de08f": {
-      "file": "11d5495e3c3de08f.mp3",
-      "text": "عَ تَخْرُجُ مِنْ وَسَطِ الْحَلْقِ، وَالْهَمْزَةُ مِنْ أَقْصَاهُ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 70260
-    },
     "14ba5282856198be": {
       "file": "14ba5282856198be.mp3",
       "text": "كَ",
@@ -3946,14 +3010,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 16343
-    },
-    "21e3e248361bcfd0": {
-      "file": "21e3e248361bcfd0.mp3",
-      "text": "الْآنَ دَوْرُكَ: قُلِ الْكَلِمَةَ بِبُطْءٍ، وَاسْمَعْ أَوَّلَهَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 81545
     },
     "263d96857348f2b9": {
       "file": "263d96857348f2b9.mp3",
@@ -3979,14 +3035,6 @@
       "context": "instruction",
       "bytes": 13536
     },
-    "28d7c75d743a53c1": {
-      "file": "28d7c75d743a53c1.mp3",
-      "text": "لِكُلِّ حَرْفٍ صَوْتٌ. نَسْمَعُ صَوْتَهُ، وَنَرَى شَكْلَهُ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 85724
-    },
     "2a0a3f85740e7d2c": {
       "file": "2a0a3f85740e7d2c.mp3",
       "text": "طُ",
@@ -4011,14 +3059,6 @@
       "context": "phoneme",
       "bytes": 11232
     },
-    "2d0d58bf1b7902b6": {
-      "file": "2d0d58bf1b7902b6.mp3",
-      "text": "طَ صَوْتٌ مُفَخَّمٌ ثَقِيلٌ، وَتَ صَوْتٌ خَفِيفٌ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 88232
-    },
     "30fa6e7c82486201": {
       "file": "30fa6e7c82486201.mp3",
       "text": "عَيْنْ",
@@ -4042,14 +3082,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 13835
-    },
-    "344556dc9228631d": {
-      "file": "344556dc9228631d.mp3",
-      "text": "أَمَّا",
-      "voice": "ar-SA-ZariyahNeural (IPA)",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 11232
     },
     "34cda7857ac05640": {
       "file": "34cda7857ac05640.mp3",
@@ -4090,22 +3122,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 20105
-    },
-    "37ff8e63217fc8a8": {
-      "file": "37ff8e63217fc8a8.mp3",
-      "text": "فَلَا تَنْتَهِي مِثْلَهُمَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 34315
-    },
-    "396277d74fba205b": {
-      "file": "396277d74fba205b.mp3",
-      "text": "الْآنَ دَوْرُكَ: اسْمَعِ الْأَجْزَاءَ، وَرَكِّبْهَا، ثُمَّ اخْتَرِ الصُّورَةَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 89486
     },
     "3d2ebf9b0889a030": {
       "file": "3d2ebf9b0889a030.mp3",
@@ -4163,14 +3179,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "469992cc64d1db2d": {
-      "file": "469992cc64d1db2d.mp3",
-      "text": "بَعْضُ الْحُرُوفِ شَكْلُهَا وَاحِدٌ، وَالْفَرْقُ فِي النِّقَاطِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 71514
-    },
     "48a76ba229f2e648": {
       "file": "48a76ba229f2e648.mp3",
       "text": "تَنْتَهِي مِثْلَ:",
@@ -4203,14 +3211,6 @@
       "context": "phoneme",
       "bytes": 13835
     },
-    "4fd01b9fcc71c8a8": {
-      "file": "4fd01b9fcc71c8a8.mp3",
-      "text": "الْآنَ دَوْرُكَ: صَفِّقْ مَعَ كُلِّ جُزْءٍ، ثُمَّ اخْتَرِ الْعَدَدَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 79037
-    },
     "50d30e9cbd186274": {
       "file": "50d30e9cbd186274.mp3",
       "text": "انْظُرْ إِلَى النِّقَاطِ جَيِّدًا.",
@@ -4242,14 +3242,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 12581
-    },
-    "5413ed33a46f8f7b": {
-      "file": "5413ed33a46f8f7b.mp3",
-      "text": "نَعُدُّ أَجْزَاءَ الْكَلِمَةِ بِالتَّصْفِيقِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 47272
     },
     "54a68d4b11ea4a5e": {
       "file": "54a68d4b11ea4a5e.mp3",
@@ -4291,14 +3283,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "5bcc1f942e81658e": {
-      "file": "5bcc1f942e81658e.mp3",
-      "text": "فِي ثَ يَخْرُجُ طَرَفُ اللِّسَانِ بَيْنَ الْأَسْنَانِ، وَفِي سَ يَبْقَى خَلْفَهَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 99517
-    },
     "6388f585962fb9ca": {
       "file": "6388f585962fb9ca.mp3",
       "text": "رُ",
@@ -4322,14 +3306,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 10074
-    },
-    "662b10631593c61d": {
-      "file": "662b10631593c61d.mp3",
-      "text": "كِلْتَاهُمَا تَنْتَهِي بِـ: لَمْ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 48526
     },
     "66a6dd859662769e": {
       "file": "66a6dd859662769e.mp3",
@@ -4355,14 +3331,6 @@
       "context": "instruction",
       "bytes": 33061
     },
-    "6acb74c6c34bef39": {
-      "file": "6acb74c6c34bef39.mp3",
-      "text": "رَكِّزْ عَلَى أَوَّلِ صَوْتٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 36823
-    },
     "6dfe25fdf432e5af": {
       "file": "6dfe25fdf432e5af.mp3",
       "text": "صَيْف",
@@ -4379,30 +3347,6 @@
       "context": "single_word",
       "bytes": 13835
     },
-    "72ed5e704f40bf6e": {
-      "file": "72ed5e704f40bf6e.mp3",
-      "text": "فِي ذَ يَخْرُجُ طَرَفُ اللِّسَانِ بَيْنَ الْأَسْنَانِ، وَفِي زَ يَبْقَى خَلْفَهَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 94501
-    },
-    "7416ae16c51633a9": {
-      "file": "7416ae16c51633a9.mp3",
-      "text": "قُلِ الصَّوْتَ مَعِي.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 23030
-    },
-    "76ef694de69a0436": {
-      "file": "76ef694de69a0436.mp3",
-      "text": "هَذَانِ صَوْتَانِ مُخْتَلِفَانِ تَمَامًا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 49780
-    },
     "787bc30a7fc15e88": {
       "file": "787bc30a7fc15e88.mp3",
       "text": "نَارْ",
@@ -4411,38 +3355,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "79f87287c7f0847c": {
-      "file": "79f87287c7f0847c.mp3",
-      "text": "أَوَّلُ صَوْتٍ فِيهَا: سَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "7bc654208da023c7": {
-      "file": "7bc654208da023c7.mp3",
-      "text": "فِي ظَ يَخْرُجُ طَرَفُ اللِّسَانِ بَيْنَ الْأَسْنَانِ، وَفِي ضَ يَبْقَى خَلْفَهَا، وَكِلَاهُمَا مُفَخَّمٌ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 142985
-    },
-    "80f933d2c3042ea0": {
-      "file": "80f933d2c3042ea0.mp3",
-      "text": "تَبْدَأُ بِالصَّوْتِ نَفْسِهِ: سَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "811c6fec1c344b21": {
-      "file": "811c6fec1c344b21.mp3",
-      "text": "قَ تَخْرُجُ مِنْ مَكَانٍ أَبْعَدَ فِي الْفَمِ مِنْ كَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 62318
-    },
     "81af119cf9ef26b2": {
       "file": "81af119cf9ef26b2.mp3",
       "text": "طَبْلْ",
@@ -4450,38 +3362,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 11232
-    },
-    "821c3074fecfb47b": {
-      "file": "821c3074fecfb47b.mp3",
-      "text": "الْآنَ دَوْرُكَ: قُلِ الْكَلِمَةَ بِبُطْءٍ، وَاسْمَعْ آخِرَهَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 82798
-    },
-    "855d0dd451d1be43": {
-      "file": "855d0dd451d1be43.mp3",
-      "text": "ثَلَاثُ تَصْفِيقَاتٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 28046
-    },
-    "8c2b444ec6c00a90": {
-      "file": "8c2b444ec6c00a90.mp3",
-      "text": "الْكَلِمَاتُ الَّتِي تَتَشَابَهُ فِي آخِرِهَا نُسَمِّيهَا: قَافِيَةً.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 90740
-    },
-    "8e20a667222716ab": {
-      "file": "8e20a667222716ab.mp3",
-      "text": "صَفِّقْ مَعَ كُلِّ جُزْءٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 35569
     },
     "9015a799bfad13c5": {
       "file": "9015a799bfad13c5.mp3",
@@ -4499,22 +3379,6 @@
       "context": "single_word",
       "bytes": 13835
     },
-    "9187d13ad000b5a2": {
-      "file": "9187d13ad000b5a2.mp3",
-      "text": "ضَ صَوْتٌ مُفَخَّمٌ ثَقِيلٌ، وَدَ صَوْتٌ خَفِيفٌ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 90740
-    },
-    "9282ad84b2b32fbe": {
-      "file": "9282ad84b2b32fbe.mp3",
-      "text": "بَعْضُ الْأَصْوَاتِ تَتَشَابَهُ، فَنَسْمَعُهَا بِانْتِبَاهٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 69006
-    },
     "92eba7a12ca059f4": {
       "file": "92eba7a12ca059f4.mp3",
       "text": "مَعًا:",
@@ -4523,14 +3387,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "97de8e21f7b5ba70": {
-      "file": "97de8e21f7b5ba70.mp3",
-      "text": "رَكِّزْ عَلَى آخِرِ صَوْتٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 38077
-    },
     "9a0a30a04f07e3cf": {
       "file": "9a0a30a04f07e3cf.mp3",
       "text": "هَذَا هُوَ الْحَرْفُ الصَّحِيحُ، صَوْتُهُ:",
@@ -4538,14 +3394,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 51034
-    },
-    "9a2720c9f1e61639": {
-      "file": "9a2720c9f1e61639.mp3",
-      "text": "حَ تَخْرُجُ مِنْ وَسَطِ الْحَلْقِ مَبْحُوحَةً، وَهَ تَخْرُجُ مِنْ أَقْصَاهُ بِنَفَسٍ خَفِيفٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 107458
     },
     "9dc2205f0bdc8bb8": {
       "file": "9dc2205f0bdc8bb8.mp3",
@@ -4603,14 +3451,6 @@
       "context": "phoneme",
       "bytes": 8784
     },
-    "a2708c4599dc842b": {
-      "file": "a2708c4599dc842b.mp3",
-      "text": "قَارِنِ النِّقَاطَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 24284
-    },
     "a4cc9d85ba038642": {
       "file": "a4cc9d85ba038642.mp3",
       "text": "عُ",
@@ -4619,14 +3459,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "a5621982a6388f7f": {
-      "file": "a5621982a6388f7f.mp3",
-      "text": "رَكِّزْ عَلَى آخِرِ الْكَلِمَةِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 39331
-    },
     "a584481d976a00ff": {
       "file": "a584481d976a00ff.mp3",
       "text": "كَلْبْ",
@@ -4634,14 +3466,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 15089
-    },
-    "a6e883e7dfc6d3a6": {
-      "file": "a6e883e7dfc6d3a6.mp3",
-      "text": "الْآنَ دَوْرُكَ: اسْمَعْ آخِرَ الْكَلِمَةِ جَيِّدًا، ثُمَّ اخْتَرْ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 79037
     },
     "a70b18377b9c2af7": {
       "file": "a70b18377b9c2af7.mp3",
@@ -4675,14 +3499,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "b0e0c32be218b84e": {
-      "file": "b0e0c32be218b84e.mp3",
-      "text": "مِثْلَ أَوَّلِ:",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 23030
-    },
     "b2c4b4066ec6b7e6": {
       "file": "b2c4b4066ec6b7e6.mp3",
       "text": "ثَلْجْ",
@@ -4690,22 +3506,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 15089
-    },
-    "b856f0e9d91fe8d9": {
-      "file": "b856f0e9d91fe8d9.mp3",
-      "text": "الْآنَ دَوْرُكَ: قَارِنِ النِّقَاطَ قَبْلَ أَنْ تَخْتَارَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 66498
-    },
-    "bbd3e7e1ea56b239": {
-      "file": "bbd3e7e1ea56b239.mp3",
-      "text": "صَ صَوْتٌ مُفَخَّمٌ ثَقِيلٌ، وَسَ صَوْتٌ خَفِيفٌ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 93247
     },
     "bdd3cf621389148e": {
       "file": "bdd3cf621389148e.mp3",
@@ -4715,14 +3515,6 @@
       "context": "single_word",
       "bytes": 11232
     },
-    "c394242e93b239bc": {
-      "file": "c394242e93b239bc.mp3",
-      "text": "فِي ذَ يَخْرُجُ طَرَفُ اللِّسَانِ بَيْنَ الْأَسْنَانِ، وَفِي دَ يَلْمِسُ أُصُولَ الْأَسْنَانِ الْعُلْيَا.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 127938
-    },
     "c950ff2f5e1319ea": {
       "file": "c950ff2f5e1319ea.mp3",
       "text": "فَأْرْ",
@@ -4730,14 +3522,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 16343
-    },
-    "cb78c86baf23c86a": {
-      "file": "cb78c86baf23c86a.mp3",
-      "text": "الْكَلِمَةُ مَصْنُوعَةٌ مِنْ أَجْزَاءٍ صَغِيرَةٍ. نُصَفِّقُ مَعَ كُلِّ جُزْءٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 99517
     },
     "cc6eec544cfa2889": {
       "file": "cc6eec544cfa2889.mp3",
@@ -4747,14 +3531,6 @@
       "context": "single_word",
       "bytes": 15089
     },
-    "cd846591960bfa8e": {
-      "file": "cd846591960bfa8e.mp3",
-      "text": "الْآنَ دَوْرُكَ: اسْمَعْ جَيِّدًا، ثُمَّ اخْتَرْ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 62318
-    },
     "cfcefe2437060d23": {
       "file": "cfcefe2437060d23.mp3",
       "text": "يَدْ",
@@ -4762,38 +3538,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 15089
-    },
-    "d2df4e290cb5e90e": {
-      "file": "d2df4e290cb5e90e.mp3",
-      "text": "خَ صَوْتٌ مَهْمُوسٌ بِلَا اهْتِزَازٍ، وَغَ مَجْهُورٌ يَهْتَزُّ مَعَهُ الْحَلْقُ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 107458
-    },
-    "d4f21eab0b286da1": {
-      "file": "d4f21eab0b286da1.mp3",
-      "text": "الْفَتْحَةُ وَالْكَسْرَةُ وَالضَّمَّةُ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 52287
-    },
-    "d512a73a0ee28d9b": {
-      "file": "d512a73a0ee28d9b.mp3",
-      "text": "هَذَا الْحَرْفُ صَوْتُهُ:",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 34315
-    },
-    "dd212fefdea24ba0": {
-      "file": "dd212fefdea24ba0.mp3",
-      "text": "اسْمَعْ بِانْتِبَاهٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 26792
     },
     "dd37b48267640fcc": {
       "file": "dd37b48267640fcc.mp3",
@@ -4827,14 +3571,6 @@
       "context": "phoneme",
       "bytes": 12581
     },
-    "e5101b218235a09f": {
-      "file": "e5101b218235a09f.mp3",
-      "text": "اسْمَعْ:",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 15089
-    },
     "e7eefe854f8521f9": {
       "file": "e7eefe854f8521f9.mp3",
       "text": "دِ",
@@ -4850,22 +3586,6 @@
       "model": "eleven_v4",
       "context": "phoneme",
       "bytes": 12581
-    },
-    "eba1fa5c5515347f": {
-      "file": "eba1fa5c5515347f.mp3",
-      "text": "الْآنَ دَوْرُكَ: اسْمَعِ الصَّوْتَ، وَاخْتَرْ حَرْفَهُ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 65244
-    },
-    "ec6e7699ef1af86b": {
-      "file": "ec6e7699ef1af86b.mp3",
-      "text": "انْظُرْ: عَدَدُ النِّقَاطِ وَمَكَانُهَا يُغَيِّرُ الْحَرْفَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 76529
     },
     "ecd8a1826fc41c57": {
       "file": "ecd8a1826fc41c57.mp3",
@@ -4954,14 +3674,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 28046
-    },
-    "feee817a1a986392": {
-      "file": "feee817a1a986392.mp3",
-      "text": "نَسْمَعُ الْآنَ آخِرَ صَوْتٍ فِي الْكَلِمَةِ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 52287
     },
     "08f8fb423ec970eb": {
       "file": "08f8fb423ec970eb.mp3",
@@ -5138,46 +3850,6 @@
       "context": "single_word",
       "bytes": 16343
     },
-    "4a51e0ebf311ad43": {
-      "file": "4a51e0ebf311ad43.mp3",
-      "text": "أَيْنَ بَيْتُ هَذَا الحَيَوَانِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 33061
-    },
-    "806f643d23575005": {
-      "file": "806f643d23575005.mp3",
-      "text": "سُلَحْفَاهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
-    },
-    "d31ea9d2478bed02": {
-      "file": "d31ea9d2478bed02.mp3",
-      "text": "فَاهْ",
-      "voice": "ar-SA-ZariyahNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 11232
-    },
-    "43870a82c2ec182d": {
-      "file": "43870a82c2ec182d.mp3",
-      "text": "كَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 13835
-    },
-    "620791e6239b5a2a": {
-      "file": "620791e6239b5a2a.mp3",
-      "text": "حَهْ",
-      "voice": "ar-SA-ZariyahNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 10656
-    },
     "bc15d32e9febc432": {
       "file": "bc15d32e9febc432.mp3",
       "text": "سَمَكَهْ",
@@ -5193,86 +3865,6 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 12240
-    },
-    "d70b76a1fcf8beb0": {
-      "file": "d70b76a1fcf8beb0.mp3",
-      "text": "لَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 15089
-    },
-    "1ec33359fe137810": {
-      "file": "1ec33359fe137810.mp3",
-      "text": "طَهْ",
-      "voice": "ar-SA-ZariyahNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 11232
-    },
-    "62784afd98f1d4be": {
-      "file": "62784afd98f1d4be.mp3",
-      "text": "رَهْ",
-      "voice": "ar-SA-HamedNeural",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 11232
-    },
-    "4e7cd777f31d9839": {
-      "file": "4e7cd777f31d9839.mp3",
-      "text": "جَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 15089
-    },
-    "656b5c2e58bf377f": {
-      "file": "656b5c2e58bf377f.mp3",
-      "text": "مَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 15089
-    },
-    "7e1a9ada3c06f616": {
-      "file": "7e1a9ada3c06f616.mp3",
-      "text": "عَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 15089
-    },
-    "d0f78f6eaa52cc5f": {
-      "file": "d0f78f6eaa52cc5f.mp3",
-      "text": "ضَهْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "phoneme",
-      "bytes": 15089
-    },
-    "b0f36664e5d173a3": {
-      "file": "b0f36664e5d173a3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: اَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 48526
-    },
-    "3558a8649f2589ad": {
-      "file": "3558a8649f2589ad.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: اِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "b4180f64e609e418": {
-      "file": "b4180f64e609e418.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: اُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
     },
     "d3cfbed630dc0e4a": {
       "file": "d3cfbed630dc0e4a.mp3",
@@ -5346,30 +3938,6 @@
       "context": "instruction",
       "bytes": 41838
     },
-    "e8eb1e86ab89ff9e": {
-      "file": "e8eb1e86ab89ff9e.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "921504867a4a495c": {
-      "file": "921504867a4a495c.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "e4edf586aa9a77e9": {
-      "file": "e4edf586aa9a77e9.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: جُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
     "733aeec0ad797fa5": {
       "file": "733aeec0ad797fa5.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: حَ؟",
@@ -5378,89 +3946,9 @@
       "context": "instruction",
       "bytes": 44764
     },
-    "5eb85cc0a0f492ab": {
-      "file": "5eb85cc0a0f492ab.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: حِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "773857c0ae69741a": {
-      "file": "773857c0ae69741a.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: حُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "3e7434807752b564": {
-      "file": "3e7434807752b564.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 44764
-    },
-    "1e9ade80f5fbaa56": {
-      "file": "1e9ade80f5fbaa56.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "3307cb8070120d9f": {
-      "file": "3307cb8070120d9f.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: خُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
     "d3c3c860c718ee6b": {
       "file": "d3c3c860c718ee6b.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: دَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "e8475a60d39f8e65": {
-      "file": "e8475a60d39f8e65.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: دِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "ddb47160cd17b0e0": {
-      "file": "ddb47160cd17b0e0.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: دُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "9c027dcb8efdbf72": {
-      "file": "9c027dcb8efdbf72.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "fd551bcb34558348": {
-      "file": "fd551bcb34558348.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "9212d4cb8900affd": {
-      "file": "9212d4cb8900affd.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ذُ؟",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "instruction",
@@ -5473,46 +3961,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 41838
-    },
-    "c7c9f61ae7b62697": {
-      "file": "c7c9f61ae7b62697.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: رِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "2930f91b1f7a545e": {
-      "file": "2930f91b1f7a545e.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: رُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "e47703ec608cefd8": {
-      "file": "e47703ec608cefd8.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "69b4c5ec1a981d22": {
-      "file": "69b4c5ec1a981d22.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "da875aec5a8fe063": {
-      "file": "da875aec5a8fe063.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: زُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
     },
     "10575640d252560f": {
       "file": "10575640d252560f.mp3",
@@ -5538,30 +3986,6 @@
       "context": "instruction",
       "bytes": 40585
     },
-    "fcf9ee238d2474c6": {
-      "file": "fcf9ee238d2474c6.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "2f776423a9531634": {
-      "file": "2f776423a9531634.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "f30b452387291851": {
-      "file": "f30b452387291851.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: شُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
     "3654edb60746e00d": {
       "file": "3654edb60746e00d.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: صَ؟",
@@ -5586,78 +4010,6 @@
       "context": "instruction",
       "bytes": 43510
     },
-    "f60c84223be000cc": {
-      "file": "f60c84223be000cc.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 49780
-    },
-    "3a3efe21d248fa2e": {
-      "file": "3a3efe21d248fa2e.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "eb79db2235589007": {
-      "file": "eb79db2235589007.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ضُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 44764
-    },
-    "253c35f14cd1de73": {
-      "file": "253c35f14cd1de73.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 46018
-    },
-    "c31157f1a6c3701d": {
-      "file": "c31157f1a6c3701d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "30059ef1538824e8": {
-      "file": "30059ef1538824e8.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: طُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "fe1d4c4340ef87da": {
-      "file": "fe1d4c4340ef87da.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 46018
-    },
-    "e8c0fa4333b163e0": {
-      "file": "e8c0fa4333b163e0.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "f353e3433a394165": {
-      "file": "f353e3433a394165.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: ظُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
     "924bbe9364d282b1": {
       "file": "924bbe9364d282b1.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: عَ؟",
@@ -5665,46 +4017,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 40585
-    },
-    "c5d8f49381e7ea8f": {
-      "file": "c5d8f49381e7ea8f.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: عِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "9def67936c42d9a6": {
-      "file": "9def67936c42d9a6.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: عُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "0a4f63d2b5d6dae0": {
-      "file": "0a4f63d2b5d6dae0.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "1fabb5d2c314feda": {
-      "file": "1fabb5d2c314feda.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "005ebad2afd8186b": {
-      "file": "005ebad2afd8186b.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: غُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 44764
     },
     "948148d456742558": {
       "file": "948148d456742558.mp3",
@@ -5714,46 +4026,6 @@
       "context": "instruction",
       "bytes": 43510
     },
-    "19c10ad41082b8a2": {
-      "file": "19c10ad41082b8a2.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: فِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 39331
-    },
-    "8a919fd4507715e3": {
-      "file": "8a919fd4507715e3.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: فُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "70d625a5aa2ae229": {
-      "file": "70d625a5aa2ae229.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "1a364ba579192817": {
-      "file": "1a364ba579192817.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "7b9f4ea5b0e0bbde": {
-      "file": "7b9f4ea5b0e0bbde.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: قُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
     "ee6ed3562060c0f2": {
       "file": "ee6ed3562060c0f2.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: كَ؟",
@@ -5761,22 +4033,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 41838
-    },
-    "568d7155cb7ed6c8": {
-      "file": "568d7155cb7ed6c8.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: كِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "e47f2a561a63b17d": {
-      "file": "e47f2a561a63b17d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: كُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
     },
     "82527acf72bf23f3": {
       "file": "82527acf72bf23f3.mp3",
@@ -5786,41 +4042,9 @@
       "context": "instruction",
       "bytes": 40585
     },
-    "20259ccfccad4f9d": {
-      "file": "20259ccfccad4f9d.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: لِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 39331
-    },
-    "8d1be3cf79756a68": {
-      "file": "8d1be3cf79756a68.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: لُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
     "a23cd9b6a30a104c": {
       "file": "a23cd9b6a30a104c.mp3",
       "text": "أَيُّ حَرْفٍ صَوْتُهُ: مَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 41838
-    },
-    "dfa353b633acb7ae": {
-      "file": "dfa353b633acb7ae.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: مِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 39331
-    },
-    "97aa30b69c829f87": {
-      "file": "97aa30b69c829f87.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: مُ؟",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "instruction",
@@ -5833,94 +4057,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 41838
-    },
-    "02aa0140dde5ea03": {
-      "file": "02aa0140dde5ea03.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: نِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "938c6c409f632142": {
-      "file": "938c6c409f632142.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: نُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "ad06330b830f1046": {
-      "file": "ad06330b830f1046.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "df81a90b9f3a4bb4": {
-      "file": "df81a90b9f3a4bb4.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 40585
-    },
-    "a3158a0b7d104dd1": {
-      "file": "a3158a0b7d104dd1.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: هُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 39331
-    },
-    "9709fd1adf4d6857": {
-      "file": "9709fd1adf4d6857.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 44764
-    },
-    "eda7d71b105bbc69": {
-      "file": "eda7d71b105bbc69.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 43510
-    },
-    "a19ce61ae5d545dc": {
-      "file": "a19ce61ae5d545dc.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: وُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 47272
-    },
-    "4924037b60837031": {
-      "file": "4924037b60837031.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يَ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 46018
-    },
-    "7caf397b7d95720f": {
-      "file": "7caf397b7d95720f.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يِ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 47272
-    },
-    "4df9ac7b622a0f26": {
-      "file": "4df9ac7b622a0f26.mp3",
-      "text": "أَيُّ حَرْفٍ صَوْتُهُ: يُ؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 44764
     },
     "29301f5d3e1cce83": {
       "file": "29301f5d3e1cce83.mp3",
@@ -6642,22 +4778,6 @@
       "context": "instruction",
       "bytes": 126684
     },
-    "285556e3eebf320d": {
-      "file": "285556e3eebf320d.mp3",
-      "text": "مِثَالٌ: قَلَمٌ. أَقْرَأُ قَ، ثُمَّ لَ، ثُمَّ مٌ، وَأَجْمَعُهَا لِأَقْرَأَ: قَلَمٌ. لَا أُضِيفُ حَرْفًا غَيْرَ مَكْتُوبٍ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 177675
-    },
-    "be819d79e5ceaea0": {
-      "file": "be819d79e5ceaea0.mp3",
-      "text": "مِثَالٌ آخَرُ: عَسَلٌ. أَقْرَأُ الْعَيْنَ وَالسِّينَ وَاللَّامَ مَعَ حَرَكَاتِهَا، ثُمَّ أَجْمَعُ الْأَصْوَاتَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 142985
-    },
     "bcc67c1571c3dbf2": {
       "file": "bcc67c1571c3dbf2.mp3",
       "text": "الْآنَ دَوْرُكَ: اسْتَخْدِمْ مَا تَعَلَّمْتَهُ فِي مِثَالٍ جَدِيدٍ، ثُمَّ فَكِّرْ فِي سَبَبِ اخْتِيَارِكَ.",
@@ -6729,14 +4849,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 193140
-    },
-    "1cccab5309848f33": {
-      "file": "1cccab5309848f33.mp3",
-      "text": "مِثَالٌ آخَرُ: عَسَلٌ. أَكْتُبُ الْعَيْنَ، ثُمَّ السِّينَ، ثُمَّ اللَّامَ. الْحَرَكَاتُ لَا تَتَحَوَّلُ إِلَى حُرُوفِ مَدٍّ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 159703
     },
     "921ba101a3d498d7": {
       "file": "921ba101a3d498d7.mp3",
