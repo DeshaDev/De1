@@ -2865,7 +2865,7 @@ export default function App() {
               <ul>
                 <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
                 <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
-                
+                <li><a href="/audio-audit.html" target="_blank" rel="noreferrer" className="text-teal-700 font-bold hover:underline inline-flex items-center gap-1">🎙️ مختبر مراجعة واستماع الصوت</a></li>
               </ul>
             </div>
             <div className="baseera-footer-col">
