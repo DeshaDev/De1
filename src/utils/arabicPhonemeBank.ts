@@ -334,6 +334,17 @@ export function formatArabicTextWithPhonemes(rawText: string): string {
   const clean = rawText.trim();
   if (!clean) return '';
 
+  // Special explicit pronunciations for made-up test words and key instructional phrases
+  if (/^فُ[وْو]بُ?$/.test(clean)) {
+    return 'فُوب';
+  }
+  if (/^إِلَيْهِ?$/.test(clean) || clean === 'إليه') {
+    return 'إِلَيْهْ';
+  }
+  if (/^أَبِيهِ?$/.test(clean) || clean === 'أبيه') {
+    return 'أَبِيهْ';
+  }
+
   // Check if entire text is a single 1-letter CV syllable (e.g. 'تُ', 'سَ', 'جِ')
   if (/^([\u0621-\u064A])([\u064E\u064F\u0650])$/.test(clean)) {
     return expandArabicPhonemeSound(clean);

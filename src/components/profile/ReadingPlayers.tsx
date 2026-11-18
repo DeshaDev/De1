@@ -413,13 +413,13 @@ export function ReadListAudioPlayer({
   };
 
   useEffect(() => {
-    if (phase === 'feedback' && lastWordFeedback?.isCorrect) {
+    if (phase === 'feedback') {
       const timer = window.setTimeout(() => {
         void advanceToNextWord();
-      }, 2500);
+      }, 1500);
       return () => window.clearTimeout(timer);
     }
-  }, [phase, lastWordFeedback, currentItemIndex]);
+  }, [phase, currentItemIndex]);
 
   const startRecording = async () => {
     if (!supported || busyRef.current || phase !== 'ready') return;
@@ -491,101 +491,38 @@ export function ReadListAudioPlayer({
             </span>
           </div>
           {lastWordFeedback && phase === 'feedback' && (
-            <div className="w-full max-w-xl mx-auto my-3 text-right" role="status" aria-live="polite">
-              {lastWordFeedback.isCorrect ? (
-                <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-xs space-y-2">
-                  <div className="flex items-center justify-between gap-2 text-emerald-800 font-bold text-sm sm:text-base">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <span>✓ أحسنت! نطق صحيح ومتقن</span>
-                    </div>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 border border-emerald-300 font-bold">
-                      درجة الدقة: {ar(lastWordFeedback.accuracyScore)}٪
-                    </span>
-                  </div>
-                  <div className="text-xs sm:text-sm text-emerald-900 space-y-1.5 pr-6 font-medium">
-                    <p>
-                      الكلمة المطلوبة: <strong className="text-emerald-950 font-bold">«{lastWordFeedback.word}»</strong>
-                    </p>
-                    <p>
-                      ما سُمع من الطفل:{' '}
-                      <strong className="text-emerald-800 font-bold">
-                        «{lastWordFeedback.spokenWord || 'صوت واضح مطابق'}»
-                      </strong>
-                    </p>
-                    <p className="text-xs text-emerald-700 pt-0.5 border-t border-emerald-200/80">
-                      <strong>التشخيص الصوتي:</strong> {lastWordFeedback.diagnosis}
-                    </p>
-                  </div>
+            <div className="w-full max-w-xl mx-auto my-3 text-center" role="status" aria-live="polite">
+              <div className="p-4 sm:p-5 rounded-2xl bg-teal-50 border-2 border-teal-200/90 shadow-2xs space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-center gap-2 text-teal-900 font-bold text-sm sm:text-base">
+                  <span className="text-xl">✨</span>
+                  <span>شكرًا لك! سُجّلت قراءتك بنجاح.</span>
                 </div>
-              ) : (
-                <div className={`p-4 rounded-2xl border-2 shadow-xs space-y-2 ${
-                  lastWordFeedback.errorType === 'Substitution'
-                    ? 'bg-rose-50 border-rose-300'
-                    : lastWordFeedback.errorType === 'Omission'
-                    ? 'bg-slate-50 border-slate-300'
-                    : 'bg-amber-50 border-amber-300'
-                }`}>
-                  <div className="flex items-center justify-between gap-2 font-bold text-sm sm:text-base">
-                    <div className="flex items-center gap-2">
-                      {lastWordFeedback.errorType === 'Substitution' ? (
-                        <span className="text-rose-700 text-lg leading-none">✗</span>
-                      ) : lastWordFeedback.errorType === 'Omission' ? (
-                        <span className="text-slate-700 text-lg leading-none">⚠️</span>
-                      ) : (
-                        <span className="text-amber-700 text-lg leading-none">⚠️</span>
-                      )}
-                      <span className={
-                        lastWordFeedback.errorType === 'Substitution'
-                          ? 'text-rose-900'
-                          : lastWordFeedback.errorType === 'Omission'
-                          ? 'text-slate-900'
-                          : 'text-amber-900'
-                      }>
-                        {lastWordFeedback.errorType === 'Substitution'
-                          ? 'استبدال كلمة'
-                          : (!lastWordFeedback.spokenWord || !stripHarakat(lastWordFeedback.spokenWord)) ? 'لم يُسمع صوت واضح'
-                          : 'خطأ في نطق الكلمة'}
-                      </span>
-                    </div>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/90 border border-slate-200 text-slate-800 font-bold">
-                      درجة الدقة: {ar(lastWordFeedback.accuracyScore)}٪
-                    </span>
-                  </div>
+                <p className="text-xs sm:text-sm text-teal-800 font-medium">
+                  أحسنت على المحاولة والجهد! لننتقل إلى الكلمة التالية…
+                </p>
+              </div>
 
-                  <div className="text-xs sm:text-sm text-slate-800 space-y-1.5 pr-6 font-medium">
-                    <p>
-                      الكلمة المطلوبة: <strong className="text-slate-950 font-bold">«{lastWordFeedback.word}»</strong>
-                    </p>
-                    <p>
-                      ما سُمع من الطفل:{' '}
-                      <strong className={lastWordFeedback.errorType === 'Substitution' ? 'text-rose-800 font-bold' : 'text-amber-800 font-bold'}>
-                        {lastWordFeedback.spokenWord ? `«${lastWordFeedback.spokenWord}»` : 'صمت / غير مسموع'}
-                      </strong>
-                    </p>
-                    <p className="text-xs text-slate-600 pt-0.5 border-t border-slate-200/60">
-                      <strong>التشخيص الصوتي:</strong> {lastWordFeedback.diagnosis}
-                    </p>
-                  </div>
+              {/* Only if no audio/speech was captured at all, offer a gentle technical re-record */}
+              {(!lastWordFeedback.spokenWord || lastWordFeedback.errorType === 'Omission') && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    className="bz-btn bz-btn-secondary bz-btn-sm text-xs"
+                    onClick={retryCurrentWord}
+                  >
+                    لم يُلتقط صوت واضح · إعادة تسجيل الكلمة 🔄
+                  </button>
                 </div>
               )}
-              <div className="flex flex-wrap justify-center items-center gap-3 pt-3">
+
+              <div className="flex justify-center items-center gap-3 pt-3">
                 <button
                   type="button"
-                  className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-3"
+                  className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-2.5"
                   onClick={() => void advanceToNextWord()}
                 >
                   {currentItemIndex + 1 < items.length ? 'الكلمة التالية ◀' : 'إنهاء القائمة وتجميع النتيجة 🏁'}
                 </button>
-                {!lastWordFeedback.isCorrect && (
-                  <button
-                    type="button"
-                    className="bz-btn bz-btn-secondary"
-                    onClick={retryCurrentWord}
-                  >
-                    إعادة قراءة هذه الكلمة 🔄
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -799,9 +736,9 @@ export function PassagePlayer({
           <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
             {phase === 'recording'
-              ? 'اقرأ القصة بصوتك الطبيعي. انقر على الكلمة أو اضغط زر المسافة لتحريك التظليل مع قراءتك.'
+              ? 'اقرأ القصة كاملةً بصوتك الطبيعي وواضح كما تقرأ في الصف. عند الانتهاء اضغط الزر الأخضر أدناه.'
               : phase === 'review'
-              ? 'اكتمل تقييم القصة. انقر على أي كلمة لترى نتيجتها وما سُمع منها.'
+              ? 'اكتمل تسجيل القصة بنجاح. شكرًا لك على مجهودك الرائع!'
               : 'اضغط بدء التسجيل، ثم اقرأ القصة كاملةً بصوت عالٍ وواضح كما تقرأ في الصف.'}
           </p>
         </div>
@@ -809,145 +746,29 @@ export function PassagePlayer({
         {/* Story Text Display */}
         {phase !== 'review' ? (
           <div
-            className="text-xl sm:text-2xl leading-[2] text-ink text-start p-4 sm:p-6 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs"
+            className="text-xl sm:text-2xl leading-[2.4] text-ink text-start p-5 sm:p-7 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs tracking-wide"
             style={READING_FONT}
             lang="ar"
           >
-            {words.map((word, index) => {
-              const isActive = phase === 'recording' && index === activeWordIndex;
-              const isPassed = phase === 'recording' && index < activeWordIndex;
-              return (
-                <span
-                  key={index}
-                  onClick={() => phase === 'recording' && setActiveWordIndex(index)}
-                  className={`cursor-pointer transition-all duration-150 inline-block px-1.5 py-0.5 rounded-lg mx-0.5 ${
-                    isActive
-                      ? 'bg-amber-300 text-slate-950 font-black shadow-md border-b-2 border-amber-600 scale-105 ring-2 ring-amber-400'
-                      : isPassed
-                      ? 'text-teal-900 bg-teal-100/60'
-                      : 'text-slate-900 hover:bg-slate-200/60'
-                  }`}
-                  title={phase === 'recording' ? 'انقر لتحديد الكلمة' : undefined}
-                >
-                  {word}{index < words.length - 1 ? ' ' : ''}
-                </span>
-              );
-            })}
+            {words.join(' ')}
           </div>
         ) : (
-          /* Review Mode with Color-coded Words */
-          <div className="space-y-4">
-            <div
-              className="text-[24px] sm:text-[30px] leading-[2.3] text-start p-5 sm:p-6 rounded-2xl bg-slate-50 border-2 border-slate-200 select-none shadow-2xs"
-              style={READING_FONT}
-              lang="ar"
-            >
-              {words.map((word, index) => {
-                const assessed = assessmentResult?.words?.[index];
-                const isCorrect = assessed?.errorType === 'None' || assessed?.errorType === 'DialectVariant';
-                const isOmission = assessed?.errorType === 'Omission';
-                const isError = !isCorrect && !isOmission;
-                const isSelected = selectedWordIndex === index;
-
-                return (
-                  <span
-                    key={index}
-                    onClick={() => setSelectedWordIndex(index)}
-                    className={`cursor-pointer inline-block px-2 py-0.5 rounded-xl mx-1 my-1 transition-all ${
-                      isSelected ? 'ring-3 ring-teal-500 scale-105 font-black ' : ''
-                    }${
-                      isCorrect
-                        ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 hover:bg-emerald-200'
-                        : isError
-                        ? 'bg-rose-100 text-rose-950 border-2 border-rose-400 font-bold shadow-2xs hover:bg-rose-200'
-                        : 'bg-slate-200/90 text-slate-500 border border-slate-300 line-through'
-                    }`}
-                  >
-                    {word}
-                    {isError && <span className="text-xs mr-1 text-rose-700 font-sans">⚠️</span>}
-                  </span>
-                );
-              })}
-            </div>
-
-            {/* Selected Word Feedback Card */}
-            {selectedWordIndex !== null && assessmentResult?.words?.[selectedWordIndex] && (
-              <div
-                className={`p-4 sm:p-5 rounded-2xl border-2 shadow-xs space-y-2 text-right transition-all ${
-                  assessmentResult.words[selectedWordIndex].errorType === 'None'
-                    ? 'bg-emerald-50 border-emerald-300'
-                    : 'bg-rose-50 border-rose-300'
-                }`}
-                role="status"
+          /* Neutral Completion Mode in Screening */
+          <div className="space-y-4 text-center p-6 sm:p-8 rounded-2xl bg-teal-50 border-2 border-teal-200 animate-fadeIn">
+            <span className="text-5xl" aria-hidden="true">🌟</span>
+            <h4 className="text-2xl sm:text-3xl font-bold text-teal-950">شكرًا لك يا بطل!</h4>
+            <p className="text-base sm:text-lg text-teal-800 font-medium max-w-md mx-auto">
+              اكتمل تسجيل القصة وتحليلها بنجاح. فخورون بمجهودك الرائع ومحاولتك المتميزة!
+            </p>
+            <div className="pt-3">
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary bz-btn-lg font-bold text-base px-8 py-3 shadow-md"
+                onClick={finishAndAdvance}
               >
-                <div className="flex items-center justify-between gap-2 font-bold text-sm sm:text-base">
-                  <div className="flex items-center gap-2">
-                    {assessmentResult.words[selectedWordIndex].errorType === 'None' ? (
-                      <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-                    ) : (
-                      <span className="text-rose-700 text-lg leading-none">⚠️</span>
-                    )}
-                    <span className={assessmentResult.words[selectedWordIndex].errorType === 'None' ? 'text-emerald-900' : 'text-rose-900'}>
-                      {assessmentResult.words[selectedWordIndex].errorType === 'None'
-                        ? '✓ نطق صحيح ومتقن'
-                        : assessmentResult.words[selectedWordIndex].errorType === 'Substitution'
-                        ? 'استبدال كلمة في القصة'
-                        : assessmentResult.words[selectedWordIndex].errorType === 'Omission'
-                        ? 'كلمة محذوفة / لم تُقرأ'
-                        : 'خطأ في تشكيل أو نطق الكلمة'}
-                    </span>
-                  </div>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/95 border font-bold text-slate-800">
-                    درجة الدقة: {ar(assessmentResult.words[selectedWordIndex].accuracyScore || 0)}٪
-                  </span>
-                </div>
-
-                <div className="text-xs sm:text-sm text-slate-800 space-y-1.5 pr-6 font-medium">
-                  <p>
-                    الكلمة المطلوبة في القصة: <strong className="text-slate-950 font-bold">«{assessmentResult.words[selectedWordIndex].word}»</strong>
-                  </p>
-                  <p>
-                    ما سُمع من الطفل:{' '}
-                    <strong className={assessmentResult.words[selectedWordIndex].errorType === 'None' ? 'text-emerald-800 font-bold' : 'text-rose-800 font-bold'}>
-                      {assessmentResult.words[selectedWordIndex].spokenWord
-                        ? `«${assessmentResult.words[selectedWordIndex].spokenWord}»`
-                        : 'صمت / لم تُقرأ'}
-                    </strong>
-                  </p>
-                  <p className="text-xs text-slate-600 pt-0.5 border-t border-slate-200/60">
-                    <strong>حالة المطابقة على مستوى الكلمة:</strong>{' '}
-                    {assessmentResult.words[selectedWordIndex].errorType === 'None' ||
-                    assessmentResult.words[selectedWordIndex].errorType === 'DialectVariant'
-                      ? 'تطابق صوتي مقبول مع الكلمة المرجعية.'
-                      : 'لم تتطابق الكلمة أو نطقها مع نص القصة.'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Performance Stats Banner */}
-            {assessmentResult && (
-              <div className="flex flex-wrap items-center justify-around gap-3 p-4 bg-teal-50 border border-teal-200 rounded-2xl text-center">
-                <div>
-                  <span className="block text-xs font-bold text-teal-800">الكلمات الصحيحة</span>
-                  <span className="text-lg font-extrabold text-teal-950">
-                    {ar(assessmentResult.correctWordsCount)} من {ar(words.length)}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-teal-800">دقة القراءة</span>
-                  <span className="text-lg font-extrabold text-teal-950">
-                    {ar(assessmentResult.wordAccuracyPercent)}٪
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-teal-800">معدل الطلاقة</span>
-                  <span className="text-lg font-extrabold text-teal-950">
-                    {ar(assessmentResult.wordsCorrectPerMinute || assessmentResult.wordsPerMinute || 0)} كلمة/د
-                  </span>
-                </div>
-              </div>
-            )}
+                متابعة الفحص ◀
+              </button>
+            </div>
           </div>
         )}
 
@@ -956,73 +777,31 @@ export function PassagePlayer({
           <div className="space-y-4 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
               <div className="inline-flex items-center gap-2 text-teal-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
                 <span>التسجيل الصوتي جارٍ… اقرأ على مهلك</span>
               </div>
               <span className="text-slate-600 text-xs">
-                الكلمة المحددة: {ar(activeWordIndex + 1)} من {ar(words.length)}
+                المدة المتبقية: {ar(Math.max(0, timeLimitSec - Math.round(elapsedSeconds)))} ثانية
               </span>
             </div>
             <div className="bz-progress">
               <span style={{ width: String(Math.min(100, (elapsedSeconds / timeLimitSec) * 100)) + '%' }} />
             </div>
 
-            {/* Live Highlighter Controls */}
-            <div className="flex flex-wrap justify-center gap-2 pt-1">
-              <button
-                type="button"
-                className="bz-btn bz-btn-secondary bz-btn-sm"
-                onClick={() => setActiveWordIndex((prev) => Math.max(0, prev - 1))}
-                disabled={activeWordIndex === 0}
-              >
-                ◀ الكلمة السابقة
-              </button>
-              <button
-                type="button"
-                className="bz-btn bz-btn-secondary bz-btn-sm font-bold"
-                onClick={() => setActiveWordIndex((prev) => Math.min(words.length - 1, prev + 1))}
-                disabled={activeWordIndex === words.length - 1}
-              >
-                الكلمة التالية ◀
+            <div className="pt-2">
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg shadow-md w-full sm:w-auto" onClick={() => void submitRecording()}>
+                <Check className="w-5 h-5" /> انتهيت من القراءة — حلّل التسجيل
               </button>
             </div>
-
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg w-full sm:w-auto" onClick={() => void submitRecording()}>
-              <Check className="w-5 h-5" /> انتهيت من القراءة — حلّل التسجيل
-            </button>
           </div>
         )}
 
         {/* Phase: Submitting */}
         {phase === 'submitting' && (
-          <div className="text-center space-y-2" role="status">
-            <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">جارٍ تحليل تسجيل القصة…</p>
-            <p className="bz-small text-muted">تقييم صوتي لكل كلمة</p>
-          </div>
-        )}
-
-        {/* Phase: Review */}
-        {phase === 'review' && (
-          <div className="flex flex-wrap justify-center gap-3 pt-2">
-            <button
-              type="button"
-              className="bz-btn bz-btn-primary bz-btn-lg"
-              onClick={finishAndAdvance}
-            >
-              متابعة النتيجة والانتقال للمهمة التالية ◀
-            </button>
-            <button
-              type="button"
-              className="bz-btn bz-btn-secondary"
-              onClick={() => {
-                finalizingRef.current = false;
-                setAssessmentResult(null);
-                setPhase('ready');
-              }}
-            >
-              إعادة تسجيل القصة
-            </button>
+          <div className="text-center space-y-2 py-4" role="status">
+            <span className="text-4xl" aria-hidden="true">🎧</span>
+            <p className="font-bold text-lg text-ink">جارٍ تحليل تسجيل القصة…</p>
+            <p className="bz-small text-muted">تقييم صوتي دقيق لطلاقة القراءة</p>
           </div>
         )}
 
