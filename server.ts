@@ -73,15 +73,16 @@ import {
   VerifiedAutomatedAudioAssessment,
 } from './src/utils/studentDataSecurity';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 // Fail-fast validation of TRUST_PROXY_HOPS before starting the server
 const TRUST_PROXY_HOPS = parseStrictTrustProxyHops(
   process.env.TRUST_PROXY_HOPS
 );
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const DATA_DIR = process.env.BASEERA_DATA_DIR
   ? path.resolve(process.env.BASEERA_DATA_DIR)
@@ -5512,9 +5513,12 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     res.status(404).json({ error: 'مسار API غير موجود.' });
   });
 
+  const isDevTsx =
+    typeof process.argv[1] === 'string' && process.argv[1].endsWith('.ts');
   const isProduction =
     process.env.NODE_ENV === 'production' ||
-    (typeof process.argv[1] === 'string' && process.argv[1].endsWith('server.js'));
+    process.env.PASSENGER_APP_ENV === 'production' ||
+    !isDevTsx;
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
@@ -5530,13 +5534,14 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { index: false }));
     // Only browser GET navigation requests may receive the SPA shell.
     app.get('*', (req, res, next) => {
       if (req.method !== 'GET') {
         next();
         return;
       }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'), (error) => {
         if (error) next(error);
       });
