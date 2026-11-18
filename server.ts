@@ -5510,9 +5510,19 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     app.use(express.static(distPath, { index: false, maxAge: '7d' }));
 
     // Only browser GET navigation requests may receive the SPA shell.
+    // Static asset requests with extensions or under /assets/, /audio/, /pictures/ must never return index.html (preventing MIME type errors).
     app.get('*', (req, res, next) => {
       if (req.method !== 'GET') {
         next();
+        return;
+      }
+      if (
+        path.extname(req.path) ||
+        req.path.startsWith('/assets/') ||
+        req.path.startsWith('/audio/') ||
+        req.path.startsWith('/pictures/')
+      ) {
+        res.status(404).type('text/plain').send('Asset not found');
         return;
       }
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
