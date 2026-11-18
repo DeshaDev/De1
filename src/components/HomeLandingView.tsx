@@ -25,7 +25,6 @@ import {
   SKILLS,
   FOCUS_SKILLS,
 } from '../cognitiveProfile/training';
-import { PROBE_MINUTES } from '../cognitiveProfile/progressProbe';
 
 export type AppTabId =
   | 'home'
@@ -189,7 +188,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               {[
                 { t: 'من ٤ سنوات فأكثر', icon: Users },
                 { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
-                { t: `جلسة التدريب نحو ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, icon: Timer },
+                { t: `جلسة التدريب نحو ${ar(MINUTES_PER_SESSION)} دقيقة`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
@@ -207,7 +206,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       {/* ================= THE GAMES, as stops on a board ================= */}
       <section className="hn-board-section">
         <div className="bz-container pt-4 pb-16 sm:pt-6 sm:pb-20">
-          <div className="max-w-2xl">
+          <div className="max-w-4xl">
             <h2 className="hn-h2">{ar(BATTERY.length)} لعبة في رحلة واحدة</h2>
             <p className="hn-body mt-3">
               من «{BATTERY[0].gameNameAr}» إلى «{BATTERY[BATTERY.length - 1].gameNameAr}». كل لعبة تقيس مهارة واحدة، وتبدأ بتجربة قصيرة قبل أن تُحسب الإجابات.
@@ -295,7 +294,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       <section className="bz-container py-16 sm:py-20">
         <div className="grid lg:grid-cols-[1fr_1fr] gap-12 items-center">
           <div>
-            <h2 className="hn-h2">نحو {ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة للجلسة، والمستوى يتبع طفلك</h2>
+            <h2 className="hn-h2">نحو {ar(MINUTES_PER_SESSION)} دقيقة للجلسة، والمستوى يتبع طفلك</h2>
             <p className="hn-body mt-3">
               {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
             </p>

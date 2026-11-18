@@ -1138,7 +1138,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           <p className="bz-small text-brand font-semibold">{progress.plan.preventive ? 'برنامج استعداد للقراءة' : 'برنامج تدريبي موجّه'}</p>
           <h2 className="joy-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>برنامج {childName}</h2>
           <p className="text-sm text-slate-600 mt-1">
-            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة
+            الجلسات المنجزة: <strong>{toArabicDigits(done)}</strong> من {toArabicDigits(target)} · {toArabicDigits(SESSIONS_PER_WEEK)} جلسات أسبوعيًا × {toArabicDigits(MINUTES_PER_SESSION)} دقيقة
           </p>
           <SessionPath done={done} total={target} perWeek={SESSIONS_PER_WEEK} />
         </div>
@@ -1365,7 +1365,7 @@ function ProgramRulesBody() {
   return (
     <section className="mt-4 grid md:grid-cols-2 gap-6">
       <div>
-        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة)</h3>
+        <h3 className="font-black text-slate-900">تركيب الجلسة (نحو {toArabicDigits(MINUTES_PER_SESSION)} دقيقة)</h3>
         <ol className="list-decimal pr-5 mt-2 space-y-1 leading-relaxed">
           <li><strong>درس قصير (أنا أعلّمك):</strong> في أول مرة في كل مستوى، وعند النزول مستوى: شرح بالصوت والصورة، ونموذج، ومثال مضاد.</li>
           <li><strong>ممارسة موجّهة (نفعلها معًا):</strong> أول تمرينين بتلميح مسموع وخيار أقل، ثم تُسحب المساعدة.</li>
