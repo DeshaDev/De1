@@ -516,7 +516,7 @@ export async function assessReadingAudioWithAzure(args: {
 
   // Azure short-audio REST assessment processes the complete WAV file (including pauses)
   // and supports EnableMiscue. The SDK's recognizeOnceAsync can stop at the first long pause.
-  const enableMiscue = args.durationSeconds <= 28;
+  const enableMiscue = args.durationSeconds <= 65;
   if (enableMiscue) {
     const pronunciationParameters = {
       ReferenceText: args.referenceText,

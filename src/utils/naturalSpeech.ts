@@ -96,8 +96,8 @@ export function prepareArabicTtsText(text: string): string {
   s = s.replace(/ة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'هْ');
 
   // 4. Prevent closed-syllable long-vowel shortening at pause:
-  //    If a word at pause ends in [ا و ي] + consonant + [short vowel or sukun], strip the final mark (e.g. بَابْ -> بَاب, كِتَابْ -> كِتَاب)
-  s = s.replace(/([اوي][\u0621-\u064A])[\u064E\u064F\u0650\u0652]+(?=\s*($|[.؟?!،,…]))/g, '$1');
+  //    If a word at pause ends in [ا و ي] + consonant + [short vowel or sukun], strip the final mark (e.g. بَابْ -> بَاب, كِتَابْ -> كِتَاب, فُوْبُ -> فُوْب)
+  s = s.replace(/([اوي][\u064E\u064F\u0650\u0652]?[\u0621-\u064A])[\u064E\u064F\u0650\u0652]+(?=\s*($|[.؟?!،,…]))/g, '$1');
 
   // 5. Apply natural Waqf (taskeen) on remaining final short vowels before pause on multi-letter words
   //    (e.g. أَحْسَنْتَ! -> أَحْسَنْتْ! , نَفْسِهِ. -> نَفْسِهْ.)
