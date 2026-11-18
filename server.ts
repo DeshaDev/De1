@@ -1,5 +1,6 @@
 import { formatArabicTextWithPhonemes } from './src/utils/arabicPhonemeBank';
 import { prepareArabicTtsText } from './src/utils/naturalSpeech';
+import { synthesizeNaturalArabicOpenRouter } from './src/utils/openrouterSpeech';
 import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -4077,6 +4078,20 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       } catch (elevenErr) {
         console.warn('[ElevenLabs TTS] Request error:', elevenErr);
       }
+    }
+
+    // Tier 0.5: OpenRouter OpenAI Audio (Studio-quality human Arabic teacher speech)
+    try {
+      const openrouterBuffer = await synthesizeNaturalArabicOpenRouter(cleanText, 'sage');
+      if (openrouterBuffer && openrouterBuffer.length > 0) {
+        const audioBase64 = openrouterBuffer.toString('base64');
+        const payload = { audioBase64, mimeType: 'audio/mp3', source: 'openrouter_audio' };
+        cacheTtsAudio(cacheKey, payload);
+        res.json(payload);
+        return;
+      }
+    } catch (openrouterErr) {
+      console.warn('[OpenRouter TTS] Error:', openrouterErr);
     }
 
     // Tier 1: Microsoft Azure Arabic Neural Speech (Studio-quality human pronunciation with flawless makharij)

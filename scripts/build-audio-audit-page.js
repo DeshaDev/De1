@@ -4,40 +4,62 @@ import path from 'node:path';
 const manifestPath = path.resolve('public/audio/v1/manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-const entries = Object.entries(manifest.clips).map(([key, clip]) => {
-  let categoryLabel = 'أخرى';
-  let categoryKey = clip.context || 'other';
-  if (categoryKey === 'single_word') categoryLabel = 'كلمات الفحص والقراءة';
-  else if (categoryKey === 'instruction') categoryLabel = 'تعليمات الألعاب والفحص';
-  else if (categoryKey === 'phoneme') categoryLabel = 'أصوات الحروف والمقاطع الفونيمية';
-  else if (categoryKey === 'praise') categoryLabel = 'عبارات المديح والتشجيع';
-  else if (categoryKey === 'pal') categoryLabel = 'التعلم المقترن (تسمية الكائنات)';
+// Group manifest entries by unique audio file to prevent duplicate cards
+const fileMap = new Map();
 
-  return {
-    key,
-    file: clip.file,
-    text: clip.text,
-    categoryKey,
-    categoryLabel,
-    voice: clip.voice || 'ar-AE-FatimaNeural',
-    sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
-    audioUrl: `/audio/v1/${clip.file}`,
-  };
-});
+for (const [key, clip] of Object.entries(manifest.clips)) {
+  const fileName = clip.file;
+  if (!fileName) continue;
 
-// Compute dynamic counts
+  if (!fileMap.has(fileName)) {
+    let categoryLabel = 'أخرى';
+    let categoryKey = clip.context || 'other';
+    if (categoryKey === 'single_word') categoryLabel = 'كلمات الفحص والقراءة';
+    else if (categoryKey === 'instruction') categoryLabel = 'تعليمات الألعاب والفحص';
+    else if (categoryKey === 'phoneme') categoryLabel = 'أصوات الحروف والمقاطع الفونيمية';
+    else if (categoryKey === 'praise') categoryLabel = 'عبارات المديح والتشجيع';
+    else if (categoryKey === 'pal') categoryLabel = 'التعلم المقترن (تسمية الكائنات)';
+
+    fileMap.set(fileName, {
+      file: fileName,
+      primaryText: clip.text,
+      categoryKey,
+      categoryLabel,
+      voice: clip.voice || 'صوت بشري طبيعي',
+      sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
+      audioUrl: `/audio/v1/${fileName}`,
+      aliases: new Set([clip.text, key]),
+    });
+  } else {
+    const existing = fileMap.get(fileName);
+    existing.aliases.add(clip.text);
+    existing.aliases.add(key);
+    // If current text has better diacritics, prefer it as primaryText
+    if (clip.text && clip.text.length >= existing.primaryText.length && /[\u064B-\u0652]/.test(clip.text)) {
+      existing.primaryText = clip.text;
+    }
+  }
+}
+
+const entries = Array.from(fileMap.values()).map(e => ({
+  ...e,
+  aliasesList: Array.from(e.aliases).filter(a => a && a !== e.primaryText && a !== e.file && !a.endsWith('.mp3')),
+  searchTerms: Array.from(e.aliases).join(' ') + ' ' + e.file,
+}));
+
+// Compute dynamic counts based on unique clips
 const singleWordCount = entries.filter(e => e.categoryKey === 'single_word').length;
 const phonemeCount = entries.filter(e => e.categoryKey === 'phoneme').length;
 const instructionCount = entries.filter(e => e.categoryKey === 'instruction').length;
 const praiseCount = entries.filter(e => e.categoryKey === 'praise').length;
 const palCount = entries.filter(e => e.categoryKey === 'pal').length;
 
-// Sort with priority to single_word and praise first, then instruction, then phoneme
+// Sort with priority: single_word and praise first, then instruction, then pal, then phoneme
 const categoryOrder = { single_word: 1, praise: 2, instruction: 3, pal: 4, phoneme: 5, other: 6 };
 entries.sort((a, b) => {
   const diff = (categoryOrder[a.categoryKey] || 9) - (categoryOrder[b.categoryKey] || 9);
   if (diff !== 0) return diff;
-  return a.text.localeCompare(b.text, 'ar');
+  return a.primaryText.localeCompare(b.primaryText, 'ar');
 });
 
 const html = `<!DOCTYPE html>
@@ -98,79 +120,81 @@ const html = `<!DOCTYPE html>
       margin: 0 auto;
     }
     .stats-bar {
+      margin-top: 1.25rem;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 1rem;
-      margin-top: 1.5rem;
+      gap: 0.5rem;
     }
     .stat-pill {
-      background: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.2);
       backdrop-filter: blur(8px);
-      padding: 0.4rem 1rem;
+      padding: 0.35rem 0.85rem;
       border-radius: 9999px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.25);
     }
     .controls {
       background: var(--card-bg);
-      padding: 1.25rem;
       border-radius: var(--radius);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 1.25rem;
       border: 1px solid var(--border);
       margin-bottom: 2rem;
-      position: sticky;
-      top: 1rem;
-      z-index: 10;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     .search-box {
       width: 100%;
       padding: 0.85rem 1.25rem;
       font-size: 1.1rem;
-      font-family: inherit;
+      font-family: 'Tajawal', sans-serif;
       border: 2px solid var(--border);
       border-radius: 0.75rem;
       outline: none;
       transition: all 0.2s;
+      margin-bottom: 1rem;
     }
     .search-box:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+      box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
     }
     .filters {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      margin-top: 1rem;
     }
     .filter-btn {
-      padding: 0.4rem 0.9rem;
-      border-radius: 0.5rem;
-      border: 1px solid var(--border);
       background: #f1f5f9;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 700;
+      border: 1px solid #cbd5e1;
+      padding: 0.45rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.9rem;
+      font-family: 'Tajawal', sans-serif;
       cursor: pointer;
+      font-weight: 600;
+      color: #475569;
       transition: all 0.2s;
     }
-    .filter-btn.active, .filter-btn:hover {
+    .filter-btn:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+    .filter-btn.active {
       background: var(--primary);
       color: white;
-      border-color: var(--primary);
+      border-color: var(--primary-dark);
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1rem;
+      gap: 1.25rem;
     }
     .card {
       background: var(--card-bg);
-      border-radius: 1rem;
-      padding: 1.25rem;
       border: 1px solid var(--border);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -178,30 +202,38 @@ const html = `<!DOCTYPE html>
     }
     .card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+      box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.08);
       border-color: #cbd5e1;
     }
     .card-category {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--primary-dark);
-      background: var(--primary-light);
+      text-transform: uppercase;
       padding: 0.2rem 0.6rem;
-      border-radius: 0.4rem;
+      border-radius: 9999px;
       display: inline-block;
       margin-bottom: 0.75rem;
-      align-self: flex-start;
     }
-    .card-category.praise { background: #fef3c7; color: #b45309; }
-    .card-category.phoneme { background: #ede9fe; color: #6d28d9; }
-    .card-category.single_word { background: #dcfce7; color: #15803d; }
+    .card-category.single_word { background: #dcfce7; color: #166534; }
+    .card-category.phoneme { background: #e0f2fe; color: #075985; }
+    .card-category.instruction { background: #fef3c7; color: #92400e; }
+    .card-category.praise { background: #fce7f3; color: #9d174d; }
+    .card-category.pal { background: #f3e8ff; color: #6b21a8; }
+    .card-category.other { background: #f1f5f9; color: #475569; }
+
     .card-text {
       font-size: 1.6rem;
       font-weight: 700;
       color: #0f172a;
       line-height: 1.5;
-      margin-bottom: 1rem;
-      min-height: 2.8rem;
+      margin-bottom: 0.5rem;
+      min-height: 2.4rem;
+    }
+    .card-aliases {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
     }
     .card-meta {
       font-size: 0.75rem;
@@ -273,9 +305,9 @@ const html = `<!DOCTYPE html>
   <div class="container">
     <header>
       <h1>🎙️ مختبر مراجعة واستماع المقاطع الصوتية</h1>
-      <p>هذه الصفحة التجريبية تتيح لك الاستماع المباشر لكل المقاطع الصوتية في منصة «هَيَّا نَقْرَأْ»، مع فحص مخارج الحروف، الكلمات المبتكرة، وبنود الفحص والتدريب.</p>
+      <p>هذه الصفحة تتيح لك الاستماع المباشر لكل المقاطع الصوتية الأصلية المعتمدة في منصة «هَيَّا نَقْرَأْ»، مع فحص مخارج الحروف، الكلمات المبتكرة، وبنود الفحص والتدريب دون أي تكرار.</p>
       <div class="stats-bar">
-        <span class="stat-pill">📊 إجمالي المقاطع المتاحة: ${entries.length} مقطعًا</span>
+        <span class="stat-pill">📊 إجمالي المقاطع الصوتية الفريدة: ${entries.length} مقطعًا</span>
         <span class="stat-pill">✨ كلمات الفحص والقراءة: ${singleWordCount}</span>
         <span class="stat-pill">📖 أصوات ومقاطع الحروف: ${phonemeCount}</span>
         <span class="stat-pill">🎯 التوجيهات والتعليمات: ${instructionCount}</span>
@@ -285,7 +317,7 @@ const html = `<!DOCTYPE html>
 
     <div class="live-tester">
       <h3>🔍 اختبار فوري لأي كلمة أو عبارة جديدة (Live Preview)</h3>
-      <p style="font-size: 0.85rem; color: #115e59;">اكتب أي كلمة بتشكيلها (مثل: فُوبُ أو إِلَيْهِ) واضغط "استمع فورًا" لاختبار مخارج حروفها مباشرة:</p>
+      <p style="font-size: 0.85rem; color: #115e59;">اكتب أي كلمة بتشكيلها (مثل: فُوبُو أو إِلَيْهِ) واضغط "استمع فورًا" لاختبار مخارج حروفها مباشرة:</p>
       <div class="tester-row">
         <input type="text" id="liveInput" class="tester-input arabic-text" value="فُوبُو" placeholder="اكتب الكلمة هنا...">
         <button type="button" class="tester-btn" onclick="playLiveCustom()">▶ استمع فورًا</button>
@@ -294,7 +326,7 @@ const html = `<!DOCTYPE html>
     </div>
 
     <div class="controls">
-      <input type="text" id="searchInput" class="search-box" placeholder="🔎 ابحث عن أي كلمة أو عبارة (مثال: فوب، سامي، إليه، شمس، أحسنت)..." oninput="filterClips()">
+      <input type="text" id="searchInput" class="search-box" placeholder="🔎 ابحث عن أي كلمة أو عبارة (مثال: فوب، سامي، إليه، أبيه، باك، جمل، دجاجة)..." oninput="filterClips()">
       <div class="filters">
         <button class="filter-btn active" onclick="setCategory('all', this)">الكل (${entries.length})</button>
         <button class="filter-btn" onclick="setCategory('single_word', this)">كلمات الفحص والقراءة (${singleWordCount})</button>
@@ -308,10 +340,11 @@ const html = `<!DOCTYPE html>
 
     <div class="grid" id="clipsGrid">
       ${entries.map((c) => `
-        <div class="card" data-category="${c.categoryKey}" data-text="${c.text.replace(/"/g, '&quot;')}">
+        <div class="card" data-category="${c.categoryKey}" data-search="${c.searchTerms.replace(/"/g, '&quot;')}">
           <div>
             <span class="card-category ${c.categoryKey}">${c.categoryLabel}</span>
-            <div class="card-text arabic-text" lang="ar">${c.text}</div>
+            <div class="card-text arabic-text" lang="ar">${c.primaryText}</div>
+            ${c.aliasesList.length > 0 ? `<div class="card-aliases">صيغ مطابقة: ${c.aliasesList.slice(0, 3).join(' ، ')}</div>` : ''}
           </div>
           <div>
             <div class="card-meta">
@@ -339,10 +372,10 @@ const html = `<!DOCTYPE html>
       let visible = 0;
 
       cards.forEach(card => {
-        const text = (card.getAttribute('data-text') || '').toLowerCase();
+        const search = (card.getAttribute('data-search') || '').toLowerCase();
         const cat = card.getAttribute('data-category');
         const matchCat = activeCategory === 'all' || cat === activeCategory;
-        const matchQuery = !query || text.includes(query);
+        const matchQuery = !query || search.includes(query);
 
         if (matchCat && matchQuery) {
           card.style.display = 'flex';
@@ -369,7 +402,7 @@ const html = `<!DOCTYPE html>
         const res = await fetch('/api/ai/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, voice: 'ar-AE-FatimaNeural' })
+          body: JSON.stringify({ text })
         });
         if (res.ok) {
           const data = await res.json();
@@ -389,4 +422,5 @@ const html = `<!DOCTYPE html>
 
 fs.writeFileSync(path.resolve('public/audio-audit.html'), html, 'utf8');
 fs.writeFileSync(path.resolve('dist/audio-audit.html'), html, 'utf8');
-console.log('Successfully generated public/audio-audit.html and dist/audio-audit.html');
+console.log('Successfully generated deduplicated public/audio-audit.html and dist/audio-audit.html');
+console.log(`Total unique audio clips displayed: ${entries.length}`);
