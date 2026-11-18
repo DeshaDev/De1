@@ -136,7 +136,7 @@ function audioFailureMessage(error: unknown): string {
 // ---------------------------------------------------------------------------
 // Continuous audio assessment for real-word and made-up-word reading lists
 // ---------------------------------------------------------------------------
-type ReadListAudioPhase = 'ready' | 'recording' | 'assessing' | 'feedback' | 'finalizing' | 'error';
+type ReadListAudioPhase = 'ready' | 'recording' | 'finalizing' | 'error';
 
 function createAudioAttemptId(): string {
   const bytes = new Uint8Array(16);
@@ -147,103 +147,6 @@ function createAudioAttemptId(): string {
 // ---------------------------------------------------------------------------
 // One recording and one Azure assessment per visible word
 // ---------------------------------------------------------------------------
-function stripHarakat(text: string): string {
-  return (text || '').normalize('NFC').replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
-}
-
-function isInflectionalOrPauseMatch(cleanSpoken: string, refClean: string): boolean {
-  if (!cleanSpoken || !refClean) return false;
-  if (cleanSpoken === refClean) return true;
-  // Tanween fat-h with alif: بيتا -> بيت
-  if (cleanSpoken.replace(/ا$/, '') === refClean) return true;
-  // Dammah/waw elongation: بيتو -> بيت
-  if (cleanSpoken.replace(/و$/, '') === refClean) return true;
-  // Kasrah/ya elongation: بيتي -> بيت
-  if (cleanSpoken.replace(/ي$/, '') === refClean) return true;
-  // Taa marbuta pausal haa: سمكه -> سمكة
-  if (cleanSpoken.replace(/ه$/, 'ة') === refClean.replace(/ه$/, 'ة')) return true;
-  // Definite article: الشمس -> شمس
-  if (cleanSpoken.replace(/^ال/, '') === refClean.replace(/^ال/, '')) return true;
-  return false;
-}
-
-function getWordDiagnosis(expectedVowelled: string, spokenRaw: string | null, accuracyScore: number, errorType: string, serverNotesAr?: string): { diagnosis: string; isCorrect: boolean } {
-  const cleanSpoken = (spokenRaw || '').replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
-  const refClean = stripHarakat(expectedVowelled);
-  const spkClean = stripHarakat(cleanSpoken);
-  const cleanServerNote = (serverNotesAr || '').trim();
-
-  // 1. Silent or no voice captured
-  if (!spkClean || cleanSpoken === 'SILENCE' || cleanSpoken === '.' || cleanSpoken === 'صمت' || (errorType === 'Omission' && !cleanSpoken)) {
-    return {
-      isCorrect: false,
-      diagnosis: cleanServerNote || 'لم نلتقط صوتًا واضحًا أو كافيًا للكلمة؛ تحدّث بوضوح قرب الميكروفون.',
-    };
-  }
-
-  // 2. Exact match or inflectional/vowel variant
-  if (isInflectionalOrPauseMatch(spkClean, refClean)) {
-    if (errorType === 'None' || errorType === 'DialectVariant') {
-      return {
-        isCorrect: true,
-        diagnosis: cleanServerNote || (spkClean === refClean
-          ? 'مطابقة صوتية واضحة للكلمة المطلوبة على مستوى الكلمة.'
-          : 'قراءة صحيحة للكلمة مع مراعاة التنوين أو الحركة الإعرابية أو الوقف.'),
-      };
-    }
-    // Preserve server-detected short-vowel / tashkeel / case-ending mispronunciation (e.g. كُتُب vs كَتَبَ or بَيْتًا vs بَيْتُ)
-    return {
-      isCorrect: false,
-      diagnosis: cleanServerNote || `تطابقت الحروف مع اختلاف في الحركات أو التشكيل (سُمع «${cleanSpoken}» بدلًا من «${expectedVowelled}»).`,
-    };
-  }
-
-  // 3. Substitution: only when letters truly differ!
-  if (errorType === 'Substitution' || (spkClean && refClean && spkClean !== refClean && (Math.abs(spkClean.length - refClean.length) >= 2 || !spkClean.startsWith(refClean[0])))) {
-    return {
-      isCorrect: false,
-      diagnosis: cleanServerNote || `استبدال كلي للكلمة؛ نُطق «${cleanSpoken || spkClean}» بدلًا من الكلمة المطلوبة «${expectedVowelled}».`,
-    };
-  }
-
-  // Specific mispronunciation analysis
-  if (refClean[0] !== spkClean[0]) {
-    return {
-      isCorrect: false,
-      diagnosis: `خطأ في نطق الحرف الأول (سُمع «${spkClean[0]}» بدلًا من «${refClean[0]}»). `,
-    };
-  }
-  if (refClean[refClean.length - 1] !== spkClean[spkClean.length - 1]) {
-    return {
-      isCorrect: false,
-      diagnosis: `خطأ في نطق الحرف الأخير (سُمع «${spkClean[spkClean.length - 1]}» بدلًا من «${refClean[refClean.length - 1]}»). `,
-    };
-  }
-  if (refClean.includes('ا') && !spkClean.includes('ا')) {
-    return {
-      isCorrect: false,
-      diagnosis: 'خطأ في مد الألف (نُطقت بفتحة قصيرة دون إشباع المد).',
-    };
-  }
-  if (refClean.includes('ي') && !spkClean.includes('ي')) {
-    return {
-      isCorrect: false,
-      diagnosis: 'خطأ في مد الياء (نُطقت بكسرة قصيرة دون إشباع المد).',
-    };
-  }
-  if (refClean.includes('و') && !spkClean.includes('و')) {
-    return {
-      isCorrect: false,
-      diagnosis: 'خطأ في مد الواو (نُطقت بضمة قصيرة دون إشباع المد).',
-    };
-  }
-
-  return {
-    isCorrect: false,
-    diagnosis: `حركات الكلمة أو مخارج حروفها غير مضبوطة (دقة الصوت: ${accuracyScore}٪).`,
-  };
-}
-
 export function ReadListAudioPlayer({
   title,
   items,
@@ -261,14 +164,6 @@ export function ReadListAudioPlayer({
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
-  const [lastWordFeedback, setLastWordFeedback] = useState<{
-    word: string;
-    accuracyScore: number;
-    errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
-    spokenWord: string | null;
-    diagnosis: string;
-    isCorrect: boolean;
-  } | null>(null);
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
   const busyRef = useRef(false);
@@ -297,35 +192,86 @@ export function ReadListAudioPlayer({
     onDone([], 0);
   };
 
-  const finalizeList = async (receipts: CognitiveAudioWordReceipt[]) => {
-    if (busyRef.current || receipts.length !== items.length) return;
+  // Each word is assessed in the background while the child reads the next one; the child never
+  // waits for, or sees, a verdict. Results appear only in the adult's report.
+  const pendingRef = useRef(new Map<string, Promise<CognitiveAudioWordReceipt>>());
+  const redoRef = useRef<number[]>([]);
+  const redoPassRef = useRef(false);
+
+  const assessInBackground = (item: ReadItem, itemIndex: number, recording: Awaited<ReturnType<WavRecordingController['stop']>>) => {
+    const request = () => assessCognitiveAudioWord({
+      taskId,
+      itemId: item.id,
+      itemIndex,
+      attemptId: attemptIdRef.current,
+      session: audioSession,
+      recording,
+    });
+    // One automatic retry covers a dropped connection without asking the child to read again.
+    const promise = request().catch(() => request());
+    pendingRef.current.set(item.id, promise);
+    void promise.then((receipt) => {
+      wordReceiptsRef.current = [
+        ...wordReceiptsRef.current.filter((r) => r.itemId !== item.id),
+        receipt,
+      ].sort((a, b) => a.itemIndex - b.itemIndex);
+    }).catch(() => undefined);
+  };
+
+  const finalizeList = async () => {
+    if (busyRef.current) return;
     busyRef.current = true;
     setPhase('finalizing');
     setErrorMessage('');
     try {
+      await Promise.allSettled([...pendingRef.current.values()]);
+      const done = new Set(wordReceiptsRef.current.map((r) => r.itemId));
+      const missing = items.map((item, index) => (done.has(item.id) ? -1 : index)).filter((i) => i >= 0);
+      if (missing.length > 0) {
+        redoRef.current = missing;
+        redoPassRef.current = true;
+        setErrorMessage(
+          `تعذّر تقييم ${ar(missing.length)} من الكلمات بسبب الاتصال. يمكن إعادة تسجيلها فقط، أو المتابعة دون درجة.`
+        );
+        setPhase('error');
+        return;
+      }
       const assessment = await finalizeCognitiveAudioWordList({
         taskId,
         attemptId: attemptIdRef.current,
         session: audioSession,
-        receipts,
+        receipts: wordReceiptsRef.current,
       });
       if (assessment.words.length !== items.length) {
         throw new Error('INVALID_VERIFIED_AUDIO_RESPONSE');
       }
-      const responses = assessment.words.map((word, index) => {
-        return {
-          itemId: items[index].id,
-          correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
-          rtMs: 0,
-          replays: 0,
-        };
-      });
+      const responses = assessment.words.map((word, index) => ({
+        itemId: items[index].id,
+        correct: word.errorType === 'None' || word.errorType === 'DialectVariant',
+        rtMs: 0,
+        replays: 0,
+      }));
       onDone(responses, Math.round(assessment.durationSeconds * 1000), assessment);
     } catch (error) {
       setErrorMessage(audioFailureMessage(error));
       setPhase('error');
     } finally {
       busyRef.current = false;
+    }
+  };
+
+  const goToNextWord = () => {
+    if (redoRef.current.length > 0) {
+      const next = redoRef.current.shift()!;
+      setCurrentItemIndex(next);
+      setPhase('ready');
+      return;
+    }
+    if (!redoPassRef.current && currentItemIndex + 1 < items.length) {
+      setCurrentItemIndex((prev) => prev + 1);
+      setPhase('ready');
+    } else {
+      void finalizeList();
     }
   };
 
@@ -338,51 +284,20 @@ export function ReadListAudioPlayer({
     ) return;
 
     busyRef.current = true;
-    setPhase('assessing');
     setErrorMessage('');
     try {
       const recording = await recordingRef.current.stop();
       recordingRef.current = null;
-      const wordReceipt = await assessCognitiveAudioWord({
-        taskId,
-        itemId: currentItem.id,
-        itemIndex: currentItemIndex,
-        attemptId: attemptIdRef.current,
-        session: audioSession,
-        recording,
-      });
-
-      // Replace only this item's earlier attempt, if any. The visible flow advances
-      // only after the server returns a verified word receipt.
-      const nextReceipts = [
-        ...wordReceiptsRef.current.filter((receipt) => receipt.itemId !== currentItem.id),
-        wordReceipt,
-      ].sort((a, b) => a.itemIndex - b.itemIndex);
-      wordReceiptsRef.current = nextReceipts;
-      const diag = getWordDiagnosis(
-        currentItem.text,
-        wordReceipt.word.spokenWord || wordReceipt.transcript,
-        wordReceipt.word.accuracyScore,
-        wordReceipt.word.errorType,
-        wordReceipt.word.notesAr
-      );
-      setLastWordFeedback({
-        word: currentItem.text,
-        accuracyScore: wordReceipt.word.accuracyScore,
-        errorType: wordReceipt.word.errorType,
-        spokenWord: wordReceipt.word.spokenWord || wordReceipt.transcript,
-        diagnosis: diag.diagnosis,
-        isCorrect: diag.isCorrect && (wordReceipt.word.errorType === 'None' || wordReceipt.word.errorType === 'DialectVariant'),
-      });
-      // In an accuracy study the adult marks the word first, without seeing the engine's verdict.
-      setPhase('feedback');
+      assessInBackground(currentItem, currentItemIndex, recording);
     } catch (error) {
       recordingRef.current = null;
+      busyRef.current = false;
       setErrorMessage(audioFailureMessage(error));
       setPhase('error');
-    } finally {
-      busyRef.current = false;
+      return;
     }
+    busyRef.current = false;
+    goToNextWord();
   };
 
   useEffect(() => {
@@ -395,31 +310,6 @@ export function ReadListAudioPlayer({
     recordingRef.current?.cancel();
     recordingRef.current = null;
   }, []);
-
-    const advanceToNextWord = async () => {
-    if (busyRef.current) return;
-    setLastWordFeedback(null);
-    if (currentItemIndex + 1 < items.length) {
-      setCurrentItemIndex((prev) => prev + 1);
-      setPhase('ready');
-    } else {
-      await finalizeList(wordReceiptsRef.current);
-    }
-  };
-
-  const retryCurrentWord = () => {
-    setLastWordFeedback(null);
-    setPhase('ready');
-  };
-
-  useEffect(() => {
-    if (phase === 'feedback') {
-      const timer = window.setTimeout(() => {
-        void advanceToNextWord();
-      }, 1500);
-      return () => window.clearTimeout(timer);
-    }
-  }, [phase, currentItemIndex]);
 
   const startRecording = async () => {
     if (!supported || busyRef.current || phase !== 'ready') return;
@@ -444,7 +334,9 @@ export function ReadListAudioPlayer({
   const retry = () => {
     setErrorMessage('');
     if (wordReceiptsRef.current.length === items.length) {
-      void finalizeList(wordReceiptsRef.current);
+      void finalizeList();
+    } else if (redoRef.current.length > 0) {
+      goToNextWord();
     } else {
       setPhase('ready');
     }
@@ -462,7 +354,7 @@ export function ReadListAudioPlayer({
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
           <p className="bz-small text-ink-2">
-            اقرأ الكلمة الظاهرة وحدها. بعد تسجيلها وتقييمها ستنتقل إلى الكلمة التالية.
+            اقرأ الكلمة الظاهرة وحدها، ثم اضغط «أنهيت قراءة الكلمة» لتظهر الكلمة التالية.
           </p>
         </div>
 
@@ -490,42 +382,6 @@ export function ReadListAudioPlayer({
               {currentItem?.text}
             </span>
           </div>
-          {lastWordFeedback && phase === 'feedback' && (
-            <div className="w-full max-w-xl mx-auto my-3 text-center" role="status" aria-live="polite">
-              <div className="p-4 sm:p-5 rounded-2xl bg-teal-50 border-2 border-teal-200/90 shadow-2xs space-y-1.5 animate-fadeIn">
-                <div className="flex items-center justify-center gap-2 text-teal-900 font-bold text-sm sm:text-base">
-                  <span className="text-xl">✨</span>
-                  <span>شكرًا لك! سُجّلت قراءتك بنجاح.</span>
-                </div>
-                <p className="text-xs sm:text-sm text-teal-800 font-medium">
-                  أحسنت على المحاولة والجهد! لننتقل إلى الكلمة التالية…
-                </p>
-              </div>
-
-              {/* Only if no audio/speech was captured at all, offer a gentle technical re-record */}
-              {(!lastWordFeedback.spokenWord || lastWordFeedback.errorType === 'Omission') && (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    className="bz-btn bz-btn-secondary bz-btn-sm text-xs"
-                    onClick={retryCurrentWord}
-                  >
-                    لم يُلتقط صوت واضح · إعادة تسجيل الكلمة 🔄
-                  </button>
-                </div>
-              )}
-
-              <div className="flex justify-center items-center gap-3 pt-3">
-                <button
-                  type="button"
-                  className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-2.5"
-                  onClick={() => void advanceToNextWord()}
-                >
-                  {currentItemIndex + 1 < items.length ? 'الكلمة التالية ◀' : 'إنهاء القائمة وتجميع النتيجة 🏁'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {phase === 'recording' && (
@@ -542,18 +398,10 @@ export function ReadListAudioPlayer({
           </div>
         )}
 
-        {phase === 'assessing' && (
-          <div className="text-center space-y-2" role="status">
-            <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">جارٍ تقييم نطق الكلمة…</p>
-            <p className="bz-small text-muted">لن ننتقل إلى التالية حتى يصل تقييمها.</p>
-          </div>
-        )}
-
         {phase === 'finalizing' && (
           <div className="text-center space-y-2" role="status">
             <span className="text-3xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-ink">اكتملت الكلمات. جارٍ تجميع النتائج…</p>
+            <p className="font-bold text-ink">أحسنت! انتهت الكلمات. جارٍ حفظ القراءة…</p>
           </div>
         )}
 
@@ -562,7 +410,7 @@ export function ReadListAudioPlayer({
             <p className="bz-small text-amber-950">{errorMessage}</p>
             <div className="flex flex-wrap justify-center gap-2">
               <button type="button" className="bz-btn bz-btn-primary" onClick={retry}>
-                {wordReceiptsRef.current.length === items.length ? 'إعادة تجميع النتيجة' : 'إعادة تسجيل هذه الكلمة'}
+                {wordReceiptsRef.current.length === items.length ? 'إعادة تجميع النتيجة' : redoRef.current.length > 0 ? 'إعادة تسجيل هذه الكلمات' : 'إعادة تسجيل هذه الكلمة'}
               </button>
               <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
                 متابعة دون درجة
