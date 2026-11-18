@@ -5126,10 +5126,9 @@
     "58b8eecb84758036": {
       "file": "58b8eecb84758036.mp3",
       "text": "فُوبُ",
-      "voice": "ar-SA-ZariyahNeural (pure faa)",
-      "model": "neural_v2",
+      "voice": "ar-AE-FatimaNeural",
       "context": "single_word",
-      "bytes": 11232
+      "bytes": 44352
     },
     "98ccc4b2de3dc1a2": {
       "file": "98ccc4b2de3dc1a2.mp3",
@@ -6822,10 +6821,9 @@
     "563a67af3fa55ad6": {
       "file": "58b8eecb84758036.mp3",
       "text": "فُوب",
-      "voice": "ar-SA-ZariyahNeural (pure faa)",
-      "model": "neural_v2",
+      "voice": "ar-AE-FatimaNeural",
       "context": "single_word",
-      "bytes": 11232
+      "bytes": 44352
     },
     "2a8d0d6a54d41509": {
       "file": "dbc6486fa358bd6d.mp3",
@@ -7026,6 +7024,76 @@
       "model": "azure-neural",
       "context": "pal",
       "bytes": 17856
+    },
+    "818f7872560773c1": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فُوْبُ",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "63206ff76a045f2f": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فُوبُو",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "76aefe508b88dbae": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فوب",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "44002fb26a749227": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فوبو",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "95c85502664df174": {
+      "file": "ilayhi.mp3",
+      "text": "إِلَيْهِ",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "95c85702664df4da": {
+      "file": "ilayhi.mp3",
+      "text": "إِلَيْهْ",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "a5a98294661cf6b0": {
+      "file": "ilayhi.mp3",
+      "text": "إليه",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "3fada52e79343e44": {
+      "file": "abihi.mp3",
+      "text": "أَبِيهِ",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "3fada72e793441aa": {
+      "file": "abihi.mp3",
+      "text": "أَبِيهْ",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "8f3f43b7f3bd8fbf": {
+      "file": "abihi.mp3",
+      "text": "أبيه",
+      "voice": "ar-AE-FatimaNeural",
+      "context": "single_word",
+      "bytes": 44352
     }
   },
   "model": "eleven_v4"

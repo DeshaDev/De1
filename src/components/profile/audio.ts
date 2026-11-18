@@ -31,11 +31,11 @@ function resolveClipFile(manifest: AudioManifest, text: string): string | undefi
   const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
 
   const keysToTry = [
-    prepared ? audioKey(prepared) : undefined,
     audioKey(text),
+    audioKey(normalizeSpokenText(text)),
+    prepared ? audioKey(prepared) : undefined,
     pausal ? audioKey(pausal) : undefined,
     prepared ? audioKey(normalizeSpokenText(prepared)) : undefined,
-    audioKey(normalizeSpokenText(text)),
     pausal ? audioKey(normalizeSpokenText(pausal)) : undefined,
   ].filter(Boolean) as string[];
 
