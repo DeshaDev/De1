@@ -301,8 +301,8 @@ export function ParentPortalView({
       return;
     }
 
-    if (!consentChecked) {
-      setFormError('يرجى تأكيد موافقة ولي الأمر قبل إنشاء ملف الطفل.');
+    if (!consentChecked || !audioConsentChecked) {
+      setFormError('يجب تأكيد موافقة ولي الأمر والموافقة على تسجيل صوت الطفل لتحليل القراءة قبل المتابعة.');
       return;
     }
 
@@ -432,7 +432,7 @@ export function ParentPortalView({
                   هَيَّا نَقْرَأْ — رحلة طفلك
                 </h1>
                 <p className="text-sm text-slate-600 mt-1">
-                  تعرّف إلى مهارات طفلك في القراءة، وتابع تقدّمه من ملف الأسرة.
+                  نساعدك في حل مشكلة عسر القراءة وتنمية مهارات طفلك في القراءة خطوةً خطوة.
                 </p>
               </div>
             </div>
@@ -694,23 +694,25 @@ export function ParentPortalView({
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
+                      required
                       checked={consentChecked}
                       onChange={(e) => setConsentChecked(e.target.checked)}
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي وفق سياسة الخصوصية.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي وفق سياسة الخصوصية. *
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
+                      required
                       checked={audioConsentChecked}
                       onChange={(e) => setAudioConsentChecked(e.target.checked)}
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة معالجة الصوت المعتمدة لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
+                      أوافق على تسجيل صوت الطفل أثناء قراءة الكلمات والنصوص وتسمية الصور والحروف لتحليل قراءته آليًا وبناء خطة التدريب المناسبة له. *
                     </span>
                   </label>
                   <p className="text-[11px] text-slate-500">
@@ -914,27 +916,29 @@ export function ParentPortalView({
                     </label>
                   </details>
 
-                  {/* Consent Checkboxes */}
+                  {/* Consent Checkboxes (Mandatory) */}
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
+                      required
                       checked={consentChecked}
                       onChange={(e) => setConsentChecked(e.target.checked)}
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي السحابي وفق سياسة الخصوصية.
+                      أوافق بصفتي ولي أمر الطفل على إنشاء ملفه وحفظ نتائجه التعليمية في حسابي السحابي وفق سياسة الخصوصية. *
                     </span>
                   </label>
                   <label className="flex items-start gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
+                      required
                       checked={audioConsentChecked}
                       onChange={(e) => setAudioConsentChecked(e.target.checked)}
                       className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500"
                     />
                     <span className="text-xs text-slate-700 leading-relaxed">
-                      أوافق اختياريًا على تسجيل صوت الطفل عند قراءة الكلمات والنصوص أو تسمية الصور والحروف، وإرساله إلى خدمة معالجة الصوت المعتمدة لتحليله آليًا. عدم الموافقة لا يمنع الأنشطة الصامتة.
+                      أوافق على تسجيل صوت الطفل أثناء قراءة الكلمات والنصوص وتسمية الصور والحروف لتحليل قراءته آليًا وبناء خطة التدريب المناسبة له. *
                     </span>
                   </label>
                   <p className="text-[11px] text-slate-500">

@@ -354,10 +354,9 @@ export default function App() {
   const isAuthenticated = Boolean(supabaseUser || baseeraSession);
 
   const setActiveTab = (tab: ActiveTab) => {
-    // Strictly block guest access: all learning, screening, reading, and report tabs require login.
+    // Strictly require login: redirect unauthenticated visits to the parent portal cleanly.
     if (!PUBLIC_TABS.has(tab) && !supabaseUser && !baseeraSession) {
       setActiveTabState('parent-portal');
-      setAiStatusBanner('يرجى تسجيل الدخول أو إنشاء حساب ولي أمر أولًا؛ لا يمكن استخدام المنصة في وضع الزائر.');
       const portalPath = tabToUrlPath('parent-portal');
       if (typeof window !== 'undefined' && window.location.pathname !== portalPath) {
         window.history.pushState(null, '', portalPath);
@@ -384,7 +383,6 @@ export default function App() {
     if (supabaseAuthLoading) return;
     if (!PUBLIC_TABS.has(activeTab) && !isAuthenticated) {
       setActiveTabState('parent-portal');
-      setAiStatusBanner('يرجى تسجيل الدخول أو إنشاء حساب ولي أمر أولًا؛ لا يمكن استخدام المنصة في وضع الزائر.');
       if (typeof window !== 'undefined') {
         const portalPath = tabToUrlPath('parent-portal');
         if (window.location.pathname !== portalPath) {
@@ -1006,6 +1004,9 @@ export default function App() {
     const selectedCountry = (child.country || '').trim();
     if (!selectedCountry) {
       throw new Error('يرجى اختيار دولة الطفل.');
+    }
+    if (child.audioConsentGiven !== true) {
+      throw new Error('يجب الموافقة على تسجيل صوت الطفل لتحليل قراءته وتخصيص خطة التدريب.');
     }
 
     let currentUser = supabaseUser;

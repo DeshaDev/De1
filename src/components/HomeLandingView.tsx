@@ -172,9 +172,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <HnSkyDecor />
         <div className="bz-container relative grid lg:grid-cols-[1fr_1fr] gap-2 lg:gap-10 items-center pt-5 pb-10 sm:pt-10 lg:pt-12 lg:pb-14">
           <div className="relative z-10">
-            <h1 className="hn-display">ننمّي مهارات القراءة العربية لدى طفلك، خطوةً خطوة</h1>
+            <h1 className="hn-display">نساعدك في حل مشكلة عسر القراءة، وتنمية مهارات طفلك في القراءة</h1>
             <p className="hn-lead mt-5 max-w-[34rem]">
-              أنشطة قراءة عربية للأطفال من ٤ إلى ٨ سنوات، مع تدريب يتدرّج بحسب أداء الطفل.
+              اكتشف صعوبات القراءة مبكرًا ونمِّ مهارات طفلك في القراءة والنطق والإملاء خطوةً خطوة، عبر ألعاب فحص صوتية ومعرفية ممتعة وبرنامج تدريبي مخصّص يناسب مستواه.
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
@@ -187,7 +187,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             </div>
             <ul className="mt-7 flex flex-wrap gap-2">
               {[
-                { t: 'من ٤ إلى ٨ سنوات', icon: Users },
+                { t: 'من ٤ سنوات فأكثر', icon: Users },
                 { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
                 { t: `جلسة التدريب نحو ${ar(MINUTES_PER_SESSION + PROBE_MINUTES)} دقيقة`, icon: Timer },
               ].map((c) => (
@@ -371,7 +371,7 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
         <h2 className="hn-h2">خصوصية طفلك، وحدود ما نقيسه</h2>
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           {[
-            { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت لمهام التقييم إلا بعد موافقة منفصلة؛ ويمكن متابعة الأنشطة دون درجة صوتية.', tone: 'coral' },
+            { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت إلا بعد موافقة ولي الأمر الصريحة، ويُستخدم حصريًا لتحليل قراءة الطفل وتخصيص تدريبه.', tone: 'coral' },
             { icon: Users, t: 'بيانات طفلك', b: 'تُحفظ بيانات الملف والنتائج بأمان في حساب الأسرة المسجّل فقط.', tone: 'grape' },
             { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
             { icon: GraduationCap, t: 'لا تشخيص', b: 'التقرير يصف أداء الطفل في أنشطة المنصة، ولا يثبت وجود عسر القراءة.', tone: 'leaf' },

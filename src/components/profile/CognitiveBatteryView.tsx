@@ -431,12 +431,12 @@ function SetupView({
   const speechLocale = pronunciationLocaleForDialect(dialect);
   const [checks, setChecks] = useState({
     consent: Boolean(student.guardianConsentGiven),
-    audioConsent: false,
+    audioConsent: Boolean(student.guardianAudioConsentGiven),
     quiet: true,
     headphones: true,
     ready: true,
   });
-  const allChecked = checks.consent && checks.quiet && checks.headphones && checks.ready;
+  const allChecked = checks.consent && checks.audioConsent && checks.quiet && checks.headphones && checks.ready;
 
   if (!ageIsSupported) {
     return (
@@ -528,11 +528,11 @@ function SetupView({
               </span>
             </label>
             <label className="bz-check sm:col-span-2">
-              <input type="checkbox" checked={checks.audioConsent} onChange={(e) => setChecks({ ...checks, audioConsent: e.target.checked })} />
+              <input type="checkbox" required checked={checks.audioConsent} onChange={(e) => setChecks({ ...checks, audioConsent: e.target.checked })} />
               <span className="text-ink-2">
-                <span className="font-semibold text-ink">موافقة منفصلة على تسجيل الصوت ومعالجته</span>
+                <span className="font-semibold text-ink">موافقة تسجيل صوت الطفل لتحليل القراءة *</span>
                 <span className="block bz-small bz-muted">
-                  أوافق على تسجيل صوت الطفل أثناء قراءة القصة والكلمات الحقيقية والكلمات المصنوعة، وأثناء التسمية السريعة للصور والحروف، وإرسال التسجيل إلى خدمة معالجة الصوت المعتمدة لتحليله مقابل عناصر المهمة المرجعية. لا يحفظ تطبيق هَيَّا نَقْرَأْ ملف التسجيل الصوتي ضمن سجل الطفل؛ وقد تُحفظ نتيجة التحليل والتفريغ النصي وملخص الكلمات والسرعة في التقرير. يمكنني رفض هذه الموافقة ومتابعة المهام غير الصوتية دون تقييم صوتي.
+                  أوافق على تسجيل صوت الطفل أثناء قراءة القصة والكلمات وتسمية الصور والحروف لتحليل قراءته آليًا وتقديم خطة تدريب دقيقة له. لا يُحفظ التسجيل الصوتي الخام في سجل الطفل.
                 </span>
               </span>
             </label>
