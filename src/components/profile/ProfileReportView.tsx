@@ -1,28 +1,35 @@
-import React, { useState } from 'react';
-import { ArrowRight, Printer, Dumbbell, AlertTriangle, ChevronDown, Info, Check } from 'lucide-react';
-import { BATTERY, DOMAINS, SUBTESTS_BY_ID, SubtestId, subtestsForAge } from '../../cognitiveProfile/battery';
-import { ageCautionAr, CognitiveProfile, ScoredSubtest, formatAge } from '../../cognitiveProfile/scoring';
-import { FLAG_TEXT_AR, READING_MEASURE_NOTE_AR, SUBTEST_GUIDANCE, WORD_NONWORD_NOTE_AR, readingMeasureLineAr } from '../../cognitiveProfile/guidance';
+import React, { useEffect } from 'react';
+import { ArrowRight, Printer, Dumbbell, AlertTriangle, Info, Check, X } from 'lucide-react';
+import { BATTERY, SUBTESTS_BY_ID, SubtestId, subtestsForAge } from '../../cognitiveProfile/battery';
+import { ageCautionAr, CognitiveAudioAssessmentEvidence, CognitiveProfile, ScoredSubtest, formatAge } from '../../cognitiveProfile/scoring';
+import { FLAG_TEXT_AR, SUBTEST_GUIDANCE, WORD_NONWORD_NOTE_AR, readingMeasureLineAr } from '../../cognitiveProfile/guidance';
 import { SPELL_ERROR_TEXT_AR } from '../../cognitiveProfile/readingTasks';
-import { DIALECT_LABELS_AR, DIALECT_SENSITIVE_ITEMS, type BatterySession, type ScreeningSnapshot } from '../../cognitiveProfile/storage';
+import { DIALECT_SENSITIVE_ITEMS, type BatterySession, type ScreeningSnapshot } from '../../cognitiveProfile/storage';
 import { BrandMark } from '../ui/BrandMark';
 
 const toArabicDigits = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
-function PerformanceBar({ scored }: { scored: ScoredSubtest }) {
-  const label = SUBTESTS_BY_ID[scored.subtestId].skillNameAr;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-ink-2">{toArabicDigits(scored.correct)}/{toArabicDigits(scored.total)} إجابة صحيحة</span>
-        <strong className="bz-num text-ink">{toArabicDigits(scored.percent)}٪ داخل هذه المهمة</strong>
-      </div>
-      <div className="h-2.5 rounded-full overflow-hidden bg-soft" role="img" aria-label={label}>
-        <span className="block h-full rounded-full bg-brand" style={{ width: scored.percent + '%' }} />
-      </div>
-    </div>
-  );
-}
+/** Within-task bands, used only to order what to praise and what to practise; not norms. */
+type Band = 'good' | 'building' | 'practice';
+const bandOf = (percent: number): Band => (percent >= 85 ? 'good' : percent >= 60 ? 'building' : 'practice');
+const BAND_TEXT: Record<Band, { label: string; className: string; bar: string }> = {
+  good: { label: 'أداء جيد', className: 'bg-emerald-50 text-emerald-800 border-emerald-200', bar: 'bg-emerald-500' },
+  building: { label: 'يحتاج تثبيتًا', className: 'bg-amber-50 text-amber-900 border-amber-200', bar: 'bg-amber-500' },
+  practice: { label: 'يحتاج تدريبًا', className: 'bg-rose-50 text-rose-800 border-rose-200', bar: 'bg-rose-500' },
+};
+
+const WORD_STATUS: Record<CognitiveAudioAssessmentEvidence['words'][number]['errorType'], { text: string; ok: boolean | null }> = {
+  None: { text: 'صحيحة', ok: true },
+  DialectVariant: { text: 'صحيحة (نطق لهجي مقبول)', ok: true },
+  Mispronunciation: { text: 'نطق غير دقيق', ok: false },
+  Substitution: { text: 'قُرئت كلمة أخرى', ok: false },
+  Omission: { text: 'لم تُقرأ', ok: false },
+  Insertion: { text: 'كلمة زائدة', ok: false },
+  Unconfirmed: { text: 'غير مؤكدة', ok: null },
+};
+
+/** Tasks read aloud whose word-by-word result is shown to the adult. */
+const WORD_DETAIL_TASKS: SubtestId[] = ['wordReading', 'nonwordReading', 'oralReading'];
 
 interface Props {
   profile: CognitiveProfile;
@@ -32,21 +39,48 @@ interface Props {
   previous?: ScreeningSnapshot | null;
 }
 
+function resultLine(scored: ScoredSubtest): string {
+  return (
+    readingMeasureLineAr(scored.subtestId, scored) ??
+    `${toArabicDigits(scored.correct)} من ${toArabicDigits(scored.total)} إجابة صحيحة`
+  );
+}
+
 export function ProfileReportView({ profile, session, onBack, onStartTraining, previous = null }: Props) {
-  const [openStrategy, setOpenStrategy] = useState<SubtestId | null>(null);
+  const ageTasks = subtestsForAge(session.ageMonths);
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
-  const flagged = profile.subtests.filter((s) => s.flags.length > 0);
+  // One ordered list: every task of this child's battery, plus any older result outside it.
+  const taskOrder: SubtestId[] = [
+    ...ageTasks.map((t) => t.id),
+    ...BATTERY.filter((t) => scoredById.has(t.id) && !ageTasks.some((a) => a.id === t.id)).map((t) => t.id),
+  ];
+  const withScore = profile.subtests.filter((s) => s.scoreAvailable !== false);
+  const noVoiceScore = profile.subtests.filter((s) => s.scoreAvailable === false);
+  const notDone = taskOrder.filter((id) => !scoredById.has(id));
+  const good = withScore.filter((s) => bandOf(s.percent) === 'good');
+  const needsWork = withScore.filter((s) => bandOf(s.percent) !== 'good').sort((a, b) => a.percent - b.percent);
+
   const dialectNotes = session.dialect
     ? (session.results.auditoryDiscrimination?.responses ?? [])
         .filter((r) => !r.correct && DIALECT_SENSITIVE_ITEMS[r.itemId]?.dialects.includes(session.dialect!))
         .map((r) => DIALECT_SENSITIVE_ITEMS[r.itemId].pairAr)
     : [];
-  const totalTasks = subtestsForAge(session.ageMonths).length;
-  /** Reading and naming tasks are shown with their raw measures, apart from the percent-correct tasks. */
-  const isMeasureTask = (id: SubtestId) => SUBTESTS_BY_ID[id].domain === 'reading' || SUBTESTS_BY_ID[id].domain === 'naming';
-  const readingScored = BATTERY.filter((t) => isMeasureTask(t.id)).map((t) => scoredById.get(t.id)).filter((x): x is ScoredSubtest => Boolean(x));
+  const wordDetails = WORD_DETAIL_TASKS.map((id) => ({
+    id,
+    evidence: scoredById.get(id)?.scoreAvailable !== false ? session.results[id]?.audioAssessment : undefined,
+  })).filter((d): d is { id: SubtestId; evidence: CognitiveAudioAssessmentEvidence } => Boolean(d.evidence?.words?.length));
+  const word = scoredById.get('wordReading');
+  const nonword = scoredById.get('nonwordReading');
   const spelling = scoredById.get('spelling');
   const testedDate = new Date(session.startedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+  const caution = ageCautionAr(session.ageMonths);
+
+  // Folded sections must be open on paper.
+  useEffect(() => {
+    const openAll = () => document.querySelectorAll<HTMLDetailsElement>('.print-report-root details').forEach((d) => { d.open = true; });
+    window.addEventListener('beforeprint', openAll);
+    return () => window.removeEventListener('beforeprint', openAll);
+  }, []);
 
   return (
     <div className="space-y-5" dir="rtl">
@@ -69,20 +103,22 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
           <div className="flex items-start gap-4">
             <BrandMark size={44} />
             <div>
-              <p className="bz-small text-brand font-semibold">هَيَّا نَقْرَأْ · ملخص أداء أنشطة القراءة</p>
+              <p className="bz-small text-brand font-semibold">هَيَّا نَقْرَأْ · تقرير فحص مهارات القراءة</p>
               <h1 className="bz-h2 mt-1" style={{ fontSize: 'clamp(24px, 2.6vw, 32px)' }}>{session.childName}</h1>
-              <p className="bz-small text-ink-2 mt-1">العمر عند الفحص: <strong className="text-ink">{formatAge(profile.ageMonths)}</strong></p>
+              <p className="bz-small text-ink-2 mt-1">العمر عند الفحص: <strong className="text-ink">{toArabicDigits(formatAge(profile.ageMonths))}</strong></p>
             </div>
           </div>
           <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 bz-small">
             <dt className="bz-muted">تاريخ الفحص</dt>
             <dd className="text-ink font-semibold">{testedDate}</dd>
-            <dt className="bz-muted">الفاحص</dt>
-            <dd className="text-ink font-semibold">{session.examinerName || '—'}</dd>
-            <dt className="bz-muted">اللغة المستهدفة</dt>
-            <dd className="text-ink font-semibold">العربية الفصحى المعيارية</dd>
+            {session.examinerName && (
+              <>
+                <dt className="bz-muted">الفاحص</dt>
+                <dd className="text-ink font-semibold">{session.examinerName}</dd>
+              </>
+            )}
             <dt className="bz-muted">المهام المكتملة</dt>
-            <dd className="text-ink font-semibold bz-num">{toArabicDigits(profile.subtests.length)} من {toArabicDigits(totalTasks)}</dd>
+            <dd className="text-ink font-semibold bz-num">{toArabicDigits(taskOrder.length - notDone.length)} من {toArabicDigits(taskOrder.length)}</dd>
           </dl>
         </header>
 
@@ -94,133 +130,159 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </p>
           )}
 
-          <section className="rounded-2xl p-6 bg-soft border border-line space-y-2" aria-labelledby="session-summary-title">
-            <p className="bz-small font-semibold text-brand">ملخص الجلسة</p>
-            <h2 id="session-summary-title" className="bz-h2" style={{ fontSize: 'clamp(22px, 2.4vw, 28px)' }}>
-              أداء الطفل داخل الأنشطة المكتملة
-            </h2>
-            <p className="text-[16px] leading-[1.8] text-ink max-w-3xl">
-              يعرض هذا التقرير عدد الإجابات الصحيحة ونسبتها داخل كل مهمة، وأزمنة الاستجابة وملاحظات التنفيذ. لا تمثل هذه النسب مئينات أو مقارنة بالأقران أو مؤشرًا لوجود عسر القراءة.
-            </p>
-            <p className="bz-small text-ink-2">
-              الفحص الحالي استكشافي وغير مقنن على عينة عربية مستقلة. استخدم النتائج لفهم ما حدث أثناء الأنشطة واختيار ممارسة تعليمية مناسبة، لا لاتخاذ قرار تشخيصي أو عالي الأثر.
-            </p>
+          {/* 1. Summary */}
+          <section aria-labelledby="summary-title" className="space-y-4">
+            <h2 id="summary-title" className="bz-h3" style={{ fontSize: 22 }}>الخلاصة</h2>
+            {withScore.length === 0 ? (
+              <p className="bz-small text-ink-2">لا توجد بعد مهام مكتملة بدرجة صالحة لعرض خلاصة.</p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
+                  <h3 className="font-bold text-emerald-900">ما أتقنه الطفل</h3>
+                  {good.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5 bz-small text-ink">
+                      {good.map((s) => (
+                        <li key={s.subtestId} className="flex gap-2"><Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />{SUBTESTS_BY_ID[s.subtestId].skillNameAr}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 bz-small text-ink-2">لم تصل أي مهمة بعد إلى مستوى الإتقان (٨٥٪ فأكثر).</p>
+                  )}
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
+                  <h3 className="font-bold text-amber-950">ما يحتاج إلى تدريب (الأضعف أولًا)</h3>
+                  {needsWork.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5 bz-small text-ink">
+                      {needsWork.map((s) => (
+                        <li key={s.subtestId} className="flex gap-2">
+                          <span className="text-amber-700 shrink-0">●</span>
+                          <span>{SUBTESTS_BY_ID[s.subtestId].skillNameAr} <span className="bz-muted bz-num">({toArabicDigits(s.percent)}٪)</span></span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 bz-small text-ink-2">لا توجد مهارة ضعيفة في المهام المكتملة.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {word?.scoreAvailable && nonword?.scoreAvailable && word.percent - nonword.percent >= 25 && (
+              <p className="rounded-xl bg-soft p-4 bz-small text-ink-2">
+                <strong className="text-ink">
+                  كلمات حقيقية {toArabicDigits(word.percent)}٪ · كلمات مصنوعة {toArabicDigits(nonword.percent)}٪.
+                </strong>{' '}
+                {WORD_NONWORD_NOTE_AR}
+              </p>
+            )}
+            {(noVoiceScore.length > 0 || notDone.length > 0) && (
+              <div className="rounded-xl border border-line p-4 bz-small text-ink-2 space-y-1">
+                {notDone.length > 0 && (
+                  <p><strong className="text-ink">لم تُنجز بعد:</strong> {notDone.map((id) => SUBTESTS_BY_ID[id].gameNameAr).join('، ')}. أكملها لتكتمل الصورة.</p>
+                )}
+                {noVoiceScore.length > 0 && (
+                  <p><strong className="text-ink">بلا تقييم صوتي:</strong> {noVoiceScore.map((s) => SUBTESTS_BY_ID[s.subtestId].gameNameAr).join('، ')} — لم يصل تقييم آلي صالح للتسجيل، فلم تُحتسب. يمكن إعادة اللعبة.</p>
+                )}
+              </div>
+            )}
+            <div className="no-print">
+              <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
+                <Dumbbell className="w-4 h-4" /> ابدأ التدريب على هذه المهارات
+              </button>
+            </div>
           </section>
 
-          {profile.structuredLiteracy && (
-            <section className="rounded-3xl border-2 border-teal-300 bg-linear-to-b from-teal-50/60 to-white p-6 sm:p-8 shadow-sm space-y-6" aria-labelledby="pillars-title">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-200/80 pb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl" aria-hidden="true">🎯</span>
-                  <div>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300">
-                      نموذج التدريس القرائي المنظم
-                    </span>
-                    <h2 id="pillars-title" className="text-xl sm:text-2xl font-black text-teal-950 mt-1">
-                      التحليل الوصفي والمسار التعليمي المقترح للطفل
-                    </h2>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={onStartTraining}
-                  className="bz-btn bz-btn-primary shadow-sm font-bold gap-2 text-sm no-print cursor-pointer"
-                >
-                  <Dumbbell className="w-4 h-4" /> ابدأ التدريب على هذه الخطة
-                </button>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-5">
-                <div className="p-5 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 text-sm font-black">١</span>
-                    <h3>ما الذي يستطيع الطفل فعله بنجاح؟</h3>
-                  </div>
-                  <ul className="space-y-2 pr-2 text-sm text-slate-800">
-                    {profile.structuredLiteracy.strengthsAr.map((s, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-white border border-amber-200 shadow-2xs space-y-3">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold text-base">
-                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-amber-100 text-amber-800 text-sm font-black">٢</span>
-                    <h3>أين تركزت أخطاء الطفل داخل المهام؟</h3>
-                  </div>
-                  <ul className="space-y-2 pr-2 text-sm text-slate-800">
-                    {profile.structuredLiteracy.breakdownPointsAr.map((b, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-amber-600 text-base leading-none shrink-0 mt-0.5">⚠️</span>
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-white border border-sky-200 shadow-2xs space-y-3">
-                  <div className="flex items-center gap-2 text-sky-900 font-bold text-base">
-                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-sky-100 text-sky-800 text-sm font-black">٣</span>
-                    <h3>التفسير الصوتي الوصفي للملاحظات</h3>
-                  </div>
-                  <p className="text-sm text-slate-800 leading-relaxed pr-2">
-                    {profile.structuredLiteracy.phonologicalRootAr}
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-3">
-                  <div className="flex items-center gap-2 text-purple-900 font-bold text-base">
-                    <span className="grid place-items-center w-7 h-7 rounded-lg bg-purple-100 text-purple-800 text-sm font-black">٤</span>
-                    <h3>الخطوة التعليمية التالية المقترحة</h3>
-                  </div>
-                  <p className="text-sm text-slate-800 leading-relaxed pr-2 font-medium">
-                    {profile.structuredLiteracy.nextInstructionalTargetAr}
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {previous && (
-            <section className="bz-card p-6 space-y-2" aria-labelledby="previous-title">
-              <h2 id="previous-title" className="bz-h3">سجل فحص سابق</h2>
-              <p className="bz-small text-ink-2">
-                يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}، وعدد المهام المكتملة فيه: {toArabicDigits(previous.completedSubtests)}.
-              </p>
-              <p className="text-xs text-ink-2">
-                لا تعرض المنصة حاليًا مقارنة معيارية أو فرقًا في المئينات بين الجلسات؛ فالجدول المرجعي مؤقت ولم يُقنّن. يجب تفسير كل نتيجة بوصفها أداءً داخل المهمة في ذلك اليوم.
-              </p>
-            </section>
-          )}
-
-          {readingScored.length > 0 && (
-            <section aria-labelledby="reading-title" className="space-y-4">
-              <div className="pb-4 border-b border-line">
-                <h2 id="reading-title" className="bz-h3" style={{ fontSize: 22 }}>القراءة والإملاء والتسمية السريعة</h2>
-                <p className="bz-small bz-muted mt-1">{READING_MEASURE_NOTE_AR}</p>
-              </div>
-              <ul className="grid md:grid-cols-2 gap-3">
-                {readingScored.map((scored) => (
-                  <li key={scored.subtestId} className="rounded-2xl border border-line p-4">
-                    <p className="font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</p>
-                    <p className="bz-small text-ink-2 mt-1 bz-num">{readingMeasureLineAr(scored.subtestId, scored)}</p>
-                    {scored.flags.includes('discontinued') && <p className="text-[12px] text-muted mt-1">{FLAG_TEXT_AR.discontinued}</p>}
+          {/* 2. Every task once */}
+          <section aria-labelledby="tasks-title" className="space-y-3">
+            <h2 id="tasks-title" className="bz-h3" style={{ fontSize: 22 }}>نتيجة كل مهمة</h2>
+            <ul className="divide-y divide-line rounded-2xl border border-line">
+              {taskOrder.map((id) => {
+                const task = SUBTESTS_BY_ID[id];
+                const scored = scoredById.get(id);
+                const band = scored && scored.scoreAvailable !== false ? bandOf(scored.percent) : null;
+                return (
+                  <li key={id} className="p-4 grid sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] gap-x-6 gap-y-2 items-center">
+                    <div className="bz-small leading-snug">
+                      <span className="font-semibold text-ink">{task.skillNameAr}</span>
+                      <span className="block text-[12px] bz-muted">{task.icon} {task.gameNameAr}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {!scored ? (
+                        <p className="bz-small bz-muted">لم تُنجز بعد.</p>
+                      ) : scored.scoreAvailable === false ? (
+                        <p className="bz-small text-ink-2">لم يتوفر تقييم صوتي صالح؛ لم تُحتسب.</p>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="bz-small text-ink-2 bz-num">{resultLine(scored)}</span>
+                            <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full border ${BAND_TEXT[band!].className}`}>
+                              {BAND_TEXT[band!].label} · <span className="bz-num">{toArabicDigits(scored.percent)}٪</span>
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full overflow-hidden bg-soft" role="img" aria-label={`${task.skillNameAr}: ${scored.percent}٪`}>
+                            <span className={`block h-full rounded-full ${BAND_TEXT[band!].bar}`} style={{ width: scored.percent + '%' }} />
+                          </div>
+                        </>
+                      )}
+                      {scored && scored.flags.length > 0 && (
+                        <p className="text-[12px] text-warn">{scored.flags.map((flag) => FLAG_TEXT_AR[flag]).filter(Boolean).join(' ')}</p>
+                      )}
+                      {id === 'auditoryDiscrimination' && dialectNotes.length > 0 && (
+                        <p className="text-[12px] text-ink-2">أخطاء قد تعود إلى لهجة البيت: {dialectNotes.join('، ')}.</p>
+                      )}
+                    </div>
                   </li>
-                ))}
-              </ul>
-              {scoredById.get('wordReading')?.scoreAvailable && scoredById.get('nonwordReading')?.scoreAvailable && (
-                <p className="rounded-xl bg-soft p-4 bz-small text-ink-2">
-                  <strong className="text-ink">
-                    كلمات حقيقية {toArabicDigits(scoredById.get('wordReading')!.percent)}٪ · كلمات مصنوعة {toArabicDigits(scoredById.get('nonwordReading')!.percent)}٪.
-                  </strong>{' '}
-                  {WORD_NONWORD_NOTE_AR}
-                </p>
-              )}
+                );
+              })}
+            </ul>
+          </section>
+
+          {/* 3. Word-by-word reading results (shown only here, never to the child) */}
+          {(wordDetails.length > 0 || (spelling?.measures?.spellingErrors?.length ?? 0) > 0) && (
+            <section aria-labelledby="words-title" className="space-y-4">
+              <div>
+                <h2 id="words-title" className="bz-h3" style={{ fontSize: 22 }}>تفاصيل القراءة كلمةً كلمة</h2>
+                <p className="bz-small bz-muted mt-1">ما سمعه التقييم الآلي في كل كلمة. لم تُعرض هذه النتائج على الطفل أثناء الفحص.</p>
+              </div>
+              {wordDetails.map(({ id, evidence }) => {
+                const wrong = evidence.words.filter((w) => WORD_STATUS[w.errorType]?.ok === false).length;
+                return (
+                  <details key={id} className="rounded-2xl border border-line overflow-hidden" open={wrong > 0}>
+                    <summary className="px-5 py-3 cursor-pointer bg-soft font-semibold text-ink bz-small">
+                      {SUBTESTS_BY_ID[id].gameNameAr} — <span className="bz-num">{toArabicDigits(evidence.words.length - wrong)}</span> صحيحة، <span className="bz-num">{toArabicDigits(wrong)}</span> بها خطأ
+                    </summary>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse min-w-[420px]">
+                        <thead>
+                          <tr className="text-ink-2 bg-card">
+                            <th className="px-3 py-2 text-right font-semibold">الكلمة</th>
+                            <th className="px-3 py-2 text-right font-semibold">النتيجة</th>
+                            <th className="px-3 py-2 text-right font-semibold">ما سُمع</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {evidence.words.map((w, i) => {
+                            const status = WORD_STATUS[w.errorType] ?? { text: w.errorType, ok: null };
+                            return (
+                              <tr key={`${w.word}-${i}`} className="border-t border-line">
+                                <td className="px-3 py-2 font-bold text-ink text-base" lang="ar">{w.word}</td>
+                                <td className={`px-3 py-2 ${status.ok === false ? 'text-rose-700' : status.ok ? 'text-emerald-700' : 'text-ink-2'}`}>
+                                  <span className="inline-flex items-center gap-1">
+                                    {status.ok === false ? <X className="w-4 h-4" /> : status.ok ? <Check className="w-4 h-4" /> : null}
+                                    {status.text}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-ink-2" lang="ar">{status.ok === false && w.spokenWord && w.spokenWord !== w.word ? w.spokenWord : '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                );
+              })}
               {spelling?.measures?.spellingErrors && spelling.measures.spellingErrors.length > 0 && (
-                <div className="rounded-xl border border-line p-4 bz-small text-ink-2">
+                <div className="rounded-2xl border border-line p-4 bz-small text-ink-2">
                   <p className="font-semibold text-ink">أخطاء الإملاء حسب النوع</p>
                   <ul className="mt-2 space-y-1">
                     {spelling.measures.spellingErrors.map((e) => (
@@ -232,144 +294,50 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </section>
           )}
 
-          <section aria-labelledby="tasks-title">
-            <div className="pb-4 border-b border-line">
-              <h2 id="tasks-title" className="bz-h3" style={{ fontSize: 22 }}>{readingScored.length > 0 ? 'المهارات السابقة للقراءة' : 'نتائج المهام المكتملة'}</h2>
-              <p className="bz-small bz-muted mt-1">النسبة = عدد الإجابات الصحيحة ÷ إجمالي بنود المهمة. لا تقارن النسب بين مهام مختلفة باعتبارها مقياسًا واحدًا.</p>
-            </div>
-            <div className="divide-y divide-line">
-              {(Object.keys(DOMAINS) as Array<keyof typeof DOMAINS>).map((domainId) => {
-                const domain = DOMAINS[domainId];
-                const members = BATTERY.filter((item) => item.domain === domainId && !isMeasureTask(item.id));
-                const scoredMembers = members.map((item) => ({ item, scored: scoredById.get(item.id) })).filter((entry) => entry.scored);
-                if (scoredMembers.length === 0) return null;
+          {/* 4. Practice ideas, only where practice is needed */}
+          {needsWork.length > 0 && (
+            <section aria-labelledby="practice-title" className="space-y-3">
+              <h2 id="practice-title" className="bz-h3" style={{ fontSize: 22 }}>كيف تساعد طفلك</h2>
+              {needsWork.map((s) => {
+                const guidance = SUBTEST_GUIDANCE[s.subtestId];
+                if (!guidance) return null;
                 return (
-                  <div key={domainId} className="py-5 grid md:grid-cols-[14rem_minmax(0,1fr)] gap-x-8 gap-y-3">
-                    <div>
-                      <h3 className="font-semibold text-ink flex items-center gap-2">
-                        <span className="w-1.5 h-5 rounded-full" style={{ backgroundColor: domain.color }} aria-hidden="true" />
-                        {domain.nameAr}
-                      </h3>
-                    </div>
-                    <div className="space-y-4">
-                      {scoredMembers.map(({ item, scored }) => (
-                        <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] items-center gap-x-4 gap-y-1">
-                          <div className="bz-small leading-snug">
-                            <span className="font-semibold text-ink">{item.skillNameAr}</span>
-                            <span className="block text-[12px] bz-muted">{item.gameNameAr}</span>
-                          </div>
-                          <PerformanceBar scored={scored as ScoredSubtest} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <section aria-labelledby="practice-title">
-            <h2 id="practice-title" className="bz-h3" style={{ fontSize: 22 }}>أفكار للممارسة التعليمية</h2>
-            <p className="mt-2 bz-small text-ink-2">
-              هذه الأفكار مرتبطة بموضوع كل نشاط، وليست توصيات تشخيصية أو نتيجة لتصنيف معياري. اختر منها ما يلائم اهتمام الطفل ومستواه الفعلي.
-            </p>
-            <div className="mt-4 space-y-3">
-              {profile.subtests.map((scored) => {
-                const id = scored.subtestId;
-                const guidance = SUBTEST_GUIDANCE[id];
-                const isOpen = openStrategy === id;
-                return (
-                  <div key={id} className="rounded-2xl border border-line overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setOpenStrategy(isOpen ? null : id)}
-                      className="w-full flex items-center justify-between gap-3 px-5 py-4 text-right bg-card hover:bg-soft cursor-pointer"
-                      aria-expanded={isOpen}
-                    >
-                      <span className="flex flex-wrap items-center gap-3">
-                        <span className="font-semibold text-ink">{SUBTESTS_BY_ID[id].skillNameAr}</span>
-                        <span className="bz-badge bz-badge-neutral">{readingMeasureLineAr(id, scored) ?? `${toArabicDigits(scored.percent)}٪ داخل المهمة`}</span>
-                      </span>
-                      <ChevronDown className={`w-5 h-5 text-muted transition-transform no-print ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    <div className={`${isOpen ? 'block' : 'hidden'} print:block px-5 pb-5 pt-1 border-t border-line`}>
-                      <dl className="grid md:grid-cols-2 gap-4 py-4 bz-small">
-                        <div><dt className="font-semibold text-ink">ماذا تقيس المهارة</dt><dd className="text-ink-2 mt-1">{guidance.measuresAr}</dd></div>
-                        <div><dt className="font-semibold text-ink">علاقتها بتعلّم القراءة</dt><dd className="text-ink-2 mt-1">{guidance.whyItMattersAr}</dd></div>
-                      </dl>
+                  <details key={s.subtestId} className="rounded-2xl border border-line overflow-hidden">
+                    <summary className="px-5 py-3 cursor-pointer font-semibold text-ink">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}</summary>
+                    <div className="px-5 pb-5 pt-2 border-t border-line space-y-3 bz-small">
+                      <p className="text-ink-2"><strong className="text-ink">لماذا تهم: </strong>{guidance.whyItMattersAr}</p>
                       <div className="grid md:grid-cols-2 gap-3">
-                        <div className="rounded-xl p-4 bg-soft">
-                          <p className="font-semibold text-ink bz-small">أنشطة مقترحة داخل الصف</p>
-                          <ul className="list-disc pr-5 mt-2 space-y-1.5 bz-small text-ink-2">
-                            {guidance.strategiesAr.map((strategy) => <li key={strategy}>{strategy}</li>)}
+                        <div className="rounded-xl p-4 bg-sun-soft">
+                          <p className="font-semibold text-ink">في البيت</p>
+                          <ul className="list-disc pr-5 mt-2 space-y-1.5 text-ink-2">
+                            {guidance.homeActivitiesAr.map((a) => <li key={a}>{a}</li>)}
                           </ul>
                         </div>
-                        <div className="rounded-xl p-4 bg-sun-soft">
-                          <p className="font-semibold text-ink bz-small">أفكار للممارسة في البيت</p>
-                          <ul className="list-disc pr-5 mt-2 space-y-1.5 bz-small text-ink-2">
-                            {guidance.homeActivitiesAr.map((activity) => <li key={activity}>{activity}</li>)}
+                        <div className="rounded-xl p-4 bg-soft">
+                          <p className="font-semibold text-ink">في الصف</p>
+                          <ul className="list-disc pr-5 mt-2 space-y-1.5 text-ink-2">
+                            {guidance.strategiesAr.map((a) => <li key={a}>{a}</li>)}
                           </ul>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </details>
                 );
               })}
-            </div>
-          </section>
+            </section>
+          )}
 
-          <section>
-            <h2 className="bz-h3" style={{ fontSize: 22 }}>جدول النتائج الخام</h2>
-            <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-              <table className="w-full text-sm border-collapse min-w-[520px]">
-                <thead>
-                  <tr className="bg-soft text-ink-2">
-                    <th className="px-3 py-2.5 text-right font-semibold">المهمة</th>
-                    <th className="px-3 py-2.5 font-semibold">الصحيح / الإجمالي</th>
-                    <th className="px-3 py-2.5 font-semibold">النسبة داخل المهمة</th>
-                    <th className="px-3 py-2.5 font-semibold">الزمن</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profile.subtests.map((scored) => (
-                    <tr key={scored.subtestId} className="border-t border-line text-center bz-num">
-                      <td className="px-3 py-2.5 text-right font-semibold text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}</td>
-                      <td className="px-3 py-2.5">{scored.scoreAvailable === false ? '—' : toArabicDigits(`${scored.correct}/${scored.total}`)}</td>
-                      <td className="px-3 py-2.5">{scored.scoreAvailable === false ? '—' : `${toArabicDigits(scored.percent)}٪`}</td>
-                      <td className="px-3 py-2.5">
-                        {scored.scoreAvailable === false ? '—' : scored.measures
-                          ? scored.measures.seconds !== null
-                            ? `${scored.measures.secondsLabel ? `${scored.measures.secondsLabel}: ` : ''}${toArabicDigits(scored.measures.seconds)} ث${scored.measures.correctPerMinute !== undefined ? ` · ${toArabicDigits(scored.measures.correctPerMinute)}/د` : ''}`
-                            : '—'
-                          : scored.medianRtMs
-                            ? `${toArabicDigits((scored.medianRtMs / 1000).toFixed(1))} ث`
-                            : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {flagged.length > 0 && (
-              <div className="mt-3 rounded-xl p-4 bg-warn-soft bz-small text-ink-2 space-y-1">
-                <p className="font-semibold text-warn">ملاحظات سياق التطبيق</p>
-                {flagged.map((scored) => (
-                  <p key={scored.subtestId}>
-                    <strong className="text-ink">{SUBTESTS_BY_ID[scored.subtestId].skillNameAr}:</strong> {scored.flags.map((flag) => FLAG_TEXT_AR[flag]).join(' ')}
-                  </p>
-                ))}
-              </div>
-            )}
-          </section>
+          {previous && (
+            <p className="bz-small text-ink-2 rounded-xl border border-line p-4">
+              يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })} ({toArabicDigits(previous.completedSubtests)} مهام مكتملة).
+            </p>
+          )}
 
           <section className="rounded-2xl bg-soft p-5 bz-small text-ink-2 space-y-2">
             <p className="flex items-center gap-1.5 font-semibold text-ink"><Info className="w-4 h-4" /> حدود التفسير</p>
-            {ageCautionAr(session.ageMonths) && <p className="font-semibold text-ink">{ageCautionAr(session.ageMonths)}</p>}
+            {caution && <p className="font-semibold text-ink">{caution}</p>}
             <p>
-              النسب المعروضة هي نسبة الإجابات الصحيحة داخل المهمة فقط. جدول المقارنة العمرية في النظام مؤقت وغير مبني على عينة عربية مقننة؛ لذلك لا نعرض المئينات أو درجات الخطورة في هذا التقرير.
-            </p>
-            <p>
-              الفحص استكشافي وليس تشخيصًا. قد يتأثر الأداء بالانتباه والتعب وفهم التعليمات واللهجة وجودة الصوت. إذا كانت لديك مخاوف مستمرة بشأن قراءة الطفل في البيت أو المدرسة، فاطلب تقييمًا شاملًا لدى جهة متخصصة مؤهلة.
+              النسب هي الإجابات الصحيحة داخل كل مهمة، وليست مقارنة بأطفال آخرين أو تشخيصًا لعسر القراءة. قد يتأثر الأداء بالتعب والانتباه وجودة الصوت. إذا استمرت مخاوفك بشأن قراءة طفلك، فاطلب تقييمًا لدى أخصائي مؤهل.
             </p>
           </section>
         </div>
