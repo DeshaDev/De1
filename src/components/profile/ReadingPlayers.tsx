@@ -777,7 +777,7 @@ export function PassagePlayer({
           <div className="space-y-4 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
               <div className="inline-flex items-center gap-2 text-teal-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
                 <span>التسجيل الصوتي جارٍ… اقرأ على مهلك</span>
               </div>
               <span className="text-slate-600 text-xs">
