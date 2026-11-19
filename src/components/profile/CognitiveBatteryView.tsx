@@ -54,6 +54,8 @@ import {
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
 import { TeachingChoicePlayer } from './TeachingPlayers';
 import { HINTS } from '../../cognitiveProfile/curriculum';
+import { exampleForTag } from '../../cognitiveProfile/examples';
+import { TaskExampleCard } from './TaskExample';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
 import { MascotMomentLive } from '../ui/MascotLive';
@@ -158,6 +160,20 @@ function SubtestRunner({
     setStage('transition');
     speak(PHRASES.testStarts);
   };
+
+  // A worked example comes before the first question of each kind (the first sound, the last
+  // sound, joining parts, counting...), shown once per game.
+  const [seenExamples, setSeenExamples] = useState<Set<string>>(() => new Set());
+  const currentChoice =
+    subtest.kind === 'choice'
+      ? stage === 'practice'
+        ? subtest.practice[index]
+        : stage === 'test'
+          ? subtest.items[index]
+          : undefined
+      : undefined;
+  const pendingExample = currentChoice ? exampleForTag(currentChoice.tag) : null;
+  const showExample = Boolean(pendingExample && !seenExamples.has(pendingExample.key));
 
   const nextPractice = () => {
     if (index + 1 < practiceCount) setIndex(index + 1);
@@ -265,7 +281,14 @@ function SubtestRunner({
           </div>
         )}
 
-        {stage === 'practice' && subtest.kind === 'choice' && (
+        {showExample && pendingExample && (
+          <TaskExampleCard
+            key={pendingExample.key}
+            example={pendingExample.example}
+            onReady={() => setSeenExamples((prev) => new Set(prev).add(pendingExample.key))}
+          />
+        )}
+        {!showExample && stage === 'practice' && subtest.kind === 'choice' && (
           // Practice teaches the rule: a hint first, and after a wrong answer an explanation of why
           // the right answer is right, then a second try. Practice is never scored.
           <TeachingChoicePlayer key={`p-${index}`} item={subtest.practice[index]} guided onDone={() => nextPractice()} />
@@ -299,12 +322,12 @@ function SubtestRunner({
           </div>
         )}
 
-        {stage === 'test' && subtest.kind === 'choice' && HINTS[(subtest as ChoiceSubtest).items[index]?.tag ?? ''] && (
+        {!showExample && stage === 'test' && subtest.kind === 'choice' && HINTS[(subtest as ChoiceSubtest).items[index]?.tag ?? ''] && (
           <p className="font-child text-sm sm:text-base text-ink-2 text-center max-w-lg mx-auto -mb-2">
             💡 {HINTS[(subtest as ChoiceSubtest).items[index].tag!]}
           </p>
         )}
-        {stage === 'test' && subtest.kind === 'choice' && (
+        {!showExample && stage === 'test' && subtest.kind === 'choice' && (
           <ChoicePlayer
             key={`t-${index}`}
             item={(subtest as ChoiceSubtest).items[index]}

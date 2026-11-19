@@ -5,6 +5,7 @@
  * is missing from this catalogue.
  */
 import { curriculumPhrases, explainMistake } from './curriculum';
+import { ALL_EXAMPLES } from './examples';
 import { BATTERY, type AudioSegment } from './battery';
 import { lex } from './lexicon';
 import { PHRASES, palThis, palWhere, palYes } from './phrases';
@@ -82,6 +83,7 @@ export function buildAudioCatalog(): CatalogEntry[] {
     }
   }
 
+  for (const example of ALL_EXAMPLES) for (const text of example.audio) add(map, text, 'examples');
   for (const phrase of curriculumPhrases()) add(map, phrase, 'curriculum');
 
   for (const skill of Object.keys(SKILLS) as SkillId[]) {

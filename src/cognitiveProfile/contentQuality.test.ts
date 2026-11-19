@@ -231,3 +231,22 @@ describe('word familiarity in scored items (Gulf Arabic norms, Khwaileh et al., 
     }
   });
 });
+
+describe('worked examples before each question type', () => {
+  it('never use a picture or word from a scored question, and every choice question type has one', async () => {
+    const { BATTERY } = await import('./battery');
+    const { ALL_EXAMPLES, exampleForTag } = await import('./examples');
+    const scored = new Set<string>();
+    const tags = new Set<string>();
+    for (const s of BATTERY) {
+      if (s.kind !== 'choice') continue;
+      for (const item of s.items) {
+        tags.add(item.tag ?? '');
+        for (const o of item.options) scored.add(o.id);
+        if (item.stimulus) scored.add(String(item.stimulus.label));
+      }
+    }
+    for (const ex of ALL_EXAMPLES) for (const row of ex.rows) if (row.picture) assert.ok(!scored.has(row.picture), row.picture);
+    for (const tag of tags) assert.ok(exampleForTag(tag), `no example for ${tag}`);
+  });
+});
