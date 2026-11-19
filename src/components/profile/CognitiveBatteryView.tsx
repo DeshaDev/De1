@@ -240,14 +240,17 @@ function SubtestRunner({
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
-          <div className="flex flex-col items-center text-center gap-3 max-w-xl">
+          <div className="flex flex-col items-center text-center gap-4 max-w-xl">
+            <span className="text-6xl" aria-hidden="true">{subtest.icon}</span>
+            <h2 className="font-child text-2xl sm:text-3xl font-black text-ink">{subtest.gameNameAr}</h2>
+            <p className="font-child text-xl sm:text-2xl leading-relaxed text-ink" lang="ar">{subtest.introAudio}</p>
             <button
               type="button"
               onClick={() => speak(subtest.introAudio)}
               className="bz-btn bz-btn-ghost bz-btn-sm"
               aria-label="إعادة سماع التعليمات"
             >
-              <Volume2 className="w-4 h-4" /> استمع
+              <Volume2 className="w-4 h-4" /> استمع مرة أخرى
             </button>
             <button
               type="button"
@@ -513,9 +516,9 @@ function SetupView({
               <label className="bz-field">
                 <span className="bz-hint">السنوات</span>
                 <select value={years} onChange={(e) => setYears(Number(e.target.value))} className="bz-input">
-                  {[4, 5, 6, 7, 8, 9].map((y) => (
+                  {Array.from({ length: 10 }, (_, i) => i + 4).map((y) => (
                     <option key={y} value={y}>
-                      {y >= 9 ? '+٨ سنوات' : `${toArabicDigits(y)} سنوات`}
+                      {toArabicDigits(y)} {y >= 11 ? 'سنة' : 'سنوات'}
                     </option>
                   ))}
                 </select>
@@ -527,10 +530,6 @@ function SetupView({
                 </select>
               </label>
             </div>
-            <span className="bz-hint">يساعد العمر الدقيق على وصف ظروف أداء الطفل بحذر. النتائج الحالية وصفية داخل الأنشطة وليست مقارنة معيارية بالأقران.</span>
-            {ageCautionAr(years * 12 + months) && (
-              <p className="rounded-xl bg-warn-soft p-3 bz-small text-ink-2">{ageCautionAr(years * 12 + months)}</p>
-            )}
           </div>
         </div>
 
@@ -1006,7 +1005,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             </div>
           </div>
           <p className="bz-small text-brand font-semibold mt-2">
-            فحص {session.childName} · {session.ageMonths >= 108 ? '+٨ سنوات' : `${toArabicDigits(Math.floor(session.ageMonths / 12))} سنوات${session.ageMonths % 12 > 0 ? ` و${toArabicDigits(session.ageMonths % 12)} أشهر` : ''}`}
+            فحص {session.childName} · {`${toArabicDigits(Math.floor(session.ageMonths / 12))} ${Math.floor(session.ageMonths / 12) >= 11 ? 'سنة' : 'سنوات'}${session.ageMonths % 12 > 0 ? ` و${toArabicDigits(session.ageMonths % 12)} أشهر` : ''}`}
           </p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
             {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
@@ -1127,7 +1126,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           </button>
         ) : (
           <span className="bz-small bz-muted">
-            يُفتح البرنامج التدريبي المخصّص بعد إنجاز الفحص.
+            يتحدّث البرنامج التدريبي بعد كل جلسة من نتائجها.
           </span>
         )}
         {completed.length === ageTasks.length && ageTasks.length > 0 && (

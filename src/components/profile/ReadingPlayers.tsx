@@ -123,14 +123,14 @@ function audioFailureMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : '';
   if (code === 'UNSUPPORTED_SPEECH_DIALECT') return 'التقييم الصوتي غير متاح للهجة المختارة. لم نغيّر اللهجة تلقائيًا.';
   if (code === 'AUDIO_CONSENT_REQUIRED') return 'يلزم تسجيل موافقة ولي الأمر المنفصلة على معالجة الصوت قبل التسجيل.';
-  if (code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'خدمة التقييم الصوتي غير مهيّأة على الخادم؛ لم تُحتسب درجة لهذه المهمة.';
+  if (code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'تقييم الصوت غير متاح الآن. أعد المحاولة بعد قليل، أو تابع دون درجة.';
   if (code === 'AUDIO_RECORDING_UNAVAILABLE' || code === 'AUDIO_CONTEXT_UNAVAILABLE') return 'المتصفح أو الجهاز لا يدعم تسجيل الصوت المطلوب. لم تُحتسب درجة.';
   if (code === 'AUDIO_DURATION_OUT_OF_RANGE') return 'مدة التسجيل خارج النطاق المسموح. لم تُحتسب درجة.';
-  if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم يتمكن محرك الصوت من حسم جميع الكلمات. لم نحسب الأخطاء أو الدرجة.';
+  if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم نسمع القراءة بوضوح. اضغط «إعادة التسجيل» واقرأ مرة أخرى بصوت واضح.';
   if (code === 'AUDIO_SERVER_UNAVAILABLE') return 'خادم التقييم الصوتي غير متصل الآن، لذلك ستبقى المهمة دون درجة.';
-  if (code === 'COGNITIVE_AUDIO_WORD_UNCONFIRMED') return 'لم يتمكن محرك الصوت من حسم نطق هذه الكلمة. لم نُسجّلها خطأ؛ أعد تسجيل الكلمة وحدها.';
+  if (code === 'COGNITIVE_AUDIO_WORD_UNCONFIRMED') return 'لم نسمع الكلمة بوضوح. اضغط «إعادة التسجيل» واقرأها مرة أخرى.';
   if (code && /[\u0600-\u06FF]/.test(code)) return code;
-  return 'تعذر إكمال التقييم الصوتي عبر الخدمة. يمكنك حفظ المهمة دون درجة وإعادة المحاولة لاحقًا.';
+  return 'لم نسمع القراءة بوضوح. اضغط «إعادة التسجيل» واقرأ مرة أخرى بصوت واضح وقريبًا من الميكروفون.';
 }
 
 // ---------------------------------------------------------------------------

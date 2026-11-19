@@ -38,12 +38,12 @@ function audioErrorMessage(error: unknown): string {
     return 'التقييم الصوتي الآلي لا يدعم اللهجة المحددة في الملف حتى الآن. لم نحسب أي درجة.';
   }
   if (code === 'AZURE_NO_RECOGNIZED_SPEECH' || code === 'AZURE_NO_WORD_LEVEL_RESULTS' || code === 'AZURE_SPEECH_ASSESSMENT_FAILED') {
-    return 'لم نتمكن من تأكيد قراءة التسجيل كاملًا. لم نحتسبه خطأً على الطفل؛ جرّب التسجيل مرة أخرى.';
+    return 'لم نسمع القراءة بوضوح. اضغط «أعد القراءة» واقرأ النص مرة أخرى بصوت واضح.';
   }
   if (code === 'AUDIO_RECORDING_UNAVAILABLE' || code === 'AUDIO_CONTEXT_UNAVAILABLE') {
     return 'تعذّر تشغيل الميكروفون أو تسجيل الصوت في هذا المتصفح.';
   }
-  return 'لم يكتمل القياس الصوتي. لم نحفظ درجة غير مؤكدة؛ يمكنك إعادة المحاولة أو متابعة التدريب.';
+  return 'لم نتمكّن من سماع القراءة بوضوح. اضغط «أعد القراءة» واقرأ النص مرة أخرى بصوت واضح وقريبًا من الميكروفون.';
 }
 
 export function TransferMeasureView({ student, point, form, session, onComplete, onSkip }: Props) {
@@ -202,6 +202,9 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
         <p className="bz-small text-brand font-bold">محطة قصيرة · {point === 'pre' ? 'بداية البرنامج' : point === 'mid' ? 'منتصف البرنامج' : 'نهاية البرنامج'}</p>
         <h2 id="transfer-measure-title" className="mt-1 font-child text-2xl font-black text-slate-900">تحدّي قراءة جديدة</h2>
         <p className="mt-1 text-sm text-slate-600">اقرأ الكلمات الجديدة، ثم اقرأ النص القصير بهدوء.</p>
+        <p className="mt-2 rounded-lg bg-card border border-line px-3 py-2 text-sm text-ink">
+          هذا قياس قصير لتقدّم طفلك، بلا تصحيح، ويتكرّر في بداية البرنامج ومنتصفه ونهايته. بعده مباشرة يبدأ درس اليوم: شرح، ثم تمارين يُصحَّح فيها كل خطأ فورًا ويعيد الطفل المحاولة.
+        </p>
         <div className="mt-3 flex items-center justify-between text-xs font-bold text-slate-500">
           <span>المحطة {ARABIC_DIGITS(index + 1)} من {ARABIC_DIGITS(tasks.length)}</span>
           <span>اقرأ على مهل</span>
@@ -228,8 +231,8 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
         </div>
 
         {error && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950" role="alert">
-            {error}
+          <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-base font-bold leading-7 text-amber-950 flex gap-2" role="alert">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-1" aria-hidden="true" /> {error}
           </div>
         )}
 
@@ -246,7 +249,7 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
         ) : (
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button type="button" onClick={() => void startRecording()} disabled={busy} className="bz-btn bz-btn-primary bz-btn-lg w-full sm:w-auto">
-              <Mic className="h-5 w-5" /> {busy ? 'جارٍ التقييم…' : 'ابدأ القراءة'}
+              <Mic className="h-5 w-5" /> {busy ? 'جارٍ التقييم…' : error ? 'أعد القراءة' : 'ابدأ القراءة'}
             </button>
             <button type="button" onClick={onSkip} disabled={busy} className="bz-btn bz-btn-ghost">
               <SkipForward className="h-4 w-4" /> تابع التدريب دون قياس

@@ -103,7 +103,7 @@ const SubtestResultSchema = z
 
 export const CognitiveBatteryUploadSchema = z
   .object({
-    ageMonths: z.number().int().min(36).max(144),
+    ageMonths: z.number().int().min(36).max(167),
     examinerName: z.string().max(80).default(''),
     startedAt: isoDate,
     dialect: z.enum(['msa', 'gulf', 'levantine', 'egyptian', 'iraqi', 'maghrebi', 'sudanese', 'other']).optional(),
@@ -167,7 +167,7 @@ export const TrainingProgressUploadSchema = z
     plan: z
       .object({
         createdAt: isoDate,
-        ageMonths: z.number().int().min(36).max(144).optional(),
+        ageMonths: z.number().int().min(36).max(167).optional(),
         preventive: z.boolean(),
         focus: z.array(z.enum(SKILL_IDS)).min(1).max(8),
         rationaleAr: z.array(z.string().max(300)).max(10),
