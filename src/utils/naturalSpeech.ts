@@ -189,15 +189,22 @@ export async function playNaturalArabicAudio(
     }
   }
 
-  // 2. Pre-recorded clips (public/audio/v1/) first — verified, offline-friendly, zero keys
+  // 2. Pre-recorded clips (public/audio/v1/) first — verified authentic studio voice
   try {
     const manifest = await getAudioManifest();
     if (manifest?.clips) {
       const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
+      const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
       const keysToTry = [
-        preparedText ? audioKey(preparedText) : undefined,
+        text,
+        text.trim(),
         audioKey(text),
+        preparedText,
+        preparedText ? audioKey(preparedText) : undefined,
+        pausal,
         pausal ? audioKey(pausal) : undefined,
+        unvowelled,
+        unvowelled ? audioKey(unvowelled) : undefined,
       ].filter(Boolean) as string[];
 
       let clip: { file: string } | undefined;
@@ -218,28 +225,8 @@ export async function playNaturalArabicAudio(
     }
   } catch {}
 
-  // 3. Fallback: Baseera server endpoint (/api/ai/tts)
-  try {
-    const res = await authenticatedFetch('/api/ai/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: preparedText, voice, rate, pitch }),
-    });
-
-    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-      const data = await res.json();
-      if (data?.audioBase64) {
-        const mimeType = data.mimeType || 'audio/mp3';
-        const dataUrl = `data:${mimeType};base64,${data.audioBase64}`;
-        cacheAudio(cacheKey, dataUrl);
-        const audio = new Audio(dataUrl);
-        await playElement(audio);
-        return;
-      }
-    }
-  } catch {}
-
-  console.warn('[NaturalSpeech] Speech playback ended without audio for:', preparedText);
+  // Strict Authentic Human Audio Policy:
+  // Robotic / Azure TTS synthesis is completely forbidden.
   options.onEnd?.();
 }
 

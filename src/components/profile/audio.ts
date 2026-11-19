@@ -26,17 +26,24 @@ function loadManifest(): Promise<AudioManifest | null> {
 }
 
 function resolveClipFile(manifest: AudioManifest, text: string): string | undefined {
+  if (!text) return undefined;
   const prepared = prepareArabicTtsText(text);
   // Also strip trailing short vowels (dammah/fatha/kasrah) for pausal match (e.g. قَلَمُ -> قَلَم, سَيَّارَةُ -> سَيَّارَة)
   const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
+  const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
 
   const keysToTry = [
+    text,
+    text.trim(),
     audioKey(text),
-    audioKey(normalizeSpokenText(text)),
+    prepared,
     prepared ? audioKey(prepared) : undefined,
+    pausal,
     pausal ? audioKey(pausal) : undefined,
-    prepared ? audioKey(normalizeSpokenText(prepared)) : undefined,
-    pausal ? audioKey(normalizeSpokenText(pausal)) : undefined,
+    normalizeSpokenText(text),
+    audioKey(normalizeSpokenText(text)),
+    unvowelled,
+    unvowelled ? audioKey(unvowelled) : undefined,
   ].filter(Boolean) as string[];
 
   for (const k of keysToTry) {
@@ -127,27 +134,10 @@ async function playRecordedClip(text: string): Promise<boolean> {
 export async function speak(text: string): Promise<void> {
   const played = await playRecordedClip(text);
   if (played) return;
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    const done = () => {
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
-    };
-    const watchdog = setTimeout(done, 15000);
-    const finish = () => {
-      clearTimeout(watchdog);
-      done();
-    };
-    playNaturalArabicAudio(text, {
-      voice: 'ar-AE-FatimaNeural',
-      rate: '0%',
-      pitch: '0%',
-      onEnd: finish,
-      onError: finish,
-    }).catch(finish);
-  });
+
+  // Strict Authentic Audio Policy:
+  // Only authentic human voice recordings (Suhair Al Abtah) are permitted.
+  // Artificial robotic / Azure synthesis fallbacks are completely eliminated.
 }
 
 export interface PlaybackHandle {
