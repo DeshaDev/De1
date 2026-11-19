@@ -2165,7 +2165,7 @@
     },
     "98ccc4b2de3dc1a2": {
       "file": "98ccc4b2de3dc1a2.mp3",
-      "text": "مَاءُ",
+      "text": "مَاء",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3181,7 +3181,7 @@
     },
     "2a8d0d6a54d41509": {
       "file": "dbc6486fa358bd6d.mp3",
-      "text": "قَلَمُ",
+      "text": "قَلَم",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3197,7 +3197,7 @@
     },
     "35d21130e8cdace8": {
       "file": "4210eb2db7353274.mp3",
-      "text": "وَلَدُ",
+      "text": "وَلَد",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3205,7 +3205,7 @@
     },
     "99807bf6157d0c34": {
       "file": "8890f2803f318698.mp3",
-      "text": "كِتَابُ",
+      "text": "كِتَاب",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3221,7 +3221,7 @@
     },
     "7f615f6018500836": {
       "file": "2e7b9a71b1c4a2d6.mp3",
-      "text": "شَجَرَةُ",
+      "text": "شَجَرَة",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3229,7 +3229,7 @@
     },
     "cd722e6a1c1d83a4": {
       "file": "124adaf3e51a20e8.mp3",
-      "text": "الشَّمْسُ",
+      "text": "الشَّمْس",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -3604,8 +3604,10 @@
     "مَاء": {
       "file": "98ccc4b2de3dc1a2.mp3",
       "text": "مَاء",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+      "bytes": 16343
     },
     "بَاب": {
       "file": "b4eec08c68b7527f.mp3",
@@ -3622,33 +3624,42 @@
     "يَد": {
       "file": "d76898a98eb7b9e8.mp3",
       "text": "يَد",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+      "bytes": 15089
     },
     "قَلَم": {
       "file": "dbc6486fa358bd6d.mp3",
       "text": "قَلَم",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+      "bytes": 16343
     },
     "وَلَد": {
-      "file": "d76898a98eb7b9e8.mp3",
+      "file": "4210eb2db7353274.mp3",
       "text": "وَلَد",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+      "bytes": 15089
     },
     "كِتَاب": {
       "file": "8890f2803f318698.mp3",
       "text": "كِتَاب",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+      "bytes": 15089
     },
     "الشَّمْس": {
-      "file": "bdfae00789dcc5b6.mp3",
+      "file": "124adaf3e51a20e8.mp3",
       "text": "الشَّمْس",
-      "context": "single_word",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4"
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 17597
     },
     "4384330463bb51d5": {
       "file": "4384330463bb51d5.mp3",
@@ -3841,6 +3852,22 @@
       "model": "eleven_v4",
       "context": "feedback",
       "bytes": 31764
+    },
+    "d76898a98eb7b9e8": {
+      "file": "d76898a98eb7b9e8.mp3",
+      "text": "يَد",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
+    },
+    "شَجَرَة": {
+      "file": "2e7b9a71b1c4a2d6.mp3",
+      "text": "شَجَرَة",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "single_word",
+      "bytes": 15089
     }
   },
   "model": "eleven_v4"

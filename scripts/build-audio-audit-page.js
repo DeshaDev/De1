@@ -4,6 +4,12 @@ import path from 'node:path';
 const manifestPath = path.resolve('public/audio/v1/manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
+// Helper to clean trailing inflection vowels on single words (pausal form)
+function cleanPausalText(text) {
+  if (!text || text.includes(' ')) return text;
+  return text.replace(/[\u064E\u064F\u0650]$/, '');
+}
+
 // Group manifest entries by unique audio file to prevent duplicate cards
 const fileMap = new Map();
 
@@ -11,6 +17,8 @@ for (const [key, clip] of Object.entries(manifest.clips)) {
   const fileName = clip.file;
   if (!fileName) continue;
   if (clip.context === 'phoneme') continue; // Purged from audit
+
+  const textClean = cleanPausalText(clip.text || key);
 
   if (!fileMap.has(fileName)) {
     let categoryLabel = 'أخرى';
@@ -22,21 +30,22 @@ for (const [key, clip] of Object.entries(manifest.clips)) {
 
     fileMap.set(fileName, {
       file: fileName,
-      primaryText: clip.text || key,
+      primaryText: textClean,
       categoryKey,
       categoryLabel,
       voice: 'صوت طبيعي (سُهير الأبطح)',
       sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
       audioUrl: `/audio/v1/${fileName}`,
-      aliases: new Set([clip.text, key]),
+      aliases: new Set([clip.text, key, textClean]),
     });
   } else {
     const existing = fileMap.get(fileName);
     if (clip.text) existing.aliases.add(clip.text);
     existing.aliases.add(key);
-    // If current text has better diacritics, prefer it as primaryText
-    if (clip.text && clip.text.length >= existing.primaryText.length && /[\u064B-\u0652]/.test(clip.text)) {
-      existing.primaryText = clip.text;
+    existing.aliases.add(textClean);
+    // If current text has better diacritics, prefer it as primaryText (clean pausal form)
+    if (textClean && textClean.length >= existing.primaryText.length && /[\u064B-\u0652]/.test(textClean)) {
+      existing.primaryText = textClean;
     }
   }
 }
