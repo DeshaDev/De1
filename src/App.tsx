@@ -659,8 +659,33 @@ export default function App() {
     };
   }, [baseeraSession?.token]);
 
-  const selectedStudent =
+  const rawSelectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0] || INITIAL_STUDENTS[0];
+
+  const selectedStudent: StudentRecord = {
+    ...rawSelectedStudent,
+    learningReport: rawSelectedStudent?.learningReport && typeof rawSelectedStudent.learningReport === 'object'
+      ? {
+          learningSummary: rawSelectedStudent.learningReport.learningSummary || 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
+          ocularMotorAnalysis: rawSelectedStudent.learningReport.ocularMotorAnalysis || 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
+          orthographicAndPhonologicalPatterns: rawSelectedStudent.learningReport.orthographicAndPhonologicalPatterns || 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+          dyscalculiaSpatialAnalysis: rawSelectedStudent.learningReport.dyscalculiaSpatialAnalysis || 'غير منطبق.',
+          interventionExercises: Array.isArray(rawSelectedStudent.learningReport.interventionExercises)
+            ? rawSelectedStudent.learningReport.interventionExercises
+            : [],
+          classroomAccommodations: Array.isArray(rawSelectedStudent.learningReport.classroomAccommodations)
+            ? rawSelectedStudent.learningReport.classroomAccommodations
+            : [],
+        }
+      : {
+          learningSummary: 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
+          ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
+          orthographicAndPhonologicalPatterns: 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+          dyscalculiaSpatialAnalysis: 'غير منطبق.',
+          interventionExercises: [],
+          classroomAccommodations: [],
+        },
+  };
 
   const selectedReadingRate = (() => {
     if (!selectedStudent || selectedStudent.sessionStatus !== 'completed') return null;
@@ -2453,7 +2478,7 @@ export default function App() {
                         ملخص الأداء
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        {selectedStudent.learningReport.learningSummary}
+                        {selectedStudent.learningReport?.learningSummary || 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.'}
                       </p>
                     </div>
                     <div className="pt-6 border-t border-slate-200 space-y-2">
@@ -2479,8 +2504,8 @@ export default function App() {
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed">
                         {
-                          selectedStudent.learningReport
-                            .orthographicAndPhonologicalPatterns
+                          selectedStudent.learningReport?.orthographicAndPhonologicalPatterns ||
+                          'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.'
                         }
                       </p>
                     </div>
@@ -2504,7 +2529,7 @@ export default function App() {
                       أنشطة يومية مقترحة
                     </h3>
                     <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white overflow-hidden">
-                      {selectedStudent.learningReport.interventionExercises.length > 0 ? (
+                      {(selectedStudent.learningReport?.interventionExercises || []).length > 0 ? (
                         selectedStudent.learningReport.interventionExercises.map(
                           (ex, idx) => (
                             <div
@@ -2539,7 +2564,7 @@ export default function App() {
                         تيسيرات مقترحة في الصف
                       </h3>
                       <ul className="space-y-2.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-xl p-5">
-                        {selectedStudent.learningReport.classroomAccommodations.length > 0 ? (
+                        {(selectedStudent.learningReport?.classroomAccommodations || []).length > 0 ? (
                           selectedStudent.learningReport.classroomAccommodations.map(
                             (acc, idx) => (
                               <li key={idx} className="flex items-start gap-2">
