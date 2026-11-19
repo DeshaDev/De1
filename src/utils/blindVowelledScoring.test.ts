@@ -111,3 +111,22 @@ test('handles silence as Omission and wraps cleanly into AzureAudioAssessmentRes
   assert.equal(wrapped.correctWordsCount, 0);
   assert.equal(wrapped.substitutionsCount, 1);
 });
+
+test('a whole passage is scored word by word from the blind vowelled transcript', async () => {
+  const { scoreBlindPassageArabic } = await import('./blindVowelledScoring');
+  const result = scoreBlindPassageArabic({
+    referenceWords: ['ذَهَبَ', 'سَامِي', 'إِلَى', 'السُّوقِ', 'وَكَتَبَ', 'رِسَالَةً'],
+    // vowel error on ذهب, «البيت» instead of «السوق», «إلى» skipped, pausal ending on the last word
+    blindTranscript: 'ذُهِبَ سَامِي الْبَيْتِ وَكَتَبَ رِسَالَهْ',
+    durationSeconds: 6,
+  });
+  const kinds = result.words.map((w) => w.errorType);
+  assert.notEqual(kinds[0], 'None', 'vowel error on ذهب is caught');
+  assert.equal(kinds[1], 'None');
+  assert.equal(kinds[2], 'Omission');
+  assert.notEqual(kinds[3], 'None', 'a different word is caught');
+  assert.equal(result.words[3].spokenWord, 'الْبَيْتِ');
+  assert.equal(kinds[4], 'None');
+  assert.ok(kinds[5] === 'None' || kinds[5] === 'DialectVariant', 'pausal reading of the last word is fine');
+  assert.equal(result.words.length, 6);
+});

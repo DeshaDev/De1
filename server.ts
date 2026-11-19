@@ -14,6 +14,7 @@ import { assessReadingAudioWithAzure, getAzureSpeechCredentials, type AzureAlign
 import { assessReadingAudioWithGemini, getGeminiApiKey, getOpenRouterApiKey } from './src/utils/geminiAudioAssessment';
 import {
   buildSingleWordAssessmentFromBlindScore,
+  scoreBlindPassageArabic,
   scoreBlindSingleWordArabic,
   transcribeArabicBlindWithGemini,
 } from './src/utils/blindVowelledScoring';
@@ -5062,44 +5063,43 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
           });
         }
       } else {
-        try {
-          result = await assessReadingAudioWithAzure({
-            referenceText: wordItem ? wordItem.referenceWord : task.referenceWords.join(' '),
-            referenceWords: wordItem ? [wordItem.referenceWord] : task.referenceWords,
-            audioWavBase64: body.audioWavBase64,
-            durationSeconds,
-            language: body.language,
-            dialectLabel: 'الفصحى المعيارية (ar-SA)',
-          });
-        } catch (azureErr) {
-          console.warn('[CognitiveAudio] Azure assessment failed, building resilient timing assessment:', azureErr);
-          const safeWpm = Math.round((task.referenceWords.length / Math.max(0.1, durationSeconds)) * 60);
-          result = {
-            sourceModel: 'azure_pronunciation_assessment',
-            assessmentMode: 'continuous-audio-alignment',
-            assessmentComplete: true,
-            transcript: task.referenceWords.join(' '),
-            accuracyScore: 85,
-            wordAccuracyPercent: 85,
-            fluencyScore: 85,
-            completenessScore: 100,
-            pronScore: 85,
-            wordsCount: task.referenceWords.length,
-            correctWordsCount: task.referenceWords.length,
-            substitutionsCount: 0,
-            omissionsCount: 0,
-            insertionsCount: 0,
-            wordsPerMinute: safeWpm,
-            wordsCorrectPerMinute: safeWpm,
-            words: task.referenceWords.map((word) => ({
-              word,
-              errorType: 'None' as const,
-              accuracyScore: 85,
-              spokenWord: word,
-              notesAr: 'تم تسجيل التسمية وحساب زمن الإنجاز بدقة.',
-            })),
-          };
+        // Passages and rapid naming: blind vowelled transcription first (Gemini hears the reading
+        // without the text, so it cannot "hear" the expected words), scored word by word against
+        // the text. Azure is the fallback. If no engine can score the recording, say so: a
+        // made-up result (every word correct) must never reach a child's report.
+        let scored: typeof result | null = null;
+        if (getOpenRouterApiKey() || getGeminiApiKey()) {
+          try {
+            const blind = await transcribeArabicBlindWithGemini({ audioWavBase64: body.audioWavBase64, mode: 'passage' });
+            scored = scoreBlindPassageArabic({
+              referenceWords: task.referenceWords,
+              blindTranscript: blind.isSilent ? '' : blind.transcript,
+              durationSeconds,
+            });
+          } catch (blindErr) {
+            console.warn('[CognitiveAudio] Blind passage transcription unavailable, falling back to Azure:', blindErr);
+          }
         }
+        if (!scored) {
+          try {
+            scored = await assessReadingAudioWithAzure({
+              referenceText: task.referenceWords.join(' '),
+              referenceWords: task.referenceWords,
+              audioWavBase64: body.audioWavBase64,
+              durationSeconds,
+              language: body.language,
+              dialectLabel: 'الفصحى المعيارية (ar-SA)',
+            });
+          } catch (azureErr) {
+            console.warn('[CognitiveAudio] No speech engine could score this recording:', azureErr);
+            res.status(503).json({
+              code: 'COGNITIVE_AUDIO_ENGINE_UNAVAILABLE',
+              error: 'تعذّر تقييم التسجيل الآن. أعد المحاولة بعد قليل، أو تابع دون درجة.',
+            });
+            return;
+          }
+        }
+        result = scored;
       }
 
       if (wordItem) {

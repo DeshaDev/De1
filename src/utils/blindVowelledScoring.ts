@@ -337,6 +337,23 @@ const BLIND_CHILD_SPEECH_PROMPT = `أنت خبير صوتيات ولغة عرب�
   "isSilent": false
 }`;
 
+const BLIND_PASSAGE_PROMPT = `أنت خبير صوتيات ولغة عربية متخصص في التفريغ الصوتي الحرفي لقراءة الأطفال.
+استمع إلى التسجيل المرفق، وهو طفل يقرأ نصًا أو يسمّي أشياء بصوت عالٍ، واكتب كل ما نطقه **حرفيًا وبالترتيب مع كامل التشكيل المسموع**.
+
+قواعد صارمة جدًا:
+1. لا تعرف النص المطلوب ولا تحاول تخمينه. اكتب ما سمعته فقط، حتى لو بدا خطأً أو بلا معنى.
+2. لا تصحّح أي كلمة، ولا تُكمل كلمة ناقصة، ولا تُضف كلمة لم تُنطق.
+3. إذا كرّر الطفل كلمة أو تراجع وأعاد، اكتب ما نطقه كما هو.
+4. اكتب الحركات التي سمعتها فعلًا (َ ُ ِ ْ ّ ً ٌ ٍ)، وإذا وقف على آخر الكلمة بالسكون فاكتب السكون.
+5. افصل بين الكلمات بمسافة واحدة، دون علامات ترقيم.
+6. إذا كان التسجيل صامتًا أو ضوضاء فقط، اجعل isSilent = true و transcript = "".
+
+أرجع JSON فقط بهذا الشكل:
+{
+  "transcript": "الكلمات المسموعة بالترتيب مع التشكيل",
+  "isSilent": false
+}`;
+
 let geminiDisabledUntil = 0;
 
 /**
@@ -346,7 +363,12 @@ let geminiDisabledUntil = 0;
 export async function transcribeArabicBlindWithGemini(args: {
   audioWavBase64: string;
   apiKey?: string;
+  /** 'passage' transcribes a whole reading (story, list of names) instead of one word. */
+  mode?: 'word' | 'passage';
 }): Promise<BlindTranscriptionResult> {
+  const passage = args.mode === 'passage';
+  const prompt = passage ? BLIND_PASSAGE_PROMPT : BLIND_CHILD_SPEECH_PROMPT;
+  const maxTokens = passage ? 1200 : 120;
   if (!args.audioWavBase64 || args.audioWavBase64.length > 6_000_000) {
     throw new Error('INVALID_AUDIO_PAYLOAD');
   }
@@ -382,18 +404,18 @@ export async function transcribeArabicBlindWithGemini(args: {
               role: 'user',
               parts: [
                 { inlineData: { mimeType: 'audio/wav', data: args.audioWavBase64 } },
-                { text: BLIND_CHILD_SPEECH_PROMPT },
+                { text: prompt },
               ],
             },
           ],
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0,
-            maxOutputTokens: 120,
+            maxOutputTokens: maxTokens,
             thinkingConfig: { thinkingBudget: 0 },
           },
         }),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(passage ? 30000 : 6000),
       });
 
       if (res.ok) {
@@ -430,14 +452,14 @@ export async function transcribeArabicBlindWithGemini(args: {
       body: JSON.stringify({
         model,
         temperature: 0,
-        max_tokens: 120,
+        max_tokens: maxTokens,
         reasoning: { effort: 'none' },
         response_format: { type: 'json_object' },
         messages: [
           {
             role: 'user',
             content: [
-              { type: 'text', text: BLIND_CHILD_SPEECH_PROMPT },
+              { type: 'text', text: prompt },
               {
                 type: 'input_audio',
                 input_audio: {
@@ -449,7 +471,7 @@ export async function transcribeArabicBlindWithGemini(args: {
           },
         ],
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(passage ? 45000 : 15000),
     });
 
     if (!res.ok) {
@@ -505,5 +527,76 @@ export function buildSingleWordAssessmentFromBlindScore(args: {
     wordsPerMinute: isOmission ? 0 : Math.round(60 / Math.max(0.5, durationSeconds)),
     wordsCorrectPerMinute: isCorrect ? Math.round(60 / Math.max(0.5, durationSeconds)) : 0,
     words: [alignedWord],
+  };
+}
+
+
+const skeleton = (w: string) =>
+  w.normalize('NFC').replace(/[\u064B-\u0652\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/^ال/, '');
+
+/**
+ * Score a whole reading from a blind (reference-free) vowelled transcript. Spoken words are
+ * aligned to the text by their letters; each aligned pair is then scored letter by letter and
+ * vowel by vowel (scoreBlindSingleWordArabic). Text words with no spoken match are omissions;
+ * spoken words with no text match are insertions.
+ */
+export function scoreBlindPassageArabic(args: {
+  referenceWords: string[];
+  blindTranscript: string;
+  durationSeconds: number;
+}): AzureAudioAssessmentResult {
+  const ref = args.referenceWords;
+  const spoken = args.blindTranscript.normalize('NFC').replace(PUNCT_AND_TATWEEL, ' ').split(/\s+/).filter(Boolean);
+  const rs = ref.map(skeleton);
+  const ss = spoken.map(skeleton);
+  const subCost = (i: number, j: number) => {
+    if (rs[i] === ss[j]) return 0;
+    const d = levenshtein(rs[i], ss[j]);
+    return d <= Math.max(1, Math.floor(rs[i].length / 3)) ? 0.6 : 1.4;
+  };
+  const n = ref.length, m = spoken.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
+    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + subCost(i - 1, j - 1));
+  }
+  const pairs: Array<number | null> = new Array(n).fill(null);
+  let insertions = 0;
+  for (let i = n, j = m; i > 0 || j > 0;) {
+    if (i > 0 && j > 0 && Math.abs(dp[i][j] - (dp[i - 1][j - 1] + subCost(i - 1, j - 1))) < 1e-9) { pairs[i - 1] = j - 1; i--; j--; }
+    else if (i > 0 && Math.abs(dp[i][j] - (dp[i - 1][j] + 1)) < 1e-9) { i--; }
+    else { insertions++; j--; }
+  }
+
+  const words: AzureAlignedWord[] = ref.map((word, i) => {
+    const j = pairs[i];
+    if (j === null) {
+      return { word, errorType: 'Omission', accuracyScore: 0, spokenWord: null, notesAr: 'لم تُقرأ هذه الكلمة.' };
+    }
+    const score = scoreBlindSingleWordArabic(word, spoken[j]);
+    return { word, errorType: score.errorType, accuracyScore: score.accuracyScore, spokenWord: score.spokenWord, notesAr: score.notesAr };
+  });
+  const correct = words.filter((w) => w.errorType === 'None' || w.errorType === 'DialectVariant').length;
+  const omissions = words.filter((w) => w.errorType === 'Omission').length;
+  const substitutions = words.length - correct - omissions;
+  const minutes = Math.max(1, args.durationSeconds) / 60;
+  const percent = n > 0 ? Math.round((correct / n) * 100) : 0;
+  return {
+    sourceModel: 'azure_pronunciation_assessment',
+    assessmentMode: 'short-audio-miscue',
+    assessmentComplete: true,
+    transcript: spoken.join(' '),
+    accuracyScore: percent,
+    wordAccuracyPercent: percent,
+    fluencyScore: null,
+    completenessScore: n > 0 ? Math.round(((n - omissions) / n) * 100) : 0,
+    pronScore: percent,
+    wordsCount: n,
+    correctWordsCount: correct,
+    substitutionsCount: substitutions,
+    omissionsCount: omissions,
+    insertionsCount: insertions,
+    wordsPerMinute: Math.round(m / minutes),
+    wordsCorrectPerMinute: Math.round(correct / minutes),
+    words,
   };
 }
