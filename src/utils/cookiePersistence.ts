@@ -155,7 +155,17 @@ export async function loadStoredStudents(): Promise<StudentRecord[]> {
   if (!raw) return [];
   const decrypted = await secureDecryptAsync<StudentRecord[]>(raw);
   if (!Array.isArray(decrypted)) {
-    throw new Error('Stored child records could not be decrypted; the original ciphertext was preserved.');
+    // The device key that encrypted these records is gone (site data partly cleared, another
+    // browser profile). Keep the unreadable copy aside for recovery, then let the app save again:
+    // refusing to save forever made every new result vanish on the next reload.
+    try {
+      window.localStorage.setItem(`${STUDENTS_STORAGE_KEY}.unreadable.${Date.now()}`, raw);
+      window.localStorage.removeItem(STUDENTS_STORAGE_KEY);
+    } catch {
+      throw new Error('Stored child records could not be decrypted or set aside; the original ciphertext was preserved.');
+    }
+    console.warn('Stored child records could not be decrypted with this device key; they were set aside and saving resumes.');
+    return [];
   }
   if (!isCurrentSecureCiphertext(raw)) {
     try {
