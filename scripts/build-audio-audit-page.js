@@ -10,22 +10,22 @@ const fileMap = new Map();
 for (const [key, clip] of Object.entries(manifest.clips)) {
   const fileName = clip.file;
   if (!fileName) continue;
+  if (clip.context === 'phoneme') continue; // Purged from audit
 
   if (!fileMap.has(fileName)) {
     let categoryLabel = 'أخرى';
     let categoryKey = clip.context || 'other';
     if (categoryKey === 'single_word') categoryLabel = 'كلمات الفحص والقراءة';
     else if (categoryKey === 'instruction') categoryLabel = 'تعليمات الألعاب والفحص';
-    else if (categoryKey === 'phoneme') categoryLabel = 'أصوات الحروف والمقاطع الفونيمية';
-    else if (categoryKey === 'praise') categoryLabel = 'عبارات المديح والتشجيع';
-    else if (categoryKey === 'pal') categoryLabel = 'التعلم المقترن (تسمية الكائنات)';
+    else if (categoryKey === 'praise') categoryLabel = 'عبارات التشجيع والمديح';
+    else if (categoryKey === 'pal') categoryLabel = 'التعلم المقترن (شخصيات الفضاء)';
 
     fileMap.set(fileName, {
       file: fileName,
       primaryText: clip.text || key,
       categoryKey,
       categoryLabel,
-      voice: clip.voice || 'صوت بشري طبيعي',
+      voice: 'صوت طبيعي (سُهير الأبطح)',
       sizeKb: clip.bytes ? Math.round(clip.bytes / 1024) : null,
       audioUrl: `/audio/v1/${fileName}`,
       aliases: new Set([clip.text, key]),
@@ -49,13 +49,7 @@ for (const entry of fileMap.values()) {
     textMap.set(textKey, entry);
   } else {
     const existing = textMap.get(textKey);
-    // Prefer authentic studio voice ML7jGRDg4E9hIl5qEm1Z
-    if (entry.voice && entry.voice.includes('ML7jGRDg4E9hIl5qEm1Z') && (!existing.voice || !existing.voice.includes('ML7jGRDg4E9hIl5qEm1Z'))) {
-      textMap.set(textKey, entry);
-      for (const a of existing.aliases) entry.aliases.add(a);
-    } else {
-      for (const a of entry.aliases) existing.aliases.add(a);
-    }
+    for (const a of entry.aliases) existing.aliases.add(a);
   }
 }
 
@@ -67,13 +61,12 @@ const entries = Array.from(textMap.values()).map(e => ({
 
 // Compute dynamic counts based on unique clips
 const singleWordCount = entries.filter(e => e.categoryKey === 'single_word').length;
-const phonemeCount = entries.filter(e => e.categoryKey === 'phoneme').length;
 const instructionCount = entries.filter(e => e.categoryKey === 'instruction').length;
 const praiseCount = entries.filter(e => e.categoryKey === 'praise').length;
 const palCount = entries.filter(e => e.categoryKey === 'pal').length;
 
-// Sort with priority: single_word and praise first, then instruction, then pal, then phoneme
-const categoryOrder = { single_word: 1, praise: 2, instruction: 3, pal: 4, phoneme: 5, other: 6 };
+// Sort with priority: single_word and praise first, then instruction, then pal
+const categoryOrder = { single_word: 1, praise: 2, instruction: 3, pal: 4, other: 5 };
 entries.sort((a, b) => {
   const diff = (categoryOrder[a.categoryKey] || 9) - (categoryOrder[b.categoryKey] || 9);
   if (diff !== 0) return diff;
@@ -85,7 +78,7 @@ const html = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مختبر مراجعة واستماع المقاطع الصوتية — هَيَّا نَقْرَأْ</title>
+  <title>مختبر مراجعة واستماع المقاطع الصوتية الطبيعية — هَيَّا نَقْرَأْ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
@@ -118,73 +111,70 @@ const html = `<!DOCTYPE html>
       margin: 0 auto;
     }
     header {
-      text-align: center;
-      margin-bottom: 2rem;
-      padding: 1.5rem 1rem;
       background: #ffffff;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      padding: 2rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      text-align: center;
     }
     h1 {
-      font-size: 1.85rem;
+      font-size: 1.8rem;
+      font-weight: 800;
       color: var(--primary-dark);
       margin-bottom: 0.5rem;
-      font-weight: 800;
     }
-    .subtitle {
+    p.subtitle {
       color: var(--text-muted);
       font-size: 0.95rem;
-      max-width: 650px;
-      margin: 0 auto 1.25rem;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
     }
     .stats-bar {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 1.25rem;
-      margin-top: 1rem;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text-muted);
+      gap: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
     }
     .stats-item {
       background: var(--bg);
-      padding: 0.4rem 0.85rem;
+      padding: 0.4rem 0.8rem;
       border-radius: 9999px;
       border: 1px solid var(--border);
     }
     .stats-item strong {
       color: var(--primary);
-      margin-left: 0.25rem;
     }
+
+    /* Controls */
     .controls {
-      position: sticky;
-      top: 1rem;
-      z-index: 50;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(8px);
-      padding: 1rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07);
-      margin-bottom: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      background: #ffffff;
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .search-input {
       width: 100%;
-      padding: 0.75rem 1rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.75rem;
+      border: 1.5px solid var(--border);
       font-size: 1rem;
       font-family: inherit;
-      border: 2px solid var(--border);
-      border-radius: 0.75rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s ease;
     }
     .search-input:focus {
       border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
     }
     .filter-tabs {
       display: flex;
@@ -194,24 +184,26 @@ const html = `<!DOCTYPE html>
     .filter-btn {
       background: var(--bg);
       border: 1px solid var(--border);
-      padding: 0.4rem 0.85rem;
-      border-radius: 0.5rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 9999px;
       font-size: 0.85rem;
       font-family: inherit;
-      font-weight: 600;
       cursor: pointer;
-      color: var(--text-muted);
-      transition: all 0.2s;
+      color: var(--text);
+      transition: all 0.15s ease;
+      font-weight: 500;
     }
     .filter-btn:hover {
-      background: #e2e8f0;
-      color: var(--text);
+      background: #f1f5f9;
+      border-color: #cbd5e1;
     }
     .filter-btn.active {
       background: var(--primary);
       color: #ffffff;
       border-color: var(--primary);
     }
+
+    /* Grid */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -222,15 +214,15 @@ const html = `<!DOCTYPE html>
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 1.25rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 0.75rem;
-      transition: transform 0.15s, box-shadow 0.15s;
+      gap: 1rem;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
     .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);
       border-color: #cbd5e1;
     }
     .card-header {
@@ -240,17 +232,17 @@ const html = `<!DOCTYPE html>
       gap: 0.5rem;
     }
     .badge {
-      font-size: 0.7rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 0.35rem;
+      font-size: 0.72rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
       font-weight: 700;
     }
     .badge-single_word { background: #dcfce7; color: #15803d; }
-    .badge-instruction { background: #e0e7ff; color: #4338ca; }
-    .badge-phoneme { background: #fef3c7; color: #b45309; }
-    .badge-praise { background: #fce7f3; color: #be185d; }
-    .badge-pal { background: #ccfbf1; color: #0f766e; }
+    .badge-instruction { background: #e0f2fe; color: #0369a1; }
+    .badge-praise { background: #fef3c7; color: #b45309; }
+    .badge-pal { background: #ede9fe; color: #6d28d9; }
     .badge-other { background: #f1f5f9; color: #475569; }
+
     .file-name {
       font-size: 0.75rem;
       color: var(--text-muted);
@@ -261,62 +253,72 @@ const html = `<!DOCTYPE html>
       text-overflow: ellipsis;
       max-width: 140px;
     }
+
     .card-body {
-      min-height: 4.5rem;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      gap: 0.4rem;
     }
     .card-text {
-      font-size: 1.45rem;
-      line-height: 1.4;
+      font-size: 1.35rem;
+      color: #0f172a;
+      line-height: 1.5;
       font-weight: 700;
-      color: var(--text);
       word-break: break-word;
     }
     .card-aliases {
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin-top: 0.35rem;
-      line-height: 1.3;
     }
+
     .card-meta {
-      font-size: 0.75rem;
-      color: var(--text-muted);
       display: flex;
       justify-content: space-between;
-      border-top: 1px dashed var(--border);
+      align-items: center;
+      font-size: 0.75rem;
+      color: #059669;
+      font-weight: 600;
       padding-top: 0.5rem;
-      margin-top: 0.25rem;
-    }
-    audio {
-      width: 100%;
-      height: 38px;
-      margin-top: 0.25rem;
-      outline: none;
+      border-top: 1px dashed var(--border);
     }
     .download-link {
-      font-size: 0.75rem;
       color: var(--primary);
       text-decoration: none;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
     }
     .download-link:hover {
       text-decoration: underline;
     }
+
+    audio {
+      width: 100%;
+      height: 38px;
+      border-radius: 0.5rem;
+      outline: none;
+    }
+
     .empty-state {
       grid-column: 1 / -1;
-      text-align: center;
+      background: #ffffff;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
       padding: 3rem 1rem;
+      text-align: center;
       color: var(--text-muted);
-      font-size: 1.1rem;
     }
+
     @media (max-width: 640px) {
       .grid {
         grid-template-columns: 1fr;
       }
+      header {
+        padding: 1.25rem 1rem;
+      }
       h1 {
-        font-size: 1.45rem;
+        font-size: 1.4rem;
       }
     }
   </style>
@@ -326,27 +328,25 @@ const html = `<!DOCTYPE html>
     <header>
       <h1>مختبر مراجعة واستماع المقاطع الصوتية — هَيَّا نَقْرَأْ</h1>
       <p class="subtitle">
-        صفحة شاملة لتدقيق واستماع كافة المقاطع الصوتية المعتمدة في المشروع. يمكنك الاستماع، البحث، وتنزيل أي ملف لمراجعته مع النص المصاحب بدقة.
+        صفحة شاملة لتدقيق واستماع كافة المقاطع الصوتية الطبيعية المعتمدة بصوت معلمة اللغة العربية (سُهير الأبطح). يمكنك الاستماع، البحث، وتنزيل أي ملف لمراجعته مع النص المصاحب بدقة تامة.
       </p>
       <div class="stats-bar">
         <span class="stats-item">إجمالي المقاطع المتاحة: <strong>${entries.length}</strong></span>
-        <span class="stats-item">كلمات القراءة: <strong>${singleWordCount}</strong></span>
-        <span class="stats-item">أصوات الفونيمات: <strong>${phonemeCount}</strong></span>
-        <span class="stats-item">التعليمات: <strong>${instructionCount}</strong></span>
-        <span class="stats-item">المديح والتشجيع: <strong>${praiseCount}</strong></span>
-        <span class="stats-item">التعلم المقترن: <strong>${palCount}</strong></span>
+        <span class="stats-item">كلمات الفحص والقراءة: <strong>${singleWordCount}</strong></span>
+        <span class="stats-item">عبارات التشجيع: <strong>${praiseCount}</strong></span>
+        <span class="stats-item">تعليمات الألعاب والفحص: <strong>${instructionCount}</strong></span>
+        <span class="stats-item">أصدقاء الفضاء: <strong>${palCount}</strong></span>
       </div>
     </header>
 
     <div class="controls">
-      <input type="text" id="searchInput" class="search-input" placeholder="ابحث عن أي كلمة أو عبارة (مثال: فُوب، سامي، إليه، شمس، أحسنت)..." autocomplete="off" />
+      <input type="text" id="searchInput" class="search-input" placeholder="ابحث عن أي كلمة أو عبارة (مثال: فُوب، سامي، شمس، أحسنت)..." autocomplete="off" />
       <div class="filter-tabs">
         <button class="filter-btn active" data-filter="all">الكل (${entries.length})</button>
         <button class="filter-btn" data-filter="single_word">كلمات الفحص والقراءة (${singleWordCount})</button>
         <button class="filter-btn" data-filter="praise">عبارات التشجيع (${praiseCount})</button>
         <button class="filter-btn" data-filter="instruction">تعليمات الألعاب والفحص (${instructionCount})</button>
-        <button class="filter-btn" data-filter="phoneme">أصوات الحروف والمقاطع (${phonemeCount})</button>
-        <button class="filter-btn" data-filter="pal">التعلم المقترن (${palCount})</button>
+        <button class="filter-btn" data-filter="pal">أصدقاء الفضاء (${palCount})</button>
       </div>
       <div id="resultCount" style="font-size: 0.85rem; color: var(--text-muted); text-align: left; margin-top: -0.25rem;">
         عرض ${entries.length} مقطعًا صوتيًا
@@ -384,65 +384,63 @@ const html = `<!DOCTYPE html>
     const searchInput = document.getElementById('searchInput');
     const filterButtons = document.querySelectorAll('.filter-btn');
     const cards = Array.from(document.querySelectorAll('.card'));
-    const resultCount = document.getElementById('resultCount');
     const emptyState = document.getElementById('emptyState');
+    const resultCount = document.getElementById('resultCount');
 
-    let currentCategory = 'all';
-    let searchQuery = '';
+    let currentFilter = 'all';
+    let currentSearch = '';
 
-    function normalizeAr(str) {
-      if (!str) return '';
-      return str
-        .normalize('NFC')
-        .replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, '')
-        .replace(/[.,!?،؟؛:"«»()[\\]{}]/g, '')
-        .replace(/[أإآ]/g, 'ا')
+    function normalizeArabic(text) {
+      if (!text) return '';
+      return text
+        .replace(/[\\u064B-\\u065F\\u0670]/g, '') // remove tashkeel
+        .replace(/[إأآا]/g, 'ا')
         .replace(/ة/g, 'ه')
         .replace(/ى/g, 'ي')
-        .trim()
-        .toLowerCase();
+        .toLowerCase()
+        .trim();
     }
 
-    function applyFilters() {
-      const q = normalizeAr(searchQuery);
-      let visible = 0;
+    function applyFilterAndSearch() {
+      const query = normalizeArabic(currentSearch);
+      let visibleCount = 0;
 
       cards.forEach(card => {
-        const cat = card.getAttribute('data-category');
+        const category = card.getAttribute('data-category');
         const rawSearch = card.getAttribute('data-search') || '';
-        const searchNormalized = normalizeAr(rawSearch);
+        const searchTarget = normalizeArabic(rawSearch) + ' ' + rawSearch.toLowerCase();
 
-        const matchesCat = (currentCategory === 'all' || cat === currentCategory);
-        const matchesQuery = !q || searchNormalized.includes(q) || rawSearch.includes(searchQuery);
+        const matchesCategory = (currentFilter === 'all' || category === currentFilter);
+        const matchesQuery = !query || searchTarget.includes(query);
 
-        if (matchesCat && matchesQuery) {
+        if (matchesCategory && matchesQuery) {
           card.style.display = 'flex';
-          visible++;
+          visibleCount++;
         } else {
           card.style.display = 'none';
         }
       });
 
-      resultCount.textContent = 'عرض ' + visible + ' مقطعًا صوتيًا';
-      emptyState.style.display = visible === 0 ? 'block' : 'none';
+      resultCount.textContent = 'عرض ' + visibleCount + ' مقطعًا صوتيًا';
+      emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
     }
 
     searchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value.trim();
-      applyFilters();
+      currentSearch = e.target.value;
+      applyFilterAndSearch();
     });
 
     filterButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         filterButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        currentCategory = btn.getAttribute('data-filter');
-        applyFilters();
+        currentFilter = btn.getAttribute('data-filter');
+        applyFilterAndSearch();
       });
     });
 
-    // Pause other audio players when one starts
-    document.addEventListener('play', (e) => {
+    // Auto pause other audio when one plays
+    document.addEventListener('play', function(e) {
       const audios = document.getElementsByTagName('audio');
       for (let i = 0; i < audios.length; i++) {
         if (audios[i] !== e.target) {
@@ -459,5 +457,4 @@ fs.writeFileSync(path.resolve('public/audio-audit.html'), html, 'utf8');
 if (fs.existsSync(path.resolve('dist'))) {
   fs.writeFileSync(path.resolve('dist/audio-audit.html'), html, 'utf8');
 }
-console.log(`Successfully generated deduplicated public/audio-audit.html and dist/audio-audit.html`);
-console.log(`Total unique audio clips displayed: ${entries.length}`);
+console.log(`Generated audio audit lab with ${entries.length} authentic studio clips.`);

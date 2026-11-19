@@ -455,10 +455,10 @@ const AUDITORY_SEQUENCES: string[][] = [
 ];
 
 export const PAL_CREATURES: PalCreature[] = [
-  { id: 'c1', name: 'مِيمُو', color: '#6E56CF', shape: 'circle', eyes: 1 },
-  { id: 'c2', name: 'رَافِي', color: '#f97316', shape: 'square', eyes: 2 },
-  { id: 'c3', name: 'كُودَا', color: '#14b8a6', shape: 'triangle', eyes: 3 },
-  { id: 'c4', name: 'سَالِي', color: '#ec4899', shape: 'blob', eyes: 2 },
+  { id: 'c1', name: 'زُوبَا', color: '#6E56CF', shape: 'circle', eyes: 1 },
+  { id: 'c2', name: 'نِيكُو', color: '#f97316', shape: 'square', eyes: 2 },
+  { id: 'c3', name: 'طَافِي', color: '#14b8a6', shape: 'triangle', eyes: 3 },
+  { id: 'c4', name: 'بِيرُو', color: '#ec4899', shape: 'blob', eyes: 2 },
 ];
 
 // ---------------------------------------------------------------------------
