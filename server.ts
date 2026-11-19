@@ -4007,7 +4007,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     ttsAudioCache.set(key, payload);
   };
 
-  app.post('/api/ai/tts', aiRateLimiter, async (req, res) => {
+  app.post('/api/ai/tts', aiRateLimiter, requireAiAccess(), async (req, res) => {
     const { text, voice, rate } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim() || text.length > 1200) {
       res.status(400).json({
@@ -5209,6 +5209,31 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
       if (task.taskId === 'ranObjects' || task.taskId === 'ranLetters') {
         result = applyRanNameVariants(result, task, durationSeconds);
+      } else if (task.taskId === 'oralReading') {
+        result.words = result.words.map((w) => {
+          if (w.errorType === 'Unconfirmed' || w.errorType === 'Insertion') {
+            const hasSpoken = Boolean(w.spokenWord && w.spokenWord.trim());
+            const score = typeof w.accuracyScore === 'number' ? w.accuracyScore : 0;
+            const resolvedError = !hasSpoken ? 'Omission' : (score >= 60 ? 'None' : 'Mispronunciation');
+            return {
+              ...w,
+              errorType: resolvedError,
+              accuracyScore: score,
+              notesAr: w.notesAr || (resolvedError === 'Omission' ? 'حذف كلمة لم تُسمع بوضوح في التسجيل.' : resolvedError === 'None' ? 'قراءة صحيحة مقبولة.' : 'خطأ في نطق الكلمة أثناء قراءة النص.'),
+            };
+          }
+          return w;
+        });
+        const correctCount = result.words.filter((w) => w.errorType === 'None' || w.errorType === 'DialectVariant').length;
+        const subCount = result.words.filter((w) => w.errorType === 'Substitution').length;
+        const omCount = result.words.filter((w) => w.errorType === 'Omission').length;
+        result.correctWordsCount = correctCount;
+        result.substitutionsCount = subCount;
+        result.omissionsCount = omCount;
+        result.insertionsCount = 0;
+        result.wordAccuracyPercent = Math.round((correctCount / result.words.length) * 100);
+        result.wordsCorrectPerMinute = Math.round((correctCount / Math.max(0.1, durationSeconds)) * 60);
+        result.wordsPerMinute = Math.round((result.words.length / Math.max(0.1, durationSeconds)) * 60);
       }
 
       const completeAndResolved =

@@ -22,7 +22,7 @@ for (const [key, clip] of Object.entries(manifest.clips)) {
 
     fileMap.set(fileName, {
       file: fileName,
-      primaryText: clip.text,
+      primaryText: clip.text || key,
       categoryKey,
       categoryLabel,
       voice: clip.voice || 'صوت بشري طبيعي',
@@ -32,7 +32,7 @@ for (const [key, clip] of Object.entries(manifest.clips)) {
     });
   } else {
     const existing = fileMap.get(fileName);
-    existing.aliases.add(clip.text);
+    if (clip.text) existing.aliases.add(clip.text);
     existing.aliases.add(key);
     // If current text has better diacritics, prefer it as primaryText
     if (clip.text && clip.text.length >= existing.primaryText.length && /[\u064B-\u0652]/.test(clip.text)) {
@@ -41,7 +41,25 @@ for (const [key, clip] of Object.entries(manifest.clips)) {
   }
 }
 
-const entries = Array.from(fileMap.values()).map(e => ({
+// Deduplicate identical texts within the same category (e.g. two files for the same exact word)
+const textMap = new Map();
+for (const entry of fileMap.values()) {
+  const textKey = `${entry.categoryKey}:${entry.primaryText.trim()}`;
+  if (!textMap.has(textKey)) {
+    textMap.set(textKey, entry);
+  } else {
+    const existing = textMap.get(textKey);
+    // Prefer authentic studio voice ML7jGRDg4E9hIl5qEm1Z
+    if (entry.voice && entry.voice.includes('ML7jGRDg4E9hIl5qEm1Z') && (!existing.voice || !existing.voice.includes('ML7jGRDg4E9hIl5qEm1Z'))) {
+      textMap.set(textKey, entry);
+      for (const a of existing.aliases) entry.aliases.add(a);
+    } else {
+      for (const a of entry.aliases) existing.aliases.add(a);
+    }
+  }
+}
+
+const entries = Array.from(textMap.values()).map(e => ({
   ...e,
   aliasesList: Array.from(e.aliases).filter(a => a && a !== e.primaryText && a !== e.file && !a.endsWith('.mp3')),
   searchTerms: Array.from(e.aliases).join(' ') + ' ' + e.file,
@@ -102,282 +120,302 @@ const html = `<!DOCTYPE html>
     header {
       text-align: center;
       margin-bottom: 2rem;
-      padding: 2rem 1.5rem;
-      background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-      color: white;
-      border-radius: 1.5rem;
-      box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.25);
+      padding: 1.5rem 1rem;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 900;
+    h1 {
+      font-size: 1.85rem;
+      color: var(--primary-dark);
       margin-bottom: 0.5rem;
+      font-weight: 800;
     }
-    header p {
-      font-size: 1.05rem;
-      opacity: 0.95;
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
       max-width: 650px;
-      margin: 0 auto;
+      margin: 0 auto 1.25rem;
     }
     .stats-bar {
-      margin-top: 1.25rem;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 0.5rem;
-    }
-    .stat-pill {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(8px);
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
+      gap: 1.25rem;
+      margin-top: 1rem;
       font-size: 0.85rem;
-      font-weight: 600;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .stats-item {
+      background: var(--bg);
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+    }
+    .stats-item strong {
+      color: var(--primary);
+      margin-left: 0.25rem;
     }
     .controls {
-      background: var(--card-bg);
-      border-radius: var(--radius);
-      padding: 1.25rem;
+      position: sticky;
+      top: 1rem;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 1rem;
       border: 1px solid var(--border);
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07);
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
-    .search-box {
+    .search-input {
       width: 100%;
-      padding: 0.85rem 1.25rem;
-      font-size: 1.1rem;
-      font-family: 'Tajawal', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-family: inherit;
       border: 2px solid var(--border);
       border-radius: 0.75rem;
       outline: none;
-      transition: all 0.2s;
-      margin-bottom: 1rem;
+      transition: border-color 0.2s;
     }
-    .search-box:focus {
+    .search-input:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
     }
-    .filters {
+    .filter-tabs {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
     }
     .filter-btn {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      padding: 0.45rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.9rem;
-      font-family: 'Tajawal', sans-serif;
-      cursor: pointer;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.85rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      font-family: inherit;
       font-weight: 600;
-      color: #475569;
+      cursor: pointer;
+      color: var(--text-muted);
       transition: all 0.2s;
     }
     .filter-btn:hover {
       background: #e2e8f0;
-      color: #1e293b;
+      color: var(--text);
     }
     .filter-btn.active {
       background: var(--primary);
-      color: white;
-      border-color: var(--primary-dark);
+      color: #ffffff;
+      border-color: var(--primary);
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1.25rem;
+      gap: 1rem;
     }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 1.25rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: 0.75rem;
       transition: transform 0.15s, box-shadow 0.15s;
     }
     .card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
       border-color: #cbd5e1;
     }
-    .card-category {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 0.2rem 0.6rem;
-      border-radius: 9999px;
-      display: inline-block;
-      margin-bottom: 0.75rem;
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .card-category.single_word { background: #dcfce7; color: #166534; }
-    .card-category.phoneme { background: #e0f2fe; color: #075985; }
-    .card-category.instruction { background: #fef3c7; color: #92400e; }
-    .card-category.praise { background: #fce7f3; color: #9d174d; }
-    .card-category.pal { background: #f3e8ff; color: #6b21a8; }
-    .card-category.other { background: #f1f5f9; color: #475569; }
-
-    .card-text {
-      font-size: 1.6rem;
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.35rem;
       font-weight: 700;
-      color: #0f172a;
-      line-height: 1.5;
-      margin-bottom: 0.5rem;
-      min-height: 2.4rem;
+    }
+    .badge-single_word { background: #dcfce7; color: #15803d; }
+    .badge-instruction { background: #e0e7ff; color: #4338ca; }
+    .badge-phoneme { background: #fef3c7; color: #b45309; }
+    .badge-praise { background: #fce7f3; color: #be185d; }
+    .badge-pal { background: #ccfbf1; color: #0f766e; }
+    .badge-other { background: #f1f5f9; color: #475569; }
+    .file-name {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      direction: ltr;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+    }
+    .card-body {
+      min-height: 4.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .card-text {
+      font-size: 1.45rem;
+      line-height: 1.4;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
     }
     .card-aliases {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
-      margin-bottom: 0.75rem;
-      line-height: 1.4;
+      margin-top: 0.35rem;
+      line-height: 1.3;
     }
     .card-meta {
       font-size: 0.75rem;
       color: var(--text-muted);
-      margin-bottom: 0.75rem;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      border-top: 1px dashed var(--border);
+      padding-top: 0.5rem;
+      margin-top: 0.25rem;
     }
-    .audio-player {
+    audio {
       width: 100%;
-      height: 40px;
+      height: 38px;
+      margin-top: 0.25rem;
       outline: none;
-      border-radius: 0.5rem;
-    }
-    .counter {
-      font-weight: bold;
-      color: var(--primary-dark);
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
     }
     .download-link {
-      color: var(--text-muted);
-      text-decoration: none;
       font-size: 0.75rem;
-      transition: color 0.2s;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
     }
     .download-link:hover {
-      color: var(--primary);
+      text-decoration: underline;
     }
-    .live-tester {
-      background: #f0fdfa;
-      border: 2px dashed #0d9488;
-      border-radius: 1rem;
-      padding: 1.25rem;
-      margin-bottom: 2rem;
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+      font-size: 1.1rem;
     }
-    .live-tester h3 {
-      font-size: 1.15rem;
-      color: #0f766e;
-      margin-bottom: 0.5rem;
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 1.45rem;
+      }
     }
-    .tester-row {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-    .tester-input {
-      flex: 1;
-      padding: 0.65rem 1rem;
-      font-size: 1.2rem;
-      border: 1px solid #99f6e4;
-      border-radius: 0.5rem;
-    }
-    .tester-btn {
-      padding: 0.65rem 1.5rem;
-      background: #0d9488;
-      color: white;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .tester-btn:hover { background: #0f766e; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>🎙️ مختبر مراجعة واستماع المقاطع الصوتية</h1>
-      <p>هذه الصفحة تتيح لك الاستماع المباشر لكل المقاطع الصوتية الأصلية المعتمدة في منصة «هَيَّا نَقْرَأْ»، مع فحص مخارج الحروف، الكلمات المبتكرة، وبنود الفحص والتدريب دون أي تكرار.</p>
+      <h1>مختبر مراجعة واستماع المقاطع الصوتية — هَيَّا نَقْرَأْ</h1>
+      <p class="subtitle">
+        صفحة شاملة لتدقيق واستماع كافة المقاطع الصوتية المعتمدة في المشروع. يمكنك الاستماع، البحث، وتنزيل أي ملف لمراجعته مع النص المصاحب بدقة.
+      </p>
       <div class="stats-bar">
-        <span class="stat-pill">📊 إجمالي المقاطع الصوتية الفريدة: ${entries.length} مقطعًا</span>
-        <span class="stat-pill">✨ كلمات الفحص والقراءة: ${singleWordCount}</span>
-        <span class="stat-pill">📖 أصوات ومقاطع الحروف: ${phonemeCount}</span>
-        <span class="stat-pill">🎯 التوجيهات والتعليمات: ${instructionCount}</span>
-        <span class="stat-pill">🌟 عبارات التشجيع: ${praiseCount}</span>
+        <span class="stats-item">إجمالي المقاطع المتاحة: <strong>${entries.length}</strong></span>
+        <span class="stats-item">كلمات القراءة: <strong>${singleWordCount}</strong></span>
+        <span class="stats-item">أصوات الفونيمات: <strong>${phonemeCount}</strong></span>
+        <span class="stats-item">التعليمات: <strong>${instructionCount}</strong></span>
+        <span class="stats-item">المديح والتشجيع: <strong>${praiseCount}</strong></span>
+        <span class="stats-item">التعلم المقترن: <strong>${palCount}</strong></span>
       </div>
     </header>
 
-    <div class="live-tester">
-      <h3>🔍 اختبار فوري لأي كلمة أو عبارة جديدة (Live Preview)</h3>
-      <p style="font-size: 0.85rem; color: #115e59;">اكتب أي كلمة بتشكيلها (مثل: فُوبُو أو إِلَيْهِ) واضغط "استمع فورًا" لاختبار مخارج حروفها مباشرة:</p>
-      <div class="tester-row">
-        <input type="text" id="liveInput" class="tester-input arabic-text" value="فُوبُو" placeholder="اكتب الكلمة هنا...">
-        <button type="button" class="tester-btn" onclick="playLiveCustom()">▶ استمع فورًا</button>
-      </div>
-      <audio id="livePlayer" style="display: none;"></audio>
-    </div>
-
     <div class="controls">
-      <input type="text" id="searchInput" class="search-box" placeholder="🔎 ابحث عن أي كلمة أو عبارة (مثال: فوب، سامي، إليه، أبيه، باك، جمل، دجاجة)..." oninput="filterClips()">
-      <div class="filters">
-        <button class="filter-btn active" onclick="setCategory('all', this)">الكل (${entries.length})</button>
-        <button class="filter-btn" onclick="setCategory('single_word', this)">كلمات الفحص والقراءة (${singleWordCount})</button>
-        <button class="filter-btn" onclick="setCategory('praise', this)">عبارات التشجيع (${praiseCount})</button>
-        <button class="filter-btn" onclick="setCategory('instruction', this)">تعليمات الألعاب والفحص (${instructionCount})</button>
-        <button class="filter-btn" onclick="setCategory('phoneme', this)">أصوات الحروف والمقاطع (${phonemeCount})</button>
-        <button class="filter-btn" onclick="setCategory('pal', this)">التعلم المقترن (${palCount})</button>
+      <input type="text" id="searchInput" class="search-input" placeholder="ابحث عن أي كلمة أو عبارة (مثال: فُوب، سامي، إليه، شمس، أحسنت)..." autocomplete="off" />
+      <div class="filter-tabs">
+        <button class="filter-btn active" data-filter="all">الكل (${entries.length})</button>
+        <button class="filter-btn" data-filter="single_word">كلمات الفحص والقراءة (${singleWordCount})</button>
+        <button class="filter-btn" data-filter="praise">عبارات التشجيع (${praiseCount})</button>
+        <button class="filter-btn" data-filter="instruction">تعليمات الألعاب والفحص (${instructionCount})</button>
+        <button class="filter-btn" data-filter="phoneme">أصوات الحروف والمقاطع (${phonemeCount})</button>
+        <button class="filter-btn" data-filter="pal">التعلم المقترن (${palCount})</button>
       </div>
-      <div class="counter" id="counterText">عرض ${entries.length} مقطعًا صوتيًا</div>
+      <div id="resultCount" style="font-size: 0.85rem; color: var(--text-muted); text-align: left; margin-top: -0.25rem;">
+        عرض ${entries.length} مقطعًا صوتيًا
+      </div>
     </div>
 
-    <div class="grid" id="clipsGrid">
-      ${entries.map((c) => `
-        <div class="card" data-category="${c.categoryKey}" data-search="${c.searchTerms.replace(/"/g, '&quot;')}">
-          <div>
-            <span class="card-category ${c.categoryKey}">${c.categoryLabel}</span>
-            <div class="card-text arabic-text" lang="ar">${c.primaryText}</div>
-            ${c.aliasesList.length > 0 ? `<div class="card-aliases">صيغ مطابقة: ${c.aliasesList.slice(0, 3).join(' ، ')}</div>` : ''}
+    <main class="grid" id="clipsGrid">
+      ${entries.map(e => `
+        <div class="card" data-category="${e.categoryKey}" data-search="${e.searchTerms}">
+          <div class="card-header">
+            <span class="badge badge-${e.categoryKey}">${e.categoryLabel}</span>
+            <span class="file-name" title="${e.file}">ملف: ${e.file}</span>
           </div>
-          <div>
-            <div class="card-meta">
-              <span>ملف: ${c.file}</span>
-              <a href="${c.audioUrl}" download class="download-link" title="تنزيل الملف الصوتي">⬇ تنزيل</a>
-            </div>
-            <audio class="audio-player" controls preload="none">
-              <source src="${c.audioUrl}" type="audio/mpeg">
-              متصفحك لا يدعم مشغل الصوت.
-            </audio>
+          <div class="card-body">
+            <div class="card-text arabic-text" lang="ar">${e.primaryText}</div>
+            ${e.aliasesList.length > 0 ? `<div class="card-aliases">مرادفات/أشكال: ${e.aliasesList.slice(0, 3).join(' • ')}</div>` : ''}
           </div>
+          <div class="card-meta">
+            <span>${e.voice}</span>
+            <a href="${e.audioUrl}" download class="download-link">⬇ تنزيل</a>
+          </div>
+          <audio controls preload="none">
+            <source src="${e.audioUrl}" type="audio/mpeg">
+            متصفحك لا يدعم تشغيل هذا المقطع.
+          </audio>
         </div>
       `).join('')}
-    </div>
+      <div id="emptyState" class="empty-state" style="display: none;">
+        لم نعثر على أي مقطع صوتي يطابق بحثك. جرّب كلمة أخرى.
+      </div>
+    </main>
   </div>
 
   <script>
-    let activeCategory = 'all';
-    const grid = document.getElementById('clipsGrid');
-    const cards = Array.from(grid.getElementsByClassName('card'));
-    const counterText = document.getElementById('counterText');
+    const searchInput = document.getElementById('searchInput');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const cards = Array.from(document.querySelectorAll('.card'));
+    const resultCount = document.getElementById('resultCount');
+    const emptyState = document.getElementById('emptyState');
 
-    function filterClips() {
-      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function normalizeAr(str) {
+      if (!str) return '';
+      return str
+        .normalize('NFC')
+        .replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, '')
+        .replace(/[.,!?،؟؛:"«»()[\\]{}]/g, '')
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .trim()
+        .toLowerCase();
+    }
+
+    function applyFilters() {
+      const q = normalizeAr(searchQuery);
       let visible = 0;
 
       cards.forEach(card => {
-        const search = (card.getAttribute('data-search') || '').toLowerCase();
         const cat = card.getAttribute('data-category');
-        const matchCat = activeCategory === 'all' || cat === activeCategory;
-        const matchQuery = !query || search.includes(query);
+        const rawSearch = card.getAttribute('data-search') || '';
+        const searchNormalized = normalizeAr(rawSearch);
 
-        if (matchCat && matchQuery) {
+        const matchesCat = (currentCategory === 'all' || cat === currentCategory);
+        const matchesQuery = !q || searchNormalized.includes(q) || rawSearch.includes(searchQuery);
+
+        if (matchesCat && matchesQuery) {
           card.style.display = 'flex';
           visible++;
         } else {
@@ -385,42 +423,41 @@ const html = `<!DOCTYPE html>
         }
       });
 
-      counterText.textContent = 'عرض ' + visible + ' من إجمالي ' + cards.length + ' مقطعًا صوتيًا';
+      resultCount.textContent = 'عرض ' + visible + ' مقطعًا صوتيًا';
+      emptyState.style.display = visible === 0 ? 'block' : 'none';
     }
 
-    function setCategory(cat, btn) {
-      activeCategory = cat;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      filterClips();
-    }
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      applyFilters();
+    });
 
-    async function playLiveCustom() {
-      const text = document.getElementById('liveInput').value.trim();
-      if (!text) return;
-      try {
-        const res = await fetch('/api/ai/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.audioBase64) {
-            const player = document.getElementById('livePlayer');
-            player.src = 'data:audio/mp3;base64,' + data.audioBase64;
-            player.play();
-          }
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = btn.getAttribute('data-filter');
+        applyFilters();
+      });
+    });
+
+    // Pause other audio players when one starts
+    document.addEventListener('play', (e) => {
+      const audios = document.getElementsByTagName('audio');
+      for (let i = 0; i < audios.length; i++) {
+        if (audios[i] !== e.target) {
+          audios[i].pause();
         }
-      } catch (e) {
-        console.error(e);
       }
-    }
+    }, true);
   </script>
 </body>
-</html>`;
+</html>
+`;
 
 fs.writeFileSync(path.resolve('public/audio-audit.html'), html, 'utf8');
-fs.writeFileSync(path.resolve('dist/audio-audit.html'), html, 'utf8');
-console.log('Successfully generated deduplicated public/audio-audit.html and dist/audio-audit.html');
+if (fs.existsSync(path.resolve('dist'))) {
+  fs.writeFileSync(path.resolve('dist/audio-audit.html'), html, 'utf8');
+}
+console.log(`Successfully generated deduplicated public/audio-audit.html and dist/audio-audit.html`);
 console.log(`Total unique audio clips displayed: ${entries.length}`);

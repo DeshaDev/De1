@@ -557,7 +557,7 @@
     },
     "374488e547311f8d": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -1637,7 +1637,7 @@
     },
     "95e0c8fb053cd4a3": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -1845,7 +1845,7 @@
     },
     "ab7b35852d53e48a": {
       "file": "ab7b35852d53e48a.mp3",
-      "text": "ئِ",
+      "text": "إِ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "phoneme",
@@ -2029,7 +2029,7 @@
     },
     "bdfae00789dcc5b6": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -3853,7 +3853,7 @@
     },
     "bc15d32e9febc432": {
       "file": "bc15d32e9febc432.mp3",
-      "text": "سَمَكَهْ",
+      "text": "سَمَكَة",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
@@ -5021,7 +5021,7 @@
     },
     "9f43df52701af8f3": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5037,7 +5037,7 @@
     },
     "a19eb83b344c97a9": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5516,7 +5516,7 @@
     },
     "دَجَاجَة": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5524,7 +5524,7 @@
     },
     "دَجَاجَةُ": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5532,7 +5532,7 @@
     },
     "دَجَاجَهْ": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5540,7 +5540,7 @@
     },
     "6050ff3df1eb8061": {
       "file": "374488e547311f8d.mp3",
-      "text": "دَجَاجَهْ",
+      "text": "دَجَاجَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5548,7 +5548,7 @@
     },
     "ذُرَة": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5556,7 +5556,7 @@
     },
     "ذُرَةُ": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5564,7 +5564,7 @@
     },
     "e8da532d624a1f96": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5572,7 +5572,7 @@
     },
     "ذُرَهْ": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5580,7 +5580,7 @@
     },
     "6939e829a6d2a33a": {
       "file": "bdfae00789dcc5b6.mp3",
-      "text": "ذُرَهْ",
+      "text": "ذُرَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5588,7 +5588,7 @@
     },
     "سَيَّارَة": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5596,7 +5596,7 @@
     },
     "سَيَّارَةُ": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5604,7 +5604,7 @@
     },
     "سَيَّارَهْ": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5612,7 +5612,7 @@
     },
     "980daa5b8924dfef": {
       "file": "95e0c8fb053cd4a3.mp3",
-      "text": "سَيَّارَهْ",
+      "text": "سَيَّارَة",
       "voice": "OpenAI-Audio-Sage",
       "model": "openai/gpt-audio-mini",
       "context": "single_word",
@@ -5745,6 +5745,66 @@
       "model": "openai/gpt-audio-mini",
       "context": "instruction",
       "bytes": 47616
+    },
+    "سَمَكَة": {
+      "file": "bc15d32e9febc432.mp3",
+      "text": "سَمَكَة",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "إِ": {
+      "file": "ab7b35852d53e48a.mp3",
+      "text": "إِ",
+      "context": "phoneme",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "مَاء": {
+      "file": "98ccc4b2de3dc1a2.mp3",
+      "text": "مَاء",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "بَاب": {
+      "file": "b4eec08c68b7527f.mp3",
+      "text": "بَاب",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "بَيْت": {
+      "file": "ba6e29c650df469c.mp3",
+      "text": "بَيْت",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "يَد": {
+      "file": "d76898a98eb7b9e8.mp3",
+      "text": "يَد",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "قَلَم": {
+      "file": "dbc6486fa358bd6d.mp3",
+      "text": "قَلَم",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "وَلَد": {
+      "file": "d76898a98eb7b9e8.mp3",
+      "text": "وَلَد",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "كِتَاب": {
+      "file": "8890f2803f318698.mp3",
+      "text": "كِتَاب",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
+    },
+    "الشَّمْس": {
+      "file": "bdfae00789dcc5b6.mp3",
+      "text": "الشَّمْس",
+      "context": "single_word",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z"
     }
   },
   "model": "eleven_v4"
