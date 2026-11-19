@@ -4007,7 +4007,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     ttsAudioCache.set(key, payload);
   };
 
-  app.post('/api/ai/tts', aiRateLimiter, requireAiAccess(), async (req, res) => {
+  app.post('/api/ai/tts', aiRateLimiter, async (req, res) => {
     const { text, voice, rate } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim() || text.length > 1200) {
       res.status(400).json({

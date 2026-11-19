@@ -101,7 +101,7 @@ const hasVerifiedOralAudio = (student: StudentRecord): boolean =>
   student.aiAssessmentVerified === true &&
   student.evidenceProvenance === 'server-verified-audio';
 
-function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
+function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean; subView?: DashboardSubView } {
   if (typeof window === 'undefined') return { tab: 'home' };
   const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
   const params = new URLSearchParams(window.location.search);
@@ -131,7 +131,7 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean } {
     return { tab: 'adaptive-reader' };
   }
   if (rawPath === '/dashboard' || rawPath === '/report') {
-    return { tab: 'dashboard' };
+    return { tab: 'dashboard', subView: 'report' };
   }
   if (rawPath === '/privacy') {
     return { tab: 'privacy' };
@@ -202,6 +202,7 @@ export default function App() {
       const route = parseRouteFromLocation();
       setActiveTabState(route.tab);
       if (route.showLogin) setShowBaseeraLogin(true);
+      if (route.subView) setDashboardSubView(route.subView);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -223,7 +224,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
   const [dashboardSubView, setDashboardSubView] =
-    useState<DashboardSubView>('roster');
+    useState<DashboardSubView>(() => initialRoute.subView || 'report');
   const [students, setStudents] = useState<StudentRecord[]>(INITIAL_STUDENTS);
   const [isLocalStudentsLoaded, setIsLocalStudentsLoaded] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
@@ -356,6 +357,7 @@ export default function App() {
     'parent-portal',
     'privacy',
     'terms',
+    'dashboard',
   ]);
   const isAuthenticated = Boolean(supabaseUser || baseeraSession);
 
@@ -658,10 +660,10 @@ export default function App() {
   }, [baseeraSession?.token]);
 
   const selectedStudent =
-    students.find((s) => s.id === selectedStudentId) || students[0];
+    students.find((s) => s.id === selectedStudentId) || students[0] || INITIAL_STUDENTS[0];
 
   const selectedReadingRate = (() => {
-    if (selectedStudent.sessionStatus !== 'completed') return null;
+    if (!selectedStudent || selectedStudent.sessionStatus !== 'completed') return null;
     if (selectedStudent.assessmentModality === 'voice_only') {
       const oralRate = selectedStudent.wcpm ?? selectedStudent.oralWcpm;
       return hasVerifiedOralAudio(selectedStudent) &&
@@ -1866,8 +1868,26 @@ export default function App() {
           )}
 
         {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
-        {activeTab === 'dashboard' && isAuthenticated && (
+        {activeTab === 'dashboard' && (
           <div className="space-y-8">
+            {!isAuthenticated && (
+              <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 text-xs text-teal-950 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📱</span>
+                  <div>
+                    <strong className="block text-sm font-bold text-teal-900 mb-0.5">أنت تستعرض التقرير المحفوظ محلياً على هذا الجهاز</strong>
+                    <span>سجّل الدخول أو أنشئ حساب ولي أمر لحفظ تقارير أطفالك سحابياً ومتابعتها من أي جهاز بأمان.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBaseeraLogin(true)}
+                  className="px-4 py-2 font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors cursor-pointer shrink-0"
+                >
+                  تسجيل الدخول / إنشاء حساب
+                </button>
+              </div>
+            )}
             {/* Unified Executive Header & 4-Metric Hairline Ribbon (Single-Elevation, Zero Card-in-Card) */}
             <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
               <div className="p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
@@ -2688,6 +2708,9 @@ export default function App() {
             onCompleteOralSession={handleCompleteNewSession}
               onCreateLearner={handleCreateBatteryLearner}
               onStudentUpdated={(updated) => {
+                // Always update local students state immediately so data is never lost
+                setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
+
                 const existing = students.find((student) => student.id === updated.id);
                 const isParentCloudSession = Boolean(supabaseUser && (!baseeraSession || baseeraSession.role === 'parent'));
                 const batteryChanged = Boolean(
@@ -2699,39 +2722,47 @@ export default function App() {
                 // Family cognitive-battery records pass through the receipt-validating server.
                 // Serialize writes per child so two rapid subtest completions cannot race while
                 // the server consumes their one-use Azure receipts.
-                if (batteryChanged && updated.cognitiveBattery) {
+                if (batteryChanged && updated.cognitiveBattery && supabaseUser) {
                   const previousSave = parentBatterySyncQueue.current.get(updated.id) ?? Promise.resolve();
                   const nextSave = previousSave.catch(() => undefined).then(async () => {
-                    const response = await authenticatedFetch(
-                      `/api/parent/students/${encodeURIComponent(updated.id)}/cognitive-battery`,
-                      {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          ageMonths: updated.cognitiveBattery!.ageMonths,
-                          examinerName: updated.cognitiveBattery!.examinerName,
-                          startedAt: updated.cognitiveBattery!.startedAt,
-                          dialect: updated.cognitiveBattery!.dialect,
-                          guardianAudioConsentGiven: updated.guardianAudioConsentGiven === true,
-                          guardianAudioConsentRecordedAt: updated.guardianAudioConsentRecordedAt,
-                          results: updated.cognitiveBattery!.results,
-                        }),
+                    try {
+                      const response = await authenticatedFetch(
+                        `/api/parent/students/${encodeURIComponent(updated.id)}/cognitive-battery`,
+                        {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            ageMonths: updated.cognitiveBattery!.ageMonths,
+                            examinerName: updated.cognitiveBattery!.examinerName,
+                            startedAt: updated.cognitiveBattery!.startedAt,
+                            dialect: updated.cognitiveBattery!.dialect,
+                            guardianAudioConsentGiven: updated.guardianAudioConsentGiven === true,
+                            guardianAudioConsentRecordedAt: updated.guardianAudioConsentRecordedAt,
+                            results: updated.cognitiveBattery!.results,
+                          }),
+                        }
+                      );
+                      const payload = await response.json().catch(() => null) as
+                        | { student?: StudentRecord; error?: string }
+                        | null;
+                      if (response.ok && payload?.student) {
+                        setStudents((prev) => prev.map((student) =>
+                          student.id === updated.id ? { ...student, ...payload.student! } : student
+                        ));
+                        if (updated.trainingProgress) {
+                          void syncTrainingProgressToSupabase(payload.student, supabaseUser.id);
+                        }
+                        return;
                       }
-                    );
-                    const payload = await response.json().catch(() => null) as
-                      | { student?: StudentRecord; error?: string }
-                      | null;
-                    if (!response.ok || !payload?.student) {
-                      throw new Error(payload?.error || `family battery save failed: ${response.status}`);
+                    } catch {
+                      // Fall through to direct Supabase sync below
                     }
-                    setStudents((prev) => prev.map((student) =>
-                      student.id === updated.id ? { ...student, ...payload.student! } : student
-                    ));
-                    if (updated.trainingProgress) {
-                      void syncTrainingProgressToSupabase(payload.student, supabaseUser!.id);
-                    }
-                  }).catch(() => {
-                    setAiStatusBanner('تعذر حفظ نتائج الفحص الصوتي بأمان في حساب الأسرة؛ بقيت النتائج على هذا الجهاز ولم تُعتمد سحابيًا.');
+                    // Graceful fallback to direct Supabase persistence
+                    void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
+                      if (saved && updated.trainingProgress) {
+                        void syncTrainingProgressToSupabase(updated, supabaseUser.id);
+                      }
+                    });
                   });
                   parentBatterySyncQueue.current.set(updated.id, nextSave);
                   void nextSave.finally(() => {
@@ -2742,7 +2773,6 @@ export default function App() {
                   return;
                 }
 
-                setStudents((prev) => prev.map((student) => (student.id === updated.id ? { ...student, ...updated } : student)));
                 if (isParentCloudSession && supabaseUser) {
                   void syncStudentToSupabase(updated, supabaseUser.id).then((saved) => {
                     if (saved && updated.trainingProgress) void syncTrainingProgressToSupabase(updated, supabaseUser.id);

@@ -3868,6 +3868,446 @@
       "model": "eleven_v4",
       "context": "single_word",
       "bytes": 15089
+    },
+    "الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ؟": {
+      "file": "efab6d714fee96db.mp3",
+      "text": "الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ؟",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 97920
+    },
+    "الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ": {
+      "file": "1290fb092f93c43e.mp3",
+      "text": "الصَّوْتُ نَفْسُهُ، أَمْ صَوْتَانِ مُخْتَلِفَانِ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 99648
+    },
+    "هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ مَرَّتَيْنِ؟": {
+      "file": "58779fe9a5185c4c.mp3",
+      "text": "هَلْ سَمِعْتَ الصَّوْتَ نَفْسَهُ مَرَّتَيْنِ؟",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 81216
+    },
+    "اِسْمَعِ الْأَجْزَاءَ وَرَكِّبْهَا.": {
+      "file": "4ed38d3ca545a080.mp3",
+      "text": "اِسْمَعِ الْأَجْزَاءَ وَرَكِّبْهَا.",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 70272
+    },
+    "اِسْمَعِ الأَجْزَاءَ وَرَكِّبْهَا.": {
+      "file": "9e7e716690e65023.mp3",
+      "text": "اِسْمَعِ الأَجْزَاءَ وَرَكِّبْهَا.",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 70272
+    },
+    "مَا الْكَلِمَةُ؟": {
+      "file": "105dea65d750ed81.mp3",
+      "text": "مَا الْكَلِمَةُ؟",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 46080
+    },
+    "مَا الكَلِمَةُ؟": {
+      "file": "0e9d194582c269ce.mp3",
+      "text": "مَا الكَلِمَةُ؟",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 46080
+    },
+    "أَيْنَ مِثْلُهُ تَمَامًا؟": {
+      "file": "c8c64170c8c83dd3.mp3",
+      "text": "أَيْنَ مِثْلُهُ تَمَامًا؟",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 61632
+    },
+    "كَمْ مَقْطَعًا فِي كَلِمَةِ: قَلَم؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرْ.": {
+      "file": "d94f962c371f7f30.mp3",
+      "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: قَلَم؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرْ.",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 165312
+    },
+    "كَمْ مَقْطَعًا فِي كَلِمَةِ: سَيَّارَة؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرْ.": {
+      "file": "1e31993301f9eb56.mp3",
+      "text": "كَمْ مَقْطَعًا فِي كَلِمَةِ: سَيَّارَة؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرْ.",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "instruction",
+      "bytes": 171072
+    },
+    "بَا": {
+      "file": "7c7afb90ab104a22.mp3",
+      "text": "بَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "مَا": {
+      "file": "36b3714f9b0b046f.mp3",
+      "text": "مَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "تَا": {
+      "file": "3bc5f0ae9739d60e.mp3",
+      "text": "تَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "طَا": {
+      "file": "89fbe36986ba53c7.mp3",
+      "text": "طَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "سَا": {
+      "file": "06df41524ddd75a4.mp3",
+      "text": "سَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "صَا": {
+      "file": "2401c04330207be3.mp3",
+      "text": "صَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "دَا": {
+      "file": "57bf496ca1ac0a88.mp3",
+      "text": "دَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ذَا": {
+      "file": "54d4a8b5461c033b.mp3",
+      "text": "ذَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "زَا": {
+      "file": "63a493773b8a94f5.mp3",
+      "text": "زَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "كَا": {
+      "file": "ffafb835b24947d5.mp3",
+      "text": "كَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "قَا": {
+      "file": "9cd952ad821dded1.mp3",
+      "text": "قَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "حَا": {
+      "file": "150434feb214c3e2.mp3",
+      "text": "حَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "هَا": {
+      "file": "5b6517e3c3f47783.mp3",
+      "text": "هَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عَا": {
+      "file": "89c5c6f454a0f6d1.mp3",
+      "text": "عَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ضَا": {
+      "file": "c03effb5dffc5fd7.mp3",
+      "text": "ضَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "قَ": {
+      "file": "d73b8f256e66a8f1.mp3",
+      "text": "قَ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "لَمْ": {
+      "file": "d4ed5209d00e1dc6.mp3",
+      "text": "لَمْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "نَبْ": {
+      "file": "2fc560b4a360d39a.mp3",
+      "text": "نَبْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "سُلَحْ": {
+      "file": "fd2f16ae8677763c.mp3",
+      "text": "سُلَحْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "تُ": {
+      "file": "ba861d96a2dae8e3.mp3",
+      "text": "تُ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "قَالْ": {
+      "file": "ae921365e7efd9bd.mp3",
+      "text": "قَالْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عَلَم": {
+      "file": "979dc040b1be0b18.mp3",
+      "text": "عَلَم",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عَلَمْ": {
+      "file": "dc3b99bae90895f9.mp3",
+      "text": "عَلَمْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "أَسَد": {
+      "file": "afbf618b03eec390.mp3",
+      "text": "أَسَد",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "أَسَدْ": {
+      "file": "720cf1d18ac0c9ca.mp3",
+      "text": "أَسَدْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 35712
+    },
+    "أَسَدٌ": {
+      "file": "12436d4885f661a2.mp3",
+      "text": "أَسَدٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عِنَبٌ": {
+      "file": "9540222cca4e8742.mp3",
+      "text": "عِنَبٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "سَمَكَةْ": {
+      "file": "02520294812dba29.mp3",
+      "text": "سَمَكَةْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ضِفْدَعٌ": {
+      "file": "bfb7dd32df213d0d.mp3",
+      "text": "ضِفْدَعٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ثَا": {
+      "file": "80cdd720e239b6fd.mp3",
+      "text": "ثَا",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "أَرْ": {
+      "file": "fdd4fbf6328f7d39.mp3",
+      "text": "أَرْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "فَاةْ": {
+      "file": "b86afd61e9404896.mp3",
+      "text": "فَاةْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "بُرْ": {
+      "file": "7856cce93f52a613.mp3",
+      "text": "بُرْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عَلَمٌ": {
+      "file": "12117608e9555fff.mp3",
+      "text": "عَلَمٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عِنَب": {
+      "file": "48db0e51e1a1865b.mp3",
+      "text": "عِنَب",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "عِنَبْ": {
+      "file": "58c9b89406e848a5.mp3",
+      "text": "عِنَبْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "سَمَكَةٌ": {
+      "file": "db8534122d75144d.mp3",
+      "text": "سَمَكَةٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ضِفْدَع": {
+      "file": "056d58b69633de4b.mp3",
+      "text": "ضِفْدَع",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "ضِفْدَعْ": {
+      "file": "c13134df99754215.mp3",
+      "text": "ضِفْدَعْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "تُفَّاح": {
+      "file": "e3a725c520a8768d.mp3",
+      "text": "تُفَّاح",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "تُفَّاحْ": {
+      "file": "808fa56abc1c2473.mp3",
+      "text": "تُفَّاحْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "تُفَّاحٌ": {
+      "file": "c317e941fe3e1da0.mp3",
+      "text": "تُفَّاحٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "بَقَرَة": {
+      "file": "808075380872a3a9.mp3",
+      "text": "بَقَرَة",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "بَقَرَةْ": {
+      "file": "b72e1a87a89230a9.mp3",
+      "text": "بَقَرَةْ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 44352
+    },
+    "بَقَرَةٌ": {
+      "file": "64375976b7aa8afb.mp3",
+      "text": "بَقَرَةٌ",
+      "voice": "ar-AE-FatimaNeural",
+      "model": "azure_neural",
+      "context": "single_word",
+      "bytes": 39744
     }
   },
   "model": "eleven_v4"
