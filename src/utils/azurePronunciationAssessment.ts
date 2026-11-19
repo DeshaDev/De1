@@ -175,7 +175,13 @@ export function mapAzureAssessmentToReferenceWords(args: {
     const sameWithoutArticle = transNorm.replace(/^ال/, '') === targetNorm.replace(/^ال/, '');
     const withCaseEnding = transNorm.length === targetNorm.length + 1 && transNorm.startsWith(targetNorm) && /[اوي]$/.test(transNorm);
     const taaMarbutaRead = targetNorm.endsWith('ة') && (transNorm === `${targetNorm.slice(0, -1)}ه` || transNorm === `${targetNorm.slice(0, -1)}ت`);
-    const isInflectionalMatch = !isExactMatch && (sameWithoutArticle || withCaseEnding || taaMarbutaRead);
+    // In pause, final taa marbuta is a soft «ـهْ» that recognition often misses (تُفَّاحَة heard as
+    // تفاح). Accept that one drop only when the pronunciation score against the target word itself
+    // is good: a child who really read «تفاح» scores low against «تُفَّاحَة».
+    const targetScore = providerWords.find(w => canonicalErrorType(w.errorType) !== 'Insertion')?.accuracyScore;
+    const pausalTaaDropped = targetNorm.endsWith('ة') && transNorm === targetNorm.slice(0, -1) &&
+      typeof targetScore === 'number' && targetScore >= 60;
+    const isInflectionalMatch = !isExactMatch && (sameWithoutArticle || withCaseEnding || taaMarbutaRead || pausalTaaDropped);
 
     if (isExactMatch || isInflectionalMatch) {
       const scored = providerWords.find(w => canonicalErrorType(w.errorType) !== 'Omission' && canonicalErrorType(w.errorType) !== 'Insertion') || providerWords[0];

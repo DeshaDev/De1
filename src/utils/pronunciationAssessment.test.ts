@@ -314,3 +314,16 @@ test('Azure single word assessment deduplicates looped reference words like feel
   assert.equal(result.words[0].errorType, 'None');
   assert.equal(result.assessmentComplete, true);
 });
+
+test('a pausal taa marbuta missed by recognition is not a reading error when the word scores well', () => {
+  const read = (transcript: string, score: number) => mapAzureAssessmentToReferenceWords({
+    referenceWords: ['تُفَّاحَة'],
+    transcript,
+    durationSeconds: 1,
+    enableMiscue: true,
+    providerWords: [{ word: transcript, errorType: 'None', accuracyScore: score }],
+  });
+  assert.equal(read('تفاح', 88).correctWordsCount, 1);
+  assert.equal(read('تفاح', 35).correctWordsCount, 0);
+  assert.equal(read('سمك', 90).correctWordsCount, 0, 'only the target with its own ة dropped');
+});

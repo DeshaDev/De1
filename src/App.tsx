@@ -77,6 +77,7 @@ const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHu
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
 import { ChildDashboard } from './components/profile/ChildDashboard';
+import { mergeStudentRecords } from './utils/mergeStudentRecords';
 import { TrainingProgressPanel } from './components/profile/TrainingProgressPanel';
 import IndividualPlanPanel from './components/profile/IndividualPlanPanel';
 import { trackUsage } from './utils/usageTracking';
@@ -243,7 +244,8 @@ export default function App() {
         if (stored.length > 0) {
           const storedIds = new Set(stored.map((student) => student.id));
           const merged = [...stored, ...INITIAL_STUDENTS.filter((student) => !storedIds.has(student.id))];
-          setStudents(merged);
+          // The cloud copy may already have arrived: keep the newer result of each child.
+          setStudents((prev) => mergeStudentRecords(prev, merged));
           const savedId = loadActiveStudentId();
           setSelectedStudentId(savedId && merged.some((student) => student.id === savedId) ? savedId : merged[0].id);
         }
@@ -519,7 +521,8 @@ export default function App() {
             try { localStorage.removeItem('hn_pending_child_registration'); } catch {}
           }
           if (merged.length > 0 && active) {
-            setStudents(merged);
+            // Merge, never replace: the cloud copy may lack a result this device still holds.
+            setStudents((prev) => mergeStudentRecords(prev.filter((p) => !p.isDemoRecord), merged));
             const savedActiveId = loadActiveStudentId();
             const preferred = savedActiveId && merged.some((s) => s.id === savedActiveId)
               ? savedActiveId
@@ -592,7 +595,7 @@ export default function App() {
         }
       }
       if (cloudStudents.length > 0) {
-        setStudents(cloudStudents);
+        setStudents((prev) => mergeStudentRecords(prev.filter((p) => !p.isDemoRecord), cloudStudents));
         selectStudent(cloudStudents[0].id);
       }
       setSupabaseAuthLoading(false);
@@ -633,7 +636,8 @@ export default function App() {
 
   // Load persistent student records from RBAC-protected server when an authenticated session is stored
   useEffect(() => {
-    if (!baseeraSession?.token) return;
+    // A parent account reads its children from Supabase; the school roster API answers 401.
+    if (!baseeraSession?.token || baseeraSession.role === 'parent') return;
     let cancelled = false;
     authenticatedFetch('/api/students')
       .then((res) => (res.ok ? res.json() : null))
@@ -658,7 +662,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [baseeraSession?.token]);
+  }, [baseeraSession?.token, baseeraSession?.role]);
 
   const rawSelectedStudent =
     students.find((s) => s.id === selectedStudentId) || students[0] || INITIAL_STUDENTS[0];
@@ -1326,10 +1330,7 @@ export default function App() {
         ...cs,
         parentAccount: cs.parentAccount || currentUser.id,
       }));
-      setStudents((prev) => {
-        const ids = new Set(mapped.map((s) => s.id));
-        return [...mapped, ...prev.filter((p) => !ids.has(p.id))];
-      });
+      setStudents((prev) => mergeStudentRecords(prev, mapped));
     }
 
     setSupabaseAuthLoading(false);
