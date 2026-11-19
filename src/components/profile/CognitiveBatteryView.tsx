@@ -55,6 +55,7 @@ import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPl
 import { TeachingChoicePlayer } from './TeachingPlayers';
 import { HINTS } from '../../cognitiveProfile/curriculum';
 import { exampleForTag } from '../../cognitiveProfile/examples';
+import { NOT_TRAINED_AS_FOCUS, SKILLS, buildTrainingPlan } from '../../cognitiveProfile/training';
 import { TaskExampleCard } from './TaskExample';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
@@ -1035,6 +1036,30 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           )}
         </div>
       </section>
+
+      {profile && (sittingJustFinished || completed.length === ageTasks.length) && (() => {
+        // The programme is built from these results: show what it will train, right after the sitting.
+        const plan = buildTrainingPlan(profile);
+        const skills = plan.focus.filter((sk) => !NOT_TRAINED_AS_FOCUS.has(sk)).slice(0, 4);
+        return (
+          <section className="bz-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-2 border-brand/30" aria-labelledby="plan-ready-title">
+            <div>
+              <h3 id="plan-ready-title" className="font-bold text-ink">البرنامج التدريبي تحدّث بنتائج هذه الجلسة</h3>
+              <p className="bz-small text-ink-2 mt-1">
+                {plan.preventive ? 'لم تظهر مهارة ضعيفة حتى الآن؛ سيعزّز البرنامج: ' : 'سيركّز على: '}
+                <strong className="text-ink">{skills.map((sk) => SKILLS[sk].nameAr).join('، ')}</strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              className="bz-btn bz-btn-primary bz-btn-lg shrink-0"
+              onClick={() => (onNavigateTab ? onNavigateTab('guided-program') : setView({ name: 'training' }))}
+            >
+              ابدأ التدريب
+            </button>
+          </section>
+        );
+      })()}
 
       {sittings.map((games, sitting) => (
         <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">

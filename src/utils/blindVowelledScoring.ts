@@ -218,6 +218,20 @@ export function scoreBlindSingleWordArabic(expectedWord: string, blindSpokenRaw:
     spkCons = consonantSkeleton(spkUnits);
   }
 
+  // Pausal taa marbuta whose soft «ـهْ» was not transcribed: دَجَاجَة read «دَجَاجَـهْ» often comes
+  // back as «دَجَاجَ». The fatha on the last letter shows the word went on to the taa; «دَجَاجْ»
+  // (sukun or no vowel) is the different word دجاج, a real reading error, and stays one.
+  if (
+    expUnits.length >= 2 &&
+    expUnits[expUnits.length - 1].letter === 'ة' &&
+    spkCons === expCons.slice(0, -1) &&
+    spkUnits.length === expUnits.length - 1 &&
+    spkUnits[spkUnits.length - 1].vowel === 'a'
+  ) {
+    spkUnits.push({ ...expUnits[expUnits.length - 1], vowel: '0' });
+    spkCons = consonantSkeleton(spkUnits);
+  }
+
   // 3) Pausal Taa Marbuta -> Haa at end of word (e.g., سَمَكَهْ vs سَمَكَةُ)
   const expConsPause = expCons.replace(/ة$/, 'ه');
   const spkConsPause = spkCons.replace(/ة$/, 'ه');
@@ -329,7 +343,8 @@ const BLIND_CHILD_SPEECH_PROMPT = `أنت خبير صوتيات ولغة عرب�
    - إذا سمعت «بَيْتُ» أو «بَيْتُو» بالضمة اكتب «بَيْتُ».
    - إذا سمعت «بَيْتْ» بالسكون الوقفي اكتب «بَيْتْ».
    - إذا سمعت «دارْفِيل» أو «كِتَاب» اكتبها كما سمعتها حرفيًا.
-4. إذا كان التسجيل صامتًا أو ضوضاء فقط بلا كلام، اجعل isSilent = true و transcript = "".
+4. إذا سمعت في آخر الكلمة هاءً خفيفة عند الوقف (مثل «دَجَاجَـهْ»)، فاكتبها ولا تحذفها. وإذا انتهى النطق بلا هاء، فلا تُضفها.
+5. إذا كان التسجيل صامتًا أو ضوضاء فقط بلا كلام، اجعل isSilent = true و transcript = "".
 
 أرجع JSON فقط بهذا الشكل:
 {

@@ -559,3 +559,18 @@ describe('audio catalogue', () => {
     assert.notEqual(audioKey('تِين'), audioKey('طِين'));
   });
 });
+
+test('adaptive programme: a new weak screening result adds its skill without resetting progress', async () => {
+  const { adaptProgressToProfile, buildTrainingPlan, createPersonalizedProgress } = await import('./training');
+  const early = profileFor({ letterSound: 95 }, 80);
+  const running = createPersonalizedProgress(buildTrainingPlan(early), early);
+  running.history.push({ date: '2026-11-18T10:00:00.000Z', skill: running.plan.focus[0], level: 1, correct: 5, total: 6 });
+  const later = profileFor({ letterSound: 95, phonological: 20, rhyme: 20 }, 80);
+  const { progress, added } = adaptProgressToProfile(running, later);
+  assert.ok(added.length > 0, 'weak phonological results add skills');
+  for (const s of added) assert.ok(progress.plan.focus.includes(s) && progress.levels[s]);
+  assert.equal(progress.history.length, 1, 'history kept');
+  assert.equal(progress.plan.createdAt, running.plan.createdAt, 'programme identity kept');
+  assert.ok(progress.plan.focus.length <= 8);
+  assert.deepEqual(adaptProgressToProfile(progress, later).added, [], 'idempotent');
+});

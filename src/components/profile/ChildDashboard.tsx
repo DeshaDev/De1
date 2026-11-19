@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Brain, Dumbbell, TrendingUp } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import { subtestsForAge } from '../../cognitiveProfile/battery';
@@ -34,7 +34,23 @@ interface Props {
  * One child at a glance: who the child is, the full screening report (every task, every word),
  * progress in the training programme, and what still needs work.
  */
-export function ChildDashboard({ student, students, onSelectStudent, onOpenScreening, onOpenTraining, onRecordUpdated, showTeacherTools }: Props) {
+export function ChildDashboard({ student, students: allStudents, onSelectStudent, onOpenScreening, onOpenTraining, onRecordUpdated, showTeacherTools }: Props) {
+  // Only real children: example records are never shown as a child's file.
+  const students = allStudents.filter((s) => !s.isDemoRecord);
+  const firstReal = students[0]?.id;
+  useEffect(() => {
+    if (student.isDemoRecord && firstReal) onSelectStudent(firstReal);
+  }, [student.isDemoRecord, firstReal, onSelectStudent]);
+  if (student.isDemoRecord) {
+    if (firstReal) return null;
+    return (
+      <section className="bz-card p-8 text-center space-y-3" dir="rtl">
+        <h1 className="bz-h2">لا يوجد ملف طفل بعد</h1>
+        <p className="bz-small text-ink-2">سجّل طفلك وابدأ الفحص؛ يظهر هنا ملفه وتقريره وتقدّمه في التدريب.</p>
+        <button type="button" className="bz-btn bz-btn-primary" onClick={onOpenScreening}>ابدأ الفحص</button>
+      </section>
+    );
+  }
   const battery = student.cognitiveBattery;
   const hasScreening = Boolean(battery && Object.keys(battery.results ?? {}).length > 0);
   const profile = hasScreening ? buildProfile(battery!.results, battery!.ageMonths) : null;

@@ -53,45 +53,6 @@ interface HomeLandingViewProps {
 
 const ar = (v: number | string) => String(v).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 
-/** Illustrative task-level results, not age norms or risk classifications. */
-const SAMPLE_PROFILE = [
-  { domain: 'phonological', correct: 7, total: 10 },
-  { domain: 'auditoryMemory', correct: 5, total: 10 },
-  { domain: 'naming', correct: 8, total: 10 },
-] as const;
-
-function SampleProfileCard({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-lg)' }}>
-      <div className="px-5 pt-5 pb-4 border-b border-line">
-        <p className="bz-small bz-muted">مثال افتراضي · أداء داخل الأنشطة فقط</p>
-        <p className="font-display font-bold text-ink text-lg mt-0.5">ملف مهارات القراءة</p>
-        <p className="bz-small text-ink-2 mt-1">لا يمثل مقارنة معيارية أو مؤشر خطورة.</p>
-      </div>
-      <div className="px-5 py-4 space-y-4">
-        {SAMPLE_PROFILE.map((row) => {
-          const percent = Math.round((row.correct / row.total) * 100);
-          return (
-            <div key={row.domain} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[13px] font-semibold text-ink truncate">{DOMAINS[row.domain].nameAr}</p>
-                <span className="bz-small text-ink-2 whitespace-nowrap">{ar(row.correct)}/{ar(row.total)} صحيحة</span>
-              </div>
-              <div className="h-2.5 rounded-full overflow-hidden bg-soft" role="img" aria-label={DOMAINS[row.domain].nameAr}>
-                <span className="block h-full rounded-full bg-brand" style={{ width: percent + '%' }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {!compact && (
-        <div className="px-5 py-3.5 bg-soft border-t border-line">
-          <p className="bz-small text-ink-2">النسبة تصف الإجابات داخل المهمة المعروضة فقط، ولا تحدد مستوى الطفل مقارنةً بأقرانه.</p>
-        </div>
-      )}
-    </div>
-  );
-}
 /** Sun, clouds and two rolling hills behind the hero (decorative). */
 function HnSkyDecor() {
   return (
@@ -179,10 +140,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
                 ابدأ اللعب مع طفلك
               </button>
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-lg hn-toy-soft" onClick={() => scrollTo('sample-report')}>
-                <FileBarChart size={18} aria-hidden="true" />
-                شاهد نموذج التقرير
-              </button>
             </div>
             <ul className="mt-7 flex flex-wrap gap-2">
               {[
@@ -240,56 +197,6 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
       </section>
 
       {/* ================= THE REPORT ================= */}
-      <section id="sample-report" className="hn-report scroll-mt-20">
-        <div className="bz-container py-16 sm:py-20 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-start">
-          <div className="lg:sticky lg:top-28">
-            <h2 className="hn-h2">تقرير تفهمه من أول قراءة</h2>
-            <p className="hn-body mt-3">يصل التقرير بعد آخر لعبة مباشرة، بلغة الأسرة لا بلغة المختبر.</p>
-            <ul className="mt-7 space-y-4">
-              {[
-                { icon: CheckCircle2, t: 'كم إجابة صحيحة في كل لعبة', tone: 'leaf' },
-                { icon: Timer, t: 'أين تمهّل طفلك أو أعاد الاستماع', tone: 'sky' },
-                { icon: Users, t: 'أفكار للعب معه في البيت والصف', tone: 'sun' },
-              ].map((x) => (
-                <li key={x.t} className="flex items-center gap-3">
-                  <span className={`joy-tile joy-tile-${x.tone} w-11 h-11 shrink-0`} aria-hidden="true"><x.icon size={20} /></span>
-                  <span className="font-child font-bold text-ink text-lg">{x.t}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="hn-small mt-7 max-w-md">
-              التقرير يصف ما فعله طفلك داخل الألعاب. لا يشخّص عسر القراءة، ولا يقارن طفلك بغيره قبل اكتمال دراسة التقنين على أطفال عرب.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <SampleProfileCard />
-            <article className="bz-card overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
-                <h3 className="bz-h3">الوعي الصوتي</h3>
-                <span className="bz-badge bz-badge-neutral">مثال للممارسة</span>
-              </div>
-              <div className="px-5 py-4 grid sm:grid-cols-2 gap-5">
-                <div>
-                  <p className="text-[13px] font-semibold text-muted">في الصف</p>
-                  <ul className="mt-2 space-y-1.5 bz-small text-ink-2 list-disc pr-4">
-                    <li>تقطيع الكلمة بالتصفيق قبل قراءتها.</li>
-                    <li>لعبة «ما الصوت الأول؟» دقيقتين كل يوم.</li>
-                    <li>حركة يد ثابتة لكل صوت.</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-muted">في البيت</p>
-                  <ul className="mt-2 space-y-1.5 bz-small text-ink-2 list-disc pr-4">
-                    <li>أناشيد بقافية واضحة.</li>
-                    <li>لعبة «أشياء تبدأ بصوت…» في الطريق.</li>
-                  </ul>
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
 
       {/* ================= DAILY TRAINING: a staircase ================= */}
       <section className="bz-container py-16 sm:py-20">
