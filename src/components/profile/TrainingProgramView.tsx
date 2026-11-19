@@ -18,6 +18,7 @@ import {
   applyProbeEvidence,
   applyReadingTargets,
   awardBadge,
+  adaptProgressToProfile,
   buildTrainingPlan,
   chanceOf,
   createPersonalizedProgress,
@@ -296,6 +297,17 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const seed = useRef(Date.now());
 
   const proposedPlan: TrainingPlan | null = useMemo(() => (profile ? buildTrainingPlan(profile) : null), [profile]);
+
+  // Adaptive programme: each finished screening task can add the skills its result shows need work.
+  const [adaptedSkills, setAdaptedSkills] = useState<SkillId[]>([]);
+  useEffect(() => {
+    if (!progress || !profile) return;
+    const { progress: adapted, added } = adaptProgressToProfile(progress, profile);
+    if (added.length === 0) return;
+    setAdaptedSkills(added);
+    persist(adapted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, profile]);
   const proposedSetup = useMemo(
     () => (proposedPlan ? summarizePlanSetup(proposedPlan, profile) : null),
     [proposedPlan, profile]
@@ -1175,6 +1187,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           </button>
         </div>
       </section>
+
+      {adaptedSkills.length > 0 && (
+        <div className="rounded-2xl border border-brand/30 bg-brand-tint p-4 text-sm text-ink" role="status">
+          <strong>تحدّث البرنامج من نتائج الفحص الجديدة:</strong> أُضيف{adaptedSkills.length > 1 ? 'ت' : ''} {adaptedSkills.map((s) => SKILLS[s].nameAr).join('، ')}.
+          يبدأ كل منها من مستوى يناسب نتيجة الطفل، ويبقى تقدّمه في المهارات الأخرى كما هو.
+        </div>
+      )}
 
       {due && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-info-soft border border-line p-4">

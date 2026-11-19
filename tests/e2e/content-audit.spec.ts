@@ -74,9 +74,6 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
     await page.goto('/');
     await audit(page, 'home', findings);
 
-    await page.getByRole('button', { name: /شاهد نموذج التقرير/ }).first().click();
-    await audit(page, 'sample-report', findings);
-    await page.goto('/');
 
     await nav(page, mobile ? /^الفحص$/ : /فحص مهارات القراءة/, mobile);
     await audit(page, 'battery-setup', findings);

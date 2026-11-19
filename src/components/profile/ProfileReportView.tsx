@@ -304,39 +304,6 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
             </section>
           )}
 
-          {/* 4. Practice ideas, only where practice is needed */}
-          {needsWork.length > 0 && (
-            <section aria-labelledby="practice-title" className="space-y-3">
-              <h2 id="practice-title" className="bz-h3" style={{ fontSize: 22 }}>كيف تساعد طفلك</h2>
-              {needsWork.map((s) => {
-                const guidance = SUBTEST_GUIDANCE[s.subtestId];
-                if (!guidance) return null;
-                return (
-                  <details key={s.subtestId} className="rounded-2xl border border-line overflow-hidden">
-                    <summary className="px-5 py-3 cursor-pointer font-semibold text-ink">{SUBTESTS_BY_ID[s.subtestId].skillNameAr}</summary>
-                    <div className="px-5 pb-5 pt-2 border-t border-line space-y-3 bz-small">
-                      <p className="text-ink-2"><strong className="text-ink">لماذا تهم: </strong>{guidance.whyItMattersAr}</p>
-                      <div className="grid md:grid-cols-2 gap-3">
-                        <div className="rounded-xl p-4 bg-sun-soft">
-                          <p className="font-semibold text-ink">في البيت</p>
-                          <ul className="list-disc pr-5 mt-2 space-y-1.5 text-ink-2">
-                            {guidance.homeActivitiesAr.map((a) => <li key={a}>{a}</li>)}
-                          </ul>
-                        </div>
-                        <div className="rounded-xl p-4 bg-soft">
-                          <p className="font-semibold text-ink">في الصف</p>
-                          <ul className="list-disc pr-5 mt-2 space-y-1.5 text-ink-2">
-                            {guidance.strategiesAr.map((a) => <li key={a}>{a}</li>)}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </details>
-                );
-              })}
-            </section>
-          )}
-
           {previous && (
             <p className="bz-small text-ink-2 rounded-xl border border-line p-4">
               يوجد فحص سابق بتاريخ {new Date(previous.completedAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })} ({toArabicDigits(previous.completedSubtests)} مهام مكتملة).

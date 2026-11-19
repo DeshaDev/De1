@@ -1454,3 +1454,40 @@ export function applyReadingTargets(
     added,
   };
 }
+
+/**
+ * Adaptive programme: when new screening results show a skill that needs work and is not yet in
+ * the running programme, add it, with a start level and mastery prior taken from its result.
+ * Progress already made (levels, history, mastery, probes) is never reset, and nothing the child
+ * is working on is removed. Returns the same object when nothing changes.
+ */
+export function adaptProgressToProfile(
+  progress: TrainingProgress,
+  profile: CognitiveProfile | null | undefined
+): { progress: TrainingProgress; added: SkillId[] } {
+  if (!profile || profile.subtests.length === 0) return { progress, added: [] };
+  const next = buildTrainingPlan(profile);
+  const added = next.focus.filter((s) => !progress.plan.focus.includes(s) && !progress.mastered.includes(s));
+  if (added.length === 0) return { progress, added };
+  const fresh = createPersonalizedProgress(next, profile);
+  const ordered = [...progress.plan.focus, ...added].sort((a, b) => SKILL_ORDER.indexOf(a) - SKILL_ORDER.indexOf(b));
+  // The record allows 8 skills: keep what still needs work, drop mastered ones first.
+  const focus = ordered.length <= 8
+    ? ordered
+    : [...ordered.filter((s) => !progress.mastered.includes(s)), ...ordered.filter((s) => progress.mastered.includes(s))].slice(0, 8);
+  const levels = { ...progress.levels };
+  for (const s of added) levels[s] = fresh.levels[s] ?? 1;
+  const bkt = progress.bkt && fresh.bkt
+    ? { ...progress.bkt, ...Object.fromEntries(Object.entries(fresh.bkt).filter(([k]) => added.some((s) => k === s || k.startsWith(`${s}:`)))) }
+    : progress.bkt ?? fresh.bkt;
+  return {
+    added: added.filter((s) => focus.includes(s)),
+    progress: {
+      ...progress,
+      plan: { ...progress.plan, focus, preventive: progress.plan.preventive && next.preventive, rationaleAr: next.rationaleAr },
+      levels,
+      bkt,
+      targets: progress.targets ?? fresh.targets,
+    },
+  };
+}

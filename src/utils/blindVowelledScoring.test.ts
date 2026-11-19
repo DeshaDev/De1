@@ -130,3 +130,13 @@ test('a whole passage is scored word by word from the blind vowelled transcript'
   assert.ok(kinds[5] === 'None' || kinds[5] === 'DialectVariant', 'pausal reading of the last word is fine');
   assert.equal(result.words.length, 6);
 });
+
+test('a pausal taa marbuta that was not transcribed is not an error; the different word دجاج is', async () => {
+  const { scoreBlindSingleWordArabic } = await import('./blindVowelledScoring');
+  for (const heard of ['دَجَاجَ', 'دَجَاجَهْ', 'دَجَاجَة']) {
+    const r = scoreBlindSingleWordArabic('دَجَاجَة', heard);
+    assert.ok(r.errorType === 'None' || r.errorType === 'DialectVariant', `${heard} → ${r.errorType}`);
+  }
+  assert.equal(scoreBlindSingleWordArabic('دَجَاجَة', 'دَجَاجْ').errorType, 'Substitution');
+  assert.ok(['None', 'DialectVariant'].includes(scoreBlindSingleWordArabic('تُفَّاحَة', 'تُفَّاحَ').errorType));
+});
