@@ -5517,11 +5517,16 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     // Serve a compact, gzip-cached audio manifest so first-time audio playback starts ~10x faster.
     let cachedManifestGzip: Buffer | null = null;
     let cachedManifestRaw: Buffer | null = null;
+    let cachedManifestMtime = 0;
+    let cachedManifestEtag = '';
     app.get('/audio/v1/manifest.json', (req, res, next) => {
       try {
-        if (!cachedManifestRaw) {
-          const manifestFile = path.join(distPath, 'audio', 'v1', 'manifest.json');
-          if (!fs.existsSync(manifestFile)) return next();
+        const manifestFile = path.join(distPath, 'audio', 'v1', 'manifest.json');
+        if (!fs.existsSync(manifestFile)) return next();
+        // Re-read when the file changes (new clips recorded), so no restart is needed.
+        const mtime = fs.statSync(manifestFile).mtimeMs;
+        if (!cachedManifestRaw || mtime !== cachedManifestMtime) {
+          cachedManifestMtime = mtime;
           const parsed = JSON.parse(fs.readFileSync(manifestFile, 'utf8')) as {
             version?: number;
             voice?: string;
@@ -5536,9 +5541,17 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
             'utf8'
           );
           cachedManifestGzip = zlib.gzipSync(cachedManifestRaw, { level: 9 });
+          cachedManifestEtag = `"${crypto.createHash('sha1').update(cachedManifestRaw).digest('hex').slice(0, 16)}"`;
+        }
+        // The list of clips changes whenever audio is re-recorded: browsers must revalidate it
+        // (a 304 costs almost nothing), or they keep pointing at clips that no longer exist.
+        res.setHeader('ETag', cachedManifestEtag);
+        res.setHeader('Cache-Control', 'no-cache');
+        if (req.headers['if-none-match'] === cachedManifestEtag) {
+          res.status(304).end();
+          return;
         }
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
         res.setHeader('Vary', 'Accept-Encoding');
         if (String(req.headers['accept-encoding'] || '').includes('gzip') && cachedManifestGzip) {
           res.setHeader('Content-Encoding', 'gzip');
@@ -5552,7 +5565,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     });
 
     // Long-lived browser caching for immutable static audio clips, pictures, and hashed Vite assets
-    app.use('/audio', express.static(path.join(distPath, 'audio'), { maxAge: '30d', immutable: true }));
+    // Clips keep their file name when re-recorded, so browsers revalidate them (304 when unchanged).
+    app.use('/audio', express.static(path.join(distPath, 'audio'), { maxAge: 0 }));
     app.use('/pictures', express.static(path.join(distPath, 'pictures'), { maxAge: '30d', immutable: true }));
     app.use('/assets', express.static(path.join(distPath, 'assets'), { maxAge: '30d', immutable: true }));
     app.use(express.static(distPath, { index: false, maxAge: '7d' }));
