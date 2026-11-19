@@ -94,7 +94,6 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
   useEffect(() => {
     exerciseCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeStation]);
-  const [selectedVoice, setSelectedVoice] = useState<'ar-SA-ZariyahNeural' | 'ar-EG-SalmaNeural' | 'ar-SA-HamedNeural'>('ar-SA-ZariyahNeural');
 
   // Curated grade-specific practice selected from reviewed content
   const [curatedSession, setCuratedSession] = useState<RemediationSessionPlan | null>(null);
@@ -176,7 +175,7 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
 
   // 100% Natural Arabic Neural Speech Player (Authentic human pronunciation with studio-grade phoneme makharij)
   const speakText = (text: string) => {
-    playNaturalArabicAudio(text, { voice: (selectedVoice as any) || 'ar-AE-FatimaNeural', rate: '0%', pitch: '0%' });
+    playNaturalArabicAudio(text, { rate: '0%', pitch: '0%' });
   };
 
   // Positive celebration

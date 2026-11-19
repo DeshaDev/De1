@@ -237,7 +237,7 @@ export default function AudioComparisonLabView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: referenceText.trim(),
-          voice: 'ar-SA-ZariyahNeural',
+          voice: 'ML7jGRDg4E9hIl5qEm1Z',
           rate: '0%',
         }),
       });
