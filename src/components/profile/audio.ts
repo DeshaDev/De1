@@ -32,7 +32,10 @@ export function resolveClipFile(manifest: AudioManifest, text: string): string |
   const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
   const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
 
+  // The clip recorded from exactly this text comes first; the looser aliases below exist only
+  // for texts outside the catalogue and once pointed at older recordings (مَاء spoken as مَاءُ).
   const keysToTry = [
+    audioKey(normalizeSpokenText(text)),
     text,
     text.trim(),
     audioKey(text),

@@ -196,9 +196,9 @@ export async function playNaturalArabicAudio(
       const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
       const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
       const keysToTry = [
+        audioKey(text),
         text,
         text.trim(),
-        audioKey(text),
         preparedText,
         preparedText ? audioKey(preparedText) : undefined,
         pausal,

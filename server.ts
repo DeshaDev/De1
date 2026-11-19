@@ -2803,11 +2803,18 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         stored.taskId !== taskId ||
         suppliedAssessment?.assessmentReceipt !== receipt
       ) {
-        res.status(409).json({
-          code: 'COGNITIVE_AUDIO_RECEIPT_INVALID',
-          error: 'إيصال تقييم الصوت منتهي الصلاحية أو لا يخص هذا الطفل وهذه الجلسة. أعد تسجيل المهمة.',
-        });
-        return;
+        // The voice score cannot be verified (receipt expired, e.g. after a server restart, or not
+        // this child's). Save this task without a score rather than rejecting the whole screening:
+        // rejecting it lost every other task's result too.
+        results[taskId] = {
+          ...incoming,
+          responses: [],
+          durationMs: undefined,
+          errorCount: undefined,
+          audioAssessment: undefined,
+          audioAssessmentReceipt: undefined,
+        };
+        continue;
       }
 
       const definition = getCognitiveAudioTaskDefinition(taskId);

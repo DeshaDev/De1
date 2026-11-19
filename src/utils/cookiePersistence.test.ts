@@ -182,3 +182,14 @@ test('Student persistence: does not overwrite existing data if durable key stora
   assert.deepEqual(restoredAfterRestart, []);
 });
 
+
+test('records encrypted with a lost device key are set aside so saving can resume', async () => {
+  const { localStorageJar } = setupMockBrowser();
+  resetDeviceEncryptionKeyCacheForTesting();
+  const unreadable = 'baseera:enc:v3:aes-gcm-idb:AAAA:BBBB';
+  localStorageJar.set('hn_stored_students_v1', unreadable);
+  assert.deepEqual(await loadStoredStudents(), []);
+  assert.equal(localStorageJar.get('hn_stored_students_v1'), undefined);
+  const backup = [...localStorageJar.entries()].find(([k]) => k.startsWith('hn_stored_students_v1.unreadable.'));
+  assert.equal(backup?.[1], unreadable);
+});
