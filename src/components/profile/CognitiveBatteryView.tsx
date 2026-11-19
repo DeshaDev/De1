@@ -240,14 +240,17 @@ function SubtestRunner({
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
-          <div className="flex flex-col items-center text-center gap-3 max-w-xl">
+          <div className="flex flex-col items-center text-center gap-4 max-w-xl">
+            <span className="text-6xl" aria-hidden="true">{subtest.icon}</span>
+            <h2 className="font-child text-2xl sm:text-3xl font-black text-ink">{subtest.gameNameAr}</h2>
+            <p className="font-child text-xl sm:text-2xl leading-relaxed text-ink" lang="ar">{subtest.introAudio}</p>
             <button
               type="button"
               onClick={() => speak(subtest.introAudio)}
               className="bz-btn bz-btn-ghost bz-btn-sm"
               aria-label="إعادة سماع التعليمات"
             >
-              <Volume2 className="w-4 h-4" /> استمع
+              <Volume2 className="w-4 h-4" /> استمع مرة أخرى
             </button>
             <button
               type="button"
@@ -1123,7 +1126,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           </button>
         ) : (
           <span className="bz-small bz-muted">
-            يُفتح البرنامج التدريبي المخصّص بعد إنجاز الفحص.
+            يتحدّث البرنامج التدريبي بعد كل جلسة من نتائجها.
           </span>
         )}
         {completed.length === ageTasks.length && ageTasks.length > 0 && (
