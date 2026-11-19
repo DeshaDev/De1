@@ -177,8 +177,8 @@ function pictureModel(ids: string[], textAr: string, spoken: string): LessonStep
   return { textAr, audio: say(spoken), visual: { kind: 'pictures', ids } };
 }
 
-function glyphModel(letters: string[], textAr: string, spoken: string, notesAr?: string[]): LessonStep {
-  return { textAr, audio: say(spoken), visual: { kind: 'glyphs', letters, ...(notesAr ? { notesAr } : {}) } };
+function glyphModel(letters: string[], textAr: string, spoken?: string, notesAr?: string[]): LessonStep {
+  return { textAr, audio: spoken ? say(spoken) : [], visual: { kind: 'glyphs', letters, ...(notesAr ? { notesAr } : {}) } };
 }
 
 function storyModel(
@@ -835,13 +835,13 @@ export function lessonFor(skill: SkillId, level: Level, targets?: TrainingTarget
         glyphModel(
           firstGroup,
           `المجموعة الأولى: ${firstGroup.join('، ')}.`,
-          `نَسْمَعُ صَوْتَ الْحُرُوفِ مَعَ حَرَكَةِ الْفَتْحَةِ: ${firstGroup.join('، ')}.`,
+          undefined,
           soundNotes.slice(0, 3)
         ),
         glyphModel(
           secondGroup,
           `المجموعة الثانية: ${secondGroup.join('، ')}.`,
-          `نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ: ${secondGroup.join('، ')}.`,
+          undefined,
           soundNotes.slice(3)
         ),
       ];

@@ -2891,22 +2891,6 @@
       "context": "instruction",
       "bytes": 106204
     },
-    "0284f122606fe0a2": {
-      "file": "0284f122606fe0a2.mp3",
-      "text": "نَسْمَعُ صَوْتَ كُلِّ حَرْفٍ مَعَ الْفَتْحَةِ: مَ، بَ، سَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 86978
-    },
-    "4819ab1cc9464fde": {
-      "file": "4819ab1cc9464fde.mp3",
-      "text": "نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ: لَ، رَ، نَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 94501
-    },
     "d597708337efb340": {
       "file": "d597708337efb340.mp3",
       "text": "الْآنَ دَوْرُكَ: اسْمَعِ الصَّوْتَ، وَاخْتَرِ الْحَرْفَ الَّذِي يُمَثِّلُهُ.",
@@ -2923,22 +2907,6 @@
       "context": "instruction",
       "bytes": 117489
     },
-    "3da6d77717957d9a": {
-      "file": "3da6d77717957d9a.mp3",
-      "text": "نَسْمَعُ صَوْتَ كُلِّ حَرْفٍ مَعَ الْفَتْحَةِ: تَ، دَ، فَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 85724
-    },
-    "f432af041c2e0ca9": {
-      "file": "f432af041c2e0ca9.mp3",
-      "text": "نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ: كَ، عَ، حَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 97009
-    },
     "47a60cb652073234": {
       "file": "47a60cb652073234.mp3",
       "text": "قَدْ يَبْقَى الْحَرْفُ نَفْسُهُ وَيَتَغَيَّرُ صَوْتُهُ مَعَ الْفَتْحَةِ وَالْكَسْرَةِ وَالضَّمَّةِ.",
@@ -2946,14 +2914,6 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 100771
-    },
-    "c684bcef2bb0e10a": {
-      "file": "c684bcef2bb0e10a.mp3",
-      "text": "نُكْمِلُ الْمَجْمُوعَةَ وَنَسْمَعُ صَوْتَ كُلِّ حَرْفٍ: سَ، صَ.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "instruction",
-      "bytes": 89486
     },
     "9267d77ce5e57ec9": {
       "file": "9267d77ce5e57ec9.mp3",
@@ -3738,54 +3698,6 @@
       "context": "pal",
       "bytes": 34315
     },
-    "072d12b5fe571504": {
-      "file": "072d12b5fe571504.mp3",
-      "text": "أَيْنَ نِيكُو؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 17597
-    },
-    "أَيْنَ نِيكُو؟": {
-      "file": "072d12b5fe571504.mp3",
-      "text": "أَيْنَ نِيكُو؟",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 17597
-    },
-    "a5a0a39e510c2caa": {
-      "file": "a5a0a39e510c2caa.mp3",
-      "text": "هَذَا نِيكُو.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 20105
-    },
-    "هَذَا نِيكُو.": {
-      "file": "a5a0a39e510c2caa.mp3",
-      "text": "هَذَا نِيكُو.",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 20105
-    },
-    "76fa7de529757dd6": {
-      "file": "76fa7de529757dd6.mp3",
-      "text": "نَعَمْ، هَذَا نِيكُو!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 33061
-    },
-    "نَعَمْ، هَذَا نِيكُو!": {
-      "file": "76fa7de529757dd6.mp3",
-      "text": "نَعَمْ، هَذَا نِيكُو!",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "pal",
-      "bytes": 33061
-    },
     "3474324be6dda487": {
       "file": "3474324be6dda487.mp3",
       "text": "أَيْنَ طَافِي؟",
@@ -3881,6 +3793,54 @@
       "model": "eleven_v4",
       "context": "pal",
       "bytes": 31807
+    },
+    "56108b52afaa9af7": {
+      "file": "56108b52afaa9af7.mp3",
+      "text": "أَيْنَ بِيكُو؟",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "instruction",
+      "bytes": 14628
+    },
+    "أَيْنَ بِيكُو؟": {
+      "file": "56108b52afaa9af7.mp3",
+      "text": "أَيْنَ بِيكُو؟",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "instruction",
+      "bytes": 14628
+    },
+    "2d3154e34abd9e57": {
+      "file": "2d3154e34abd9e57.mp3",
+      "text": "هَذَا بِيكُو.",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "instruction",
+      "bytes": 20062
+    },
+    "هَذَا بِيكُو.": {
+      "file": "2d3154e34abd9e57.mp3",
+      "text": "هَذَا بِيكُو.",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "instruction",
+      "bytes": 20062
+    },
+    "3e4a106efa4ed62f": {
+      "file": "3e4a106efa4ed62f.mp3",
+      "text": "نَعَمْ، هَذَا بِيكُو!",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "feedback",
+      "bytes": 31764
+    },
+    "نَعَمْ، هَذَا بِيكُو!": {
+      "file": "3e4a106efa4ed62f.mp3",
+      "text": "نَعَمْ، هَذَا بِيكُو!",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
+      "context": "feedback",
+      "bytes": 31764
     }
   },
   "model": "eleven_v4"
