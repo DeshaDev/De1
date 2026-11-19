@@ -4491,14 +4491,34 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
 
     console.log(`[Azure Assessment] Incoming audio evaluation for passage: "${body.passageId}" | Duration: ${durationSeconds}s | Language: ${language}`);
     try {
-      const result = await assessReadingAudioWithAzure({
-        referenceText: referenceText.trim(),
-        referenceWords,
-        audioWavBase64,
-        durationSeconds: Number(durationSeconds),
-        language,
-        dialectLabel: 'الفصحى المعيارية (ar-SA)',
-      });
+      // Blind vowelled transcription first (the engine hears the reading without the text), then
+      // Azure if no Gemini/OpenRouter key works. Either result goes through the same checks below.
+      let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>> | null = null;
+      if (getOpenRouterApiKey() || getGeminiApiKey()) {
+        try {
+          const blind = await transcribeArabicBlindWithGemini({ audioWavBase64, mode: 'passage' });
+          result = scoreBlindPassageArabic({
+            referenceWords: trustedPassage.words,
+            blindTranscript: blind.isSilent ? '' : blind.transcript,
+            durationSeconds: Number(durationSeconds),
+          });
+          if (blind.isSilent) throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
+        } catch (blindErr) {
+          if (blindErr instanceof Error && blindErr.message === 'AZURE_NO_RECOGNIZED_SPEECH') throw blindErr;
+          console.warn('[Reading Assessment] Blind transcription unavailable, using Azure:', blindErr);
+          result = null;
+        }
+      }
+      if (!result) {
+        result = await assessReadingAudioWithAzure({
+          referenceText: referenceText.trim(),
+          referenceWords,
+          audioWavBase64,
+          durationSeconds: Number(durationSeconds),
+          language,
+          dialectLabel: 'الفصحى المعيارية (ar-SA)',
+        });
+      }
       console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
 
       // A receipt is created only when every target word has a resolved Azure word-level result.

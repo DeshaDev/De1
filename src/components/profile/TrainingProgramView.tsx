@@ -1190,8 +1190,8 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
 
       {adaptedSkills.length > 0 && (
         <div className="rounded-2xl border border-brand/30 bg-brand-tint p-4 text-sm text-ink" role="status">
-          <strong>تحدّث البرنامج من نتائج الفحص الجديدة:</strong> أُضيف{adaptedSkills.length > 1 ? 'ت' : ''} {adaptedSkills.map((s) => SKILLS[s].nameAr).join('، ')}.
-          يبدأ كل منها من مستوى يناسب نتيجة الطفل، ويبقى تقدّمه في المهارات الأخرى كما هو.
+          أضفنا إلى برنامج طفلك تمرين <strong>{adaptedSkills.map((sk) => `«${SKILLS[sk].nameAr}»`).join(' و')}</strong>،
+          لأن نتيجته في الفحص الأخير تحتاج تدريبًا. يبدأ التمرين من مستوى يناسب طفلك.
         </div>
       )}
 
