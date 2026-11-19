@@ -1551,9 +1551,9 @@
       "file": "e1282bea9dc9b820.mp3",
       "text": "فِيلْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 13824
+      "bytes": 15089
     },
     "e130c1c09d7dcc51": {
       "file": "e130c1c09d7dcc51.mp3",
@@ -2156,11 +2156,11 @@
     },
     "58b8eecb84758036": {
       "file": "58b8eecb84758036.mp3",
-      "text": "فُوبُو",
+      "text": "فُوبْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 12288
+      "bytes": 14253
     },
     "98ccc4b2de3dc1a2": {
       "file": "98ccc4b2de3dc1a2.mp3",
@@ -3292,11 +3292,11 @@
     },
     "فُوب": {
       "file": "58b8eecb84758036.mp3",
-      "text": "فُوب",
+      "text": "فُوبْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 17597
+      "bytes": 14253
     },
     "فُوبُ": {
       "file": "58b8eecb84758036.mp3",
@@ -3574,9 +3574,9 @@
       "file": "e1282bea9dc9b820.mp3",
       "text": "فِيلْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 13824
+      "bytes": 15089
     },
     "فِيلُ": {
       "file": "e1282bea9dc9b820.mp3",
@@ -3590,9 +3590,9 @@
       "file": "e1282bea9dc9b820.mp3",
       "text": "فِيلْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 13824
+      "bytes": 15089
     },
     "سَمَكَة": {
       "file": "bc15d32e9febc432.mp3",
@@ -13343,11 +13343,11 @@
     },
     "فيل": {
       "file": "e1282bea9dc9b820.mp3",
-      "text": "فيل",
+      "text": "فِيلْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 13824
+      "bytes": 15089
     },
     "68c48a50849d6715": {
       "file": "e1282bea9dc9b820.mp3",
@@ -21812,11 +21812,11 @@
     },
     "فوب": {
       "file": "58b8eecb84758036.mp3",
-      "text": "فوب",
+      "text": "فُوبْ",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_multilingual_v2",
       "context": "single_word",
-      "bytes": 44352,
-      "model": "eleven_v4"
+      "bytes": 14253
     },
     "فُوْب": {
       "file": "58b8eecb84758036.mp3",
@@ -30209,6 +30209,14 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 95755
+    },
+    "فُوبْ": {
+      "file": "58b8eecb84758036.mp3",
+      "text": "فُوبْ",
+      "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_multilingual_v2",
+      "context": "single_word",
+      "bytes": 14253
     }
   },
   "model": "eleven_v4"
