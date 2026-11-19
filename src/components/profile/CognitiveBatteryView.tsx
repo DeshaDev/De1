@@ -52,6 +52,8 @@ import {
   saveBatterySession,
 } from '../../cognitiveProfile/storage';
 import { AssociationPlayer, ChoicePlayer, PalPlayer, SpanPlayer } from './TaskPlayers';
+import { TeachingChoicePlayer } from './TeachingPlayers';
+import { HINTS } from '../../cognitiveProfile/curriculum';
 import { PassagePlayer, RanPlayer, ReadAloudPlayer, ReadListAudioPlayer, SpellingPlayer } from './ReadingPlayers';
 import type { CognitiveAudioSessionContext } from './cognitiveAudioClient';
 import { MascotMomentLive } from '../ui/MascotLive';
@@ -264,7 +266,9 @@ function SubtestRunner({
         )}
 
         {stage === 'practice' && subtest.kind === 'choice' && (
-          <ChoicePlayer key={`p-${index}`} item={subtest.practice[index]} showFeedback onDone={nextPractice} />
+          // Practice teaches the rule: a hint first, and after a wrong answer an explanation of why
+          // the right answer is right, then a second try. Practice is never scored.
+          <TeachingChoicePlayer key={`p-${index}`} item={subtest.practice[index]} guided onDone={() => nextPractice()} />
         )}
         {stage === 'practice' && subtest.kind === 'span' && (
           <SpanPlayer key={`p-${index}`} trial={subtest.practice[index]} modality={subtest.modality} showFeedback onDone={nextPractice} />
@@ -295,6 +299,11 @@ function SubtestRunner({
           </div>
         )}
 
+        {stage === 'test' && subtest.kind === 'choice' && HINTS[(subtest as ChoiceSubtest).items[index]?.tag ?? ''] && (
+          <p className="font-child text-sm sm:text-base text-ink-2 text-center max-w-lg mx-auto -mb-2">
+            💡 {HINTS[(subtest as ChoiceSubtest).items[index].tag!]}
+          </p>
+        )}
         {stage === 'test' && subtest.kind === 'choice' && (
           <ChoicePlayer
             key={`t-${index}`}

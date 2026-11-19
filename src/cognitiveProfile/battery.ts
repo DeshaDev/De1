@@ -270,12 +270,12 @@ function rhymeItem(id: string, target: string, options: string[], correct: strin
   const t = lex(target);
   return {
     id,
-    promptAr: `أيّ صورة تنتهي مثل «${t.word}»؟`,
+    promptAr: `أيّ صورة ينتهي اسمها مثل «${t.word}»؟`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [
       { text: t.word, highlight: 'stimulus', pauseAfterMs: 400 },
       ...namedOptions(options),
-      { text: `أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: ${t.word}؟` },
+      { text: `أَيُّ صُورَةٍ يَنْتَهِي اسْمُهَا مِثْلَ: ${t.word}؟` },
     ],
     options: options.map(pic),
     correctId: correct,
@@ -287,12 +287,12 @@ function onsetItem(id: string, target: string, options: string[], correct: strin
   const t = lex(target);
   return {
     id,
-    promptAr: `أيّ صورة تبدأ بصوت «${t.word}» نفسه؟`,
+    promptAr: `أيّ صورة يبدأ اسمها مثل «${t.word}»؟`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [
       { text: t.word, highlight: 'stimulus', pauseAfterMs: 400 },
       ...namedOptions(options),
-      { text: `أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: ${t.word}؟` },
+      { text: `أَيُّ صُورَةٍ يَبْدَأُ اسْمُهَا مِثْلَ: ${t.word}؟` },
     ],
     options: options.map(pic),
     correctId: correct,
@@ -304,12 +304,12 @@ function codaItem(id: string, target: string, options: string[], correct: string
   const t = lex(target);
   return {
     id,
-    promptAr: `أيّ صورة تنتهي بآخر صوت في «${t.word}»؟`,
+    promptAr: `أيّ صورة ينتهي اسمها بآخر صوت في «${t.word}»؟`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [
       { text: t.word, highlight: 'stimulus', pauseAfterMs: 400 },
       ...namedOptions(options),
-      { text: `أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: ${t.word}؟` },
+      { text: `أَيُّ صُورَةٍ يَنْتَهِي اسْمُهَا بِآخِرِ صَوْتٍ فِي: ${t.word}؟` },
     ],
     options: options.map(pic),
     correctId: correct,
@@ -321,7 +321,7 @@ function blendItem(id: string, target: string, options: string[]): ChoiceItem {
   const t = lex(target);
   return {
     id,
-    promptAr: 'ركّب الأجزاء: ما الكلمة؟',
+    promptAr: 'اسمع أجزاء الكلمة، ثم اختر صورتها',
     audio: [
       { text: 'اسْمَعِ الأَجْزَاءَ وَرَكِّبْهَا.', pauseAfterMs: 400 },
       ...t.syllables.map((s) => ({ text: s, pauseAfterMs: 650 })),
@@ -342,7 +342,7 @@ function syllableCountItem(id: string, target: string): ChoiceItem {
   }));
   return {
     id,
-    promptAr: `كم مقطعًا في «${t.word}»؟`,
+    promptAr: `كم مقطعًا في «${t.word}»؟ صفّق مع كل مقطع.`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [{ text: `كَمْ مَقْطَعًا فِي كَلِمَةِ: ${t.word}؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ، ثُمَّ اخْتَرْ.`, highlight: 'stimulus' }],
     options,
@@ -359,7 +359,7 @@ const SAME_DIFFERENT: ChoiceOption[] = [
 function sameDifferentItem(id: string, first: string, second: string): ChoiceItem {
   return {
     id,
-    promptAr: 'هل سمعت الصوت نفسه مرتين؟',
+    promptAr: 'هل الصوتان متشابهان أم مختلفان؟',
     audio: [
       { text: first, pauseAfterMs: 700 },
       { text: second, pauseAfterMs: 400 },
@@ -374,7 +374,7 @@ function sameDifferentItem(id: string, first: string, second: string): ChoiceIte
 function minimalPairItem(id: string, target: string, options: [string, string]): ChoiceItem {
   return {
     id,
-    promptAr: 'أين الصورة التي سمعت اسمها؟',
+    promptAr: 'المس صورة الكلمة التي سمعتها',
     audio: [{ text: `أَيْنَ: ${lex(target).word}؟` }],
     options: options.map(pic),
     correctId: target,
@@ -385,7 +385,7 @@ function minimalPairItem(id: string, target: string, options: [string, string]):
 function matchItem(id: string, target: string, options: string[]): ChoiceItem {
   return {
     id,
-    promptAr: 'أين الشكل المطابق تمامًا؟',
+    promptAr: 'أين الشكل الذي يطابق الشكل في الأعلى تمامًا؟',
     stimulus: { type: 'glyph', value: target, label: target },
     audio: [{ text: 'أَيْنَ مِثْلُهُ تَمَامًا؟' }],
     options: options.map(glyph),
@@ -397,7 +397,7 @@ function matchItem(id: string, target: string, options: string[]): ChoiceItem {
 function letterSoundItem(id: string, sound: string, letter: string, options: string[]): ChoiceItem {
   return {
     id,
-    promptAr: 'أيّ حرف له هذا الصوت؟',
+    promptAr: 'المس الحرف الذي سمعت صوته',
     audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound}؟` }],
     options: options.map(glyph),
     correctId: letter,
@@ -479,7 +479,7 @@ export const BATTERY: Subtest[] = [
     examinerNoteAr:
       'سيسمع الطفل سلسلة من الكلمات دون رؤية صورها، ثم يلمس الصور بالترتيب نفسه الذي سمعه. دورك: تأكّد من هدوء المكان (ويُفضَّل استخدام سماعات)، ولا تكرّر الكلمات للطفل.',
     introAudio:
-      'البَبَّغَاءُ سَيَقُولُ كَلِمَاتٍ. اسْمَعْ جَيِّدًا، ثُمَّ الْمِسِ الصُّوَرَ بِالتَّرْتِيبِ الَّذِي سَمِعْتَهُ.',
+      'سَيَقُولُ الْبَبَّغَاءُ كَلِمَاتٍ، وَالصُّوَرُ مُخْتَفِيَةٌ. اسْمَعْ جَيِّدًا، ثُمَّ الْمِسِ الصُّوَرَ بِالتَّرْتِيبِ نَفْسِهِ الَّذِي سَمِعْتَهُ.',
     practice: [buildSpanTrial('as-p1', ['house', 'banana'], AUDITORY_SPAN_POOL, 301)],
     trials: AUDITORY_SEQUENCES.map((seq, i) => buildSpanTrial(`as-${i + 1}`, seq, AUDITORY_SPAN_POOL, 400 + i)),
   },
@@ -522,7 +522,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 4,
     examinerNoteAr:
       'يسمع الطفل اسم الصورة في الأعلى ثم أسماء ثلاث صور في الأسفل، ويختار الصورة التي تنتهي بالصوت نفسه (مثل: قَلَم وعَلَم). دورك: دعه يختار بنفسه ويمكن إعادة سماع الصوت عند الحاجة.',
-    introAudio: 'سَنَبْحَثُ عَنْ كَلِمَاتٍ تَتَشَابَهُ فِي آخِرِهَا، مِثْلَ: قَلَم وَعَلَم.',
+    introAudio: 'سَتَسْمَعُ اسْمَ صُورَةٍ، ثُمَّ أَسْمَاءَ ثَلَاثِ صُوَرٍ. اخْتَرِ الصُّورَةَ الَّتِي يَنْتَهِي اسْمُهَا مِثْلَهَا، مِثْلَ: قَلَم وَعَلَم.',
     practice: [
       rhymeItem('rh-p1', 'pen', ['flag', 'banana', 'sun'], 'flag'),
       rhymeItem('rh-p2', 'door', ['cat', 'book', 'elephant'], 'book'),
@@ -553,7 +553,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 4,
     examinerNoteAr:
       'أربع خطوات قصيرة بالصوت والصور: اختيار ما يبدأ بالصوت نفسه، ثم ما ينتهي بالصوت نفسه، ثم تركيب مقاطع مسموعة لمعرفة الكلمة، ثم عدّ مقاطع الكلمة. يمكن للطفل التصفيق مع المقاطع. دورك: الجلوس بجانبه دون توجيهه للإجابة.',
-    introAudio: 'فِي مُخْتَبَرِ الأَصْوَاتِ سَنَلْعَبُ بِأَصْوَاتِ الكَلِمَاتِ: أَوَّلِهَا وَآخِرِهَا وَأَجْزَائِهَا.',
+    introAudio: 'فِي مُخْتَبَرِ الْأَصْوَاتِ نَسْمَعُ اسْمَ صُورَةٍ، ثُمَّ نَبْحَثُ عَنْ صُورَةٍ يَبْدَأُ اسْمُهَا أَوْ يَنْتَهِي بِالصَّوْتِ نَفْسِهِ. مِثْلًا: شَمْس وَشَجَرَة تَبْدَآنِ بِالصَّوْتِ نَفْسِهِ.',
     practice: [
       onsetItem('ph-p1', 'sun', ['tree', 'moon', 'door'], 'tree'),
       blendItem('ph-p2', 'pen', ['flag', 'pen', 'elephant']),
@@ -590,7 +590,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 6,
     examinerNoteAr:
       'سيسمع الطفل صوتين متقاربين ويختار هل هما «الصوت نفسه» أم «صوتان مختلفان»، ثم يختار بين صورتين يختلف اسماهما بصوت واحد (مثل: كلب/قلب). دورك: وفّر مكانًا هادئًا ويُفضَّل استخدام سماعات، ولا تكرّر الأصوات بصوتك.',
-    introAudio: 'سَتَسْمَعُ صَوْتَيْنِ. إِذَا كَانَا مُتَشَابِهَيْنِ تَمَامًا فَاخْتَرْ: نَفْسُ الصَّوْتِ. وَإِذَا كَانَا مُخْتَلِفَيْنِ فَاخْتَرْ: مُخْتَلِفَانِ.',
+    introAudio: 'سَتَسْمَعُ صَوْتَيْنِ. إِذَا كَانَا مُتَشَابِهَيْنِ تَمَامًا فَالْمِسْ: الصَّوْتُ نَفْسُهُ. وَإِذَا كَانَا مُخْتَلِفَيْنِ فَالْمِسْ: صَوْتَانِ مُخْتَلِفَانِ.',
     practice: [sameDifferentItem('ad-p1', 'بَا', 'بَا'), sameDifferentItem('ad-p2', 'بَا', 'مَا')],
     items: [
       sameDifferentItem('ad-1', 'تَا', 'طَا'),
@@ -656,7 +656,7 @@ export const BATTERY: Subtest[] = [
     discontinueAfter: 5,
     examinerNoteAr:
       'سيسمع الطفل صوت حرف ويلمس الحرف المطابق له من بين أربعة حروف. دورك: دعه يختار بنفسه دون نطق اسم الحرف أو الإشارة إليه (ومن الطبيعي في الأعمار الصغيرة ألا يعرف كل الحروف بعد).',
-    introAudio: 'سَتَسْمَعُ صَوْتَ حَرْفٍ. الْمِسِ الحَرْفَ الَّذِي يُصْدِرُ هَذَا الصَّوْتَ.',
+    introAudio: 'سَتَسْمَعُ صَوْتَ حَرْفٍ، لَا اسْمَهُ. الْمِسِ الْحَرْفَ الَّذِي لَهُ هَذَا الصَّوْتُ.',
     practice: [letterSoundItem('ls-p1', 'مَ', 'م', ['ك', 'م', 'ع', 'و'])],
     items: [
       letterSoundItem('ls-1', 'بَ', 'ب', ['ب', 'ت', 'ن', 'ث']),
@@ -690,7 +690,7 @@ export const BATTERY: Subtest[] = [
     examinerNoteAr:
       'في البداية يتعرّف الطفل على أسماء ٥ صور، ثم تظهر شبكة من الصور ويسمّيها الطفل بصوت عالٍ وبأسرع ما يستطيع من اليمين إلى اليسار سطرًا بسطر أثناء التسجيل. دورك: اضغط بدء التسجيل ثم إيقافه عند الانتهاء، ولا تصحّح له أثناء السباق.',
     introAudio:
-      'سَتَرَى صُوَرًا كَثِيرَةً. قُلْ اسْمَ كُلِّ صُورَةٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنْ أَوَّلِ السَّطْرِ إِلَى آخِرِهِ.',
+      'قُلِ اسْمَ كُلِّ صُورَةٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنَ الْيَمِينِ إِلَى الْيَسَارِ، سَطْرًا بَعْدَ سَطْرٍ.',
     symbols: RAN_OBJECTS,
     grid: RAN_OBJECT_GRID,
   },
@@ -709,7 +709,7 @@ export const BATTERY: Subtest[] = [
     adultScored: false,
     examinerNoteAr:
       'في البداية يتعرّف الطفل على ٥ حروف، ثم تظهر شبكة من الحروف ويقرأ الطفل اسم كل حرف بصوت عالٍ وبأسرع ما يستطيع من اليمين إلى اليسار سطرًا بسطر أثناء التسجيل. دورك: اضغط بدء التسجيل ثم إيقافه عند الانتهاء، ولا تصحّح له أثناء القراءة.',
-    introAudio: 'وَالآنَ حُرُوفٌ. قُلْ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ.',
+    introAudio: 'قُلِ اسْمَ كُلِّ حَرْفٍ بِأَسْرَعِ مَا تَسْتَطِيعُ، مِنَ الْيَمِينِ إِلَى الْيَسَارِ، سَطْرًا بَعْدَ سَطْرٍ.',
     symbols: RAN_LETTERS,
     grid: RAN_LETTER_GRID,
   },
@@ -729,7 +729,7 @@ export const BATTERY: Subtest[] = [
     hesitationSec: 5,
     examinerNoteAr:
       'ستظهر كلمات حقيقية واحدة تلو الأخرى، والمطلوب أن يقرأ الطفل كل كلمة بصوت عالٍ وواضح بعد الضغط على زر التسجيل. دورك: شجّع الطفل بهدوء، ولا تصحّح قراءته أو تنطق الكلمة نيابةً عنه.',
-    introAudio: 'سَتَظْهَرُ كَلِمَاتٌ. اقْرَأْ كُلَّ كَلِمَةٍ بِصَوْتٍ عَالٍ.',
+    introAudio: 'سَتَظْهَرُ كَلِمَةٌ بَعْدَ كَلِمَةٍ. اقْرَأْهَا بِصَوْتٍ عَالٍ، ثُمَّ اضْغَطْ: أَنْهَيْتُ قِرَاءَةَ الْكَلِمَةِ.',
     practice: WORD_PRACTICE,
     items: WORD_ITEMS,
   },

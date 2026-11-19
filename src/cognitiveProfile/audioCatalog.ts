@@ -4,7 +4,7 @@
  * A unit test regenerates fresh training sessions and checks they never speak a text that
  * is missing from this catalogue.
  */
-import { curriculumPhrases } from './curriculum';
+import { curriculumPhrases, explainMistake } from './curriculum';
 import { BATTERY, type AudioSegment } from './battery';
 import { lex } from './lexicon';
 import { PHRASES, palThis, palWhere, palYes } from './phrases';
@@ -62,6 +62,8 @@ export function buildAudioCatalog(): CatalogEntry[] {
     add(map, s.introAudio, `${s.id}.intro`);
     if (s.kind === 'choice') {
       for (const item of [...s.practice, ...s.items]) addSegments(map, item.audio, `${s.id}.${item.id}`);
+      // Practice items explain a wrong answer aloud before the second try.
+      for (const item of s.practice) addSegments(map, explainMistake(item)?.audio ?? [], `${s.id}.${item.id}.explain`);
     } else if (s.kind === 'span') {
       for (const t of [...s.practice, ...s.trials]) for (const id of [...t.sequence, ...t.choices]) add(map, lex(id).word, `${s.id}.${t.id}`);
     } else if (s.kind === 'readList') {
@@ -86,7 +88,10 @@ export function buildAudioCatalog(): CatalogEntry[] {
     for (const level of [1, 2, 3] as Level[]) {
       for (let seed = 1; seed <= TRAINING_CATALOG_SEEDS; seed++) {
         for (const task of generateSession(skill, level, seed, undefined, 96)) {
-          if (task.kind === 'choice') addSegments(map, task.item.audio, `training.${skill}`);
+          if (task.kind === 'choice') {
+            addSegments(map, task.item.audio, `training.${skill}`);
+            addSegments(map, explainMistake(task.item)?.audio ?? [], `training.${skill}.explain`);
+          }
           else for (const id of [...task.trial.sequence, ...task.trial.choices]) add(map, lex(id).word, `training.${skill}`);
         }
       }

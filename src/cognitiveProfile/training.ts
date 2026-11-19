@@ -1010,12 +1010,12 @@ function rhymeTask(random: () => number, level: Level, n: number): ChoiceItem | 
   const options = shuffleWith([answer, ...distractors], random).map((e) => e.id);
   return {
     id: `tr-rhyme-${n}`,
-    promptAr: `أيّ صورة تنتهي مثل «${target.word}»؟`,
+    promptAr: `أيّ صورة ينتهي اسمها مثل «${target.word}»؟`,
     stimulus: { type: 'emoji', value: target.emoji, label: target.word },
     audio: [
       { text: target.word, highlight: 'stimulus', pauseAfterMs: 400 },
       ...named(options),
-      { text: `أَيُّ صُورَةٍ تَنْتَهِي مِثْلَ: ${target.word}؟` },
+      { text: `أَيُّ صُورَةٍ يَنْتَهِي اسْمُهَا مِثْلَ: ${target.word}؟` },
     ],
     options: options.map(pic),
     correctId: answer.id,
@@ -1059,15 +1059,15 @@ function soundPositionTask(random: () => number, level: Level, n: number): Choic
     const options = shuffleWith([answer, ...distractors], random).map((e) => e.id);
     return {
       id: `tr-pos-${n}`,
-      promptAr: useCoda ? `أيّ صورة تنتهي بآخر صوت في «${target.word}»؟` : `أيّ صورة تبدأ بصوت «${target.word}» نفسه؟`,
+      promptAr: useCoda ? `أيّ صورة ينتهي اسمها بآخر صوت في «${target.word}»؟` : `أيّ صورة يبدأ اسمها مثل «${target.word}»؟`,
       stimulus: { type: 'emoji', value: target.emoji, label: target.word },
       audio: [
         { text: target.word, highlight: 'stimulus', pauseAfterMs: 400 },
         ...named(options),
         {
           text: useCoda
-            ? `أَيُّ صُورَةٍ آخِرُ صَوْتٍ فِيهَا مِثْلُ آخِرِ صَوْتٍ فِي: ${target.word}؟`
-            : `أَيُّ صُورَةٍ تَبْدَأُ بِصَوْتِ: ${target.word}؟`,
+            ? `أَيُّ صُورَةٍ يَنْتَهِي اسْمُهَا بِآخِرِ صَوْتٍ فِي: ${target.word}؟`
+            : `أَيُّ صُورَةٍ يَبْدَأُ اسْمُهَا مِثْلَ: ${target.word}؟`,
         },
       ],
       options: options.map(pic),
@@ -1084,7 +1084,7 @@ function blendingTask(random: () => number, level: Level, n: number): ChoiceItem
     const target = pick(entries.filter((e) => e.syllables.length <= 4), random);
     return {
       id: `tr-count-${n}`,
-      promptAr: `كم مقطعًا في «${target.word}»؟`,
+      promptAr: `كم مقطعًا في «${target.word}»؟ صفّق مع كل مقطع.`,
       stimulus: { type: 'emoji', value: target.emoji, label: target.word },
       audio: [{ text: `كَمْ مَقْطَعًا فِي كَلِمَةِ: ${target.word}؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.`, highlight: 'stimulus' }],
       options: [1, 2, 3, 4].map((v) => ({ id: `n${v}`, visual: { type: 'count', value: v, label: `${v}` } })),
@@ -1111,7 +1111,7 @@ function blendingTask(random: () => number, level: Level, n: number): ChoiceItem
   const options = shuffleWith([target, ...distractors], random).map((e) => e.id);
   return {
     id: `tr-blend-${n}`,
-    promptAr: 'ركّب الأجزاء: ما الكلمة؟',
+    promptAr: 'اسمع أجزاء الكلمة، ثم اختر صورتها',
     audio: [
       { text: 'اسْمَعِ الأَجْزَاءَ وَرَكِّبْهَا.', pauseAfterMs: 400 },
       ...target.syllables.map((s) => ({ text: s, pauseAfterMs: 650 })),
@@ -1143,7 +1143,7 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
     const options = shuffleWith([...pair], random);
     return {
       id: `tr-mp-${n}`,
-      promptAr: 'أين الصورة التي سمعت اسمها؟',
+      promptAr: 'المس صورة الكلمة التي سمعتها',
       audio: [{ text: `أَيْنَ: ${lex(target).word}؟` }],
       options: options.map(pic),
       correctId: target,
@@ -1165,7 +1165,7 @@ function discriminationTask(random: () => number, level: Level, n: number, targe
   const second = cvSyllable(same ? a : b, vowel);
   return {
     id: `tr-sd-${n}`,
-    promptAr: 'هل سمعت الصوت نفسه مرتين؟',
+    promptAr: 'هل الصوتان متشابهان أم مختلفان؟',
     audio: [
       { text: first, pauseAfterMs: 700 },
       { text: second, pauseAfterMs: 400 },
@@ -1202,7 +1202,7 @@ function letterSoundTask(random: () => number, level: Level, n: number, targets?
   });
   return {
     id: `tr-ls-${n}`,
-    promptAr: 'أيّ حرف له هذا الصوت؟',
+    promptAr: 'المس الحرف الذي سمعت صوته',
     audio: [{ text: `أَيُّ حَرْفٍ صَوْتُهُ: ${sound}؟` }],
     options: shuffleWith([letter, ...distractors], random).map(glyphWithMark),
     correctId: letter,
@@ -1238,7 +1238,7 @@ function visualDiscriminationTask(random: () => number, level: Level, n: number,
     const shape = (l: string) => (level === 2 ? `${l}ـ` : l);
     return {
       id: `tr-vd-${n}`,
-      promptAr: 'أين الشكل المطابق تمامًا؟',
+      promptAr: 'أين الشكل الذي يطابق الشكل في الأعلى تمامًا؟',
       stimulus: { type: 'glyph', value: shape(target), label: shape(target) },
       audio: [{ text: 'أَيْنَ مِثْلُهُ تَمَامًا؟' }],
       options: options.map((l) => glyph(shape(l))),
@@ -1256,7 +1256,7 @@ function visualDiscriminationTask(random: () => number, level: Level, n: number,
     if (variants.size < 4) continue;
     return {
       id: `tr-vdw-${n}`,
-      promptAr: 'أين الكلمة المطابقة تمامًا؟',
+      promptAr: 'أين الكلمة التي تطابق الكلمة في الأعلى تمامًا؟',
       stimulus: { type: 'glyph', value: word, label: word },
       audio: [{ text: 'أَيْنَ مِثْلُهَا تَمَامًا؟' }],
       options: shuffleWith(Array.from(variants), random).map(glyph),
