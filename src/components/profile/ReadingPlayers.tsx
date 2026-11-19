@@ -594,8 +594,8 @@ export function PassagePlayer({
         {/* Story Text Display */}
         {phase !== 'review' ? (
           <div
-            className="text-xl sm:text-2xl leading-[2.4] text-ink text-start p-5 sm:p-7 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs tracking-wide"
-            style={READING_FONT}
+            className="text-[28px] sm:text-4xl leading-[2.3] text-ink text-start p-6 sm:p-9 rounded-2xl bg-soft border-2 border-line/60 select-none shadow-2xs max-w-[34ch] mx-auto"
+            style={{ ...READING_FONT, wordSpacing: '0.35em' }}
             lang="ar"
           >
             {words.join(' ')}

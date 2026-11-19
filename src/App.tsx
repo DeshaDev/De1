@@ -2123,8 +2123,23 @@ export default function App() {
                         | { student?: StudentRecord; error?: string }
                         | null;
                       if (response.ok && payload?.student) {
+                        // Keep a verified voice result this device holds if the server copy came back
+                        // without one for the same task (it could not verify the receipt).
+                        const serverBattery = payload.student.cognitiveBattery;
+                        const localResults = updated.cognitiveBattery?.results ?? {};
+                        const keptBattery = serverBattery
+                          ? {
+                              ...serverBattery,
+                              results: Object.fromEntries(
+                                Object.entries({ ...localResults, ...serverBattery.results }).map(([id, result]) => {
+                                  const local = (localResults as Record<string, typeof result>)[id];
+                                  return [id, !result?.audioAssessment && local?.audioAssessment ? local : result];
+                                })
+                              ) as typeof serverBattery.results,
+                            }
+                          : updated.cognitiveBattery;
                         setStudents((prev) => prev.map((student) =>
-                          student.id === updated.id ? { ...student, ...payload.student! } : student
+                          student.id === updated.id ? { ...student, ...payload.student!, cognitiveBattery: keptBattery } : student
                         ));
                         if (updated.trainingProgress) {
                           void syncTrainingProgressToSupabase(payload.student, supabaseUser.id);

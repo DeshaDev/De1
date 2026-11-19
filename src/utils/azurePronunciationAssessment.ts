@@ -111,6 +111,15 @@ function normalizeAssessmentMetrics(payload: any): {
  * scripted short-audio response explicitly marks the reference word as Omission.
  * Continuous mode does not support EnableMiscue, so unmatched words stay unresolved.
  */
+/** Same word, allowing what pausal reading and recognition legitimately change. */
+function sameWordLoosely(heard: string, target: string): boolean {
+  if (heard === target) return true;
+  const a = heard.replace(/^ال/, ''), b = target.replace(/^ال/, '');
+  if (a === b) return true;
+  if (b.endsWith('ة') && [b.slice(0, -1), `${b.slice(0, -1)}ه`, `${b.slice(0, -1)}ت`].includes(a)) return true;
+  return a.length === b.length + 1 && a.startsWith(b) && /[اوي]$/.test(a);
+}
+
 export function mapAzureAssessmentToReferenceWords(args: {
   referenceWords: string[];
   transcript: string;
@@ -120,6 +129,12 @@ export function mapAzureAssessmentToReferenceWords(args: {
   providerWords: AzureRawWord[];
   globalMetrics?: Partial<Pick<AzureAudioAssessmentResult, 'accuracyScore' | 'fluencyScore' | 'completenessScore' | 'pronScore'>>;
   providerInsertions?: number;
+  /**
+   * Transcript of the same audio recognised WITHOUT the reference text. Scripted assessment
+   * leans towards the expected words, so a misread word can come back as correct; the free
+   * transcript is what was actually heard.
+   */
+  freeTranscript?: string;
 }): AzureAudioAssessmentResult {
   const { referenceWords, transcript, durationSeconds, enableMiscue, providerWords } = args;
 
@@ -418,6 +433,31 @@ export function mapAzureAssessmentToReferenceWords(args: {
     };
   });
 
+  // Cross-check with the free transcript: a word heard with different letters is a reading
+  // error even when the scripted assessment called it correct; a word it heard as written
+  // settles a word the scripted assessment left unresolved.
+  if (args.freeTranscript && args.freeTranscript.trim()) {
+    const free = alignSpeechWithReferenceText(referenceWords, args.freeTranscript, durationSeconds, args.dialectLabel || 'الفصحى المعيارية');
+    words.forEach((w, i) => {
+      const f = free.words[i];
+      if (!f) return;
+      const heard = f.spokenWord ? normalizeArabicToken(f.spokenWord) : '';
+      const kept = w.errorType === 'None' || w.errorType === 'DialectVariant' || w.errorType === 'Unconfirmed';
+      if (!kept) return;
+      if ((f.errorType === 'Substitution' || f.errorType === 'Mispronunciation') && heard && !sameWordLoosely(heard, normalizeArabicToken(w.word))) {
+        words[i] = { ...w, errorType: 'Substitution', spokenWord: f.spokenWord ?? null, notesAr: `قُرئت «${f.spokenWord}» بدل «${w.word}» (التفريغ المستقل للصوت).` };
+      } else if (f.errorType === 'Omission' && (w.errorType === 'Unconfirmed' || (w.accuracyScore ?? 100) < 70)) {
+        words[i] = { ...w, errorType: 'Omission', spokenWord: null, accuracyScore: 0, notesAr: 'لم تُسمع الكلمة في التفريغ المستقل، ودرجة نطقها ضعيفة.' };
+      } else if (w.errorType === 'Unconfirmed' && (f.errorType === 'None' || f.errorType === 'DialectVariant') && (w.accuracyScore ?? 0) >= 60) {
+        words[i] = { ...w, errorType: 'None', notesAr: 'حُسمت صحيحة: سُمعت كما كُتبت في التفريغ المستقل.' };
+      }
+    });
+    confirmedCorrect = words.filter((w) => w.errorType === 'None' || w.errorType === 'DialectVariant').length;
+    substitutions = words.filter((w) => w.errorType === 'Substitution' || w.errorType === 'Mispronunciation').length;
+    omissions = words.filter((w) => w.errorType === 'Omission').length;
+    unresolved = words.filter((w) => w.errorType === 'Unconfirmed').length;
+  }
+
   const totalWords = referenceWords.length;
   const assessmentComplete = unresolved === 0;
   const tokenCount = transcript.trim() ? transcript.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -537,7 +577,8 @@ export async function assessReadingAudioWithAzure(args: {
     // For single-word screening items, run unconstrained ASR in parallel so that
     // if the child speaks a different word (e.g. "دارفيل" or "كتاب" instead of "فيل"),
     // Azure's forced-alignment language model doesn't loop or hallucinate repetitions of the reference word.
-    const runUnconstrainedAsr = args.referenceWords.length === 1;
+    // Also for passages and word lists: the free transcript catches misread words (see freeTranscript).
+    const runUnconstrainedAsr = true;
 
     const [pronResponse, freeResponse] = await Promise.all([
       fetch(endpoint, {
@@ -573,14 +614,16 @@ export async function assessReadingAudioWithAzure(args: {
       payload?.DisplayText ?? nBest?.Display ?? nBest?.Lexical ?? nBest?.ITN ?? ''
     ).trim();
 
+    let freeTranscript = '';
     if (freeResponse && freeResponse.ok) {
       const freePayload: any = await freeResponse.json().catch(() => null);
       const freeNBest = freePayload?.NBest?.[0] ?? freePayload?.nBest?.[0];
       const freeText = String(
         freePayload?.DisplayText ?? freeNBest?.Display ?? freeNBest?.Lexical ?? freeNBest?.ITN ?? ''
       ).replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+      freeTranscript = freeText;
 
-      if (freeText) {
+      if (freeText && args.referenceWords.length === 1) {
         const targetClean = normalizeArabicToken(args.referenceWords[0]);
         const freeClean = normalizeArabicToken(freeText);
         const pronClean = normalizeArabicToken(transcript);
@@ -606,6 +649,7 @@ export async function assessReadingAudioWithAzure(args: {
       enableMiscue: true,
       providerWords: provider.words,
       globalMetrics: provider.metrics,
+      freeTranscript: args.referenceWords.length > 1 ? freeTranscript : undefined,
     });
   }
 

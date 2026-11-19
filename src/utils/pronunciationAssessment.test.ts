@@ -327,3 +327,20 @@ test('a pausal taa marbuta missed by recognition is not a reading error when the
   assert.equal(read('تفاح', 35).correctWordsCount, 0);
   assert.equal(read('سمك', 90).correctWordsCount, 0, 'only the target with its own ة dropped');
 });
+
+test('a passage word misread is caught by the free transcript even when the scripted result says correct', () => {
+  const reference = ['ذَهَبَ', 'سَامِي', 'لِيَلْعَبَ', 'مَعَ', 'تُفَّاحَة'];
+  const result = mapAzureAssessmentToReferenceWords({
+    referenceWords: reference,
+    transcript: 'ذهب سامي ليلعب مع تفاحة',
+    durationSeconds: 4,
+    enableMiscue: true,
+    providerWords: ['ذهب', 'سامي', 'ليلعب', 'مع', 'تفاحة'].map((word) => ({ word, errorType: 'None', accuracyScore: 85 })),
+    freeTranscript: 'ذهب سامي ليكتب مع تفاحه',
+  });
+  assert.equal(result.words[2].errorType, 'Substitution');
+  assert.equal(result.words[2].spokenWord, 'ليكتب');
+  assert.equal(result.words[4].errorType, 'None', 'pausal taa marbuta is not an error');
+  assert.equal(result.correctWordsCount, 4);
+  assert.equal(result.substitutionsCount, 1);
+});

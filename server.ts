@@ -2804,8 +2804,13 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         suppliedAssessment?.assessmentReceipt !== receipt
       ) {
         // The voice score cannot be verified (receipt expired, e.g. after a server restart, or not
-        // this child's). Save this task without a score rather than rejecting the whole screening:
-        // rejecting it lost every other task's result too.
+        // this child's). Never downgrade a result this child already has verified: keep it. Only a
+        // task with nothing verified yet is saved without a score, so the rest of the screening
+        // is still kept (rejecting the whole upload lost every other task's result too).
+        if (previousResult?.audioAssessment && previousResult.audioAssessmentReceipt) {
+          results[taskId] = previousResult;
+          continue;
+        }
         results[taskId] = {
           ...incoming,
           responses: [],
