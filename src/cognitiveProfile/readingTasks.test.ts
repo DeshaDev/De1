@@ -460,3 +460,12 @@ describe('older saved sessions', () => {
     assert.ok(longer.results.pairedAssociate);
   });
 });
+
+describe('ages up to 13', () => {
+  it('a 13-year-old is in range and the record is accepted', () => {
+    assert.equal(buildProfile({}, 13 * 12 + 11).ageOutOfRange, false);
+    assert.equal(buildProfile({}, 9 * 12).ageOutOfRange, false);
+    const ok = CognitiveBatteryUploadSchema.safeParse({ ageMonths: 13 * 12 + 11, examinerName: '', startedAt: now, results: {} });
+    assert.ok(ok.success, JSON.stringify(ok.error?.issues?.slice(0, 2)));
+  });
+});

@@ -1131,8 +1131,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                   </ul>
                 </details>
               )}
-              <ProgramRules />
-              <button type="button" onClick={() => startProgram(plan)} className="bz-btn bz-btn-primary bz-btn-lg">
+                      <button type="button" onClick={() => startProgram(plan)} className="bz-btn bz-btn-primary bz-btn-lg">
                 اعتماد الخطة وبدء البرنامج
               </button>
             </>
@@ -1222,55 +1221,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
         )}
       </section>
 
-      {/* تبقى تفاصيل الأوسمة خارج واجهة المتابعة الأساسية حتى لا تزاحم زر جلسة اليوم. */}
-      <details className="bz-card p-5 space-y-3">
-        <summary className="cursor-pointer font-black text-slate-900 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2"><Award className="w-4 h-4 text-amber-500" /> أوسمة المهارات</span>
-          <span className="text-xs font-bold text-slate-500">
-            {toArabicDigits((progress.badges ?? []).length)} من {toArabicDigits(progress.plan.focus.length)}
-          </span>
-        </summary>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-3">
-          {progress.plan.focus.map((s) => {
-            const badge = SKILL_BADGES[s];
-            const isEarned = (progress.badges ?? []).includes(s) || progress.mastered.includes(s);
-            return (
-              <div
-                key={s}
-                className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
-                  isEarned
-                    ? 'border-amber-300 bg-amber-50/70 shadow-xs'
-                    : 'border-slate-200 bg-slate-50/50 opacity-60'
-                }`}
-              >
-                <span className="text-3xl shrink-0" aria-hidden="true">
-                  {badge.icon}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-child text-sm font-black text-slate-900 truncate">{badge.titleAr}</p>
-                  <p className="text-[11px] font-bold text-slate-500">
-                    {isEarned ? <span className="text-emerald-700">مكتسب 🏆</span> : <span>قيد التدريب ⭐</span>}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </details>
 
-      {progress.targets && (progress.targets.soundPairs.length > 0 || progress.targets.letters.length > 0) && (
-        <details className="bz-card-quiet p-4">
-          <summary className="cursor-pointer font-bold text-slate-900">أصوات وحروف نركّز عليها</summary>
-          <p className="mt-2 text-sm text-ink-2">
-            {progress.targets.soundPairs.length > 0 && <>أصوات {progress.targets.soundPairs.map((p) => p.join('/')).join('، ')}.</>}
-            {progress.targets.letters.length > 0 && <> حروف {progress.targets.letters.join(' ')}.</>}
-            {' '}تظهر هذه الأهداف في جزء من تمارين المهارات المرتبطة بها.
-          </p>
-        </details>
-      )}
 
-      <details className="bz-card-quiet p-4">
-        <summary className="cursor-pointer font-bold text-slate-900">تفاصيل تقدّم المهارات</summary>
+      <section aria-labelledby="skills-heading">
+        <h3 id="skills-heading" className="font-black text-slate-900">ما يتعلّمه طفلك</h3>
         <div className="grid md:grid-cols-3 gap-4 mt-3">
         {progress.plan.focus.map((s) => {
           const level = (progress.levels[s] ?? 1) as Level;
@@ -1293,72 +1247,19 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               )}
               {progress.supportFlags.includes(s) && (
                 <p className="mt-3 text-[13px] font-semibold text-warn bg-warn-soft rounded-lg p-2.5 flex gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> تُعرض استراتيجيات المساندة المقترحة في التقرير بجانب التمرين.
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> تراجع مستواه هنا؛ اجلس معه في الجلسة القادمة.
                 </p>
               )}
             </div>
           );
         })}
         </div>
-      </details>
+      </section>
 
-      <details className="bz-card-quiet p-4">
-        <summary className="cursor-pointer font-black text-slate-900">أنشطة إضافية اختيارية</summary>
-        <p className="text-xs text-ink-2 mt-2">أنشطة بعد جلسة اليوم، وليست بديلًا عنها.</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => setShowStructuredLiteracyStations(true)}>محطات القراءة واللغة</button>
-          {onOpenExtra && (
-            <>
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('remediation-gym')}>ألعاب إضافية</button>
-              <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('adaptive-reader')}>القارئ الميسّر</button>
-              {(student?.ageYears ?? 0) >= 6 && (
-                <button type="button" className="bz-btn bz-btn-secondary bz-btn-sm" onClick={() => onOpenExtra('reading-lab')}>قراءة جهرية مع تحليل الأخطاء</button>
-              )}
-            </>
-          )}
-        </div>
-      </details>
 
-      {student && (
-        <details className="bz-card-quiet p-4">
-          <summary className="cursor-pointer font-black text-slate-900">اقتراحات ممارسة إضافية لولي الأمر</summary>
-          <div className="mt-3">
-            <IndividualPlanPanel student={student} progress={progress} canApprove={syncEnabled} onRecordUpdated={onRecordUpdated} />
-          </div>
-        </details>
-      )}
 
       <ProgramRules />
 
-      {recent.length > 0 && (
-        <details className="bz-card p-5">
-          <summary className="cursor-pointer font-black text-slate-900 flex items-center gap-2">
-            <Target className="w-4 h-4" /> سجل الجلسات الأخيرة ({toArabicDigits(recent.length)})
-          </summary>
-          <table className="w-full text-sm mt-3">
-            <thead>
-              <tr className="text-slate-500 text-xs">
-                <th className="text-right p-1.5">التاريخ</th>
-                <th className="text-right p-1.5">المهارة</th>
-                <th className="p-1.5">المستوى</th>
-                <th className="p-1.5">النتيجة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((h, i) => (
-                <tr key={i} className="border-t border-slate-100">
-                  <td className="p-1.5">{new Date(h.date).toLocaleDateString('ar-EG')}</td>
-                  <td className="p-1.5 font-bold">{SKILLS[h.skill].nameAr}</td>
-                  <td className="p-1.5 text-center">{toArabicDigits(h.level)}</td>
-                  <td className="p-1.5 text-center font-bold text-slate-700">
-                    {toArabicDigits(h.correct)} من {toArabicDigits(h.total)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      )}
 
       {proposedPlan && (
         <button

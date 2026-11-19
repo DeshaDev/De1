@@ -174,6 +174,11 @@ export const AGE_BANDS: AgeBand[] = [
   { minMonths: 72, maxMonths: 83, labelAr: '٦ سنوات – ٦ سنوات و١١ شهرًا' },
   { minMonths: 84, maxMonths: 95, labelAr: '٧ سنوات – ٧ سنوات و١١ شهرًا' },
   { minMonths: 96, maxMonths: 107, labelAr: '٨ سنوات – ٨ سنوات و١١ شهرًا' },
+  { minMonths: 108, maxMonths: 119, labelAr: '٩ سنوات – ٩ سنوات و١١ شهرًا' },
+  { minMonths: 120, maxMonths: 131, labelAr: '١٠ سنوات – ١٠ سنوات و١١ شهرًا' },
+  { minMonths: 132, maxMonths: 143, labelAr: '١١ سنة – ١١ سنة و١١ شهرًا' },
+  { minMonths: 144, maxMonths: 155, labelAr: '١٢ سنة – ١٢ سنة و١١ شهرًا' },
+  { minMonths: 156, maxMonths: 167, labelAr: '١٣ سنة – ١٣ سنة و١١ شهرًا' },
 ];
 
 /** [mean, sd] of percent correct for each age band (index matches AGE_BANDS). */
