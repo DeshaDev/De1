@@ -326,9 +326,9 @@ describe('teaching curriculum: explanatory feedback ("you do")', () => {
 });
 
 describe('progress measure schedule', () => {
-  it('first session, then weekly (every 5 sessions), and the last session', () => {
+  it('never before the first lesson: second session, then weekly (every 5 sessions), and the last session', () => {
     const due = Array.from({ length: PROGRAM_SESSIONS }, (_, i) => i + 1).filter((n) => probeDueAt(n, PROGRAM_SESSIONS));
-    assert.deepEqual(due, [1, 6, 11, 16, 20]);
+    assert.deepEqual(due, [2, 6, 11, 16, 20]);
   });
 });
 

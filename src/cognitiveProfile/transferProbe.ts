@@ -244,12 +244,11 @@ export function formFor(studentId: string, point: TransferPoint, programmeId = '
 export function transferDueAt(progress: TrainingProgress, sessionNumber: number, ageMonths: number | null | undefined): TransferPoint | null {
   if (typeof ageMonths !== 'number' || ageMonths < READING_MIN_AGE_MONTHS) return null;
   const done = new Set((progress.transfer ?? []).map((r) => r.point));
-  for (const point of ['pre', 'mid', 'post'] as TransferPoint[]) {
+  // No test before the first lesson: the screening's reading tasks are the starting point. The
+  // new-text reading is measured in the middle and at the end of the programme.
+  for (const point of ['mid', 'post'] as TransferPoint[]) {
     const [from, to] = TRANSFER_WINDOWS[point];
-    if (sessionNumber >= from && sessionNumber <= to && !done.has(point)) {
-      if (point !== 'pre' && !done.has('pre')) return null;
-      return point;
-    }
+    if (sessionNumber >= from && sessionNumber <= to && !done.has(point)) return point;
   }
   return null;
 }
@@ -267,10 +266,12 @@ export interface TransferSummary {
 const pct = (s: TransferListScore) => (s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0);
 
 export function summarizeTransfer(records: TransferRecord[]): TransferSummary | null {
-  const pre = records.find((r) => r.point === 'pre');
+  // The earliest measurement is the starting point: «pre» in older programmes, «mid» now.
+  const order: TransferPoint[] = ['pre', 'mid', 'post'];
+  const sorted = [...records].sort((a, b) => order.indexOf(a.point) - order.indexOf(b.point));
+  const pre = sorted[0];
   if (!pre) return null;
-  const later = records.filter((r) => r.point !== 'pre');
-  const latest = later.find((r) => r.point === 'post') ?? later.find((r) => r.point === 'mid') ?? pre;
+  const latest = sorted[sorted.length - 1];
   return {
     pre,
     latest,

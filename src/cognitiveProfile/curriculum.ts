@@ -1145,8 +1145,13 @@ export function explainMistake(item: ChoiceItem): Explanation | null {
 // ---------------------------------------------------------------------------
 // Progress measure schedule: the first session, then once a week (every 5 sessions), and the last
 // ---------------------------------------------------------------------------
+/**
+ * The progress check is due from the second session (the first session teaches; the screening is
+ * the starting point), then every fifth session and the last one.
+ */
 export function probeDueAt(sessionNumber: number, programmeSessions: number): boolean {
-  return sessionNumber === 1 || (sessionNumber - 1) % 5 === 0 || sessionNumber === programmeSessions;
+  if (sessionNumber < 2) return false;
+  return sessionNumber === 2 || (sessionNumber - 1) % 5 === 0 || sessionNumber === programmeSessions;
 }
 
 // ---------------------------------------------------------------------------

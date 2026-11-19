@@ -195,18 +195,17 @@ describe('transfer measure (untrained words)', () => {
     }
   });
 
-  it('is due at the start, middle and end, only from six, and the end needs a start to compare with', () => {
+  it('is never due before the first lesson (the screening is the start), then middle and end, only from six', () => {
     const p = createProgress(plan, 1);
-    assert.equal(transferDueAt(p, 1, 84), 'pre');
-    assert.equal(transferDueAt(p, 1, 60), null, 'not before six');
+    assert.equal(transferDueAt(p, 1, 84), null, 'no test before the first lesson');
+    assert.equal(transferDueAt(p, 11, 60), null, 'not before six');
     assert.equal(transferDueAt(p, 5, 84), null, 'outside the windows');
-    assert.equal(transferDueAt(p, 19, 84), null, 'no end measure without a start');
     const rec = (point: TransferRecord['point']): TransferRecord => ({ point, form: 'A', session: 1, date: '2026-11-10T00:00:00.000Z', real: { correct: 4, total: 8, ms: 40_000 }, nonword: { correct: 2, total: 8, ms: 50_000 } });
-    const withPre = { ...p, transfer: [rec('pre')] };
-    assert.equal(transferDueAt(withPre, 2, 84), null, 'start already done');
-    assert.equal(transferDueAt(withPre, 11, 84), 'mid');
-    assert.equal(transferDueAt(withPre, 20, 84), 'post');
-    assert.ok(TrainingProgressUploadSchema.safeParse({ ...withPre }).success);
+    assert.equal(transferDueAt(p, 11, 84), 'mid');
+    const withMid = { ...p, transfer: [rec('mid')] };
+    assert.equal(transferDueAt(withMid, 11, 84), null, 'middle already done');
+    assert.equal(transferDueAt(withMid, 20, 84), 'post');
+    assert.ok(TrainingProgressUploadSchema.safeParse({ ...withMid }).success);
   });
 
   it('scores only complete server-resolved audio and summarises change on unseen material', () => {
