@@ -202,6 +202,9 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
         <p className="bz-small text-brand font-bold">محطة قصيرة · {point === 'pre' ? 'بداية البرنامج' : point === 'mid' ? 'منتصف البرنامج' : 'نهاية البرنامج'}</p>
         <h2 id="transfer-measure-title" className="mt-1 font-child text-2xl font-black text-slate-900">تحدّي قراءة جديدة</h2>
         <p className="mt-1 text-sm text-slate-600">اقرأ الكلمات الجديدة، ثم اقرأ النص القصير بهدوء.</p>
+        <p className="mt-2 rounded-lg bg-card border border-line px-3 py-2 text-sm text-ink">
+          هذا قياس قصير لتقدّم طفلك، بلا تصحيح، ويتكرّر في بداية البرنامج ومنتصفه ونهايته. بعده مباشرة يبدأ درس اليوم: شرح، ثم تمارين يُصحَّح فيها كل خطأ فورًا ويعيد الطفل المحاولة.
+        </p>
         <div className="mt-3 flex items-center justify-between text-xs font-bold text-slate-500">
           <span>المحطة {ARABIC_DIGITS(index + 1)} من {ARABIC_DIGITS(tasks.length)}</span>
           <span>اقرأ على مهل</span>
