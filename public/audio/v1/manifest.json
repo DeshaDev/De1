@@ -1,7 +1,7 @@
 {
   "version": 1,
   "voice": "ML7jGRDg4E9hIl5qEm1Z",
-  "generatedAt": "2026-11-19T18:16:58.064Z",
+  "generatedAt": "2026-11-19T19:09:20.018Z",
   "clips": {
     "0387e243cd039298": {
       "file": "0387e243cd039298.mp3",
@@ -153,7 +153,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13835
+      "bytes": 16343
     },
     "20d6957b0125cb6c": {
       "file": "20d6957b0125cb6c.mp3",
@@ -244,12 +244,12 @@
       "bytes": 62318
     },
     "2d76ed9b0e6e8092": {
-      "file": "1ff1fc7e4c0bceb9.mp3",
-      "text": "دِيكْ",
+      "file": "2d76ed9b0e6e8092.mp3",
+      "text": "دِيك",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 11136
+      "bytes": 13835
     },
     "2e7b9a71b1c4a2d6": {
       "file": "2e7b9a71b1c4a2d6.mp3",
@@ -393,7 +393,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 15089
+      "bytes": 16343
     },
     "3fea37d4bf105bf1": {
       "file": "3fea37d4bf105bf1.mp3",
@@ -561,7 +561,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 15089
     },
     "575709427a447a5d": {
       "file": "575709427a447a5d.mp3",
@@ -673,7 +673,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 17597
+      "bytes": 16343
     },
     "697a45ef6c48b06c": {
       "file": "697a45ef6c48b06c.mp3",
@@ -745,7 +745,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 15089
     },
     "72503e37ad7a7584": {
       "file": "72503e37ad7a7584.mp3",
@@ -761,7 +761,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13835
+      "bytes": 16343
     },
     "73451ea97f09d0de": {
       "file": "73451ea97f09d0de.mp3",
@@ -773,11 +773,11 @@
     },
     "73aad2de91c83cee": {
       "file": "73aad2de91c83cee.mp3",
-      "text": "جَمَلْ",
+      "text": "جَمَل",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 10368
+      "bytes": 15089
     },
     "73f665fc1cbc29d4": {
       "file": "73f665fc1cbc29d4.mp3",
@@ -785,7 +785,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 13835
     },
     "7446f8aec261dcd8": {
       "file": "7446f8aec261dcd8.mp3",
@@ -897,7 +897,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 15089
+      "bytes": 16343
     },
     "89039b6d98c12de7": {
       "file": "89039b6d98c12de7.mp3",
@@ -1145,7 +1145,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13835
+      "bytes": 16343
     },
     "ad1d7bf69b49a47e": {
       "file": "ad1d7bf69b49a47e.mp3",
@@ -1153,7 +1153,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 17597
     },
     "ae8630c79c3dd79a": {
       "file": "ae8630c79c3dd79a.mp3",
@@ -1161,7 +1161,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 17597
+      "bytes": 16343
     },
     "aefa3af2494e3bc1": {
       "file": "aefa3af2494e3bc1.mp3",
@@ -1353,7 +1353,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 15089
     },
     "ce31d5c066962e8d": {
       "file": "ce31d5c066962e8d.mp3",
@@ -1457,7 +1457,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 15089
     },
     "dc005505cd3623ee": {
       "file": "dc005505cd3623ee.mp3",
@@ -1549,11 +1549,11 @@
     },
     "e1282bea9dc9b820": {
       "file": "e1282bea9dc9b820.mp3",
-      "text": "فِيلْ",
+      "text": "فِيل",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13824
+      "bytes": 16343
     },
     "e130c1c09d7dcc51": {
       "file": "e130c1c09d7dcc51.mp3",
@@ -1625,7 +1625,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 15089
+      "bytes": 13835
     },
     "e6b0cf7a12bf7ea3": {
       "file": "e6b0cf7a12bf7ea3.mp3",
@@ -1753,7 +1753,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 17597
+      "bytes": 16343
     },
     "f8a56f202085d84a": {
       "file": "f8a56f202085d84a.mp3",
@@ -1912,7 +1912,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 15089
+      "bytes": 16343
     },
     "71c6bf6b6b43a73c": {
       "file": "71c6bf6b6b43a73c.mp3",
@@ -2052,11 +2052,11 @@
     },
     "178d12ebd07d6686": {
       "file": "178d12ebd07d6686.mp3",
-      "text": "عُصْفُورْ",
+      "text": "عُصْفُور",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 19584
+      "bytes": 18851
     },
     "1c8d66c357cfef80": {
       "file": "1c8d66c357cfef80.mp3",
@@ -3163,20 +3163,20 @@
       "bytes": 157195
     },
     "8a159d2a67e45d1a": {
-      "file": "98ccc4b2de3dc1a2.mp3",
+      "file": "8a159d2a67e45d1a.mp3",
       "text": "مَاء",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 17597
     },
     "563a67af3fa55ad6": {
-      "file": "58b8eecb84758036.mp3",
-      "text": "فُوبُو",
+      "file": "563a67af3fa55ad6.mp3",
+      "text": "فُوب",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 12288
+      "bytes": 16343
     },
     "2a8d0d6a54d41509": {
       "file": "dbc6486fa358bd6d.mp3",
@@ -3858,8 +3858,8 @@
       "text": "يَد",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 15089
+      "context": "phoneme",
+      "bytes": 12581
     },
     "شَجَرَة": {
       "file": "2e7b9a71b1c4a2d6.mp3",
@@ -14839,8 +14839,9 @@
       "file": "b4eec08c68b7527f.mp3",
       "text": "بَاب",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
+      "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 10449
+      "bytes": 16343
     },
     "هَذَا هُوَ الْحَرْفُ الصَّحِيحُ.": {
       "file": "3609b13a27f91005.mp3",
@@ -15323,12 +15324,12 @@
       "bytes": 16343
     },
     "ba6e29c650df469c": {
-      "file": "a70b18377b9c2af7.mp3",
-      "text": "بَيْتْ",
+      "file": "ba6e29c650df469c.mp3",
+      "text": "بَيْت",
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 15089
     },
     "ثَلْجْ": {
       "file": "b2c4b4066ec6b7e6.mp3",
@@ -24640,7 +24641,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 16343
+      "bytes": 17597
     },
     "4c8071dbb57aba92": {
       "file": "4c8071dbb57aba92.mp3",
@@ -26512,7 +26513,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "phoneme",
-      "bytes": 12581
+      "bytes": 13835
     },
     "8adadf91855a9c1d": {
       "file": "8adadf91855a9c1d.mp3",
@@ -27664,7 +27665,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13835
+      "bytes": 15089
     },
     "b261b7f5a1244b48": {
       "file": "b261b7f5a1244b48.mp3",
@@ -27744,7 +27745,7 @@
       "voice": "ML7jGRDg4E9hIl5qEm1Z",
       "model": "eleven_v4",
       "context": "single_word",
-      "bytes": 13835
+      "bytes": 16343
     },
     "b4f1dcacb3befea3": {
       "file": "b4f1dcacb3befea3.mp3",

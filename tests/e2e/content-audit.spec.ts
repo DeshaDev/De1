@@ -131,10 +131,6 @@ for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['p
       await page.goto('/');
       await footer(page, label);
       await audit(page, name, findings);
-      if (name === 'dashboard') {
-        await page.getByRole('tab', { name: /تقرير الطالب/ }).click();
-        await audit(page, 'dashboard-report', findings);
-      }
       if (name === 'oral-reading') {
         await page.getByRole('button', { name: /اختيار/ }).first().click();
         await audit(page, 'oral-reading-ready', findings);

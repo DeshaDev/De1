@@ -9,6 +9,7 @@
  * Usage:
  *   ELEVENLABS_API_KEY=... npx tsx scripts/generate-suhair-audio.ts           # missing + synthetic only
  *   ELEVENLABS_API_KEY=... npx tsx scripts/generate-suhair-audio.ts --dry-run # list what would be recorded
+ *   ELEVENLABS_API_KEY=... npx tsx scripts/generate-suhair-audio.ts --repausal # re-record unmarked final consonants
  * Progress is saved after every clip, so an interrupted run resumes where it stopped.
  */
 import fs from 'node:fs';
@@ -22,6 +23,8 @@ const MODEL_ID = 'eleven_v4';
 const OUT_DIR = path.resolve('public/audio/v1');
 const MANIFEST_PATH = path.join(OUT_DIR, 'manifest.json');
 const DRY_RUN = process.argv.includes('--dry-run');
+/** Re-record single words that end in an unmarked consonant (see spokenForm). */
+const REPAUSAL = process.argv.includes('--repausal');
 const CONCURRENCY = 3;
 
 interface Clip { file: string; text: string; voice: string; model: string; context: string; bytes: number }
@@ -31,7 +34,23 @@ const isSynthetic = (c: Clip) => c.model === 'azure_neural' || /Neural/.test(c.v
 const lettersOf = (t: string) => t.replace(/[ً-ٰٟ\s.؟?!،,…:«»]/g, '');
 const contextOf = (e: CatalogEntry) => (lettersOf(e.text).length <= 2 ? 'phoneme' : e.text.includes(' ') ? 'instruction' : 'single_word');
 
+/**
+ * A single word shown without a final vowel (مَاء، شَمْس) must be spoken in pause form. Without an
+ * explicit sukun the voice adds a case ending the child does not see (مَاءُ). The sukun is added
+ * after the shared text preparation, which otherwise strips it after a long vowel.
+ */
+const UNMARKED_CONSONANT_END = /[\u0621-\u064A]$/;
+function endsInUnmarkedConsonant(text: string): boolean {
+  const t = text.replace(/[.؟?!،,…:]+$/, '').trim();
+  return !t.includes(' ') && UNMARKED_CONSONANT_END.test(t) && !/[اىويةه]$/.test(t);
+}
+function spokenForm(text: string): string {
+  const prepared = prepareArabicTtsText(text);
+  return endsInUnmarkedConsonant(text) ? `${prepared.replace(/[.؟?!،,…:]+$/, '')}\u0652.` : prepared;
+}
+
 function needsRecording(e: CatalogEntry): boolean {
+  if (REPAUSAL) return endsInUnmarkedConsonant(e.text);
   const c = manifest.clips[e.key];
   return !c || isSynthetic(c) || !fs.existsSync(path.join(OUT_DIR, c.file));
 }
@@ -45,7 +64,7 @@ function saveManifest() {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function synthesize(text: string, context: string): Promise<Buffer> {
-  const prepared = prepareArabicTtsText(text);
+  const prepared = spokenForm(text);
   const stability = context === 'phoneme' ? 0.8 : 0.72;
   for (let attempt = 1; ; attempt += 1) {
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`, {
