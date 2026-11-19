@@ -37,6 +37,8 @@ interface Props {
   onBack: () => void;
   onStartTraining: () => void;
   previous?: ScreeningSnapshot | null;
+  /** Inside the child dashboard: no back button, print only. */
+  embedded?: boolean;
 }
 
 function resultLine(scored: ScoredSubtest): string {
@@ -46,7 +48,7 @@ function resultLine(scored: ScoredSubtest): string {
   );
 }
 
-export function ProfileReportView({ profile, session, onBack, onStartTraining, previous = null }: Props) {
+export function ProfileReportView({ profile, session, onBack, onStartTraining, previous = null, embedded = false }: Props) {
   const ageTasks = subtestsForAge(session.ageMonths);
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
   // One ordered list: every task of this child's battery, plus any older result outside it.
@@ -85,21 +87,27 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
   return (
     <div className="space-y-5" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-        <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
-          <ArrowRight className="w-4 h-4" /> العودة إلى الألعاب
-        </button>
+        {embedded ? (
+          <h2 className="bz-h3">تقرير الفحص</h2>
+        ) : (
+          <button type="button" onClick={onBack} className="bz-btn bz-btn-ghost">
+            <ArrowRight className="w-4 h-4" /> العودة إلى الألعاب
+          </button>
+        )}
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => window.print()} className="bz-btn bz-btn-secondary">
             <Printer className="w-4 h-4" /> طباعة / PDF
           </button>
-          <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
-            <Dumbbell className="w-4 h-4" /> الانتقال إلى البرنامج التدريبي
-          </button>
+          {!embedded && (
+            <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
+              <Dumbbell className="w-4 h-4" /> الانتقال إلى البرنامج التدريبي
+            </button>
+          )}
         </div>
       </div>
 
       <article className="print-report-root bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }}>
-        <header className="px-5 sm:px-10 pt-8 pb-6 border-b border-line flex flex-wrap items-start justify-between gap-6">
+        <header className={`px-5 sm:px-10 pt-8 pb-6 border-b border-line flex-wrap items-start justify-between gap-6 ${embedded ? 'hidden print:flex' : 'flex'}`}>
           <div className="flex items-start gap-4">
             <BrandMark size={44} />
             <div>
@@ -184,11 +192,13 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                 )}
               </div>
             )}
-            <div className="no-print">
-              <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
-                <Dumbbell className="w-4 h-4" /> ابدأ التدريب على هذه المهارات
-              </button>
-            </div>
+            {!embedded && (
+              <div className="no-print">
+                <button type="button" onClick={onStartTraining} className="bz-btn bz-btn-primary">
+                  <Dumbbell className="w-4 h-4" /> ابدأ التدريب على هذه المهارات
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 2. Every task once */}
