@@ -276,3 +276,16 @@ describe('every spoken screening text plays a recorded clip', () => {
     assert.equal(synthetic.length, 0);
   });
 });
+
+describe('clip aliases', () => {
+  it('every alias plays the recording made from its own text', async () => {
+    const fs = await import('node:fs');
+    const { audioKey } = await import('./audioCatalog');
+    const manifest = JSON.parse(fs.readFileSync('public/audio/v1/manifest.json', 'utf8'));
+    const wrong = Object.entries(manifest.clips as Record<string, { file: string; text: string }>).filter(([, clip]) => {
+      const canonical = manifest.clips[audioKey(clip.text)];
+      return canonical && canonical.file !== clip.file;
+    });
+    assert.deepEqual(wrong.map(([k]) => k), []);
+  });
+});
