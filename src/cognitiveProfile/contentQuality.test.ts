@@ -250,3 +250,29 @@ describe('worked examples before each question type', () => {
     for (const tag of tags) assert.ok(exampleForTag(tag), `no example for ${tag}`);
   });
 });
+
+describe('every spoken screening text plays a recorded clip', () => {
+  it('resolves to an existing studio-voice file through the same lookup the app uses', async () => {
+    const { BATTERY } = await import('./battery');
+    const { ALL_EXAMPLES } = await import('./examples');
+    const { explainMistake } = await import('./curriculum');
+    const { resolveClipFile } = await import('../components/profile/audio');
+    const fs = await import('node:fs');
+    const manifest = JSON.parse(fs.readFileSync('public/audio/v1/manifest.json', 'utf8'));
+    const texts: string[] = [];
+    for (const s of BATTERY) {
+      texts.push(s.introAudio);
+      if (s.kind !== 'choice') continue;
+      for (const item of [...s.practice, ...s.items]) texts.push(...item.audio.map((a) => a.text));
+      for (const item of s.practice) texts.push(...(explainMistake(item)?.audio ?? []).map((a) => a.text));
+    }
+    for (const ex of ALL_EXAMPLES) texts.push(...ex.audio);
+    const silent = texts.filter((t) => {
+      const file = resolveClipFile(manifest, t);
+      return !file || !fs.existsSync(`public/audio/v1/${file}`);
+    });
+    assert.deepEqual([...new Set(silent)], []);
+    const synthetic = Object.values(manifest.clips as Record<string, { model?: string }>).filter((c) => c.model === 'azure_neural');
+    assert.equal(synthetic.length, 0);
+  });
+});

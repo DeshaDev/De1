@@ -16,7 +16,7 @@ let manifestCache: { clips: Record<string, { file: string }> } | null = null;
 async function getAudioManifest(): Promise<{ clips: Record<string, { file: string }> } | null> {
   if (manifestCache) return manifestCache;
   try {
-    const res = await fetch('/audio/v1/manifest.json', { cache: 'force-cache' });
+    const res = await fetch('/audio/v1/manifest.json', { cache: 'no-cache' });
     if (res.ok) {
       manifestCache = await res.json();
       return manifestCache;

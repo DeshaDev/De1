@@ -18,14 +18,14 @@ const MAX_PRELOADED_CLIPS = 48;
 
 function loadManifest(): Promise<AudioManifest | null> {
   if (!manifestPromise) {
-    manifestPromise = fetch(`${AUDIO_BASE}manifest.json`, { cache: 'force-cache' })
+    manifestPromise = fetch(`${AUDIO_BASE}manifest.json`, { cache: 'no-cache' })
       .then((res) => (res.ok ? (res.json() as Promise<AudioManifest>) : null))
       .catch(() => null);
   }
   return manifestPromise;
 }
 
-function resolveClipFile(manifest: AudioManifest, text: string): string | undefined {
+export function resolveClipFile(manifest: AudioManifest, text: string): string | undefined {
   if (!text) return undefined;
   const prepared = prepareArabicTtsText(text);
   // Also strip trailing short vowels (dammah/fatha/kasrah) for pausal match (e.g. قَلَمُ -> قَلَم, سَيَّارَةُ -> سَيَّارَة)

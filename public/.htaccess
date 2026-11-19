@@ -19,12 +19,19 @@
   </IfModule>
 </FilesMatch>
 
+# The clip list and the clips change when audio is re-recorded under the same file names:
+# browsers must revalidate them (an unchanged file costs a 304), never keep a stale copy.
+<FilesMatch "(manifest\.json|\.mp3)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</FilesMatch>
+
 # Caching and Compression for Namecheap Apache
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType image/svg+xml "access plus 1 month"
   ExpiresByType audio/wav "access plus 1 month"
-  ExpiresByType audio/mpeg "access plus 1 month"
   ExpiresByType text/css "access plus 1 week"
   ExpiresByType application/javascript "access plus 1 week"
 </IfModule>
