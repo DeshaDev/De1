@@ -285,9 +285,10 @@ function rhymeItem(id: string, target: string, options: string[], correct: strin
 
 function onsetItem(id: string, target: string, options: string[], correct: string): ChoiceItem {
   const t = lex(target);
+  const cv = t.word.match(/^([\u0621-\u064A][\u064E\u064F\u0650])/)?.[1] ?? t.onset;
   return {
     id,
-    promptAr: `أيّ صورة يبدأ اسمها مثل «${t.word}»؟`,
+    promptAr: `«${t.word}» تبدأ بالصوت «${cv}». أيّ صورة يبدأ اسمها بالصوت «${cv}» مثل «${t.word}»؟`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [
       { text: t.word, highlight: 'stimulus', pauseAfterMs: 400 },
@@ -304,7 +305,7 @@ function codaItem(id: string, target: string, options: string[], correct: string
   const t = lex(target);
   return {
     id,
-    promptAr: `أيّ صورة ينتهي اسمها بآخر صوت في «${t.word}»؟`,
+    promptAr: `«${t.word}» تنتهي بحرف «${t.coda}». أيّ صورة ينتهي اسمها بآخر صوت في «${t.word}»؟`,
     stimulus: { type: 'emoji', value: t.emoji, label: t.word },
     audio: [
       { text: t.word, highlight: 'stimulus', pauseAfterMs: 400 },
@@ -561,8 +562,8 @@ export const BATTERY: Subtest[] = [
     items: [
       onsetItem('ph-1', 'fish', ['sun', 'car', 'moon'], 'car'),
       onsetItem('ph-2', 'duck', ['banana', 'elephant', 'door'], 'door'),
-      onsetItem('ph-3', 'bear', ['rooster', 'key', 'apple'], 'rooster'),
-      onsetItem('ph-4', 'dog', ['tree', 'ball', 'camel'], 'ball'),
+      onsetItem('ph-3', 'bee', ['star', 'key', 'apple'], 'star'),
+      onsetItem('ph-4', 'ball', ['tree', 'chair', 'camel'], 'chair'),
       codaItem('ph-5', 'book', ['bear', 'house', 'elephant'], 'bear'),
       codaItem('ph-6', 'sun', ['fish', 'bell', 'moon'], 'bell'),
       // ph-7 was «ديك → شبّاك». In Gulf Arabic the window is «دريشة» and ك is often affricated

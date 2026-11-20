@@ -1,6 +1,6 @@
 import { PHRASES } from '../../cognitiveProfile/phrases';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Home, GraduationCap } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CheckCircle2, Play, Target, AlertTriangle, RefreshCw, TrendingUp, Award, Home, GraduationCap, PauseCircle } from 'lucide-react';
 import type { CognitiveProfile } from '../../cognitiveProfile/scoring';
 import {
   Level,
@@ -267,6 +267,7 @@ interface Props {
   profile: CognitiveProfile | null;
   onBack: () => void;
   onGoToBattery: () => void;
+  onGoHome?: () => void;
   onRunningChange?: (running: boolean) => void;
   /** Progress stored in the school record, used when this device has none. */
   serverProgress?: TrainingProgress | null;
@@ -279,7 +280,7 @@ interface Props {
   onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
 }
 
-export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
+export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onGoHome, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
   const [progress, setProgress] = useState<TrainingProgress | null>(serverProgress);
   useEffect(() => {
     let cancelled = false;
@@ -674,45 +675,99 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     });
   };
 
+  const saveAndPauseSession = (goHome: boolean) => {
+    stopSpeech();
+    if (progress) {
+      let toSave = progress;
+      if (run && run.phase === 'task' && run.taskIndex > 0) {
+        const currentSkill = sessionSkills[run.skillIndex];
+        if (currentSkill) {
+          toSave = recordSkillBlock(
+            progress,
+            currentSkill,
+            run.blockStart?.level ?? ((progress.levels[currentSkill] ?? 1) as Level),
+            run.correct,
+            run.taskIndex
+          );
+        }
+      }
+      persist(toSave);
+    }
+    setRun(null);
+    setTransferPoint(null);
+    setShowStructuredLiteracyStations(false);
+    if (goHome) {
+      if (onGoHome) onGoHome();
+      else onBack();
+    }
+  };
+
+  const renderSessionExitActions = () => (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => saveAndPauseSession(false)}
+        className="bz-btn bz-btn-ghost bz-btn-sm text-xs"
+        title="حفظ التقدم وإيقاف الجلسة مؤقتًا"
+      >
+        <PauseCircle className="w-3.5 h-3.5" /> حفظ وإيقاف
+      </button>
+      <button
+        type="button"
+        onClick={() => saveAndPauseSession(true)}
+        className="bz-btn bz-btn-secondary bz-btn-sm text-xs font-bold"
+        title="حفظ التقدم والعودة إلى الصفحة الرئيسية"
+      >
+        <Home className="w-3.5 h-3.5" /> حفظ والعودة للرئيسية
+      </button>
+    </div>
+  );
+
   // ---------------------------------------------------------------- running a session
   if (transferPoint && progress && (hasCompletedAnyScreening || progress.history.length > 0)) {
     const today = new Date().toISOString().slice(0, 10);
     const alreadyTrainedToday = progress.history.some((entry) => entry.date.slice(0, 10) === today);
     const transferSessionNumber = sessionsCompleted(progress) + (alreadyTrainedToday ? 0 : 1);
     return (
-      <TransferMeasureView
-        student={student}
-        point={transferPoint}
-        form={formFor(studentId, transferPoint, progress.plan.createdAt)}
-        session={transferSessionNumber}
-        onComplete={(record: TransferRecord) => {
-          const next = {
-            ...progress,
-            transfer: [...(progress.transfer ?? []).filter((saved) => saved.point !== record.point), record],
-          };
-          persist(next);
-          setTransferPoint(null);
-          // The new-material measure replaces the ordinary weekly probe on this sitting.
-          beginSession(true, true);
-        }}
-        onSkip={() => {
-          setTransferPoint(null);
-          // When voice assessment is unavailable or declined, keep the non-audio probe if due.
-          beginSession(false, true);
-        }}
-      />
+      <div className="space-y-3" dir="rtl">
+        <div className="flex items-center justify-end">{renderSessionExitActions()}</div>
+        <TransferMeasureView
+          student={student}
+          point={transferPoint}
+          form={formFor(studentId, transferPoint, progress.plan.createdAt)}
+          session={transferSessionNumber}
+          onComplete={(record: TransferRecord) => {
+            const next = {
+              ...progress,
+              transfer: [...(progress.transfer ?? []).filter((saved) => saved.point !== record.point), record],
+            };
+            persist(next);
+            setTransferPoint(null);
+            // The new-material measure replaces the ordinary weekly probe on this sitting.
+            beginSession(true, true);
+          }}
+          onSkip={() => {
+            setTransferPoint(null);
+            // When voice assessment is unavailable or declined, keep the non-audio probe if due.
+            beginSession(false, true);
+          }}
+        />
+      </div>
     );
   }
 
   if (showStructuredLiteracyStations) {
     const ageYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? ((student?.ageYears ?? 4) * 12)) / 12)));
     return (
-      <StructuredLiteracyStations
-        studentId={studentId}
-        ageYears={ageYears}
-        childName={childName}
-        onClose={() => setShowStructuredLiteracyStations(false)}
-      />
+      <div className="space-y-3" dir="rtl">
+        <div className="flex items-center justify-end">{renderSessionExitActions()}</div>
+        <StructuredLiteracyStations
+          studentId={studentId}
+          ageYears={ageYears}
+          childName={childName}
+          onClose={() => setShowStructuredLiteracyStations(false)}
+        />
+      </div>
     );
   }
 
@@ -720,13 +775,29 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const pl = run.placement;
     const def = SKILLS[pl.skill];
     const item = pl.items[pl.index];
+    const skipPlacementToPractice = () => {
+      stopSpeech();
+      const placed = applyPlacement(progress, pl.skill, pl.suggested, pl.answers, pl.suggested);
+      persist(placed);
+      beginSkill(run.skillIndex, { ...run, placement: null }, placed);
+    };
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-line bg-soft">
           <p className="font-child font-black text-slate-900 flex items-center gap-2">
             <span className="text-2xl" aria-hidden="true">{def.icon}</span> من أين نبدأ؟ {def.nameAr}
+            <span className="text-xs font-bold text-slate-500 mr-2">· المستوى {toArabicDigits(pl.level)}</span>
           </p>
-          <p className="text-xs font-bold text-slate-500">المستوى {toArabicDigits(pl.level)}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={skipPlacementToPractice}
+              className="bz-btn bz-btn-ghost bz-btn-sm text-xs"
+            >
+              تخطّي وبدء التدريب
+            </button>
+            {renderSessionExitActions()}
+          </div>
         </div>
         <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
           {run.phase === 'placementIntro' && (
@@ -734,9 +805,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
               <p className="font-child text-lg font-bold text-slate-700">
                 سنجرّب أمثلة جديدة. وإذا احتجت مساعدة، سنشرح لك ثم تحاول مرة أخرى.
               </p>
-              <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
-                <Play className="w-6 h-6" /> ابدأ
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button type="button" onClick={() => setRun({ ...run, phase: 'placement' })} className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10">
+                  <Play className="w-6 h-6" /> ابدأ
+                </button>
+                <button type="button" onClick={skipPlacementToPractice} className="font-child bz-btn bz-btn-secondary text-sm px-5">
+                  ابدأ التدريب مباشرة
+                </button>
+              </div>
             </div>
           )}
           {run.phase === 'placement' && item && (
@@ -757,13 +833,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const item = items[index];
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-soft">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-line bg-soft">
           <p className="font-child font-black text-slate-900 flex items-center gap-2">
             <span className="text-2xl" aria-hidden="true">📏</span> مقياس التقدّم الأسبوعي
+            <span className="text-xs font-bold text-slate-500 mr-2">
+              · {toArabicDigits(index + 1)} من {toArabicDigits(items.length)}
+            </span>
           </p>
-          <p className="text-xs font-bold text-slate-500">
-            {toArabicDigits(index + 1)} من {toArabicDigits(items.length)}
-          </p>
+          {renderSessionExitActions()}
         </div>
         {run.phase === 'probe' && (
           <div className="px-6 pt-4">
@@ -830,7 +907,10 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     };
     return (
       <div className="bz-card p-5 sm:p-8 space-y-5 text-center" dir="rtl">
-        <span className="bz-badge bz-badge-brand">الطلاقة · قراءة متكررة</span>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+          <span className="bz-badge bz-badge-brand">الطلاقة · قراءة متكررة</span>
+          {renderSessionExitActions()}
+        </div>
         {run.phase === 'fluencyIntro' ? (
           <>
             <h2 className="font-child text-2xl font-black text-slate-900">نقرأ النص معًا ثلاث مرات</h2>
@@ -866,9 +946,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const task = run.tasks[run.taskIndex];
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-soft text-xs font-bold text-slate-500">
-          <span>المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
-          <span>المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-line bg-soft text-xs font-bold text-slate-500">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-900 font-black">{def?.nameAr}</span>
+            <span>· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
+            <span>· المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
+          </div>
+          {renderSessionExitActions()}
         </div>
         {run.phase === 'task' && (
           <div className="px-6 pt-4">
@@ -1021,9 +1105,14 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
                 );
               })()}
 
-              <button type="button" onClick={() => setRun(null)} className="bz-btn bz-btn-primary bz-btn-lg">
-                العودة إلى البرنامج
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button type="button" onClick={() => setRun(null)} className="bz-btn bz-btn-primary bz-btn-lg">
+                  العودة إلى البرنامج
+                </button>
+                <button type="button" onClick={() => saveAndPauseSession(true)} className="bz-btn bz-btn-secondary bz-btn-lg">
+                  <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1183,6 +1272,13 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
             className="bz-btn bz-btn-primary bz-btn-lg font-bold shadow-md"
           >
             <GraduationCap className="w-5 h-5" /> ابدأ جلسة اليوم
+          </button>
+          <button
+            type="button"
+            onClick={() => saveAndPauseSession(true)}
+            className="bz-btn bz-btn-secondary bz-btn-lg"
+          >
+            <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
           </button>
         </div>
       </section>

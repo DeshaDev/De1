@@ -1029,6 +1029,11 @@ function confusableWith(letter: string): string[] {
   return Array.from(new Set([...fromPairs, ...fromGroups]));
 }
 
+export function initialCvSound(e: LexiconEntry): string {
+  const m = e.word.normalize('NFC').match(/^([\u0621-\u064A])\u0651?([\u064E\u064F\u0650])/);
+  return m ? `${m[1]}${m[2]}` : e.onset;
+}
+
 function soundPositionTask(random: () => number, level: Level, n: number): ChoiceItem | null {
   const useCoda = level === 3;
   const key = (e: LexiconEntry) => (useCoda ? e.coda : e.onset);
@@ -1044,7 +1049,10 @@ function soundPositionTask(random: () => number, level: Level, n: number): Choic
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const target = pick(entries, random);
     const sound = key(target) as string;
-    const matches = entries.filter((e) => e.id !== target.id && key(e) === sound);
+    const targetCv = initialCvSound(target);
+    const matches = entries.filter(
+      (e) => e.id !== target.id && key(e) === sound && (useCoda || initialCvSound(e) === targetCv)
+    );
     if (matches.length === 0) continue;
     const answer = pick(matches, random);
     const close = level === 2 ? confusableWith(sound) : [];
@@ -1059,7 +1067,9 @@ function soundPositionTask(random: () => number, level: Level, n: number): Choic
     const options = shuffleWith([answer, ...distractors], random).map((e) => e.id);
     return {
       id: `tr-pos-${n}`,
-      promptAr: useCoda ? `أيّ صورة ينتهي اسمها بآخر صوت في «${target.word}»؟` : `أيّ صورة يبدأ اسمها مثل «${target.word}»؟`,
+      promptAr: useCoda
+        ? `«${target.word}» تنتهي بحرف «${target.coda}». أيّ صورة ينتهي اسمها بآخر صوت في «${target.word}»؟`
+        : `«${target.word}» تبدأ بالصوت «${targetCv}». أيّ صورة يبدأ اسمها بالصوت «${targetCv}» مثل «${target.word}»؟`,
       stimulus: { type: 'emoji', value: target.emoji, label: target.word },
       audio: [
         { text: target.word, highlight: 'stimulus', pauseAfterMs: 400 },

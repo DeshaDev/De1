@@ -33,6 +33,7 @@ import {
   Flame,
   FileText,
   Pause,
+  Home,
 } from 'lucide-react';
 import { DailySprintStation } from './remediation/DailySprintStation';
 import { StoryGenStation } from './remediation/StoryGenStation';
@@ -388,28 +389,37 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
       </KidPageHeader>
 
       {/* Two ways to train */}
-      <div className="bz-segment w-full sm:w-auto" role="tablist" aria-label="طريقة التدريب">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="bz-segment w-full sm:w-auto" role="tablist" aria-label="طريقة التدريب">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={gymMode === 'curriculum'}
+            onClick={() => {
+              setGymMode('curriculum');
+              setActiveScaffold(null);
+            }}
+          >
+            <Target size={17} /> تمرين اليوم (٣ أسئلة)
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={gymMode === 'stations'}
+            onClick={() => {
+              setGymMode('stations');
+              setActiveScaffold(null);
+            }}
+          >
+            <Sparkles size={17} /> ألعاب المهارات (٥ ألعاب)
+          </button>
+        </div>
         <button
           type="button"
-          role="tab"
-          aria-selected={gymMode === 'curriculum'}
-          onClick={() => {
-            setGymMode('curriculum');
-            setActiveScaffold(null);
-          }}
+          onClick={() => onNavigateTab('home')}
+          className="bz-btn bz-btn-secondary bz-btn-sm font-bold"
         >
-          <Target size={17} /> تمرين اليوم (٣ أسئلة)
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={gymMode === 'stations'}
-          onClick={() => {
-            setGymMode('stations');
-            setActiveScaffold(null);
-          }}
-        >
-          <Sparkles size={17} /> ألعاب المهارات (٥ ألعاب)
+          <Home className="w-4 h-4" /> حفظ والعودة للرئيسية
         </button>
       </div>
 

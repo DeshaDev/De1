@@ -90,21 +90,19 @@ export function prepareArabicTtsText(text: string): string {
   s = s.replace(/:\s*/g, ' ');
 
   // 3. At pause (end of string or before . ؟ ? ! ، …):
-  //    a) Convert taa marbuta (ة) after long alif (ا) to اهْ (e.g. سُلَحْفَاة -> سُلَحْفَاهْ)
-  s = s.replace(/اة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'اهْ');
-  //    b) Convert other taa marbuta (ة) at pause to هْ (e.g. سَمَكَة -> سَمَكَهْ)
-  s = s.replace(/ة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'هْ');
-
-  // 4. Prevent closed-syllable long-vowel shortening at pause:
-  //    If a word at pause ends in [ا و ي] + consonant + [short vowel or sukun], strip the final mark (e.g. بَابْ -> بَاب, كِتَابْ -> كِتَاب, فُوْبُ -> فُوْب)
-  s = s.replace(/([اوي][\u064E\u064F\u0650\u0652]?[\u0621-\u064A])[\u064E\u064F\u0650\u0652]+(?=\s*($|[.؟?!،,…]))/g, '$1');
-
-  // 5. Apply natural Waqf (taskeen) on remaining final short vowels before pause on multi-letter words
-  //    (e.g. أَحْسَنْتَ! -> أَحْسَنْتْ! , نَفْسِهِ. -> نَفْسِهْ.)
-  const lettersOnly = s.replace(/[\u064B-\u065F\u0670\s.؟?!،,…]/g, '');
-  if (lettersOnly.length > 1) {
-    s = s.replace(/([\u0621-\u064A])[\u064E\u064F\u0650]+(?=\s*($|[.؟?!،,…]))/g, '$1\u0652');
+  //    In multi-word sentences, keep ة (stripping only case/tanween marks) so TTS never
+  //    confuses ة with the masculine possessive pronoun ـهُ ('سَمَكُهُ').
+  //    In isolated single words, convert ة to هْ to prevent TTS from adding tanween ('نحلتون').
+  if (s.includes(' ')) {
+    s = s.replace(/ة[\u064B-\u0652]+(?=\s*($|[.؟?!،,…]))/g, 'ة');
+  } else {
+    s = s.replace(/اة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'اهْ');
+    s = s.replace(/ة[\u064B-\u0652]*(?=\s*($|[.؟?!،,…]))/g, 'هْ');
   }
+
+  // 4. Apply natural Waqf (taskeen) on final short vowels/tanween before pause ONLY on multi-letter words
+  //    (never strip the vowel of a 1-letter phoneme token like 'سَ').
+  s = s.replace(/([\u0621-\u064A][\u064B-\u065F\u0670]*[\u0621-\u064A])[\u064E\u064F\u0650\u064C\u064D]+(?=\s*($|[.؟?!،,…]))/g, '$1\u0652');
 
   return s;
 }

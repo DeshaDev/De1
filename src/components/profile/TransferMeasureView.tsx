@@ -121,7 +121,7 @@ export function TransferMeasureView({ student, point, form, session, onComplete,
       };
       if (!response.ok) throw new Error(result.code || `TRANSFER_AUDIO_HTTP_${response.status}`);
       if (
-        result.sourceModel !== 'azure_pronunciation_assessment' ||
+        (result.sourceModel !== 'azure_pronunciation_assessment' && result.sourceModel !== 'ifm_jais_asr') ||
         result.assessmentComplete !== true ||
         typeof result.assessmentReceipt !== 'string' ||
         !/^[a-f0-9]{64}$/.test(result.assessmentReceipt) ||

@@ -14,6 +14,7 @@ import {
   ArrowLeft as ArrowLeftIcon,
   Cloud,
   AlertTriangle,
+  Home,
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
 import {
@@ -103,11 +104,13 @@ function SubtestRunner({
   audioSession,
   onFinish,
   onExit,
+  onSaveAndGoHome,
 }: {
   subtest: Subtest;
   audioSession: CognitiveAudioSessionContext;
   onFinish: (result: SubtestResult) => void;
   onExit: () => void;
+  onSaveAndGoHome?: () => void;
 }) {
   const [stage, setStage] = useState<Stage>('intro');
   const [index, setIndex] = useState(0);
@@ -212,15 +215,30 @@ function SubtestRunner({
           </div>
         </div>
         {stage !== 'done' && (
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('إيقاف هذه اللعبة؟ لن تُحفظ إجاباتها، ويمكن إعادتها لاحقًا.')) onExit();
-            }}
-            className="bz-btn bz-btn-ghost bz-btn-sm"
-          >
-            <PauseCircle className="w-4 h-4" /> إيقاف
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                stopSpeech();
+                onExit();
+              }}
+              className="bz-btn bz-btn-ghost bz-btn-sm text-xs"
+            >
+              <PauseCircle className="w-4 h-4" /> إيقاف مؤقت
+            </button>
+            {onSaveAndGoHome && (
+              <button
+                type="button"
+                onClick={() => {
+                  stopSpeech();
+                  onSaveAndGoHome();
+                }}
+                className="bz-btn bz-btn-secondary bz-btn-sm text-xs font-bold"
+              >
+                <Home className="w-4 h-4" /> حفظ والعودة للرئيسية
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -429,13 +447,24 @@ function SubtestRunner({
                 <p className="font-child text-xl font-bold text-ink">أحسنت! انتهت المهمة.</p>
               </>
             )}
-            <button
-              type="button"
-              onClick={onExit}
-              className="bz-btn bz-btn-primary bz-btn-lg"
-            >
-              العودة إلى خريطة الألعاب
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={onExit}
+                className="bz-btn bz-btn-primary bz-btn-lg"
+              >
+                العودة إلى خريطة الألعاب
+              </button>
+              {onSaveAndGoHome && (
+                <button
+                  type="button"
+                  onClick={onSaveAndGoHome}
+                  className="bz-btn bz-btn-secondary bz-btn-lg"
+                >
+                  <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -872,6 +901,20 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     pushToSchool(updated);
   };
 
+  const saveAndGoHome = () => {
+    stopSpeech();
+    if (session) {
+      void saveBatterySession(session).catch((error) => console.error('Unable to persist battery session:', error));
+      pushToSchool(session);
+    }
+    setView({ name: 'map' });
+    if (onNavigateTab) {
+      onNavigateTab('home');
+    } else if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
+
   if (view.name === 'training') {
     return (
       <TrainingProgramView
@@ -892,6 +935,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             setView(session ? { name: 'map' } : { name: 'setup' });
           }
         }}
+        onGoHome={saveAndGoHome}
         onRunningChange={setTrainingRunning}
         serverProgress={trainingFromRecord(activeStudent)}
         syncEnabled={syncEnabled}
@@ -949,6 +993,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         audioSession={session}
         onFinish={saveResult}
         onExit={() => setView({ name: 'map' })}
+        onSaveAndGoHome={saveAndGoHome}
       />
     );
   }
@@ -1033,6 +1078,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
               <FileBarChart className="w-5 h-5" /> النتيجة والتقرير
             </button>
           )}
+          <button type="button" onClick={saveAndGoHome} className="bz-btn bz-btn-ghost bz-btn-lg">
+            <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
+          </button>
         </div>
       </section>
 

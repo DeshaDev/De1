@@ -972,6 +972,20 @@ export const ReadingAssessmentView: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col font-sans select-none" dir="rtl">
+      <div className="max-w-4xl w-full mx-auto px-4 pt-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            isReadingActiveRef.current = false;
+            if (timerRef.current) clearInterval(timerRef.current);
+            if (onNavigateTab) onNavigateTab('home');
+            else if (typeof window !== 'undefined') window.location.href = '/';
+          }}
+          className="bz-btn bz-btn-secondary bz-btn-sm font-bold"
+        >
+          حفظ وإيقاف · العودة للرئيسية
+        </button>
+      </div>
       {/* =====================================================================
           STAGE 1: BRIEFING & PASSAGE SELECTION
           ===================================================================== */}

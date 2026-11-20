@@ -368,5 +368,17 @@ export function formatArabicTextWithPhonemes(rawText: string): string {
     return `${cleanPrefix}${formattedSound}${suffix || '؟'}`;
   }
 
-  return clean;
+  // Expand standalone 1-letter CV phoneme tokens inside sentences (e.g., "فِيهِمَا سَ." -> "فِيهِمَا سَا.")
+  // Exclude common 1-letter conjunctions/prepositions (وَ، فَ، بِ، لِ) unless at sentence end.
+  return clean.replace(
+    /(^|[\s:«"،,])([\u0621-\u064A][\u064E\u064F\u0650])(?=$|[\s.؟?!،,…»"])/g,
+    (full, lead, token, offset, str) => {
+      const rest = str.slice(offset + full.length).trim();
+      const atClauseEnd = /^($|[.؟?!،,…»"])/.test(rest);
+      if (!atClauseEnd && (token === 'وَ' || token === 'فَ' || token === 'بِ' || token === 'لِ')) {
+        return full;
+      }
+      return `${lead}${expandArabicPhonemeSound(token)}`;
+    }
+  );
 }
