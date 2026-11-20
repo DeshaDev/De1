@@ -25,7 +25,7 @@ const MANIFEST_PATH = path.join(OUT_DIR, 'manifest.json');
 const DRY_RUN = process.argv.includes('--dry-run');
 /** Re-record single words that end in an unmarked consonant (see spokenForm). */
 const REPAUSAL = process.argv.includes('--repausal');
-const CONCURRENCY = 3;
+const CONCURRENCY = 1;
 
 interface Clip { file: string; text: string; voice: string; model: string; context: string; bytes: number }
 const manifest: { clips: Record<string, Clip> } & Record<string, unknown> = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
@@ -57,8 +57,17 @@ function needsRecording(e: CatalogEntry): boolean {
 
 function saveManifest() {
   const tmp = `${MANIFEST_PATH}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(manifest, null, 2), 'utf8');
-  fs.renameSync(tmp, MANIFEST_PATH);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(manifest, null, 2), 'utf8');
+  } catch {}
+  try {
+    fs.renameSync(tmp, MANIFEST_PATH);
+  } catch {
+    try {
+      fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8');
+    } catch {}
+    fs.rmSync(tmp, { force: true });
+  }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -123,4 +132,7 @@ async function main() {
   for (const f of failed) console.log(`FAILED ${f}`);
 }
 
-void main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
