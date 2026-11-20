@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import { Mascot } from './ui/Mascot';
+import { ContactUsSection } from './ContactUsSection';
 import { MascotMomentLive } from './ui/MascotLive';
 import { Cloud, HeroScene, LetterBlock, Sparkle } from './ui/Playful';
 import { BATTERY, DOMAINS } from '../cognitiveProfile/battery';
@@ -291,6 +292,9 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
           ))}
         </ul>
       </section>
+
+      {/* ================= CONTACT US ================= */}
+      <ContactUsSection />
 
       {/* ================= CLOSE ================= */}
       <section className="bz-container pb-16 sm:pb-24">

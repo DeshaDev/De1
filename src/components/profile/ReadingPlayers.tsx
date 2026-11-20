@@ -591,6 +591,76 @@ export function PassagePlayer({
           </p>
         </div>
 
+        {/* Top Controls Bar - Keep record/stop buttons visible above the story text */}
+        {phase === 'ready' && (
+          <div className="flex flex-wrap justify-center gap-3 pb-1">
+            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
+              <Mic className="w-5 h-5" /> ابدأ تسجيل القراءة
+            </button>
+            {!supported && (
+              <p className="w-full text-center bz-small text-amber-800">
+                {audioAvailabilityMessage(audioSession)}
+              </p>
+            )}
+            <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
+              متابعة دون درجة
+            </button>
+          </div>
+        )}
+
+        {phase === 'recording' && (
+          <div className="space-y-3 text-center pb-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
+              <div className="inline-flex items-center gap-2 text-teal-800">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                <span>التسجيل الصوتي جارٍ… اقرأ على مهلك</span>
+              </div>
+              <span className="text-slate-600 text-xs">
+                المدة المتبقية: {ar(Math.max(0, timeLimitSec - Math.round(elapsedSeconds)))} ثانية
+              </span>
+            </div>
+            <div className="bz-progress">
+              <span style={{ width: String(Math.min(100, (elapsedSeconds / timeLimitSec) * 100)) + '%' }} />
+            </div>
+
+            <div>
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg shadow-md w-full sm:w-auto" onClick={() => void submitRecording()}>
+                <Check className="w-5 h-5" /> انتهيت من القراءة — حلّل التسجيل
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'submitting' && (
+          <div className="text-center space-y-2 py-4" role="status">
+            <span className="text-4xl" aria-hidden="true">🎧</span>
+            <p className="font-bold text-lg text-ink">جارٍ تحليل تسجيل القصة…</p>
+            <p className="bz-small text-muted">تقييم صوتي دقيق لطلاقة القراءة</p>
+          </div>
+        )}
+
+        {phase === 'error' && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
+            <p className="bz-small text-amber-950">{errorMessage}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                className="bz-btn bz-btn-primary"
+                onClick={() => {
+                  finalizingRef.current = false;
+                  setErrorMessage('');
+                  setPhase('ready');
+                }}
+              >
+                إعادة التسجيل والمحاولة
+              </button>
+              <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
+                حفظ المهمة دون درجة
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Story Text Display */}
         {phase !== 'review' ? (
           <div
@@ -617,79 +687,6 @@ export function PassagePlayer({
                 متابعة الفحص ◀
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Phase: Recording */}
-        {phase === 'recording' && (
-          <div className="space-y-4 text-center">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-sm font-bold">
-              <div className="inline-flex items-center gap-2 text-teal-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                <span>التسجيل الصوتي جارٍ… اقرأ على مهلك</span>
-              </div>
-              <span className="text-slate-600 text-xs">
-                المدة المتبقية: {ar(Math.max(0, timeLimitSec - Math.round(elapsedSeconds)))} ثانية
-              </span>
-            </div>
-            <div className="bz-progress">
-              <span style={{ width: String(Math.min(100, (elapsedSeconds / timeLimitSec) * 100)) + '%' }} />
-            </div>
-
-            <div className="pt-2">
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg shadow-md w-full sm:w-auto" onClick={() => void submitRecording()}>
-                <Check className="w-5 h-5" /> انتهيت من القراءة — حلّل التسجيل
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Phase: Submitting */}
-        {phase === 'submitting' && (
-          <div className="text-center space-y-2 py-4" role="status">
-            <span className="text-4xl" aria-hidden="true">🎧</span>
-            <p className="font-bold text-lg text-ink">جارٍ تحليل تسجيل القصة…</p>
-            <p className="bz-small text-muted">تقييم صوتي دقيق لطلاقة القراءة</p>
-          </div>
-        )}
-
-        {/* Phase: Error */}
-        {phase === 'error' && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3" role="alert">
-            <p className="bz-small text-amber-950">{errorMessage}</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                className="bz-btn bz-btn-primary"
-                onClick={() => {
-                  finalizingRef.current = false;
-                  setErrorMessage('');
-                  setPhase('ready');
-                }}
-              >
-                إعادة التسجيل والمحاولة
-              </button>
-              <button type="button" className="bz-btn bz-btn-secondary" onClick={saveWithoutScore}>
-                حفظ المهمة دون درجة
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Phase: Ready */}
-        {phase === 'ready' && (
-          <div className="flex flex-wrap justify-center gap-3">
-            <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => void startRecording()} disabled={!supported}>
-              <Mic className="w-5 h-5" /> ابدأ تسجيل القراءة
-            </button>
-            {!supported && (
-              <p className="w-full text-center bz-small text-amber-800">
-                {audioAvailabilityMessage(audioSession)}
-              </p>
-            )}
-            <button type="button" className="bz-btn bz-btn-ghost" onClick={saveWithoutScore}>
-              متابعة دون درجة
-            </button>
           </div>
         )}
       </div>

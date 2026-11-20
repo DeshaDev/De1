@@ -2,6 +2,7 @@ import { formatArabicTextWithPhonemes } from './src/utils/arabicPhonemeBank';
 import { prepareArabicTtsText } from './src/utils/naturalSpeech';
 import express from 'express';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
@@ -94,6 +95,8 @@ const DATA_DIR = process.env.BASEERA_DATA_DIR
 const STORE_PATH = path.join(DATA_DIR, 'learning-store.json');
 const SECURITY_STATE_PATH = path.join(DATA_DIR, 'security-state.json');
 const DEMO_REQUESTS_PATH = path.join(DATA_DIR, 'school-demo-requests.json');
+const CONTACT_INQUIRIES_PATH = path.join(DATA_DIR, 'contact-inquiries.json');
+const CONTACT_RECIPIENT_EMAIL = (process.env.CONTACT_TO_EMAIL || 'contact@hayanaqra.com').trim();
 const USAGE_PATH = path.join(DATA_DIR, 'usage-metrics.json');
 
 let baseeraStoreReady = false;
@@ -630,18 +633,30 @@ function usageRateLimiter(req: express.Request, res: express.Response, next: exp
 }
 
 const DEMO_REQUEST_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const DEMO_REQUEST_CIPHER_CONTEXT = 'baseera-demo-requests-aes-256-gcm-v1';
+const CONTACT_INQUIRY_CIPHER_CONTEXT = 'baseera-contact-inquiries-aes-256-gcm-v1';
 
-function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
+interface PersistedContactInquiry {
+  id: string;
+  submittedAt: string;
+  clientIp: string;
+  name: string;
+  childAge: string;
+  question: string;
+  emailed: boolean;
+}
+
+function loadEncryptedTimedList<T extends { submittedAt: string }>(
+  filePath: string,
+  cipherContext: string,
+  retentionLabel: string
+): T[] {
   try {
-    if (!fs.existsSync(DEMO_REQUESTS_PATH)) return [];
+    if (!fs.existsSync(filePath)) return [];
     const key = getStoreEncryptionKey();
     if (!key) return [];
-    const raw = fs.readFileSync(DEMO_REQUESTS_PATH, 'utf8');
-    const decrypted = decryptJsonPayload<PersistedSchoolDemoRequest[]>(
-      raw,
-      key,
-      'baseera-demo-requests-aes-256-gcm-v1'
-    );
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const decrypted = decryptJsonPayload<T[]>(raw, key, cipherContext);
     if (!decrypted.wasEncrypted || !Array.isArray(decrypted.data)) return [];
 
     const now = Date.now();
@@ -655,19 +670,15 @@ function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
 
     if (retained.length !== decrypted.data.length) {
       try {
-        const encrypted = encryptJsonPayload(
-          retained,
-          key,
-          'baseera-demo-requests-aes-256-gcm-v1'
-        );
-        if (!writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, encrypted)) {
+        const encrypted = encryptJsonPayload(retained, key, cipherContext);
+        if (!writeEncryptedFileAtomic(filePath, encrypted)) {
           console.error(
-            `[BASEERA PRIVACY] Could not persist retention cleanup for ${decrypted.data.length - retained.length} expired/invalid school lead records.`
+            `[BASEERA PRIVACY] Could not persist retention cleanup for ${decrypted.data.length - retained.length} expired/invalid ${retentionLabel}.`
           );
         }
       } catch {
         console.error(
-          `[BASEERA PRIVACY] Retention cleanup failed for ${decrypted.data.length - retained.length} expired/invalid school lead records.`
+          `[BASEERA PRIVACY] Retention cleanup failed for ${decrypted.data.length - retained.length} expired/invalid ${retentionLabel}.`
         );
       }
     }
@@ -677,8 +688,12 @@ function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
   }
 }
 
-
-function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
+function appendEncryptedTimedList<T extends { submittedAt: string }>(
+  filePath: string,
+  cipherContext: string,
+  item: T,
+  label: string
+): {
   success: boolean;
   reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'WRITE_ERROR' | 'EXCEPTION';
 } {
@@ -686,23 +701,59 @@ function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
     const key = getStoreEncryptionKey();
     if (!key) {
       console.error(
-        'Cannot save school demo request: BASEERA_STORE_ENCRYPTION_KEY is not configured (fail-closed).'
+        `Cannot save ${label}: BASEERA_STORE_ENCRYPTION_KEY is not configured (fail-closed).`
       );
       return { success: false, reason: 'ENCRYPTION_KEY_UNAVAILABLE' };
     }
-    const list = loadPersistedDemoRequests();
+    const list = loadEncryptedTimedList<T>(filePath, cipherContext, label);
     list.push(item);
-    const content = encryptJsonPayload(
-      list,
-      key,
-      'baseera-demo-requests-aes-256-gcm-v1'
-    );
-    const written = writeEncryptedFileAtomic(DEMO_REQUESTS_PATH, content);
+    const content = encryptJsonPayload(list, key, cipherContext);
+    const written = writeEncryptedFileAtomic(filePath, content);
     return { success: written, reason: written ? undefined : 'WRITE_ERROR' };
   } catch (err) {
-    console.error('Failed to save school demo request:', err);
+    console.error(`Failed to save ${label}:`, err);
     return { success: false, reason: 'EXCEPTION' };
   }
+}
+
+function loadPersistedDemoRequests(): PersistedSchoolDemoRequest[] {
+  return loadEncryptedTimedList<PersistedSchoolDemoRequest>(
+    DEMO_REQUESTS_PATH,
+    DEMO_REQUEST_CIPHER_CONTEXT,
+    'school lead records'
+  );
+}
+
+function saveSchoolDemoRequest(item: PersistedSchoolDemoRequest): {
+  success: boolean;
+  reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'WRITE_ERROR' | 'EXCEPTION';
+} {
+  return appendEncryptedTimedList(
+    DEMO_REQUESTS_PATH,
+    DEMO_REQUEST_CIPHER_CONTEXT,
+    item,
+    'school demo request'
+  );
+}
+
+function loadPersistedContactInquiries(): PersistedContactInquiry[] {
+  return loadEncryptedTimedList<PersistedContactInquiry>(
+    CONTACT_INQUIRIES_PATH,
+    CONTACT_INQUIRY_CIPHER_CONTEXT,
+    'contact inquiry records'
+  );
+}
+
+function saveContactInquiry(item: PersistedContactInquiry): {
+  success: boolean;
+  reason?: 'ENCRYPTION_KEY_UNAVAILABLE' | 'WRITE_ERROR' | 'EXCEPTION';
+} {
+  return appendEncryptedTimedList(
+    CONTACT_INQUIRIES_PATH,
+    CONTACT_INQUIRY_CIPHER_CONTEXT,
+    item,
+    'contact inquiry'
+  );
 }
 
 function deletePersistedDemoRequest(id: string): {
@@ -815,6 +866,116 @@ const SchoolDemoRequestSchema = z.object({
   expectedStudents: z.string().trim().max(50).optional().default(''),
   notes: z.string().trim().max(1000).optional().default(''),
 });
+
+const ContactInquirySchema = z.object({
+  name: z.string().trim().min(2, 'يرجى إدخال الاسم').max(100),
+  childAge: z.string().trim().min(1, 'يرجى إدخال عمر الطفل').max(40),
+  question: z.string().trim().min(5, 'يرجى كتابة نص السؤال').max(2000),
+});
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildContactMailtoUrl(name: string, childAge: string, question: string): string {
+  const subject = `سؤال عبر نموذج تواصل معنا — ${name} (عمر الطفل: ${childAge})`;
+  const body = `الاسم: ${name}\nعمر الطفل: ${childAge}\n\nنص السؤال:\n${question}`;
+  return `mailto:${CONTACT_RECIPIENT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+async function sendContactInquiryEmail(item: {
+  name: string;
+  childAge: string;
+  question: string;
+  submittedAt: string;
+}): Promise<{ configured: boolean; sent: boolean; provider?: 'resend' | 'smtp'; error?: string }> {
+  const subject = `سؤال جديد من نموذج تواصل معنا — ${item.name} (عمر الطفل: ${item.childAge})`;
+  const textBody = [
+    `الاسم: ${item.name}`,
+    `عمر الطفل: ${item.childAge}`,
+    `التاريخ: ${item.submittedAt}`,
+    '',
+    'نص السؤال:',
+    item.question,
+  ].join('\n');
+  const htmlBody = `
+    <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.7; color: #0f172a; max-width: 640px;">
+      <h2 style="color: #0f766e;">رسالة جديدة من نموذج تواصل معنا — هَيَّا نَقْرَأْ</h2>
+      <p><strong>الاسم:</strong> ${escapeHtml(item.name)}</p>
+      <p><strong>عمر الطفل:</strong> ${escapeHtml(item.childAge)}</p>
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+      <p><strong>نص السؤال:</strong></p>
+      <div style="white-space: pre-wrap; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0;">${escapeHtml(item.question)}</div>
+    </div>
+  `;
+
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  if (resendKey) {
+    try {
+      const fromAddr = (process.env.CONTACT_FROM_EMAIL || `Haya Naqra <${CONTACT_RECIPIENT_EMAIL}>`).trim();
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: fromAddr,
+          to: [CONTACT_RECIPIENT_EMAIL],
+          subject,
+          text: textBody,
+          html: htmlBody,
+        }),
+      });
+      if (resp.ok) {
+        return { configured: true, sent: true, provider: 'resend' };
+      }
+      const errBody = await resp.text();
+      console.error('[BASEERA CONTACT] Resend error:', resp.status, errBody.slice(0, 200));
+      return { configured: true, sent: false, provider: 'resend', error: `HTTP ${resp.status}` };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'resend_failed';
+      console.error('[BASEERA CONTACT] Resend exception:', msg);
+      return { configured: true, sent: false, provider: 'resend', error: msg };
+    }
+  }
+
+  const smtpHost = (process.env.SMTP_HOST || '').trim();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpPass = (process.env.SMTP_PASS || '').trim();
+  if (smtpHost && smtpUser && smtpPass) {
+    try {
+      const port = Number(process.env.SMTP_PORT || 465);
+      const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465;
+      const fromAddr = (process.env.CONTACT_FROM_EMAIL || smtpUser).trim();
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port,
+        secure,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+      await transporter.sendMail({
+        from: fromAddr,
+        to: CONTACT_RECIPIENT_EMAIL,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+      return { configured: true, sent: true, provider: 'smtp' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'smtp_failed';
+      console.error('[BASEERA CONTACT] SMTP error:', msg);
+      return { configured: true, sent: false, provider: 'smtp', error: msg };
+    }
+  }
+
+  return { configured: false, sent: false };
+}
 
 function serializeSecurityState(): PersistedSecurityState {
   const now = Date.now();
@@ -5518,6 +5679,105 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         ['purged']
       );
       res.json({ ok: true, message: 'تم حذف طلب التجربة من مخزن التطبيق النشط المشفر وتسجيل العملية.' });
+    }
+  );
+
+  app.post('/api/contact', demoRequestRateLimiter, async (req, res) => {
+    const parsed = ContactInquirySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: parsed.error.issues[0]?.message || 'بيانات نموذج التواصل غير مكتملة أو غير صالحة.',
+      });
+      return;
+    }
+
+    const { name, childAge, question } = parsed.data;
+    const submittedAt = new Date().toISOString();
+    const id = `contact_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const mailtoUrl = buildContactMailtoUrl(name, childAge, question);
+
+    const emailResult = await sendContactInquiryEmail({ name, childAge, question, submittedAt });
+
+    const inquiryRecord: PersistedContactInquiry = {
+      id,
+      submittedAt,
+      clientIp: req.ip || req.socket.remoteAddress || 'local',
+      name,
+      childAge,
+      question,
+      emailed: emailResult.sent,
+    };
+    const saveResult = saveContactInquiry(inquiryRecord);
+    if (saveResult.success) {
+      recordLeadAuditLog(
+        'platform',
+        'public_lead',
+        'public',
+        'lead.create',
+        id,
+        ['name', 'childAge']
+      );
+    }
+
+    if (emailResult.configured && !emailResult.sent) {
+      res.status(502).json({
+        error: `تعذر إرسال البريد الإلكتروني عبر الخادم إلى ${CONTACT_RECIPIENT_EMAIL} حاليًا. يمكنك الإرسال مباشرة عبر تطبيق البريد.`,
+        saved: saveResult.success,
+        recipientEmail: CONTACT_RECIPIENT_EMAIL,
+        mailtoUrl,
+      });
+      return;
+    }
+
+    if (emailResult.sent) {
+      res.status(201).json({
+        ok: true,
+        emailed: true,
+        stored: saveResult.success,
+        recipientEmail: CONTACT_RECIPIENT_EMAIL,
+        message: `تم إرسال سؤالك بنجاح إلى ${CONTACT_RECIPIENT_EMAIL}.`,
+      });
+      return;
+    }
+
+    if (saveResult.success) {
+      res.status(202).json({
+        ok: true,
+        emailed: false,
+        stored: true,
+        reason: 'EMAIL_TRANSPORT_NOT_CONFIGURED',
+        recipientEmail: CONTACT_RECIPIENT_EMAIL,
+        mailtoUrl,
+        message: `تم حفظ سؤالك بأمان في سجل المنصة، ولإرساله مباشرةً عبر بريدك إلى ${CONTACT_RECIPIENT_EMAIL} اضغط على الزر أدناه:`,
+      });
+      return;
+    }
+
+    res.status(503).json({
+      error: `تعذر الإرسال التلقائي لعدم اكتمال تهيئة البريد على الخادم. يرجى الإرسال مباشرة إلى ${CONTACT_RECIPIENT_EMAIL}.`,
+      recipientEmail: CONTACT_RECIPIENT_EMAIL,
+      mailtoUrl,
+    });
+  });
+
+  app.get(
+    '/api/admin/contact-inquiries',
+    requireBaseeraAuth('leads:manage'),
+    (req, res) => {
+      const session = (req as any).baseeraSession as VerifiedBaseeraSession;
+      if (session.role !== 'platform_admin') {
+        res.status(403).json({
+          error: 'صلاحية مسؤول المنصة (Platform Admin) مطلوبة للاطلاع على رسائل تواصل معنا.',
+        });
+        return;
+      }
+      const inquiries = loadPersistedContactInquiries();
+      res.json({
+        ok: true,
+        inquiries,
+        count: inquiries.length,
+        retrievedAt: new Date().toISOString(),
+      });
     }
   );
 

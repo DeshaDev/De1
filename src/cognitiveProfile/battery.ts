@@ -703,7 +703,7 @@ export const BATTERY: Subtest[] = [
     domain: 'naming',
     gameNameAr: 'سباق الحروف',
     skillNameAr: 'سرعة تسمية الحروف',
-    icon: '🔤',
+    icon: '⏱️',
     minutes: 1,
     chance: 0,
     minAgeMonths: READING_MIN_AGE_MONTHS,

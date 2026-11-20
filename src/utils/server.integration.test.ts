@@ -1076,6 +1076,62 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.ok(!verifyDelJson.requests.some((r) => r.id === targetLead.id));
   });
 
+  it('validates contact inquiries, sends/stores honestly for contact@hayanaqra.com, and protects admin queue', async () => {
+    // 1. Missing question -> 400
+    const badRes = await fetch(`${baseUrl}/api/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'أم يوسف', childAge: '٧ سنوات' }),
+    });
+    assert.equal(badRes.status, 400);
+
+    // 2. Valid contact payload (without SMTP/Resend env configured in test, stores encrypted and returns honest mailto fallback)
+    const goodRes = await fetch(`${baseUrl}/api/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'أم يوسف',
+        childAge: '٧ سنوات',
+        question: 'طفلي يخلط بين حرفي السين والصاد، كيف نبدأ التدريب؟',
+      }),
+    });
+    assert.equal(goodRes.status, 202);
+    const goodJson = (await goodRes.json()) as {
+      ok?: boolean;
+      emailed?: boolean;
+      stored?: boolean;
+      recipientEmail?: string;
+      mailtoUrl?: string;
+    };
+    assert.equal(goodJson.ok, true);
+    assert.equal(goodJson.emailed, false);
+    assert.equal(goodJson.stored, true);
+    assert.equal(goodJson.recipientEmail, 'contact@hayanaqra.com');
+    assert.ok(goodJson.mailtoUrl?.startsWith('mailto:contact@hayanaqra.com?'));
+
+    // 3. Admin inbox RBAC enforcement
+    const noAuth = await fetch(`${baseUrl}/api/admin/contact-inquiries`);
+    assert.equal(noAuth.status, 401);
+
+    const schoolAdmin = await loginWithCode(SCHOOL_A_ADMIN_CODE);
+    const schoolRes = await fetch(`${baseUrl}/api/admin/contact-inquiries`, {
+      headers: { Authorization: `Bearer ${schoolAdmin.token}` },
+    });
+    assert.equal(schoolRes.status, 403);
+
+    const platformAdmin = await loginWithCode(PLATFORM_ADMIN_CODE);
+    const adminRes = await fetch(`${baseUrl}/api/admin/contact-inquiries`, {
+      headers: { Authorization: `Bearer ${platformAdmin.token}` },
+    });
+    assert.equal(adminRes.status, 200);
+    const adminJson = (await adminRes.json()) as {
+      ok: boolean;
+      inquiries: Array<{ name: string; childAge: string; question: string }>;
+    };
+    assert.equal(adminJson.ok, true);
+    assert.ok(adminJson.inquiries.some((q) => q.name === 'أم يوسف' && q.childAge === '٧ سنوات'));
+  });
+
   it('drafts an individual practice plan from descriptive task facts and retires per-child approval', async () => {
     const facts = {
       ageYears: 6,

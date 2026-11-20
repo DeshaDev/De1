@@ -2291,10 +2291,26 @@ export default function App() {
               </ul>
             </div>
             <div className="baseera-footer-col">
-              <h2>الثقة والخصوصية</h2>
+              <h2>الثقة والخصوصية والتواصل</h2>
               <ul>
                 <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
                 <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('home');
+                      setTimeout(() => document.getElementById('contact-us')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+                    }}
+                  >
+                    تواصل معنا
+                  </button>
+                </li>
+                <li>
+                  <a href="mailto:contact@hayanaqra.com" className="text-teal-700 hover:underline font-medium" dir="ltr">
+                    contact@hayanaqra.com
+                  </a>
+                </li>
               </ul>
             </div>
             <p className="baseera-footer-note">
