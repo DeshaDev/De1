@@ -45,6 +45,7 @@ async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<Rec
     const mono = new Float32Array(frameCount);
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, channel) => decoded.getChannelData(channel));
 
+    let maxSample = 0;
     for (let outputIndex = 0; outputIndex < frameCount; outputIndex++) {
       const sourcePosition = outputIndex * decoded.sampleRate / targetRate;
       const sourceIndex = Math.floor(sourcePosition);
@@ -55,8 +56,13 @@ async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<Rec
         const second = channel[Math.min(sourceIndex + 1, channel.length - 1)] || first;
         sample += first + (second - first) * fraction;
       }
-      mono[outputIndex] = Math.max(-1, Math.min(1, sample / channels.length));
+      const val = Math.max(-1, Math.min(1, sample / channels.length));
+      mono[outputIndex] = val;
+      const abs = Math.abs(val);
+      if (abs > maxSample) maxSample = abs;
     }
+
+    const normGain = (maxSample >= 0.015 && maxSample < 0.80) ? Math.min(8, 0.85 / maxSample) : 1.0;
 
     const wavBuffer = new ArrayBuffer(44 + mono.length * 2);
     const view = new DataView(wavBuffer);
@@ -78,7 +84,7 @@ async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<Rec
     view.setUint32(40, mono.length * 2, true);
 
     for (let i = 0; i < mono.length; i++) {
-      const sample = mono[i];
+      const sample = Math.max(-1, Math.min(1, mono[i] * normGain));
       view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
     }
 

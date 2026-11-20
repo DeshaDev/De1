@@ -122,6 +122,54 @@ export const transliterateLatinToArabicWithJais = async (latinText: string, _api
  * real silence detection more accurately.
  * Only catches completely dead buffers (e.g., corrupt recording, zero-byte payload).
  */
+/**
+ * Normalizes PCM WAV audio samples dynamically to ensure child speech reaches
+ * IFM Jais-ASR with optimal signal-to-noise ratio.
+ * If the recording is quiet (maxPeak < 22000), it applies an intelligent gain boost.
+ */
+export function normalizePcmWavBuffer(audioBytes: Buffer): {
+  normalized: Buffer;
+  maxPeak: number;
+  rms: number;
+  gainApplied: number;
+} {
+  if (!audioBytes || audioBytes.length <= 44) {
+    return { normalized: audioBytes, maxPeak: 0, rms: 0, gainApplied: 1 };
+  }
+  const dataIdx = audioBytes.indexOf('data');
+  const startOffset = dataIdx >= 0 ? dataIdx + 8 : 44;
+  if (startOffset >= audioBytes.length) {
+    return { normalized: audioBytes, maxPeak: 0, rms: 0, gainApplied: 1 };
+  }
+
+  let maxPeak = 0;
+  let sumSquares = 0;
+  let sampleCount = 0;
+
+  for (let i = startOffset; i < audioBytes.length - 1; i += 2) {
+    const sample = Math.abs(audioBytes.readInt16LE(i));
+    if (sample > maxPeak) maxPeak = sample;
+    sumSquares += sample * sample;
+    sampleCount++;
+  }
+
+  const rms = sampleCount > 0 ? Math.sqrt(sumSquares / sampleCount) : 0;
+
+  if (maxPeak >= 200 && maxPeak < 22000) {
+    const gain = Math.min(10, 26000 / maxPeak);
+    const outBuffer = Buffer.from(audioBytes);
+    for (let i = startOffset; i < outBuffer.length - 1; i += 2) {
+      const orig = outBuffer.readInt16LE(i);
+      const boosted = Math.round(orig * gain);
+      const clamped = Math.max(-32768, Math.min(32767, boosted));
+      outBuffer.writeInt16LE(clamped, i);
+    }
+    return { normalized: outBuffer, maxPeak, rms, gainApplied: gain };
+  }
+
+  return { normalized: audioBytes, maxPeak, rms, gainApplied: 1 };
+}
+
 export function isAudioPracticallySilent(audioBytes: Buffer): boolean {
   if (!audioBytes || audioBytes.length <= 44) return true;
   const dataIdx = audioBytes.indexOf('data');
@@ -198,8 +246,9 @@ export async function transcribeArabicWithJaisAsr(args: {
     throw new Error('IFM_API_KEY_NOT_CONFIGURED');
   }
 
-  const audioBytes = Buffer.from(args.audioWavBase64, 'base64');
-  console.log(`[IFM ASR] Received audio: ${audioBytes.length} bytes (base64 len: ${args.audioWavBase64.length})`);
+  const rawAudioBytes = Buffer.from(args.audioWavBase64, 'base64');
+  const { normalized: audioBytes, maxPeak, rms, gainApplied } = normalizePcmWavBuffer(rawAudioBytes);
+  console.log(`[IFM ASR] Received audio: ${rawAudioBytes.length} bytes, peak=${maxPeak}, rms=${Math.round(rms)}, gain=${gainApplied.toFixed(2)}x`);
 
   // Only skip truly zero-signal buffers (corrupt/empty); real speech always passes
   if (isAudioPracticallySilent(audioBytes)) {
@@ -214,13 +263,14 @@ export async function transcribeArabicWithJaisAsr(args: {
 
   return executeWithIfmRateLimit(async () => {
     const maxRetries = 3;
-    const blob = new Blob([audioBytes], { type: 'audio/wav' });
+    const blob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/wav' });
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const form = new FormData();
       form.append('file', blob, 'recording.wav');
       form.append('model', 'IFM/Jais-ASR');
       form.append('language', args.language === 'ar-EG' ? 'ar' : 'ar');
+      form.append('diacritics', 'true');
 
       const timeoutMs = args.mode === 'passage' ? 30000 : 12000;
       console.log(`[IFM ASR] Sending request attempt ${attempt}/${maxRetries}, timeout=${timeoutMs}ms`);

@@ -38,6 +38,7 @@ export async function convertRecordedAudioToWavBase64(
 
     const outputLength = Math.max(1, Math.round(mono.length * targetSampleRate / decoded.sampleRate));
     const pcm = new Int16Array(outputLength);
+    let maxSample = 0;
     for (let i = 0; i < outputLength; i += 1) {
       const sourcePosition = i * decoded.sampleRate / targetSampleRate;
       const leftIndex = Math.min(mono.length - 1, Math.floor(sourcePosition));
@@ -45,7 +46,15 @@ export async function convertRecordedAudioToWavBase64(
       const fraction = sourcePosition - leftIndex;
       const sample = mono[leftIndex] * (1 - fraction) + mono[rightIndex] * fraction;
       const clipped = Math.max(-1, Math.min(1, sample));
-      pcm[i] = clipped < 0 ? Math.round(clipped * 0x8000) : Math.round(clipped * 0x7fff);
+      const abs = Math.abs(clipped);
+      if (abs > maxSample) maxSample = abs;
+      mono[i] = clipped;
+    }
+
+    const normGain = (maxSample >= 0.015 && maxSample < 0.80) ? Math.min(8, 0.85 / maxSample) : 1.0;
+    for (let i = 0; i < outputLength; i += 1) {
+      const boosted = Math.max(-1, Math.min(1, mono[i] * normGain));
+      pcm[i] = boosted < 0 ? Math.round(boosted * 0x8000) : Math.round(boosted * 0x7fff);
     }
 
     const wav = new ArrayBuffer(44 + pcm.length * 2);
