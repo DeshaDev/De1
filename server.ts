@@ -5133,7 +5133,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
           assessedWord.errorType !== 'Unconfirmed' &&
           assessedWord.errorType !== 'Insertion' &&
           typeof assessedWord.accuracyScore === 'number' &&
-          result.transcript.trim().length > 0;
+          (result.transcript.trim().length > 0 || assessedWord.errorType === 'Omission');
         if (!resolvedWord) {
           res.status(422).json({
             code: 'COGNITIVE_AUDIO_WORD_UNCONFIRMED',
@@ -5162,7 +5162,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
           itemId: wordItem.itemId,
           itemIndex: wordItem.itemIndex,
           attemptId: wordItem.attemptId,
-          transcript: result.transcript,
+          transcript: result.transcript.trim() || '(صمت)',
           durationSeconds,
           word: assessedWord,
           expiresAt,
@@ -5172,7 +5172,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
             itemId: wordItem.itemId,
             itemIndex: wordItem.itemIndex,
             assessmentReceipt: receipt,
-            transcript: result.transcript,
+            transcript: result.transcript.trim() || '(صمت)',
             durationSeconds,
             word: {
               word: assessedWord.word,

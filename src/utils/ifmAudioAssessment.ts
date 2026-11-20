@@ -7,7 +7,13 @@
  *    - Native silence & non-speech detection ('no_speech': true)
  *    - Zero confirmation bias / hallucination (pure blind acoustic model)
  *
- * 2. Native Arabic Pedagogical & Phonetic Diagnosis:
+ * 2. Rate-Limiting & Throughput Optimization:
+ *    - Paced concurrency queue enforcing >= 550ms interval (~1.8 req/sec) to respect IFM 2 req/s rate limits
+ *    - Automatic HTTP 429 retry with exponential/header-based backoff
+ *    - Instant local Latin-to-Arabic phonetic transliteration (0ms extra delay)
+ *    - Inaudible silence pre-filtering (<80 RMS)
+ *
+ * 3. Native Arabic Pedagogical & Phonetic Diagnosis:
  *    - Model: IFM/Jais-3-MoVA-36B-A4B (via https://api.ifm.ai/v1/chat/completions)
  *    - In-depth Arabic phonetic, morphological, and diacritical analysis
  */
@@ -59,9 +65,10 @@ const PHONETIC_ARABIC_MAP: Record<string, string> = {
   kitab: 'كِتَاب',
   qalam: 'قَلَم',
   sayf: 'سَيْف',
+  saif: 'سَيْف',
 };
 
-function quickLatinToArabicPhonetics(text: string): string {
+export function quickLatinToArabicPhonetics(text: string): string {
   const lower = text.toLowerCase().trim();
   if (PHONETIC_ARABIC_MAP[lower]) return PHONETIC_ARABIC_MAP[lower];
 
@@ -93,67 +100,80 @@ function quickLatinToArabicPhonetics(text: string): string {
 
 /**
  * Transliterates Latin transcription tokens (e.g., nonwords like "fob" -> "فُوب")
- * into authentic diacritized Arabic script using Jais-3, with instant phonetic fallback.
+ * into authentic diacritized Arabic script instantaneously without remote network lag.
  */
-export async function transliterateLatinToArabicWithJais(
-  latinText: string,
-  apiKey: string
-): Promise<string> {
+export function transliterateLatinToArabic(latinText: string): string {
   const clean = (latinText || '').trim();
   if (!clean || !/[a-zA-Z]/.test(clean)) {
     return clean;
   }
+  return quickLatinToArabicPhonetics(clean);
+}
 
-  // Instant 0ms return for known nonwords and syllables
-  const directMatch = PHONETIC_ARABIC_MAP[clean.toLowerCase()];
-  if (directMatch) {
-    return directMatch;
+// Keep backwards-compatible alias
+export const transliterateLatinToArabicWithJais = async (latinText: string, _apiKey?: string): Promise<string> => {
+  return transliterateLatinToArabic(latinText);
+};
+
+/**
+ * Detects if a WAV buffer is silence or microphone background hiss (RMS < 80).
+ */
+export function isAudioPracticallySilent(audioBytes: Buffer): boolean {
+  if (!audioBytes || audioBytes.length <= 44) return true;
+  const dataIdx = audioBytes.indexOf('data');
+  const startOffset = dataIdx >= 0 ? dataIdx + 8 : 44;
+  if (startOffset >= audioBytes.length) return true;
+
+  let sumSquares = 0;
+  let sampleCount = 0;
+  let maxPeak = 0;
+  const step = 8;
+  for (let i = startOffset; i < audioBytes.length - 1; i += step) {
+    const sample = Math.abs(audioBytes.readInt16LE(i));
+    if (sample > maxPeak) maxPeak = sample;
+    sumSquares += sample * sample;
+    sampleCount++;
   }
+  if (sampleCount === 0) return true;
+  const rms = Math.sqrt(sumSquares / sampleCount);
+  return rms < 80 && maxPeak < 250;
+}
 
-  const fallback = quickLatinToArabicPhonetics(clean);
+/**
+ * Global rate-limiter queue for IFM API:
+ * Enforces >= 550ms interval between calls to ensure we stay strictly under the 2 req/s quota.
+ */
+let lastIfmRequestFinishedAt = 0;
+const IFM_MIN_SPACING_MS = 550;
+let ifmQueueTail: Promise<any> = Promise.resolve();
 
-  try {
-    const res = await fetch('https://api.ifm.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'IFM/Jais-3-MoVA-36B-A4B',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'حول أي تفريغ صوتي بحروف لاتينية إلى كلمات وحروف عربية مشكولة بدقة صوتية للأطفال. أرجع الكلمة العربية فقط دون أي شرح أو مقدمات أو علامات إضافية.',
-          },
-          { role: 'user', content: clean },
-        ],
-        temperature: 0,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (res.ok) {
-      const data: any = await res.json();
-      const content = data?.choices?.[0]?.message?.content;
-      if (typeof content === 'string' && content.trim()) {
-        const arOnly = content.replace(/[`*]/g, '').trim().split(/\s+/)[0];
-        if (arOnly && /[\u0600-\u06FF]/.test(arOnly)) {
-          return arOnly;
-        }
-      }
+export async function executeWithIfmRateLimit<T>(fn: () => Promise<T>): Promise<T> {
+  const execute = async (): Promise<T> => {
+    const now = Date.now();
+    const waitMs = Math.max(0, lastIfmRequestFinishedAt + IFM_MIN_SPACING_MS - now);
+    if (waitMs > 0) {
+      await new Promise((r) => setTimeout(r, waitMs));
     }
-  } catch (err) {
-    console.warn('[IFM] Transliteration fallback warning:', err);
-  }
+    try {
+      return await fn();
+    } finally {
+      lastIfmRequestFinishedAt = Date.now();
+    }
+  };
 
-  return fallback;
+  const next = ifmQueueTail.then(execute, execute);
+  ifmQueueTail = next.catch(() => {});
+  return next;
 }
 
 /**
  * Transcribes children's Arabic speech blindly using IFM Jais-ASR.
  * Zero reference text is sent to the model, eliminating confirmation bias.
+ * Incorporates:
+ * - 0ms silence pre-detection
+ * - 550ms pacing queue
+ * - Automatic HTTP 429 retry
+ * - Instant Latin-to-Arabic phonetic normalization
  */
 export async function transcribeArabicWithJaisAsr(args: {
   audioWavBase64: string;
@@ -171,56 +191,88 @@ export async function transcribeArabicWithJaisAsr(args: {
   }
 
   const audioBytes = Buffer.from(args.audioWavBase64, 'base64');
-  const blob = new Blob([audioBytes], { type: 'audio/wav' });
 
-  const form = new FormData();
-  form.append('file', blob, 'recording.wav');
-  form.append('model', 'IFM/Jais-ASR');
-  form.append('language', args.language === 'ar-EG' ? 'ar' : 'ar');
-
-  const timeoutMs = args.mode === 'passage' ? 25000 : 10000;
-  const res = await fetch('https://api.ifm.ai/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${effectiveKey}`,
-    },
-    body: form,
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => '');
-    throw new Error(`IFM_ASR_HTTP_${res.status}: ${errorText.slice(0, 200)}`);
-  }
-
-  const payload: any = await res.json();
-  const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
-  const noSpeech = payload.no_speech === true;
-  const isSilent = noSpeech || rawText.length === 0;
-
-  if (isSilent) {
+  // Fast silence pre-detection to save quota and respond in 0ms on skipped words
+  if (isAudioPracticallySilent(audioBytes)) {
     return {
       transcript: '',
       isSilent: true,
-      language: payload.language ?? null,
+      language: null,
       sourceModel: 'ifm/jais-asr',
-      rawResponse: payload,
     };
   }
 
-  let finalTranscript = rawText;
-  // If the ASR transcribed Latin phonetics (e.g. for nonwords), map cleanly to Arabic
-  if (/[a-zA-Z]/.test(finalTranscript)) {
-    finalTranscript = await transliterateLatinToArabicWithJais(finalTranscript, effectiveKey);
-  }
+  return executeWithIfmRateLimit(async () => {
+    const maxRetries = 3;
+    const blob = new Blob([audioBytes], { type: 'audio/wav' });
 
-  return {
-    transcript: finalTranscript,
-    isSilent: false,
-    language: payload.language ?? null,
-    sourceModel: 'ifm/jais-asr',
-    rawResponse: payload,
-  };
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const form = new FormData();
+      form.append('file', blob, 'recording.wav');
+      form.append('model', 'IFM/Jais-ASR');
+      form.append('language', args.language === 'ar-EG' ? 'ar' : 'ar');
+
+      const timeoutMs = args.mode === 'passage' ? 30000 : 12000;
+      const res = await fetch('https://api.ifm.ai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${effectiveKey}`,
+        },
+        body: form,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('retry-after');
+        const resetReqs = res.headers.get('x-ratelimit-reset-requests');
+        let waitMs = 1100;
+        if (retryAfter && Number(retryAfter)) {
+          waitMs = Math.round(Number(retryAfter) * 1000) + 150;
+        } else if (resetReqs && /^\d+s?$/.test(resetReqs)) {
+          waitMs = parseInt(resetReqs, 10) * 1000 + 150;
+        }
+        console.warn(`[IFM ASR] Rate limit 429 hit. Pacing wait ${waitMs}ms (attempt ${attempt}/${maxRetries})...`);
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        throw new Error(`IFM_ASR_HTTP_${res.status}: ${errorText.slice(0, 200)}`);
+      }
+
+      const payload: any = await res.json();
+      const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
+      const noSpeech = payload.no_speech === true;
+      const isSilent = noSpeech || rawText.length === 0;
+
+      if (isSilent) {
+        return {
+          transcript: '',
+          isSilent: true,
+          language: payload.language ?? null,
+          sourceModel: 'ifm/jais-asr',
+          rawResponse: payload,
+        };
+      }
+
+      let finalTranscript = rawText;
+      // If the ASR transcribed Latin phonetics (e.g. for nonwords), map cleanly to Arabic
+      if (/[a-zA-Z]/.test(finalTranscript)) {
+        finalTranscript = transliterateLatinToArabic(finalTranscript);
+      }
+
+      return {
+        transcript: finalTranscript,
+        isSilent: false,
+        language: payload.language ?? null,
+        sourceModel: 'ifm/jais-asr',
+        rawResponse: payload,
+      };
+    }
+
+    throw new Error('IFM_ASR_HTTP_429: Rate limit exceeded after retries');
+  });
 }
 
 /**
@@ -247,35 +299,37 @@ export async function diagnoseReadingErrorWithJais3(args: {
   "confidenceScore": 90
 }`;
 
-  const res = await fetch('https://api.ifm.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${effectiveKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'IFM/Jais-3-MoVA-36B-A4B',
-      messages: [
-        { role: 'system', content: 'أنت أخصائي تشخيص قراءة باللغة العربية. أرجع JSON فقط.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0,
-    }),
-    signal: AbortSignal.timeout(8000),
+  return executeWithIfmRateLimit(async () => {
+    const res = await fetch('https://api.ifm.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${effectiveKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'IFM/Jais-3-MoVA-36B-A4B',
+        messages: [
+          { role: 'system', content: 'أنت أخصائي تشخيص قراءة باللغة العربية. أرجع JSON فقط.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!res.ok) {
+      throw new Error(`IFM_JAIS3_HTTP_${res.status}`);
+    }
+
+    const data: any = await res.json();
+    const rawJson = data?.choices?.[0]?.message?.content || '{}';
+    const cleanJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    return {
+      errorType: parsed.errorType || 'Substitution',
+      notesAr: parsed.notesAr || '',
+      confidenceScore: typeof parsed.confidenceScore === 'number' ? parsed.confidenceScore : 85,
+    };
   });
-
-  if (!res.ok) {
-    throw new Error(`IFM_JAIS3_HTTP_${res.status}`);
-  }
-
-  const data: any = await res.json();
-  const rawJson = data?.choices?.[0]?.message?.content || '{}';
-  const cleanJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  const parsed = JSON.parse(cleanJson);
-
-  return {
-    errorType: parsed.errorType || 'Substitution',
-    notesAr: parsed.notesAr || '',
-    confidenceScore: typeof parsed.confidenceScore === 'number' ? parsed.confidenceScore : 85,
-  };
 }

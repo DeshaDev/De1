@@ -557,7 +557,7 @@ export function buildSingleWordAssessmentFromBlindScore(args: {
     sourceModel: 'azure_pronunciation_assessment',
     assessmentMode: 'short-audio-miscue',
     assessmentComplete: true,
-    transcript: score.spokenWord || '',
+    transcript: score.spokenWord || (isOmission ? '(صمت)' : score.word),
     accuracyScore: score.accuracyScore,
     wordAccuracyPercent: isCorrect ? 100 : 0,
     fluencyScore: isOmission ? 0 : 90,

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {
   getIfmApiKey,
   transcribeArabicWithJaisAsr,
-  diagnoseReadingErrorWithJais3,
+  transliterateLatinToArabic,
   transliterateLatinToArabicWithJais,
+  isAudioPracticallySilent,
 } from './ifmAudioAssessment';
 
 describe('IFM Audio Assessment Unit Tests', () => {
@@ -50,9 +51,44 @@ describe('IFM Audio Assessment Unit Tests', () => {
     );
   });
 
-  it('transliterateLatinToArabicWithJais returns clean text immediately if no Latin characters', async () => {
-    const arabic = 'كَتَبَ التِّلْمِيذُ';
-    const result = await transliterateLatinToArabicWithJais(arabic, 'fake-key');
-    assert.equal(result, arabic);
+  it('transliterateLatinToArabic translates phonetics to Arabic instantaneously', () => {
+    assert.equal(transliterateLatinToArabic('كَتَبَ التِّلْمِيذُ'), 'كَتَبَ التِّلْمِيذُ');
+    assert.equal(transliterateLatinToArabic('fob'), 'فُوب');
+    assert.equal(transliterateLatinToArabic('foob'), 'فُوب');
+    assert.equal(transliterateLatinToArabic('kataba'), 'كَتَبَ');
+  });
+
+  it('isAudioPracticallySilent detects silent PCM WAV and distinguishes real audio', () => {
+    // 0.5s of silent PCM audio
+    const silentWav = Buffer.alloc(44 + 16000);
+    silentWav.write('RIFF', 0);
+    silentWav.write('WAVE', 8);
+    silentWav.write('fmt ', 12);
+    silentWav.write('data', 36);
+    assert.equal(isAudioPracticallySilent(silentWav), true);
+
+    // Audio with audible signal
+    const loudWav = Buffer.from(silentWav);
+    for (let i = 44; i < loudWav.length; i += 2) {
+      loudWav.writeInt16LE(2500, i);
+    }
+    assert.equal(isAudioPracticallySilent(loudWav), false);
+  });
+
+  it('transcribeArabicWithJaisAsr returns isSilent=true immediately for silent audio without network call', async () => {
+    const silentWav = Buffer.alloc(44 + 16000);
+    silentWav.write('RIFF', 0);
+    silentWav.write('WAVE', 8);
+    silentWav.write('fmt ', 12);
+    silentWav.write('data', 36);
+    const base64 = silentWav.toString('base64');
+
+    const res = await transcribeArabicWithJaisAsr({
+      audioWavBase64: base64,
+      apiKey: 'IFM-v1_test_dummy_key',
+    });
+    assert.equal(res.isSilent, true);
+    assert.equal(res.transcript, '');
+    assert.equal(res.sourceModel, 'ifm/jais-asr');
   });
 });
