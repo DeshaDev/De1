@@ -45,6 +45,8 @@ async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<Rec
     const mono = new Float32Array(frameCount);
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, channel) => decoded.getChannelData(channel));
 
+    // De-click start/end 65ms (1040 samples at 16kHz) so button/mouse clicks never pollute ASR
+    const edgeSamples = frameCount > 4800 ? 1040 : 0;
     let maxSample = 0;
     for (let outputIndex = 0; outputIndex < frameCount; outputIndex++) {
       const sourcePosition = outputIndex * decoded.sampleRate / targetRate;
@@ -56,13 +58,20 @@ async function encodePcmWav(blob: Blob, minimumDurationSeconds = 1): Promise<Rec
         const second = channel[Math.min(sourceIndex + 1, channel.length - 1)] || first;
         sample += first + (second - first) * fraction;
       }
-      const val = Math.max(-1, Math.min(1, sample / channels.length));
+      let val = Math.max(-1, Math.min(1, sample / channels.length));
+      if (edgeSamples > 0) {
+        if (outputIndex < edgeSamples) {
+          val *= Math.max(0, (outputIndex - 480) / (edgeSamples - 480));
+        } else if (outputIndex > frameCount - edgeSamples) {
+          val *= Math.max(0, (frameCount - outputIndex - 480) / (edgeSamples - 480));
+        }
+      }
       mono[outputIndex] = val;
       const abs = Math.abs(val);
       if (abs > maxSample) maxSample = abs;
     }
 
-    const normGain = (maxSample >= 0.015 && maxSample < 0.80) ? Math.min(8, 0.85 / maxSample) : 1.0;
+    const normGain = (maxSample >= 0.02 && maxSample < 0.80) ? Math.min(10, 0.85 / maxSample) : 1.0;
 
     const wavBuffer = new ArrayBuffer(44 + mono.length * 2);
     const view = new DataView(wavBuffer);

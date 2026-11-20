@@ -4,8 +4,9 @@ import {
   getIfmApiKey,
   transcribeArabicWithJaisAsr,
   transliterateLatinToArabic,
-  transliterateLatinToArabicWithJais,
   isAudioPracticallySilent,
+  stripCarrierAndCollapseSingleWord,
+  frameSingleWordWithCarrier,
 } from './ifmAudioAssessment';
 
 describe('IFM Audio Assessment Unit Tests', () => {
@@ -56,6 +57,29 @@ describe('IFM Audio Assessment Unit Tests', () => {
     assert.equal(transliterateLatinToArabic('fob'), 'فُوب');
     assert.equal(transliterateLatinToArabic('foob'), 'فُوب');
     assert.equal(transliterateLatinToArabic('kataba'), 'كَتَبَ');
+  });
+
+  it('stripCarrierAndCollapseSingleWord removes carrier prefix and collapses 2x repetitions', () => {
+    assert.equal(stripCarrierAndCollapseSingleWord('هَذِهِ بَابْ، بَابْ.'), 'بَابْ');
+    assert.equal(stripCarrierAndCollapseSingleWord('هذه بيت، بَيْتْ.'), 'بَيْتْ');
+    assert.equal(stripCarrierAndCollapseSingleWord('هَذِهِ يَدٌ، يَدٌ.'), 'يَدٌ');
+    assert.equal(stripCarrierAndCollapseSingleWord('هذه:'), '');
+    assert.equal(stripCarrierAndCollapseSingleWord('فُوب'), 'فُوب');
+  });
+
+  it('frameSingleWordWithCarrier produces a valid enlarged 16kHz PCM WAV', () => {
+    const wordWav = Buffer.alloc(44 + 16000);
+    wordWav.write('RIFF', 0);
+    wordWav.write('WAVE', 8);
+    wordWav.write('fmt ', 12);
+    wordWav.write('data', 36);
+    for (let i = 44; i < wordWav.length; i += 2) {
+      wordWav.writeInt16LE(3000, i);
+    }
+    const framed = frameSingleWordWithCarrier(wordWav);
+    assert.ok(framed.length > wordWav.length * 2);
+    assert.equal(framed.subarray(0, 4).toString('ascii'), 'RIFF');
+    assert.equal(framed.subarray(8, 12).toString('ascii'), 'WAVE');
   });
 
   it('isAudioPracticallySilent detects silent PCM WAV and distinguishes real audio', () => {
