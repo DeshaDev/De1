@@ -206,7 +206,7 @@ function SubtestRunner({
 
   return (
     <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-line bg-soft">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-4 sm:px-6 py-3 border-b border-line bg-soft">
         <div className="flex items-center gap-3 min-w-0">
           <span className="grid place-items-center w-10 h-10 rounded-xl bg-card text-2xl shrink-0" aria-hidden="true">{subtest.icon}</span>
           <div className="min-w-0">
@@ -905,7 +905,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     stopSpeech();
     if (session) {
       void saveBatterySession(session).catch((error) => console.error('Unable to persist battery session:', error));
-      pushToSchool(session);
+      if (Object.keys(session.results).length > 0) {
+        pushToSchool(session);
+      }
     }
     setView({ name: 'map' });
     if (onNavigateTab) {

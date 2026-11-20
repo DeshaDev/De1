@@ -273,12 +273,44 @@ export async function syncStudentToSupabase(student: StudentRecord, userId: stri
  * re-derives new transfer scores from its short-lived Azure receipts before cloud persistence.
  */
 export async function syncTrainingProgressToSupabase(student: StudentRecord, userId: string): Promise<boolean> {
-  const progress = student.trainingProgress;
-  if (!isSupabaseConfigured() || !userId || !progress) return false;
+  const rawProgress = student.trainingProgress as (StudentRecord['trainingProgress'] & { updatedAt?: string }) | null | undefined;
+  if (!isSupabaseConfigured() || !userId || !rawProgress) return false;
   try {
     const { data, error } = await supabase.auth.getSession();
     const accessToken = data.session?.access_token;
     if (error || !accessToken || data.session?.user?.id !== userId) return false;
+    const {
+      plan,
+      levels,
+      mastered,
+      history,
+      supportFlags,
+      probes,
+      bkt,
+      lessonsSeen,
+      seenTrainingItems,
+      badges,
+      fluencyPractice,
+      placements,
+      transfer,
+      targets,
+    } = rawProgress;
+    const progress = {
+      plan,
+      levels,
+      mastered,
+      history: Array.isArray(history) ? history.slice(-400) : [],
+      supportFlags,
+      ...(probes !== undefined ? { probes: probes.slice(-200) } : {}),
+      ...(bkt !== undefined ? { bkt } : {}),
+      ...(lessonsSeen !== undefined ? { lessonsSeen } : {}),
+      ...(seenTrainingItems !== undefined ? { seenTrainingItems } : {}),
+      ...(badges !== undefined ? { badges } : {}),
+      ...(fluencyPractice !== undefined ? { fluencyPractice } : {}),
+      ...(placements !== undefined ? { placements } : {}),
+      ...(transfer !== undefined ? { transfer } : {}),
+      ...(targets !== undefined ? { targets } : {}),
+    };
     const response = await fetch(`/api/parent/students/${encodeURIComponent(student.id)}/training-progress`, {
       method: 'PUT',
       headers: {

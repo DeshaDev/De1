@@ -445,11 +445,11 @@ export function ParentPortalView({
                     {(supabaseUser.user_metadata?.full_name || supabaseUser.email || 'و')[0].toUpperCase()}
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-slate-900 leading-tight">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-xs font-bold text-slate-900 leading-tight truncate">
                         {supabaseUser.user_metadata?.full_name || 'ولي أمر مسجل'}
                       </p>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0 whitespace-nowrap">
                         ☁️ سحابي
                       </span>
                     </div>

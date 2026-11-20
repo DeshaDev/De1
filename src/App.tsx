@@ -1775,7 +1775,7 @@ export default function App() {
           <span className="baseera-session-copy">
             <ShieldCheck aria-hidden="true" size={16} />
             {supabaseUser
-              ? `جلسة سحابية نشطة (Google): ${baseeraSession.accountName}`
+              ? `جلسة سحابية نشطة: ${baseeraSession.accountName}`
               : `جلسة المدرسة متصلة: ${baseeraSession.accountName} · ${getTenantDisplayLabelAr(baseeraSession)}`}
           </span>
           <button

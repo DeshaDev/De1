@@ -113,15 +113,18 @@ async function playRecordedClip(text: string): Promise<boolean> {
     } catch {}
     currentClip = audio;
     let settled = false;
+    let timerId: number | undefined;
     const finish = (played: boolean) => {
       if (settled) return;
       settled = true;
+      if (timerId !== undefined) window.clearTimeout(timerId);
       audio.onended = null;
       audio.onpause = null;
       audio.onerror = null;
       if (currentClip === audio) currentClip = null;
       resolve(played);
     };
+    timerId = window.setTimeout(() => finish(false), 25000);
     audio.onended = () => finish(true);
     audio.onpause = () => finish(true); // stopSpeech() pauses the clip
     audio.onerror = () => finish(false);

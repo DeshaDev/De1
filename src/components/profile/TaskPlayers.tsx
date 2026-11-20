@@ -107,7 +107,7 @@ function optionClass(id: string, highlight: string | null, feedback: Feedback, c
     return `${base} border-slate-200 opacity-50`;
   }
   if (highlight === id) return `${base} border-sun bg-sun-soft scale-105 shadow-lg`;
-  return `${base} border-line shadow-sm ${disabled ? 'opacity-70' : 'hover:border-brand hover:-translate-y-0.5 cursor-pointer'}`;
+  return `${base} border-line shadow-sm ${disabled ? 'opacity-95' : 'hover:border-brand hover:-translate-y-0.5 cursor-pointer'}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,7 +248,7 @@ export function ChoicePlayer({ item, showFeedback, allowReplay = true, onDone }:
           </button>
         ))}
       </div>
-      <p className="text-xs font-bold text-slate-400 h-4">{listening ? 'استمع…' : ''}</p>
+      <p className="font-child text-sm font-bold text-brand min-h-6 flex items-center justify-center">{listening ? '🎧 استمع أولًا ثم اختر الصورة…' : 'اختر الإجابة الآن 👆'}</p>
       {showFeedback && <PracticeReaction correct={feedback ? feedback.correct : null} seed={seedOf(item.id)} />}
     </div>
   );

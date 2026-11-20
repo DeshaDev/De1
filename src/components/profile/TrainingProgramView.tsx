@@ -372,7 +372,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   const childAgeYears = Math.min(8, Math.max(4, Math.floor((childAgeMonths ?? 48) / 12)));
   const beginSession = (skipProbe = false, skipTransfer = false) => {
     if (!progress) return;
-    if (!hasCompletedAnyScreening && progress.history.length === 0) return;
+    if (!hasCompletedAnyScreening && progress.history.length === 0 && progress.plan.preventive) return;
     const today = new Date().toISOString().slice(0, 10);
     const trainedToday = progress.history.some((h) => h.date.slice(0, 10) === today);
     const sessionNumber = sessionsCompleted(progress) + (trainedToday ? 0 : 1);
@@ -724,7 +724,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
   );
 
   // ---------------------------------------------------------------- running a session
-  if (transferPoint && progress && (hasCompletedAnyScreening || progress.history.length > 0)) {
+  if (transferPoint && progress && (hasCompletedAnyScreening || progress.history.length > 0 || !progress.plan.preventive)) {
     const today = new Date().toISOString().slice(0, 10);
     const alreadyTrainedToday = progress.history.some((entry) => entry.date.slice(0, 10) === today);
     const transferSessionNumber = sessionsCompleted(progress) + (alreadyTrainedToday ? 0 : 1);
@@ -783,19 +783,22 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     };
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-line bg-soft">
-          <p className="font-child font-black text-slate-900 flex items-center gap-2">
-            <span className="text-2xl" aria-hidden="true">{def.icon}</span> من أين نبدأ؟ {def.nameAr}
-            <span className="text-xs font-bold text-slate-500 mr-2">· المستوى {toArabicDigits(pl.level)}</span>
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={skipPlacementToPractice}
-              className="bz-btn bz-btn-ghost bz-btn-sm text-xs"
-            >
-              تخطّي وبدء التدريب
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-line bg-soft">
+          <div className="font-child font-black text-slate-900 flex flex-wrap items-center gap-2 min-w-0">
+            <span className="text-2xl shrink-0" aria-hidden="true">{def.icon}</span>
+            <span>من أين نبدأ؟ {def.nameAr}</span>
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap shrink-0">· المستوى {toArabicDigits(pl.level)}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 max-w-full">
+            {run.phase === 'placement' && (
+              <button
+                type="button"
+                onClick={skipPlacementToPractice}
+                className="bz-btn bz-btn-ghost bz-btn-sm text-xs whitespace-nowrap"
+              >
+                تخطّي وبدء التدريب
+              </button>
+            )}
             {renderSessionExitActions()}
           </div>
         </div>
@@ -946,11 +949,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
     const task = run.tasks[run.taskIndex];
     return (
       <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-line bg-soft text-xs font-bold text-slate-500">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-line bg-soft text-xs font-bold text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="text-slate-900 font-black">{def?.nameAr}</span>
-            <span>· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
-            <span>· المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
+            <span className="whitespace-nowrap shrink-0">· المستوى {toArabicDigits(progress.levels[skill] ?? 1)}</span>
+            <span className="whitespace-nowrap shrink-0">· المهارة {toArabicDigits(run.skillIndex + 1)} من {toArabicDigits(sessionSkills.length)}</span>
           </div>
           {renderSessionExitActions()}
         </div>
