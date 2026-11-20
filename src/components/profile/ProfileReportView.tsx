@@ -281,7 +281,13 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                                     {status.text}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2 text-ink-2" lang="ar">{status.ok === false && w.spokenWord && w.spokenWord !== w.word ? w.spokenWord : '—'}</td>
+                                <td className="px-3 py-2 text-ink-2 font-medium" lang="ar">
+                                  {w.errorType === 'Omission' ? (
+                                    <span className="text-slate-400 italic">لم يُلتقط صوت</span>
+                                  ) : (
+                                    w.spokenWord || w.word
+                                  )}
+                                </td>
                               </tr>
                             );
                           })}

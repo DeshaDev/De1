@@ -116,7 +116,11 @@ export const transliterateLatinToArabicWithJais = async (latinText: string, _api
 };
 
 /**
- * Detects if a WAV buffer is silence or microphone background hiss (RMS < 80).
+ * Detects if a WAV buffer is truly blank/zero-signal audio.
+ * Thresholds are set very conservatively so whispering children are NEVER
+ * silently rejected — IFM Jais-ASR's native no_speech detection handles
+ * real silence detection more accurately.
+ * Only catches completely dead buffers (e.g., corrupt recording, zero-byte payload).
  */
 export function isAudioPracticallySilent(audioBytes: Buffer): boolean {
   if (!audioBytes || audioBytes.length <= 44) return true;
@@ -136,7 +140,11 @@ export function isAudioPracticallySilent(audioBytes: Buffer): boolean {
   }
   if (sampleCount === 0) return true;
   const rms = Math.sqrt(sumSquares / sampleCount);
-  return rms < 80 && maxPeak < 250;
+  // Only mark as silent if truly zero-signal: RMS < 5 AND peak < 20.
+  // Browser WebM/Opus → WAV always has at least some background noise;
+  // even a whisper produces RMS > 50. The IFM ASR model's own no_speech
+  // flag handles true silence far more accurately than PCM energy alone.
+  return rms < 5 && maxPeak < 20;
 }
 
 /**
@@ -191,9 +199,11 @@ export async function transcribeArabicWithJaisAsr(args: {
   }
 
   const audioBytes = Buffer.from(args.audioWavBase64, 'base64');
+  console.log(`[IFM ASR] Received audio: ${audioBytes.length} bytes (base64 len: ${args.audioWavBase64.length})`);
 
-  // Fast silence pre-detection to save quota and respond in 0ms on skipped words
+  // Only skip truly zero-signal buffers (corrupt/empty); real speech always passes
   if (isAudioPracticallySilent(audioBytes)) {
+    console.log(`[IFM ASR] Pre-filter: audio is zero-signal, skipping API call`);
     return {
       transcript: '',
       isSilent: true,
@@ -213,6 +223,7 @@ export async function transcribeArabicWithJaisAsr(args: {
       form.append('language', args.language === 'ar-EG' ? 'ar' : 'ar');
 
       const timeoutMs = args.mode === 'passage' ? 30000 : 12000;
+      console.log(`[IFM ASR] Sending request attempt ${attempt}/${maxRetries}, timeout=${timeoutMs}ms`);
       const res = await fetch('https://api.ifm.ai/v1/audio/transcriptions', {
         method: 'POST',
         headers: {
@@ -245,6 +256,7 @@ export async function transcribeArabicWithJaisAsr(args: {
       const rawText = typeof payload.text === 'string' ? payload.text.trim() : '';
       const noSpeech = payload.no_speech === true;
       const isSilent = noSpeech || rawText.length === 0;
+      console.log(`[IFM ASR] Response: text="${rawText}", no_speech=${noSpeech}, isSilent=${isSilent}`);
 
       if (isSilent) {
         return {
