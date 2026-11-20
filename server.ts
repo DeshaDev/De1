@@ -12,6 +12,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { generateAdaptiveRemediationPlan, isStructurallyValidRemediationSessionPlan } from './src/utils/remediationEngine';
 import { assessReadingAudioWithAzure, getAzureSpeechCredentials, type AzureAlignedWord } from './src/utils/azurePronunciationAssessment';
 import { assessReadingAudioWithGemini, getGeminiApiKey, getOpenRouterApiKey } from './src/utils/geminiAudioAssessment';
+import { getIfmApiKey, transcribeArabicWithJaisAsr } from './src/utils/ifmAudioAssessment';
 import {
   buildSingleWordAssessmentFromBlindScore,
   scoreBlindPassageArabic,
@@ -4020,7 +4021,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     ttsAudioCache.set(key, payload);
   };
 
-  app.post('/api/ai/tts', aiRateLimiter, async (req, res) => {
+  app.post('/api/ai/tts', aiRateLimiter, requireAiAccess(), async (req, res) => {
     const { text, voice, rate } = req.body || {};
     if (!text || typeof text !== 'string' || !text.trim() || text.length > 1200) {
       res.status(400).json({
@@ -4494,7 +4495,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       // Blind vowelled transcription first (the engine hears the reading without the text), then
       // Azure if no Gemini/OpenRouter key works. Either result goes through the same checks below.
       let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>> | null = null;
-      if (getOpenRouterApiKey() || getGeminiApiKey()) {
+      if (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey()) {
         try {
           const blind = await transcribeArabicBlindWithGemini({ audioWavBase64, mode: 'passage' });
           result = scoreBlindPassageArabic({
@@ -5054,7 +5055,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       const requestStartedAt = Date.now();
       let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>>;
 
-      if (wordItem && (getOpenRouterApiKey() || getGeminiApiKey())) {
+      if (wordItem && (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey())) {
         // Two-stage Blind Vowelled Transcription for isolated word & nonword reading:
         // Stage 1 listens blindly (zero reference text -> zero confirmation bias).
         // Stage 2 scores consonants, internal short vowels (e.g. كَتَبَ vs كُتُب),
@@ -5088,7 +5089,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         // the text. Azure is the fallback. If no engine can score the recording, say so: a
         // made-up result (every word correct) must never reach a child's report.
         let scored: typeof result | null = null;
-        if (getOpenRouterApiKey() || getGeminiApiKey()) {
+        if (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey()) {
           try {
             const blind = await transcribeArabicBlindWithGemini({ audioWavBase64: body.audioWavBase64, mode: 'passage' });
             scored = scoreBlindPassageArabic({

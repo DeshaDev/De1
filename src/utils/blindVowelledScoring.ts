@@ -11,6 +11,7 @@
  */
 
 import { getGeminiApiKey, getOpenRouterApiKey } from './geminiAudioAssessment';
+import { getIfmApiKey, transcribeArabicWithJaisAsr } from './ifmAudioAssessment';
 import type { AzureAlignedWord, AzureAudioAssessmentResult, AzureWordError } from './azurePronunciationAssessment';
 
 export type ArabicVowel = 'a' | 'u' | 'i' | 'an' | 'un' | 'in' | '0' | null;
@@ -375,20 +376,48 @@ let geminiDisabledUntil = 0;
  * Calls Gemini Multimodal Audio (Direct Google Generative Language API primary, OpenRouter fallback)
  * strictly BLIND — ZERO reference text is sent to the model.
  */
+export const transcribeArabicBlind = transcribeArabicBlindWithGemini;
+
 export async function transcribeArabicBlindWithGemini(args: {
   audioWavBase64: string;
   apiKey?: string;
   /** 'passage' transcribes a whole reading (story, list of names) instead of one word. */
   mode?: 'word' | 'passage';
 }): Promise<BlindTranscriptionResult> {
-  const passage = args.mode === 'passage';
-  const prompt = passage ? BLIND_PASSAGE_PROMPT : BLIND_CHILD_SPEECH_PROMPT;
-  const maxTokens = passage ? 1200 : 120;
   if (!args.audioWavBase64 || args.audioWavBase64.length > 6_000_000) {
     throw new Error('INVALID_AUDIO_PAYLOAD');
   }
 
+
   const userKey = (args.apiKey && args.apiKey.trim()) || '';
+  const ifmKey = userKey.startsWith('IFM-') ? userKey : getIfmApiKey();
+
+  // Primary Speech Recognition Engine: IFM Jais-ASR
+  if (ifmKey) {
+    try {
+      const res = await transcribeArabicWithJaisAsr({
+        audioWavBase64: args.audioWavBase64,
+        apiKey: ifmKey,
+        mode: args.mode,
+      });
+      return {
+        transcript: res.transcript,
+        isSilent: res.isSilent,
+        sourceModel: 'blind:ifm/jais-asr',
+      };
+    } catch (ifmErr) {
+      console.warn('[BlindASR] IFM Jais-ASR transient error, falling back to secondary engine:', ifmErr);
+      if (!getGeminiApiKey() && !getOpenRouterApiKey()) {
+        throw ifmErr;
+      }
+    }
+  }
+
+  const passage = args.mode === 'passage';
+  const prompt = passage ? BLIND_PASSAGE_PROMPT : BLIND_CHILD_SPEECH_PROMPT;
+  const maxTokens = passage ? 1200 : 120;
+
+
   const openRouterKey = userKey.startsWith('sk-or-') ? userKey : getOpenRouterApiKey();
   const rawGeminiKey = userKey && !userKey.startsWith('sk-or-') ? userKey : getGeminiApiKey();
   const geminiKey = rawGeminiKey && Date.now() > geminiDisabledUntil ? rawGeminiKey : null;
