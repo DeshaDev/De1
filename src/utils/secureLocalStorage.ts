@@ -25,10 +25,12 @@ const LEGACY_STORAGE_SEED_KEY = 'baseera_app_encryption_seed_v1';
 const SESSION_STORAGE_SEED_KEY = 'baseera_session_entropy_seed_v2';
 
 let cachedLegacyKey: Uint8Array | null = null;
+let cachedCryptoKey: CryptoKey | null = null;
 let keyDatabasePromise: Promise<IDBDatabase> | null = null;
 
 export function resetDeviceEncryptionKeyCacheForTesting(): void {
   cachedLegacyKey = null;
+  cachedCryptoKey = null;
   keyDatabasePromise = null;
 }
 
@@ -176,56 +178,103 @@ export function getDeviceEncryptionKey(): Uint8Array {
   return cachedLegacyKey;
 }
 
+function isValidAesGcmCryptoKey(key: CryptoKey | null | undefined): key is CryptoKey {
+  return Boolean(
+    key &&
+    key.type === 'secret' &&
+    !key.extractable &&
+    key.algorithm.name === 'AES-GCM' &&
+    key.usages.includes('encrypt') &&
+    key.usages.includes('decrypt')
+  );
+}
+
 function openKeyDatabase(): Promise<IDBDatabase> {
   if (keyDatabasePromise) return keyDatabasePromise;
   if (typeof indexedDB === 'undefined') {
     return Promise.reject(new Error('IndexedDB is required for persistent encrypted child storage.'));
   }
-  keyDatabasePromise = new Promise<IDBDatabase>((resolve, reject) => {
+  const promise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(KEY_DATABASE, KEY_DATABASE_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(KEY_STORE)) db.createObjectStore(KEY_STORE);
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onclose = () => {
+        if (keyDatabasePromise === promise) keyDatabasePromise = null;
+      };
+      db.onversionchange = () => {
+        if (keyDatabasePromise === promise) keyDatabasePromise = null;
+        try {
+          db.close?.();
+        } catch {
+          // Ignore close errors during version change.
+        }
+      };
+      resolve(db);
+    };
     request.onerror = () => reject(request.error || new Error('Unable to open the encryption key database.'));
     request.onblocked = () => reject(new Error('The encryption key database is blocked by another tab.'));
   }).catch((error) => {
-    keyDatabasePromise = null;
+    if (keyDatabasePromise === promise) keyDatabasePromise = null;
     throw error;
   });
-  return keyDatabasePromise!;
+  keyDatabasePromise = promise;
+  return promise;
 }
 
-function readPersistedCryptoKey(): Promise<CryptoKey | null> {
-  return openKeyDatabase().then((db) => new Promise<CryptoKey | null>((resolve, reject) => {
-    const transaction = db.transaction(KEY_STORE, 'readonly');
+async function openTransactionWithReconnect(mode: IDBTransactionMode): Promise<IDBTransaction> {
+  const db = await openKeyDatabase();
+  try {
+    return db.transaction(KEY_STORE, mode);
+  } catch (err) {
+    // Browser closed or is closing the cached IDBDatabase handle; discard cache and reopen once.
+    keyDatabasePromise = null;
+    const freshDb = await openKeyDatabase();
+    return freshDb.transaction(KEY_STORE, mode);
+  }
+}
+
+async function readPersistedCryptoKey(): Promise<CryptoKey | null> {
+  if (isValidAesGcmCryptoKey(cachedCryptoKey)) return cachedCryptoKey;
+  const transaction = await openTransactionWithReconnect('readonly');
+  return new Promise<CryptoKey | null>((resolve, reject) => {
     const request = transaction.objectStore(KEY_STORE).get(KEY_ID);
-    request.onsuccess = () => resolve((request.result as CryptoKey | undefined) || null);
+    request.onsuccess = () => {
+      const result = (request.result as CryptoKey | undefined) || null;
+      if (isValidAesGcmCryptoKey(result)) cachedCryptoKey = result;
+      resolve(result);
+    };
     request.onerror = () => reject(request.error || new Error('Unable to read the encryption key.'));
     transaction.onerror = () => reject(transaction.error || new Error('Encryption key read failed.'));
-  }));
+  });
 }
 
-function storeCryptoKeyIfAbsent(key: CryptoKey): Promise<void> {
-  return openKeyDatabase().then((db) => new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(KEY_STORE, 'readwrite');
+async function storeCryptoKeyIfAbsent(key: CryptoKey): Promise<void> {
+  const transaction = await openTransactionWithReconnect('readwrite');
+  return new Promise<void>((resolve, reject) => {
     transaction.objectStore(KEY_STORE).add(key, KEY_ID);
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => {
+      if (isValidAesGcmCryptoKey(key)) cachedCryptoKey = key;
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error || new Error('Unable to persist the encryption key.'));
     transaction.onabort = () => reject(transaction.error || new Error('Encryption key persistence was aborted.'));
-  }));
+  });
 }
 
 async function getOrCreatePersistentCryptoKey(): Promise<CryptoKey> {
+  if (isValidAesGcmCryptoKey(cachedCryptoKey)) return cachedCryptoKey;
   const webCrypto = globalThis.crypto;
   if (!webCrypto?.subtle) throw new Error('Web Crypto AES-GCM is unavailable.');
   const existing = await readPersistedCryptoKey();
   if (existing) {
-    if (existing.type !== 'secret' || existing.extractable || existing.algorithm.name !== 'AES-GCM' ||
-        !existing.usages.includes('encrypt') || !existing.usages.includes('decrypt')) {
+    if (!isValidAesGcmCryptoKey(existing)) {
       throw new Error('The persisted encryption key is invalid; refusing to overwrite encrypted records.');
     }
+    cachedCryptoKey = existing;
     return existing;
   }
 
@@ -236,13 +285,13 @@ async function getOrCreatePersistentCryptoKey(): Promise<CryptoKey> {
   );
   try {
     await storeCryptoKeyIfAbsent(generated);
+    cachedCryptoKey = generated;
     return generated;
   } catch {
     // Another tab may have created the key at the same time. Re-read the winner.
     const racedKey = await readPersistedCryptoKey();
-    if (racedKey && racedKey.type === 'secret' && !racedKey.extractable &&
-        racedKey.algorithm.name === 'AES-GCM' &&
-        racedKey.usages.includes('encrypt') && racedKey.usages.includes('decrypt')) {
+    if (isValidAesGcmCryptoKey(racedKey)) {
+      cachedCryptoKey = racedKey;
       return racedKey;
     }
     throw new Error('Unable to persist a non-extractable encryption key.');

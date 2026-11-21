@@ -108,4 +108,61 @@ describe('AES-GCM child storage and legacy migration', () => {
   it('exports the new versioned AES-GCM storage prefix', () => {
     assert.ok(CURRENT_AES_GCM_PREFIX.includes('aes-gcm'));
   });
+
+  it('automatically reconnects when a cached IDBDatabase connection is closing', async () => {
+    installFakeIndexedDB();
+    resetDeviceEncryptionKeyCacheForTesting();
+    const firstCipher = await secureEncrypt({ child: 'أحمد' });
+    assert.ok(firstCipher.startsWith(CURRENT_AES_GCM_PREFIX));
+
+    // Simulate a subsequent read after memory key cache clears while old IDB connection is closing
+    const origOpen = (globalThis as any).indexedDB.open;
+    let firstDbInstance: any = null;
+    let openCalls = 0;
+    (globalThis as any).indexedDB.open = () => {
+      openCalls++;
+      const req = origOpen();
+      const origQueue = queueMicrotask;
+      void origQueue;
+      return req;
+    };
+
+    // Poison the first opened DB's transaction once to simulate InvalidStateError: The database connection is closing
+    installFakeIndexedDB();
+    resetDeviceEncryptionKeyCacheForTesting();
+    const baseOpen = (globalThis as any).indexedDB.open;
+    let poisoned = false;
+    (globalThis as any).indexedDB.open = () => {
+      const request: any = {};
+      queueMicrotask(() => {
+        const innerReq = baseOpen();
+        queueMicrotask(() => {
+          const realDb = innerReq.result;
+          if (!poisoned) {
+            poisoned = true;
+            firstDbInstance = {
+              ...realDb,
+              objectStoreNames: realDb.objectStoreNames,
+              createObjectStore: realDb.createObjectStore.bind(realDb),
+              transaction: () => {
+                throw new Error("InvalidStateError: Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing.");
+              },
+            };
+            request.result = firstDbInstance;
+          } else {
+            request.result = realDb;
+          }
+          request.onupgradeneeded?.();
+          request.onsuccess?.();
+        });
+      });
+      return request;
+    };
+
+    const encryptedAfterReconnect = await secureEncrypt({ child: 'ليلى' });
+    assert.ok(encryptedAfterReconnect.startsWith(CURRENT_AES_GCM_PREFIX));
+    const decrypted = await secureDecryptAsync<{ child: string }>(encryptedAfterReconnect);
+    assert.deepEqual(decrypted, { child: 'ليلى' });
+    void openCalls;
+  });
 });
