@@ -88,7 +88,12 @@ export function ReadAloudPlayer({
 
   return (
     <div className="w-full max-w-xl text-center space-y-5" dir="rtl">
-      <p className="bz-small text-ink-2">تدرّب على قراءة الكلمة. يمكنك الاستماع إليها ثم المحاولة بنفسك.</p>
+      <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-4 text-right space-y-1.5 bz-small text-ink">
+        <p className="font-bold text-teal-950">📋 خطوات التدريب بوضوح:</p>
+        <p>١. يمكنك الضغط على زر <strong>«استمع إلى الكلمة»</strong> لسماع نطقها الصحيح.</p>
+        <p>٢. اطلب من الطفل أن <strong>يقوم بقراءة الكلمة</strong> الظاهرة أمامه بصوت واضح.</p>
+        <p>٣. بعد أن يقرأها الطفل، اضغط على زر <strong>«أكملت المحاولة»</strong> للانتقال إلى الخطوة التالية.</p>
+      </div>
       <div className="rounded-3xl border-4 border-line bg-card p-8 shadow-sm">
         <p className="text-5xl sm:text-6xl font-bold text-ink" style={READING_FONT} lang="ar">{item.text}</p>
       </div>
@@ -97,7 +102,7 @@ export function ReadAloudPlayer({
           <Volume2 className="w-5 h-5" /> {playing ? 'يُقرأ الآن…' : 'استمع إلى الكلمة'}
         </button>
         <button type="button" className="bz-btn bz-btn-primary" onClick={continuePractice}>
-          أكملت المحاولة
+          أكملت المحاولة ◀
         </button>
       </div>
     </div>
@@ -154,23 +159,38 @@ export function ReadListAudioPlayer({
   items,
   taskId,
   audioSession,
+  initialIndex = 0,
+  initialAttemptId = '',
+  initialWordReceipts = [],
+  onWordProgress,
   onDone,
 }: {
   title: string;
   items: ReadItem[];
   taskId: Extract<CognitiveAudioTaskId, 'wordReading' | 'nonwordReading'>;
   audioSession: CognitiveAudioSessionContext;
+  initialIndex?: number;
+  initialAttemptId?: string;
+  initialWordReceipts?: CognitiveAudioWordReceipt[];
+  onWordProgress?: (progress: {
+    index: number;
+    attemptId: string;
+    wordReceipts: CognitiveAudioWordReceipt[];
+    responses: ItemResponse[];
+  }) => void;
   onDone: (responses: ItemResponse[], durationMs: number, assessment?: CognitiveAudioAssessmentEvidence) => void;
 }) {
   const [phase, setPhase] = useState<ReadListAudioPhase>('ready');
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [currentItemIndex, setCurrentItemIndex] = useState(() =>
+    Math.min(Math.max(0, initialIndex), Math.max(0, items.length - 1))
+  );
   const [elapsedNow, setElapsedNow] = useState(() => performance.now());
   const [errorMessage, setErrorMessage] = useState('');
   const recordingRef = useRef<WavRecordingController | null>(null);
   const startAtRef = useRef(0);
   const busyRef = useRef(false);
-  const attemptIdRef = useRef('');
-  const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>([]);
+  const attemptIdRef = useRef(initialAttemptId);
+  const wordReceiptsRef = useRef<CognitiveAudioWordReceipt[]>(initialWordReceipts);
   const maxWordDurationSeconds = 30;
   const supported = audioSession.guardianConsentGiven === true &&
     audioSession.guardianAudioConsentGiven === true;
@@ -200,6 +220,22 @@ export function ReadListAudioPlayer({
   const redoRef = useRef<number[]>([]);
   const redoPassRef = useRef(false);
 
+  const emitProgress = (nextIndex: number, receipts: CognitiveAudioWordReceipt[]) => {
+    if (!onWordProgress) return;
+    const partialResponses: ItemResponse[] = receipts.map((r) => ({
+      itemId: r.itemId,
+      correct: r.word.errorType === 'None' || r.word.errorType === 'DialectVariant',
+      rtMs: Math.round((r.durationSeconds || 0) * 1000),
+      replays: 0,
+    }));
+    onWordProgress({
+      index: nextIndex,
+      attemptId: attemptIdRef.current,
+      wordReceipts: receipts,
+      responses: partialResponses,
+    });
+  };
+
   const assessInBackground = (item: ReadItem, itemIndex: number, recording: Awaited<ReturnType<WavRecordingController['stop']>>) => {
     const request = () => assessCognitiveAudioWord({
       taskId,
@@ -213,10 +249,12 @@ export function ReadListAudioPlayer({
     const promise = request().catch(() => request());
     pendingRef.current.set(item.id, promise);
     void promise.then((receipt) => {
-      wordReceiptsRef.current = [
+      const updatedReceipts = [
         ...wordReceiptsRef.current.filter((r) => r.itemId !== item.id),
         receipt,
       ].sort((a, b) => a.itemIndex - b.itemIndex);
+      wordReceiptsRef.current = updatedReceipts;
+      emitProgress(Math.min(items.length - 1, Math.max(itemIndex + 1, updatedReceipts.length)), updatedReceipts);
     }).catch(() => undefined);
   };
 
@@ -347,17 +385,20 @@ export function ReadListAudioPlayer({
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
       <div className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-5">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <span className="text-5xl" aria-hidden="true">📚</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
-              🎧 قراءة الكلمات كلمةً كلمة
+              🎧 قراءة الكلمات كلمةً بعد كلمة
             </span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
-          <p className="bz-small text-ink-2">
-            اقرأ الكلمة الظاهرة وحدها، ثم اضغط «أنهيت قراءة الكلمة» لتظهر الكلمة التالية.
-          </p>
+          <div className="w-full max-w-2xl mx-auto rounded-2xl border border-teal-200 bg-teal-50/70 p-4 text-right space-y-1.5 bz-small text-ink">
+            <p className="font-bold text-teal-950">📋 خطوات هذه المهمة بوضوح:</p>
+            <p>١. اضغط على زر <strong>«ابدأ تسجيل هذه الكلمة»</strong> بالأسفل لتشغيل الميكروفون.</p>
+            <p>٢. اطلب من الطفل أن <strong>يقوم بقراءة الكلمة الظاهرة أمامه</strong> بصوت واضح ومسموع.</p>
+            <p>٣. فور قراءة الكلمة، اضغط على زر <strong>«أنهيت قراءة الكلمة»</strong> للانتقال إلى الكلمة التالية.</p>
+          </div>
         </div>
 
         <div className="w-full max-w-2xl mx-auto space-y-3" lang="ar">
@@ -576,7 +617,7 @@ export function PassagePlayer({
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
       <div className="w-full max-w-3xl rounded-[2rem] border-4 border-line bg-card p-5 sm:p-8 shadow-sm space-y-5">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <span className="text-5xl" aria-hidden="true">📖</span>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-900 border border-teal-300 shadow-2xs">
@@ -584,13 +625,16 @@ export function PassagePlayer({
             </span>
           </div>
           <h3 className="text-3xl font-bold text-ink" style={READING_FONT} lang="ar">{title}</h3>
-          <p className="bz-small text-ink-2">
-            {phase === 'recording'
-              ? 'اقرأ القصة كاملةً بصوتك الطبيعي وواضح كما تقرأ في الصف. عند الانتهاء اضغط الزر الأخضر أدناه.'
-              : phase === 'review'
-              ? 'اكتمل تسجيل القصة بنجاح. شكرًا لك على مجهودك الرائع!'
-              : 'اضغط بدء التسجيل، ثم اقرأ القصة كاملةً بصوت عالٍ وواضح كما تقرأ في الصف.'}
-          </p>
+          {phase === 'review' ? (
+            <p className="bz-small text-ink-2">اكتمل تسجيل القصة بنجاح. شكرًا لك على مجهودك الرائع!</p>
+          ) : (
+            <div className="w-full max-w-2xl mx-auto rounded-2xl border border-teal-200 bg-teal-50/70 p-4 text-right space-y-1.5 bz-small text-ink">
+              <p className="font-bold text-teal-950">📋 خطوات قراءة القصة بوضوح:</p>
+              <p>١. اضغط على زر <strong>«ابدأ تسجيل القراءة»</strong> بالأسفل لتشغيل الميكروفون.</p>
+              <p>٢. اطلب من الطفل أن <strong>يقوم بقراءة القصة كاملةً بصوت واضح ومسموع</strong> من أول كلمة إلى آخر كلمة (من اليمين إلى اليسار).</p>
+              <p>٣. فور انتهاء الطفل من القراءة، اضغط على زر <strong>«انتهيت من القراءة — حلّل التسجيل»</strong>.</p>
+            </div>
+          )}
         </div>
 
         {/* Top Controls Bar - Keep record/stop buttons visible above the story text */}
@@ -850,19 +894,29 @@ export function RanPlayer({
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
       {phase === 'names' && (
         <div className="w-full max-w-2xl flex flex-col items-center gap-5 text-center">
-          <p className="font-child text-2xl font-black text-ink">{display === 'picture' ? 'ما أسماء هذه الصور؟' : 'ما أسماء هذه الحروف؟'}</p>
-          <p className="bz-small text-ink-2">
-            يتعرّف الطفل على أسماء هذه {display === 'picture' ? 'الصور الخمس' : 'الحروف الخمسة'} أولًا، ثم يسمّيها في السباق بصوت عالٍ من اليمين إلى اليسار.
+          <p className="font-child text-2xl font-black text-ink">
+            {display === 'picture' ? 'الخطوة الأولى: تعرّف على أسماء الصور الخمس' : 'الخطوة الأولى: تعرّف على أسماء الحروف الخمسة'}
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="w-full rounded-2xl border border-teal-200 bg-teal-50/70 p-4 text-right space-y-1.5 bz-small text-ink">
+            <p className="font-bold text-teal-950">📋 خطوات هذه الشاشة بوضوح:</p>
+            <p>١. اطلب من الطفل أن <strong>يقوم بتسمية كل {display === 'picture' ? 'صورة' : 'حرف'}</strong> من {display === 'picture' ? 'الصور الخمس' : 'الحروف الخمسة'} الموجودة بالأسفل.</p>
+            <p>٢. الاسم الصحيح مكتوب تحت كل {display === 'picture' ? 'صورة' : 'حرف'} حتى يعرف الطفل وولي الأمر الاسم المطلوب بالضبط.</p>
+            <p>٣. بعد التأكد من معرفة الأسماء، اضغط على زر <strong>«عرفنا الأسماء — انتقل إلى السباق»</strong> بالأسفل.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4">
             {symbols.map((symbol) => (
-              <div key={symbol.id} className="grid place-items-center w-24 h-24 rounded-3xl border-[3px] border-line bg-card">
-                <RanCell symbol={symbol} display={display} size="lg" />
+              <div key={symbol.id} className="flex flex-col items-center gap-2">
+                <div className="grid place-items-center w-24 h-24 rounded-3xl border-[3px] border-line bg-card shadow-2xs">
+                  <RanCell symbol={symbol} display={display} size="lg" />
+                </div>
+                <span className="text-sm font-bold text-ink px-2.5 py-0.5 rounded-full bg-soft border border-line" lang="ar">
+                  {symbol.nameAr}
+                </span>
               </div>
             ))}
           </div>
           <button type="button" className="bz-btn bz-btn-primary bz-btn-lg" onClick={() => setPhase('ready')}>
-            الرموز مألوفة — ابدأ السباق
+            عرفنا الأسماء — انتقل إلى السباق ◀
           </button>
         </div>
       )}
@@ -870,19 +924,24 @@ export function RanPlayer({
       {phase !== 'names' && (
         <div className="w-full max-w-2xl space-y-4">
           {/* Top Controls Bar - ALWAYS VISIBLE ABOVE THE GRID */}
-          <div className="sticky top-2 z-20 p-3 sm:p-4 rounded-2xl border-2 border-line bg-card/95 backdrop-blur-md shadow-md space-y-2 text-center">
+          <div className="sticky top-2 z-20 p-3 sm:p-4 rounded-2xl border-2 border-line bg-card/95 backdrop-blur-md shadow-md space-y-2.5 text-center">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-bold text-ink text-base sm:text-lg">
                 {display === 'picture' ? '🏁 سباق تسمية الصور' : '🏁 سباق تسمية الحروف'}
               </span>
               <span className="text-xs px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200">
-                ٤٠ عنصرًا · من اليمين إلى اليسار ◀
+                ٤٠ {display === 'picture' ? 'صورة' : 'حرفًا'} · من اليمين إلى اليسار ◀
               </span>
             </div>
 
-            <p className="bz-small text-ink-2">
-              سمِّ جميع الرموز بصوت واضح بأسرع ما تستطيع، من اليمين إلى اليسار سطرًا سطرًا.
-            </p>
+            <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3 text-right space-y-1 bz-small text-ink">
+              <p className="font-bold text-teal-950">
+                قم بتسمية جميع {display === 'picture' ? 'الصور' : 'الحروف'} بصوت واضح وبأسرع ما تستطيع، من اليمين إلى اليسار (سطرًا بعد سطر):
+              </p>
+              <p>١. اضغط على زر <strong>«ابدأ التسجيل والسباق»</strong> لتشغيل الميكروفون.</p>
+              <p>٢. ابدأ من أول {display === 'picture' ? 'صورة' : 'حرف'} في أعلى اليمين، و<strong>قم بتسمية كل {display === 'picture' ? 'صورة' : 'حرف'}</strong> بالترتيب من اليمين إلى اليسار، سطرًا بعد سطر حتى النهاية.</p>
+              <p>٣. فور الانتهاء من آخر {display === 'picture' ? 'صورة' : 'حرف'}، اضغط على زر <strong>«انتهيت من تسمية جميع {display === 'picture' ? 'الصور' : 'الحروف'}»</strong>.</p>
+            </div>
 
             {phase === 'ready' && (
               <div className="flex flex-wrap justify-center items-center gap-3 pt-1">
@@ -906,7 +965,7 @@ export function RanPlayer({
                 <div className="flex flex-wrap items-center justify-between gap-2 px-2">
                   <div className="inline-flex items-center gap-2 text-teal-800 font-bold text-sm">
                     <span className="w-3 h-3 rounded-full bg-teal-500" />
-                    <span>السباق جارٍ… سمِّ الرموز سطرًا سطرًا من اليمين إلى اليسار ◀</span>
+                    <span>التسجيل يعمل الآن… قم بتسمية كل {display === 'picture' ? 'صورة' : 'حرف'} بالترتيب من اليمين إلى اليسار ◀</span>
                   </div>
                   <span className="text-xs font-bold text-teal-900 bg-teal-100 px-3 py-1 rounded-full border border-teal-300">
                     ⏱️ {ar(Math.floor(elapsedSeconds))} ثانية
@@ -918,7 +977,7 @@ export function RanPlayer({
                     className="bz-btn bz-btn-primary bz-btn-lg shadow-md font-bold text-base px-6 py-3"
                     onClick={() => void submitRecording()}
                   >
-                    <Check className="w-5 h-5" /> انتهيت من تسمية جميع الرموز ✓
+                    <Check className="w-5 h-5" /> انتهيت من تسمية جميع {display === 'picture' ? 'الصور' : 'الحروف'} ✓
                   </button>
                   <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={saveWithoutScore}>
                     تخطي
@@ -1122,6 +1181,12 @@ export function SpellingPlayer({
 
   return (
     <div className="w-full flex flex-col items-center gap-4" dir="rtl">
+      <div className="w-full max-w-2xl rounded-2xl border border-teal-200 bg-teal-50/70 p-3.5 text-right space-y-1 bz-small text-ink">
+        <p className="font-bold text-teal-950">📋 خطوات كتابة الكلمة بوضوح:</p>
+        <p>١. استمع إلى الكلمة المنطوقة جيدًا (ويمكنك الضغط على زر السماعة لإعادة سماعها).</p>
+        <p>٢. قم بكتابة الكلمة عبر الضغط على حروفها بالترتيب من اليمين إلى اليسار.</p>
+        <p>٣. بعد كتابة الكلمة، اضغط على زر <strong>«تَمّ»</strong> بالأسفل.</p>
+      </div>
       <div className="flex items-center gap-3">
         <button
           type="button"

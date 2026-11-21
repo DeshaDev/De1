@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Heart,
   Sparkles,
@@ -21,10 +21,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { StudentRecord } from '../data/seedData';
-import { subtestsForAge } from '../cognitiveProfile/battery';
+import { SUBTESTS_BY_ID, subtestsForAge, type SubtestId } from '../cognitiveProfile/battery';
 import { PROGRAM_SESSIONS } from '../cognitiveProfile/training';
 import { summarizeProbes } from '../cognitiveProfile/progressProbe';
-import { loadBatterySession, loadTrainingProgress } from '../cognitiveProfile/storage';
+import { loadBatterySession, type BatterySession } from '../cognitiveProfile/storage';
 import { toArabicNum } from '../utils/arabicDigits';
 import { BrandMark } from './ui/BrandMark';
 import { JoyCorners } from './ui/Playful';
@@ -96,7 +96,7 @@ interface NextStep {
 }
 
 /** The one thing a parent should do next for this child: screening, then the programme. */
-function nextStepFor(child: StudentRecord): NextStep {
+function nextStepFor(child: StudentRecord, localSession?: BatterySession | null): NextStep {
   const isInScreeningAgeRange = Number.isInteger(child.ageYears) && child.ageYears >= 4 && child.ageYears <= 13;
   if (!isInScreeningAgeRange) {
     return {
@@ -107,19 +107,43 @@ function nextStepFor(child: StudentRecord): NextStep {
     };
   }
   const stored = child.cognitiveBattery ?? null;
-  const battery = stored?.results ?? {};
-  const effectiveAgeMonths = Math.min(96, stored?.ageMonths ?? child.ageYears * 12);
+  const battery = {
+    ...(stored?.results ?? {}),
+    ...(localSession?.results ?? {}),
+  };
+  const pausedIds = (Object.keys(localSession?.inProgress ?? {}) as SubtestId[]).filter(
+    (id) => id in SUBTESTS_BY_ID
+  );
+  const effectiveAgeMonths = Math.min(96, localSession?.ageMonths ?? stored?.ageMonths ?? child.ageYears * 12);
   const tasks = subtestsForAge(effectiveAgeMonths);
-  const done = tasks.filter((s) => battery[s.id]).length;
+  const done = tasks.filter((s) => battery[s.id] && !localSession?.inProgress?.[s.id]).length;
   const training = child.trainingProgress ?? null;
+  if (done === 0 && pausedIds.length > 0) {
+    const pausedTitles = pausedIds.map((id) => SUBTESTS_BY_ID[id].gameNameAr).join('، ');
+    return {
+      stageAr: 'الفحص محفوظ مؤقتًا',
+      actionAr: `استكمال الفحص من «${SUBTESTS_BY_ID[pausedIds[0]].gameNameAr}»`,
+      progressAr: `تم حفظ التوقف المؤقت عند «${pausedTitles}». يمكنك المتابعة من حيث توقفتم.`,
+      tab: 'dyslexia-lab',
+    };
+  }
+  if (done === 0 && (stored || localSession)) {
+    return {
+      stageAr: 'بدأ الفحص (محفوظ)',
+      actionAr: 'استكمال فحص مهارات القراءة',
+      progressAr: 'تم حفظ بدء الفحص، ويمكنك المتابعة من المهمة الأولى في أي وقت.',
+      tab: 'dyslexia-lab',
+    };
+  }
   if (done === 0) {
     return { stageAr: 'لم يبدأ الفحص', actionAr: 'ابدأ فحص مهارات القراءة', progressAr: null, tab: 'dyslexia-lab' };
   }
   if (done < tasks.length && !training) {
+    const pausedNote = pausedIds.length > 0 ? ` · توقف عند «${SUBTESTS_BY_ID[pausedIds[0]].gameNameAr}»` : '';
     return {
-      stageAr: 'الفحص قيد التنفيذ',
-      actionAr: 'أكمل الفحص',
-      progressAr: `المهام المنجزة: ${toArabicNum(done)} من ${toArabicNum(tasks.length)}. يمكن إكمال الفحص على أكثر من جلسة.`,
+      stageAr: 'الفحص قيد التنفيذ (محفوظ)',
+      actionAr: 'استكمال الفحص المحفوظ',
+      progressAr: `المهام المنجزة: ${toArabicNum(done)} من ${toArabicNum(tasks.length)}${pausedNote}. يمكن إكمال الفحص على أكثر من جلسة.`,
       tab: 'dyslexia-lab',
     };
   }
@@ -248,6 +272,33 @@ export function ParentPortalView({
   const [linkPassword, setLinkPassword] = useState('');
   const [linkError, setLinkError] = useState('');
   const [isLinking, setIsLinking] = useState(false);
+  const [localSessions, setLocalSessions] = useState<Record<string, BatterySession>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const realIds = students.filter((s) => !s.isDemoRecord).map((s) => s.id);
+    if (realIds.length === 0) return;
+    void Promise.all(
+      realIds.map(async (id) => {
+        try {
+          const sess = await loadBatterySession(id);
+          return [id, sess] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      const next: Record<string, BatterySession> = {};
+      for (const [id, sess] of entries) {
+        if (sess) next[id] = sess;
+      }
+      setLocalSessions(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [students]);
 
   // Cloud-synced children belonging to this authenticated user
   const cloudChildren = supabaseUser
@@ -538,12 +589,12 @@ export function ParentPortalView({
                         )}
                       </div>
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800">
-                        {nextStepFor(child).stageAr}
+                        {nextStepFor(child, localSessions[child.id]).stageAr}
                       </span>
                     </div>
 
                     {(() => {
-                      const step = nextStepFor(child);
+                      const step = nextStepFor(child, localSessions[child.id]);
                       return (
                         <div className="space-y-2 pt-2 border-t border-slate-100">
                           {step.progressAr && <p className="text-xs text-slate-600">{step.progressAr}</p>}

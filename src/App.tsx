@@ -1723,6 +1723,7 @@ export default function App() {
               { id: 'home', label: 'الرئيسية', icon: Home },
               { id: 'dyslexia-lab', label: 'فحص مهارات القراءة', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
+              { id: 'dashboard', label: 'التقرير وملف الطفل', icon: FileText },
             ] as const).map((item) => {
               const Icon = item.icon;
               return (
@@ -1809,6 +1810,7 @@ export default function App() {
           { id: 'parent-portal', label: 'طفلي', icon: Heart },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
+          { id: 'dashboard', label: 'التقرير', icon: FileText },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1940,6 +1942,10 @@ export default function App() {
                 onSelectStudent={setSelectedStudentId}
                 onOpenScreening={() => setActiveTab('dyslexia-lab')}
                 onOpenTraining={() => setActiveTab('guided-program')}
+                onOpenReader={() => setActiveTab('adaptive-reader')}
+                onOpenGames={() => setActiveTab('remediation-gym')}
+                onOpenParentPortal={() => setActiveTab('parent-portal')}
+                supabaseUser={supabaseUser}
                 showTeacherTools={baseeraSession?.role === 'school_admin' || baseeraSession?.role === 'platform_admin' || baseeraSession?.role === 'educator_readonly'}
                 onRecordUpdated={(updated) => {
                   setStudents((prev) => prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)));

@@ -326,6 +326,12 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
 
   return (
     <div className="w-full flex flex-col items-center gap-5" dir="rtl">
+      <div className="w-full max-w-xl rounded-2xl border border-teal-200 bg-teal-50/70 p-3.5 text-right space-y-1 bz-small text-ink">
+        <p className="font-bold text-teal-950">📋 خطوات هذه اللعبة بوضوح:</p>
+        <p>١. اضغط على زر <strong>«{modality === 'visual' ? 'اعرض الصور' : 'استمع إلى الكلمات'}»</strong> بالأسفل.</p>
+        <p>٢. {modality === 'visual' ? 'شاهد الصور التي تظهر واحدةً بعد الأخرى واحفظ ترتيبها.' : 'استمع جيدًا إلى الكلمات التي يقولها الببغاء واحفظ ترتيبها.'}</p>
+        <p>٣. بعد ذلك <strong>قم بلمس الصور بالترتيب نفسه</strong> من الأولى إلى الأخيرة.</p>
+      </div>
       <div className="relative w-56 h-48 sm:w-64 sm:h-56 rounded-t-[7rem] rounded-b-3xl border-[10px] border-amber-700/80 bg-gradient-to-b from-brand-soft to-brand-tint flex items-center justify-center shadow-inner overflow-hidden">
         {phase === 'ready' && (
           <button
@@ -333,7 +339,7 @@ export function SpanPlayer({ trial, modality, showFeedback, onDone }: SpanPlayer
             onClick={present}
             className="font-child bz-btn bz-btn-sun bz-btn-lg text-lg"
           >
-            <Play className="w-5 h-5" /> {modality === 'visual' ? 'انظر!' : 'استمع!'}
+            <Play className="w-5 h-5" /> {modality === 'visual' ? 'اعرض الصور!' : 'استمع إلى الكلمات!'}
           </button>
         )}
         {phase === 'present' && modality === 'visual' && shown && (
@@ -553,17 +559,19 @@ export function Creature({ creature, size = 96 }: { creature: PalCreature; size?
 interface PalPlayerProps {
   creatures: PalCreature[];
   blocks: { id: string; order: string[] }[];
+  initialResponses?: ItemResponse[];
+  onResponseProgress?: (responses: ItemResponse[]) => void;
   onDone: (responses: ItemResponse[], blockScores: number[]) => void;
 }
 
-export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
+export function PalPlayer({ creatures, blocks, initialResponses = [], onResponseProgress, onDone }: PalPlayerProps) {
   const [phase, setPhase] = useState<'ready' | 'learn' | 'test'>('ready');
-  const [blockIndex, setBlockIndex] = useState(0);
-  const [trialIndex, setTrialIndex] = useState(0);
+  const [blockIndex, setBlockIndex] = useState(() => Math.min(blocks.length - 1, Math.floor(initialResponses.length / 4)));
+  const [trialIndex, setTrialIndex] = useState(() => initialResponses.length % 4);
   const [spotlight, setSpotlight] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ chosen: string; correctId: string } | null>(null);
   const [listening, setListening] = useState(false);
-  const responses = useRef<ItemResponse[]>([]);
+  const responses = useRef<ItemResponse[]>([...initialResponses]);
   const blockScores = useRef<number[]>([]);
   const askedAt = useRef(0);
   const cancelled = useRef(false);
@@ -612,6 +620,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
       rtMs: Math.round(performance.now() - askedAt.current),
       replays: 0,
     });
+    onResponseProgress?.([...responses.current]);
     blockScores.current[blockIndex] = (blockScores.current[blockIndex] ?? 0) + (correct ? 1 : 0);
     setFlash({ chosen: id, correctId: target });
     await speak(correct ? palYes(byId(target).name) : palThis(byId(target).name));
@@ -631,10 +640,15 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
 
   return (
     <div className="w-full flex flex-col items-center gap-6" dir="rtl">
+      <div className="w-full max-w-xl rounded-2xl border border-teal-200 bg-teal-50/70 p-3.5 text-right space-y-1 bz-small text-ink">
+        <p className="font-bold text-teal-950">📋 خطوات هذه اللعبة بوضوح:</p>
+        <p>١. اضغط على زر <strong>«تعرّف على الأصدقاء»</strong> ليسمع الطفل اسم كل شخصية فضائية ويحفظه.</p>
+        <p>٢. بعدها سينطق التطبيق اسمًا واحدًا، والمطلوب أن <strong>يقوم الطفل بلمس الشخصية صاحبة هذا الاسم</strong>.</p>
+      </div>
       {phase === 'ready' && (
         <button
           type="button"
-          onClick={() => learn(0)}
+          onClick={() => learn(blockIndex)}
           className="font-child bz-btn bz-btn-sun bz-btn-lg text-lg"
         >
           <Play className="w-5 h-5" /> تعرّف على الأصدقاء
@@ -642,7 +656,7 @@ export function PalPlayer({ creatures, blocks, onDone }: PalPlayerProps) {
       )}
       {phase !== 'ready' && (
         <p className="font-child text-lg font-black text-slate-800 h-7">
-          {phase === 'learn' ? 'احفظ الأسماء' : listening ? 'استمع…' : 'المس صاحب الاسم'}
+          {phase === 'learn' ? 'استمع واحفظ اسم كل شخصية…' : listening ? 'استمع إلى الاسم…' : 'قم بلمس الشخصية صاحبة الاسم 👆'}
           <span className="text-sm text-slate-400 font-bold mr-3">الجولة {blockIndex + 1} من {blocks.length}</span>
         </p>
       )}

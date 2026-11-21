@@ -44,6 +44,7 @@ import {
   normalizeHomeDialect,
   pronunciationLocaleForDialect,
   type HomeDialect,
+  type SubtestInProgress,
   BatterySession,
   clearBatterySession,
   loadBatterySession,
@@ -102,21 +103,69 @@ type Stage = 'intro' | 'practice' | 'transition' | 'test' | 'done';
 function SubtestRunner({
   subtest,
   audioSession,
+  initialProgress,
+  onProgressSave,
+  onPause,
   onFinish,
   onExit,
   onSaveAndGoHome,
 }: {
   subtest: Subtest;
   audioSession: CognitiveAudioSessionContext;
+  initialProgress?: SubtestInProgress;
+  onProgressSave?: (progress: SubtestInProgress, partialResult?: SubtestResult) => void;
+  onPause: (progress: SubtestInProgress, partialResult?: SubtestResult) => void;
   onFinish: (result: SubtestResult) => void;
   onExit: () => void;
-  onSaveAndGoHome?: () => void;
+  onSaveAndGoHome?: (progress?: SubtestInProgress, partialResult?: SubtestResult) => void;
 }) {
-  const [stage, setStage] = useState<Stage>('intro');
-  const [index, setIndex] = useState(0);
-  const [showNote, setShowNote] = useState(false);
+  const [stage, setStage] = useState<Stage>(() => initialProgress?.stage ?? 'intro');
+  const [index, setIndex] = useState(() => initialProgress?.index ?? 0);
+  const [showNote, setShowNote] = useState(true);
   const [voiceUnscored, setVoiceUnscored] = useState(false);
-  const responses = useRef<ItemResponse[]>([]);
+  const responses = useRef<ItemResponse[]>(initialProgress?.responses ? [...initialProgress.responses] : []);
+  const wordListProgressRef = useRef<{
+    attemptId: string;
+    wordReceipts: NonNullable<SubtestInProgress['wordReceipts']>;
+  }>({
+    attemptId: initialProgress?.attemptId ?? '',
+    wordReceipts: initialProgress?.wordReceipts ? [...initialProgress.wordReceipts] : [],
+  });
+  const wasResumed = Boolean(
+    initialProgress && (initialProgress.responses.length > 0 || initialProgress.stage !== 'intro')
+  );
+
+  const buildSnapshot = (
+    overrideStage: Exclude<Stage, 'done'> = stage === 'done' ? 'test' : stage,
+    overrideIndex: number = index,
+    overrideResponses: ItemResponse[] = responses.current
+  ): { progress: SubtestInProgress; partialResult?: SubtestResult } => {
+    const cleanResponses = [...overrideResponses];
+    const progress: SubtestInProgress = {
+      stage: overrideStage,
+      index: overrideIndex,
+      responses: cleanResponses,
+      ...(wordListProgressRef.current.attemptId ? { attemptId: wordListProgressRef.current.attemptId } : {}),
+      ...(wordListProgressRef.current.wordReceipts.length > 0
+        ? { wordReceipts: [...wordListProgressRef.current.wordReceipts] }
+        : {}),
+      updatedAt: new Date().toISOString(),
+    };
+    const isSpeechTask = subtest.kind === 'readList' || subtest.kind === 'passage' || subtest.kind === 'ran';
+    const partialResult: SubtestResult | undefined =
+      !isSpeechTask && cleanResponses.length > 0
+        ? {
+            subtestId: subtest.id,
+            responses: cleanResponses,
+            discontinued: true,
+            completedAt: new Date().toISOString(),
+            ...(subtest.kind === 'span'
+              ? { maxSpan: maxSpanFrom(subtest.trials.map((t) => t.sequence.length), cleanResponses) }
+              : {}),
+          }
+        : undefined;
+    return { progress, partialResult };
+  };
 
   useEffect(() => {
     const upcoming: string[] = [subtest.introAudio, PHRASES.testStarts, PHRASES.gameOver];
@@ -126,7 +175,9 @@ function SubtestRunner({
       for (const p of subtest.practice) upcoming.push(p.spoken);
     }
     preloadAudioClips(upcoming);
-    speak(subtest.introAudio);
+    if ((initialProgress?.stage ?? 'intro') === 'intro') {
+      speak(subtest.introAudio);
+    }
     return () => stopSpeech();
   }, [subtest.id]);
 
@@ -162,6 +213,8 @@ function SubtestRunner({
   const startTest = () => {
     setIndex(0);
     setStage('transition');
+    const snap = buildSnapshot('transition', 0, responses.current);
+    onProgressSave?.(snap.progress, snap.partialResult);
     speak(PHRASES.testStarts);
   };
 
@@ -180,8 +233,14 @@ function SubtestRunner({
   const showExample = Boolean(pendingExample && !seenExamples.has(pendingExample.key));
 
   const nextPractice = () => {
-    if (index + 1 < practiceCount) setIndex(index + 1);
-    else startTest();
+    if (index + 1 < practiceCount) {
+      const nextIdx = index + 1;
+      setIndex(nextIdx);
+      const snap = buildSnapshot('practice', nextIdx, responses.current);
+      onProgressSave?.(snap.progress, snap.partialResult);
+    } else {
+      startTest();
+    }
   };
 
   const recordAndAdvance = (newResponses: ItemResponse[]) => {
@@ -199,10 +258,17 @@ function SubtestRunner({
       if (index >= 1 && blockCorrect === 0) return finish(true);
       if (index + 1 >= subtest.blocks.length) return finish(false);
     }
-    setIndex(index + 1);
+    const nextIdx = index + 1;
+    setIndex(nextIdx);
+    const snap = buildSnapshot('test', nextIdx, responses.current);
+    onProgressSave?.(snap.progress, snap.partialResult);
   };
 
   const answered = stage === 'test' ? responses.current.length : 0;
+  const stepLines = subtest.examinerNoteAr
+    .split(/(?=[١٢٣٤٥٦]\.\s)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   return (
     <div className="bz-card overflow-hidden" style={{ boxShadow: 'var(--shadow-md)' }} dir="rtl">
@@ -220,18 +286,20 @@ function SubtestRunner({
               type="button"
               onClick={() => {
                 stopSpeech();
-                onExit();
+                const snap = buildSnapshot();
+                onPause(snap.progress, snap.partialResult);
               }}
-              className="bz-btn bz-btn-ghost bz-btn-sm text-xs"
+              className="bz-btn bz-btn-ghost bz-btn-sm text-xs font-bold"
             >
-              <PauseCircle className="w-4 h-4" /> إيقاف مؤقت
+              <PauseCircle className="w-4 h-4" /> حفظ وإيقاف مؤقت
             </button>
             {onSaveAndGoHome && (
               <button
                 type="button"
                 onClick={() => {
                   stopSpeech();
-                  onSaveAndGoHome();
+                  const snap = buildSnapshot();
+                  onSaveAndGoHome(snap.progress, snap.partialResult);
                 }}
                 className="bz-btn bz-btn-secondary bz-btn-sm text-xs font-bold"
               >
@@ -241,6 +309,13 @@ function SubtestRunner({
           </div>
         )}
       </div>
+
+      {wasResumed && stage !== 'done' && (
+        <div className="mx-4 sm:mx-6 mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 flex items-center justify-between gap-2">
+          <span>✅ تم استرجاع تقدّمك المحفوظ في هذه المهمة — يمكنك المتابعة من حيث توقفت.</span>
+          {answered > 0 && <span className="bz-num">تم إنجاز {toArabicDigits(answered)} من {toArabicDigits(total)}</span>}
+        </div>
+      )}
 
       {(stage === 'practice' || (stage === 'test' && !noPractice)) && (
         <div className="px-4 sm:px-6 pt-4">
@@ -258,47 +333,61 @@ function SubtestRunner({
 
       <div className="p-5 sm:p-10 min-h-[460px] flex flex-col items-center justify-center">
         {stage === 'intro' && (
-          <div className="flex flex-col items-center text-center gap-4 max-w-xl">
+          <div className="flex flex-col items-center text-center gap-5 max-w-2xl w-full">
             <span className="text-6xl" aria-hidden="true">{subtest.icon}</span>
             <h2 className="font-child text-2xl sm:text-3xl font-black text-ink">{subtest.gameNameAr}</h2>
             <p className="font-child text-xl sm:text-2xl leading-relaxed text-ink" lang="ar">{subtest.introAudio}</p>
-            <button
-              type="button"
-              onClick={() => speak(subtest.introAudio)}
-              className="bz-btn bz-btn-ghost bz-btn-sm"
-              aria-label="إعادة سماع التعليمات"
-            >
-              <Volume2 className="w-4 h-4" /> استمع مرة أخرى
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                stopSpeech();
-                if (noPractice) setStage('test');
-                else {
-                  setIndex(0);
-                  setStage('practice');
-                }
-              }}
-              className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
-            >
-              <Play className="w-6 h-6" /> {noPractice ? 'ابدأ' : 'لنتدرّب أولًا'}
-            </button>
-            <div className="w-full text-right">
+
+            <div className="w-full rounded-2xl border-2 border-teal-200 bg-teal-50/75 p-4 sm:p-5 text-right space-y-2.5 shadow-2xs">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold text-teal-950 text-base flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-teal-700 shrink-0" />
+                  <span>شرح خطوات اللعبة بوضوح (للطفل وولي الأمر):</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowNote(!showNote)}
+                  className="text-xs font-bold text-teal-800 hover:underline flex items-center gap-1"
+                  aria-expanded={showNote}
+                >
+                  <span>{showNote ? 'إخفاء الشرح' : 'عرض الشرح'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNote ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+              {showNote && (
+                <div className="space-y-2 bz-small text-ink leading-relaxed pt-1 border-t border-teal-200/70">
+                  {stepLines.map((line, idx) => (
+                    <p key={idx} className="font-medium text-ink">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => setShowNote(!showNote)}
-                className="bz-btn bz-btn-ghost bz-btn-sm"
-                aria-expanded={showNote}
+                onClick={() => {
+                  stopSpeech();
+                  const nextStage = noPractice ? 'test' : 'practice';
+                  setIndex(0);
+                  setStage(nextStage);
+                  const snap = buildSnapshot(nextStage, 0, responses.current);
+                  onProgressSave?.(snap.progress, snap.partialResult);
+                }}
+                className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
               >
-                <ClipboardList className="w-3.5 h-3.5" /> إرشاد للمرافق
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNote ? 'rotate-180' : ''}`} />
+                <Play className="w-6 h-6" /> {noPractice ? 'ابدأ اللعبة الآن' : 'ابدأ بالتدريب أولًا'}
               </button>
-              {showNote && (
-                <p className="mt-2 bz-small text-ink-2 bz-card-quiet p-4">
-                  {subtest.examinerNoteAr}
-                </p>
-              )}
+              <button
+                type="button"
+                onClick={() => speak(subtest.introAudio)}
+                className="bz-btn bz-btn-secondary bz-btn-lg"
+                aria-label="إعادة سماع التعليمات"
+              >
+                <Volume2 className="w-5 h-5" /> استمع إلى الشرح الصوتي مرة أخرى
+              </button>
             </div>
           </div>
         )}
@@ -329,17 +418,23 @@ function SubtestRunner({
         )}
 
         {stage === 'transition' && (
-          <div className="flex flex-col items-center gap-4 text-center">
-            <p className="font-child text-xl font-bold text-ink">حاول أفضل ما تستطيع.</p>
+          <div className="flex flex-col items-center gap-4 text-center max-w-lg">
+            <span className="text-5xl" aria-hidden="true">🌟</span>
+            <p className="font-child text-2xl font-bold text-ink">أحسنت في التدريب! الآن نبدأ اللعبة الفعلية.</p>
+            <p className="bz-small text-ink-2">
+              حاول أفضل ما تستطيع بهدوء، ويمكنك الضغط على «حفظ وإيقاف مؤقت» في أي وقت لحفظ تقدّمك.
+            </p>
             <button
               type="button"
               onClick={() => {
                 stopSpeech();
                 setStage('test');
+                const snap = buildSnapshot('test', 0, responses.current);
+                onProgressSave?.(snap.progress, snap.partialResult);
               }}
               className="font-child bz-btn bz-btn-sun bz-btn-lg text-xl px-10"
             >
-              <Play className="w-6 h-6" /> ابدأ الاختبار
+              <Play className="w-6 h-6" /> ابدأ اللعبة الآن
             </button>
           </div>
         )}
@@ -370,6 +465,19 @@ function SubtestRunner({
             items={subtest.items}
             taskId={subtest.id === 'wordReading' ? 'wordReading' : 'nonwordReading'}
             audioSession={audioSession}
+            initialIndex={index}
+            initialAttemptId={wordListProgressRef.current.attemptId}
+            initialWordReceipts={wordListProgressRef.current.wordReceipts}
+            onWordProgress={(wp) => {
+              wordListProgressRef.current = {
+                attemptId: wp.attemptId,
+                wordReceipts: wp.wordReceipts,
+              };
+              responses.current = wp.responses;
+              setIndex(wp.index);
+              const snap = buildSnapshot('test', wp.index, wp.responses);
+              onProgressSave?.(snap.progress, snap.partialResult);
+            }}
             onDone={(rs, durationMs, audioAssessment) => {
               responses.current = rs;
               finish(false, {
@@ -422,6 +530,12 @@ function SubtestRunner({
           <PalPlayer
             creatures={subtest.creatures}
             blocks={subtest.blocks}
+            initialResponses={responses.current}
+            onResponseProgress={(rs) => {
+              responses.current = rs;
+              const snap = buildSnapshot('test', rs.length, rs);
+              onProgressSave?.(snap.progress, snap.partialResult);
+            }}
             onDone={(rs, blockScores) => {
               responses.current = rs;
               finish(false, { blockScores });
@@ -444,7 +558,7 @@ function SubtestRunner({
             ) : (
               <>
                 <CheckCircle2 className="h-14 w-14 text-emerald-600" aria-hidden="true" />
-                <p className="font-child text-xl font-bold text-ink">أحسنت! انتهت المهمة.</p>
+                <p className="font-child text-xl font-bold text-ink">أحسنت! انتهت المهمة وتم حفظ النتيجة.</p>
               </>
             )}
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -458,7 +572,7 @@ function SubtestRunner({
               {onSaveAndGoHome && (
                 <button
                   type="button"
-                  onClick={onSaveAndGoHome}
+                  onClick={() => onSaveAndGoHome()}
                   className="bz-btn bz-btn-secondary bz-btn-lg"
                 >
                   <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
@@ -775,9 +889,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     return null;
   };
   const [session, setSession] = useState<BatterySession | null>(null);
+  const [saveBanner, setSaveBanner] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     setSession(null);
+    setSaveBanner(null);
     const started = startedSessions.get(activeStudent.id);
     if (started) {
       // Kept until its save finishes (see onStart), so a second effect run (StrictMode) finds it too.
@@ -789,17 +905,30 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         if (cancelled) return;
         const profileDialect = normalizeHomeDialect(activeStudent.dialectCode || activeStudent.dialect, activeStudent.country);
         const profileSpeechLocale = pronunciationLocaleForDialect(profileDialect);
+        const serverBattery = activeStudent.cognitiveBattery;
+        const mergedResults = {
+          ...(serverBattery?.results ?? {}),
+          ...(existing?.results ?? {}),
+        };
         const restored = existing
           ? {
               ...existing,
+              results: mergedResults,
               dialect: profileDialect,
               ...(profileSpeechLocale ? { speechLocale: profileSpeechLocale } : { speechLocale: undefined }),
             }
-          : null;
+          : serverBattery
+            ? {
+                ...batterySessionFromRecord(activeStudent)!,
+                dialect: profileDialect,
+                ...(profileSpeechLocale ? { speechLocale: profileSpeechLocale } : { speechLocale: undefined }),
+              }
+            : null;
         const initial = restored ?? createInitialSession();
         if (restored && (
           existing?.dialect !== profileDialect ||
-          existing?.speechLocale !== profileSpeechLocale
+          existing?.speechLocale !== profileSpeechLocale ||
+          Object.keys(mergedResults).length !== Object.keys(existing?.results ?? {}).length
         )) {
           void saveBatterySession(restored).catch((error) => console.error('Unable to update stored speech dialect:', error));
         }
@@ -813,27 +942,25 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   }, [activeStudent.id]);
 
   const pushToSchool = (s: BatterySession) => {
+    if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
+      onRecordUpdated?.({
+        ...activeStudent,
+        guardianConsentGiven: s.guardianConsentGiven === true,
+        guardianConsentRecordedAt: s.guardianConsentRecordedAt,
+        guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
+        guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
+        cognitiveBattery: {
+          ageMonths: s.ageMonths,
+          examinerName: s.examinerName,
+          startedAt: s.startedAt,
+          dialect: s.dialect,
+          updatedAt: new Date().toISOString(),
+          results: s.results,
+          summary: summarizeBattery(s.results, s.ageMonths),
+        },
+      });
+    }
     if (!syncEnabled) {
-      // Family accounts and devices without a school: keep the result in the child's record too,
-      // so the app can save it to the family's database. The summary is computed on this device.
-      if (!activeStudent.isDemoRecord && s.studentId === activeStudent.id) {
-        onRecordUpdated?.({
-          ...activeStudent,
-          guardianConsentGiven: s.guardianConsentGiven === true,
-          guardianConsentRecordedAt: s.guardianConsentRecordedAt,
-          guardianAudioConsentGiven: s.guardianAudioConsentGiven === true,
-          guardianAudioConsentRecordedAt: s.guardianAudioConsentRecordedAt,
-          cognitiveBattery: {
-            ageMonths: s.ageMonths,
-            examinerName: s.examinerName,
-            startedAt: s.startedAt,
-            dialect: s.dialect,
-            updatedAt: new Date().toISOString(),
-            results: s.results,
-            summary: summarizeBattery(s.results, s.ageMonths),
-          },
-        });
-      }
       return;
     }
     setSyncState('saving');
@@ -866,13 +993,14 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   useEffect(() => () => onFocusModeChange?.(false), [onFocusModeChange]);
 
   const profile = useMemo(
-    () => (session && Object.keys(session.results).length > 0 ? buildProfile(session.results, session.ageMonths) : null),
+    () => (session ? buildProfile(session.results, session.ageMonths) : null),
     [session]
   );
 
   const ageTasks = session ? subtestsForAge(session.ageMonths, screeningMode) : [];
   const sittings = session ? sittingsForAge(session.ageMonths, screeningMode) : [];
-  const completed = ageTasks.filter((s) => session?.results[s.id]);
+  const completed = ageTasks.filter((s) => session?.results[s.id] && !session?.inProgress?.[s.id]);
+  const pausedTasks = ageTasks.filter((s) => Boolean(session?.inProgress?.[s.id]));
   const [localHistory, setLocalHistory] = useState<ScreeningSnapshot[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -882,38 +1010,103 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
     return () => { cancelled = true; };
   }, [activeStudent.id]);
   const previousScreenings = localHistory.length > 0 ? localHistory : activeStudent.screeningHistory ?? [];
-  const nextSubtest = ageTasks.find((s) => !session?.results[s.id]);
-  const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id]).reduce((sum, s) => sum + s.minutes, 0);
+  const nextSubtest =
+    pausedTasks[0] ??
+    ageTasks.find((s) => !session?.results[s.id]);
+  const remainingMinutes = ageTasks.filter((s) => !session?.results[s.id] || session?.inProgress?.[s.id]).reduce((sum, s) => sum + s.minutes, 0);
   const nextSitting = nextSubtest ? sittings.findIndex((games) => games.some((g) => g.id === nextSubtest.id)) : -1;
   /** The child just completed a whole sitting: a natural place to stop for today. */
   const sittingJustFinished =
     nextSitting > 0 && sittings[nextSitting].every((g) => !session?.results[g.id]) && sittings[nextSitting - 1].every((g) => session?.results[g.id]);
 
+  const applySubtestProgress = (
+    base: BatterySession,
+    subtestId: SubtestId,
+    progress?: SubtestInProgress,
+    partialResult?: SubtestResult
+  ): BatterySession => {
+    if (!progress) return base;
+    const nextInProgress: NonNullable<BatterySession['inProgress']> = {
+      ...(base.inProgress ?? {}),
+      [subtestId]: progress,
+    };
+    const existingResult = base.results[subtestId];
+    const shouldWritePartial =
+      partialResult &&
+      partialResult.responses.length > 0 &&
+      (!existingResult || existingResult.discontinued);
+    const nextResults: BatterySession['results'] = shouldWritePartial
+      ? { ...base.results, [subtestId]: partialResult }
+      : base.results;
+    return {
+      ...base,
+      results: nextResults,
+      inProgress: nextInProgress,
+    };
+  };
+
+  const handleProgressSave = (subtestId: SubtestId, progress: SubtestInProgress, partialResult?: SubtestResult) => {
+    if (!session) return;
+    const updated = applySubtestProgress(session, subtestId, progress, partialResult);
+    setSession(updated);
+    void saveBatterySession(updated).catch((error) => console.error('Unable to persist battery session:', error));
+  };
+
+  const handlePauseSubtest = (subtestId: SubtestId, progress: SubtestInProgress, partialResult?: SubtestResult) => {
+    if (!session) {
+      setView({ name: 'map' });
+      return;
+    }
+    const updated = applySubtestProgress(session, subtestId, progress, partialResult);
+    setSession(updated);
+    void saveBatterySession(updated).catch((error) => console.error('Unable to persist battery session:', error));
+    pushToSchool(updated);
+    const gameTitle = SUBTESTS_BY_ID[subtestId].gameNameAr;
+    const answeredCount = progress.responses.length;
+    setSaveBanner(
+      answeredCount > 0
+        ? `✅ تم حفظ التقدم في «${gameTitle}» (${toArabicDigits(answeredCount)} إجابة محفوظة). يمكنك استكمال اللعبة في أي وقت أو عرض التقرير الحالي بالأسفل.`
+        : `✅ تم حفظ التوقف المؤقت عند «${gameTitle}». يمكنك استكمال اللعبة في أي وقت أو عرض التقرير الحالي بالأسفل.`
+    );
+    setView({ name: 'map' });
+  };
+
   const saveResult = (result: SubtestResult) => {
     if (!session) return;
-    const updated = { ...session, results: { ...session.results, [result.subtestId]: result } };
+    const nextInProgress = { ...(session.inProgress ?? {}) };
+    delete nextInProgress[result.subtestId];
+    const updated: BatterySession = {
+      ...session,
+      results: { ...session.results, [result.subtestId]: result },
+      ...(Object.keys(nextInProgress).length > 0 ? { inProgress: nextInProgress } : { inProgress: undefined }),
+    };
     trackUsage('subtest_completed', { subtestId: result.subtestId, discontinued: result.discontinued });
     const tasks = subtestsForAge(session.ageMonths);
     const wasComplete = tasks.every((s) => session.results[s.id]);
     if (!wasComplete && tasks.every((s) => updated.results[s.id])) trackUsage('battery_completed');
     setSession(updated);
+    setSaveBanner(`✅ تم حفظ نتيجة «${SUBTESTS_BY_ID[result.subtestId].gameNameAr}» في ملف الطفل والتقرير بنجاح.`);
     void saveBatterySession(updated).catch((error) => console.error('Unable to persist battery session:', error));
     pushToSchool(updated);
   };
 
-  const saveAndGoHome = () => {
+  const saveAndGoHome = (subtestId?: SubtestId, progress?: SubtestInProgress, partialResult?: SubtestResult) => {
     stopSpeech();
     if (session) {
-      void saveBatterySession(session).catch((error) => console.error('Unable to persist battery session:', error));
-      if (Object.keys(session.results).length > 0) {
-        pushToSchool(session);
-      }
+      const updated =
+        subtestId && progress
+          ? applySubtestProgress(session, subtestId, progress, partialResult)
+          : session;
+      setSession(updated);
+      void saveBatterySession(updated).catch((error) => console.error('Unable to persist battery session:', error));
+      pushToSchool(updated);
     }
     setView({ name: 'map' });
+    const targetTab = !activeStudent.isDemoRecord ? 'dashboard' : 'home';
     if (onNavigateTab) {
-      onNavigateTab('home');
+      onNavigateTab(targetTab);
     } else if (typeof window !== 'undefined') {
-      window.location.href = '/';
+      window.location.href = targetTab === 'dashboard' ? '/dashboard' : '/';
     }
   };
 
@@ -988,14 +1181,18 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   }
 
   if (view.name === 'run') {
+    const runningId = view.id;
     return (
       <SubtestRunner
-        key={view.id}
-        subtest={SUBTESTS_BY_ID[view.id]}
+        key={runningId}
+        subtest={SUBTESTS_BY_ID[runningId]}
         audioSession={session}
+        initialProgress={session.inProgress?.[runningId]}
+        onProgressSave={(prog, partial) => handleProgressSave(runningId, prog, partial)}
+        onPause={(prog, partial) => handlePauseSubtest(runningId, prog, partial)}
         onFinish={saveResult}
         onExit={() => setView({ name: 'map' })}
-        onSaveAndGoHome={saveAndGoHome}
+        onSaveAndGoHome={(prog, partial) => saveAndGoHome(runningId, prog, partial)}
       />
     );
   }
@@ -1022,6 +1219,31 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
 
   return (
     <div className="space-y-6" dir="rtl">
+      {saveBanner && (
+        <div
+          className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm font-bold text-emerald-950 flex flex-wrap items-center justify-between gap-3 shadow-2xs"
+          role="status"
+        >
+          <span>{saveBanner}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setView({ name: 'report' })}
+              className="bz-btn bz-btn-secondary bz-btn-sm text-xs"
+            >
+              <FileBarChart className="w-4 h-4" /> عرض التقرير الحالي
+            </button>
+            <button
+              type="button"
+              onClick={() => setSaveBanner(null)}
+              className="text-xs text-emerald-800 hover:underline px-2"
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="bz-card bz-card-pad flex flex-col md:flex-row md:items-center justify-between gap-6">
         {(completed.length === ageTasks.length || sittingJustFinished) && (
           <MascotMomentLive
@@ -1055,7 +1277,9 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
             فحص {session.childName} · {`${toArabicDigits(Math.floor(session.ageMonths / 12))} ${Math.floor(session.ageMonths / 12) >= 11 ? 'سنة' : 'سنوات'}${session.ageMonths % 12 > 0 ? ` و${toArabicDigits(session.ageMonths % 12)} أشهر` : ''}`}
           </p>
           <h2 className="bz-h2 mt-1" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
-            {completed.length === ageTasks.length ? 'اكتملت كل المهام' : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}`}
+            {completed.length === ageTasks.length
+              ? 'اكتملت كل المهام'
+              : `المهام المنجزة: ${toArabicDigits(completed.length)} من ${toArabicDigits(ageTasks.length)}${pausedTasks.length > 0 ? ` (${toArabicDigits(pausedTasks.length)} محفوظة مؤقتًا)` : ''}`}
           </h2>
           <div className="mt-4 flex items-center gap-3 max-w-md">
             <div className="bz-progress flex-1"><span style={{ width: `${(completed.length / Math.max(1, ageTasks.length)) * 100}%` }} /></div>
@@ -1072,15 +1296,20 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         <div className="flex flex-wrap gap-2">
           {nextSubtest && (
             <button type="button" onClick={() => setView({ name: 'run', id: nextSubtest.id })} className="bz-btn bz-btn-primary bz-btn-lg">
-              <Play className="w-5 h-5" /> {completed.length === 0 ? 'ابدأ اللعبة الأولى' : 'اللعبة التالية'}
+              <Play className="w-5 h-5" />{' '}
+              {pausedTasks.length > 0
+                ? `استكمال «${nextSubtest.gameNameAr}»`
+                : completed.length === 0
+                  ? 'ابدأ اللعبة الأولى'
+                  : 'اللعبة التالية'}
             </button>
           )}
-          {profile && completed.length > 0 && (
+          {profile && (
             <button type="button" onClick={() => setView({ name: 'report' })} className="bz-btn bz-btn-secondary bz-btn-lg">
-              <FileBarChart className="w-5 h-5" /> النتيجة والتقرير
+              <FileBarChart className="w-5 h-5" /> النتيجة والتقرير الحالي
             </button>
           )}
-          <button type="button" onClick={saveAndGoHome} className="bz-btn bz-btn-ghost bz-btn-lg">
+          <button type="button" onClick={() => saveAndGoHome()} className="bz-btn bz-btn-ghost bz-btn-lg">
             <Home className="w-5 h-5" /> حفظ والعودة للرئيسية
           </button>
         </div>
@@ -1115,11 +1344,13 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
           <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
             الجلسة {toArabicDigits(sitting + 1)}
             <span className="bz-small bz-muted font-normal">نحو {formatMinutesAr(roundEstimateMinutes(sittingMinutes(games)))}</span>
-            {games.every((g) => session.results[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
+            {games.every((g) => session.results[g.id] && !session.inProgress?.[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
           </h3>
       <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
         {games.map((s) => {
-          const done = Boolean(session.results[s.id]);
+          const inProg = session.inProgress?.[s.id];
+          const isPaused = Boolean(inProg);
+          const done = Boolean(session.results[s.id] && !isPaused);
           const isNext = nextSubtest?.id === s.id;
           const domain = DOMAINS[s.domain];
           return (
@@ -1138,6 +1369,10 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                   <span className="joy-tile w-20 h-20 text-5xl" style={{ background: `color-mix(in srgb, ${domain.color} 14%, var(--card))` }} aria-hidden="true">{s.icon}</span>
                   {done ? (
                     <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة ⭐</span>
+                  ) : isPaused ? (
+                    <span className="bz-badge bz-badge-warn">
+                      <PauseCircle className="w-3.5 h-3.5" /> محفوظة مؤقتًا{inProg && inProg.responses.length > 0 ? ` (${toArabicDigits(inProg.responses.length)}/${toArabicDigits(scoredItemCount(s))})` : ''}
+                    </span>
                   ) : isNext ? (
                     <span className="bz-badge bz-badge-sun">التالية</span>
                   ) : (
@@ -1148,9 +1383,11 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
                   <p className="font-child text-[22px] font-bold text-ink leading-snug">{s.gameNameAr}</p>
                   <p className="bz-small text-ink-2 mt-1">{s.skillNameAr}</p>
                 </div>
-                {done && (
+                {done ? (
                   <div className="mt-auto w-full text-[12px] font-semibold pt-3 border-t border-line bz-muted">إعادة اللعبة</div>
-                )}
+                ) : isPaused ? (
+                  <div className="mt-auto w-full text-[12px] font-bold pt-3 border-t border-line text-amber-800">▶️ اضغط لاستكمال اللعبة من حيث توقفت</div>
+                ) : null}
               </button>
             </li>
           );

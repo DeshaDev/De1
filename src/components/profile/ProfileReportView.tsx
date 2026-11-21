@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ArrowRight, Printer, Dumbbell, AlertTriangle, Info, Check, X } from 'lucide-react';
-import { BATTERY, SUBTESTS_BY_ID, SubtestId, subtestsForAge } from '../../cognitiveProfile/battery';
+import { BATTERY, SUBTESTS_BY_ID, SubtestId, scoredItemCount, subtestsForAge } from '../../cognitiveProfile/battery';
 import { ageCautionAr, CognitiveAudioAssessmentEvidence, CognitiveProfile, ScoredSubtest, formatAge } from '../../cognitiveProfile/scoring';
 import { FLAG_TEXT_AR, SUBTEST_GUIDANCE, WORD_NONWORD_NOTE_AR, readingMeasureLineAr } from '../../cognitiveProfile/guidance';
 import { SPELL_ERROR_TEXT_AR } from '../../cognitiveProfile/readingTasks';
@@ -49,6 +49,7 @@ function resultLine(scored: ScoredSubtest): string {
 }
 
 export function ProfileReportView({ profile, session, onBack, onStartTraining, previous = null, embedded = false }: Props) {
+  void SUBTEST_GUIDANCE;
   const ageTasks = subtestsForAge(session.ageMonths);
   const scoredById = new Map(profile.subtests.map((s) => [s.subtestId, s]));
   // One ordered list: every task of this child's battery, plus any older result outside it.
@@ -58,7 +59,8 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
   ];
   const withScore = profile.subtests.filter((s) => s.scoreAvailable !== false);
   const noVoiceScore = profile.subtests.filter((s) => s.scoreAvailable === false);
-  const notDone = taskOrder.filter((id) => !scoredById.has(id));
+  const pausedIds = taskOrder.filter((id) => Boolean(session.inProgress?.[id]));
+  const notDone = taskOrder.filter((id) => !scoredById.has(id) && !session.inProgress?.[id]);
   const good = withScore.filter((s) => bandOf(s.percent) === 'good');
   const needsWork = withScore.filter((s) => bandOf(s.percent) !== 'good').sort((a, b) => a.percent - b.percent);
 
@@ -67,10 +69,21 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
         .filter((r) => !r.correct && DIALECT_SENSITIVE_ITEMS[r.itemId]?.dialects.includes(session.dialect!))
         .map((r) => DIALECT_SENSITIVE_ITEMS[r.itemId].pairAr)
     : [];
-  const wordDetails = WORD_DETAIL_TASKS.map((id) => ({
-    id,
-    evidence: scoredById.get(id)?.scoreAvailable !== false ? session.results[id]?.audioAssessment : undefined,
-  })).filter((d): d is { id: SubtestId; evidence: CognitiveAudioAssessmentEvidence } => Boolean(d.evidence?.words?.length));
+  const wordDetails = WORD_DETAIL_TASKS.map((id) => {
+    const fullEvidence = scoredById.get(id)?.scoreAvailable !== false ? session.results[id]?.audioAssessment : undefined;
+    if (fullEvidence?.words?.length) {
+      return { id, words: fullEvidence.words, isPartial: false };
+    }
+    const partialReceipts = session.inProgress?.[id]?.wordReceipts;
+    if (partialReceipts && partialReceipts.length > 0) {
+      return {
+        id,
+        words: partialReceipts.map((r) => r.word),
+        isPartial: true,
+      };
+    }
+    return null;
+  }).filter((d): d is { id: SubtestId; words: CognitiveAudioAssessmentEvidence['words']; isPartial: boolean } => Boolean(d));
   const word = scoredById.get('wordReading');
   const nonword = scoredById.get('nonwordReading');
   const spelling = scoredById.get('spelling');
@@ -126,7 +139,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
               </>
             )}
             <dt className="bz-muted">المهام المكتملة</dt>
-            <dd className="text-ink font-semibold bz-num">{toArabicDigits(taskOrder.length - notDone.length)} من {toArabicDigits(taskOrder.length)}</dd>
+            <dd className="text-ink font-semibold bz-num">{toArabicDigits(withScore.length)} من {toArabicDigits(taskOrder.length)}</dd>
           </dl>
         </header>
 
@@ -142,7 +155,16 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
           <section aria-labelledby="summary-title" className="space-y-4">
             <h2 id="summary-title" className="bz-h3" style={{ fontSize: 22 }}>الخلاصة</h2>
             {withScore.length === 0 ? (
-              <p className="bz-small text-ink-2">لا توجد بعد مهام مكتملة بدرجة صالحة لعرض خلاصة.</p>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 space-y-2">
+                <p className="font-bold text-amber-950">
+                  {pausedIds.length > 0
+                    ? `⏸️ تم حفظ تقدّم الطفل مؤقتًا عند «${pausedIds.map((id) => SUBTESTS_BY_ID[id].gameNameAr).join('، ')}».`
+                    : '📌 بدأ الفحص وتم حفظ الجلسة، ولم تكتمل أول مهمة بعد.'}
+                </p>
+                <p className="bz-small text-ink-2">
+                  بمجرد استكمال المهمة الحالية أو أي مهمة من مهام الفحص، ستظهر درجاتها وتفاصيلها هنا فورًا.
+                </p>
+              </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
@@ -182,8 +204,20 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                 {WORD_NONWORD_NOTE_AR}
               </p>
             )}
-            {(noVoiceScore.length > 0 || notDone.length > 0) && (
-              <div className="rounded-xl border border-line p-4 bz-small text-ink-2 space-y-1">
+            {(pausedIds.length > 0 || noVoiceScore.length > 0 || notDone.length > 0) && (
+              <div className="rounded-xl border border-line p-4 bz-small text-ink-2 space-y-1.5">
+                {pausedIds.length > 0 && (
+                  <p>
+                    <strong className="text-amber-900">⏸️ محفوظة مؤقتًا للاستكمال:</strong>{' '}
+                    {pausedIds.map((id) => {
+                      const inProg = session.inProgress?.[id];
+                      const count = inProg?.responses?.length ?? 0;
+                      return count > 0
+                        ? `${SUBTESTS_BY_ID[id].gameNameAr} (${toArabicDigits(count)} من ${toArabicDigits(scoredItemCount(SUBTESTS_BY_ID[id]))})`
+                        : SUBTESTS_BY_ID[id].gameNameAr;
+                    }).join('، ')}.
+                  </p>
+                )}
                 {notDone.length > 0 && (
                   <p><strong className="text-ink">لم تُنجز بعد:</strong> {notDone.map((id) => SUBTESTS_BY_ID[id].gameNameAr).join('، ')}. أكملها لتكتمل الصورة.</p>
                 )}
@@ -208,6 +242,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
               {taskOrder.map((id) => {
                 const task = SUBTESTS_BY_ID[id];
                 const scored = scoredById.get(id);
+                const inProg = session.inProgress?.[id];
                 const band = scored && scored.scoreAvailable !== false ? bandOf(scored.percent) : null;
                 return (
                   <li key={id} className="p-4 grid sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] gap-x-6 gap-y-2 items-center">
@@ -217,15 +252,34 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                     </div>
                     <div className="space-y-1.5">
                       {!scored ? (
-                        <p className="bz-small bz-muted">لم تُنجز بعد.</p>
+                        inProg ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
+                              ⏸️ محفوظة مؤقتًا للاستكمال
+                              {inProg.responses.length > 0
+                                ? ` (${toArabicDigits(inProg.responses.length)} من ${toArabicDigits(scoredItemCount(task))})`
+                                : ''}
+                            </span>
+                            {inProg.responses.length > 0 && (
+                              <p className="bz-small text-ink-2">
+                                تم حفظ {toArabicDigits(inProg.responses.length)} إجابة حتى الآن ({toArabicDigits(inProg.responses.filter((r) => r.correct).length)} صحيحة) — أكمل المهمة لاعتماد الدرجة النهائية.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="bz-small bz-muted">لم تُنجز بعد.</p>
+                        )
                       ) : scored.scoreAvailable === false ? (
                         <p className="bz-small text-ink-2">لم يتوفر تقييم صوتي صالح؛ لم تُحتسب.</p>
                       ) : (
                         <>
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="bz-small text-ink-2 bz-num">{resultLine(scored)}</span>
+                            <span className="bz-small text-ink-2 bz-num">
+                              {resultLine(scored)}
+                              {inProg ? ` · (محفوظة مؤقتًا: ${toArabicDigits(inProg.responses.length)} من ${toArabicDigits(scoredItemCount(task))})` : ''}
+                            </span>
                             <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full border ${BAND_TEXT[band!].className}`}>
-                              {BAND_TEXT[band!].label} · <span className="bz-num">{toArabicDigits(scored.percent)}٪</span>
+                              {inProg ? 'تقدّم مرحلي' : BAND_TEXT[band!].label} · <span className="bz-num">{toArabicDigits(scored.percent)}٪</span>
                             </span>
                           </div>
                           <div className="h-2 rounded-full overflow-hidden bg-soft" role="img" aria-label={`${task.skillNameAr}: ${scored.percent}٪`}>
@@ -253,12 +307,13 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                 <h2 id="words-title" className="bz-h3" style={{ fontSize: 22 }}>تفاصيل القراءة كلمةً كلمة</h2>
                 <p className="bz-small bz-muted mt-1">ما سمعه التقييم الآلي في كل كلمة. لم تُعرض هذه النتائج على الطفل أثناء الفحص.</p>
               </div>
-              {wordDetails.map(({ id, evidence }) => {
-                const wrong = evidence.words.filter((w) => WORD_STATUS[w.errorType]?.ok === false).length;
+              {wordDetails.map(({ id, words, isPartial }) => {
+                const wrong = words.filter((w) => WORD_STATUS[w.errorType]?.ok === false).length;
                 return (
-                  <details key={id} className="rounded-2xl border border-line overflow-hidden" open={wrong > 0}>
+                  <details key={id} className="rounded-2xl border border-line overflow-hidden" open={wrong > 0 || isPartial}>
                     <summary className="px-5 py-3 cursor-pointer bg-soft font-semibold text-ink bz-small">
-                      {SUBTESTS_BY_ID[id].gameNameAr} — <span className="bz-num">{toArabicDigits(evidence.words.length - wrong)}</span> صحيحة، <span className="bz-num">{toArabicDigits(wrong)}</span> بها خطأ
+                      {SUBTESTS_BY_ID[id].gameNameAr}
+                      {isPartial ? ' (تقدّم محفوظ مؤقتًا)' : ''} — <span className="bz-num">{toArabicDigits(words.length - wrong)}</span> صحيحة، <span className="bz-num">{toArabicDigits(wrong)}</span> بها خطأ
                     </summary>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border-collapse min-w-[420px]">
@@ -270,7 +325,7 @@ export function ProfileReportView({ profile, session, onBack, onStartTraining, p
                           </tr>
                         </thead>
                         <tbody>
-                          {evidence.words.map((w, i) => {
+                          {words.map((w, i) => {
                             const status = WORD_STATUS[w.errorType] ?? { text: w.errorType, ok: null };
                             return (
                               <tr key={`${w.word}-${i}`} className="border-t border-line">

@@ -3,7 +3,7 @@
  * Sensitive child data is encrypted at rest using AES-256-GCM and a non-extractable IndexedDB key.
  */
 import { SUBTESTS_BY_ID, type SubtestId } from './battery';
-import type { SubtestResult } from './scoring';
+import type { ItemResponse, SubtestResult } from './scoring';
 import { SKILLS, type TrainingProgress } from './training';
 import { emptyLiteracyPracticeProgress, sanitizeLiteracyPracticeProgress, type LiteracyPracticeProgress } from './literacyPracticeProgress';
 import { secureStorage } from '../utils/secureLocalStorage';
@@ -43,6 +43,28 @@ export const DIALECT_LABELS_AR: Record<HomeDialect, string> = {
  */
 export const DIALECT_SENSITIVE_ITEMS: Record<string, { pairAr: string; dialects: HomeDialect[] }> = {};
 
+export interface SubtestInProgress {
+  stage: 'intro' | 'practice' | 'transition' | 'test';
+  index: number;
+  responses: ItemResponse[];
+  attemptId?: string;
+  wordReceipts?: Array<{
+    itemId: string;
+    itemIndex: number;
+    assessmentReceipt: string;
+    transcript: string;
+    durationSeconds: number;
+    word: {
+      word: string;
+      errorType: 'None' | 'Omission' | 'Mispronunciation' | 'Substitution' | 'DialectVariant';
+      accuracyScore: number;
+      spokenWord: string | null;
+      notesAr?: string;
+    };
+  }>;
+  updatedAt: string;
+}
+
 export interface BatterySession {
   studentId: string;
   childName: string;
@@ -57,6 +79,7 @@ export interface BatterySession {
   guardianAudioConsentRecordedAt?: string;
   speechLocale?: 'ar-SA' | 'ar-EG';
   results: Partial<Record<SubtestId, SubtestResult>>;
+  inProgress?: Partial<Record<SubtestId, SubtestInProgress>>;
 }
 
 const SESSION_KEY = (studentId: string) => `baseera.cognitiveProfile.v1.session.${studentId}`;
@@ -83,11 +106,16 @@ export function sanitizeBatterySession(session: BatterySession): BatterySession 
   const results = Object.fromEntries(
     Object.entries(session.results ?? {}).filter(([id]) => id in SUBTESTS_BY_ID)
   ) as BatterySession['results'];
+  const inProgress = session.inProgress
+    ? (Object.fromEntries(
+        Object.entries(session.inProgress).filter(([id, val]) => id in SUBTESTS_BY_ID && val && typeof val === 'object')
+      ) as BatterySession['inProgress'])
+    : undefined;
   // «أصدقاء الفضاء» grew from three rounds to six; a three-round result would be scored out of
   // the longer total, so the game is offered again instead.
   const pal = results.pairedAssociate;
-  if (pal && !pal.responses?.some((r) => /^pal-[4-9]/.test(r.itemId))) delete results.pairedAssociate;
-  return { ...session, results };
+  if (pal && !pal.responses?.some((r) => /^pal-[4-9]/.test(r.itemId) || pal.discontinued)) delete results.pairedAssociate;
+  return { ...session, results, ...(inProgress && Object.keys(inProgress).length > 0 ? { inProgress } : {}) };
 }
 
 export const loadBatterySession = async (studentId: string) => {
