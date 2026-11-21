@@ -18,8 +18,13 @@ const SCHOOL_B_EDUCATOR_CODE = '44cb83fefd7812bbb449d63d2323160f6ce0d1524910d368
 const TEST_ENV = {
   ...process.env,
   GEMINI_API_KEY: '', // Keep integration tests deterministic and prevent external model calls.
-  AZURE_SPEECH_KEY: '', // Audio endpoint fails closed without external credentials.
+  AZURE_SPEECH_KEY: '', // Audio endpoint fails closed without IFM credentials.
   AZURE_SPEECH_REGION: '',
+  IFM_API_KEY: '',
+  VITE_IFM_API_KEY: '',
+  OPENROUTER_API_KEY: '',
+  VITE_OPENROUTER_API_KEY: '',
+  ELEVENLABS_API_KEY: '',
   NODE_ENV: 'production',
   AI_RATE_LIMIT_PER_MINUTE: '60',
   TRUST_PROXY_HOPS: '0',
@@ -373,7 +378,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(forgedDuration.status, 400);
     assert.equal(((await forgedDuration.json()) as { code: string }).code, 'INVALID_COGNITIVE_AUDIO_INPUT');
 
-    const noAzureWordAssessment = await fetch(url, {
+    const noIfmWordAssessment = await fetch(url, {
       method: 'POST',
       headers: authorization,
       body: JSON.stringify({
@@ -386,8 +391,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         guardianAudioConsentRecordedAt: timestamp,
       }),
     });
-    assert.equal(noAzureWordAssessment.status, 503);
-    assert.equal(((await noAzureWordAssessment.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
+    assert.equal(noIfmWordAssessment.status, 503);
+    assert.equal(((await noIfmWordAssessment.json()) as { code: string }).code, 'IFM_API_KEY_NOT_CONFIGURED');
 
     const incompleteWordList = await fetch(`${baseUrl}/api/ai/cognitive-audio-assessment/finalize`, {
       method: 'POST',
@@ -402,7 +407,7 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
     assert.equal(incompleteWordList.status, 400);
     assert.equal(((await incompleteWordList.json()) as { code: string }).code, 'COGNITIVE_AUDIO_WORD_LIST_INVALID');
 
-    const noAzure = await fetch(url, {
+    const noIfm = await fetch(url, {
       method: 'POST',
       headers: authorization,
       body: JSON.stringify({
@@ -411,8 +416,8 @@ describe('Real HTTP Server Integration Tests (server.ts)', () => {
         guardianAudioConsentRecordedAt: timestamp,
       }),
     });
-    assert.equal(noAzure.status, 503);
-    assert.equal(((await noAzure.json()) as { code: string }).code, 'AZURE_SPEECH_NOT_CONFIGURED');
+    assert.equal(noIfm.status, 503);
+    assert.equal(((await noIfm.json()) as { code: string }).code, 'IFM_API_KEY_NOT_CONFIGURED');
   });
 
   it('does not allow school or anonymous sessions to use family oral-reading persistence', async () => {

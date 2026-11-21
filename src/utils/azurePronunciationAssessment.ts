@@ -41,6 +41,27 @@ export interface AzureRawWord {
 }
 
 const DIACRITICS = /[\u064B-\u065F\u0670\u0640]/g;
+const ARABIC_LETTER_RE = /[\u0600-\u06FF]/;
+const LATIN_LETTER_RE = /[a-zA-Z]/;
+const PUNCTUATION_RE = /[.,!?،؟؛:"«»()[\]{}]/g;
+
+export function hasArabicScript(value: string | null | undefined): boolean {
+  return typeof value === 'string' && ARABIC_LETTER_RE.test(value);
+}
+
+/**
+ * Strips punctuation and rejects non-Arabic (e.g. English code-switched) tokens so
+ * Arabic reading assessments never surface English words like "Feel" or trailing periods in «ما سُمع».
+ */
+export function sanitizeArabicTranscriptText(value: string | null | undefined): string {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(PUNCTUATION_RE, ' ')
+    .split(/\s+/)
+    .filter((token) => token && hasArabicScript(token) && !LATIN_LETTER_RE.test(token))
+    .join(' ')
+    .trim();
+}
 
 /**
  * Normalisation for matching provider words to the same Arabic spoken token.
@@ -52,7 +73,7 @@ export function normalizeArabicToken(value: string): string {
     .normalize('NFC')
     .replace(DIACRITICS, '')
     .replace(/[أإآٱ]/g, 'ا')
-    .replace(/[.,!?،؟؛:"«»()[\]{}]/g, '')
+    .replace(PUNCTUATION_RE, '')
     .trim();
 }
 
@@ -173,7 +194,42 @@ export function mapAzureAssessmentToReferenceWords(args: {
       };
     }
 
-    const rawTokens = transTrim.split(/\s+/).filter(Boolean);
+    const expectsArabic = hasArabicScript(targetWord);
+    const effectiveTranscript = expectsArabic
+      ? sanitizeArabicTranscriptText(transTrim)
+      : transTrim.replace(PUNCTUATION_RE, ' ').replace(/\s+/g, ' ').trim();
+
+    if (!effectiveTranscript) {
+      return {
+        sourceModel: 'azure_pronunciation_assessment',
+        assessmentMode: 'short-audio-miscue',
+        dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
+        durationSeconds,
+        transcript: '',
+        wordsCount: 1,
+        correctWordsCount: 0,
+        substitutionsCount: 0,
+        omissionsCount: 0,
+        insertionsCount: 0,
+        wordsPerMinute: null,
+        wordsCorrectPerMinute: null,
+        wordAccuracyPercent: null,
+        assessmentComplete: false,
+        words: [{
+          word: targetWord,
+          errorType: 'Unconfirmed',
+          accuracyScore: null,
+          spokenWord: null,
+          notesAr: 'التقط المحرك نصًا غير عربي؛ يلزم إعادة تسجيل الكلمة بالعربية بوضوح.',
+        }],
+        accuracyScore: null,
+        fluencyScore: null,
+        completenessScore: null,
+        pronScore: null,
+      };
+    }
+
+    const rawTokens = effectiveTranscript.split(/\s+/).filter(Boolean);
     const targetNorm = normalizeArabicToken(targetWord);
     
     // If the acoustic aligner repeated the target word (e.g. "فيل فيل" for "فِيلُ"):
@@ -263,9 +319,45 @@ export function mapAzureAssessmentToReferenceWords(args: {
     };
   }
 
+  const expectsArabic = referenceWords.some(hasArabicScript);
+  const effectiveTranscript = expectsArabic && transcript.trim()
+    ? sanitizeArabicTranscriptText(transcript)
+    : transcript;
+
+  if (expectsArabic && transcript.trim() && !effectiveTranscript) {
+    const totalWords = referenceWords.length;
+    return {
+      sourceModel: 'azure_pronunciation_assessment',
+      assessmentMode: enableMiscue ? 'short-audio-miscue' : 'continuous-audio-alignment',
+      dialectLabel: args.dialectLabel || 'الفصحى المعيارية',
+      durationSeconds,
+      transcript: '',
+      accuracyScore: null,
+      wordAccuracyPercent: null,
+      fluencyScore: null,
+      completenessScore: null,
+      pronScore: null,
+      wordsCount: totalWords,
+      correctWordsCount: 0,
+      substitutionsCount: 0,
+      omissionsCount: 0,
+      insertionsCount: 0,
+      wordsPerMinute: null,
+      wordsCorrectPerMinute: null,
+      assessmentComplete: false,
+      words: referenceWords.map((word) => ({
+        word,
+        errorType: 'Unconfirmed',
+        accuracyScore: null,
+        spokenWord: null,
+        notesAr: 'التقط المحرك نصًا غير عربي؛ أعد تسجيل القراءة بالعربية بوضوح.',
+      })),
+    };
+  }
+
   const aligned = alignSpeechWithReferenceText(
     referenceWords,
-    transcript,
+    effectiveTranscript,
     durationSeconds,
     args.dialectLabel || 'الفصحى المعيارية'
   );
@@ -436,8 +528,11 @@ export function mapAzureAssessmentToReferenceWords(args: {
   // Cross-check with the free transcript: a word heard with different letters is a reading
   // error even when the scripted assessment called it correct; a word it heard as written
   // settles a word the scripted assessment left unresolved.
-  if (args.freeTranscript && args.freeTranscript.trim()) {
-    const free = alignSpeechWithReferenceText(referenceWords, args.freeTranscript, durationSeconds, args.dialectLabel || 'الفصحى المعيارية');
+  const cleanFreeTranscript = expectsArabic && args.freeTranscript
+    ? sanitizeArabicTranscriptText(args.freeTranscript)
+    : (args.freeTranscript || '').trim();
+  if (cleanFreeTranscript) {
+    const free = alignSpeechWithReferenceText(referenceWords, cleanFreeTranscript, durationSeconds, args.dialectLabel || 'الفصحى المعيارية');
     words.forEach((w, i) => {
       const f = free.words[i];
       if (!f) return;
@@ -460,7 +555,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
 
   const totalWords = referenceWords.length;
   const assessmentComplete = unresolved === 0;
-  const tokenCount = transcript.trim() ? transcript.trim().split(/\s+/).filter(Boolean).length : 0;
+  const tokenCount = effectiveTranscript.trim() ? effectiveTranscript.trim().split(/\s+/).filter(Boolean).length : 0;
   const durationMin = Math.max(1, durationSeconds) / 60;
   const global = args.globalMetrics || {};
   const derivedWordAccuracy = totalWords > 0
@@ -471,7 +566,7 @@ export function mapAzureAssessmentToReferenceWords(args: {
     sourceModel: 'azure_pronunciation_assessment',
     assessmentMode: enableMiscue ? 'short-audio-miscue' : 'continuous-audio-alignment',
     assessmentComplete,
-    transcript,
+    transcript: effectiveTranscript,
     accuracyScore: global.accuracyScore ?? (assessmentComplete ? derivedWordAccuracy : null),
     wordAccuracyPercent: assessmentComplete ? derivedWordAccuracy : null,
     fluencyScore: global.fluencyScore ?? null,
@@ -614,13 +709,17 @@ export async function assessReadingAudioWithAzure(args: {
       payload?.DisplayText ?? nBest?.Display ?? nBest?.Lexical ?? nBest?.ITN ?? ''
     ).trim();
 
+    const expectsArabicSpeech = args.language.startsWith('ar') || args.referenceWords.some(hasArabicScript);
     let freeTranscript = '';
     if (freeResponse && freeResponse.ok) {
       const freePayload: any = await freeResponse.json().catch(() => null);
       const freeNBest = freePayload?.NBest?.[0] ?? freePayload?.nBest?.[0];
-      const freeText = String(
+      const rawFreeText = String(
         freePayload?.DisplayText ?? freeNBest?.Display ?? freeNBest?.Lexical ?? freeNBest?.ITN ?? ''
-      ).replace(/[.,!?،؟؛:"«»()[\]{}]/g, '').trim();
+      );
+      const freeText = expectsArabicSpeech
+        ? sanitizeArabicTranscriptText(rawFreeText)
+        : rawFreeText.replace(PUNCTUATION_RE, '').trim();
       freeTranscript = freeText;
 
       if (freeText && args.referenceWords.length === 1) {

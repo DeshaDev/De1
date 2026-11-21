@@ -18,7 +18,7 @@ import {
   buildSingleWordAssessmentFromBlindScore,
   scoreBlindPassageArabic,
   scoreBlindSingleWordArabic,
-  transcribeArabicBlindWithGemini,
+  transcribeArabicBlind,
 } from './src/utils/blindVowelledScoring';
 import {
   ACTIVITY_IDS,
@@ -4591,11 +4591,10 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       }
     }
 
-    const { key: azureKey, region: azureRegion } = getAzureSpeechCredentials();
-    if (!azureKey || !azureRegion) {
+    if (!getIfmApiKey()) {
       res.status(503).json({
-        code: 'AZURE_SPEECH_NOT_CONFIGURED',
-        error: 'تقييم الصوت الحقيقي غير مهيأ بعد. أضف بيانات اعتماد Azure Speech إلى ملف .env على الخادم ثم أعد تشغيله.',
+        code: 'IFM_API_KEY_NOT_CONFIGURED',
+        error: 'خدمة تقييم الصوت (IFM Jais-ASR) غير مهيأة بعد. أضف IFM_API_KEY إلى ملف .env على الخادم ثم أعد تشغيله.',
       });
       return;
     }
@@ -4651,37 +4650,20 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
-    console.log(`[Azure Assessment] Incoming audio evaluation for passage: "${body.passageId}" | Duration: ${durationSeconds}s | Language: ${language}`);
+    console.log(`[IFM Assessment] Incoming audio evaluation for passage: "${body.passageId}" | Duration: ${durationSeconds}s | Language: ${language}`);
     try {
-      // Blind vowelled transcription first (the engine hears the reading without the text), then
-      // Azure if no Gemini/OpenRouter key works. Either result goes through the same checks below.
-      let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>> | null = null;
-      if (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey()) {
-        try {
-          const blind = await transcribeArabicBlindWithGemini({ audioWavBase64, mode: 'passage' });
-          result = scoreBlindPassageArabic({
-            referenceWords: trustedPassage.words,
-            blindTranscript: blind.isSilent ? '' : blind.transcript,
-            durationSeconds: Number(durationSeconds),
-          });
-          if (blind.isSilent) throw new Error('AZURE_NO_RECOGNIZED_SPEECH');
-        } catch (blindErr) {
-          if (blindErr instanceof Error && blindErr.message === 'AZURE_NO_RECOGNIZED_SPEECH') throw blindErr;
-          console.warn('[Reading Assessment] Blind transcription unavailable, using Azure:', blindErr);
-          result = null;
-        }
+      // Strict IFM-only Arabic speech recognition (IFM/Jais-ASR) + deterministic Arabic diacritic scoring.
+      // Azure and Gemini/OpenRouter are never invoked in production speech assessment.
+      const blind = await transcribeArabicBlind({ audioWavBase64, mode: 'passage' });
+      if (blind.isSilent) {
+        throw new Error('IFM_NO_RECOGNIZED_SPEECH');
       }
-      if (!result) {
-        result = await assessReadingAudioWithAzure({
-          referenceText: referenceText.trim(),
-          referenceWords,
-          audioWavBase64,
-          durationSeconds: Number(durationSeconds),
-          language,
-          dialectLabel: 'الفصحى المعيارية (ar-SA)',
-        });
-      }
-      console.log(`[Azure Assessment] Assessment SUCCESS | Mode: ${result.assessmentMode} | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
+      const result = scoreBlindPassageArabic({
+        referenceWords: trustedPassage.words,
+        blindTranscript: blind.transcript,
+        durationSeconds: Number(durationSeconds),
+      });
+      console.log(`[IFM Assessment] SUCCESS | Accuracy: ${result.accuracyScore}% | WCPM: ${result.wordsCorrectPerMinute} | Substitutions: ${result.substitutionsCount} | Omissions: ${result.omissionsCount}`);
 
       // A receipt is created only when every target word has a resolved Azure word-level result.
       // It holds derived scores only; raw child audio is neither cached nor persisted.
@@ -4733,8 +4715,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         receiptExpiresAt: new Date(expiresAt).toISOString(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
-      console.warn(`[Azure Assessment] Azure service call failed: ${message}. No fallback was applied; the request will fail closed.`);
+      const message = err instanceof Error ? err.message : 'IFM_SPEECH_ASSESSMENT_FAILED';
+      console.warn(`[IFM Assessment] IFM service call failed: ${message}. No Azure/Gemini fallback was applied; the request failed cleanly.`);
 
       if ([
         'INVALID_AUDIO_PAYLOAD',
@@ -4746,16 +4728,23 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         res.status(400).json({ code: message, error: 'التسجيل غير صالح؛ أعد المحاولة بعد تسجيل الصوت من جديد.' });
         return;
       }
-      if (message === 'AZURE_NO_RECOGNIZED_SPEECH' || message === 'AZURE_NO_WORD_LEVEL_RESULTS') {
+      if (message === 'IFM_API_KEY_NOT_CONFIGURED') {
+        res.status(503).json({
+          code: 'IFM_API_KEY_NOT_CONFIGURED',
+          error: 'خدمة تقييم الصوت (IFM Jais-ASR) غير مهيأة على الخادم.',
+        });
+        return;
+      }
+      if (message === 'IFM_NO_RECOGNIZED_SPEECH') {
         res.status(422).json({
           code: message,
-          error: 'لم يتمكن Azure من استخراج كلمات قابلة للتقييم من هذا التسجيل. لم تُسجّل النتيجة على أنها أخطاء قراءة.',
+          error: 'لم يلتقط محرك الصوت (IFM) كلامًا عربيًا واضحًا في هذا التسجيل. لم تُسجّل النتيجة على أنها أخطاء قراءة.',
         });
         return;
       }
       res.status(502).json({
-        code: 'AZURE_SPEECH_ASSESSMENT_FAILED',
-        error: 'تعذر إكمال تقييم الصوت من Microsoft Azure. لم يتم استخدام تفريغ المتصفح بديلاً عن تقييم الصوت.',
+        code: 'IFM_SPEECH_ASSESSMENT_FAILED',
+        error: 'تعذر إكمال تقييم الصوت عبر IFM (Jais-ASR). لم يُستخدم أي محرك بديل.',
       });
     }
   });
@@ -5050,11 +5039,10 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       return;
     }
 
-    const { key: azureKey, region: azureRegion } = getAzureSpeechCredentials();
-    if (!azureKey || !azureRegion) {
+    if (!getIfmApiKey()) {
       res.status(503).json({
-        code: 'AZURE_SPEECH_NOT_CONFIGURED',
-        error: 'خدمة تقييم الصوت غير مهيأة على الخادم. لم نستخدم التعرف الصوتي في المتصفح ولم نحتسب درجة بديلة.',
+        code: 'IFM_API_KEY_NOT_CONFIGURED',
+        error: 'خدمة تقييم الصوت (IFM Jais-ASR) غير مهيأة على الخادم. أضف IFM_API_KEY إلى ملف .env ثم أعد تشغيله.',
       });
       return;
     }
@@ -5213,75 +5201,38 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
     }
 
     try {
-      const requestStartedAt = Date.now();
-      let result: Awaited<ReturnType<typeof assessReadingAudioWithAzure>>;
+      let result: ReturnType<typeof scoreBlindPassageArabic>;
 
-      if (wordItem && (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey())) {
-        // Two-stage Blind Vowelled Transcription for isolated word & nonword reading:
-        // Stage 1 listens blindly (zero reference text -> zero confirmation bias).
-        // Stage 2 scores consonants, internal short vowels (e.g. كَتَبَ vs كُتُب),
-        // Arabic pausal reading, and final case/tanween endings deterministically.
-        try {
-          const blind = await transcribeArabicBlindWithGemini({
-            audioWavBase64: body.audioWavBase64,
-          });
-          const blindScore = scoreBlindSingleWordArabic(
-            wordItem.referenceWord,
-            blind.isSilent ? null : blind.transcript
-          );
-          result = buildSingleWordAssessmentFromBlindScore({
-            score: blindScore,
-            durationSeconds,
-          });
-        } catch (blindErr) {
-          console.warn('[CognitiveAudio] Blind vowelled transcription unavailable, falling back to Azure:', blindErr);
-          result = await assessReadingAudioWithAzure({
-            referenceText: wordItem.referenceWord,
-            referenceWords: [wordItem.referenceWord],
-            audioWavBase64: body.audioWavBase64,
-            durationSeconds,
-            language: body.language,
-            dialectLabel: 'الفصحى المعيارية (ar-SA)',
-          });
-        }
+      if (wordItem) {
+        // Strict IFM-only Blind Vowelled Transcription (IFM/Jais-ASR) + deterministic
+        // Arabic diacritic/phonological scoring. ZERO Azure or Gemini fallback permitted.
+        const blind = await transcribeArabicBlind({
+          audioWavBase64: body.audioWavBase64,
+          mode: 'word',
+        });
+        const blindScore = scoreBlindSingleWordArabic(
+          wordItem.referenceWord,
+          blind.isSilent ? null : blind.transcript
+        );
+        result = buildSingleWordAssessmentFromBlindScore({
+          score: blindScore,
+          durationSeconds,
+        });
       } else {
-        // Passages and rapid naming: blind vowelled transcription first (Gemini hears the reading
-        // without the text, so it cannot "hear" the expected words), scored word by word against
-        // the text. Azure is the fallback. If no engine can score the recording, say so: a
-        // made-up result (every word correct) must never reach a child's report.
-        let scored: typeof result | null = null;
-        if (getIfmApiKey() || getOpenRouterApiKey() || getGeminiApiKey()) {
-          try {
-            const blind = await transcribeArabicBlindWithGemini({ audioWavBase64: body.audioWavBase64, mode: 'passage' });
-            scored = scoreBlindPassageArabic({
-              referenceWords: task.referenceWords,
-              blindTranscript: blind.isSilent ? '' : blind.transcript,
-              durationSeconds,
-            });
-          } catch (blindErr) {
-            console.warn('[CognitiveAudio] Blind passage transcription unavailable, falling back to Azure:', blindErr);
-          }
+        // Passages and rapid naming: strict IFM-only blind transcription (IFM/Jais-ASR)
+        // scored word by word deterministically. ZERO Azure or Gemini fallback permitted.
+        const blind = await transcribeArabicBlind({
+          audioWavBase64: body.audioWavBase64,
+          mode: 'passage',
+        });
+        if (blind.isSilent) {
+          throw new Error('IFM_NO_RECOGNIZED_SPEECH');
         }
-        if (!scored) {
-          try {
-            scored = await assessReadingAudioWithAzure({
-              referenceText: task.referenceWords.join(' '),
-              referenceWords: task.referenceWords,
-              audioWavBase64: body.audioWavBase64,
-              durationSeconds,
-              language: body.language,
-              dialectLabel: 'الفصحى المعيارية (ar-SA)',
-            });
-          } catch (azureErr) {
-            console.warn('[CognitiveAudio] No speech engine could score this recording:', azureErr);
-            res.status(503).json({
-              code: 'COGNITIVE_AUDIO_ENGINE_UNAVAILABLE',
-              error: 'تعذّر تقييم التسجيل الآن. أعد المحاولة بعد قليل، أو تابع دون درجة.',
-            });
-            return;
-          }
-        }
-        result = scored;
+        result = scoreBlindPassageArabic({
+          referenceWords: task.referenceWords,
+          blindTranscript: blind.transcript,
+          durationSeconds,
+        });
       }
 
       if (wordItem) {
@@ -5348,6 +5299,9 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         return;
       }
       if (task.taskId === 'ranObjects' || task.taskId === 'ranLetters' || task.taskId === 'oralReading') {
+        if (!result.transcript || !result.transcript.trim()) {
+          throw new Error('IFM_NO_RECOGNIZED_SPEECH');
+        }
         const targetWords = task.referenceWords;
         const isRan = task.taskId === 'ranObjects' || task.taskId === 'ranLetters';
         const alignedWords: typeof result.words = [];
@@ -5428,7 +5382,7 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       if (!completeAndResolved) {
         res.status(422).json({
           code: 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE',
-          error: 'لم يحسم Azure جميع كلمات المهمة بدرجة كافية. لم نحتسب الأخطاء أو النتيجة؛ يمكنك إعادة التسجيل.',
+          error: 'لم يحسم محرك الصوت جميع كلمات المهمة بدرجة كافية. لم نحتسب الأخطاء أو النتيجة؛ يمكنك إعادة التسجيل.',
         });
         return;
       }
@@ -5469,8 +5423,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         receiptExpiresAt: new Date(expiresAt).toISOString(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'AZURE_ASSESSMENT_FAILED';
-      console.warn(`[Cognitive Azure Assessment] Failed for ${task.taskId}: ${message}. No fallback was applied.`);
+      const message = err instanceof Error ? err.message : 'IFM_SPEECH_ASSESSMENT_FAILED';
+      console.warn(`[Cognitive IFM Assessment] Failed for ${task.taskId}: ${message}. No Azure/Gemini fallback was applied.`);
       if ([
         'INVALID_AUDIO_PAYLOAD',
         'INVALID_REFERENCE_WORDS',
@@ -5484,16 +5438,23 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         });
         return;
       }
-      if (message === 'AZURE_NO_RECOGNIZED_SPEECH' || message === 'AZURE_NO_WORD_LEVEL_RESULTS') {
+      if (message === 'IFM_API_KEY_NOT_CONFIGURED') {
+        res.status(503).json({
+          code: 'IFM_API_KEY_NOT_CONFIGURED',
+          error: 'خدمة تحليل الصوت (IFM Jais-ASR) غير مهيأة على الخادم.',
+        });
+        return;
+      }
+      if (message === 'IFM_NO_RECOGNIZED_SPEECH') {
         res.status(422).json({
           code: message,
-          error: 'لم يلتقط Azure كلمات قابلة للتقييم. لم نعتبر غياب الكلمات خطأ قراءة.',
+          error: 'لم يلتقط محرك الصوت (IFM) كلامًا عربيًا واضحًا. لم نعتبر غياب الكلمات خطأ قراءة.',
         });
         return;
       }
       res.status(502).json({
-        code: 'AZURE_SPEECH_ASSESSMENT_FAILED',
-        error: 'تعذر إكمال تقييم الصوت عبر Azure. لم نستبدله بتفريغ المتصفح أو بتصحيح يدوي.',
+        code: 'IFM_SPEECH_ASSESSMENT_FAILED',
+        error: 'تعذر إكمال تقييم الصوت عبر IFM (Jais-ASR). لم يُستخدم أي محرك بديل (لا Azure ولا Gemini).',
       });
     }
   });

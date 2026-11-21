@@ -140,3 +140,45 @@ test('a pausal taa marbuta that was not transcribed is not an error; the differe
   assert.equal(scoreBlindSingleWordArabic('دَجَاجَة', 'دَجَاجْ').errorType, 'Substitution');
   assert.ok(['None', 'DialectVariant'].includes(scoreBlindSingleWordArabic('تُفَّاحَة', 'تُفَّاحَ').errorType));
 });
+
+test('blind single-word and passage scorers never emit English/Latin words into spokenWord', async () => {
+  const { scoreBlindPassageArabic } = await import('./blindVowelledScoring');
+  for (const noise of ['Map', 'Feel', 'Mate', "You're done", 'Wallet']) {
+    const res = scoreBlindSingleWordArabic('يَد', noise);
+    assert.equal(res.errorType, 'Omission');
+    assert.equal(res.spokenWord, null);
+  }
+
+  const passage = scoreBlindPassageArabic({
+    referenceWords: ['ذَهَبَ', 'سَامِي'],
+    blindTranscript: "ذَهَبَ You're done سَامِي",
+    durationSeconds: 3,
+  });
+  assert.equal(passage.correctWordsCount, 2);
+  assert.equal(passage.insertionsCount, 0);
+  assert.equal(passage.words[0].spokenWord, 'ذَهَبَ');
+  assert.equal(passage.words[1].spokenWord, 'سَامِي');
+});
+
+test('strict IFM-only policy: transcribeArabicBlind refuses Gemini/OpenRouter/Azure fallback when IFM key is absent', async () => {
+  const { transcribeArabicBlind } = await import('./blindVowelledScoring');
+  const origIfm = process.env.IFM_API_KEY;
+  const origViteIfm = process.env.VITE_IFM_API_KEY;
+  const origGem = process.env.GEMINI_API_KEY;
+  const origOr = process.env.OPENROUTER_API_KEY;
+  try {
+    delete process.env.IFM_API_KEY;
+    delete process.env.VITE_IFM_API_KEY;
+    process.env.GEMINI_API_KEY = 'AIzaSyFakeKeyThatMustNotBeCalled';
+    process.env.OPENROUTER_API_KEY = 'sk-or-v1-FakeKeyThatMustNotBeCalled';
+    await assert.rejects(
+      () => transcribeArabicBlind({ audioWavBase64: 'UklGRgAAAABXQVZF' }),
+      /IFM_API_KEY_NOT_CONFIGURED/
+    );
+  } finally {
+    process.env.IFM_API_KEY = origIfm;
+    process.env.VITE_IFM_API_KEY = origViteIfm;
+    process.env.GEMINI_API_KEY = origGem;
+    process.env.OPENROUTER_API_KEY = origOr;
+  }
+});

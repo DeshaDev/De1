@@ -1,18 +1,23 @@
 /**
- * Two-stage Blind Arabic Phonological Assessment Engine:
+ * Two-stage Blind Arabic Phonological Assessment Engine (IFM Only):
  *
- * Stage 1 (Blind Transcription): Sends ONLY the raw audio to a multimodal model
+ * Stage 1 (Blind Transcription): Sends ONLY the raw audio to IFM/Jais-ASR
  * WITHOUT revealing the reference text — eliminating confirmation bias / prior hallucination
  * where models "hear" the expected word even when a child misreads a vowel or nonword.
+ * Strict IFM-only policy: never falls back to Google Gemini, OpenRouter, or Azure.
  *
  * Stage 2 (Deterministic Arabic Phonological Scoring): Pure deterministic comparator
  * that inspects consonant skeleton, internal short vowels (e.g., كَتَبَ vs كُتُب),
  * Arabic pausal reading (الوقف بالسكون), and final case/tanween endings (e.g., بَيْتُ vs بَيْتًا).
  */
 
-import { getGeminiApiKey, getOpenRouterApiKey } from './geminiAudioAssessment';
 import { getIfmApiKey, transcribeArabicWithJaisAsr } from './ifmAudioAssessment';
-import type { AzureAlignedWord, AzureAudioAssessmentResult, AzureWordError } from './azurePronunciationAssessment';
+import {
+  sanitizeArabicTranscriptText,
+  type AzureAlignedWord,
+  type AzureAudioAssessmentResult,
+  type AzureWordError,
+} from './azurePronunciationAssessment';
 
 export type ArabicVowel = 'a' | 'u' | 'i' | 'an' | 'un' | 'in' | '0' | null;
 
@@ -147,9 +152,10 @@ function levenshtein(a: string, b: string): number {
  * - Exact vowelled reading (e.g. بَيْتُ vs بَيْتُ, بَيْتُو vs بَيْتُ)
  */
 export function scoreBlindSingleWordArabic(expectedWord: string, blindSpokenRaw: string | null): BlindWordScore {
-  const cleanSpoken = (blindSpokenRaw || '').normalize('NFC').replace(PUNCT_AND_TATWEEL, ' ').replace(/\s+/g, ' ').trim();
+  const normalizedNoPunct = (blindSpokenRaw || '').normalize('NFC').replace(PUNCT_AND_TATWEEL, ' ').replace(/\s+/g, ' ').trim();
+  const cleanSpoken = sanitizeArabicTranscriptText(normalizedNoPunct);
 
-  if (!cleanSpoken || cleanSpoken === 'SILENCE' || cleanSpoken === 'صمت') {
+  if (!normalizedNoPunct || normalizedNoPunct === 'SILENCE' || normalizedNoPunct === 'صمت' || !cleanSpoken) {
     return {
       word: expectedWord,
       spokenWord: null,
@@ -332,53 +338,11 @@ export function scoreBlindSingleWordArabic(expectedWord: string, blindSpokenRaw:
   };
 }
 
-const BLIND_CHILD_SPEECH_PROMPT = `أنت خبير صوتيات ولغة عربية متخصص في التفريغ الصوتي الحرفي لقراءة الأطفال.
-مهمتك الوحيدة هي الاستماع إلى التسجيل الصوتي المرفق وكتابة ما نطقه المتحدث **حرفيًا مع كامل التشكيل المسموع** دون أي تصحيح تلقائي أو تخمين.
-
-قواعد صارمة جدًا:
-1. اكتب الحروف والتشكيل الفعلي الذي سمعته في الصوت بالضبط (فتحة َ، ضمة ُ، كسرة ِ، سكون ْ، شدة ّ، تنوين ً ٌ ٍ).
-2. المتحدث قد يقرأ كلمة حقيقية أو كلمة مصنوعة غير حقيقية (مثل: بَتَمُ، دُمَكُ، فُوبُ، شِدَفُ، زَفَكُ، بَاكِفُ) — لا تحوّل الكلمة المصنوعة أبدًا إلى كلمة عربية مألوفة! اكتب الأصوات كما سمعتها حرفيًا.
-3. التزم برصد الحركات الداخلية وحركة الحرف الأخير والتنوين بدقة:
-   - إذا سمعت «كُتُب» اكتب «كُتُب» ولا تصححها إلى «كَتَبَ».
-   - إذا سمعت «بَيْتًا» بتنوين الفتح اكتب «بَيْتًا».
-   - إذا سمعت «بَيْتُ» أو «بَيْتُو» بالضمة اكتب «بَيْتُ».
-   - إذا سمعت «بَيْتْ» بالسكون الوقفي اكتب «بَيْتْ».
-   - إذا سمعت «دارْفِيل» أو «كِتَاب» اكتبها كما سمعتها حرفيًا.
-4. إذا سمعت في آخر الكلمة هاءً خفيفة عند الوقف (مثل «دَجَاجَـهْ»)، فاكتبها ولا تحذفها. وإذا انتهى النطق بلا هاء، فلا تُضفها.
-5. إذا كان التسجيل صامتًا أو ضوضاء فقط بلا كلام، اجعل isSilent = true و transcript = "".
-
-أرجع JSON فقط بهذا الشكل:
-{
-  "transcript": "النص المسموع حرفيًا مع كامل التشكيل أو سلسلة فارغة عند الصمت",
-  "isSilent": false
-}`;
-
-const BLIND_PASSAGE_PROMPT = `أنت خبير صوتيات ولغة عربية متخصص في التفريغ الصوتي الحرفي لقراءة الأطفال.
-استمع إلى التسجيل المرفق، وهو طفل يقرأ نصًا أو يسمّي أشياء بصوت عالٍ، واكتب كل ما نطقه **حرفيًا وبالترتيب مع كامل التشكيل المسموع**.
-
-قواعد صارمة جدًا:
-1. لا تعرف النص المطلوب ولا تحاول تخمينه. اكتب ما سمعته فقط، حتى لو بدا خطأً أو بلا معنى.
-2. لا تصحّح أي كلمة، ولا تُكمل كلمة ناقصة، ولا تُضف كلمة لم تُنطق.
-3. إذا كرّر الطفل كلمة أو تراجع وأعاد، اكتب ما نطقه كما هو.
-4. اكتب الحركات التي سمعتها فعلًا (َ ُ ِ ْ ّ ً ٌ ٍ)، وإذا وقف على آخر الكلمة بالسكون فاكتب السكون.
-5. افصل بين الكلمات بمسافة واحدة، دون علامات ترقيم.
-6. إذا كان التسجيل صامتًا أو ضوضاء فقط، اجعل isSilent = true و transcript = "".
-
-أرجع JSON فقط بهذا الشكل:
-{
-  "transcript": "الكلمات المسموعة بالترتيب مع التشكيل",
-  "isSilent": false
-}`;
-
-let geminiDisabledUntil = 0;
-
 /**
- * Calls Gemini Multimodal Audio (Direct Google Generative Language API primary, OpenRouter fallback)
- * strictly BLIND — ZERO reference text is sent to the model.
+ * Transcribes child speech strictly BLIND via IFM/Jais-ASR ONLY.
+ * ZERO reference text is sent, and ZERO fallback to Gemini, OpenRouter, or Azure is permitted.
  */
-export const transcribeArabicBlind = transcribeArabicBlindWithGemini;
-
-export async function transcribeArabicBlindWithGemini(args: {
+export async function transcribeArabicBlind(args: {
   audioWavBase64: string;
   apiKey?: string;
   /** 'passage' transcribes a whole reading (story, list of names) instead of one word. */
@@ -388,149 +352,26 @@ export async function transcribeArabicBlindWithGemini(args: {
     throw new Error('INVALID_AUDIO_PAYLOAD');
   }
 
-
   const userKey = (args.apiKey && args.apiKey.trim()) || '';
-  const ifmKey = userKey.startsWith('IFM-') ? userKey : getIfmApiKey();
-
-  // Primary Speech Recognition Engine: IFM Jais-ASR
-  if (ifmKey) {
-    try {
-      const res = await transcribeArabicWithJaisAsr({
-        audioWavBase64: args.audioWavBase64,
-        apiKey: ifmKey,
-        mode: args.mode,
-      });
-      return {
-        transcript: res.transcript,
-        isSilent: res.isSilent,
-        sourceModel: 'blind:ifm/jais-asr',
-      };
-    } catch (ifmErr) {
-      console.warn('[BlindASR] IFM Jais-ASR transient error, falling back to secondary engine:', ifmErr);
-      if (!getGeminiApiKey() && !getOpenRouterApiKey()) {
-        throw ifmErr;
-      }
-    }
+  const ifmKey = userKey || getIfmApiKey();
+  if (!ifmKey) {
+    throw new Error('IFM_API_KEY_NOT_CONFIGURED');
   }
 
-  const passage = args.mode === 'passage';
-  const prompt = passage ? BLIND_PASSAGE_PROMPT : BLIND_CHILD_SPEECH_PROMPT;
-  const maxTokens = passage ? 1200 : 120;
-
-
-  const openRouterKey = userKey.startsWith('sk-or-') ? userKey : getOpenRouterApiKey();
-  const rawGeminiKey = userKey && !userKey.startsWith('sk-or-') ? userKey : getGeminiApiKey();
-  const geminiKey = rawGeminiKey && Date.now() > geminiDisabledUntil ? rawGeminiKey : null;
-
-  if (!openRouterKey && !geminiKey) {
-    throw new Error('BLIND_ASR_KEY_NOT_CONFIGURED');
-  }
-
-  const parsePayload = (rawText: string, sourceModel: string): BlindTranscriptionResult => {
-    const cleanJson = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    const parsed = JSON.parse(cleanJson);
-    const transcript = typeof parsed.transcript === 'string' ? parsed.transcript.trim() : '';
-    const isSilent = parsed.isSilent === true || transcript.length === 0;
-    return { transcript: isSilent ? '' : transcript, isSilent, sourceModel };
+  const res = await transcribeArabicWithJaisAsr({
+    audioWavBase64: args.audioWavBase64,
+    apiKey: ifmKey,
+    mode: args.mode,
+  });
+  return {
+    transcript: res.transcript,
+    isSilent: res.isSilent,
+    sourceModel: 'blind:ifm/jais-asr',
   };
-
-  // Prefer direct Google Gemini API first (zero proxy hop, ~3-6x faster than OpenRouter)
-  // with thinkingBudget: 0 so Gemini 2.5 Flash skips hidden reasoning tokens for single-word ASR.
-  if (geminiKey) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { inlineData: { mimeType: 'audio/wav', data: args.audioWavBase64 } },
-                { text: prompt },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0,
-            maxOutputTokens: maxTokens,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-        signal: AbortSignal.timeout(passage ? 30000 : 6000),
-      });
-
-      if (res.ok) {
-        const data: any = await res.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (typeof rawText === 'string' && rawText.trim()) {
-          return parsePayload(rawText, 'blind:google/gemini-2.5-flash');
-        }
-      }
-      if (res.status === 402 || res.status === 401 || res.status === 403) {
-        // Prepayment depleted or invalid key; bypass Gemini for 10 minutes to avoid per-word delays
-        geminiDisabledUntil = Date.now() + 10 * 60 * 1000;
-        console.warn(`[BlindASR] Gemini API returned HTTP ${res.status}. Bypassing Gemini for 10 minutes, using Azure directly.`);
-      }
-      if (!openRouterKey) {
-        throw new Error(`BLIND_GEMINI_HTTP_${res.status}`);
-      }
-    } catch (directErr) {
-      if (!openRouterKey) throw directErr;
-    }
-  }
-
-  // Fallback to OpenRouter if direct Gemini API key is absent or transiently failed
-  if (openRouterKey) {
-    const model = 'google/gemini-2.5-flash';
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openRouterKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://hayanaqra.com',
-        'X-Title': 'Haya Naqra Blind Arabic Transcription',
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        max_tokens: maxTokens,
-        reasoning: { effort: 'none' },
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              {
-                type: 'input_audio',
-                input_audio: {
-                  data: args.audioWavBase64,
-                  format: 'wav',
-                },
-              },
-            ],
-          },
-        ],
-      }),
-      signal: AbortSignal.timeout(passage ? 45000 : 15000),
-    });
-
-    if (!res.ok) {
-      throw new Error(`BLIND_OPENROUTER_HTTP_${res.status}`);
-    }
-    const data: any = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || !content.trim()) {
-      throw new Error('BLIND_OPENROUTER_EMPTY_RESPONSE');
-    }
-    return parsePayload(content, `blind:${model}`);
-  }
-
-  throw new Error('BLIND_ASR_KEY_NOT_CONFIGURED');
 }
+
+/** Backwards-compatible alias preserved for existing imports; strictly routes to IFM/Jais-ASR only. */
+export const transcribeArabicBlindWithGemini = transcribeArabicBlind;
 
 /**
  * Wraps a blind single-word score into the standard AzureAudioAssessmentResult contract
@@ -590,7 +431,10 @@ export function scoreBlindPassageArabic(args: {
   durationSeconds: number;
 }): AzureAudioAssessmentResult {
   const ref = args.referenceWords;
-  const spoken = args.blindTranscript.normalize('NFC').replace(PUNCT_AND_TATWEEL, ' ').split(/\s+/).filter(Boolean);
+  const sanitized = sanitizeArabicTranscriptText(
+    args.blindTranscript.normalize('NFC').replace(PUNCT_AND_TATWEEL, ' ')
+  );
+  const spoken = sanitized ? sanitized.split(/\s+/).filter(Boolean) : [];
   const rs = ref.map(skeleton);
   const ss = spoken.map(skeleton);
   const subCost = (i: number, j: number) => {

@@ -57,6 +57,9 @@ describe('IFM Audio Assessment Unit Tests', () => {
     assert.equal(transliterateLatinToArabic('fob'), 'فُوب');
     assert.equal(transliterateLatinToArabic('foob'), 'فُوب');
     assert.equal(transliterateLatinToArabic('kataba'), 'كَتَبَ');
+    assert.doesNotMatch(transliterateLatinToArabic('mate'), /[a-zA-Z]/);
+    assert.doesNotMatch(transliterateLatinToArabic('wallet'), /[a-zA-Z]/);
+    assert.doesNotMatch(transliterateLatinToArabic('capex'), /[a-zA-Z]/);
   });
 
   it('stripCarrierAndCollapseSingleWord removes carrier prefix and collapses 2x repetitions', () => {

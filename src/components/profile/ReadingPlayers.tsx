@@ -123,7 +123,9 @@ function audioFailureMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : '';
   if (code === 'UNSUPPORTED_SPEECH_DIALECT') return 'التقييم الصوتي غير متاح للهجة المختارة. لم نغيّر اللهجة تلقائيًا.';
   if (code === 'AUDIO_CONSENT_REQUIRED') return 'يلزم تسجيل موافقة ولي الأمر المنفصلة على معالجة الصوت قبل التسجيل.';
-  if (code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'تقييم الصوت غير متاح الآن. أعد المحاولة بعد قليل، أو تابع دون درجة.';
+  if (code === 'IFM_API_KEY_NOT_CONFIGURED' || code === 'AZURE_SPEECH_NOT_CONFIGURED') return 'خدمة تقييم الصوت (IFM) غير مهيأة الآن على الخادم. أعد المحاولة بعد قليل، أو تابع دون درجة.';
+  if (code === 'IFM_NO_RECOGNIZED_SPEECH') return 'لم يُلتقط كلام عربي واضح في التسجيل. اضغط «إعادة التسجيل» واقرأ بصوت واضح وقريبًا من الميكروفون.';
+  if (code === 'IFM_SPEECH_ASSESSMENT_FAILED') return 'تعذر إكمال تحليل الصوت عبر IFM الآن. اضغط «إعادة التسجيل» بعد قليل، أو تابع دون درجة.';
   if (code === 'AUDIO_RECORDING_UNAVAILABLE' || code === 'AUDIO_CONTEXT_UNAVAILABLE') return 'المتصفح أو الجهاز لا يدعم تسجيل الصوت المطلوب. لم تُحتسب درجة.';
   if (code === 'AUDIO_DURATION_OUT_OF_RANGE') return 'مدة التسجيل خارج النطاق المسموح. لم تُحتسب درجة.';
   if (code === 'COGNITIVE_AUDIO_ASSESSMENT_INCOMPLETE') return 'لم نسمع القراءة بوضوح. اضغط «إعادة التسجيل» واقرأ مرة أخرى بصوت واضح.';

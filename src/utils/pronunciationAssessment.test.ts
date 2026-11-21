@@ -7,6 +7,7 @@ import {
 import {
   mapAzureAssessmentToReferenceWords,
   normalizeAzureWordResults,
+  sanitizeArabicTranscriptText,
 } from './azurePronunciationAssessment';
 
 test('Pronunciation Assessment & Reference-Text Alignment Engine', async (t) => {
@@ -343,4 +344,48 @@ test('a passage word misread is caught by the free transcript even when the scri
   assert.equal(result.words[4].errorType, 'None', 'pausal taa marbuta is not an error');
   assert.equal(result.correctWordsCount, 4);
   assert.equal(result.substitutionsCount, 1);
+});
+
+test('Arabic reading assessment strips trailing punctuation and rejects non-Arabic English hallucinations', () => {
+  assert.equal(sanitizeArabicTranscriptText('قَلَم.'), 'قَلَم');
+  assert.equal(sanitizeArabicTranscriptText('Feel'), '');
+  assert.equal(sanitizeArabicTranscriptText("You're done"), '');
+  assert.equal(sanitizeArabicTranscriptText('قَرَأَ map الطِّفْلُ'), 'قَرَأَ الطِّفْلُ');
+
+  const punctuated = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['قَلَم'],
+    transcript: 'قَلَم.',
+    durationSeconds: 0.7,
+    enableMiscue: true,
+    providerWords: [{ word: 'قلم', errorType: 'None', accuracyScore: 95 }],
+  });
+  assert.equal(punctuated.words[0].errorType, 'None');
+  assert.equal(punctuated.words[0].spokenWord, 'قَلَم');
+
+  for (const englishNoise of ['Map', 'Feel', 'Mate', "You're done", 'Wallet']) {
+    const blocked = mapAzureAssessmentToReferenceWords({
+      referenceWords: ['بَاب'],
+      transcript: englishNoise,
+      durationSeconds: 0.6,
+      enableMiscue: true,
+      providerWords: [{ word: 'باب', errorType: 'None', accuracyScore: 75 }],
+    });
+    assert.equal(blocked.words[0].errorType, 'Unconfirmed');
+    assert.equal(blocked.words[0].spokenWord, null);
+    assert.equal(blocked.assessmentComplete, false);
+  }
+
+  const passageIgnoreEnglishFree = mapAzureAssessmentToReferenceWords({
+    referenceWords: ['ذَهَبَ', 'سَامِي'],
+    transcript: 'ذهب سامي',
+    durationSeconds: 2,
+    enableMiscue: true,
+    providerWords: [
+      { word: 'ذهب', errorType: 'None', accuracyScore: 92 },
+      { word: 'سامي', errorType: 'None', accuracyScore: 90 },
+    ],
+    freeTranscript: 'Map Feel',
+  });
+  assert.equal(passageIgnoreEnglishFree.correctWordsCount, 2);
+  assert.equal(passageIgnoreEnglishFree.words[0].spokenWord, 'ذهب');
 });
