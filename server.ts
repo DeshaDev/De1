@@ -2808,7 +2808,11 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       policyVersion: current.policyVersion || '2026.1',
     };
 
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
+    const writeApiKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+    const writeAuthHeader = SUPABASE_SERVICE_ROLE_KEY
+      ? `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      : authorization;
+    if (!writeApiKey || !writeAuthHeader) {
       res.status(503).json({
         code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
         error: 'الحفظ الصوتي الآمن غير مهيأ في الخادم؛ بقيت النتيجة محلية ولم تُكتب إلى قاعدة البيانات.',
@@ -2821,8 +2825,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       const updateResponse = await fetch(updateUrl, {
         method: 'PATCH',
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: writeApiKey,
+          Authorization: writeAuthHeader,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
@@ -3035,7 +3039,11 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       },
     };
 
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
+    const writeApiKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+    const writeAuthHeader = SUPABASE_SERVICE_ROLE_KEY
+      ? `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      : authorization;
+    if (!writeApiKey || !writeAuthHeader) {
       res.status(503).json({
         code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
         error: 'الحفظ الصوتي الآمن غير مهيأ في الخادم؛ بقيت النتائج محلية ولم تُكتب إلى قاعدة البيانات.',
@@ -3062,8 +3070,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       const updateResponse = await fetch(updateUrl, {
         method: 'PATCH',
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: writeApiKey,
+          Authorization: writeAuthHeader,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
@@ -3287,7 +3295,11 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       trainingProgress: { ...progress, updatedAt: new Date().toISOString() },
     };
 
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
+    const writeApiKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+    const writeAuthHeader = SUPABASE_SERVICE_ROLE_KEY
+      ? `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      : authorization;
+    if (!writeApiKey || !writeAuthHeader) {
       res.status(503).json({
         code: 'SUPABASE_SERVER_WRITE_NOT_CONFIGURED',
         error: 'الحفظ الآمن لتقدم البرنامج غير مهيأ في الخادم؛ بقي التقدم على هذا الجهاز.',
@@ -3312,8 +3324,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
       const updateResponse = await fetch(updateUrl, {
         method: 'PATCH',
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: writeApiKey,
+          Authorization: writeAuthHeader,
           'Content-Type': 'application/json',
           Prefer: 'return=representation',
         },
@@ -3342,8 +3354,8 @@ function humanMarkFor(responses: Array<{ itemId: string; humanCorrect?: boolean 
         {
           method: 'POST',
           headers: {
-            apikey: SUPABASE_SERVICE_ROLE_KEY,
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: writeApiKey,
+            Authorization: writeAuthHeader,
             'Content-Type': 'application/json',
             Prefer: 'resolution=merge-duplicates,return=minimal',
           },
