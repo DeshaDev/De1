@@ -765,6 +765,11 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           studentId={studentId}
           ageYears={ageYears}
           childName={childName}
+          skillLevels={progress?.levels}
+          onOpenLibrary={onOpenExtra ? () => {
+            setShowStructuredLiteracyStations(false);
+            onOpenExtra('adaptive-reader');
+          } : undefined}
           onClose={() => setShowStructuredLiteracyStations(false)}
         />
       </div>

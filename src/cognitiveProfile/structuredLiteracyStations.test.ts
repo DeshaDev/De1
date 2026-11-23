@@ -29,6 +29,22 @@ describe('age-appropriate structured literacy practice stations', () => {
     assert.equal(getStructuredLiteracyStations(8).some((station) => station.id === 'morphology'), true);
   });
 
+  it('uses the child’s current programme level to choose matched practice items', () => {
+    const stations = getStructuredLiteracyStations(8, { spelling: 2, comprehension: 3 });
+    const spelling = stations.find((station) => station.id === 'spelling');
+    const comprehension = stations.find((station) => station.id === 'comprehension');
+    const fluency = stations.find((station) => station.id === 'fluency');
+    assert.ok(spelling);
+    assert.ok(comprehension);
+    assert.equal(spelling.practiceLevel, 2);
+    assert.equal(comprehension.practiceLevel, 3);
+    assert.ok(spelling.questions.length > 0);
+    assert.ok(comprehension.questions.length > 0);
+    assert.ok(spelling.questions.every((question) => question.level === 2));
+    assert.ok(comprehension.questions.every((question) => question.level === 3));
+    assert.equal(fluency?.practiceLevel, undefined);
+  });
+
   it('keeps the early-years spoken worked example consistent with the displayed answer', () => {
     const station = getStructuredLiteracyStations(4).find((entry) => entry.id === 'comprehension');
     assert.ok(station);

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2, Headphones, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { ArrowRight, BookOpen, CheckCircle2, Headphones, Play, RotateCcw, Volume2 } from 'lucide-react';
 import {
   getFluencyPassage,
   getStructuredLiteracyStations,
+  type LiteracyPracticeLevels,
   type LiteracyQuestion,
   type LiteracyStation,
   type LiteracyStationId,
@@ -23,13 +24,15 @@ interface Props {
   ageYears: number;
   childName: string;
   onClose: () => void;
+  onOpenLibrary?: () => void;
+  skillLevels?: LiteracyPracticeLevels;
 }
 
 const ageLabel = (age: number) => String(age).replace(/[0-9]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'[Number(digit)]);
 
-export function StructuredLiteracyStations({ studentId, ageYears, childName, onClose }: Props) {
+export function StructuredLiteracyStations({ studentId, ageYears, childName, onClose, onOpenLibrary, skillLevels }: Props) {
   const safeAgeYears = Number.isFinite(ageYears) ? Math.max(4, Math.min(8, Math.floor(ageYears))) : 4;
-  const stations = useMemo(() => getStructuredLiteracyStations(safeAgeYears), [safeAgeYears]);
+  const stations = useMemo(() => getStructuredLiteracyStations(safeAgeYears, skillLevels), [safeAgeYears, skillLevels]);
   const [stationId, setStationId] = useState<LiteracyStationId | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -174,6 +177,18 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
           <p className="text-xs text-slate-500">العمر المحدد في ملف الطفل: {ageLabel(ageYears)} سنوات · {childName}</p>
         </section>
 
+        <section className="bz-card bz-card-pad flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-black text-slate-900">مكتبة القراءة المتدرجة</h3>
+            <p className="text-sm text-slate-600 mt-1">اختر قصة أو نصًا مناسبًا، واستفد من الكلمات التي ظهرت في قراءة الطفل.</p>
+          </div>
+          {onOpenLibrary && (
+            <button type="button" className="bz-btn bz-btn-secondary shrink-0" onClick={onOpenLibrary}>
+              <BookOpen className="w-4 h-4" /> افتح المكتبة
+            </button>
+          )}
+        </section>
+
         <div className="grid sm:grid-cols-2 gap-4">
           {stations.map((item) => (
             <button
@@ -194,6 +209,15 @@ export function StructuredLiteracyStations({ studentId, ageYears, childName, onC
               </div>
               <p className="text-sm text-slate-600 leading-7 mt-3">{item.purposeAr}</p>
               <p className="text-xs text-slate-500 mt-3">{item.ageNoteAr}</p>
+              {item.practiceLevel && <p className="text-xs font-semibold text-brand mt-2">مستوى التدريب الحالي: {ageLabel(item.practiceLevel)}</p>}
+              <p className="text-xs text-slate-500 mt-2">
+                {practiceReady ? (
+                  <>
+                    جلسات ممارسة: {ageLabel(practiceProgress.stations[item.id].completedSessions)}
+                    {item.id === 'fluency' && <> · قراءات متكررة: {ageLabel(practiceProgress.fluencyReadingsCompleted)}</>}
+                  </>
+                ) : 'جارٍ تحميل سجل الممارسة…'}
+              </p>
               <span className="inline-flex items-center gap-1 text-sm font-bold text-brand mt-4">
                 ابدأ المحطة <ArrowRight className="w-4 h-4 rotate-180" />
               </span>

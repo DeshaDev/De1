@@ -48,8 +48,12 @@ export interface LiteracyStation {
   teachAudioAr: string;
   /** Fully vowelled model narration for speech synthesis; separate from display copy. */
   modelAudioAr: string;
+  /** Current programme level, when this station is connected to an assessed learning plan. */
+  practiceLevel?: 1 | 2 | 3;
   questions: LiteracyQuestion[];
 }
+
+export type LiteracyPracticeLevels = Partial<Record<'decoding' | 'spelling' | 'comprehension' | 'morphology', 1 | 2 | 3>>;
 
 export interface FluencyPassage {
   titleAr: string;
@@ -1390,7 +1394,7 @@ const fluencyPassages: FluencyPassage[] = [
   },
 ];
 
-export function getStructuredLiteracyStations(ageYears: number): LiteracyStation[] {
+export function getStructuredLiteracyStations(ageYears: number, levels: LiteracyPracticeLevels = {}): LiteracyStation[] {
   const stations: LiteracyStation[] = [
     {
       id: 'comprehension',
@@ -1468,7 +1472,17 @@ export function getStructuredLiteracyStations(ageYears: number): LiteracyStation
     });
   }
 
-  return stations;
+  return stations.map((station) => {
+    const practiceLevel = station.id === 'fluency' ? undefined : levels[station.id];
+    if (!practiceLevel) return station;
+    const questions = station.questions.filter((question) => question.level === practiceLevel);
+    if (questions.length === 0) return station;
+    return {
+      ...station,
+      practiceLevel,
+      questions,
+    };
+  });
 }
 
 export function getFluencyPassage(ageYears: number): FluencyPassage {
