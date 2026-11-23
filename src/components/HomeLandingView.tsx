@@ -42,7 +42,8 @@ export type AppTabId =
   | 'guided-program'
   | 'content-review'
   | 'audio-lab'
-  | 'parent-portal';
+  | 'parent-portal'
+  | 'literacy-studio';
 
 interface HomeLandingViewProps {
   students: StudentRecord[];
@@ -239,6 +240,14 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <span className="hn-who-icon" aria-hidden="true"><Users size={28} /></span>
               <h3 className="hn-h3">الأسرة</h3>
               <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه في جلسات قصيرة خلال الأسبوع.</p>
+              <div className="mt-5 grid gap-2">
+                <button type="button" className="bz-btn bz-btn-primary hn-toy" onClick={() => onNavigateTab('parent-portal')}>
+                  سجّل طفلك وابدأ الفحص
+                </button>
+                <button type="button" className="bz-btn bz-btn-secondary" onClick={() => onNavigateTab('literacy-studio')}>
+                  <BookOpen size={17} aria-hidden="true" /> استوديو القراءة والإملاء
+                </button>
+              </div>
             </article>
             <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-leaf)' }}>
               <span className="hn-who-icon" aria-hidden="true"><Building2 size={28} /></span>

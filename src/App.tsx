@@ -74,6 +74,7 @@ import { AssessmentProvider } from './contexts/AssessmentContext';
 const ReaderPage = lazy(() => import('./components/reader/ReaderPage').then((m) => ({ default: m.ReaderPage })));
 const RemediationGymView = lazy(() => import('./components/RemediationGymView'));
 const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHub'));
+const ArabicLiteracyStudioView = lazy(() => import('./components/profile/ArabicLiteracyStudioView').then((m) => ({ default: m.ArabicLiteracyStudioView })));
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
 import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
 import { ChildDashboard } from './components/profile/ChildDashboard';
@@ -132,6 +133,14 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean; subVie
   if (rawPath === '/reader' || rawPath === '/adaptive-reader') {
     return { tab: 'adaptive-reader' };
   }
+  if (
+    rawPath === '/studio' ||
+    rawPath === '/literacy-studio' ||
+    rawPath === '/library' ||
+    rawPath === '/spelling'
+  ) {
+    return { tab: 'literacy-studio' };
+  }
   if (rawPath === '/dashboard' || rawPath === '/report') {
     return { tab: 'dashboard', subView: 'report' };
   }
@@ -174,6 +183,8 @@ function tabToUrlPath(tab: ActiveTab): string {
       return '/gym';
     case 'adaptive-reader':
       return '/reader';
+    case 'literacy-studio':
+      return '/studio';
     case 'dashboard':
       return '/dashboard';
     case 'privacy':
@@ -361,6 +372,7 @@ export default function App() {
     'privacy',
     'terms',
     'dashboard',
+    'literacy-studio',
   ]);
   const isAuthenticated = Boolean(supabaseUser || baseeraSession);
 
@@ -1723,6 +1735,7 @@ export default function App() {
               { id: 'home', label: 'الرئيسية', icon: Home },
               { id: 'dyslexia-lab', label: 'فحص مهارات القراءة', icon: Brain },
               { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
+              { id: 'literacy-studio', label: 'المكتبة والإملاء', icon: BookOpen },
               { id: 'dashboard', label: 'التقرير وملف الطفل', icon: FileText },
             ] as const).map((item) => {
               const Icon = item.icon;
@@ -1810,6 +1823,7 @@ export default function App() {
           { id: 'parent-portal', label: 'طفلي', icon: Heart },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
+          { id: 'literacy-studio', label: 'المكتبة والإملاء', icon: BookOpen },
           { id: 'dashboard', label: 'التقرير', icon: FileText },
         ] as const).map((item) => {
           const Icon = item.icon;
@@ -2228,6 +2242,15 @@ export default function App() {
             problematicWords={selectedStudent.sessionStatus === 'completed' && hasVerifiedOralAudio(selectedStudent) ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}
+          />
+        )}
+
+        {activeTab === 'literacy-studio' && (
+          <ArabicLiteracyStudioView
+            childName={selectedStudent.name}
+            gradeLevel={selectedStudent.gradeLevel}
+            ageYears={selectedStudent.ageYears}
+            onClose={() => setActiveTab('home')}
           />
         )}
 

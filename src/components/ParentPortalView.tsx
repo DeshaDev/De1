@@ -182,7 +182,7 @@ interface ParentPortalViewProps {
   onLinkLocalChild: (childId: string, email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   /** Permanently delete a child's file and results (cloud account and this device). */
   onDeleteChild?: (childId: string) => Promise<{ success: boolean; error?: string }>;
-  onSelectStudent: (studentId: string, targetTab: 'dyslexia-lab' | 'dashboard' | 'guided-program') => void;
+  onSelectStudent: (studentId: string, targetTab: 'dyslexia-lab' | 'dashboard' | 'guided-program' | 'literacy-studio') => void;
   onNavigateHome: () => void;
 }
 
@@ -613,6 +613,14 @@ export function ParentPortalView({
                           >
                             <FileBarChart size={15} />
                             <span>عرض التقرير وخطة الدعم</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onSelectStudent(child.id, 'literacy-studio')}
+                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-bold transition-colors cursor-pointer border border-indigo-200/60"
+                          >
+                            <BookOpen size={15} className="text-indigo-600" />
+                            <span>استوديو القراءة والإملاء والمكتبة</span>
                           </button>
                           {deleteControls(child)}
                         </div>

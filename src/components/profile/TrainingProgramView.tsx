@@ -277,7 +277,7 @@ interface Props {
   student?: StudentRecord;
   /** Show a back button (only when the user came here from the games map or the report). */
   showBack?: boolean;
-  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab') => void;
+  onOpenExtra?: (tab: 'remediation-gym' | 'adaptive-reader' | 'reading-lab' | 'literacy-studio') => void;
 }
 
 export function TrainingProgramView({ studentId, childName, profile, onBack, onGoToBattery, onGoHome, onRunningChange, serverProgress = null, syncEnabled = false, onRecordUpdated, student, showBack = true, onOpenExtra }: Props) {
@@ -768,7 +768,7 @@ export function TrainingProgramView({ studentId, childName, profile, onBack, onG
           skillLevels={progress?.levels}
           onOpenLibrary={onOpenExtra ? () => {
             setShowStructuredLiteracyStations(false);
-            onOpenExtra('adaptive-reader');
+            onOpenExtra('literacy-studio');
           } : undefined}
           onClose={() => setShowStructuredLiteracyStations(false)}
         />
