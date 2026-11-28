@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface InteractiveNumberLineProps {
@@ -28,6 +29,10 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const trackSpring = reducedMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, stiffness: 420, damping: 34 };
 
   // Clamp value between min and max
   const clamp = useCallback(
@@ -110,9 +115,10 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
       {/* Main Interactive Trail Track Container */}
       <div className="relative pt-12 pb-7 px-4">
         {/* Floating Mascot speech bubble anchored to the current value */}
-        <div
-          className="absolute top-0 transition-all duration-75 ease-out pointer-events-none -translate-x-1/2"
-          style={{ left: `${percentage}%` }}
+        <motion.div
+          className="absolute top-0 pointer-events-none -translate-x-1/2"
+          animate={{ left: `${percentage}%` }}
+          transition={trackSpring}
         >
           <div className="bg-white border-2 border-emerald-500 text-emerald-950 font-black px-3 py-1 rounded-2xl shadow-md text-xs whitespace-nowrap flex items-center gap-1">
             <span>قفزة:</span>
@@ -121,22 +127,54 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
             </span>
             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r-2 border-b-2 border-emerald-500 rotate-45" />
           </div>
-        </div>
+        </motion.div>
 
         {/* The Track Line Bar */}
         <div
           ref={trackRef}
+          role="slider"
+          tabIndex={disabled ? -1 : 0}
+          aria-label={label || 'خط الأعداد التفاعلي'}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={value}
+          aria-valuetext={toEasternArabicDigits(value)}
+          aria-disabled={disabled || undefined}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            const stepBig = Math.max(2, Math.round((max - min) / 10));
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+              e.preventDefault();
+              onChange(clamp(value + 1));
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              onChange(clamp(value - 1));
+            } else if (e.key === 'PageUp') {
+              e.preventDefault();
+              onChange(clamp(value + stepBig));
+            } else if (e.key === 'PageDown') {
+              e.preventDefault();
+              onChange(clamp(value - stepBig));
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              onChange(min);
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              onChange(max);
+            }
+          }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className={`relative h-6 rounded-full cursor-pointer transition-all shadow-inner border-2 border-slate-300/80 ${
+          className={`relative h-6 rounded-full cursor-pointer transition-[opacity,filter,box-shadow] focus-visible:outline-3 focus-visible:outline-emerald-600 focus-visible:outline-offset-4 shadow-inner border-2 border-slate-300/80 ${
             disabled ? 'opacity-60 cursor-not-allowed bg-slate-200' : 'bg-gradient-to-r from-amber-200 via-sky-200 to-emerald-200 hover:brightness-105'
           }`}
         >
           {/* Active trail fill */}
-          <div
+          <motion.div
             className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-emerald-500 opacity-70"
-            style={{ width: `${percentage}%` }}
+            animate={{ width: `${percentage}%` }}
+            transition={trackSpring}
           />
 
           {/* Ticks on the trail (10 pips) */}
@@ -150,9 +188,10 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
           </div>
 
           {/* Thumb: a plain handle (no character on an active task) */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-75 ease-out"
-            style={{ left: `${percentage}%` }}
+          <motion.div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+            animate={{ left: `${percentage}%` }}
+            transition={trackSpring}
           >
             <div
               className={`w-14 h-14 rounded-full bg-white border-3 border-emerald-500 shadow-xl flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-110 active:scale-95 transition-transform ${
@@ -161,7 +200,7 @@ export const InteractiveNumberLine: React.FC<InteractiveNumberLineProps> = ({
             >
               <span className="w-5 h-5 rounded-full bg-emerald-500" aria-hidden="true" />
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Milestone Labels Under Track */}

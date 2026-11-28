@@ -36,7 +36,7 @@ function PolicySection({
 }
 
 export const PrivacyPolicyView: React.FC = () => (
-  <main dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
+  <article dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
     <header className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-teal-800">
         <ShieldCheck className="h-5 w-5" aria-hidden={true} />
@@ -77,10 +77,16 @@ export const PrivacyPolicyView: React.FC = () => (
         <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
           <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
             <Mail className="w-4 h-4 text-teal-700" />
-            <span>مسؤول الخصوصية وقناة التواصل الرسمية:</span>
+            <span>الدعم الرسمي ومسؤول الخصوصية:</span>
           </div>
           <p className="text-slate-600 leading-relaxed">
-            البريد الرسمي المخصص لطلبات أولياء الأمور والمدارس واستفسارات الحذف وسحب الموافقة:
+            الدعم العام لأولياء الأمور واستفسارات المنصة:
+            <br />
+            <a href="mailto:contact@hayanaqra.com" className="font-mono font-bold text-teal-800 underline">
+              contact@hayanaqra.com
+            </a>
+            <br />
+            طلبات الخصوصية والحذف وسحب الموافقة:
             <br />
             <a href="mailto:hayanaqra@vorala.xyz" className="font-mono font-bold text-teal-800 underline">
               hayanaqra@vorala.xyz
@@ -198,7 +204,7 @@ export const PrivacyPolicyView: React.FC = () => (
         صُممت منصة <strong>هَيَّا نَقْرَأْ</strong> لأغراض الدعم التعليمي التكويني وتعزيز مهارات القراءة باللغة العربية الفصحى لدى الأطفال من ٤ إلى ٨ سنوات. المنصة ليست أداة تشخيص طبي أو عيادي. نلتزم بتوفير بيئة رقمية آمنة وخالية من الإعلانات ومن التتبع التجاري بنسبة ١٠٠٪.
       </p>
     </section>
-  </main>
+  </article>
 );
 
 export default PrivacyPolicyView;

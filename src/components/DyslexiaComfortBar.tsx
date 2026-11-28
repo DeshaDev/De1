@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import {
   Volume2,
   Square,
@@ -29,7 +30,7 @@ interface DyslexiaComfortBarProps {
 }
 
 const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
-  home: 'مرحبًا بك في هَيَّا نَقْرَأْ. اختر نشاطًا للقراءة وطلاقتها، وخذ وقتك في التعلّم. يمكنك الاستماع إلى الكلمات وتغيير حجم النص والمسافات متى احتجت.',
+  home: 'مرحبًا بك في هَيَّا نَقْرَأْ، منصة تعلّم اللغة العربية وتأسيس القراءة ودعم صعوبات القراءة. اختر التأسيس والحروف، أو المكتبة المصوّرة، أو الفحص التدريبي المتخصص.',
   dashboard:
     'أنت في لوحة التحليل والمتابعة. راجع نتائج الجلسة ومؤشرات القراءة والفهم، ثم اختر نشاطًا تعليميًا مناسبًا للمتابعة.',
   'cognitive-lab':
@@ -59,7 +60,7 @@ const TAB_AUDIO_SUMMARIES: Record<AppTabId, string> = {
   'content-review':
     'أنت في صفحة مراجعة المحتوى قبل الإطلاق، وهي مخصصة للمراجع المتخصص.',
   'literacy-studio':
-    'أنت في استوديو النمو القرائي واللغوي. تدرّب في مختبر الإملاء وبناء الكلمة، واستمتع بمضمار الطلاقة والتنغيم ومكتبة القصص المتدرجة.'
+    'أنت في استوديو تعلّم اللغة العربية وتأسيس القراءة. تدرّب على الحروف الرملية، وصيد البالونات الصوتية، والأبجدية المتحركة، ومختبر الإملاء والقواعد، والقصص المرسومة.',
 };
 
 export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
@@ -75,11 +76,86 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [rulerY, setRulerY] = useState<number>(280);
   const rootRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const rulerTopMV = useMotionValue(Math.max(60, 280 - 42));
+  const rulerTopSpring = useSpring(rulerTopMV, { stiffness: 360, damping: 34, mass: 0.55 });
 
   useEffect(() => {
     stopNaturalArabicAudio();
     setIsSpeaking(false);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onDocDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', onDocDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onDocDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!readingRulerEnabled) return;
+    const clampY = (y: number) => Math.max(84, Math.min((window.innerHeight || 900) - 64, y));
+    const applyY = (nextY: number) => {
+      const clamped = clampY(nextY);
+      const top = Math.max(60, clamped - 42);
+      setRulerY(clamped);
+      if (reducedMotion) {
+        rulerTopMV.jump(top);
+        rulerTopSpring.jump(top);
+      } else {
+        rulerTopMV.set(top);
+      }
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      applyY(e.clientY);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setRulerY((prev) => {
+          const clamped = clampY(prev + 28);
+          const top = Math.max(60, clamped - 42);
+          if (reducedMotion) {
+            rulerTopMV.jump(top);
+            rulerTopSpring.jump(top);
+          } else {
+            rulerTopMV.set(top);
+          }
+          return clamped;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setRulerY((prev) => {
+          const clamped = clampY(prev - 28);
+          const top = Math.max(60, clamped - 42);
+          if (reducedMotion) {
+            rulerTopMV.jump(top);
+            rulerTopSpring.jump(top);
+          } else {
+            rulerTopMV.set(top);
+          }
+          return clamped;
+        });
+      }
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [readingRulerEnabled, reducedMotion, rulerTopMV, rulerTopSpring]);
 
   const handleToggleSpeech = () => {
     if (isSpeaking) {
@@ -123,12 +199,21 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
           )}
         </button>
 
-        {isOpen && (
-          <div role="dialog" aria-label="خيارات القراءة والعرض" className="bz-comfort-panel animate-fade-slide-up">
-            <div className="flex items-center justify-between">
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              role="dialog"
+              aria-label="خيارات القراءة والعرض"
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.96, y: -6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reducedMotion ? undefined : { opacity: 0, scale: 0.97, y: -4 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              className="bz-comfort-panel"
+            >
+              <div className="flex items-center justify-between">
               <h2>خيارات القراءة والعرض</h2>
-              <button type="button" onClick={() => setIsOpen(false)} aria-label="إغلاق" className="bz-icon-btn" style={{ width: 34, height: 34, minHeight: 34 }}>
-                <X className="w-4 h-4" />
+              <button type="button" onClick={() => setIsOpen(false)} aria-label="إغلاق" className="bz-icon-btn" style={{ width: 44, height: 44, minHeight: 44 }}>
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -196,29 +281,31 @@ export const DyslexiaComfortBar: React.FC<DyslexiaComfortBarProps> = ({
                 <RotateCcw className="w-3.5 h-3.5" /> إعادة الإعدادات الافتراضية
               </button>
             )}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
       {/* Compositor-Only Interactive Reading Focus Ruler Overlay */}
       {readingRulerEnabled && (
         <div
-          className="fixed inset-0 pointer-events-none z-50 overflow-hidden animate-fade-slide-up"
+          className="fixed inset-0 pointer-events-none z-50 overflow-hidden"
           aria-hidden="true"
           data-testid="global-reading-ruler"
+          data-ruler-y={rulerY}
         >
-          <div
+          <motion.div
             style={{
-              transform: `translate3d(0, ${Math.max(60, rulerY - 42)}px, 0)`,
+              y: reducedMotion ? rulerTopMV : rulerTopSpring,
             }}
-            className="w-full h-[84px] border-y-2 border-brand bg-sun/10 shadow-[0_0_0_9999px_rgba(15,23,42,0.28)] transition-transform duration-75 ease-out"
+            className="w-full h-[84px] border-y-2 border-brand bg-sun/10 shadow-[0_0_0_9999px_rgba(15,23,42,0.28)]"
           >
             <div className="max-w-[1360px] mx-auto px-6 h-full flex items-center justify-end">
-              <span className="px-2 py-0.5 rounded bg-[#0F172A]/85 text-amber-300 text-[10px] font-mono">
-                مسطرة التركيز
+              <span className="px-2.5 py-0.5 rounded bg-[#0F172A]/90 text-amber-300 text-xs font-bold">
+                مسطرة التركيز (تحرك بالمؤشر أو الأسهم)
               </span>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </>

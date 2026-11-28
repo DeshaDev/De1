@@ -76,7 +76,7 @@ export const ContactUsSection: React.FC = () => {
           <div className="space-y-4">
             <span className="bz-badge">
               <MessageSquareHeart size={15} aria-hidden="true" />
-              دعم الأهل والمختصين
+              دعم أولياء الأمور والأسرة
             </span>
             <h2 id="contact-us-title" className="hn-h2">تواصل معنا</h2>
             <p className="hn-body">
@@ -155,22 +155,27 @@ export const ContactUsSection: React.FC = () => {
                       maxLength={100}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="مثال: أم سارة / أحمد علي"
+                      placeholder="مثال: فهد حمد"
                       className="bz-input"
                     />
                   </label>
                   <label className="bz-field">
                     <span className="bz-label">عمر الطفل *</span>
-                    <input
-                      type="text"
+                    <select
                       required
-                      minLength={1}
-                      maxLength={40}
                       value={childAge}
                       onChange={(e) => setChildAge(e.target.value)}
-                      placeholder="مثال: ٦ سنوات"
-                      className="bz-input"
-                    />
+                      className="bz-input bg-white cursor-pointer"
+                    >
+                      <option value="" disabled>اختر عمر الطفل</option>
+                      <option value="٤ سنوات">٤ سنوات</option>
+                      <option value="٥ سنوات">٥ سنوات</option>
+                      <option value="٦ سنوات">٦ سنوات</option>
+                      <option value="٧ سنوات">٧ سنوات</option>
+                      <option value="٨ سنوات">٨ سنوات</option>
+                      <option value="أكثر من ٨ سنوات">أكثر من ٨ سنوات</option>
+                      <option value="استفسار عام">استفسار عام</option>
+                    </select>
                   </label>
                 </div>
 

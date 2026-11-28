@@ -658,13 +658,14 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
                 const isCurrent = wIdx === highlightWordIdx;
                 const isPassed = wIdx < highlightWordIdx;
                 return (
-                  <span
+                  <button
+                    type="button"
                     key={wIdx}
                     onClick={() => {
                       setHighlightWordIdx(wIdx);
                       speakText(word);
                     }}
-                    className={`px-2 py-1 rounded-xl transition-all cursor-pointer select-none ${
+                    className={`px-2 py-1 rounded-xl transition-[transform,background-color,color,box-shadow] cursor-pointer ${
                       isCurrent
                         ? 'bg-amber-400 text-slate-950 scale-110 shadow-md ring-4 ring-amber-400/30'
                         : isPassed
@@ -673,7 +674,7 @@ export const DailySprintStation: React.FC<DailySprintStationProps> = ({
                     }`}
                   >
                     {word}
-                  </span>
+                  </button>
                 );
               })}
             </div>

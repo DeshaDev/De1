@@ -24,7 +24,7 @@ function TermsSection({
 }
 
 export const TermsOfUseView: React.FC = () => (
-  <main dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
+  <article dir="rtl" lang="ar" className="mx-auto w-full max-w-4xl space-y-6">
     <header className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
       <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-teal-800">
         <FileText className="h-5 w-5" aria-hidden={true} />
@@ -81,7 +81,7 @@ export const TermsOfUseView: React.FC = () => (
       <p><strong>الصور:</strong> صور الألعاب والتمارين من مجموعة <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noreferrer" className="font-bold underline text-teal-800">Twemoji</a>، وهي مرخّصة بموجب <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="font-bold underline text-teal-800">CC BY ٤٫٠</a>.</p>
       <p><strong>الجهة المطوّرة:</strong> منصة هَيَّا نَقْرَأْ التابعة لشركة فورالا (Vorala LLC) المسجلة في الولايات المتحدة الأمريكية. بيانات التواصل الرسمية لطلبات الخصوصية مذكورة في سياسة الخصوصية.</p>
     </TermsSection>
-  </main>
+  </article>
 );
 
 export default TermsOfUseView;

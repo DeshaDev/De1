@@ -17,6 +17,7 @@ import {
   Home,
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
+import { formatArabicCount } from '../../utils/arabicDigits';
 import {
   ChoiceSubtest,
   DOMAINS,
@@ -974,6 +975,7 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
   const [view, setView] = useState<View>(() =>
     initialView === 'training' ? { name: 'training' } : session ? { name: 'map' } : { name: 'setup' }
   );
+  const [showAllSittings, setShowAllSittings] = useState(false);
 
   // Restore the appropriate screen only when the active learner/session identity changes.
   // Updating results for the same learner must not unmount the running subtest before its
@@ -1339,62 +1341,94 @@ export function CognitiveBatteryView({ activeStudent, initialView = 'map', onFoc
         );
       })()}
 
-      {sittings.map((games, sitting) => (
-        <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">
-          <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
-            الجلسة {toArabicDigits(sitting + 1)}
-            <span className="bz-small bz-muted font-normal">نحو {formatMinutesAr(roundEstimateMinutes(sittingMinutes(games)))}</span>
-            {games.every((g) => session.results[g.id] && !session.inProgress?.[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
-          </h3>
-      <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
-        {games.map((s) => {
-          const inProg = session.inProgress?.[s.id];
-          const isPaused = Boolean(inProg);
-          const done = Boolean(session.results[s.id] && !isPaused);
-          const isNext = nextSubtest?.id === s.id;
-          const domain = DOMAINS[s.domain];
-          return (
-            <li key={s.id}>
-              <button
-                type="button"
-                onClick={() => setView({ name: 'run', id: s.id })}
-                className="joy-card joy-card-hover w-full h-full p-5 flex flex-col gap-4 text-right"
-                style={{
-                  borderTop: `6px solid ${domain.color}`,
-                  ...(isNext ? { borderColor: 'var(--brand)', borderTopColor: domain.color, boxShadow: '0 4px 0 var(--brand), 0 0 0 4px var(--brand-soft)' } : {}),
-                  ...(done ? { background: `color-mix(in srgb, ${domain.color} 6%, var(--card))` } : {}),
-                }}
-              >
-                <div className="flex items-start justify-between gap-3 w-full">
-                  <span className="joy-tile w-20 h-20 text-5xl" style={{ background: `color-mix(in srgb, ${domain.color} 14%, var(--card))` }} aria-hidden="true">{s.icon}</span>
-                  {done ? (
-                    <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة ⭐</span>
-                  ) : isPaused ? (
-                    <span className="bz-badge bz-badge-warn">
-                      <PauseCircle className="w-3.5 h-3.5" /> محفوظة مؤقتًا{inProg && inProg.responses.length > 0 ? ` (${toArabicDigits(inProg.responses.length)}/${toArabicDigits(scoredItemCount(s))})` : ''}
-                    </span>
-                  ) : isNext ? (
-                    <span className="bz-badge bz-badge-sun">التالية</span>
-                  ) : (
-                    <span className="bz-small bz-muted bz-num">{toArabicDigits(ageTasks.indexOf(s) + 1)} / {toArabicDigits(ageTasks.length)}</span>
-                  )}
-                </div>
-                <div className="w-full">
-                  <p className="font-child text-[22px] font-bold text-ink leading-snug">{s.gameNameAr}</p>
-                  <p className="bz-small text-ink-2 mt-1">{s.skillNameAr}</p>
-                </div>
-                {done ? (
-                  <div className="mt-auto w-full text-[12px] font-semibold pt-3 border-t border-line bz-muted">إعادة اللعبة</div>
-                ) : isPaused ? (
-                  <div className="mt-auto w-full text-[12px] font-bold pt-3 border-t border-line text-amber-800">▶️ اضغط لاستكمال اللعبة من حيث توقفت</div>
-                ) : null}
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-        </section>
-      ))}
+      {(() => {
+        const activeSittingIdx = nextSitting >= 0 ? nextSitting : 0;
+        const visibleSittings = showAllSittings
+          ? sittings.map((games, idx) => ({ games, idx }))
+          : sittings
+              .map((games, idx) => ({ games, idx }))
+              .filter(({ idx }) => idx === activeSittingIdx);
+
+        return (
+          <div className="space-y-4">
+            {sittings.length > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black text-ink">
+                  {showAllSittings
+                    ? `كل جلسات الفحص (${formatArabicCount(sittings.length, { singular: 'جلسة', dual: 'جلستان', plural: 'جلسات', accusative: 'جلسةً' })})`
+                    : `مهام الجلسة الحالية فقط (${formatArabicCount(visibleSittings[0]?.games.length ?? 0, { singular: 'مهمة قصيرة', dual: 'مهمتان قصيرتان', plural: 'مهام قصيرة', accusative: 'مهمةً قصيرة' })})`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAllSittings((prev) => !prev)}
+                  className="text-xs font-extrabold text-brand hover:underline cursor-pointer"
+                >
+                  {showAllSittings
+                    ? 'عرض الجلسة الحالية فقط'
+                    : `عرض كل الجلسات (${formatArabicCount(ageTasks.length, { singular: 'لعبة', dual: 'لعبتان', plural: 'ألعاب', accusative: 'لعبةً' })})`}
+                </button>
+              </div>
+            )}
+
+            {visibleSittings.map(({ games, idx: sitting }) => (
+              <section key={sitting} aria-labelledby={`sitting-${sitting}`} className="space-y-3">
+                <h3 id={`sitting-${sitting}`} className="font-semibold text-ink flex flex-wrap items-baseline gap-2">
+                  الجلسة {toArabicDigits(sitting + 1)} من {toArabicDigits(sittings.length)}
+                  <span className="bz-small bz-muted font-normal">نحو {formatMinutesAr(roundEstimateMinutes(sittingMinutes(games)))}</span>
+                  {games.every((g) => session.results[g.id] && !session.inProgress?.[g.id]) && <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> اكتملت</span>}
+                </h3>
+            <ol className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0">
+              {games.map((s) => {
+                const inProg = session.inProgress?.[s.id];
+                const isPaused = Boolean(inProg);
+                const done = Boolean(session.results[s.id] && !isPaused);
+                const isNext = nextSubtest?.id === s.id;
+                const domain = DOMAINS[s.domain];
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => setView({ name: 'run', id: s.id })}
+                      className="joy-card joy-card-hover w-full h-full p-5 flex flex-col gap-4 text-right"
+                      style={{
+                        borderTop: `6px solid ${domain.color}`,
+                        ...(isNext ? { borderColor: 'var(--brand)', borderTopColor: domain.color, boxShadow: '0 4px 0 var(--brand), 0 0 0 4px var(--brand-soft)' } : {}),
+                        ...(done ? { background: `color-mix(in srgb, ${domain.color} 6%, var(--card))` } : {}),
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3 w-full">
+                        <span className="joy-tile w-20 h-20 text-5xl" style={{ background: `color-mix(in srgb, ${domain.color} 14%, var(--card))` }} aria-hidden="true">{s.icon}</span>
+                        {done ? (
+                          <span className="bz-badge bz-badge-brand"><CheckCircle2 className="w-3.5 h-3.5" /> مكتملة ⭐</span>
+                        ) : isPaused ? (
+                          <span className="bz-badge bz-badge-warn">
+                            <PauseCircle className="w-3.5 h-3.5" /> محفوظة مؤقتًا{inProg && inProg.responses.length > 0 ? ` (${toArabicDigits(inProg.responses.length)}/${toArabicDigits(scoredItemCount(s))})` : ''}
+                          </span>
+                        ) : isNext ? (
+                          <span className="bz-badge bz-badge-sun">التالية</span>
+                        ) : (
+                          <span className="bz-small bz-muted bz-num">{toArabicDigits(ageTasks.indexOf(s) + 1)} / {toArabicDigits(ageTasks.length)}</span>
+                        )}
+                      </div>
+                      <div className="w-full">
+                        <p className="font-child text-[22px] font-bold text-ink leading-snug">{s.gameNameAr}</p>
+                        <p className="bz-small text-ink-2 mt-1">{s.skillNameAr}</p>
+                      </div>
+                      {done ? (
+                        <div className="mt-auto w-full text-[12px] font-semibold pt-3 border-t border-line bz-muted">إعادة اللعبة</div>
+                      ) : isPaused ? (
+                        <div className="mt-auto w-full text-[12px] font-bold pt-3 border-t border-line text-amber-800">▶️ اضغط لاستكمال اللعبة من حيث توقفت</div>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+              </section>
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {profile ? (

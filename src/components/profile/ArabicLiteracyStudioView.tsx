@@ -1,71 +1,284 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookOpen,
-  Sparkles,
-  ArrowRight,
   ArrowLeft,
+  ArrowRight,
+  Award,
+  Blocks,
+  BookOpen,
+  Brain,
+  CheckCircle2,
+  Feather,
+  GraduationCap,
+  HelpCircle,
+  Lightbulb,
+  PenTool,
+  Play,
+  RotateCcw,
+  ShoppingBasket,
+  Sparkles,
+  Star,
   Volume2,
   VolumeX,
-  CheckCircle2,
-  HelpCircle,
-  RotateCcw,
-  Star,
-  Award,
-  Layers,
-  Feather,
-  Smile,
-  ChevronLeft,
-  ChevronRight,
-  Lightbulb,
-  Check,
   X,
-  Clock,
-  ShieldCheck,
-  BookmarkCheck,
 } from 'lucide-react';
 import { playNaturalArabicAudio, stopNaturalArabicAudio } from '../../utils/naturalSpeech';
 import { toArabicNum } from '../../utils/arabicDigits';
 import {
-  SPELLING_LESSONS,
   FLUENCY_PASSAGES,
-  LEVELED_STORIES,
-  SpellingLesson,
-  FluencyPassageTrack,
-  LeveledArabicStory,
-  getRecommendedFluencyPassage,
-  getRecommendedStoriesForGrade,
+  SPELLING_LESSONS,
+  type FluencyPassageTrack,
+  type SpellingLesson,
 } from '../../cognitiveProfile/literacyStudio';
+import {
+  ARABIC_LANGUAGE_UNITS,
+  type ArabicLanguageUnit,
+} from '../../cognitiveProfile/arabicFoundations';
+import {
+  buildAdaptiveArabicPrescription,
+  type DetectedErrorPattern,
+  type StudioTabId,
+} from '../../cognitiveProfile/arabicErrorAdapter';
+import {
+  LEARNING_PATH_STATIONS,
+  getNextStationId,
+  getStationById,
+  type LearningStation,
+  type LearningTrackId,
+} from '../../cognitiveProfile/learningPath';
+import {
+  getStationMasteryPercent,
+  loadStudioAdaptiveState,
+  pickAdaptiveRecommendedStation,
+  recordLetterAttempt,
+  recordStationAnswer,
+  recordStoryActivity,
+  saveStudioAdaptiveState,
+  type StudioAdaptiveState,
+} from '../../cognitiveProfile/studioAdaptive';
+import type { StudentRecord } from '../../data/seedData';
+import type { AppTabId } from '../HomeLandingView';
+import { ArabicFoundationsView, type FoundationSubMode } from './ArabicFoundationsView';
+import { InteractiveStoryReader } from '../reader/InteractiveStoryReader';
+import { Mascot } from '../ui/Mascot';
 
 interface ArabicLiteracyStudioViewProps {
+  student?: StudentRecord;
   childName?: string;
   gradeLevel?: number;
   ageYears?: number;
-  initialTab?: 'spelling' | 'fluency' | 'library';
+  initialTab?: StudioTabId;
+  initialStoryId?: string;
   onClose?: () => void;
-  onActivityCompleted?: (type: 'spelling' | 'fluency' | 'story', id: string) => void;
+  onNavigateTab?: (tab: AppTabId) => void;
+  onActivityCompleted?: (
+    type: 'foundations' | 'spelling' | 'fluency' | 'story',
+    id: string,
+    extraWords?: string[],
+  ) => void;
 }
 
+type TrackFilterId = 'all' | Exclude<LearningTrackId, 'language'>;
+type SpellingPhase = 'learn' | 'example' | 'practice' | 'build' | 'celebrate';
+type LanguagePhase = 'learn' | 'practice' | 'celebrate';
+type FluencyPhase = 'listen' | 'phrase' | 'celebrate';
+
+function getStationIcon(station: LearningStation, className = 'w-6 h-6') {
+  if (station.kind === 'foundation') {
+    if (station.refId === 'trace') return <PenTool className={className} aria-hidden="true" />;
+    if (station.refId === 'basket') return <ShoppingBasket className={className} aria-hidden="true" />;
+    if (station.refId === 'balloon') return <Sparkles className={className} aria-hidden="true" />;
+    return <Blocks className={className} aria-hidden="true" />;
+  }
+  if (station.kind === 'spelling') return <PenTool className={className} aria-hidden="true" />;
+  if (station.kind === 'language') return <GraduationCap className={className} aria-hidden="true" />;
+  if (station.kind === 'fluency') return <Feather className={className} aria-hidden="true" />;
+  return <BookOpen className={className} aria-hidden="true" />;
+}
+
+const ACCENT_CLASSES: Record<
+  LearningStation['accent'],
+  { card: string; badge: string; btn: string; softBg: string; border: string }
+> = {
+  emerald: {
+    card: 'border-emerald-300 bg-white hover:border-emerald-500 shadow-[0_6px_0_0_rgba(16,185,129,0.14)]',
+    badge: 'bg-emerald-100 text-emerald-900',
+    btn: 'bg-emerald-600 hover:bg-emerald-700 border-emerald-800',
+    softBg: 'bg-emerald-50',
+    border: 'border-emerald-300',
+  },
+  sky: {
+    card: 'border-sky-300 bg-white hover:border-sky-500 shadow-[0_6px_0_0_rgba(14,165,233,0.14)]',
+    badge: 'bg-sky-100 text-sky-900',
+    btn: 'bg-sky-600 hover:bg-sky-700 border-sky-800',
+    softBg: 'bg-sky-50',
+    border: 'border-sky-300',
+  },
+  amber: {
+    card: 'border-amber-300 bg-white hover:border-amber-500 shadow-[0_6px_0_0_rgba(245,158,11,0.16)]',
+    badge: 'bg-amber-100 text-amber-950',
+    btn: 'bg-amber-500 hover:bg-amber-600 border-amber-700',
+    softBg: 'bg-amber-50',
+    border: 'border-amber-300',
+  },
+  violet: {
+    card: 'border-violet-300 bg-white hover:border-violet-500 shadow-[0_6px_0_0_rgba(139,92,246,0.14)]',
+    badge: 'bg-violet-100 text-violet-900',
+    btn: 'bg-violet-600 hover:bg-violet-700 border-violet-800',
+    softBg: 'bg-violet-50',
+    border: 'border-violet-300',
+  },
+  teal: {
+    card: 'border-teal-300 bg-white hover:border-teal-500 shadow-[0_6px_0_0_rgba(20,184,166,0.14)]',
+    badge: 'bg-teal-100 text-teal-900',
+    btn: 'bg-teal-600 hover:bg-teal-700 border-teal-800',
+    softBg: 'bg-teal-50',
+    border: 'border-teal-300',
+  },
+};
+
 export const ArabicLiteracyStudioView: React.FC<ArabicLiteracyStudioViewProps> = ({
+  student,
   childName = 'البطل',
   gradeLevel = 1,
-  ageYears = 7,
-  initialTab = 'spelling',
+  ageYears: _ageYears = 7,
+  initialTab = 'foundations',
+  initialStoryId,
   onClose,
+  onNavigateTab,
   onActivityCompleted,
 }) => {
-  const [activeTab, setActiveTab] = useState<'spelling' | 'fluency' | 'library'>(initialTab);
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const effectiveName = student?.name || childName;
+  const firstName = effectiveName.trim() ? effectiveName.trim().split(/\s+/)[0] : 'البطل';
+  const effectiveGrade = student?.gradeLevel ?? gradeLevel;
+
+  const prescription = useMemo(() => buildAdaptiveArabicPrescription(student), [student]);
+
+  const [adaptiveState, setAdaptiveState] = useState<StudioAdaptiveState>(() =>
+    loadStudioAdaptiveState(student?.id),
+  );
+  const completedStations = adaptiveState.completedStations;
+
+  const updateAdaptiveState = useCallback(
+    (updater: (prev: StudioAdaptiveState) => StudioAdaptiveState) => {
+      setAdaptiveState((prev) => {
+        const next = updater(prev);
+        saveStudioAdaptiveState(student?.id, next);
+        return next;
+      });
+    },
+    [student?.id],
+  );
+
+  const adaptiveRecommendation = useMemo(
+    () => pickAdaptiveRecommendedStation(student, prescription, completedStations, adaptiveState),
+    [student, prescription, completedStations, adaptiveState],
+  );
+  const recommendedStation = adaptiveRecommendation.station;
+
+  const getInitialStationFromProps = useCallback(
+    (tab: StudioTabId, storyId?: string): string | null => {
+      if (tab === 'library' || storyId) return 'stories-library';
+      return null;
+    },
+    [],
+  );
+
+  const [activeStationId, setActiveStationId] = useState<string | null>(() =>
+    getInitialStationFromProps(initialTab, initialStoryId),
+  );
+  const [trackFilter, setTrackFilter] = useState<TrackFilterId>(() => {
+    if (initialTab === 'spelling') return 'spelling';
+    if (initialTab === 'fluency') return 'fluency';
+    const recTrack = adaptiveRecommendation.station.track;
+    return recTrack === 'language' ? 'spelling' : recTrack === 'stories' ? 'letters' : recTrack;
+  });
+  const [showParentGuide, setShowParentGuide] = useState(false);
+  const [isStoryFocused, setIsStoryFocused] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
 
-  // Stop audio when component unmounts or activeTab changes
+  // Inner phase states for single-skill stepped player
+  const [spellingPhase, setSpellingPhase] = useState<SpellingPhase>('learn');
+  const [practiceIdx, setPracticeIdx] = useState(0);
+  const [spellingRetryQueue, setSpellingRetryQueue] = useState<number[]>([]);
+  const [selectedPracticeOpt, setSelectedPracticeOpt] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(false);
+  const [assembledTileIndices, setAssembledTileIndices] = useState<number[]>([]);
+  const [assemblyFeedback, setAssemblyFeedback] = useState<string | null>(null);
+
+  const [langPhase, setLangPhase] = useState<LanguagePhase>('learn');
+  const [langIdx, setLangIdx] = useState(0);
+  const [langRetryQueue, setLangRetryQueue] = useState<number[]>([]);
+  const [langChoice, setLangChoice] = useState<string | null>(null);
+
+  const [fluencyPhase, setFluencyPhase] = useState<FluencyPhase>('listen');
+  const [phraseIdx, setPhraseIdx] = useState(0);
+
+  const prevStudentIdRef = useRef<string | undefined>(student?.id);
+
+  // Sync URL/external route changes cleanly
+  useEffect(() => {
+    if (initialTab === 'library' || initialStoryId) {
+      setActiveStationId('stories-library');
+    } else if (initialTab === 'spelling') {
+      setTrackFilter('spelling');
+      setActiveStationId(null);
+    } else if (initialTab === 'fluency') {
+      setTrackFilter('fluency');
+      setActiveStationId(null);
+    }
+  }, [initialTab, initialStoryId]);
+
+  // Reload progress and reset view only when switching to a different student profile
+  useEffect(() => {
+    if (prevStudentIdRef.current === student?.id) return;
+    prevStudentIdRef.current = student?.id;
+    stopNaturalArabicAudio();
+    setIsPlayingAudio(false);
+    setAdaptiveState(loadStudioAdaptiveState(student?.id));
+    setActiveStationId(getInitialStationFromProps(initialTab, initialStoryId));
+    setSpellingPhase('learn');
+    setPracticeIdx(0);
+    setSpellingRetryQueue([]);
+    setSelectedPracticeOpt(null);
+    setShowHint(false);
+    setAssembledTileIndices([]);
+    setAssemblyFeedback(null);
+    setLangPhase('learn');
+    setLangIdx(0);
+    setLangRetryQueue([]);
+    setLangChoice(null);
+    setFluencyPhase('listen');
+    setPhraseIdx(0);
+  }, [student?.id, initialTab, initialStoryId, getInitialStationFromProps]);
+
+  // Immersion focus mode when inside any non-stories skill player
+  useEffect(() => {
+    if (activeStationId && activeStationId !== 'stories-library') {
+      document.body.classList.add('baseera-reading-focus');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      return () => {
+        document.body.classList.remove('baseera-reading-focus');
+      };
+    }
+    return undefined;
+  }, [activeStationId]);
+
+  // Stop speech when leaving station or unmounting
   useEffect(() => {
     return () => {
       stopNaturalArabicAudio();
     };
-  }, [activeTab]);
+  }, [activeStationId]);
+
+  const stopAudio = useCallback(() => {
+    stopNaturalArabicAudio();
+    setIsPlayingAudio(false);
+  }, []);
 
   const speak = useCallback(async (text: string) => {
     try {
+      stopNaturalArabicAudio();
       setAudioError(null);
       setIsPlayingAudio(true);
       await playNaturalArabicAudio(text, {
@@ -80,1101 +293,1258 @@ export const ArabicLiteracyStudioView: React.FC<ArabicLiteracyStudioViewProps> =
     }
   }, []);
 
-  const stopAudio = useCallback(() => {
-    stopNaturalArabicAudio();
-    setIsPlayingAudio(false);
-  }, []);
+  const markStationCompleted = useCallback(
+    (stationId: string) => {
+      updateAdaptiveState((prev) => ({
+        ...prev,
+        completedStations: [...new Set([...prev.completedStations, stationId])],
+      }));
+    },
+    [updateAdaptiveState],
+  );
 
-  // -------------------------------------------------------------------------
-  // 1. SPELLING GYM STATE
-  // -------------------------------------------------------------------------
-  const [selectedSpellingId, setSelectedSpellingId] = useState<string>(SPELLING_LESSONS[0].id);
-  const [spellingStep, setSpellingStep] = useState<1 | 2 | 3 | 4>(1);
-  const [guidedPracticeIndex, setGuidedPracticeIndex] = useState<number>(0);
-  const [selectedPracticeOption, setSelectedPracticeOption] = useState<string | null>(null);
-  const [showPracticeHint, setShowPracticeHint] = useState<boolean>(false);
-  const [assembledSyllables, setAssembledSyllables] = useState<string[]>([]);
-  const [independentCompleted, setIndependentCompleted] = useState<boolean>(false);
-
-  const activeSpellingLesson = useMemo<SpellingLesson>(() => {
-    return SPELLING_LESSONS.find((l) => l.id === selectedSpellingId) || SPELLING_LESSONS[0];
-  }, [selectedSpellingId]);
-
-  const handleSelectLesson = (lessonId: string) => {
+  const resetStationPlayerState = useCallback(() => {
     stopAudio();
-    setSelectedSpellingId(lessonId);
-    setSpellingStep(1);
-    setGuidedPracticeIndex(0);
-    setSelectedPracticeOption(null);
-    setShowPracticeHint(false);
-    setAssembledSyllables([]);
-    setIndependentCompleted(false);
-  };
+    setAudioError(null);
+    setSpellingPhase('learn');
+    setPracticeIdx(0);
+    setSpellingRetryQueue([]);
+    setSelectedPracticeOpt(null);
+    setShowHint(false);
+    setAssembledTileIndices([]);
+    setAssemblyFeedback(null);
+    setLangPhase('learn');
+    setLangIdx(0);
+    setLangRetryQueue([]);
+    setLangChoice(null);
+    setFluencyPhase('listen');
+    setPhraseIdx(0);
+  }, [stopAudio]);
 
-  const handleTileClick = (tile: string) => {
-    if (assembledSyllables.includes(tile)) {
-      setAssembledSyllables((prev) => prev.filter((t) => t !== tile));
+  const openStation = useCallback(
+    (stationId: string) => {
+      resetStationPlayerState();
+      setActiveStationId(stationId);
+      setShowParentGuide(false);
+    },
+    [resetStationPlayerState],
+  );
+
+  const closePlayer = useCallback(() => {
+    stopAudio();
+    setActiveStationId(null);
+  }, [stopAudio]);
+
+  const handleAdvanceNext = useCallback(() => {
+    if (!activeStationId) return;
+    const nextId = getNextStationId(activeStationId);
+    if (nextId) {
+      openStation(nextId);
     } else {
-      setAssembledSyllables((prev) => [...prev, tile]);
+      closePlayer();
     }
+  }, [activeStationId, openStation, closePlayer]);
+
+  const activeStation = useMemo(
+    () => getStationById(activeStationId),
+    [activeStationId],
+  );
+
+  const visibleStations = useMemo(() => {
+    if (trackFilter === 'all') return LEARNING_PATH_STATIONS;
+    if (trackFilter === 'spelling') {
+      return LEARNING_PATH_STATIONS.filter(
+        (s) => s.track === 'spelling' || s.track === 'language',
+      );
+    }
+    return LEARNING_PATH_STATIONS.filter((s) => s.track === trackFilter);
+  }, [trackFilter]);
+
+  const activeSpellingLesson: SpellingLesson | undefined = useMemo(() => {
+    if (activeStation?.kind !== 'spelling') return undefined;
+    return SPELLING_LESSONS.find((l) => l.id === activeStation.refId) || SPELLING_LESSONS[0];
+  }, [activeStation]);
+
+  const availableTiles = useMemo(() => {
+    if (!activeSpellingLesson) return [];
+    return [
+      ...activeSpellingLesson.independentTask.scrambledSyllables,
+      ...(activeSpellingLesson.independentTask.distractorTiles || []),
+    ].sort((a, b) => a.localeCompare(b, 'ar'));
+  }, [activeSpellingLesson]);
+
+  const activeLanguageUnit: ArabicLanguageUnit | undefined = useMemo(() => {
+    if (activeStation?.kind !== 'language') return undefined;
+    return ARABIC_LANGUAGE_UNITS.find((u) => u.id === activeStation.refId) || ARABIC_LANGUAGE_UNITS[0];
+  }, [activeStation]);
+
+  const activeFluencyPassage: FluencyPassageTrack | undefined = useMemo(() => {
+    if (activeStation?.kind !== 'fluency') return undefined;
+    return FLUENCY_PASSAGES.find((p) => p.id === activeStation.refId) || FLUENCY_PASSAGES[0];
+  }, [activeStation]);
+
+  const handleTileIndexClick = (tileIdx: number) => {
+    setAssemblyFeedback(null);
+    setAssembledTileIndices((prev) =>
+      prev.includes(tileIdx) ? prev.filter((x) => x !== tileIdx) : [...prev, tileIdx],
+    );
   };
 
-  const checkIndependentAssembly = () => {
-    const assembledWord = assembledSyllables.join('');
-    const target = activeSpellingLesson.independentTask.targetWord.replace(/[\u064B-\u065F\u0670\u0640\s]/g, '');
+  const checkSpellingAssembly = () => {
+    if (!activeSpellingLesson || !activeStation) return;
+    const assembledWord = assembledTileIndices.map((idx) => availableTiles[idx] ?? '').join('');
+    const target = activeSpellingLesson.independentTask.targetWord.replace(
+      /[\u064B-\u065F\u0670\u0640\s]/g,
+      '',
+    );
     const cleanAssembled = assembledWord.replace(/[\u064B-\u065F\u0670\u0640\s]/g, '');
 
-    if (cleanAssembled === target || assembledSyllables.length === activeSpellingLesson.independentTask.scrambledSyllables.length) {
-      setIndependentCompleted(true);
-      speak(`رائع يا ${childName}! كتابة صحيحة تمامًا: ${activeSpellingLesson.independentTask.targetWord}`);
+    if (cleanAssembled === target) {
+      setAssemblyFeedback(null);
+      markStationCompleted(activeStation.id);
       onActivityCompleted?.('spelling', activeSpellingLesson.id);
+      setSpellingPhase('celebrate');
+      void speak('أَحْسَنْتَ! إِجَابَةٌ صَحِيحَةٌ.');
     } else {
-      speak('حاول إعادة ترتيب المقاطع بالترتيب الصحيح.');
+      setAssemblyFeedback('جرّب إعادة ترتيب المقاطع لتطابق الكلمة المطلوبة.');
+      void speak('حاول إعادة ترتيب المقاطع بالترتيب الصحيح.');
     }
   };
 
-  // -------------------------------------------------------------------------
-  // 2. FLUENCY TRACK STATE
-  // -------------------------------------------------------------------------
-  const [selectedFluencyId, setSelectedFluencyId] = useState<string>(
-    getRecommendedFluencyPassage(gradeLevel).id
-  );
-  const [activePhraseIndex, setActivePhraseIndex] = useState<number | null>(null);
-  const [fluencyChecklist, setFluencyChecklist] = useState<{ accuracy: boolean; phrasing: boolean; expression: boolean }>({
-    accuracy: false,
-    phrasing: false,
-    expression: false,
-  });
-  const [fluencySessionDone, setFluencySessionDone] = useState<boolean>(false);
+  const resolvePatternStationId = (pattern: DetectedErrorPattern): string | null => {
+    if (pattern.targetTab === 'foundations') {
+      return `foundation-${pattern.targetSubMode || 'trace'}`;
+    }
+    if (pattern.targetTab === 'spelling') {
+      return `spelling-${pattern.targetSubMode || prescription.recommendedSpellingLessonId}`;
+    }
+    if (pattern.targetTab === 'fluency') {
+      return `fluency-fluency-g${Math.max(1, Math.min(3, effectiveGrade || 1))}`;
+    }
+    return null;
+  };
 
-  const activeFluencyPassage = useMemo<FluencyPassageTrack>(() => {
-    return FLUENCY_PASSAGES.find((p) => p.id === selectedFluencyId) || FLUENCY_PASSAGES[0];
-  }, [selectedFluencyId]);
-
-  const handleSelectFluency = (id: string) => {
+  const handleApplyParentPattern = (pattern: DetectedErrorPattern) => {
     stopAudio();
-    setSelectedFluencyId(id);
-    setActivePhraseIndex(null);
-    setFluencyChecklist({ accuracy: false, phrasing: false, expression: false });
-    setFluencySessionDone(false);
-  };
-
-  const handleReadPhrase = async (phrase: string, index: number) => {
-    setActivePhraseIndex(index);
-    await speak(phrase);
-  };
-
-  // -------------------------------------------------------------------------
-  // 3. LEVELED LIBRARY STATE
-  // -------------------------------------------------------------------------
-  const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
-  const [currentStoryPage, setCurrentStoryPage] = useState<number>(1);
-  const [selectedStoryLevel, setSelectedStoryLevel] = useState<number>(0); // 0 = all
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState<boolean>(false);
-
-  const activeStory = useMemo<LeveledArabicStory | null>(() => {
-    if (!selectedStoryId) return null;
-    return LEVELED_STORIES.find((s) => s.id === selectedStoryId) || null;
-  }, [selectedStoryId]);
-
-  const filteredStories = useMemo(() => {
-    if (selectedStoryLevel === 0) return LEVELED_STORIES;
-    return LEVELED_STORIES.filter((s) => s.level === selectedStoryLevel);
-  }, [selectedStoryLevel]);
-
-  const handleOpenStory = (story: LeveledArabicStory) => {
-    stopAudio();
-    setSelectedStoryId(story.id);
-    setCurrentStoryPage(1);
-    setQuizAnswers({});
-    setQuizSubmitted(false);
-  };
-
-  const handleCloseStory = () => {
-    stopAudio();
-    setSelectedStoryId(null);
-  };
-
-  const handleQuizAnswer = (questionId: string, optionIndex: number) => {
-    setQuizAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
-  };
-
-  const submitQuiz = () => {
-    setQuizSubmitted(true);
-    if (activeStory) {
-      let correct = 0;
-      activeStory.comprehensionQuiz.forEach((q) => {
-        if (quizAnswers[q.id] === q.correctIndex) correct++;
-      });
-      speak(`أحسنت يا ${childName}! أجبت على ${toArabicNum(correct)} من ${toArabicNum(activeStory.comprehensionQuiz.length)} في الفهم القرائي.`);
-      onActivityCompleted?.('story', activeStory.id);
+    if (pattern.targetTab === 'dyslexia-lab' || pattern.targetTab === 'guided-program') {
+      setShowParentGuide(false);
+      onNavigateTab?.(pattern.targetTab);
+      return;
+    }
+    const targetStation = resolvePatternStationId(pattern);
+    if (targetStation && getStationById(targetStation)) {
+      openStation(targetStation);
+    } else {
+      setShowParentGuide(false);
     }
   };
 
-  // -------------------------------------------------------------------------
-  // RENDER HELPERS
-  // -------------------------------------------------------------------------
-  return (
-    <div className="space-y-6 max-w-5xl mx-auto px-4 py-4" dir="rtl">
-      {/* HEADER & TOP NAVIGATION */}
-      <header className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-teal-50 text-teal-800 border border-teal-200">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                استوديو النمو القرائي واللغوي المستمر
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                ملف {childName} · الصف {toArabicNum(gradeLevel)}
-              </span>
+  // Compute progress percentage inside player
+  const playerProgressPercent = useMemo(() => {
+    if (!activeStation) return 0;
+    if (activeStation.kind === 'spelling') {
+      const map: Record<SpellingPhase, number> = {
+        learn: 20,
+        example: 40,
+        practice: 65,
+        build: 85,
+        celebrate: 100,
+      };
+      return map[spellingPhase];
+    }
+    if (activeStation.kind === 'language' && activeLanguageUnit) {
+      if (langPhase === 'learn') return 20;
+      if (langPhase === 'celebrate') return 100;
+      return Math.round(30 + ((langIdx + 1) / activeLanguageUnit.items.length) * 65);
+    }
+    if (activeStation.kind === 'fluency' && activeFluencyPassage) {
+      if (fluencyPhase === 'listen') return 15;
+      if (fluencyPhase === 'celebrate') return 100;
+      return Math.round(25 + ((phraseIdx + 1) / activeFluencyPassage.phrasedLines.length) * 70);
+    }
+    return 50;
+  }, [
+    activeStation,
+    spellingPhase,
+    langPhase,
+    langIdx,
+    activeLanguageUnit,
+    fluencyPhase,
+    phraseIdx,
+    activeFluencyPassage,
+  ]);
+
+  const currentAudioPrompt = useMemo(() => {
+    if (!activeStation) return '';
+    if (activeStation.kind === 'spelling' && activeSpellingLesson) {
+      if (spellingPhase === 'learn') return activeSpellingLesson.ruleAudioTextAr;
+      if (spellingPhase === 'example') return activeSpellingLesson.workedExample.targetWord;
+      if (spellingPhase === 'practice') {
+        const q = activeSpellingLesson.guidedPractices[practiceIdx];
+        return q ? `${q.promptAr} ${q.wordContextAr.replace(/\.+/g, '')}` : '';
+      }
+      if (spellingPhase === 'build') return activeSpellingLesson.independentTask.promptAr;
+    }
+    if (activeStation.kind === 'language' && activeLanguageUnit) {
+      if (langPhase === 'learn') return activeLanguageUnit.ruleAr.join(' ');
+      if (langPhase === 'practice') {
+        const q = activeLanguageUnit.items[langIdx];
+        return q ? q.showAr.replace(/\.\.\./g, '') : '';
+      }
+    }
+    if (activeStation.kind === 'fluency' && activeFluencyPassage) {
+      if (fluencyPhase === 'listen') return activeFluencyPassage.fullTextVowelled;
+      if (fluencyPhase === 'phrase') {
+        return activeFluencyPassage.phrasedLines[phraseIdx]?.textAr || '';
+      }
+    }
+    return '';
+  }, [
+    activeStation,
+    activeSpellingLesson,
+    spellingPhase,
+    practiceIdx,
+    activeLanguageUnit,
+    langPhase,
+    langIdx,
+    activeFluencyPassage,
+    fluencyPhase,
+    phraseIdx,
+  ]);
+
+  // ===========================================================================
+  // VIEW B: FULL-SCREEN STORIES LIBRARY STATION
+  // ===========================================================================
+  if (activeStation?.kind === 'stories') {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-4 space-y-4" dir="rtl">
+        {!isStoryFocused && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-3xl p-4 border-[3px] border-teal-200 shadow-xs">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={closePlayer}
+                className="min-w-[44px] min-h-[44px] rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-3 flex items-center gap-1.5 cursor-pointer"
+                aria-label="العودة إلى خريطة المهارات"
+              >
+                <ArrowRight className="w-5 h-5" />
+                <span className="text-sm">خريطة المهارات</span>
+              </button>
+              <span className="text-base font-black text-slate-900">المكتبة المصوّرة</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              تطوير مهارات القراءة والكتابة العربية
-            </h1>
-            <p className="text-sm text-slate-600">
-              رحلة متكاملة ترافق الطفل من فك الرموز إلى الطلاقة التعبيرية، وإتقان قواعد الإملاء، والاستمتاع بمكتبة القصص المتدرجة.
-            </p>
-          </div>
-
-          {onClose && (
             <button
               type="button"
-              onClick={onClose}
-              className="bz-btn bz-btn-ghost text-slate-600 hover:text-slate-900 text-sm flex items-center gap-1.5"
+              onClick={() => setShowParentGuide(true)}
+              className="bz-btn bz-btn-ghost text-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <ArrowRight className="w-4 h-4" />
-              العودة للرئيسية
+              <GraduationCap className="w-4 h-4 text-teal-700" />
+              <span>دليل ولي الأمر</span>
+            </button>
+          </div>
+        )}
+
+        <InteractiveStoryReader
+          student={student}
+          adaptiveState={adaptiveState}
+          recommendedStoryId={prescription.recommendedStoryId}
+          childName={firstName}
+          initialStoryId={initialStoryId}
+          onReadingChange={setIsStoryFocused}
+          onActivityCompleted={(storyId, struggledWords) => {
+            updateAdaptiveState((prev) => recordStoryActivity(prev, storyId, struggledWords));
+            markStationCompleted('stories-library');
+            onActivityCompleted?.('story', storyId, struggledWords);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // ===========================================================================
+  // VIEW B: FULL-SCREEN SINGLE-SKILL FOCUS PLAYER
+  // ===========================================================================
+  if (activeStation) {
+    const accent = ACCENT_CLASSES[activeStation.accent];
+
+    return (
+      <div className="min-h-[85vh] max-w-3xl mx-auto px-4 py-5 flex flex-col gap-5" dir="rtl">
+        {/* Unified Calm Top Bar */}
+        <div className="flex items-center gap-3 bg-white rounded-3xl p-3 border-[3px] border-slate-200 shadow-xs">
+          <button
+            type="button"
+            onClick={closePlayer}
+            aria-label="العودة إلى خريطة المهارات"
+            className="min-w-[44px] min-h-[44px] rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between text-xs font-black text-slate-600 px-1">
+              <span>{activeStation.shortTitleAr}</span>
+              <span>
+                {toArabicNum(activeStation.order)} / {toArabicNum(LEARNING_PATH_STATIONS.length)}
+              </span>
+            </div>
+            <div className="h-3.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+              <div
+                className="h-full bg-gradient-to-l from-teal-500 to-emerald-500 rounded-full transition-all duration-300"
+                style={{ width: `${Math.max(10, playerProgressPercent)}%` }}
+              />
+            </div>
+          </div>
+
+          {currentAudioPrompt && (
+            <button
+              type="button"
+              onClick={() => (isPlayingAudio ? stopAudio() : void speak(currentAudioPrompt))}
+              aria-label={isPlayingAudio ? 'إيقاف الصوت' : 'استمع للتعليمات'}
+              className={`min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center border-2 cursor-pointer transition-all ${
+                isPlayingAudio
+                  ? 'bg-rose-100 border-rose-300 text-rose-700'
+                  : 'bg-teal-50 border-teal-300 text-teal-800 hover:bg-teal-100'
+              }`}
+            >
+              {isPlayingAudio ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
           )}
         </div>
 
-        {/* 3 CORE PILLARS TAB BAR */}
-        <nav className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100" aria-label="أقسام الاستوديو">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('spelling');
-              handleCloseStory();
+        {audioError && (
+          <div className="p-3 bg-amber-50 border-2 border-amber-200 rounded-2xl text-xs font-bold text-amber-950 flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{audioError}</span>
+          </div>
+        )}
+
+        {/* 1. FOUNDATION GAME IN SINGLE-SKILL MODE */}
+        {activeStation.kind === 'foundation' && (
+          <ArabicFoundationsView
+            singleMode
+            student={student}
+            studentId={student?.id}
+            childName={firstName}
+            initialMode={activeStation.refId as FoundationSubMode}
+            recommendedLetterFocus={prescription.recommendedLetterFocus}
+            adaptiveState={adaptiveState}
+            onAdaptiveAttempt={(letter, correct, traced) => {
+              updateAdaptiveState((prev) => recordLetterAttempt(prev, letter, correct, traced));
             }}
-            className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-sm transition-all ${
-              activeTab === 'spelling'
-                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="text-lg">✍️</span>
-            <span>مختبر الإملاء وبناء الكلمة</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('fluency');
-              handleCloseStory();
+            onActivityCompleted={(id) => {
+              markStationCompleted(activeStation.id);
+              onActivityCompleted?.('foundations', id);
             }}
-            className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-sm transition-all ${
-              activeTab === 'fluency'
-                ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20'
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="text-lg">📖</span>
-            <span>مضمار الطلاقة والتنغيم</span>
-          </button>
+            onNextSkill={handleAdvanceNext}
+          />
+        )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('library');
-            }}
-            className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl font-black text-sm transition-all ${
-              activeTab === 'library'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-            }`}
-          >
-            <span className="text-lg">📚</span>
-            <span>المكتبة العربية المتدرجة</span>
-          </button>
-        </nav>
-      </header>
+        {/* 2. SPELLING STATION (1 STEP AT A TIME) */}
+        {activeStation.kind === 'spelling' && activeSpellingLesson && (
+          <div className="flex-1 flex flex-col justify-center">
+            {spellingPhase === 'learn' && (
+              <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md text-center space-y-6`}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-950">
+                  <Lightbulb className="w-4 h-4 text-amber-600" />
+                  تعلّم القاعدة
+                </span>
 
-      {audioError && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-          <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>{audioError}</span>
-        </div>
-      )}
-
-      {/* =====================================================================
-          TAB 1: SPELLING & ORTHOGRAPHY GYM
-         ===================================================================== */}
-      {activeTab === 'spelling' && (
-        <div className="space-y-6">
-          {/* Topic Selector Chips */}
-          <section className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider px-1">اختر مهارة إملائية للتدرّب عليها:</h2>
-            <div className="flex flex-wrap gap-2">
-              {SPELLING_LESSONS.map((lesson) => {
-                const isSelected = lesson.id === activeSpellingLesson.id;
-                return (
-                  <button
-                    key={lesson.id}
-                    type="button"
-                    onClick={() => handleSelectLesson(lesson.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-amber-100 text-amber-950 border-2 border-amber-500 shadow-xs'
-                        : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>{lesson.titleAr}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Active Spelling Lesson Container with 4 Explicit Pedagogical Steps */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-            {/* Lesson Title & 4-Step Tracker Header */}
-            <div className="bg-amber-50/70 p-6 border-b border-amber-100 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs font-bold text-amber-800 bg-amber-200/60 px-2.5 py-0.5 rounded-full">
-                    {activeSpellingLesson.categoryAr}
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">{activeSpellingLesson.titleAr}</h3>
+                <div className="py-4 px-6 rounded-3xl bg-amber-50/70 border-2 border-amber-200 inline-block">
+                  <p className="text-4xl sm:text-5xl font-black text-amber-950">
+                    {activeSpellingLesson.workedExample.targetWord}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <p className="text-lg sm:text-xl font-bold text-slate-800 leading-relaxed max-w-xl mx-auto">
+                  {activeSpellingLesson.ruleSummaryAr}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => (isPlayingAudio ? stopAudio() : speak(activeSpellingLesson.ruleAudioTextAr))}
-                    className="bz-btn bz-btn-secondary text-xs flex items-center gap-1.5 bg-white shadow-xs"
+                    onClick={() => void speak(activeSpellingLesson.ruleAudioTextAr)}
+                    className="min-h-[52px] px-6 rounded-2xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-black text-base flex items-center gap-2 cursor-pointer"
                   >
-                    {isPlayingAudio ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-amber-600" />}
-                    <span>{isPlayingAudio ? 'إيقاف الصوت' : 'استمع لشرح القاعدة'}</span>
+                    <Volume2 className="w-5 h-5 text-amber-600" />
+                    <span>اسمع الشرح</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopAudio();
+                      setSpellingPhase('example');
+                    }}
+                    className="min-h-[52px] px-8 rounded-2xl border-b-4 border-amber-700 bg-amber-500 hover:bg-amber-600 text-white font-black text-base flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>فهمت! هيا نلعب</span>
+                    <ArrowLeft className="w-5 h-5" />
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* Step indicator breadcrumbs */}
-              <div className="grid grid-cols-4 gap-2 pt-2">
-                {[
-                  { step: 1, label: '١. شرح القاعدة' },
-                  { step: 2, label: '٢. مثال محلول' },
-                  { step: 3, label: '٣. تدريب موجه' },
-                  { step: 4, label: '٤. تطبيق مستقل' },
-                ].map(({ step, label }) => {
-                  const isActive = spellingStep === step;
-                  const isDone = spellingStep > step;
-                  return (
+            {spellingPhase === 'example' && (
+              <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md text-center space-y-6`}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-sky-100 text-sky-900">
+                  شاهد تفكيك الكلمة
+                </span>
+
+                <p className="text-4xl sm:text-5xl font-black text-slate-900">
+                  {activeSpellingLesson.workedExample.targetWord}
+                </p>
+
+                <div className="flex items-center justify-center gap-3 flex-wrap" dir="rtl">
+                  {activeSpellingLesson.workedExample.visualBreakdown.map((part, i) => (
+                    <span
+                      key={i}
+                      className="px-5 py-3 rounded-2xl border-[3px] border-amber-300 bg-amber-50 text-2xl sm:text-3xl font-black text-amber-950 shadow-xs"
+                    >
+                      {part}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="text-base font-bold text-teal-900 bg-teal-50 border border-teal-200 rounded-2xl py-3 px-4 max-w-lg mx-auto">
+                  {activeSpellingLesson.workedExample.proofTipAr}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopAudio();
+                    setPracticeIdx(0);
+                    setSelectedPracticeOpt(null);
+                    setShowHint(false);
+                    setSpellingPhase('practice');
+                  }}
+                  className="min-h-[52px] px-8 rounded-2xl border-b-4 border-amber-700 bg-amber-500 hover:bg-amber-600 text-white font-black text-base inline-flex items-center gap-2 cursor-pointer"
+                >
+                  <span>ابدأ التحدي!</span>
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {spellingPhase === 'practice' && (() => {
+              const baseLen = activeSpellingLesson.guidedPractices.length;
+              const isRetryTurn = practiceIdx >= baseLen;
+              const actualPracticeIdx = isRetryTurn
+                ? spellingRetryQueue[practiceIdx - baseLen] ?? 0
+                : practiceIdx;
+              const totalPracticeSteps = baseLen + spellingRetryQueue.length;
+              const q =
+                activeSpellingLesson.guidedPractices[actualPracticeIdx] ||
+                activeSpellingLesson.guidedPractices[0];
+              const isAnswered = selectedPracticeOpt !== null;
+              const isCorrect = selectedPracticeOpt === q.correctId;
+
+              return (
+                <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md space-y-6`}>
+                  <div className="flex items-center justify-between text-xs font-black text-slate-500">
+                    <span>
+                      {isRetryTurn
+                        ? 'مراجعة ذكية لما أخطأنا فيه'
+                        : `التحدي ${toArabicNum(practiceIdx + 1)} من ${toArabicNum(totalPracticeSteps)}`}
+                    </span>
                     <button
-                      key={step}
                       type="button"
-                      onClick={() => setSpellingStep(step as 1 | 2 | 3 | 4)}
-                      className={`py-2 px-1 text-center rounded-xl text-xs font-black transition-all ${
-                        isActive
-                          ? 'bg-amber-500 text-white shadow-xs'
-                          : isDone
-                          ? 'bg-amber-100 text-amber-900'
-                          : 'bg-white text-slate-500 border border-slate-200/60'
+                      onClick={() => setShowHint((h) => !h)}
+                      className="min-h-[36px] px-3 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 flex items-center gap-1 cursor-pointer"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      <span>{showHint ? 'إخفاء التلميح' : 'تلميح'}</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-3xl p-6 border-2 border-slate-200 text-center space-y-2">
+                    <p className="text-base font-bold text-slate-600">{q.promptAr}</p>
+                    <p className="text-3xl font-black text-slate-900">{q.wordContextAr}</p>
+                  </div>
+
+                  {showHint && (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-200 text-sm font-bold text-amber-950 text-center">
+                      {q.hintAr}
+                    </div>
+                  )}
+
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {q.options.map((opt) => {
+                      const picked = selectedPracticeOpt === opt.id;
+                      const right = opt.id === q.correctId;
+                      let cls =
+                        'border-slate-200 bg-white text-slate-900 hover:border-amber-400 hover:-translate-y-0.5';
+                      if (isAnswered) {
+                        if (right) cls = 'border-emerald-500 bg-emerald-50 text-emerald-950';
+                        else if (picked) cls = 'border-rose-400 bg-rose-50 text-rose-900';
+                        else cls = 'border-slate-200 bg-slate-50 text-slate-400';
+                      }
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          disabled={isAnswered}
+                          onClick={() => {
+                            setSelectedPracticeOpt(opt.id);
+                            updateAdaptiveState((prev) =>
+                              recordStationAnswer(prev, activeStation.id, right, q.options.length),
+                            );
+                            if (!right && !isRetryTurn) {
+                              setSpellingRetryQueue((rq) =>
+                                rq.includes(actualPracticeIdx) ? rq : [...rq, actualPracticeIdx],
+                              );
+                            }
+                            void speak(q.explanationAr);
+                          }}
+                          className={`min-h-[60px] p-4 rounded-2xl border-[3px] font-black text-xl transition-all cursor-pointer ${cls}`}
+                        >
+                          {opt.labelAr}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {isAnswered && (
+                    <div
+                      className={`p-4 rounded-2xl border-2 flex flex-wrap items-center justify-between gap-3 ${
+                        isCorrect
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                          : 'bg-rose-50 border-rose-200 text-rose-950'
                       }`}
                     >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* STEP 1: RULE EXPLANATION */}
-            {spellingStep === 1 && (
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-200/60 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-900 font-black text-base">
-                    <Lightbulb className="w-5 h-5 text-amber-600" />
-                    <span>القاعدة الإملائية المبسّطة:</span>
-                  </div>
-                  <p className="text-base sm:text-lg text-slate-800 leading-relaxed font-semibold">
-                    {activeSpellingLesson.ruleSummaryAr}
-                  </p>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setSpellingStep(2)}
-                    className="bz-btn bz-btn-primary bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2"
-                  >
-                    <span>انتقل إلى المثال المحلول</span>
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: WORKED EXAMPLE */}
-            {spellingStep === 2 && (
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="text-center space-y-4">
-                  <span className="text-xs font-black text-slate-500">الكلمة النموذجية المشروحة:</span>
-                  <div className="inline-block bg-slate-50 rounded-3xl p-6 border border-slate-200 shadow-xs">
-                    <span className="text-4xl sm:text-5xl font-black text-amber-800 tracking-wider">
-                      {activeSpellingLesson.workedExample.targetWord}
-                    </span>
-
-                    {/* Syllable Breakdown */}
-                    <div className="flex items-center justify-center gap-2 mt-4" dir="rtl">
-                      {activeSpellingLesson.workedExample.visualBreakdown.map((part, i) => (
-                        <span
-                          key={i}
-                          className="px-3.5 py-1.5 bg-white border-2 border-amber-300 text-amber-900 rounded-xl text-xl font-black shadow-2xs"
-                        >
-                          {part}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <p className="max-w-xl mx-auto text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                    {activeSpellingLesson.workedExample.explanationAr}
-                  </p>
-
-                  <div className="inline-flex items-center gap-2 p-3 bg-teal-50 border border-teal-200 rounded-2xl text-xs sm:text-sm text-teal-900 font-bold">
-                    <BookmarkCheck className="w-4 h-4 text-teal-600 shrink-0" />
-                    <span>تلميح التحقق: {activeSpellingLesson.workedExample.proofTipAr}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <button type="button" onClick={() => setSpellingStep(1)} className="bz-btn bz-btn-ghost text-xs">
-                    <ArrowRight className="w-4 h-4" /> السابق (القاعدة)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSpellingStep(3)}
-                    className="bz-btn bz-btn-primary bg-amber-500 hover:bg-amber-600 text-white text-xs flex items-center gap-1.5"
-                  >
-                    <span>ابدأ التدريب الموجه</span>
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: GUIDED PRACTICE */}
-            {spellingStep === 3 && (
-              <div className="p-6 sm:p-8 space-y-6">
-                {(() => {
-                  const practice = activeSpellingLesson.guidedPractices[guidedPracticeIndex] || activeSpellingLesson.guidedPractices[0];
-                  const isAnswered = selectedPracticeOption !== null;
-                  const isCorrect = selectedPracticeOption === practice.correctId;
-
-                  return (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between text-xs text-slate-500 font-bold">
-                        <span>تدريب موجه رقم {toArabicNum(guidedPracticeIndex + 1)} من {toArabicNum(activeSpellingLesson.guidedPractices.length)}</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowPracticeHint(!showPracticeHint)}
-                          className="text-amber-700 hover:underline flex items-center gap-1"
-                        >
-                          <HelpCircle className="w-3.5 h-3.5" />
-                          <span>{showPracticeHint ? 'إخفاء التلميح' : 'أحتاج تلميحًا'}</span>
-                        </button>
-                      </div>
-
-                      <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 text-center space-y-2">
-                        <p className="text-base sm:text-lg font-black text-slate-900">{practice.promptAr}</p>
-                        <p className="text-xl font-bold text-amber-900 py-2">{practice.wordContextAr}</p>
-                      </div>
-
-                      {showPracticeHint && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium">
-                          💡 <strong>تلميح:</strong> {practice.hintAr}
-                        </div>
-                      )}
-
-                      {/* Options */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {practice.options.map((opt) => {
-                          const isOptionSelected = selectedPracticeOption === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setSelectedPracticeOption(opt.id)}
-                              className={`p-4 rounded-2xl border-2 text-right font-black text-base transition-all ${
-                                isOptionSelected
-                                  ? opt.id === practice.correctId
-                                    ? 'bg-teal-50 border-teal-500 text-teal-900 shadow-sm'
-                                    : 'bg-rose-50 border-rose-400 text-rose-900'
-                                  : 'bg-white border-slate-200 hover:border-amber-300 text-slate-800'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span>{opt.labelAr}</span>
-                                {isOptionSelected && (
-                                  <span>{opt.id === practice.correctId ? '✅' : '❌'}</span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Feedback after answer */}
-                      {isAnswered && (
-                        <div
-                          className={`p-4 rounded-2xl text-sm font-semibold space-y-1 ${
-                            isCorrect ? 'bg-teal-50 text-teal-900 border border-teal-200' : 'bg-rose-50 text-rose-900 border border-rose-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isCorrect ? <CheckCircle2 className="w-5 h-5 text-teal-600" /> : <X className="w-5 h-5 text-rose-500" />}
-                            <span>{isCorrect ? 'إجابة متميزة!' : 'انتبه إلى القاعدة:'}</span>
-                          </div>
-                          <p className="text-xs text-slate-700">{practice.explanationAr}</p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                        <button type="button" onClick={() => setSpellingStep(2)} className="bz-btn bz-btn-ghost text-xs">
-                          <ArrowRight className="w-4 h-4" /> السابق
-                        </button>
-
-                        {isAnswered && guidedPracticeIndex < activeSpellingLesson.guidedPractices.length - 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGuidedPracticeIndex((prev) => prev + 1);
-                              setSelectedPracticeOption(null);
-                              setShowPracticeHint(false);
-                            }}
-                            className="bz-btn bz-btn-secondary text-xs flex items-center gap-1.5"
-                          >
-                            <span>التدريب التالي</span>
-                            <ArrowLeft className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={!isAnswered}
-                            onClick={() => setSpellingStep(4)}
-                            className="bz-btn bz-btn-primary bg-amber-500 hover:bg-amber-600 text-white text-xs flex items-center gap-1.5 disabled:opacity-40"
-                          >
-                            <span>الانتقال للتطبيق المستقل</span>
-                            <ArrowLeft className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* STEP 4: INDEPENDENT APPLICATION (Syllable Assembly / Word Building) */}
-            {spellingStep === 4 && (
-              <div className="p-6 sm:p-8 space-y-6">
-                <div className="text-center space-y-3">
-                  <span className="text-xs font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-full">
-                    تحدي بناء الكلمة الذكي
-                  </span>
-                  <p className="text-base sm:text-lg font-black text-slate-900">
-                    {activeSpellingLesson.independentTask.promptAr}
-                  </p>
-                </div>
-
-                {/* Assembly workspace */}
-                <div className="bg-slate-50 rounded-3xl p-6 border-2 border-dashed border-amber-300 text-center min-h-[90px] flex items-center justify-center gap-3 flex-wrap">
-                  {assembledSyllables.length === 0 ? (
-                    <span className="text-sm text-slate-400 font-medium">اضغط على المقاطع بالترتيب لتكوين الكلمة هُنا...</span>
-                  ) : (
-                    assembledSyllables.map((tile, i) => (
+                      <p className="text-sm font-bold flex-1">{q.explanationAr}</p>
                       <button
-                        key={i}
                         type="button"
-                        onClick={() => handleTileClick(tile)}
-                        className="px-4 py-2 bg-amber-500 text-white rounded-xl text-xl font-black shadow-xs hover:bg-rose-500 transition-colors"
-                        title="اضغط للإزالة"
+                        onClick={() => {
+                          stopAudio();
+                          setShowHint(false);
+                          setSelectedPracticeOpt(null);
+                          if (practiceIdx + 1 < totalPracticeSteps) {
+                            setPracticeIdx((p) => p + 1);
+                          } else {
+                            setAssembledTileIndices([]);
+                            setAssemblyFeedback(null);
+                            setSpellingPhase('build');
+                          }
+                        }}
+                        className="min-h-[48px] px-6 rounded-2xl border-b-4 border-amber-700 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm flex items-center gap-1.5 cursor-pointer"
                       >
-                        {tile}
+                        <span>التالي</span>
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {spellingPhase === 'build' && (
+              <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md space-y-6 text-center`}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-950">
+                  ركّب الكلمة
+                </span>
+
+                <p className="text-xl font-black text-slate-900">
+                  {activeSpellingLesson.independentTask.promptAr}
+                </p>
+
+                <div className="bg-slate-50 rounded-3xl p-6 border-2 border-dashed border-amber-300 min-h-[88px] flex items-center justify-center gap-3 flex-wrap">
+                  {assembledTileIndices.length === 0 ? (
+                    <span className="text-sm font-bold text-slate-400">اضغط على المقاطع بالترتيب</span>
+                  ) : (
+                    assembledTileIndices.map((tileIdx, i) => (
+                      <button
+                        key={`${tileIdx}-${i}`}
+                        type="button"
+                        onClick={() => handleTileIndexClick(tileIdx)}
+                        className="min-h-[48px] px-5 py-2 rounded-2xl bg-amber-500 hover:bg-rose-500 text-white text-2xl font-black shadow-xs cursor-pointer transition-colors"
+                      >
+                        {availableTiles[tileIdx]}
                       </button>
                     ))
                   )}
                 </div>
 
-                {/* Available Scrambled Tiles */}
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {availableTiles.map((tile, i) => {
+                    const isUsed = assembledTileIndices.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={isUsed}
+                        onClick={() => handleTileIndexClick(i)}
+                        className={`min-w-[60px] min-h-[56px] px-5 py-3 rounded-2xl text-2xl font-black border-[3px] transition-all cursor-pointer ${
+                          isUsed
+                            ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-40'
+                            : 'bg-white border-amber-300 text-amber-950 hover:border-amber-500 hover:-translate-y-0.5 shadow-xs'
+                        }`}
+                      >
+                        {tile}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {assemblyFeedback && (
+                  <div className="p-3 rounded-2xl bg-rose-50 border-2 border-rose-200 text-sm font-bold text-rose-900">
+                    {assemblyFeedback}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                  {[
-                    ...activeSpellingLesson.independentTask.scrambledSyllables,
-                    ...(activeSpellingLesson.independentTask.distractorTiles || []),
-                  ]
-                    .sort()
-                    .map((tile, i) => {
-                      const isUsed = assembledSyllables.includes(tile);
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssembledTileIndices([]);
+                      setAssemblyFeedback(null);
+                    }}
+                    className="min-h-[48px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>مسح</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={assembledTileIndices.length === 0}
+                    onClick={checkSpellingAssembly}
+                    className="min-h-[52px] px-8 rounded-2xl border-b-4 border-amber-700 bg-amber-500 hover:bg-amber-600 text-white font-black text-base flex items-center gap-2 disabled:opacity-40 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>تحقق</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {spellingPhase === 'celebrate' && (
+              <CelebrationCard
+                firstName={firstName}
+                skillTitle={activeStation.shortTitleAr}
+                onNext={getNextStationId(activeStation.id) ? handleAdvanceNext : undefined}
+                onBackToMap={closePlayer}
+              />
+            )}
+          </div>
+        )}
+
+        {/* 3. ARABIC LANGUAGE UNIT STATION (1 STEP AT A TIME) */}
+        {activeStation.kind === 'language' && activeLanguageUnit && (
+          <div className="flex-1 flex flex-col justify-center">
+            {langPhase === 'learn' && (
+              <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md text-center space-y-6`}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-900">
+                  <Lightbulb className="w-4 h-4 text-violet-600" />
+                  تعلّم المهارة
+                </span>
+
+                <div className="py-5 px-6 rounded-3xl bg-violet-50/80 border-2 border-violet-200 max-w-xl mx-auto">
+                  <p className="text-2xl sm:text-3xl font-black text-violet-950">
+                    {activeLanguageUnit.exampleShowAr}
+                  </p>
+                </div>
+
+                <p className="text-lg font-bold text-slate-800 leading-relaxed max-w-xl mx-auto">
+                  {activeLanguageUnit.ruleAr[0]}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => void speak(activeLanguageUnit.ruleAr.join(' '))}
+                    className="min-h-[52px] px-6 rounded-2xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-black text-base flex items-center gap-2 cursor-pointer"
+                  >
+                    <Volume2 className="w-5 h-5 text-violet-600" />
+                    <span>اسمع القاعدة</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopAudio();
+                      setLangIdx(0);
+                      setLangChoice(null);
+                      setLangPhase('practice');
+                    }}
+                    className="min-h-[52px] px-8 rounded-2xl border-b-4 border-violet-800 bg-violet-600 hover:bg-violet-700 text-white font-black text-base flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>هيا نلعب!</span>
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {langPhase === 'practice' && (() => {
+              const baseLen = activeLanguageUnit.items.length;
+              const isRetryTurn = langIdx >= baseLen;
+              const actualLangIdx = isRetryTurn
+                ? langRetryQueue[langIdx - baseLen] ?? 0
+                : langIdx;
+              const totalLangSteps = baseLen + langRetryQueue.length;
+              const q = activeLanguageUnit.items[actualLangIdx] || activeLanguageUnit.items[0];
+              const answered = langChoice !== null;
+              const isCorrect = langChoice === q.correctAnswer;
+
+              return (
+                <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-6 sm:p-8 shadow-md space-y-6`}>
+                  <div className="flex items-center justify-between text-xs font-black text-slate-500">
+                    <span>
+                      {isRetryTurn
+                        ? 'مراجعة ذكية لما أخطأنا فيه'
+                        : `سؤال ${toArabicNum(langIdx + 1)} من ${toArabicNum(totalLangSteps)}`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void speak(q.showAr.replace(/\.\.\./g, ''))}
+                      className="text-violet-700 font-black flex items-center gap-1 cursor-pointer"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      <span>اسمع</span>
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-3xl p-6 border-2 border-slate-200 text-center space-y-2">
+                    <p className="text-base font-bold text-slate-600">{q.promptAr}</p>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900">{q.showAr}</p>
+                  </div>
+
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    {q.options.map((opt) => {
+                      const chosen = langChoice === opt;
+                      const right = opt === q.correctAnswer;
+                      let cls =
+                        'border-slate-200 bg-white text-slate-900 hover:border-violet-400 hover:-translate-y-0.5';
+                      if (answered) {
+                        if (right) cls = 'border-emerald-500 bg-emerald-50 text-emerald-950';
+                        else if (chosen) cls = 'border-rose-400 bg-rose-50 text-rose-900';
+                        else cls = 'border-slate-200 bg-slate-50 text-slate-400';
+                      }
                       return (
                         <button
-                          key={i}
+                          key={opt}
                           type="button"
-                          disabled={isUsed}
-                          onClick={() => handleTileClick(tile)}
-                          className={`px-5 py-3 rounded-2xl text-2xl font-black border-2 transition-all ${
-                            isUsed
-                              ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-40'
-                              : 'bg-white border-amber-400 text-amber-950 hover:bg-amber-50 hover:scale-105 shadow-xs'
-                          }`}
+                          disabled={answered}
+                          onClick={() => {
+                            setLangChoice(opt);
+                            updateAdaptiveState((prev) =>
+                              recordStationAnswer(prev, activeStation.id, right, q.options.length),
+                            );
+                            if (!right && !isRetryTurn) {
+                              setLangRetryQueue((rq) =>
+                                rq.includes(actualLangIdx) ? rq : [...rq, actualLangIdx],
+                              );
+                            }
+                            void speak(q.explanationAr);
+                          }}
+                          className={`min-h-[60px] p-4 rounded-2xl border-[3px] font-black text-lg transition-all cursor-pointer ${cls}`}
                         >
-                          {tile}
+                          {opt}
                         </button>
                       );
                     })}
-                </div>
+                  </div>
 
-                {/* Action buttons */}
-                <div className="flex items-center justify-center gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setAssembledSyllables([])}
-                    className="bz-btn bz-btn-ghost text-xs flex items-center gap-1.5"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>إعادة المحاولة</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={checkIndependentAssembly}
-                    disabled={assembledSyllables.length === 0 || independentCompleted}
-                    className="bz-btn bz-btn-primary bg-amber-500 hover:bg-amber-600 text-white text-sm px-6 py-2.5 flex items-center gap-2 shadow-xs disabled:opacity-40"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>تحقق من كتابة الكلمة</span>
-                  </button>
-                </div>
-
-                {independentCompleted && (
-                  <div className="bg-teal-50 border border-teal-300 rounded-3xl p-6 text-center space-y-3">
-                    <div className="w-12 h-12 bg-teal-500 text-white rounded-full flex items-center justify-center mx-auto text-2xl">
-                      ⭐
-                    </div>
-                    <h4 className="text-xl font-black text-teal-950">إتقان ممتاز يا {childName}!</h4>
-                    <p className="text-sm text-slate-700 max-w-md mx-auto font-medium">
-                      {activeSpellingLesson.independentTask.explanationAr}
-                    </p>
-                    <div className="pt-2">
+                  {answered && (
+                    <div
+                      className={`p-4 rounded-2xl border-2 flex flex-wrap items-center justify-between gap-3 ${
+                        isCorrect
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                          : 'bg-rose-50 border-rose-200 text-rose-950'
+                      }`}
+                    >
+                      <p className="text-sm font-bold flex-1">{q.explanationAr}</p>
                       <button
                         type="button"
                         onClick={() => {
-                          const currentIndex = SPELLING_LESSONS.findIndex((l) => l.id === activeSpellingLesson.id);
-                          const nextLesson = SPELLING_LESSONS[(currentIndex + 1) % SPELLING_LESSONS.length];
-                          handleSelectLesson(nextLesson.id);
+                          stopAudio();
+                          setLangChoice(null);
+                          if (langIdx + 1 < totalLangSteps) {
+                            setLangIdx((p) => p + 1);
+                          } else {
+                            markStationCompleted(activeStation.id);
+                            onActivityCompleted?.('spelling', `lang-${activeLanguageUnit.id}`);
+                            setLangPhase('celebrate');
+                            void speak('أَحْسَنْتَ! إِجَابَةٌ صَحِيحَةٌ.');
+                          }
                         }}
-                        className="bz-btn bz-btn-primary bg-teal-600 hover:bg-teal-700 text-white text-xs px-5 py-2 inline-flex items-center gap-2"
+                        className="min-h-[48px] px-6 rounded-2xl border-b-4 border-violet-800 bg-violet-600 hover:bg-violet-700 text-white font-black text-sm flex items-center gap-1.5 cursor-pointer"
                       >
-                        <span>المهارة الإملائية التالية</span>
+                        <span>التالي</span>
                         <ArrowLeft className="w-4 h-4" />
                       </button>
                     </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {langPhase === 'celebrate' && (
+              <CelebrationCard
+                firstName={firstName}
+                skillTitle={activeStation.shortTitleAr}
+                onNext={getNextStationId(activeStation.id) ? handleAdvanceNext : undefined}
+                onBackToMap={closePlayer}
+              />
+            )}
+          </div>
+        )}
+
+        {/* 4. CALM FLUENCY STATION (ONE SINGLE PHRASE PER SCREEN!) */}
+        {activeStation.kind === 'fluency' && activeFluencyPassage && (
+          <div className="flex-1 flex flex-col justify-center">
+            {fluencyPhase === 'listen' && (
+              <div className={`rounded-3xl border-[3px] ${accent.border} bg-white p-7 sm:p-10 shadow-md text-center space-y-6`}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-teal-100 text-teal-900">
+                  <Feather className="w-4 h-4 text-teal-700" />
+                  الصف {toArabicNum(activeFluencyPassage.gradeLevel)}
+                </span>
+
+                <h2 className="text-3xl sm:text-4xl font-black text-slate-900">
+                  {activeFluencyPassage.titleAr}
+                </h2>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isPlayingAudio
+                        ? stopAudio()
+                        : void speak(activeFluencyPassage.fullTextVowelled)
+                    }
+                    className="min-h-[56px] px-7 rounded-2xl border-2 border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-950 font-black text-base flex items-center gap-2 cursor-pointer"
+                  >
+                    {isPlayingAudio ? (
+                      <VolumeX className="w-5 h-5 text-rose-600" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-teal-700" />
+                    )}
+                    <span>{isPlayingAudio ? 'إيقاف الصوت' : 'استمع للنموذج'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopAudio();
+                      setPhraseIdx(0);
+                      setFluencyPhase('phrase');
+                    }}
+                    className="min-h-[56px] px-8 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-base flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>ابدأ القراءة جملةً بجملة</span>
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {fluencyPhase === 'phrase' && (() => {
+              const line =
+                activeFluencyPassage.phrasedLines[phraseIdx] ||
+                activeFluencyPassage.phrasedLines[0];
+              const hasMore = phraseIdx + 1 < activeFluencyPassage.phrasedLines.length;
+
+              return (
+                <div className={`rounded-3xl border-[3px] ${accent.border} bg-[#FFFDF8] p-7 sm:p-10 shadow-md text-center space-y-7`}>
+                  <span className="inline-block px-3.5 py-1 rounded-full text-xs font-black bg-teal-100 text-teal-900">
+                    جملة {toArabicNum(phraseIdx + 1)} من{' '}
+                    {toArabicNum(activeFluencyPassage.phrasedLines.length)}
+                  </span>
+
+                  <p
+                    className="text-3xl sm:text-4xl font-black text-slate-900 leading-loose"
+                    style={{ fontFamily: 'var(--font-reading)' }}
+                  >
+                    {line.textAr}
+                  </p>
+
+                  {line.cueNotesAr && (
+                    <div>
+                      <span className="inline-block px-4 py-1.5 rounded-full bg-amber-100 text-amber-950 text-xs font-black">
+                        {line.cueNotesAr}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => void speak(line.textAr)}
+                      className="min-h-[54px] px-6 rounded-2xl border-2 border-teal-300 bg-white hover:bg-teal-50 text-teal-900 font-black text-base flex items-center gap-2 cursor-pointer"
+                    >
+                      <Volume2 className="w-5 h-5 text-teal-700" />
+                      <span>استمع</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopAudio();
+                        if (hasMore) {
+                          setPhraseIdx((p) => p + 1);
+                        } else {
+                          markStationCompleted(activeStation.id);
+                          onActivityCompleted?.('fluency', activeFluencyPassage.id);
+                          setFluencyPhase('celebrate');
+                          void speak('أَحْسَنْتَ! إِجَابَةٌ صَحِيحَةٌ.');
+                        }
+                      }}
+                      className="min-h-[54px] px-8 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-base flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>{hasMore ? 'قرأتها! الجملة التالية' : 'أتممت القراءة!'}</span>
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
                   </div>
+                </div>
+              );
+            })()}
+
+            {fluencyPhase === 'celebrate' && (
+              <CelebrationCard
+                firstName={firstName}
+                skillTitle={activeStation.shortTitleAr}
+                onNext={getNextStationId(activeStation.id) ? handleAdvanceNext : undefined}
+                onBackToMap={closePlayer}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===========================================================================
+  // VIEW A: CALM VISUAL STEPPING-STONE LEARNING PATH MAP
+  // ===========================================================================
+  const recAccent = ACCENT_CLASSES[recommendedStation.accent];
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-5 space-y-6" dir="rtl">
+      {/* Compact Kid-First Header */}
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-3xl p-4 sm:p-5 border-[3px] border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <Mascot mood="wave" size={56} />
+          <div>
+            <h1 className="text-2xl font-black text-slate-900">أهلًا يا {firstName}!</h1>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-100 text-amber-950 text-xs font-black mt-1">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-600" aria-hidden="true" />
+              <span>
+                {toArabicNum(completedStations.length)} / {toArabicNum(LEARNING_PATH_STATIONS.length)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowParentGuide(true)}
+            className="min-h-[44px] px-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-black text-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <GraduationCap className="w-4 h-4 text-teal-700" />
+            <span>دليل ولي الأمر</span>
+          </button>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[44px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <ArrowRight className="w-4 h-4" />
+              <span>الرئيسية</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Spotlight Card: ONE Recommended Station */}
+      <section
+        aria-label="محطتك الآن"
+        className={`rounded-3xl border-[3px] ${recAccent.border} bg-gradient-to-br from-white via-[#F4FBF9] to-[#E6F7F2] p-6 shadow-[0_8px_0_0_rgba(13,148,136,0.12)] flex flex-wrap items-center justify-between gap-4`}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-2xl ${recAccent.badge} flex items-center justify-center shrink-0`}>
+            {getStationIcon(recommendedStation, 'w-7 h-7')}
+          </div>
+          <div>
+            <span className="inline-block px-3 py-0.5 rounded-full bg-teal-600 text-white text-xs font-black mb-1">
+              محطتك التكيّفية الآن
+            </span>
+            <h2 className="text-2xl font-black text-slate-900">
+              {recommendedStation.shortTitleAr}
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-teal-900/80 mt-1 max-w-xl">
+              {adaptiveRecommendation.reasonAr}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => openStation(recommendedStation.id)}
+          className="min-h-[52px] px-7 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-base flex items-center gap-2 cursor-pointer transition-transform active:translate-y-0.5"
+        >
+          <Play className="w-5 h-5 fill-current" aria-hidden="true" />
+          <span>ابدأ الآن</span>
+        </button>
+      </section>
+
+      {/* 4 Progressive Stage Cards + Optional 'All' Toggle (Fixed Contrast & Typography Hierarchy) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-base sm:text-lg font-black text-slate-900">مراحل التعلّم المتدرّجة:</h2>
+          <button
+            type="button"
+            onClick={() => setTrackFilter(trackFilter === 'all' ? 'letters' : 'all')}
+            className="text-xs sm:text-sm font-extrabold text-teal-700 hover:text-teal-900 underline cursor-pointer"
+          >
+            {trackFilter === 'all' ? 'عرض مرحلة واحدة فقط' : `عرض كل المهارات (${toArabicNum(LEARNING_PATH_STATIONS.length)})`}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" role="tablist" aria-label="مراحل التعلّم">
+          {(
+            [
+              { id: 'letters', step: 'المرحلة ١', label: 'الحروف وأصواتها', sub: '٤ أنشطة تأسيس' },
+              { id: 'spelling', step: 'المرحلة ٢', label: 'المقاطع والإملاء', sub: '١٠ مهارات' },
+              { id: 'fluency', step: 'المرحلة ٣', label: 'القراءة والطلاقة', sub: '٣ نصوص متدرجة' },
+              { id: 'stories', step: 'المرحلة ٤', label: 'القصص المصوّرة', sub: 'قصص ناطقة' },
+            ] as Array<{ id: TrackFilterId; step: string; label: string; sub: string }>
+          ).map((pill) => {
+            const active = trackFilter === pill.id;
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  if (pill.id === 'stories') {
+                    openStation('stories-library');
+                  } else {
+                    setTrackFilter(pill.id);
+                  }
+                }}
+                className={`min-h-[88px] p-4 rounded-2xl border-[3px] text-right transition-all cursor-pointer flex flex-col justify-between ${
+                  active
+                    ? 'bg-teal-700 border-teal-900 text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-900 hover:border-teal-400'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1.5">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-lg text-xs font-black ${
+                      active ? 'bg-teal-950 text-amber-300' : 'bg-teal-50 text-teal-800 border border-teal-200'
+                    }`}
+                  >
+                    {pill.step}
+                  </span>
+                  <span className={`text-xs font-bold ${active ? 'text-teal-100' : 'text-slate-500'}`}>
+                    {pill.sub}
+                  </span>
+                </div>
+                <strong className={`text-base sm:text-lg font-black mt-2 block leading-snug ${active ? 'text-white' : 'text-slate-900'}`}>
+                  {pill.label}
+                </strong>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stepping-Stone Path Cards (Clear Typography & Action Affordance) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {visibleStations.map((station) => {
+          const isDone = completedStations.includes(station.id);
+          const isNext = station.id === recommendedStation.id;
+          const masteryPct = getStationMasteryPercent(adaptiveState, station.id);
+          const accent = ACCENT_CLASSES[station.accent];
+          const trackLabel =
+            station.kind === 'foundation'
+              ? 'تأسيس الحروف والأصوات'
+              : station.kind === 'spelling'
+              ? 'قاعدة إملائية وتطبيق'
+              : station.kind === 'language'
+              ? 'مهارة لغوية وتدريب'
+              : station.kind === 'fluency'
+              ? 'قراءة جهرية معبّرة'
+              : 'قصص مصوّرة تفاعلية';
+
+          return (
+            <button
+              key={station.id}
+              type="button"
+              onClick={() => openStation(station.id)}
+              className={`group rounded-3xl border-[3px] p-5 min-h-[100px] flex items-center justify-between gap-4 text-right transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-teal-400/50 ${
+                isDone
+                  ? 'border-emerald-400 bg-emerald-50/60 hover:border-emerald-500 shadow-xs'
+                  : isNext
+                  ? `${accent.card} ring-4 ring-teal-300/40`
+                  : accent.card
+              }`}
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <span
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 ${
+                    isDone ? 'bg-emerald-600 text-white' : accent.badge
+                  }`}
+                >
+                  {toArabicNum(station.order)}
+                </span>
+
+                <div className="min-w-0">
+                  <span className="block font-black text-lg sm:text-xl text-slate-900 leading-snug">
+                    {station.shortTitleAr}
+                  </span>
+                  <span className="block text-xs sm:text-sm font-bold text-slate-500 mt-0.5">
+                    {trackLabel}{masteryPct !== null ? ` · إتقان ${toArabicNum(masteryPct)}٪` : ''}
+                  </span>
+                </div>
+              </div>
+
+              <span
+                className={`px-3.5 py-2 rounded-xl font-black text-xs sm:text-sm flex items-center gap-1.5 shrink-0 transition-colors ${
+                  isDone
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-teal-50 text-teal-800 border border-teal-200 group-hover:bg-teal-600 group-hover:text-white'
+                }`}
+              >
+                {isDone ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                    <span>مكتمل</span>
+                  </>
+                ) : (
+                  <>
+                    <span>ابدأ</span>
+                    <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                  </>
                 )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Parent & Specialist Guide Modal (Tucks all adult reports away cleanly) */}
+      {showParentGuide && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowParentGuide(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="دليل ولي الأمر والمختص"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 space-y-5 border-[3px] border-teal-200 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-teal-50 text-teal-800">
+                  <GraduationCap className="w-4 h-4 text-teal-700" />
+                  دليل ولي الأمر والمختص · ملف {firstName}
+                </span>
+                <h3 className="text-xl font-black text-slate-900 mt-2">التوجيه التكيفي للأخطاء القرائية</h3>
+                <p className="text-sm text-slate-600 mt-1">{prescription.headlineAr}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowParentGuide(false)}
+                aria-label="إغلاق الدليل"
+                className="min-w-[44px] min-h-[44px] rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {prescription.detectedPatterns.map((pat) => (
+                <div
+                  key={pat.id}
+                  className="rounded-2xl border-2 border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70"
+                >
+                  <div className="space-y-1 flex-1 min-w-[200px]">
+                    <strong className="block text-sm font-black text-slate-900">{pat.labelAr}</strong>
+                    <p className="text-xs text-slate-600 leading-relaxed">{pat.reasonAr}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyParentPattern(pat)}
+                    className="min-h-[44px] px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <span>{pat.ctaAr}</span>
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {onNavigateTab && (
+              <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-bold text-slate-500">
+                  مسار فحص وعلاج عسر القراءة متاح بالكامل لولي الأمر والمختص:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowParentGuide(false);
+                    onNavigateTab('dyslexia-lab');
+                  }}
+                  className="min-h-[44px] px-5 rounded-2xl bg-teal-50 hover:bg-teal-100 border-2 border-teal-200 text-teal-900 text-xs font-black flex items-center gap-2 cursor-pointer"
+                >
+                  <Brain className="w-4 h-4 text-teal-700" />
+                  <span>فتح مسار فحص ودعم صعوبات القراءة</span>
+                </button>
               </div>
             )}
           </div>
         </div>
       )}
-
-      {/* =====================================================================
-          TAB 2: CALM EXPRESSIVE FLUENCY STUDIO
-         ===================================================================== */}
-      {activeTab === 'fluency' && (
-        <div className="space-y-6">
-          {/* Passage Selector Bar */}
-          <section className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-2">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-wider px-1">اختر مضمار الطلاقة المناسب لصف الطفل:</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {FLUENCY_PASSAGES.map((passage) => {
-                const isSelected = passage.id === activeFluencyPassage.id;
-                return (
-                  <button
-                    key={passage.id}
-                    type="button"
-                    onClick={() => handleSelectFluency(passage.id)}
-                    className={`p-4 rounded-2xl border-2 text-right transition-all ${
-                      isSelected
-                        ? 'bg-teal-50/80 border-teal-600 shadow-xs'
-                        : 'bg-white border-slate-200 hover:border-teal-300'
-                    }`}
-                  >
-                    <span className="text-xs font-black text-teal-800 bg-teal-100 px-2 py-0.5 rounded-full">
-                      الصف {toArabicNum(passage.gradeLevel)}
-                    </span>
-                    <h3 className="text-base font-black text-slate-900 mt-2">{passage.titleAr}</h3>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-1">{passage.themeAr}</p>
-                    <span className="text-2xs text-teal-900 font-bold block mt-2">
-                      معدل مريح: {toArabicNum(passage.recommendedWcpmRange[0])}–{toArabicNum(passage.recommendedWcpmRange[1])} كلمة/د
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Three Pedagogical Fluency Pillars Banner (No Blind Speed) */}
-          <div className="bg-teal-900 text-white rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <span className="text-teal-300 text-xs font-black">الطلاقة الحقيقية ليست سباق سرعة</span>
-                <h3 className="text-xl sm:text-2xl font-black mt-0.5">{activeFluencyPassage.titleAr}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => (isPlayingAudio ? stopAudio() : speak(activeFluencyPassage.fullTextVowelled))}
-                className="bz-btn bg-teal-700 hover:bg-teal-600 text-white text-xs flex items-center gap-1.5 border border-teal-500/50 shadow-xs"
-              >
-                {isPlayingAudio ? <VolumeX className="w-4 h-4 text-rose-300" /> : <Volume2 className="w-4 h-4 text-teal-200" />}
-                <span>{isPlayingAudio ? 'إيقاف النموذج' : 'استمع للنموذج الكامل بتنغيم'}</span>
-              </button>
-            </div>
-
-            {/* 3 Indicators */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-              <div className="bg-teal-800/60 rounded-xl p-3 border border-teal-700/60 space-y-1">
-                <span className="font-black text-teal-200 block">🎯 ١. دقة الحركات</span>
-                <span className="text-teal-100 leading-relaxed block">نطق الحركات والمدود بصوت هادئ دون تخمين.</span>
-              </div>
-              <div className="bg-teal-800/60 rounded-xl p-3 border border-teal-700/60 space-y-1">
-                <span className="font-black text-teal-200 block">🌊 ٢. تجميع العبارات</span>
-                <span className="text-teal-100 leading-relaxed block">قراءة العبارة كوحدة معنوية واحدة دون تقطيع الحروف.</span>
-              </div>
-              <div className="bg-teal-800/60 rounded-xl p-3 border border-teal-700/60 space-y-1">
-                <span className="font-black text-teal-200 block">🎭 ٣. التنغيم والوقف</span>
-                <span className="text-teal-100 leading-relaxed block">الوقوف عند الفاصلة والتعبير عن السؤال والتعجب.</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Phrase-Cued Reading Workspace */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-bold border-b border-slate-100 pb-3">
-              <span>تدرّب على قراءة العبارات بالترتيب:</span>
-              <span>اضغط على العبارة للاستماع إليها وتكرارها بصوتك</span>
-            </div>
-
-            {/* Chunked Lines */}
-            <div className="space-y-3">
-              {activeFluencyPassage.phrasedLines.map((line, index) => {
-                const isActive = activePhraseIndex === index;
-                return (
-                  <div
-                    key={index}
-                    onClick={() => handleReadPhrase(line.textAr, index)}
-                    className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-wrap items-center justify-between gap-3 ${
-                      isActive
-                        ? 'bg-teal-50 border-teal-500 shadow-xs'
-                        : 'bg-slate-50/70 border-slate-200 hover:border-teal-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 rounded-full bg-white border border-slate-300 flex items-center justify-center text-xs font-black text-slate-700 shrink-0">
-                        {toArabicNum(index + 1)}
-                      </span>
-                      <span className="text-lg sm:text-xl font-black text-slate-900 tracking-wide">
-                        {line.textAr}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {line.cueNotesAr && (
-                        <span className="text-2xs bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 font-semibold">
-                          {line.cueNotesAr}
-                        </span>
-                      )}
-                      <Volume2 className={`w-4 h-4 ${isActive ? 'text-teal-600' : 'text-slate-400'}`} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Prosody & Punctuation Advice */}
-            <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-2 text-xs">
-              <span className="font-black text-amber-950 flex items-center gap-1.5">
-                <Lightbulb className="w-4 h-4 text-amber-600" />
-                إرشاد التنغيم لمرافقة الطفل:
-              </span>
-              <p className="text-slate-700 leading-relaxed font-medium">
-                {activeFluencyPassage.prosodyGuidanceAr}
-              </p>
-              <ul className="list-disc list-inside text-slate-600 space-y-0.5 pt-1">
-                {activeFluencyPassage.punctuationTipsAr.map((tip, idx) => (
-                  <li key={idx}>{tip}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Self-Reflection Checklist */}
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-              <span className="text-xs font-black text-slate-800 block">تقييم جولة القراءة المتكررة (مع ولي الأمر):</span>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer bg-white p-3 rounded-xl border border-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={fluencyChecklist.accuracy}
-                    onChange={(e) => setFluencyChecklist({ ...fluencyChecklist, accuracy: e.target.checked })}
-                    className="rounded text-teal-600 focus:ring-teal-500"
-                  />
-                  <span>قرأت كل الحركات بدقة دون إبدال</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer bg-white p-3 rounded-xl border border-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={fluencyChecklist.phrasing}
-                    onChange={(e) => setFluencyChecklist({ ...fluencyChecklist, phrasing: e.target.checked })}
-                    className="rounded text-teal-600 focus:ring-teal-500"
-                  />
-                  <span>وصلت الكلمات ووقفت عند الوقف</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer bg-white p-3 rounded-xl border border-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={fluencyChecklist.expression}
-                    onChange={(e) => setFluencyChecklist({ ...fluencyChecklist, expression: e.target.checked })}
-                    className="rounded text-teal-600 focus:ring-teal-500"
-                  />
-                  <span>عبّرت بنبرة صوتي عن المعنى</span>
-                </label>
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  disabled={!fluencyChecklist.accuracy || !fluencyChecklist.phrasing || fluencySessionDone}
-                  onClick={() => {
-                    setFluencySessionDone(true);
-                    speak(`أحسنت القراءة يا ${childName}! طلاقتك وتعبيرك في تحسن مستمر.`);
-                    onActivityCompleted?.('fluency', activeFluencyPassage.id);
-                  }}
-                  className="bz-btn bz-btn-primary bg-teal-600 hover:bg-teal-700 text-white text-xs flex items-center gap-2 disabled:opacity-40"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{fluencySessionDone ? 'تم توثيق جولة الطلاقة بنجاح ⭐' : 'تأكيد إتمام جولة القراءة المتكررة'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          TAB 3: SMART LEVELED ARABIC STORYBOOK LIBRARY
-         ===================================================================== */}
-      {activeTab === 'library' && (
-        <div className="space-y-6">
-          {!activeStory ? (
-            /* STORY CATALOG VIEW */
-            <div className="space-y-6">
-              {/* Level Filter Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-indigo-600" />
-                  <span className="text-sm font-black text-slate-800">رفوف المكتبة المصنفة:</span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {[
-                    { id: 0, label: 'جميع المستويات' },
-                    { id: 1, label: 'المستوى ١ (بذور القراءة)' },
-                    { id: 2, label: 'المستوى ٢ (خطوات الطلاقة)' },
-                    { id: 3, label: 'المستوى ٣ (القراءة المستقلة)' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setSelectedStoryLevel(id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                        selectedStoryLevel === id
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Story Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                {filteredStories.map((story) => (
-                  <article
-                    key={story.id}
-                    className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      {/* Cover header */}
-                      <div className={`p-6 text-white text-center bg-gradient-to-br ${story.coverBgClass} space-y-2`}>
-                        <span className="text-5xl block transform hover:scale-110 transition-transform">
-                          {story.coverEmoji}
-                        </span>
-                        <span className="inline-block text-2xs font-black bg-black/20 px-2.5 py-0.5 rounded-full">
-                          {story.levelLabelAr}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 space-y-3">
-                        <div className="flex items-center justify-between text-2xs text-slate-500 font-bold">
-                          <span>{story.targetGradeRange}</span>
-                          <span>{toArabicNum(story.wordCount)} كلمة</span>
-                        </div>
-
-                        <h3 className="text-lg font-black text-slate-900 leading-snug">{story.titleAr}</h3>
-                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{story.synopsisAr}</p>
-
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-2xs text-slate-700 font-medium">
-                          🎯 <strong>التركيز:</strong> {story.phonicsFocusAr}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-5 pt-0">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenStory(story)}
-                        className="w-full bz-btn bz-btn-primary bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-2.5 rounded-xl font-black flex items-center justify-center gap-2 shadow-xs"
-                      >
-                        <BookOpen className="w-4 h-4" />
-                        <span>افتح القصة واقرأ</span>
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* ACTIVE STORY READER & COMPREHENSION VIEW */
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden space-y-6">
-              {/* Story Reader Top Bar */}
-              <div className="p-5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCloseStory}
-                    className="bz-btn bz-btn-ghost text-xs flex items-center gap-1 text-slate-600 hover:text-slate-900"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                    <span>فهرس القصص</span>
-                  </button>
-                  <span className="text-slate-300">|</span>
-                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-1.5">
-                    <span>{activeStory.coverEmoji}</span>
-                    <span>{activeStory.titleAr}</span>
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500">
-                    صفحة {toArabicNum(currentStoryPage)} من {toArabicNum(activeStory.pages.length)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const page = activeStory.pages[currentStoryPage - 1];
-                      if (isPlayingAudio) {
-                        stopAudio();
-                      } else if (page) {
-                        speak(page.vowelledTextAr);
-                      }
-                    }}
-                    className="bz-btn bz-btn-secondary text-xs flex items-center gap-1 bg-white shadow-xs"
-                  >
-                    {isPlayingAudio ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-indigo-600" />}
-                    <span>{isPlayingAudio ? 'إيقاف' : 'استمع للصفحة'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Story Page Display */}
-              {(() => {
-                const page = activeStory.pages[currentStoryPage - 1] || activeStory.pages[0];
-                return (
-                  <div className="p-8 max-w-2xl mx-auto space-y-8">
-                    {/* Illustration */}
-                    <div className="text-center">
-                      <span className="text-6xl block transform hover:scale-110 transition-transform">
-                        {page.illustrationEmoji}
-                      </span>
-                    </div>
-
-                    {/* Vowelled Text Lines */}
-                    <div className="bg-amber-50/40 rounded-3xl p-6 sm:p-8 border border-amber-200/60 shadow-xs space-y-4 text-center">
-                      {page.linesAr.map((line, idx) => (
-                        <p
-                          key={idx}
-                          className="text-2xl sm:text-3xl font-black text-slate-900 leading-loose tracking-wide font-serif"
-                        >
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Page Navigation */}
-                    <div className="flex items-center justify-between pt-4">
-                      <button
-                        type="button"
-                        disabled={currentStoryPage <= 1}
-                        onClick={() => {
-                          stopAudio();
-                          setCurrentStoryPage((prev) => Math.max(1, prev - 1));
-                        }}
-                        className="bz-btn bz-btn-secondary text-xs flex items-center gap-1 disabled:opacity-30"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                        <span>الصفحة السابقة</span>
-                      </button>
-
-                      <div className="flex items-center gap-1.5">
-                        {activeStory.pages.map((p) => (
-                          <span
-                            key={p.pageNumber}
-                            className={`w-3 h-3 rounded-full ${
-                              currentStoryPage === p.pageNumber ? 'bg-indigo-600 scale-125' : 'bg-slate-200'
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={currentStoryPage >= activeStory.pages.length}
-                        onClick={() => {
-                          stopAudio();
-                          setCurrentStoryPage((prev) => Math.min(activeStory.pages.length, prev + 1));
-                        }}
-                        className="bz-btn bz-btn-primary bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1 disabled:opacity-30"
-                      >
-                        <span>الصفحة التالية</span>
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* VOCABULARY SPOTLIGHT */}
-              {activeStory.vocabularySpotlight.length > 0 && (
-                <div className="p-6 bg-indigo-50/60 border-t border-indigo-100 space-y-3">
-                  <div className="flex items-center gap-2 text-indigo-950 font-black text-xs uppercase tracking-wider">
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <span>مفردات القصة الجديدة:</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {activeStory.vocabularySpotlight.map((vocab, i) => (
-                      <div key={i} className="p-3 bg-white rounded-xl border border-indigo-200/80 text-xs space-y-0.5">
-                        <strong className="text-indigo-900 font-black text-sm block">{vocab.wordAr}</strong>
-                        <span className="text-slate-600">{vocab.meaningAr}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* COMPREHENSION QUIZ (Shown after reading all pages) */}
-              <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-200 space-y-6">
-                <div className="space-y-1">
-                  <span className="text-xs font-black text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">
-                    تحدي الفهم القرائي والاستيعاب
-                  </span>
-                  <h4 className="text-xl font-black text-slate-900">ماذا تعلمنا من القصة؟</h4>
-                  <p className="text-xs text-slate-600">أجب عن الأسئلة التالية للتأكد من فهمك للأحداث والمعاني.</p>
-                </div>
-
-                <div className="space-y-6">
-                  {activeStory.comprehensionQuiz.map((item, qIdx) => {
-                    const selectedOpt = quizAnswers[item.id];
-                    return (
-                      <div key={item.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-black text-indigo-900">
-                            السؤال {toArabicNum(qIdx + 1)}: {item.questionAr}
-                          </span>
-                          <span className="text-2xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
-                            {item.typeLabelAr}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          {item.options.map((opt, optIdx) => {
-                            const isChosen = selectedOpt === optIdx;
-                            const isCorrect = item.correctIndex === optIdx;
-                            let btnStyle = 'bg-slate-50 border-slate-200 text-slate-800 hover:border-indigo-300';
-
-                            if (quizSubmitted) {
-                              if (isCorrect) btnStyle = 'bg-teal-50 border-teal-500 text-teal-900 font-black';
-                              else if (isChosen) btnStyle = 'bg-rose-50 border-rose-400 text-rose-900 line-through';
-                            } else if (isChosen) {
-                              btnStyle = 'bg-indigo-50 border-indigo-600 text-indigo-950 font-black';
-                            }
-
-                            return (
-                              <button
-                                key={optIdx}
-                                type="button"
-                                disabled={quizSubmitted}
-                                onClick={() => handleQuizAnswer(item.id, optIdx)}
-                                className={`p-3 rounded-xl border text-right text-xs transition-all ${btnStyle}`}
-                              >
-                                {opt}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {quizSubmitted && (
-                          <p className="text-xs text-slate-600 pt-1 font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                            💡 <strong>الشرح:</strong> {item.explanationAr}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  {!quizSubmitted ? (
-                    <button
-                      type="button"
-                      disabled={Object.keys(quizAnswers).length < activeStory.comprehensionQuiz.length}
-                      onClick={submitQuiz}
-                      className="bz-btn bz-btn-primary bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-6 py-2.5 flex items-center gap-2 shadow-xs disabled:opacity-40"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>تأكيد الإجابات واكتساب النقاط ⭐</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleCloseStory}
-                      className="bz-btn bz-btn-secondary text-xs flex items-center gap-2"
-                    >
-                      <span>العودة لرفوف المكتبة واختيار قصة أخرى</span>
-                      <ArrowLeft className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
+
+interface CelebrationCardProps {
+  firstName: string;
+  skillTitle: string;
+  onNext?: () => void;
+  onBackToMap: () => void;
+}
+
+const CelebrationCard: React.FC<CelebrationCardProps> = ({
+  firstName,
+  skillTitle,
+  onNext,
+  onBackToMap,
+}) => (
+  <div className="rounded-3xl border-[3px] border-emerald-400 bg-white p-8 shadow-md text-center space-y-5">
+    <div className="flex justify-center">
+      <Mascot mood="proud" size={108} />
+    </div>
+    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-900 text-sm font-black">
+      <Award className="w-4 h-4 text-emerald-700" />
+      <span>{skillTitle}</span>
+    </div>
+    <h2 className="text-3xl font-black text-slate-900">أحسنت يا {firstName}!</h2>
+    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+      {onNext && (
+        <button
+          type="button"
+          onClick={onNext}
+          className="min-h-[54px] px-8 rounded-2xl border-b-4 border-emerald-800 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base flex items-center gap-2 cursor-pointer"
+        >
+          <span>انتقل للمهارة التالية</span>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onBackToMap}
+        className="min-h-[54px] px-6 rounded-2xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-black text-base cursor-pointer"
+      >
+        العودة للخريطة
+      </button>
+    </div>
+  </div>
+);

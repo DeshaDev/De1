@@ -793,16 +793,18 @@ export const RemediationGymView: React.FC<RemediationGymViewProps> = ({
                   <button
                     type="button"
                     onClick={() => speakText(activeScaffold.audioText)}
-                    className="p-1.5 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-900 cursor-pointer"
+                    aria-label="استماع إلى الشرح المساعد"
+                    className="min-h-11 min-w-11 flex items-center justify-center p-2.5 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-900 cursor-pointer"
                   >
-                    <Volume2 className="w-3.5 h-3.5" />
+                    <Volume2 className="w-4 h-4" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveScaffold(null)}
-                    className="p-1.5 rounded-lg hover:bg-amber-200/80 text-amber-800 cursor-pointer"
+                    aria-label="إغلاق الشرح المساعد"
+                    className="min-h-11 min-w-11 flex items-center justify-center p-2.5 rounded-lg hover:bg-amber-200/80 text-amber-800 cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>

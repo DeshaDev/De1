@@ -1,5 +1,6 @@
 import { toArabicNum } from './utils/arabicDigits';
-import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo, useRef } from 'react';
+import { MotionConfig } from 'motion/react';
 import {
   Search,
   Sparkles,
@@ -18,7 +19,7 @@ import {
   ArrowLeft,
   Trash2,
   ShieldCheck,
-  FileText,
+  Lock,
   Users,
   Building2,
   Mail,
@@ -76,18 +77,15 @@ const RemediationGymView = lazy(() => import('./components/RemediationGymView'))
 const DyslexiaScreeningHub = lazy(() => import('./components/DyslexiaScreeningHub'));
 const ArabicLiteracyStudioView = lazy(() => import('./components/profile/ArabicLiteracyStudioView').then((m) => ({ default: m.ArabicLiteracyStudioView })));
 import { BrandLockup, BrandMark } from './components/ui/BrandMark';
-import { BatteryRiskBadge, BatterySummaryPanel } from './components/profile/BatterySummaryPanel';
-import { ChildDashboard } from './components/profile/ChildDashboard';
 import { mergeStudentRecords } from './utils/mergeStudentRecords';
-import { TrainingProgressPanel } from './components/profile/TrainingProgressPanel';
-import IndividualPlanPanel from './components/profile/IndividualPlanPanel';
 import { trackUsage } from './utils/usageTracking';
+const ChildDashboard = lazy(() => import('./components/profile/ChildDashboard').then((m) => ({ default: m.ChildDashboard })));
+const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
 const UsageMetricsPanel = lazy(() => import('./components/UsageMetricsPanel'));
 const PrivacyPolicyView = lazy(() => import('./components/PrivacyPolicyView'));
 const TermsOfUseView = lazy(() => import('./components/TermsOfUseView'));
 const ContentReviewView = lazy(() => import('./components/review/ContentReviewView'));
 const AudioComparisonLabView = lazy(() => import('./components/AudioComparisonLabView'));
-import { ParentPortalView } from './components/ParentPortalView';
 import { HomeLandingView, AppTabId } from './components/HomeLandingView';
 import {
   DyslexiaComfortBar,
@@ -104,7 +102,13 @@ const hasVerifiedOralAudio = (student: StudentRecord): boolean =>
   student.aiAssessmentVerified === true &&
   student.evidenceProvenance === 'server-verified-audio';
 
-function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean; subView?: DashboardSubView } {
+function parseRouteFromLocation(): {
+  tab: ActiveTab;
+  showLogin?: boolean;
+  subView?: DashboardSubView;
+  studioTab?: 'foundations' | 'spelling' | 'fluency' | 'library';
+  storyId?: string;
+} {
   if (typeof window === 'undefined') return { tab: 'home' };
   const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
   const params = new URLSearchParams(window.location.search);
@@ -134,12 +138,27 @@ function parseRouteFromLocation(): { tab: ActiveTab; showLogin?: boolean; subVie
     return { tab: 'adaptive-reader' };
   }
   if (
+    rawPath === '/foundations' ||
+    rawPath === '/arabic' ||
+    rawPath === '/reading' ||
+    rawPath === '/stories' ||
     rawPath === '/studio' ||
     rawPath === '/literacy-studio' ||
     rawPath === '/library' ||
     rawPath === '/spelling'
   ) {
-    return { tab: 'literacy-studio' };
+    const storyId = params.get('story') || undefined;
+    const isStoriesRoute = rawPath === '/reading' || rawPath === '/stories' || rawPath === '/library' || Boolean(storyId);
+    const studioTab: 'foundations' | 'spelling' | 'fluency' | 'library' = isStoriesRoute
+      ? 'library'
+      : rawPath === '/spelling'
+      ? 'spelling'
+      : 'foundations';
+    return {
+      tab: 'literacy-studio',
+      studioTab,
+      storyId,
+    };
   }
   if (rawPath === '/dashboard' || rawPath === '/report') {
     return { tab: 'dashboard', subView: 'report' };
@@ -200,12 +219,20 @@ function tabToUrlPath(tab: ActiveTab): string {
   }
 }
 
+// Keep teacher login logic, modal, and /school route intact while hiding the header button for parents.
+const SHOW_TEACHER_LOGIN_BUTTON = false;
+
 export default function App() {
   // Family battery updates are serialized per child. Each snapshot may contain
   // one-use receipts for earlier tasks that are still being saved.
   const parentBatterySyncQueue = useRef(new Map<string, Promise<void>>());
   const initialRoute = parseRouteFromLocation();
   const [activeTab, setActiveTabState] = useState<ActiveTab>(initialRoute.tab);
+  const [parentPortalInitialMode, setParentPortalInitialMode] = useState<'register' | 'login'>('register');
+  const [studioInitialTab, setStudioInitialTab] = useState<'foundations' | 'spelling' | 'fluency' | 'library'>(
+    initialRoute.studioTab || 'foundations',
+  );
+  const [studioInitialStoryId, setStudioInitialStoryId] = useState<string | undefined>(initialRoute.storyId);
   const [showBaseeraLogin, setShowBaseeraLogin] = useState<boolean>(initialRoute.showLogin || false);
 
 
@@ -214,6 +241,8 @@ export default function App() {
     const handlePopState = () => {
       const route = parseRouteFromLocation();
       setActiveTabState(route.tab);
+      if (route.studioTab) setStudioInitialTab(route.studioTab);
+      setStudioInitialStoryId(route.storyId);
       if (route.showLogin) setShowBaseeraLogin(true);
       if (route.subView) setDashboardSubView(route.subView);
     };
@@ -363,7 +392,16 @@ export default function App() {
   const [cookieNoticeAccepted, setCookieNoticeAccepted] = useState<boolean>(() => hasAcceptedCookieNotice());
 
   useEffect(() => {
-    preloadAudioManifest();
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof win.requestIdleCallback === 'function') {
+      const id = win.requestIdleCallback(() => preloadAudioManifest(), { timeout: 2000 });
+      return () => win.cancelIdleCallback?.(id);
+    }
+    const timer = window.setTimeout(() => preloadAudioManifest(), 1200);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const PUBLIC_TABS: ReadonlySet<ActiveTab> = new Set([
@@ -377,9 +415,10 @@ export default function App() {
   const isAuthenticated = Boolean(supabaseUser || baseeraSession);
 
   const setActiveTab = (tab: ActiveTab) => {
-    // Strictly require login: redirect unauthenticated visits to the parent portal cleanly.
+    // Strictly require login: guide unauthenticated visitors cleanly to login/signup.
     if (!PUBLIC_TABS.has(tab) && !supabaseUser && !baseeraSession) {
       setActiveTabState('parent-portal');
+      setAiStatusBanner('لبدء فحص عسر القراءة والبرنامج التدريبي المخصّص وحفظ نتائج طفلك بأمان، أنشئ حساب أسرة أو سجّل الدخول أدناه.');
       const portalPath = tabToUrlPath('parent-portal');
       if (typeof window !== 'undefined' && window.location.pathname !== portalPath) {
         window.history.pushState(null, '', portalPath);
@@ -676,33 +715,38 @@ export default function App() {
     };
   }, [baseeraSession?.token, baseeraSession?.role]);
 
-  const rawSelectedStudent =
-    students.find((s) => s.id === selectedStudentId) || students[0] || INITIAL_STUDENTS[0];
+  const rawSelectedStudent = useMemo(
+    () => students.find((s) => s.id === selectedStudentId) || students[0] || INITIAL_STUDENTS[0],
+    [students, selectedStudentId],
+  );
 
-  const selectedStudent: StudentRecord = {
-    ...rawSelectedStudent,
-    learningReport: rawSelectedStudent?.learningReport && typeof rawSelectedStudent.learningReport === 'object'
-      ? {
-          learningSummary: rawSelectedStudent.learningReport.learningSummary || 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
-          ocularMotorAnalysis: rawSelectedStudent.learningReport.ocularMotorAnalysis || 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
-          orthographicAndPhonologicalPatterns: rawSelectedStudent.learningReport.orthographicAndPhonologicalPatterns || 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
-          dyscalculiaSpatialAnalysis: rawSelectedStudent.learningReport.dyscalculiaSpatialAnalysis || 'غير منطبق.',
-          interventionExercises: Array.isArray(rawSelectedStudent.learningReport.interventionExercises)
-            ? rawSelectedStudent.learningReport.interventionExercises
-            : [],
-          classroomAccommodations: Array.isArray(rawSelectedStudent.learningReport.classroomAccommodations)
-            ? rawSelectedStudent.learningReport.classroomAccommodations
-            : [],
-        }
-      : {
-          learningSummary: 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
-          ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
-          orthographicAndPhonologicalPatterns: 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
-          dyscalculiaSpatialAnalysis: 'غير منطبق.',
-          interventionExercises: [],
-          classroomAccommodations: [],
-        },
-  };
+  const selectedStudent: StudentRecord = useMemo(
+    () => ({
+      ...rawSelectedStudent,
+      learningReport: rawSelectedStudent?.learningReport && typeof rawSelectedStudent.learningReport === 'object'
+        ? {
+            learningSummary: rawSelectedStudent.learningReport.learningSummary || 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
+            ocularMotorAnalysis: rawSelectedStudent.learningReport.ocularMotorAnalysis || 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
+            orthographicAndPhonologicalPatterns: rawSelectedStudent.learningReport.orthographicAndPhonologicalPatterns || 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+            dyscalculiaSpatialAnalysis: rawSelectedStudent.learningReport.dyscalculiaSpatialAnalysis || 'غير منطبق.',
+            interventionExercises: Array.isArray(rawSelectedStudent.learningReport.interventionExercises)
+              ? rawSelectedStudent.learningReport.interventionExercises
+              : [],
+            classroomAccommodations: Array.isArray(rawSelectedStudent.learningReport.classroomAccommodations)
+              ? rawSelectedStudent.learningReport.classroomAccommodations
+              : [],
+          }
+        : {
+            learningSummary: 'لم يُجرَ أي تقييم بعد. يظهر هنا ملخص أداء الطفل بعد أول نشاط قراءة أو فحص.',
+            ocularMotorAnalysis: 'غير منطبق؛ منصة هَيَّا نَقْرَأْ لا تعتمد على الكاميرا أو تتبّع حركة العين.',
+            orthographicAndPhonologicalPatterns: 'تظهر الأنماط والكلمات المستهدفة بعد إتمام أنشطة القراءة.',
+            dyscalculiaSpatialAnalysis: 'غير منطبق.',
+            interventionExercises: [],
+            classroomAccommodations: [],
+          },
+    }),
+    [rawSelectedStudent],
+  );
 
   const selectedReadingRate = (() => {
     if (!selectedStudent || selectedStudent.sessionStatus !== 'completed') return null;
@@ -719,20 +763,24 @@ export default function App() {
       : null;
   })();
 
-  const filteredStudents = students.filter((s) => {
-    if (hideDemoRecords && s.isDemoRecord) return false;
+  const filteredStudents = useMemo(
+    () =>
+      students.filter((s) => {
+        if (hideDemoRecords && s.isDemoRecord) return false;
 
-    const matchesSearch =
-      !searchQuery.trim() ||
-      s.name.includes(searchQuery.trim()) ||
-      s.schoolName.includes(searchQuery.trim());
-    if (!matchesSearch) return false;
+        const matchesSearch =
+          !searchQuery.trim() ||
+          s.name.includes(searchQuery.trim()) ||
+          s.schoolName.includes(searchQuery.trim());
+        if (!matchesSearch) return false;
 
-    // Filter by workflow completion, not by unvalidated diagnostic/risk labels.
-    if (sessionFilter === 'completed') return s.sessionStatus === 'completed';
-    if (sessionFilter === 'in_progress') return s.sessionStatus !== 'completed';
-    return true;
-  });
+        // Filter by workflow completion, not by unvalidated diagnostic/risk labels.
+        if (sessionFilter === 'completed') return s.sessionStatus === 'completed';
+        if (sessionFilter === 'in_progress') return s.sessionStatus !== 'completed';
+        return true;
+      }),
+    [students, hideDemoRecords, searchQuery, sessionFilter],
+  );
 
   const snapshotCompletedSession = (record: StudentRecord) => {
     const verifiedAudio = hasVerifiedOralAudio(record);
@@ -1658,15 +1706,32 @@ export default function App() {
 
   return (
     <AssessmentProvider>
+      <MotionConfig reducedMotion="user">
       <div
+        id="top"
+        dir="rtl"
         data-dyslexia-theme={surfaceTheme}
         data-dyslexia-spacing={spacingMode}
         className="baseera-app min-h-screen w-full flex flex-col"
       >
       <a className="baseera-skip-link" href="#main-content">تجاوز إلى المحتوى</a>
       {showBaseeraLogin && (
-        <div className="bz-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="baseera-login-title">
+        <div
+          className="bz-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="baseera-login-title"
+          onClick={() => { setShowBaseeraLogin(false); setBaseeraLoginError(''); setSupabaseError(''); }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setShowBaseeraLogin(false);
+              setBaseeraLoginError('');
+              setSupabaseError('');
+            }
+          }}
+        >
           <form
+            onClick={(event) => event.stopPropagation()}
             onSubmit={(event) => { event.preventDefault(); void handleBaseeraLogin(); }}
             className="bz-modal space-y-5"
             style={{ width: 'min(100%, 440px)' }}
@@ -1730,14 +1795,11 @@ export default function App() {
 
           <nav className="baseera-desktop-nav" aria-label="التنقل الرئيسي">
             {([
-              // One journey: register the child (header button), screen, then train.
-              // Practice games and the reader are optional extras inside the programme and the footer.
-              { id: 'home', label: 'الرئيسية', icon: Home },
-              { id: 'dyslexia-lab', label: 'فحص مهارات القراءة', icon: Brain },
-              { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target },
-              { id: 'literacy-studio', label: 'المكتبة والإملاء', icon: BookOpen },
-              { id: 'dashboard', label: 'التقرير وملف الطفل', icon: FileText },
-            ] as const).map((item) => {
+              { id: 'home', label: 'الرئيسية', icon: Home, show: true },
+              { id: 'literacy-studio', label: 'تعلّم العربية والقصص', icon: BookOpen, show: true },
+              { id: 'dyslexia-lab', label: isAuthenticated ? 'فحص مهارات القراءة' : 'فحص وعلاج عسر القراءة', icon: Brain, show: true },
+              { id: 'guided-program', label: 'البرنامج التدريبي', icon: Target, show: isAuthenticated },
+            ] as const).filter((item) => item.show).map((item) => {
               const Icon = item.icon;
               return (
                 <button
@@ -1764,21 +1826,26 @@ export default function App() {
               readingRulerEnabled={readingRulerEnabled}
               onToggleReadingRuler={() => setReadingRulerEnabled((prev) => !prev)}
             />
+            {(SHOW_TEACHER_LOGIN_BUTTON || (baseeraSession && !supabaseUser)) && (
+              <button
+                type="button"
+                className="bz-btn bz-btn-ghost shrink-0 whitespace-nowrap"
+                aria-label={baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}
+                onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
+              >
+                <GraduationCap aria-hidden="true" size={18} />
+                <span className="bz-hide-sm whitespace-nowrap">{baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}</span>
+              </button>
+            )}
             <button
               type="button"
-              className="bz-btn bz-btn-ghost shrink-0 whitespace-nowrap"
-              aria-label={baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}
-              onClick={() => baseeraSession ? setActiveTab('dashboard') : setShowBaseeraLogin(true)}
+              className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold baseera-topbar-cta cursor-pointer"
+              onClick={() => {
+                setParentPortalInitialMode('register');
+                setActiveTab('parent-portal');
+              }}
             >
-              <GraduationCap aria-hidden="true" size={18} />
-              <span className="bz-hide-sm whitespace-nowrap">{baseeraSession ? 'لوحة المعلم' : 'دخول المعلم'}</span>
-            </button>
-            <button
-              type="button"
-              className="bz-btn bz-btn-primary shrink-0 whitespace-nowrap font-bold baseera-topbar-cta"
-              onClick={() => setActiveTab('parent-portal')}
-            >
-              <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي 👶' : 'تسجيل طفل / حساب الأسرة 👨‍👩‍👧'}</span>
+              <span className="whitespace-nowrap">{supabaseUser ? 'أطفالي وتقاريرهم' : 'تسجيل طفل / الدخول'}</span>
             </button>
           </div>
         </div>
@@ -1820,11 +1887,10 @@ export default function App() {
       <nav className="baseera-mobile-nav" aria-label="التنقل السريع">
         {([
           { id: 'home', label: 'الرئيسية', icon: Home },
-          { id: 'parent-portal', label: 'طفلي', icon: Heart },
+          { id: 'parent-portal', label: supabaseUser ? 'أطفالي' : 'حسابي', icon: Heart },
           { id: 'dyslexia-lab', label: 'الفحص', icon: Brain },
           { id: 'guided-program', label: 'البرنامج', icon: Target },
-          { id: 'literacy-studio', label: 'المكتبة والإملاء', icon: BookOpen },
-          { id: 'dashboard', label: 'التقرير', icon: FileText },
+          { id: 'literacy-studio', label: 'تعلّم العربية', icon: BookOpen },
         ] as const).map((item) => {
           const Icon = item.icon;
           return (
@@ -1882,6 +1948,7 @@ export default function App() {
               supabaseUser={supabaseUser}
               authLoading={supabaseAuthLoading}
               students={students}
+              initialPortalMode={parentPortalInitialMode}
               onSignInWithEmail={handleEmailSignIn}
               onSignOut={async () => {
                 if (supabaseUser) {
@@ -1910,27 +1977,48 @@ export default function App() {
             />
           )}
 
-        {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD */}
-        {activeTab === 'dashboard' && (
+        {/* VIEW 1: AUTHENTICATION GATE FOR DASHBOARD WHEN LOGGED OUT */}
+        {activeTab === 'dashboard' && !isAuthenticated && (
+          <div className="max-w-xl mx-auto my-8 bg-white rounded-3xl border-[3px] border-teal-200 p-8 text-center space-y-5 shadow-sm" dir="rtl">
+            <div className="w-16 h-16 rounded-2xl bg-teal-50 border-2 border-teal-200 text-teal-700 flex items-center justify-center mx-auto">
+              <Lock className="w-8 h-8" aria-hidden="true" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-slate-900">
+                التقرير وملف الطفل متاح داخل حساب ولي الأمر
+              </h2>
+              <p className="text-sm font-medium text-slate-600 leading-relaxed">
+                لحماية خصوصية طفلك، لا تُعرض التقارير إلا بعد تسجيل الدخول أو إنشاء حساب أسرة.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setParentPortalInitialMode('register');
+                  setActiveTab('parent-portal');
+                }}
+                className="w-full sm:w-auto min-h-[52px] px-6 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-sm cursor-pointer transition-colors"
+              >
+                إنشاء حساب جديد وتسجيل طفل
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setParentPortalInitialMode('login');
+                  setActiveTab('parent-portal');
+                }}
+                className="w-full sm:w-auto min-h-[52px] px-6 rounded-2xl border-2 border-teal-600 bg-white hover:bg-teal-50 text-teal-900 font-black text-sm cursor-pointer transition-colors"
+              >
+                لديّ حساب — تسجيل الدخول
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 1: EDUCATIONAL INDICATORS DASHBOARD (authenticated only) */}
+        {activeTab === 'dashboard' && isAuthenticated && (
           <div className="space-y-8">
-            {!isAuthenticated && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 text-xs text-teal-950 shadow-xs">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">📱</span>
-                  <div>
-                    <strong className="block text-sm font-bold text-teal-900 mb-0.5">أنت تستعرض التقرير المحفوظ محلياً على هذا الجهاز</strong>
-                    <span>سجّل الدخول أو أنشئ حساب ولي أمر لحفظ تقارير أطفالك سحابياً ومتابعتها من أي جهاز بأمان.</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowBaseeraLogin(true)}
-                  className="px-4 py-2 font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors cursor-pointer shrink-0"
-                >
-                  تسجيل الدخول / إنشاء حساب
-                </button>
-              </div>
-            )}
             {baseeraSession?.role === 'platform_admin' && (
               <nav className="flex flex-wrap gap-2" aria-label="أدوات المدير">
                 {(['report', 'metrics', 'demo_requests'] as const).map((view) => (
@@ -2242,15 +2330,36 @@ export default function App() {
             problematicWords={selectedStudent.sessionStatus === 'completed' && hasVerifiedOralAudio(selectedStudent) ? (selectedStudent.problematicWords || []) : []}
             studentName={selectedStudent.name}
             passageId={selectedStudent.passageId}
+            onOpenHandDrawnStories={() => {
+              setStudioInitialTab('library');
+              setStudioInitialStoryId(undefined);
+              setActiveTab('literacy-studio');
+            }}
           />
         )}
 
         {activeTab === 'literacy-studio' && (
           <ArabicLiteracyStudioView
+            student={selectedStudent}
             childName={selectedStudent.name}
             gradeLevel={selectedStudent.gradeLevel}
             ageYears={selectedStudent.ageYears}
+            initialTab={studioInitialTab}
+            initialStoryId={studioInitialStoryId}
+            onNavigateTab={setActiveTab}
             onClose={() => setActiveTab('home')}
+            onActivityCompleted={(_type, _id, extraWords) => {
+              if (!extraWords || extraWords.length === 0) return;
+              const merged = [...new Set([...(selectedStudent.problematicWords || []), ...extraWords])].slice(-35);
+              if (merged.length === (selectedStudent.problematicWords || []).length) return;
+              const updatedStudent = { ...selectedStudent, problematicWords: merged };
+              setStudents((prev) =>
+                prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)),
+              );
+              if (supabaseUser && !updatedStudent.isDemoRecord) {
+                void syncStudentToSupabase(updatedStudent, supabaseUser.id);
+              }
+            }}
           />
         )}
 
@@ -2300,30 +2409,40 @@ export default function App() {
           <div className="baseera-footer-inner">
             <div className="baseera-footer-brand">
               <span className="baseera-brand"><BrandLockup tagline={false} /></span>
-              <p>فحص معرفي مبكر لمهارات ما قبل القراءة، وبرنامج تدريبي عربي يتكيّف مع تقدّم الطفل — للأسر والمدارس والأخصائيين.</p>
+              <p>منصة عربية متكاملة لتعلّم اللغة العربية وتأسيس القراءة والقصص المصوّرة للجميع، مع مسار فحص ودعم متخصص لصعوبات وعسر القراءة خطوةً بخطوة.</p>
             </div>
             <div className="baseera-footer-col">
-              <h2>المنصة</h2>
+              <h2>المسارات</h2>
               <ul>
-                <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص مهارات القراءة</button></li>
-                <li><button type="button" onClick={() => setActiveTab('guided-program')}>البرنامج التدريبي</button></li>
-                <li><button type="button" onClick={() => setActiveTab('remediation-gym')}>ألعاب إضافية (صالة التدريب)</button></li>
-                <li><button type="button" onClick={() => setActiveTab('adaptive-reader')}>القارئ الميسّر (لمن يقرأ)</button></li>
+                <li><button type="button" onClick={() => setActiveTab('literacy-studio')}>تعلّم العربية والقصص</button></li>
+                <li><button type="button" onClick={() => setActiveTab('dyslexia-lab')}>فحص وعلاج عسر القراءة</button></li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParentPortalInitialMode('register');
+                      setActiveTab('parent-portal');
+                    }}
+                  >
+                    حساب الأسرة وتسجيل طفل
+                  </button>
+                </li>
               </ul>
             </div>
             <div className="baseera-footer-col">
-              <h2>للمدارس والأخصائيين</h2>
+              <h2>الدعم والتواصل</h2>
               <ul>
-                <li><button type="button" onClick={() => setActiveTab('dashboard')}>لوحة المتابعة والتقارير</button></li>
-                <li><button type="button" onClick={() => setActiveTab('reading-lab')}>فحص القراءة الجهرية</button></li>
-                <li><a href="/audio-audit.html" target="_blank" rel="noreferrer" className="text-teal-700 font-bold hover:underline inline-flex items-center gap-1">🎙️ مختبر مراجعة واستماع الصوت</a></li>
-              </ul>
-            </div>
-            <div className="baseera-footer-col">
-              <h2>الثقة والخصوصية والتواصل</h2>
-              <ul>
-                <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
-                <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParentPortalInitialMode('login');
+                      setActiveTab('parent-portal');
+                    }}
+                  >
+                    تسجيل الدخول لحسابي
+                  </button>
+                </li>
                 <li>
                   <button
                     type="button"
@@ -2335,6 +2454,13 @@ export default function App() {
                     تواصل معنا
                   </button>
                 </li>
+              </ul>
+            </div>
+            <div className="baseera-footer-col">
+              <h2>الثقة والخصوصية</h2>
+              <ul>
+                <li><button type="button" onClick={() => setActiveTab('privacy')}>سياسة الخصوصية</button></li>
+                <li><button type="button" onClick={() => setActiveTab('terms')}>شروط الاستخدام</button></li>
                 <li>
                   <a href="mailto:contact@hayanaqra.com" className="text-teal-700 hover:underline font-medium" dir="ltr">
                     contact@hayanaqra.com
@@ -2343,13 +2469,14 @@ export default function App() {
               </ul>
             </div>
             <p className="baseera-footer-note">
-              <span>© ٢٠٢٦ هَيَّا نَقْرَأْ</span>
-              <span>أداة فرز وتدريب تعليمية، وليست تشخيصًا طبيًا. ولا يكون التشخيص إلا لدى مختص مؤهل.</span>
+              <span>© ٢٠٢٦ هَيَّا نَقْرَأْ — إحدى منصات شركة فورالا (Vorala LLC)</span>
+              <span>أداة تعليمية وفرز مبكر، وليست تشخيصًا طبيًا. ولا يكون التشخيص إلا لدى مختص مؤهل.</span>
             </p>
           </div>
         </footer>
       )}
     </div>
+    </MotionConfig>
     </AssessmentProvider>
   );
 }

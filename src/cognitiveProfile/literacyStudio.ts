@@ -108,7 +108,7 @@ export interface LeveledArabicStory {
 export const SPELLING_LESSONS: SpellingLesson[] = [
   {
     id: 'ta_marbuta_open',
-    titleAr: 'التاء المربوطة والتاء المفتوحة (ـة / ة vs ت)',
+    titleAr: 'التاء المربوطة والتاء المفتوحة (ـة / ة أو ت)',
     categoryAr: 'النهايات الإملائية',
     gradeLevelMin: 1,
     ruleSummaryAr:
@@ -291,7 +291,7 @@ export const SPELLING_LESSONS: SpellingLesson[] = [
         promptAr: 'ما الكتابة الصحيحة لكلمة: «شُكْرًا»؟',
         wordContextAr: 'قَالَ سَامِي لِأَبِيهِ: ... لَكَ يَا أَبِي.',
         options: [
-          { id: 'correct', labelAr: 'شُكْرًا (تنوين فتح على ألف)' },
+          { id: 'correct', labelAr: 'شُكْرًا (تنوين فتح مع ألف)' },
           { id: 'wrong_noon', labelAr: 'شُكْرَنْ (نون صريحة خطأ)' },
         ],
         correctId: 'correct',
@@ -310,7 +310,7 @@ export const SPELLING_LESSONS: SpellingLesson[] = [
   },
   {
     id: 'solar_lunar',
-    titleAr: 'اللام الشمسية واللام القمرية (الْـ vs الشَّـ)',
+    titleAr: 'اللام الشمسية واللام القمرية (الْـ أو الشَّـ)',
     categoryAr: 'السوابق الإملائية',
     gradeLevelMin: 2,
     ruleSummaryAr:

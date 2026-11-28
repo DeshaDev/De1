@@ -16,6 +16,7 @@ import {
   PauseCircle,
 } from 'lucide-react';
 import type { StudentRecord } from '../../data/seedData';
+import { formatArabicCount } from '../../utils/arabicDigits';
 import { SUBTESTS_BY_ID, subtestsForAge, type SubtestId } from '../../cognitiveProfile/battery';
 import { buildProfile } from '../../cognitiveProfile/scoring';
 import { SKILLS, type TrainingProgress } from '../../cognitiveProfile/training';
@@ -173,7 +174,7 @@ export const ChildDashboard: React.FC<Props> = ({
           ? 'لم يبدأ بعد'
           : screeningComplete
             ? `مكتمل (${ar(tasksDone)} من ${ar(tasksTotal)})`
-            : `محفوظ: ${ar(tasksDone)} من ${ar(tasksTotal)} مهمة${pausedIds.length > 0 ? ` · توقف عند «${SUBTESTS_BY_ID[pausedIds[0]].gameNameAr}»` : ''}`;
+            : `محفوظ: ${ar(tasksDone)} من ${formatArabicCount(tasksTotal, { singular: 'مهمة', dual: 'مهمتين', plural: 'مهام', accusative: 'مهمةً' })}${pausedIds.length > 0 ? ` · توقف عند «${SUBTESTS_BY_ID[pausedIds[0]].gameNameAr}»` : ''}`;
 
   const reportStatusText = !session
     ? 'يظهر بعد بدء الفحص'
@@ -300,7 +301,7 @@ export const ChildDashboard: React.FC<Props> = ({
             title: 'البرنامج التدريبي',
             status:
               sessionsDone > 0
-                ? `${ar(sessionsDone)} جلسة مكتملة`
+                ? `${formatArabicCount(sessionsDone, { singular: 'جلسة مكتملة', dual: 'جلستان مكتملتان', plural: 'جلسات مكتملة', accusative: 'جلسةً مكتملة' })}`
                 : focusSkills.length > 0
                   ? 'الخطة جاهزة للبدء'
                   : 'يبنى تلقائيًا بعد الفحص',

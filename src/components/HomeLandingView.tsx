@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   BookOpen,
+  Brain,
   Gamepad2,
-  Building2,
   CheckCircle2,
   ClipboardCheck,
-  FileBarChart,
   GraduationCap,
   Lock,
-  Stethoscope,
+  Sparkles,
   Timer,
   Users,
-  X,
+  ArrowLeft,
 } from 'lucide-react';
 import { StudentRecord } from '../data/seedData';
 import { Mascot } from './ui/Mascot';
@@ -24,8 +23,7 @@ import {
   PROGRAM_SESSIONS,
   SESSIONS_PER_WEEK,
   SKILLS,
-  FOCUS_SKILLS,
-} from '../cognitiveProfile/training';
+} from '../cognitiveProfile/meta';
 
 export type AppTabId =
   | 'home'
@@ -82,72 +80,78 @@ function HnCloseDecor() {
 }
 
 export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab }) => {
-
-  const [showSchoolDemoModal, setShowSchoolDemoModal] = useState(false);
-  const [schoolName, setSchoolName] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [roleTitle, setRoleTitle] = useState('');
-  const [workEmail, setWorkEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [expectedStudents, setExpectedStudents] = useState('');
-  const [demoNotes, setDemoNotes] = useState('');
-  const [isSubmittingDemo, setIsSubmittingDemo] = useState(false);
-  const [demoSubmitError, setDemoSubmitError] = useState('');
-  const [demoSubmitSuccess, setDemoSubmitSuccess] = useState(false);
-
-  const handleSchoolDemoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmittingDemo(true);
-    setDemoSubmitError('');
-    try {
-      const res = await fetch('/api/school-demo-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolName: schoolName.trim(),
-          contactName: contactName.trim(),
-          roleTitle: roleTitle.trim(),
-          workEmail: workEmail.trim(),
-          phone: phone.trim(),
-          expectedStudents: expectedStudents.trim(),
-          notes: demoNotes.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'تعذر إرسال طلب التجربة.');
-      setDemoSubmitSuccess(true);
-    } catch (err: any) {
-      setDemoSubmitError(err.message || 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة لاحقًا.');
-    } finally {
-      setIsSubmittingDemo(false);
-    }
-  };
-
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  const domainOrder = Object.keys(DOMAINS) as Array<keyof typeof DOMAINS>;
-
   return (
     <div className="baseera-home" dir="rtl">
-      {/* ================= HERO: a sky, hills, and letters to tap ================= */}
+      {/* ================= HERO: Clear 2-Track Value Proposition ================= */}
       <section className="hn-sky relative overflow-hidden">
         <HnSkyDecor />
-        <div className="bz-container relative grid lg:grid-cols-[1fr_1fr] gap-2 lg:gap-10 items-center pt-5 pb-10 sm:pt-10 lg:pt-12 lg:pb-14">
+        <div className="bz-container relative grid lg:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8 items-center pt-4 pb-10 sm:pt-6 lg:pt-8 lg:pb-12">
           <div className="relative z-10">
-            <h1 className="hn-display">نساعدك في حل مشكلة عسر القراءة، وتنمية مهارات طفلك في القراءة</h1>
-            <p className="hn-lead mt-5 max-w-[34rem]">
-              اكتشف صعوبات القراءة مبكرًا ونمِّ مهارات طفلك في القراءة والنطق والإملاء خطوةً خطوة، عبر ألعاب فحص صوتية ومعرفية ممتعة وبرنامج تدريبي مخصّص يناسب مستواه.
-            </p>
-            <div className="flex flex-wrap gap-3 mt-7">
-              <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
-                ابدأ اللعب مع طفلك
-              </button>
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 border border-teal-200 text-teal-900 text-xs font-black shadow-2xs mb-3">
+              <Sparkles size={14} className="text-amber-500" aria-hidden="true" />
+              <span>للأطفال من ٤ إلى ١٢ سنة · بالصوت العربي الفصيح</span>
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.55rem] font-black text-slate-900 leading-tight tracking-tight">
+              هَيَّا نَقْرَأْ: تعلّم العربية ودعم صعوبات القراءة
+            </h1>
+            <h2 className="text-base sm:text-lg font-extrabold text-teal-950 mt-2.5">
+              اختر المسار المناسب لطفلك وابدأ فورًا:
+            </h2>
+
+            {/* Two Crystal-Clear Path Cards right in the Hero */}
+            <div className="grid sm:grid-cols-2 gap-3.5 mt-4">
+              {/* Path 1: Open Arabic Learning & Stories */}
+              <div className="bg-white/95 backdrop-blur-xs rounded-3xl p-4 border-[3px] border-teal-500 shadow-sm flex flex-col justify-between gap-3">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-900 text-[11px] font-black">
+                    ١. متاح فورًا للجميع
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-1.5">
+                    تعلّم العربية والقصص
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-1 leading-relaxed">
+                    تأسيس الحروف بالحركات، المقاطع، الإملاء، الطلاقة، والمكتبة المصوّرة الناطقة خطوةً بخطوة.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary w-full justify-center hn-toy cursor-pointer"
+                  onClick={() => onNavigateTab('literacy-studio')}
+                >
+                  <BookOpen size={18} aria-hidden="true" />
+                  <span>ابدأ التعلّم والقصص الآن</span>
+                </button>
+              </div>
+
+              {/* Path 2: Dyslexia Screening & Guided Remediation */}
+              <div className="bg-white/95 backdrop-blur-xs rounded-3xl p-4 border-[3px] border-amber-400 shadow-sm flex flex-col justify-between gap-3">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 text-[11px] font-black">
+                    ٢. لمن يواجه صعوبات قراءة
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-1.5">
+                    فحص وعلاج عسر القراءة
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-1 leading-relaxed">
+                    فحص مبكر باللعب ({ar(BATTERY.length)} مهارةً قرائية) مع تقرير واضح وبرنامج تدريبي مخصّص لطفلك.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-secondary w-full justify-center border-2 border-amber-500 bg-amber-50 hover:bg-amber-100 text-slate-900 font-black cursor-pointer"
+                  onClick={() => onNavigateTab('parent-portal')}
+                >
+                  <Brain size={18} className="text-amber-700" aria-hidden="true" />
+                  <span>سجّل طفلك وابدأ الفحص</span>
+                </button>
+              </div>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-2">
+
+            <ul className="mt-4 flex flex-wrap gap-2">
               {[
                 { t: 'من ٤ سنوات فأكثر', icon: Users },
-                { t: `${ar(BATTERY.length)} لعبة للفحص`, icon: Gamepad2 },
-                { t: `جلسة التدريب نحو ${ar(MINUTES_PER_SESSION)} دقيقة`, icon: Timer },
+                { t: `${ar(BATTERY.length)} لعبة للفحص المبكر`, icon: Gamepad2 },
+                { t: `جلسة قصيرة (${ar(MINUTES_PER_SESSION)} دقيقة)`, icon: Timer },
               ].map((c) => (
                 <li key={c.t} className="hn-pill">
                   <c.icon size={16} aria-hidden="true" />
@@ -156,22 +160,68 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               ))}
             </ul>
           </div>
-          <div className="order-first lg:order-none mx-auto w-full max-w-[300px] sm:max-w-[420px] lg:max-w-none">
+
+          <div className="order-first lg:order-none mx-auto w-full max-w-[280px] sm:max-w-[380px] lg:max-w-none">
             <HeroScene />
           </div>
         </div>
       </section>
 
-      {/* ================= THE GAMES, as stops on a board ================= */}
-      <section className="hn-board-section">
-        <div className="bz-container pt-4 pb-16 sm:pt-6 sm:pb-20">
-          <div className="max-w-4xl">
-            <h2 className="hn-h2">{ar(BATTERY.length)} لعبة في رحلة واحدة</h2>
-            <p className="hn-body mt-3">
-              من «{BATTERY[0].gameNameAr}» إلى «{BATTERY[BATTERY.length - 1].gameNameAr}». كل لعبة تقيس مهارة واحدة، وتبدأ بتجربة قصيرة قبل أن تُحسب الإجابات.
+      {/* ================= HOW IT WORKS IN 3 SIMPLE STEPS ================= */}
+      <section className="bz-container py-12 sm:py-16">
+        <div className="text-center max-w-2xl mx-auto">
+          <h2 className="hn-h2">كيف تسير رحلة طفلك في ٣ خطوات؟</h2>
+          <p className="hn-body mt-2">
+            صُمّمت المنصة لتكون واضحة وهادئة دون قوائم معقّدة أو نصوص طويلة.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-5 mt-8">
+          <div className="bg-white rounded-3xl p-6 border-[3px] border-teal-200 shadow-xs space-y-2.5">
+            <span className="w-11 h-11 rounded-2xl bg-teal-600 text-white font-black text-xl flex items-center justify-center">
+              ١
+            </span>
+            <h3 className="text-xl font-black text-slate-900">اختر المسار المناسب</h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+              ادخل مباشرةً إلى <strong>تعلّم العربية والقصص</strong> للتأسيس العام، أو سجّل حساب أسرة لبدء <strong>فحص عسر القراءة</strong> وحفظ النتائج.
             </p>
           </div>
-          <ol className="hn-board mt-10">
+
+          <div className="bg-white rounded-3xl p-6 border-[3px] border-amber-200 shadow-xs space-y-2.5">
+            <span className="w-11 h-11 rounded-2xl bg-amber-500 text-slate-950 font-black text-xl flex items-center justify-center">
+              ٢
+            </span>
+            <h3 className="text-xl font-black text-slate-900">مهمة واحدة في كل شاشة</h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+              يسمع الطفل النطق العربي الفصيح، ويتدرّج من الحروف إلى المقاطع ثم الكلمات والقصص المصوّرة في جلسات قصيرة ({ar(MINUTES_PER_SESSION)} دقيقة).
+            </p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 border-[3px] border-emerald-200 shadow-xs space-y-2.5">
+            <span className="w-11 h-11 rounded-2xl bg-emerald-600 text-white font-black text-xl flex items-center justify-center">
+              ٣
+            </span>
+            <h3 className="text-xl font-black text-slate-900">خطة تتكيّف مع طفلك</h3>
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+              يركّز البرنامج التدريبي ({ar(SESSIONS_PER_WEEK)} جلسات أسبوعيًا، {ar(PROGRAM_SESSIONS)} جلسةً) على المهارات التي يحتاجها طفلك ويعرض تقدّمه لولي الأمر.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= THE 11 SCREENING GAMES ================= */}
+      <section className="hn-board-section">
+        <div className="bz-container pt-6 pb-14 sm:pt-8 sm:pb-16">
+          <div className="max-w-3xl">
+            <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-950 text-xs font-black mb-2">
+              مسار فحص ودعم عسر القراءة
+            </span>
+            <h2 className="hn-h2">{ar(BATTERY.length)} لعبة قصيرة لقياس مهارات القراءة</h2>
+            <p className="hn-body mt-2">
+              كل لعبة تقيس مهارة قرائية محددة، وتبدأ بتجربة تدريبية بالصوت قبل حساب النتيجة، ويمكن إكمالها على أكثر من جلسة.
+            </p>
+          </div>
+          <ol className="hn-board mt-8">
             {BATTERY.map((s, i) => {
               const domain = DOMAINS[s.domain];
               return (
@@ -191,107 +241,64 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
               <span className="hn-stop">
                 <span className="hn-stop-icon">🏆</span>
               </span>
-              <span className="hn-stop-name">التقرير</span>
+              <span className="hn-stop-name">التقرير والخطة</span>
             </li>
           </ol>
-          <p className="hn-small mt-8">يجلس بالغ بجانب الطفل، ويمكن استكمال الرحلة على جلسات قصيرة.</p>
-        </div>
-      </section>
 
-      {/* ================= THE REPORT ================= */}
-
-      {/* ================= DAILY TRAINING: a staircase ================= */}
-      <section className="bz-container py-16 sm:py-20">
-        <div className="grid lg:grid-cols-[1fr_1fr] gap-12 items-center">
-          <div>
-            <h2 className="hn-h2">نحو {ar(MINUTES_PER_SESSION)} دقيقة للجلسة، والمستوى يتبع طفلك</h2>
-            <p className="hn-body mt-3">
-              {ar(SESSIONS_PER_WEEK)} جلسات في الأسبوع، {ar(PROGRAM_SESSIONS)} جلسة في المجموع. يصعد طفلك درجة حين يتقن ما أمامه، وينزل درجة إذا احتاج إلى ذلك، ثم يُعاد الفحص لنرى ما تغيّر.
-            </p>
-            <p className="hn-small mt-5">
-              المهارات في البرنامج: {FOCUS_SKILLS.map((id) => SKILLS[id].nameAr).join('، ')}. وقد تطول بعض الجلسات عند قياس القراءة على كلمات ونصوص جديدة.
-            </p>
-          </div>
-          <div className="hn-stairs" aria-label="مثال: مستويات مهارة القافية">
-            {[1, 2, 3].map((lvl) => (
-              <div key={lvl} className={`hn-step hn-step-${lvl}`}>
-                {lvl === 2 && (
-                  <span className="hn-step-bird" aria-hidden="true">
-                    <Mascot mood="cheer" size={74} />
-                  </span>
-                )}
-                <span className="hn-step-label">المستوى {ar(lvl)}</span>
-                <span className="hn-step-text">{SKILLS.rhyme.levels[lvl as 1 | 2 | 3]}</span>
-              </div>
-            ))}
-            <p className="hn-small col-span-3 mt-2">
-              يتقدّم الطفل عندما تظهر إجاباته إتقان المهارة، ويعود إلى مستوى أبسط عندما يحتاج إلى مزيد من التدريب.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= WHO IT IS FOR ================= */}
-      <section className="hn-who">
-        <div className="bz-container py-16 sm:py-20">
-          <h2 className="hn-h2 text-center">للأسرة والمدرسة والأخصائي</h2>
-          <div className="grid md:grid-cols-3 gap-5 mt-10">
-            <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-sun)' }}>
-              <span className="hn-who-icon" aria-hidden="true"><Users size={28} /></span>
-              <h3 className="hn-h3">الأسرة</h3>
-              <p className="hn-body flex-1">اعرف أين يحتاج طفلك إلى المساعدة، وتدرّب معه في جلسات قصيرة خلال الأسبوع.</p>
-              <div className="mt-5 grid gap-2">
-                <button type="button" className="bz-btn bz-btn-primary hn-toy" onClick={() => onNavigateTab('parent-portal')}>
-                  سجّل طفلك وابدأ الفحص
-                </button>
-                <button type="button" className="bz-btn bz-btn-secondary" onClick={() => onNavigateTab('literacy-studio')}>
-                  <BookOpen size={17} aria-hidden="true" /> استوديو القراءة والإملاء
-                </button>
-              </div>
-            </article>
-            <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-leaf)' }}>
-              <span className="hn-who-icon" aria-hidden="true"><Building2 size={28} /></span>
-              <h3 className="hn-h3">المدرسة</h3>
-              <p className="hn-body flex-1">افحص طلاب الصفوف الأولى، وتابع تقدّمهم من لوحة واحدة للمعلم.</p>
-              <div className="mt-5 grid gap-2">
+          <div className="mt-8 grid lg:grid-cols-[1fr_1fr] gap-8 items-center bg-white/80 rounded-3xl p-6 border-2 border-slate-200/80">
+            <div>
+              <h3 className="text-xl font-black text-slate-900">
+                برنامج تدريبي يتدرّج مع إتقان طفلك
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed font-medium">
+                بعد الفحص، يبدأ الطفل جلسات قصيرة تركّز على أضعف مهاراته؛ يصعد مستوى عندما يتقن، ويعود إلى خطوة أبسط عندما يحتاج إلى دعم إضافي.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  className="bz-btn bz-btn-primary hn-toy"
-                  onClick={() => {
-                    setDemoSubmitSuccess(false);
-                    setDemoSubmitError('');
-                    setShowSchoolDemoModal(true);
-                  }}
+                  className="bz-btn bz-btn-primary hn-toy cursor-pointer"
+                  onClick={() => onNavigateTab('parent-portal')}
                 >
-                  اطلب تجربة لمدرستك
+                  <span>سجّل طفلك وابدأ الفحص</span>
+                  <ArrowLeft size={17} aria-hidden="true" />
                 </button>
-                <button type="button" className="bz-btn bz-btn-ghost" onClick={() => onNavigateTab('dashboard')}>افتح لوحة المعلم</button>
-              </div>
-            </article>
-            <article className="hn-who-card" style={{ ['--who' as string]: 'var(--joy-sky)' }}>
-              <span className="hn-who-icon" aria-hidden="true"><Stethoscope size={28} /></span>
-              <h3 className="hn-h3">الأخصائي</h3>
-              <p className="hn-body flex-1">درجات خام وأزمنة استجابة لكل لعبة، وأدوات لقياس القراءة الجهرية.</p>
-              <div className="mt-5 grid gap-2">
-                <button type="button" className="bz-btn bz-btn-secondary" onClick={() => onNavigateTab('reading-lab')}>
-                  <BookOpen size={17} aria-hidden="true" /> رحلة القراءة والطلاقة
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-secondary cursor-pointer"
+                  onClick={() => onNavigateTab('literacy-studio')}
+                >
+                  <BookOpen size={17} aria-hidden="true" />
+                  <span>جرّب تعلّم العربية والمكتبة</span>
                 </button>
-                <button type="button" className="bz-btn bz-btn-ghost" onClick={() => onNavigateTab('adaptive-reader')}>القارئ الميسّر</button>
               </div>
-            </article>
+            </div>
+
+            <div className="hn-stairs" aria-label="مثال: مستويات مهارة القافية">
+              {[1, 2, 3].map((lvl) => (
+                <div key={lvl} className={`hn-step hn-step-${lvl}`}>
+                  {lvl === 2 && (
+                    <span className="hn-step-bird" aria-hidden="true">
+                      <Mascot mood="cheer" size={68} />
+                    </span>
+                  )}
+                  <span className="hn-step-label">المستوى {ar(lvl)}</span>
+                  <span className="hn-step-text">{SKILLS.rhyme.levels[lvl as 1 | 2 | 3]}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ================= PRIVACY AND LIMITS ================= */}
-      <section className="bz-container py-16 sm:py-20">
+      <section className="bz-container py-12 sm:py-16">
         <h2 className="hn-h2">خصوصية طفلك، وحدود ما نقيسه</h2>
-        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+        <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
           {[
             { icon: Lock, t: 'صوت طفلك بموافقتك', b: 'لا يُسجَّل الصوت إلا بعد موافقة ولي الأمر الصريحة، ويُستخدم حصريًا لتحليل قراءة الطفل وتخصيص تدريبه.', tone: 'coral' },
             { icon: Users, t: 'بيانات طفلك', b: 'تُحفظ بيانات الملف والنتائج بأمان في حساب الأسرة المسجّل فقط.', tone: 'grape' },
-            { icon: ClipboardCheck, t: 'تعليمات ثابتة', b: 'كل طفل يسمع التعليمات نفسها، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
-            { icon: GraduationCap, t: 'لا تشخيص', b: 'التقرير يصف أداء الطفل في أنشطة المنصة، ولا يثبت وجود عسر القراءة.', tone: 'leaf' },
+            { icon: ClipboardCheck, t: 'تعليمات واضحة', b: 'كل طفل يسمع التعليمات بالصوت الفصيح، ويجرّب قبل أن تُحسب إجاباته.', tone: 'sky' },
+            { icon: GraduationCap, t: 'مؤشرات تربوية لا تشخيص طبي', b: 'التقرير يصف أداء الطفل في أنشطة القراءة لتوجيه التدريب، ولا يُغني عن التشخيص الإكلينيكي.', tone: 'leaf' },
           ].map((x) => (
             <li key={x.t}>
               <span className={`joy-tile joy-tile-${x.tone} w-12 h-12`} aria-hidden="true"><x.icon size={22} /></span>
@@ -313,85 +320,30 @@ export const HomeLandingView: React.FC<HomeLandingViewProps> = ({ onNavigateTab 
             <MascotMomentLive mood="wave" size={160} className="mx-auto" />
             <div>
               <h2 className="hn-h2">هُدهُد ينتظر طفلك</h2>
-              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">ابدأ بإنشاء ملف طفلك، ثم أكملوا الأنشطة معًا في جلسات قصيرة.</p>
-              <div className="mt-7 flex flex-wrap justify-center md:justify-start gap-3">
-                <button type="button" className="bz-btn bz-btn-primary bz-btn-lg hn-toy" onClick={() => onNavigateTab('parent-portal')}>
-                  سجّل طفلك وابدأ
+              <p className="hn-body mt-3 max-w-xl md:mx-0 mx-auto">
+                ابدأ بتعلّم الحروف والقصص المصوّرة مباشرةً، أو أنشئ ملف طفلك لبدء فحص صعوبات القراءة والخطة المخصّصة.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-3">
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-primary bz-btn-lg hn-toy cursor-pointer"
+                  onClick={() => onNavigateTab('literacy-studio')}
+                >
+                  <BookOpen size={19} aria-hidden="true" />
+                  <span>ابدأ تعلّم العربية والقصص</span>
+                </button>
+                <button
+                  type="button"
+                  className="bz-btn bz-btn-secondary bz-btn-lg cursor-pointer"
+                  onClick={() => onNavigateTab('parent-portal')}
+                >
+                  <span>سجّل طفلك لفحص القراءة</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* ================= MODAL: SCHOOL PILOT REQUEST ================= */}
-      {showSchoolDemoModal && (
-        <div className="bz-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowSchoolDemoModal(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="demo-modal-title" className="bz-modal space-y-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="grid place-items-center w-11 h-11 rounded-xl bg-brand-soft text-brand"><Building2 size={22} /></span>
-                <div>
-                  <h3 id="demo-modal-title" className="bz-h3">طلب تجربة مدرسية وشراكة تجريبية</h3>
-                  <p className="bz-small bz-muted">برنامج تجريبي لأقسام الدعم التعليمي والمدارس</p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowSchoolDemoModal(false)} aria-label="إغلاق" className="bz-icon-btn"><X size={18} /></button>
-            </div>
-
-            {demoSubmitSuccess ? (
-              <div className="py-6 text-center space-y-4">
-                <span className="mx-auto grid place-items-center w-16 h-16 rounded-full bg-brand-soft text-brand"><CheckCircle2 size={34} /></span>
-                <h4 className="bz-h3">تم استلام طلبكم بنجاح!</h4>
-                <p className="bz-body max-w-sm mx-auto">شكرًا لاهتمامكم. تم تسجيل طلب التجربة. لا يتضمن هذا الطلب إنشاء حساب لطفل أو إرسال بياناته التعليمية. سنتواصل معكم لجدولة الجلسات قبل بدء التجربة.</p>
-                <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-primary">إغلاق</button>
-              </div>
-            ) : (
-              <form onSubmit={handleSchoolDemoSubmit} className="space-y-4">
-                {demoSubmitError && <div role="alert" className="p-3 rounded-xl bg-risk-soft text-risk bz-small font-semibold">{demoSubmitError}</div>}
-                <label className="bz-field">
-                  <span className="bz-label">اسم المدرسة أو المركز</span>
-                  <input type="text" required value={schoolName} onChange={(e) => setSchoolName(e.target.value)} placeholder="مثال: مدرسة قطر الابتدائية" className="bz-input" />
-                </label>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <label className="bz-field">
-                    <span className="bz-label">اسم مسؤول التواصل</span>
-                    <input type="text" required value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="مثال: أ. مريم السليطي" className="bz-input" />
-                  </label>
-                  <label className="bz-field">
-                    <span className="bz-label">الصفة الوظيفية</span>
-                    <input type="text" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="منسّق دعم / أخصائي تخاطب" className="bz-input" />
-                  </label>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <label className="bz-field">
-                    <span className="bz-label">البريد الإلكتروني المؤسسي</span>
-                    <input type="email" required value={workEmail} onChange={(e) => setWorkEmail(e.target.value)} placeholder="name@school.edu.qa" className="bz-input" dir="ltr" style={{ textAlign: 'right' }} />
-                  </label>
-                  <label className="bz-field">
-                    <span className="bz-label">رقم الهاتف</span>
-                    <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+974 5500 0000" className="bz-input" dir="ltr" style={{ textAlign: 'right' }} />
-                  </label>
-                </div>
-                <label className="bz-field">
-                  <span className="bz-label">العدد التقديري للطلاب</span>
-                  <input type="text" value={expectedStudents} onChange={(e) => setExpectedStudents(e.target.value)} placeholder="مثال: ٣٠ طالبًا في الصف الأول" className="bz-input" />
-                </label>
-                <label className="bz-field">
-                  <span className="bz-label">ملاحظات</span>
-                  <textarea rows={2} value={demoNotes} onChange={(e) => setDemoNotes(e.target.value)} placeholder="أي احتياجات خاصة بالمتابعة أو التقارير" className="bz-input" />
-                </label>
-                <div className="flex items-center gap-2 pt-1">
-                  <button type="submit" disabled={isSubmittingDemo} className="bz-btn bz-btn-primary flex-1">
-                    {isSubmittingDemo ? 'جارٍ إرسال الطلب…' : 'إرسال طلب التجربة'}
-                  </button>
-                  <button type="button" onClick={() => setShowSchoolDemoModal(false)} className="bz-btn bz-btn-ghost">إلغاء</button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

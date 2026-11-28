@@ -92,7 +92,12 @@ export default function AudioComparisonLabView() {
   const [evalError, setEvalError] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState<boolean>(false);
   const [customGeminiKey, setCustomGeminiKey] = useState<string>(() => {
-    return localStorage.getItem('baseera_custom_gemini_key') || '';
+    try {
+      localStorage.removeItem('baseera_custom_gemini_key');
+    } catch {
+      /* ignore */
+    }
+    return sessionStorage.getItem('baseera_custom_gemini_key') || '';
   });
   const [showKeySettings, setShowKeySettings] = useState<boolean>(false);
 
@@ -420,7 +425,7 @@ export default function AudioComparisonLabView() {
                 onChange={(e) => {
                   const val = e.target.value;
                   setCustomGeminiKey(val);
-                  localStorage.setItem('baseera_custom_gemini_key', val);
+                  sessionStorage.setItem('baseera_custom_gemini_key', val);
                 }}
                 placeholder="الصق مفتاح OpenRouter (sk-or-v1-...) أو Google Gemini..."
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -430,7 +435,7 @@ export default function AudioComparisonLabView() {
                   type="button"
                   onClick={() => {
                     setCustomGeminiKey('');
-                    localStorage.removeItem('baseera_custom_gemini_key');
+                    sessionStorage.removeItem('baseera_custom_gemini_key');
                   }}
                   className="px-3 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl font-bold text-xs"
                 >
@@ -881,7 +886,7 @@ export default function AudioComparisonLabView() {
                         onChange={(e) => {
                           const val = e.target.value;
                           setCustomGeminiKey(val);
-                          localStorage.setItem('baseera_custom_gemini_key', val);
+                          sessionStorage.setItem('baseera_custom_gemini_key', val);
                         }}
                         placeholder="الصق مفتاح Google المجاني هنا (AIzaSy...)"
                         className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"

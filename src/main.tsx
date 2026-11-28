@@ -2,6 +2,11 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+const gfontsEl = typeof document !== 'undefined' ? document.getElementById('gfonts') : null;
+if (gfontsEl instanceof HTMLLinkElement) {
+  gfontsEl.media = 'all';
+}
+
 // Prevent Emscripten / MediaPipe WASM C++ stderr INFO logs (e.g. "INFO: Created TensorFlow Lite XNNPACK delegate for CPU.")
 // from being emitted as console.error in the browser environment.
 const isBenignMediaPipeLog = (args: unknown[]): boolean => {

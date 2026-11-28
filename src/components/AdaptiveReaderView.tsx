@@ -648,17 +648,19 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                 {lines.map((line, lIdx) => {
                   const isFocusedLine = !readingRuler || activeLineIdx === lIdx;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={lIdx}
                       onClick={() => setActiveLineIdx(lIdx)}
                       onMouseEnter={() => setActiveLineIdx(lIdx)}
+                      aria-current={readingRuler && isFocusedLine ? 'true' : undefined}
                       style={{
                         fontSize: `${fontSizePx}px`,
                         wordSpacing: `${wordSpacingPx}px`,
                         letterSpacing: `${letterSpacingPx}px`,
                         lineHeight: lineHeightRatio,
                       }}
-                      className={`p-3.5 rounded-xl transition-opacity cursor-pointer flex flex-wrap gap-x-3 gap-y-2 ${
+                      className={`w-full text-start p-3.5 rounded-xl transition-opacity cursor-pointer flex flex-wrap gap-x-3 gap-y-2 ${
                         openDyslexicMode ? 'reading-assist-emphasis' : 'font-display'
                       } ${
                         isFocusedLine
@@ -667,7 +669,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                               ? 'bg-slate-800/90 ring-2 ring-sky-400 opacity-100'
                               : 'bg-white/90 ring-2 ring-[#0284C7] shadow-xs opacity-100'
                             : 'opacity-100'
-                          : 'opacity-30'
+                          : 'opacity-70'
                       }`}
                     >
                       {line.words.map(({ word, globalIdx }) => {
@@ -685,7 +687,7 @@ export const AdaptiveReaderView: React.FC<AdaptiveReaderViewProps> = ({
                           </span>
                         );
                       })}
-                    </div>
+                    </button>
                   );
                 })}
               </div>

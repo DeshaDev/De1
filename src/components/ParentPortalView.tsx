@@ -166,6 +166,7 @@ interface ParentPortalViewProps {
   supabaseUser: any;
   authLoading: boolean;
   students: StudentRecord[];
+  initialPortalMode?: 'register' | 'login';
   onSignInWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   onSignOut: () => Promise<void>;
   onRegisterChild: (child: {
@@ -190,6 +191,7 @@ export function ParentPortalView({
   supabaseUser,
   authLoading,
   students,
+  initialPortalMode = 'register',
   onSignInWithEmail,
   onSignOut,
   onRegisterChild,
@@ -199,7 +201,11 @@ export function ParentPortalView({
   onNavigateHome,
 }: ParentPortalViewProps) {
   // Mode when unauthenticated: 'register' | 'login'
-  const [portalMode, setPortalMode] = useState<'register' | 'login'>('register');
+  const [portalMode, setPortalMode] = useState<'register' | 'login'>(initialPortalMode);
+
+  useEffect(() => {
+    if (initialPortalMode) setPortalMode(initialPortalMode);
+  }, [initialPortalMode]);
 
   // Toggle for adding another child when authenticated
   const [showAddForm, setShowAddForm] = useState(false);
@@ -465,73 +471,89 @@ export function ParentPortalView({
   };
 
   return (
-    <div className="min-h-[85vh] py-10 px-4 sm:px-6 lg:px-8" dir="rtl">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-[85vh] py-4 sm:py-5 px-4 sm:px-6 lg:px-8" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-4">
         
-        {/* Top Header Card */}
-        <div className="joy-header joy-header-sun rounded-[28px] p-6 sm:p-8 relative overflow-hidden">
-          <JoyCorners variant="a" />
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
-            <div className="flex items-center gap-4">
-              <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true"><MascotLive mood="wave" size={112} className="w-28" /></span>
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 text-xs font-bold mb-1.5">
-                  <Heart size={14} className="text-teal-600 fill-teal-600" />
-                  <span>بوابة أولياء الأمور والأسرة</span>
+        {/* Compact Top Header Card (Keeps Form Above the Fold) */}
+        <div className="bg-white rounded-3xl p-4 sm:px-6 border-2 border-teal-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="joy-decor hidden sm:block shrink-0" aria-hidden="true">
+              <MascotLive mood="wave" size={52} className="w-14" />
+            </span>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[11px] font-bold">
+                <Heart size={12} className="text-teal-600 fill-teal-600" />
+                <span>بوابة أولياء الأمور · حفظ آمن لنتائج طفلك</span>
+              </div>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                هَيَّا نَقْرَأْ — حساب الأسرة وتسجيل الطفل
+              </h1>
+            </div>
+          </div>
+
+          {!supabaseUser && (
+            <div className="inline-flex rounded-2xl bg-slate-100 p-1 border border-slate-200" role="tablist" aria-label="نوع الدخول">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={portalMode === 'register'}
+                onClick={() => setPortalMode('register')}
+                className={`min-h-[40px] px-4 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                  portalMode === 'register'
+                    ? 'bg-teal-600 text-white shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-900'
+                }`}
+              >
+                <UserPlus size={14} aria-hidden="true" />
+                <span>حساب جديد وتسجيل طفل</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={portalMode === 'login'}
+                onClick={() => setPortalMode('login')}
+                className={`min-h-[40px] px-4 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                  portalMode === 'login'
+                    ? 'bg-teal-600 text-white shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-900'
+                }`}
+              >
+                <LogIn size={14} aria-hidden="true" />
+                <span>لديّ حساب (تسجيل الدخول)</span>
+              </button>
+            </div>
+          )}
+
+          {/* User Profile (shown cleanly when logged in) */}
+          {supabaseUser && (
+            <div>
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2 sm:px-3.5">
+                <div className="w-9 h-9 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center">
+                  {(supabaseUser.user_metadata?.full_name || supabaseUser.email || 'و')[0].toUpperCase()}
                 </div>
-                <h1 className="joy-title">
-                  هَيَّا نَقْرَأْ — رحلة طفلك
-                </h1>
-                <p className="text-sm text-slate-600 mt-1">
-                  نساعدك في حل مشكلة عسر القراءة وتنمية مهارات طفلك في القراءة خطوةً خطوة.
-                </p>
+                <div className="text-right">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                      {supabaseUser.user_metadata?.full_name || 'ولي أمر مسجل'}
+                    </p>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0 whitespace-nowrap">
+                      ☁️ سحابي
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate max-w-[150px]">{supabaseUser.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  aria-label="تسجيل الخروج"
+                  title="تسجيل الخروج"
+                  className="min-h-11 min-w-11 flex items-center justify-center p-2.5 text-slate-600 hover:text-rose-700 transition-colors cursor-pointer"
+                >
+                  <LogOut size={16} aria-hidden="true" />
+                </button>
               </div>
             </div>
-
-            {/* User Profile / Status */}
-            <div>
-              {supabaseUser ? (
-                <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 sm:px-4">
-                  <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center">
-                    {(supabaseUser.user_metadata?.full_name || supabaseUser.email || 'و')[0].toUpperCase()}
-                  </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 leading-tight truncate">
-                        {supabaseUser.user_metadata?.full_name || 'ولي أمر مسجل'}
-                      </p>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0 whitespace-nowrap">
-                        ☁️ سحابي
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 truncate max-w-[150px]">{supabaseUser.email}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    title="تسجيل الخروج"
-                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold">
-                    🔒 يلزم تسجيل الدخول أو إنشاء حساب
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Security / Privacy Banner */}
-        <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
-          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-emerald-900 leading-relaxed">
-            <strong>حفظ البيانات:</strong> تُحفظ بيانات طفلك ونتائجه بأمان في حساب الأسرة السحابي بعد تسجيل الدخول، ويُستخدم تسجيل الصوت حصريًا لتحليل القراءة وتخصيص التدريب بموافقة ولي الأمر.
-          </div>
+          )}
         </div>
 
         {formNotice && (
@@ -601,26 +623,26 @@ export function ParentPortalView({
                           <button
                             type="button"
                             onClick={() => onSelectStudent(child.id, step.tab)}
-                            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors cursor-pointer"
+                            className="w-full min-h-[48px] flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-black shadow-xs transition-colors cursor-pointer"
                           >
-                            {step.tab === 'guided-program' ? <TrendingUp size={16} /> : <Brain size={16} />}
+                            {step.tab === 'guided-program' ? <TrendingUp size={17} /> : <Brain size={17} />}
                             <span>{step.actionAr}</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => onSelectStudent(child.id, 'dashboard')}
-                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                            className="w-full min-h-[46px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-950 text-sm font-black transition-colors cursor-pointer border-2 border-amber-300"
                           >
-                            <FileBarChart size={15} />
-                            <span>عرض التقرير وخطة الدعم</span>
+                            <FileBarChart size={16} className="text-amber-700" />
+                            <span>عرض التقرير الشامل وخطة الدعم</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => onSelectStudent(child.id, 'literacy-studio')}
-                            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-bold transition-colors cursor-pointer border border-indigo-200/60"
+                            className="w-full min-h-[46px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-950 text-sm font-black transition-colors cursor-pointer border-2 border-indigo-200"
                           >
-                            <BookOpen size={15} className="text-indigo-600" />
-                            <span>استوديو القراءة والإملاء والمكتبة</span>
+                            <BookOpen size={16} className="text-indigo-700" />
+                            <span>تعلّم العربية والمكتبة المصوّرة</span>
                           </button>
                           {deleteControls(child)}
                         </div>
@@ -674,28 +696,24 @@ export function ParentPortalView({
                     />
                   </label>
 
-                  <div className="space-y-2">
+                  <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <Calendar size={14} className="text-slate-400" />
                       <span>عمر الطفل بالسنوات *</span>
                     </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    <select
+                      required
+                      value={ageYears}
+                      onChange={(e) => setAgeYears(Number(e.target.value))}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                    >
                       {AGE_OPTIONS.map((age) => (
-                        <button
-                          key={age.val}
-                          type="button"
-                          onClick={() => setAgeYears(age.val)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            ageYears === age.val
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
+                        <option key={age.val} value={age.val}>
                           {age.label}
-                        </button>
+                        </option>
                       ))}
-                    </div>
-                  </div>
+                    </select>
+                  </label>
 
                   <label className="block space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -798,131 +816,105 @@ export function ParentPortalView({
             STATE 2: UNAUTHENTICATED VISITOR (Tabs for Register vs Login)
             ========================================================================= */}
         {!supabaseUser && (
-          <div className="space-y-6">
-            {/* Segmented Mode Selector */}
-            <div className="bg-slate-100 p-1.5 rounded-2xl flex max-w-md mx-auto">
-              <button
-                type="button"
-                onClick={() => setPortalMode('register')}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  portalMode === 'register'
-                    ? 'bg-white text-teal-800 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <UserPlus size={16} />
-                <span>📝 تسجيل طفل</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPortalMode('login')}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  portalMode === 'login'
-                    ? 'bg-white text-teal-800 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <LogIn size={16} />
-                <span>🔑 دخول ولي أمر مسجل</span>
-              </button>
-            </div>
-
-            {/* TAB 1: REGISTRATION FORM */}
+          <div className="space-y-4">
+            {/* TAB 1: REGISTRATION FORM (Directly visible above the fold) */}
             {portalMode === 'register' && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-                <div className="border-b border-slate-100 pb-4">
-                  <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <UserPlus size={20} className="text-teal-600" />
-                    <span>تسجيل طفل</span>
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    أنشئ حساب الأسرة وأدخل بيانات طفلك لحفظ ملفه ونتائجه في قاعدة البيانات بأمان والبدء فورًا.
-                  </p>
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-5">
+                <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                      <UserPlus size={20} className="text-teal-600" />
+                      <span>بيانات الطفل وحساب ولي الأمر</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      سجّل بيانات طفلك في دقيقة واحدة لبدء فحص القراءة وحفظ نتائجه وتدريبه.
+                    </p>
+                  </div>
                 </div>
 
-                <form onSubmit={handleRegisterSubmit} className="space-y-6">
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
                   {formError && (
                     <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
                       {formError}
                     </div>
                   )}
 
-                  {/* Child name */}
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700">اسم الطفل *</span>
-                    <input
-                      type="text"
-                      required
-                      value={childName}
-                      onChange={(e) => setChildName(e.target.value)}
-                      placeholder="مثال: إياد أو سارة"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
-                    />
-                  </label>
+                  {/* 2x2 Grid for Child Info so it fits comfortably above the fold */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* Child name */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-slate-700">اسم الطفل *</span>
+                      <input
+                        type="text"
+                        required
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value)}
+                        placeholder="مثال: فهد حمد أو سارة"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
+                      />
+                    </label>
 
-                  {/* Age selection */}
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <Calendar size={14} className="text-slate-400" />
-                      <span>عمر الطفل بالسنوات *</span>
-                    </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {AGE_OPTIONS.map((age) => (
-                        <button
-                          key={age.val}
-                          type="button"
-                          onClick={() => setAgeYears(age.val)}
-                          className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            ageYears === age.val
-                              ? 'border-teal-600 bg-teal-50 text-teal-800 ring-2 ring-teal-500/20'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {age.label}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Age selection */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Calendar size={14} className="text-slate-400" />
+                        <span>عمر الطفل بالسنوات *</span>
+                      </span>
+                      <select
+                        required
+                        value={ageYears}
+                        onChange={(e) => setAgeYears(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                      >
+                        {AGE_OPTIONS.map((age) => (
+                          <option key={age.val} value={age.val}>
+                            {age.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {/* Grade dropdown */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <BookOpen size={14} className="text-slate-400" />
+                        <span>المرحلة الدراسية الحالية *</span>
+                      </span>
+                      <select
+                        required
+                        value={gradeLevel}
+                        onChange={(e) => setGradeLevel(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                      >
+                        {GRADE_OPTIONS.map((g) => (
+                          <option key={g.val} value={g.val}>
+                            {g.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {/* Country dropdown */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Globe size={14} className="text-teal-600" />
+                        <span>دولة الطفل *</span>
+                      </span>
+                      <select
+                        required
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
+                      >
+                        <option value="">اختر الدولة</option>
+                        {ARAB_COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.name}>
+                            {c.flag} {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
-
-                  {/* Grade dropdown */}
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <BookOpen size={14} className="text-slate-400" />
-                      <span>المرحلة الدراسية الحالية *</span>
-                    </span>
-                    <select
-                      required
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(Number(e.target.value))}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
-                    >
-                      {GRADE_OPTIONS.map((g) => (
-                        <option key={g.val} value={g.val}>
-                          {g.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <Globe size={14} className="text-teal-600" />
-                      <span>دولة الطفل *</span>
-                    </span>
-                    <select
-                      required
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm bg-white cursor-pointer"
-                    >
-                      <option value="">اختر الدولة</option>
-                      {ARAB_COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.name}>
-                          {c.flag} {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
 
                   {/* Parent Credentials (REQUIRED) */}
                   <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
@@ -1009,16 +1001,16 @@ export function ParentPortalView({
                     <button
                       type="button"
                       onClick={() => setPortalMode('login')}
-                      className="text-xs text-slate-600 hover:text-teal-700 font-bold transition-colors cursor-pointer order-2 sm:order-1"
+                      className="text-sm text-teal-700 hover:underline font-black transition-colors cursor-pointer order-2 sm:order-1"
                     >
                       لديك حساب بالفعل؟ تسجيل الدخول هنا ←
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
+                      className="w-full sm:w-auto min-h-[54px] inline-flex items-center justify-center gap-2 py-3.5 px-8 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-base shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 order-1 sm:order-2"
                     >
-                      <Brain size={18} />
+                      <Brain size={20} />
                       <span>{isSubmitting ? 'جارٍ إنشاء الحساب وحفظ الملف…' : 'إنشاء الحساب وحفظ ملف الطفل وبدء الفحص ←'}</span>
                     </button>
                   </div>
@@ -1029,22 +1021,22 @@ export function ParentPortalView({
             {/* TAB 2: LOGIN FORM */}
             {portalMode === 'login' && (
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-                <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+                <div className="border-b border-slate-100 pb-4 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <LogIn size={20} className="text-teal-600" />
-                      <span>تسجيل دخول ولي أمر</span>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+                      <LogIn size={22} className="text-teal-600" />
+                      <span>تسجيل الدخول إلى حساب ولي الأمر</span>
                     </h2>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs sm:text-sm text-slate-600 mt-1">
                       أدخل بريدك الإلكتروني وكلمة المرور لمتابعة ملفات أطفالك المحفوظة وتقاريرهم القرائية السابقة.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setPortalMode('register')}
-                    className="text-xs text-teal-600 font-bold hover:underline cursor-pointer"
+                    className="text-sm text-teal-700 font-black hover:underline cursor-pointer"
                   >
-                    تسجيل طفل جديد ←
+                    إنشاء حساب وتسجيل طفل جديد ←
                   </button>
                 </div>
 
@@ -1066,7 +1058,7 @@ export function ParentPortalView({
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="parent@example.com"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
                       dir="ltr"
                     />
                   </label>
@@ -1082,7 +1074,7 @@ export function ParentPortalView({
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-slate-800 text-sm"
                       dir="ltr"
                     />
                   </label>
@@ -1090,7 +1082,7 @@ export function ParentPortalView({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer disabled:opacity-50 mt-2"
+                    className="w-full min-h-[54px] py-3.5 px-6 rounded-2xl border-b-4 border-teal-800 bg-teal-600 hover:bg-teal-700 text-white font-black text-base shadow-md transition-all cursor-pointer disabled:opacity-50 mt-2"
                   >
                     {isSubmitting ? 'جارٍ تسجيل الدخول…' : 'تسجيل الدخول وعرض أطفالي'}
                   </button>

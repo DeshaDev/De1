@@ -200,7 +200,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
               <span>درس اليوم</span>
             </div>
             <h2 id="evidence-curriculum-title" className="text-xl sm:text-2xl font-black text-slate-900">
-              نتعلّم المهارة خطوةً خطوة
+              نتعلّم المهارة خطوةً بخطوة
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 mt-0.5">
               شاهد المثال، ثم جرّب بنفسك.
@@ -434,7 +434,7 @@ export const EvidenceBasedCurriculumView: React.FC<Props> = ({ student, onSpeak,
                 </h3>
                 <p className="max-w-md mx-auto text-sm font-bold leading-6 text-slate-600">
                   {passedThisRound
-                    ? 'أحسنت! نجحت في هذه الجولة. نواصل التدرّب خطوةً خطوة.'
+                    ? 'أحسنت! نجحت في هذه الجولة. نواصل التدرّب خطوةً بخطوة.'
                     : 'محاولة رائعة! تدرّبنا على المهارة وسنعيد التحدي بأسئلة جديدة لترسيخ الفهم.'}
                 </p>
                 <div className="flex flex-col gap-3 max-w-sm mx-auto pt-2">

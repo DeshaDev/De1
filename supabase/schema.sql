@@ -93,7 +93,40 @@ USING (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile" 
 ON public.profiles FOR UPDATE 
-USING (auth.uid() = id);
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
+
+-- منع تصعيد الصلاحيات عبر تعديل عمود role من الواجهة باستخدام anon key
+CREATE OR REPLACE FUNCTION public.guard_profile_role_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  jwt_role text := COALESCE(
+    NULLIF(NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', ''),
+    ''
+  );
+BEGIN
+  IF jwt_role = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Profile role cannot be modified from client requests'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS profiles_guard_role ON public.profiles;
+CREATE TRIGGER profiles_guard_role
+BEFORE UPDATE OF role
+ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.guard_profile_role_update();
 
 -- سياسات جدول students
 CREATE POLICY "Users can view own students" 

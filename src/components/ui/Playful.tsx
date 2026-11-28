@@ -93,24 +93,24 @@ export function HeroScene({ message = 'مرحبًا، أنا هُدهُد! أه�
           className={`hn-letter pointer-events-none select-none absolute ${l.pos}`}
           aria-hidden="true"
         >
-          <LetterBlock letter={l.letter} color={l.color} size={78} rotate={l.rotate} />
+          <LetterBlock letter={l.letter} color={l.color} size={64} rotate={l.rotate} />
         </div>
       ))}
-      <div className="absolute inset-x-0 bottom-[2%] flex justify-center">
-        <div className="hn-bird w-[54%]">
+      <div className="absolute inset-x-0 bottom-[0%] flex justify-center">
+        <div className="hn-bird w-[52%]">
           <Mascot mood="wave" size={230} className="h-auto w-full" animated />
         </div>
       </div>
     </div>
   );
   return (
-    <div className="relative mx-auto flex w-full max-w-[560px] flex-col items-center">
+    <div className="relative mx-auto flex w-full max-w-[430px] flex-col items-center">
       <div className="relative z-10 w-[88%] max-w-[23rem]">
         <p className="mascot-bubble mascot-bubble-down font-child text-center" role="status" aria-live="polite">
           {message}
         </p>
       </div>
-      <div className="joy-decor relative -mt-1 w-full aspect-[1.1]">
+      <div className="joy-decor relative -mt-3 w-full aspect-[1.3]">
         <span className="absolute inset-[8%] rounded-full hn-halo" aria-hidden="true" />
         <div className="absolute inset-0" data-hero-game="true">
           {scene}
@@ -126,7 +126,6 @@ export function JoyCorners({ variant = 'a' }: { variant?: 'a' | 'b' | 'c' }) {
     a: (
       <>
         <LetterBlock letter="ح" color="sun" size={46} rotate={-12} className="absolute top-4 left-4 opacity-90" />
-        <Sparkle size={18} color="coral" className="absolute top-16 left-16" />
         <Cloud width={90} className="absolute bottom-3 right-3 opacity-90" />
       </>
     ),

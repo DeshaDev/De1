@@ -801,12 +801,11 @@
       "bytes": 30554
     },
     "d2e445ff8e76f419": {
-      "file": "806f643d23575005.mp3",
+      "file": "d2e445ff8e76f419.mp3",
       "text": "سُلَحْفَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
     },
     "d3b5fa988bac2749": {
       "file": "d3b5fa988bac2749.mp3",
@@ -1184,12 +1183,11 @@
       "bytes": 15089
     },
     "81af119cf9ef26b2": {
-      "file": "c4907b60e5033845.mp3",
+      "file": "81af119cf9ef26b2.mp3",
       "text": "طَبْلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 11232
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
     },
     "9015a799bfad13c5": {
       "file": "9015a799bfad13c5.mp3",
@@ -1200,12 +1198,11 @@
       "bytes": 38077
     },
     "90d3f210964625cb": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "92eba7a12ca059f4": {
       "file": "92eba7a12ca059f4.mp3",
@@ -1256,12 +1253,11 @@
       "bytes": 15089
     },
     "bdd3cf621389148e": {
-      "file": "e65a83bc0b2d7a61.mp3",
+      "file": "bdd3cf621389148e.mp3",
       "text": "سَيْفْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 11232
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
     },
     "c950ff2f5e1319ea": {
       "file": "c950ff2f5e1319ea.mp3",
@@ -2120,12 +2116,11 @@
       "bytes": 15089
     },
     "90d3fd109646387c": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "7f615f6018500836": {
       "file": "2e7b9a71b1c4a2d6.mp3",
@@ -2136,12 +2131,11 @@
       "bytes": 15089
     },
     "cd722e6a1c1d83a4": {
-      "file": "124adaf3e51a20e8.mp3",
-      "text": "الشَّمْس",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 17597
+      "file": "cd722e6a1c1d83a4.mp3",
+      "text": "الشَّمْسُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 24236
     },
     "9f43df52701af8f3": {
       "file": "95e0c8fb053cd4a3.mp3",
@@ -2480,28 +2474,25 @@
       "bytes": 19584
     },
     "فِيل": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "فِيلُ": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "فِيلْ": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "سَمَكَة": {
       "file": "6c6e0741ffdefc4e.mp3",
@@ -5514,36 +5505,32 @@
       "bytes": 30554
     },
     "سُلَحْفَاة": {
-      "file": "806f643d23575005.mp3",
+      "file": "d2e445ff8e76f419.mp3",
       "text": "سُلَحْفَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
     },
     "8c3b5167497b3d02": {
-      "file": "806f643d23575005.mp3",
+      "file": "d2e445ff8e76f419.mp3",
       "text": "سُلَحْفَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
     },
     "d2e8cfff8e7bc76e": {
-      "file": "806f643d23575005.mp3",
+      "file": "d2e445ff8e76f419.mp3",
       "text": "سُلَحْفَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
     },
     "8c36d36749767e11": {
-      "file": "806f643d23575005.mp3",
+      "file": "d2e445ff8e76f419.mp3",
       "text": "سُلَحْفَاة",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 21358
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
     },
     "كَمْ مَقْطَعًا فِي كَلِمَةِ: ثَلْج؟ صَفِّقْ مَعَ كُلِّ مَقْطَعٍ.": {
       "file": "d3b5fa988bac2749.mp3",
@@ -5914,12 +5901,11 @@
       "bytes": 15089
     },
     "68c48a50849d6715": {
-      "file": "e1282bea9dc9b820.mp3",
+      "file": "90d3f210964625cb.mp3",
       "text": "فِيلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 13824
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
     },
     "شُبَّاك": {
       "file": "e130c1c09d7dcc51.mp3",
@@ -6608,12 +6594,11 @@
       "bytes": 15089
     },
     "طَبْلْ": {
-      "file": "c4907b60e5033845.mp3",
+      "file": "81af119cf9ef26b2.mp3",
       "text": "طَبْلْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 11232
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
     },
     "تَنْتَهِيَانِ بِالصَّوْتِ نَفْسِهِ.": {
       "file": "9015a799bfad13c5.mp3",
@@ -6773,12 +6758,11 @@
       "bytes": 15089
     },
     "سَيْفْ": {
-      "file": "e65a83bc0b2d7a61.mp3",
+      "file": "bdd3cf621389148e.mp3",
       "text": "سَيْفْ",
-      "voice": "ML7jGRDg4E9hIl5qEm1Z",
-      "model": "eleven_v4",
-      "context": "single_word",
-      "bytes": 11232
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
     },
     "فَأْرْ": {
       "file": "c950ff2f5e1319ea.mp3",
@@ -17567,6 +17551,2085 @@
       "model": "eleven_v4",
       "context": "instruction",
       "bytes": 93247
+    },
+    "83653966b8df7f49": {
+      "file": "83653966b8df7f49.mp3",
+      "text": "أَلِف",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "cf7ab48dca9f7a4e": {
+      "file": "cf7ab48dca9f7a4e.mp3",
+      "text": "تَاء",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "7b2975b00b103bf5": {
+      "file": "7b2975b00b103bf5.mp3",
+      "text": "ثَاء",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26540
+    },
+    "a2f28394f0835b19": {
+      "file": "a2f28394f0835b19.mp3",
+      "text": "جِيم",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "12ffb0e8da78732f": {
+      "file": "12ffb0e8da78732f.mp3",
+      "text": "حَاء",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "0f84874c5e767e42": {
+      "file": "0f84874c5e767e42.mp3",
+      "text": "خَاء",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "f246e2657ba51772": {
+      "file": "f246e2657ba51772.mp3",
+      "text": "ذَال",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "8bac6a0b55779dc3": {
+      "file": "8bac6a0b55779dc3.mp3",
+      "text": "رَاء",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "d68149a7b48f6f8e": {
+      "file": "d68149a7b48f6f8e.mp3",
+      "text": "زَاي",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 19244
+    },
+    "b15062c21412a498": {
+      "file": "b15062c21412a498.mp3",
+      "text": "شِين",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "17614dd366dee8df": {
+      "file": "17614dd366dee8df.mp3",
+      "text": "أَصِيصٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "39df1e225e594ef0": {
+      "file": "39df1e225e594ef0.mp3",
+      "text": "بِذْرَةً",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 29612
+    },
+    "e152b2d0903e5e87": {
+      "file": "e152b2d0903e5e87.mp3",
+      "text": "تَفَتَّحَتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "74fde8f322f259bf": {
+      "file": "74fde8f322f259bf.mp3",
+      "text": "وَضَعَتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "e6ee31213b43ce80": {
+      "file": "e6ee31213b43ce80.mp3",
+      "text": "وَضَعَتْ أَمِينَةُ بِذْرَةً مُخَطَّطَةً صَغِيرَةً دَاخِلَ أَصِيصٍ فَخَّارِيٍّ دَافِئٍ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 116012
+    },
+    "c18fd5cf0a8f763f": {
+      "file": "c18fd5cf0a8f763f.mp3",
+      "text": "دَاخِلَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "e0e9d8b67656f558": {
+      "file": "e0e9d8b67656f558.mp3",
+      "text": "أَمِينَةُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "05c333b30fe2be62": {
+      "file": "05c333b30fe2be62.mp3",
+      "text": "صَغِيرَةً",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "8b0cf58adcf60e1f": {
+      "file": "8b0cf58adcf60e1f.mp3",
+      "text": "مُخَطَّطَةً",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 30764
+    },
+    "0408fd72ea012847": {
+      "file": "0408fd72ea012847.mp3",
+      "text": "فَخَّارِيٍّ",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26540
+    },
+    "fa89bb24608faab0": {
+      "file": "fa89bb24608faab0.mp3",
+      "text": "سَقَتِ",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21548
+    },
+    "59503ed141b44bd5": {
+      "file": "59503ed141b44bd5.mp3",
+      "text": "سَقَتِ التُّرْبَةَ بِمَاءٍ صَافٍ مِنْ إِبْرِيقٍ أَخْضَرَ صَغِيرٍ.",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 79916
+    },
+    "e559f355e0b65475": {
+      "file": "e559f355e0b65475.mp3",
+      "text": "بِمَاءٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "b996b89de01affca": {
+      "file": "b996b89de01affca.mp3",
+      "text": "مِنْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 17324
+    },
+    "939d35cdc2ad78d3": {
+      "file": "939d35cdc2ad78d3.mp3",
+      "text": "أَخْضَرَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "a9ff59fe72cd57c8": {
+      "file": "a9ff59fe72cd57c8.mp3",
+      "text": "صَغِيرٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 28076
+    },
+    "354c8780f55ae577": {
+      "file": "354c8780f55ae577.mp3",
+      "text": "إِلَى",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "7245760a6dd4825b": {
+      "file": "7245760a6dd4825b.mp3",
+      "text": "نَظَرَتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "98f23941f1cb81ab": {
+      "file": "98f23941f1cb81ab.mp3",
+      "text": "نَظَرَتْ إِلَى التُّرْبَةِ بِقَلَقٍ: أَيْنَ اخْتَفَتِ الْبِذْرَةُ الصَّغِيرَةُ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 82604
+    },
+    "33df2b2b8bb946a0": {
+      "file": "33df2b2b8bb946a0.mp3",
+      "text": "التُّرْبَةِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "06cd8f8ca5501fcf": {
+      "file": "06cd8f8ca5501fcf.mp3",
+      "text": "بِقَلَقٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 32684
+    },
+    "7c91ea316e92430b": {
+      "file": "7c91ea316e92430b.mp3",
+      "text": "أَيْنَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 17324
+    },
+    "433221a7618a47d2": {
+      "file": "433221a7618a47d2.mp3",
+      "text": "اخْتَفَتِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "9432378bea1e1ca7": {
+      "file": "9432378bea1e1ca7.mp3",
+      "text": "الْبِذْرَةُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "a4e53af32a2944e8": {
+      "file": "a4e53af32a2944e8.mp3",
+      "text": "الصَّغِيرَةُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 28076
+    },
+    "96647855c7f8a136": {
+      "file": "96647855c7f8a136.mp3",
+      "text": "فِي فَجْرٍ ذَهَبِيٍّ، هَمَسَتْ بِابْتِسَامَةٍ: انْهَضِي يَا بِذْرَتِي، الشَّمْسُ تَنْتَظِرُكِ!",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 131372
+    },
+    "bf9aae50b5dd2e55": {
+      "file": "bf9aae50b5dd2e55.mp3",
+      "text": "فِي",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "5b06f3ecbf5b7bc4": {
+      "file": "5b06f3ecbf5b7bc4.mp3",
+      "text": "هَمَسَتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "951e263ff28e5973": {
+      "file": "951e263ff28e5973.mp3",
+      "text": "صَفَّقَتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "31b8465efb6402da": {
+      "file": "31b8465efb6402da.mp3",
+      "text": "تَنْتَظِرُكِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
+    },
+    "ff738a32b32f8c98": {
+      "file": "ff738a32b32f8c98.mp3",
+      "text": "بِفَرَحٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "b72c096d25170904": {
+      "file": "b72c096d25170904.mp3",
+      "text": "حِينَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "9fc3edf4b1b17ed4": {
+      "file": "9fc3edf4b1b17ed4.mp3",
+      "text": "أَطَلَّتْ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "89af248c67da77e9": {
+      "file": "89af248c67da77e9.mp3",
+      "text": "نَبْتَةٌ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "656d70f6d18c5a7f": {
+      "file": "656d70f6d18c5a7f.mp3",
+      "text": "خَضْرَاءُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "78c7cf5d3582e6fd": {
+      "file": "78c7cf5d3582e6fd.mp3",
+      "text": "بِوَرَقَتَيْنِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 31916
+    },
+    "ea4fa8dbde0574e4": {
+      "file": "ea4fa8dbde0574e4.mp3",
+      "text": "طَرِيَّتَيْنِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 28076
+    },
+    "d2dab5b04de2306e": {
+      "file": "d2dab5b04de2306e.mp3",
+      "text": "صَفَّقَتْ أَمِينَةُ بِفَرَحٍ حِينَ أَطَلَّتْ نَبْتَةٌ خَضْرَاءُ بِوَرَقَتَيْنِ طَرِيَّتَيْنِ.",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 102572
+    },
+    "62e54a5ee6278430": {
+      "file": "62e54a5ee6278430.mp3",
+      "text": "زَهْرَةُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "9e65770a5c51af64": {
+      "file": "9e65770a5c51af64.mp3",
+      "text": "دَوَّارِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "de40ffd774605ef3": {
+      "file": "de40ffd774605ef3.mp3",
+      "text": "تَفَتَّحَتْ زَهْرَةُ دَوَّارِ شَمْسٍ ذَهَبِيَّةٌ، فَتَعَلَّمَتْ أَمِينَةُ أَنَّ الصَّبْرَ يُثْمِرُ جَمَالًا.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 122924
+    },
+    "9ca569638bbcbba1": {
+      "file": "9ca569638bbcbba1.mp3",
+      "text": "أَنَّ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 14252
+    },
+    "53ee622ef61b3f1a": {
+      "file": "53ee622ef61b3f1a.mp3",
+      "text": "جَمَالًا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 24236
+    },
+    "2b9d35559dd029c6": {
+      "file": "2b9d35559dd029c6.mp3",
+      "text": "أَطَلَّتْ نَبْتَةٌ خَضْرَاءُ وَتَفَتَّحَتْ زَهْرَةُ دَوَّارِ شَمْسٍ عَالِيَةٌ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 99116
+    },
+    "95a7ba5396a8f3a4": {
+      "file": "95a7ba5396a8f3a4.mp3",
+      "text": "قَلِقَتْ لِاخْتِفَاءِ الْبِذْرَةِ، ثُمَّ هَمَسَتْ لَهَا فِي الْفَجْرِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 76844
+    },
+    "4025bca8e36d304d": {
+      "file": "4025bca8e36d304d.mp3",
+      "text": "وَضَعَتْ أَمِينَةُ الْبِذْرَةَ فِي الْأَصِيصِ وَسَقَتْهَا بِالْمَاءِ الصَّافِي.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 83756
+    },
+    "6aee907721512b95": {
+      "file": "6aee907721512b95.mp3",
+      "text": "بِمَاذَا سَقَتْ أَمِينَةُ التُّرْبَةَ بَعْدَ الزِّرَاعَةِ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 62636
+    },
+    "fdcfed19353c6d31": {
+      "file": "fdcfed19353c6d31.mp3",
+      "text": "لِمَاذَا قَلِقَتْ أَمِينَةُ عِنْدَمَا نَظَرَتْ إِلَى التُّرْبَةِ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 62252
+    },
+    "352f0ab069b7af57": {
+      "file": "352f0ab069b7af57.mp3",
+      "text": "مَاذَا تَعَلَّمَتْ أَمِينَةُ حِينَ تَفَتَّحَتِ الزَّهْرَةُ الْعَالِيَةُ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 74156
+    },
+    "2d1e0f9e629a65a0": {
+      "file": "2d1e0f9e629a65a0.mp3",
+      "text": "عُصْفُورٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 28844
+    },
+    "f4afa3fdcb17985b": {
+      "file": "f4afa3fdcb17985b.mp3",
+      "text": "طَوَى عُمَرُ وَرَقَةً صَفْرَاءَ، وَصَنَعَ طَائِرًا صَغِيرًا.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 81836
+    },
+    "1ee4b018c60a486f": {
+      "file": "1ee4b018c60a486f.mp3",
+      "text": "طَائِرًا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "cc217d1714972853": {
+      "file": "cc217d1714972853.mp3",
+      "text": "طَوَى",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 19244
+    },
+    "c90f092e29d2a282": {
+      "file": "c90f092e29d2a282.mp3",
+      "text": "نَافِذَةِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19244
+    },
+    "9ace0563884a7a7c": {
+      "file": "9ace0563884a7a7c.mp3",
+      "text": "عُمَرُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "5164896ac06c5919": {
+      "file": "5164896ac06c5919.mp3",
+      "text": "صَفْرَاءَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "d04e33c4cbd166b4": {
+      "file": "d04e33c4cbd166b4.mp3",
+      "text": "نَسِيمُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "b6fc793d35ad8337": {
+      "file": "b6fc793d35ad8337.mp3",
+      "text": "الصَّبَاحِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "a4401ff516186a3b": {
+      "file": "a4401ff516186a3b.mp3",
+      "text": "الطَّائِرَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "61358d6ab5bc6255": {
+      "file": "61358d6ab5bc6255.mp3",
+      "text": "حَطَّ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "7540f746a6f92ac3": {
+      "file": "7540f746a6f92ac3.mp3",
+      "text": "الْغُرْفَةِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "a4401ef516186888": {
+      "file": "a4401ef516186888.mp3",
+      "text": "الطَّائِرُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "9e4aa124603d8b52": {
+      "file": "9e4aa124603d8b52.mp3",
+      "text": "فَوْقَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "dedfcb816cc3a601": {
+      "file": "dedfcb816cc3a601.mp3",
+      "text": "غُصْنِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "17eccf190e86b705": {
+      "file": "17eccf190e86b705.mp3",
+      "text": "التِّينِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "23dc1ffb61d09b52": {
+      "file": "23dc1ffb61d09b52.mp3",
+      "text": "بِرِفْقٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "d33fce4af7283dbd": {
+      "file": "d33fce4af7283dbd.mp3",
+      "text": "قُرْبَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "485e27d179c07310": {
+      "file": "485e27d179c07310.mp3",
+      "text": "أَسْرَعَتْ أَمِينَةُ فِي مَمَرِّ الْحَدِيقَةِ وَهِيَ تَبْتَسِمُ بِسَعَادَةٍ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 77612
+    },
+    "3c1e9788c17cba0f": {
+      "file": "3c1e9788c17cba0f.mp3",
+      "text": "الْحَدِيقَةِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 31532
+    },
+    "5b7ddc9fe73492f9": {
+      "file": "5b7ddc9fe73492f9.mp3",
+      "text": "عُشِّ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "1cf93780f0d6d678": {
+      "file": "1cf93780f0d6d678.mp3",
+      "text": "تَبْتَسِمُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "8d921de93890d8b1": {
+      "file": "8d921de93890d8b1.mp3",
+      "text": "جَلَسَ عُمَرُ وَأَمِينَةُ عَلَى الْحَصِيرِ، وَرَسَمَا نُجُومًا مُلَوَّنَةً عَلَى جَنَاحَيْهِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 112556
+    },
+    "ab31e807384ae274": {
+      "file": "ab31e807384ae274.mp3",
+      "text": "بِسَعَادَةٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 24236
+    },
+    "d28e8d253550a576": {
+      "file": "d28e8d253550a576.mp3",
+      "text": "وَأَمِينَةُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "9d3c2b670163897e": {
+      "file": "9d3c2b670163897e.mp3",
+      "text": "جَلَسَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 22316
+    },
+    "f18bc75c9f1bd6d1": {
+      "file": "f18bc75c9f1bd6d1.mp3",
+      "text": "عَلَى",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 19244
+    },
+    "0881f8637e809b39": {
+      "file": "0881f8637e809b39.mp3",
+      "text": "الْحَصِيرِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "021ae5199badf76d": {
+      "file": "021ae5199badf76d.mp3",
+      "text": "وَرَسَمَا",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "ddeb768e76da3f2c": {
+      "file": "ddeb768e76da3f2c.mp3",
+      "text": "نُجُومًا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "8eeca33721814dbe": {
+      "file": "8eeca33721814dbe.mp3",
+      "text": "مُلَوَّنَةً",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "e480422f0086eeaa": {
+      "file": "e480422f0086eeaa.mp3",
+      "text": "جَنَاحَيْهِ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "fde4784a0a2c2c8c": {
+      "file": "fde4784a0a2c2c8c.mp3",
+      "text": "رَفِّ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20012
+    },
+    "8c021f811151ec12": {
+      "file": "8c021f811151ec12.mp3",
+      "text": "عَادَ الطَّائِرُ الْمُزَيَّنُ إِلَى رَفِّ الْكُتُبِ، يَنْتَظِرُ رِحْلَةً جَدِيدَةً.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 91436
+    },
+    "ef21f9f2c5be73fc": {
+      "file": "ef21f9f2c5be73fc.mp3",
+      "text": "الْمُزَيَّنُ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "2b9697d0b76fb34e": {
+      "file": "2b9697d0b76fb34e.mp3",
+      "text": "رِحْلَةً",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 22316
+    },
+    "7a5484d9f6a47160": {
+      "file": "7a5484d9f6a47160.mp3",
+      "text": "جَدِيدَةً",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "a741215091b6ac11": {
+      "file": "a741215091b6ac11.mp3",
+      "text": "طَوَى عُمَرُ وَرَقَةً صَفْرَاءَ وَطَارَ الطَّائِرُ مِنَ النَّافِذَةِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 81836
+    },
+    "54dcdda94bebd3b8": {
+      "file": "54dcdda94bebd3b8.mp3",
+      "text": "خَرِيطَةً",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "106e1b7a4b081aa7": {
+      "file": "106e1b7a4b081aa7.mp3",
+      "text": "عَتِيقًا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "85ce06cc798fd70d": {
+      "file": "85ce06cc798fd70d.mp3",
+      "text": "أَيْنَ حَطَّ طَائِرُ الْوَرَقِ بَعْدَ أَنْ خَرَجَ مِنَ النَّافِذَةِ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 67244
+    },
+    "5fb8ecf8dea01ae1": {
+      "file": "5fb8ecf8dea01ae1.mp3",
+      "text": "فَتَحَ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 22316
+    },
+    "44bb13fe64ba69f3": {
+      "file": "44bb13fe64ba69f3.mp3",
+      "text": "مَاذَا رَسَمَ عُمَرُ وَأَمِينَةُ عَلَى جَنَاحَيِ الطَّائِرِ؟",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 73772
+    },
+    "9ab34f79d566bd28": {
+      "file": "9ab34f79d566bd28.mp3",
+      "text": "صُنْدُوقًا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "f5e43f0214f96526": {
+      "file": "f5e43f0214f96526.mp3",
+      "text": "فَتَحَ عُمَرُ صُنْدُوقًا خَشَبِيًّا عَتِيقًا فِي الْعُلِّيَّةِ، فَوَجَدَ بُوصَلَةً نُحَاسِيَّةً وَخَرِيطَةً مَطْوِيَّةً.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 135596
+    },
+    "646bbac05cbb3042": {
+      "file": "646bbac05cbb3042.mp3",
+      "text": "خَشَبِيًّا",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "1db53dd8bb528cff": {
+      "file": "1db53dd8bb528cff.mp3",
+      "text": "فَوَجَدَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "b931a02c0cda78c1": {
+      "file": "b931a02c0cda78c1.mp3",
+      "text": "دَافِئٍ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "35e36959fc81308c": {
+      "file": "35e36959fc81308c.mp3",
+      "text": "صَافٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "c48284c13d330428": {
+      "file": "c48284c13d330428.mp3",
+      "text": "إِبْرِيقٍ",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "cd1db86d9c0338f2": {
+      "file": "cd1db86d9c0338f2.mp3",
+      "text": "فَجْرٍ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17708
+    },
+    "33df492b8bb9799a": {
+      "file": "33df492b8bb9799a.mp3",
+      "text": "التُّرْبَةَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 22700
+    },
+    "4f8681b734852f3b": {
+      "file": "4f8681b734852f3b.mp3",
+      "text": "ذَهَبِيٍّ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "a951d4b843de0eb6": {
+      "file": "a951d4b843de0eb6.mp3",
+      "text": "بِابْتِسَامَةٍ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "23101fe02a3fd54f": {
+      "file": "23101fe02a3fd54f.mp3",
+      "text": "انْهَضِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17324
+    },
+    "52cadec0f6d499f3": {
+      "file": "52cadec0f6d499f3.mp3",
+      "text": "بِذْرَتِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17708
+    },
+    "5b21d821dc07fec4": {
+      "file": "5b21d821dc07fec4.mp3",
+      "text": "شَمْسٍ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "c4a38dd75f258c04": {
+      "file": "c4a38dd75f258c04.mp3",
+      "text": "ذَهَبِيَّةٌ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 25772
+    },
+    "9b298587eec30c41": {
+      "file": "9b298587eec30c41.mp3",
+      "text": "فَتَعَلَّمَتْ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "147c6a9c6c8462e4": {
+      "file": "147c6a9c6c8462e4.mp3",
+      "text": "الصَّبْرَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "d4a16ed840d8abc4": {
+      "file": "d4a16ed840d8abc4.mp3",
+      "text": "يُثْمِرُ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "bf6c842ab8276e3c": {
+      "file": "bf6c842ab8276e3c.mp3",
+      "text": "وَرَقَةً",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26540
+    },
+    "de6717cfdf987b3b": {
+      "file": "de6717cfdf987b3b.mp3",
+      "text": "وَصَنَعَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 24620
+    },
+    "641b0c27424908d3": {
+      "file": "641b0c27424908d3.mp3",
+      "text": "صَغِيرًا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 22316
+    },
+    "a1a4179d30654752": {
+      "file": "a1a4179d30654752.mp3",
+      "text": "حَمَلَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19244
+    },
+    "0db3fd9adc4a8a75": {
+      "file": "0db3fd9adc4a8a75.mp3",
+      "text": "حَمَلَ نَسِيمُ الصَّبَاحِ الطَّائِرَ مِنْ نَافِذَةِ الْغُرْفَةِ.",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 73388
+    },
+    "8005d88236a312a8": {
+      "file": "8005d88236a312a8.mp3",
+      "text": "أَسْرَعَتْ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "3ea6439d04bbe2d9": {
+      "file": "3ea6439d04bbe2d9.mp3",
+      "text": "حَطَّ الطَّائِرُ بِرِفْقٍ فَوْقَ غُصْنِ التِّينِ قُرْبَ عُشِّ عُصْفُورٍ.",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 94124
+    },
+    "b1d3a7eea1ff84fd": {
+      "file": "b1d3a7eea1ff84fd.mp3",
+      "text": "مَمَرِّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "3687357e64e2f62a": {
+      "file": "3687357e64e2f62a.mp3",
+      "text": "وَهِيَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "3261c6804ec5a31e": {
+      "file": "3261c6804ec5a31e.mp3",
+      "text": "عَادَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "8f2476d2dbe5eb05": {
+      "file": "8f2476d2dbe5eb05.mp3",
+      "text": "الْكُتُبِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "13559f8fef55e90a": {
+      "file": "13559f8fef55e90a.mp3",
+      "text": "يَنْتَظِرُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "6dee76685feeb98c": {
+      "file": "6dee76685feeb98c.mp3",
+      "text": "حَطَّ الطَّائِرُ قُرْبَ عُشِّ عُصْفُورٍ وَوَجَدَتْهُ أَمِينَةُ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 81068
+    },
+    "ca05e7df17b44822": {
+      "file": "ca05e7df17b44822.mp3",
+      "text": "رَسَمَا نُجُومًا عَلَى جَنَاحَيْهِ وَوَضَعَاهُ عَلَى رَفِّ الْكُتُبِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 81836
+    },
+    "ac31c1a01dabc995": {
+      "file": "ac31c1a01dabc995.mp3",
+      "text": "بُوصَلَةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "400fd3023a62c80f": {
+      "file": "400fd3023a62c80f.mp3",
+      "text": "الْعُلِّيَّةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "af5fcecf364c6d3e": {
+      "file": "af5fcecf364c6d3e.mp3",
+      "text": "نُحَاسِيَّةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 31148
+    },
+    "2b93dd77e661996e": {
+      "file": "2b93dd77e661996e.mp3",
+      "text": "وَخَرِيطَةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 27308
+    },
+    "95751da681009ae4": {
+      "file": "95751da681009ae4.mp3",
+      "text": "شَرَحَ الْجَدُّ سَالِمٌ بِابْتِسَامَةٍ دَافِئَةٍ أَنَّ الْإِبْرَةَ الْحَمْرَاءَ تُشِيرُ دَائِمًا إِلَى الشَّمَالِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 127148
+    },
+    "eeb28afa856df096": {
+      "file": "eeb28afa856df096.mp3",
+      "text": "شَرَحَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "ccce6c5975827ed7": {
+      "file": "ccce6c5975827ed7.mp3",
+      "text": "مَطْوِيَّةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "05ce40f254a52c8e": {
+      "file": "05ce40f254a52c8e.mp3",
+      "text": "الْجَدُّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "fb624856b62f48dd": {
+      "file": "fb624856b62f48dd.mp3",
+      "text": "سَالِمٌ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 25004
+    },
+    "dcd288e879ba2011": {
+      "file": "dcd288e879ba2011.mp3",
+      "text": "دَافِئَةٍ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "2eb47185a573bf03": {
+      "file": "2eb47185a573bf03.mp3",
+      "text": "الْإِبْرَةَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "f22f2e0bdfa10bde": {
+      "file": "f22f2e0bdfa10bde.mp3",
+      "text": "الْحَمْرَاءَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "bab69b3e83fc0736": {
+      "file": "bab69b3e83fc0736.mp3",
+      "text": "تُشِيرُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "33080077b506b21e": {
+      "file": "33080077b506b21e.mp3",
+      "text": "دَائِمًا",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "1f655e5e63006c14": {
+      "file": "1f655e5e63006c14.mp3",
+      "text": "الشَّمَالِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 24620
+    },
+    "dc6f7e83d87b1320": {
+      "file": "dc6f7e83d87b1320.mp3",
+      "text": "تَتَبَّعَ عُمَرُ وَالْجَدُّ مَسَارَ الْبُسْتَانِ الْمَرْصُوفَ نَحْوَ شَجَرَةِ الزَّيْتُونِ الْمُعَمَّرَةِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 99116
+    },
+    "08f1cd5d181cf964": {
+      "file": "08f1cd5d181cf964.mp3",
+      "text": "تَتَبَّعَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 22700
+    },
+    "e3aec2b29429f6f8": {
+      "file": "e3aec2b29429f6f8.mp3",
+      "text": "وَالْجَدُّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "015d1ee339c94b27": {
+      "file": "015d1ee339c94b27.mp3",
+      "text": "مَسَارَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "322ea6cf6bd80daa": {
+      "file": "322ea6cf6bd80daa.mp3",
+      "text": "الْبُسْتَانِ",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26540
+    },
+    "2f935c42b6624770": {
+      "file": "2f935c42b6624770.mp3",
+      "text": "الْمَرْصُوفَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "11f2b6eb7d96d9af": {
+      "file": "11f2b6eb7d96d9af.mp3",
+      "text": "نَحْوَ",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16940
+    },
+    "7f615a60184fffb7": {
+      "file": "7f615a60184fffb7.mp3",
+      "text": "شَجَرَةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "bb6462c6ab82b647": {
+      "file": "bb6462c6ab82b647.mp3",
+      "text": "الزَّيْتُونِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "157832a6a10779e1": {
+      "file": "157832a6a10779e1.mp3",
+      "text": "الْمُعَمَّرَةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "209de89e265597b2": {
+      "file": "209de89e265597b2.mp3",
+      "text": "عَبَرَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "207e69eff720ada0": {
+      "file": "207e69eff720ada0.mp3",
+      "text": "عَبَرَ عُمَرُ السَّاقِيَةَ فَوْقَ الْحِجَارَةِ الْمَلْسَاءِ وَهُوَ يُرَاقِبُ اتِّجَاهَ الْإِبْرَةِ بِدِقَّةٍ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 121388
+    },
+    "f2238a1e7f2463a8": {
+      "file": "f2238a1e7f2463a8.mp3",
+      "text": "الْحِجَارَةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 24620
+    },
+    "58ad53f39ecc52de": {
+      "file": "58ad53f39ecc52de.mp3",
+      "text": "السَّاقِيَةَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 22700
+    },
+    "6c1a7e0bcbd7327c": {
+      "file": "6c1a7e0bcbd7327c.mp3",
+      "text": "الْمَلْسَاءِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "0a7879476c65c24d": {
+      "file": "0a7879476c65c24d.mp3",
+      "text": "وَهُوَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "036cae534ca0dce5": {
+      "file": "036cae534ca0dce5.mp3",
+      "text": "يُرَاقِبُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "c003ac0b2fd3c9a4": {
+      "file": "c003ac0b2fd3c9a4.mp3",
+      "text": "اتِّجَاهَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "2eb46f85a573bb9d": {
+      "file": "2eb46f85a573bb9d.mp3",
+      "text": "الْإِبْرَةِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21164
+    },
+    "d371e2668fdd34ff": {
+      "file": "d371e2668fdd34ff.mp3",
+      "text": "بِدِقَّةٍ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21548
+    },
+    "fc2093f29e094bcf": {
+      "file": "fc2093f29e094bcf.mp3",
+      "text": "تَحْتَ شَجَرَةِ التِّينِ قُرْبَ السُّورِ الْحَجَرِيِّ، اكْتَشَفَ عُمَرُ عُلْبَةً مَعْدِنِيَّةً بَيْنَ الْأَعْشَابِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 123308
+    },
+    "3110f7e4bf91cea5": {
+      "file": "3110f7e4bf91cea5.mp3",
+      "text": "تَحْتَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16940
+    },
+    "7972d09c6a8939cd": {
+      "file": "7972d09c6a8939cd.mp3",
+      "text": "السُّورِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "37517448f2be058b": {
+      "file": "37517448f2be058b.mp3",
+      "text": "الْحَجَرِيِّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26156
+    },
+    "2f1592bee88d9c28": {
+      "file": "2f1592bee88d9c28.mp3",
+      "text": "اكْتَشَفَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "6e72d6ce6d345c34": {
+      "file": "6e72d6ce6d345c34.mp3",
+      "text": "عُلْبَةً",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18092
+    },
+    "a3ef1b71421ccc7b": {
+      "file": "a3ef1b71421ccc7b.mp3",
+      "text": "مَعْدِنِيَّةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 25388
+    },
+    "bc9dc03f837a91de": {
+      "file": "bc9dc03f837a91de.mp3",
+      "text": "بَيْنَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13868
+    },
+    "916433c1498ec013": {
+      "file": "916433c1498ec013.mp3",
+      "text": "الْأَعْشَابِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "b87c811e956838cb": {
+      "file": "b87c811e956838cb.mp3",
+      "text": "فَتَحَ الْعُلْبَةَ بِلَهْفَةٍ، فَوَجَدَ دَفْتَرَ طُفُولَةِ جَدِّهِ وَبُذُورًا قَدِيمَةً تَنْتَظِرُ مَنْ يَزْرَعُهَا.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 130220
+    },
+    "fb8bf80de6907b0c": {
+      "file": "fb8bf80de6907b0c.mp3",
+      "text": "الْعُلْبَةَ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "1a19954a3bf58161": {
+      "file": "1a19954a3bf58161.mp3",
+      "text": "بِلَهْفَةٍ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 22316
+    },
+    "9f8ce373f6a9bb1f": {
+      "file": "9f8ce373f6a9bb1f.mp3",
+      "text": "طُفُولَةِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "4191bb3cb2fb552d": {
+      "file": "4191bb3cb2fb552d.mp3",
+      "text": "جَدِّهِ",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "e15c984f667b429b": {
+      "file": "e15c984f667b429b.mp3",
+      "text": "دَفْتَرَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "b364b443def5f60c": {
+      "file": "b364b443def5f60c.mp3",
+      "text": "قَدِيمَةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 20780
+    },
+    "4073514f1bc07540": {
+      "file": "4073514f1bc07540.mp3",
+      "text": "وَبُذُورًا",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "f078734c928622df": {
+      "file": "f078734c928622df.mp3",
+      "text": "تَنْتَظِرُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 21932
+    },
+    "702ecb2e5f711c78": {
+      "file": "702ecb2e5f711c78.mp3",
+      "text": "مَنْ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13868
+    },
+    "30cca4ac5dfac21c": {
+      "file": "30cca4ac5dfac21c.mp3",
+      "text": "وَجَدَ عُمَرُ بُوصَلَةً نُحَاسِيَّةً وَخَرِيطَةً فِي صُنْدُوقٍ عَتِيقٍ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 97196
+    },
+    "55ccafcbdf42215a": {
+      "file": "55ccafcbdf42215a.mp3",
+      "text": "تَعَلَّمَ اتِّجَاهَ الشَّمَالِ وَعَبَرَ السَّاقِيَةَ فِي الْبُسْتَانِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 79532
+    },
+    "5f8264a575a02247": {
+      "file": "5f8264a575a02247.mp3",
+      "text": "اكْتَشَفَ تَحْتَ شَجَرَةِ التِّينِ عُلْبَةً فِيهَا دَفْتَرُ جَدِّهِ وَبُذُورٌ قَدِيمَةٌ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 101420
+    },
+    "78ea4ea0178353f3": {
+      "file": "78ea4ea0178353f3.mp3",
+      "text": "إِلَى أَيِّ جِهَةٍ تُشِيرُ إِبْرَةُ الْبُوصَلَةِ الْحَمْرَاءُ دَائِمًا؟",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 74156
+    },
+    "229369ee3a774169": {
+      "file": "229369ee3a774169.mp3",
+      "text": "مَاذَا وَجَدَ عُمَرُ دَاخِلَ الْعُلْبَةِ الْمَعْدِنِيَّةِ فِي نِهَايَةِ الرِّحْلَةِ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 82604
+    },
+    "ec71d68afd480ce4": {
+      "file": "ec71d68afd480ce4.mp3",
+      "text": "لِمَاذَا خَبَّأَ الْجَدُّ سَالِمٌ الدَّفْتَرَ وَالْبُذُورَ لِيَصِلَ إِلَيْهَا عُمَرُ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 96044
+    },
+    "30ced64aa0ba4123": {
+      "file": "30ced64aa0ba4123.mp3",
+      "text": "بِذْرَةٌ فِي أَصِيصٍ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 33836
+    },
+    "efb474415a9ccae0": {
+      "file": "efb474415a9ccae0.mp3",
+      "text": "طَائِرُ الْوَرَقِ الْأَصْفَرُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 36140
+    },
+    "2c89f00250b93800": {
+      "file": "2c89f00250b93800.mp3",
+      "text": "بُوصَلَةُ الْجَدِّ سَالِمٍ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 41132
+    },
+    "ffbedf179ab017e9": {
+      "file": "ffbedf179ab017e9.mp3",
+      "text": "صَاد",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "d45ad23fd2a7dbfd": {
+      "file": "d45ad23fd2a7dbfd.mp3",
+      "text": "يَزْرَعُهَا",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "95fb4530cef95085": {
+      "file": "95fb4530cef95085.mp3",
+      "text": "مكتبة المدرسة وصناعة الورق",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 50732
+    },
+    "e5dd9df1a5be26d7": {
+      "file": "e5dd9df1a5be26d7.mp3",
+      "text": "غَيْن",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "ee15f1c37d98db86": {
+      "file": "ee15f1c37d98db86.mp3",
+      "text": "قَاف",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 27308
+    },
+    "efdc637b29d38939": {
+      "file": "efdc637b29d38939.mp3",
+      "text": "كَاف",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "fdbf2a3488ccb4f0": {
+      "file": "fdbf2a3488ccb4f0.mp3",
+      "text": "هَاء",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26540
+    },
+    "507434d3be50af23": {
+      "file": "507434d3be50af23.mp3",
+      "text": "وَاو",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 29228
+    },
+    "8daf732412784b5b": {
+      "file": "8daf732412784b5b.mp3",
+      "text": "يَاء",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 28076
+    },
+    "793d474a5180e65a": {
+      "file": "793d474a5180e65a.mp3",
+      "text": "وَرْد",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17324
+    },
+    "888e8498cb7ecbf2": {
+      "file": "888e8498cb7ecbf2.mp3",
+      "text": "تَمْر",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 12332
+    },
+    "e565a5e50c20cfad": {
+      "file": "e565a5e50c20cfad.mp3",
+      "text": "بَحْر",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "9599fd223c9c8694": {
+      "file": "9599fd223c9c8694.mp3",
+      "text": "نَجْم",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16940
+    },
+    "0abdeb27f1f8eae9": {
+      "file": "0abdeb27f1f8eae9.mp3",
+      "text": "طَرِيق",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17708
+    },
+    "a399e623b98634c4": {
+      "file": "a399e623b98634c4.mp3",
+      "text": "الْقِطَّةُ الْبَيْضَاءُ فِي الْحَدِيقَةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 48428
+    },
+    "40c495a6869930ea": {
+      "file": "40c495a6869930ea.mp3",
+      "text": "صَبَاحٌ فِي سُوقِ الْفَاكِهَةِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 39980
+    },
+    "b5a145d0e3774c7e": {
+      "file": "b5a145d0e3774c7e.mp3",
+      "text": "رِحْلَةٌ إِلَى المَرْصَدِ الفَلَكِيِّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 46124
+    },
+    "19ade7cb289982b5": {
+      "file": "19ade7cb289982b5.mp3",
+      "text": "واحةُ النخيلِ والقنواتُ المائيةُ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 56108
+    },
+    "4a077c5b7bd8ccb3": {
+      "file": "4a077c5b7bd8ccb3.mp3",
+      "text": "ساقيةُ القريةِ وحقولُ القمحِ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 56108
+    },
+    "b6eb545475d46f45": {
+      "file": "b6eb545475d46f45.mp3",
+      "text": "الطاقةُ الشمسيةُ في مدينتِنا",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 53804
+    },
+    "c150d1e87064ce8a": {
+      "file": "c150d1e87064ce8a.mp3",
+      "text": "زَهْرَةُ لَيْلَى",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 27692
+    },
+    "72ee54e567f87d76": {
+      "file": "72ee54e567f87d76.mp3",
+      "text": "حَقِيبَةُ عُمَرَ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 27308
+    },
+    "36edaedb9e0cd135": {
+      "file": "36edaedb9e0cd135.mp3",
+      "text": "المَطَرُ فِي الحَيِّ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 34220
+    },
+    "ce9a0ea22d424ea7": {
+      "file": "ce9a0ea22d424ea7.mp3",
+      "text": "إدارة الماء في المدرسة",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 34604
+    },
+    "f3983bbd66c7bec6": {
+      "file": "f3983bbd66c7bec6.mp3",
+      "text": "حفظ الحكايات المحلية",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 36908
+    },
+    "cb053f5a9f00d930": {
+      "file": "cb053f5a9f00d930.mp3",
+      "text": "نقرأ النص ونفهم فكرته",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 44972
+    },
+    "902bb0955e0d8958": {
+      "file": "902bb0955e0d8958.mp3",
+      "text": "الفهم القرائي واللغة",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 36908
+    },
+    "3ddefb6e70cc3033": {
+      "file": "3ddefb6e70cc3033.mp3",
+      "text": "قَرَأَتْ مَرْيَمُ قِصَّةً قَبْلَ النَّوْمِ. مَاذَا قَرَأَتْ مَرْيَمُ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 75308
+    },
+    "7d680246dfa5998d": {
+      "file": "7d680246dfa5998d.mp3",
+      "text": "هَطَلَ الْمَطَرُ، فَحَمَلَ سَامِي مِظَلَّتَهُ قَبْلَ أَنْ يَخْرُجَ. لِمَاذَا حَمَلَ سَامِي مِظَلَّتَهُ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 124076
+    },
+    "af5df8f58bdb74dd": {
+      "file": "af5df8f58bdb74dd.mp3",
+      "text": "قَرَأَتْ سَلْمَى كِتَابًا مُشَوِّقًا، فَلَمْ تَتَوَقَّفْ حَتَّى وَصَلَتْ إِلَى نِهَايَتِهِ. مَا مَعْنَى «مُشَوِّق» فِي الْجُمْلَةِ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 145196
+    },
+    "0fb9234ee8fc89d8": {
+      "file": "0fb9234ee8fc89d8.mp3",
+      "text": "رَأَى عَادِلٌ أَنَّ التُّرَابَ جَافٌّ، فَأَحْضَرَ الْمَاءَ وَسَقَى النَّبْتَةَ. مَاذَا نَفْهَمُ مِنْ ذَلِكَ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 117548
+    },
+    "8f5af5f712cbe8a2": {
+      "file": "8f5af5f712cbe8a2.mp3",
+      "text": "رَسَمَتْ لَيْلَى شَكْلًا، ثُمَّ لَوَّنَتْهُ بِالْأَحْمَرِ. مَاذَا فَعَلَتْ لَيْلَى بَعْدَ الرَّسْمِ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 108716
+    },
+    "872ebe8be570be00": {
+      "file": "872ebe8be570be00.mp3",
+      "text": "خَرَجَتْ هِنْدٌ فِي يَوْمٍ بَارِدٍ، وَلَبِسَتْ مِعْطَفًا. كَيْفَ كَانَ الْيَوْمُ؟",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 102188
+    },
+    "dc66eec537e5e8f7": {
+      "file": "dc66eec537e5e8f7.mp3",
+      "text": "وَضَعَتْ سَلْمَى الْبُذُورَ فِي التُّرْبَةِ، ثُمَّ سَقَتْهَا. مَاذَا فَعَلَتْ بَعْدَ وَضْعِ الْبُذُورِ؟",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 110252
+    },
+    "6f33aa2810cd6d84": {
+      "file": "6f33aa2810cd6d84.mp3",
+      "text": "سَقَى عَادِلٌ الشَّجَرَةَ. مَاذَا سَقَى عَادِلٌ؟",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 65708
+    },
+    "c6d2ba5ad9690815": {
+      "file": "c6d2ba5ad9690815.mp3",
+      "text": "دَخَلَ عُمَرُ الْغُرْفَةَ الْمُظْلِمَةَ، فَأَضَاءَ الْمِصْبَاحَ. لِمَاذَا أَضَاءَ عُمَرُ الْمِصْبَاحَ؟",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 109100
+    },
+    "055ac4f63c2f2e56": {
+      "file": "055ac4f63c2f2e56.mp3",
+      "text": "قَاعِدَةُ الْوَقْفِ: انْطِقِ الْكَلِمَةَ بِالسُّكُونِ عِنْدَ الْوَقْفِ. إِذَا سَمِعْتَ هَاءً فَهِيَ تَاءٌ مَرْبُوطَة، مِثْلَ: شَجَرَةْ، شَجَرَةٌ. وَإِذَا سَمِعْتَ تَاءً بَقِيَتْ تَاءً، فَهِيَ تَاءٌ مَفْتُوحَة، مِثْلَ: بَيْتْ، بَيْتٌ.",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 288428
+    },
+    "1b533d4623045094": {
+      "file": "1b533d4623045094.mp3",
+      "text": "حُرُوفُ الْمَدِّ ثَلَاثَة: الْأَلِفُ مَفْتُوحٌ مَا قَبْلَهَا، وَالْوَاوُ مَضْمُومٌ مَا قَبْلَهَا، وَالْيَاءُ مَكْسُورٌ مَا قَبْلَهَا. لَا تَضَعْ حَرْفَ مَدٍّ إِلَّا إِذَا سَمِعْتَ صَوْتًا طَوِيلًا مَمْدُودًا.",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 260012
+    },
+    "b64c5c8534118c87": {
+      "file": "b64c5c8534118c87.mp3",
+      "text": "إِ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 8108
+    },
+    "0b0ff607b75a073f": {
+      "file": "0b0ff607b75a073f.mp3",
+      "text": "آ",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 9644
+    },
+    "161eabfa3d987f6c": {
+      "file": "161eabfa3d987f6c.mp3",
+      "text": "رِيشَة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16940
+    },
+    "6776bbdb3e2ba4bb": {
+      "file": "6776bbdb3e2ba4bb.mp3",
+      "text": "جِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "e62d86db85072464": {
+      "file": "e62d86db85072464.mp3",
+      "text": "جُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "7ca6fcf0d0e748f3": {
+      "file": "7ca6fcf0d0e748f3.mp3",
+      "text": "رُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 11948
+    },
+    "96d1fff0dfc5facc": {
+      "file": "96d1fff0dfc5facc.mp3",
+      "text": "رِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 12716
+    },
+    "f9758d0c7a1118bc": {
+      "file": "f9758d0c7a1118bc.mp3",
+      "text": "زَهْرَة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "3a8b9b322f8c8fd5": {
+      "file": "3a8b9b322f8c8fd5.mp3",
+      "text": "خَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 11948
+    },
+    "884672f0d8536068": {
+      "file": "884672f0d8536068.mp3",
+      "text": "رَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13484
+    },
+    "c72aa9dfa486a9e3": {
+      "file": "c72aa9dfa486a9e3.mp3",
+      "text": "شِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13484
+    },
+    "596e6875f393590a": {
+      "file": "596e6875f393590a.mp3",
+      "text": "صَقْر",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "26cb426bf93bb730": {
+      "file": "26cb426bf93bb730.mp3",
+      "text": "ضَاد",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "ca6172e0372a8c33": {
+      "file": "ca6172e0372a8c33.mp3",
+      "text": "شَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 12332
+    },
+    "d1c77d66555f3ff4": {
+      "file": "d1c77d66555f3ff4.mp3",
+      "text": "ظَاء",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23468
+    },
+    "cfb9765cb4ed6841": {
+      "file": "cfb9765cb4ed6841.mp3",
+      "text": "طَاء",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 29228
+    },
+    "ce434d2aaf33d25c": {
+      "file": "ce434d2aaf33d25c.mp3",
+      "text": "ظَرْف",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18476
+    },
+    "edc934ad9fe6f6b7": {
+      "file": "edc934ad9fe6f6b7.mp3",
+      "text": "ظَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "2ca2b61b2caee84a": {
+      "file": "2ca2b61b2caee84a.mp3",
+      "text": "غَيْمَة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 15788
+    },
+    "d52764e03dddd29c": {
+      "file": "d52764e03dddd29c.mp3",
+      "text": "شُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13484
+    },
+    "6c95715ee5c561f3": {
+      "file": "6c95715ee5c561f3.mp3",
+      "text": "لَيْمُون",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "69eeca282739faec": {
+      "file": "69eeca282739faec.mp3",
+      "text": "نُون",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 23852
+    },
+    "36d55deed599c3c6": {
+      "file": "36d55deed599c3c6.mp3",
+      "text": "فَاء",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 26924
+    },
+    "99efbb0e1c0dc3d1": {
+      "file": "99efbb0e1c0dc3d1.mp3",
+      "text": "غَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 11948
+    },
+    "90de79509a6c4246": {
+      "file": "90de79509a6c4246.mp3",
+      "text": "فُو",
+      "voice": "gemini-2.5-flash-preview-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18092
+    },
+    "c1f8708704d74540": {
+      "file": "c1f8708704d74540.mp3",
+      "text": "نِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "abad36f3281df453": {
+      "file": "abad36f3281df453.mp3",
+      "text": "هَدِيَّة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "a20adb2812aed29a": {
+      "file": "a20adb2812aed29a.mp3",
+      "text": "وَرْدَة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "f47703872104e7cc": {
+      "file": "f47703872104e7cc.mp3",
+      "text": "نَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 11180
+    },
+    "e9e8a5871a81df4f": {
+      "file": "e9e8a5871a81df4f.mp3",
+      "text": "نُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "31562b2b58a4631a": {
+      "file": "31562b2b58a4631a.mp3",
+      "text": "وَا",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "276ab92b52ab99f1": {
+      "file": "276ab92b52ab99f1.mp3",
+      "text": "وُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 12716
+    },
+    "cd7d2aa988bef78b": {
+      "file": "cd7d2aa988bef78b.mp3",
+      "text": "يُو",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 14636
+    },
+    "5ca3bda948c15994": {
+      "file": "5ca3bda948c15994.mp3",
+      "text": "يِي",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 13868
+    },
+    "f5e2765895cab278": {
+      "file": "f5e2765895cab278.mp3",
+      "text": "دَرَّاجَة",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 17708
+    },
+    "f596ab16efcb5155": {
+      "file": "f596ab16efcb5155.mp3",
+      "text": "حُوت",
+      "voice": "gemini-3.8-flash-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 19628
+    },
+    "902946d152db2d21": {
+      "file": "902946d152db2d21.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ الْبَاءِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 92204
+    },
+    "9971242b03bf2aba": {
+      "file": "9971242b03bf2aba.mp3",
+      "text": "وِي",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 18092
+    },
+    "01468bc605325a2c": {
+      "file": "01468bc605325a2c.mp3",
+      "text": "مَوْزَة",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 20396
+    },
+    "91eae9dc1802de30": {
+      "file": "91eae9dc1802de30.mp3",
+      "text": "بَالُون",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "a7220c2c7616ac0d": {
+      "file": "a7220c2c7616ac0d.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ السِّينِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 99884
+    },
+    "0f5ddcb17e33b0c3": {
+      "file": "0f5ddcb17e33b0c3.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ الدَّالِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 101036
+    },
+    "a4a8f453befaa07d": {
+      "file": "a4a8f453befaa07d.mp3",
+      "text": "دُلْفِين",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 23084
+    },
+    "3aaaf08a0e680226": {
+      "file": "3aaaf08a0e680226.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ الشِّينِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 106412
+    },
+    "41461e2fd88a9c88": {
+      "file": "41461e2fd88a9c88.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ الْمِيمِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 101804
+    },
+    "1ff4799037260890": {
+      "file": "1ff4799037260890.mp3",
+      "text": "شَمْعَة",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 15404
+    },
+    "aa45a5fadc36ebda": {
+      "file": "aa45a5fadc36ebda.mp3",
+      "text": "شِرَاع",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 18860
+    },
+    "3b104fbdfd50228b": {
+      "file": "3b104fbdfd50228b.mp3",
+      "text": "اِسْمَعِ الصَّوْتَ، ثُمَّ ضَعْ فِي السَّلَّةِ كُلَّ صُورَةٍ تَبْدَأُ بِحَرْفِ الْقَافِ.",
+      "voice": "gemini-3.1-flash-tts-preview/Aoede",
+      "rate": "1.0",
+      "bytes": 102956
+    },
+    "6b4b787b87e67827": {
+      "file": "6b4b787b87e67827.mp3",
+      "text": "مِثَالٌ مَحْلُول: كَلِمَةُ شَجَرَة. عِنْدَ الْوَقْفِ نَقُولُ: شَجَرَهْ، نَسْمَعُ هَاءً. وَعِنْدَ الْحَرَكَةِ نَقُولُ: شَجَرَةٌ. لِذَلِكَ كَتَبْنَاهَا تَاءً مَرْبُوطَةً.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 203180
+    },
+    "a4d1818518fa2008": {
+      "file": "a4d1818518fa2008.mp3",
+      "text": "اختر النهاية الصحيحة لكلمة: «لُعْبَـ...» عند الحديث عن دُمية الطفل: اشْتَرَى أَحْمَدُ لُعْبَـ جَمِيلَةً",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 162860
+    },
+    "63488626fffdde25": {
+      "file": "63488626fffdde25.mp3",
+      "text": "عند الوقف نقول «لُعْبَهْ» بالهاء، إذن تكتب تاء مربوطة بنقطتين: «لُعْبَة».",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 125612
+    },
+    "c3f4a423bf519153": {
+      "file": "c3f4a423bf519153.mp3",
+      "text": "قِطَار",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 16556
+    },
+    "2563b54511e767d0": {
+      "file": "2563b54511e767d0.mp3",
+      "text": "اختر الحرف الأخير لكلمة: «بَيْـ...» (المكان الذي نسكن فيه): رَجَعَ سَامِي إِلَى الْبَيْـ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 121388
+    },
+    "c69d20d586818cb3": {
+      "file": "c69d20d586818cb3.mp3",
+      "text": "صوت التاء بقي ثابتاً عند الوقف: «بَيْتْ»، لذلك تُكتب تاءً مفتوحة مبسوطة: «بَيْت».",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 96812
+    },
+    "44f12a42097f6b10": {
+      "file": "44f12a42097f6b10.mp3",
+      "text": "ما الكتابة الصحيحة لكلمة «مَدْرَسَة»؟ ذَهَبَتْ سَارَةُ إِلَى الـ",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 104876
+    },
+    "ce81962cb4f8401b": {
+      "file": "ce81962cb4f8401b.mp3",
+      "text": "تُنطق هاءً عند الوقف (مَدْرَسَهْ) وتاءً عند الحركة (مَدْرَسَةُ)، وتُوضع النقطتان دائماً.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 157868
+    },
+    "03bcd1318762eae7": {
+      "file": "03bcd1318762eae7.mp3",
+      "text": "رتّب المقاطع الصوتية لكتابة كلمة: «حَـ ـدِيـ ـقَـ ـة»:",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 102956
+    },
+    "657e25a01cd282dd": {
+      "file": "657e25a01cd282dd.mp3",
+      "text": "مِثَال: كَلِمَةُ كِتَاب. نَقُولُ كِـ بِحَرَكَةٍ قَصِيرَة، ثُمَّ نَمُدُّ: تَـا. لِذَلِكَ نَكْتُبُ أَلِفَ الْمَدِّ بَعْدَ التَّاءِ.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 205484
+    },
+    "87afa124e8546fcf": {
+      "file": "87afa124e8546fcf.mp3",
+      "text": "الضمة الممتدة على النون تنتج مدّ الواو: «نُور».",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 77612
+    },
+    "1574c86b5c4dc609": {
+      "file": "1574c86b5c4dc609.mp3",
+      "text": "الْمَقْطَعُ السَّاكِنُ: الْحَرْفُ السَّاكِنُ ضَعِيفٌ لَا يُنْطَقُ وَحْدَهُ، بَلْ نَنْطِقُهُ مَعَ الْحَرْفِ الْمُتَحَرِّكِ قَبْلَهُ فِي مَقْطَعٍ وَاحِدٍ، مِثْلَ: مَكْـ فِي كَلِمَةِ مَكْتَبَة.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 246956
+    },
+    "9232235c5bcef502": {
+      "file": "9232235c5bcef502.mp3",
+      "text": "مِثَال: مَسْـ + جِد. نَقْرَأُ مَسْ دَفْعَةً وَاحِدَة، ثُمَّ جِد. السُّكُونُ يَجْمَعُ الْحَرْفَيْنِ مَعًا.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 194348
+    },
+    "7f4d583a59dbcdd8": {
+      "file": "7f4d583a59dbcdd8.mp3",
+      "text": "هَمْزَةُ الْقَطْعِ تَظْهَرُ رَأْسَ عَيْنٍ صَغِيرَةٍ فَوْقَ الْأَلِفِ مَعَ الْفَتْحَةِ وَالضَّمَّةِ، وَتَحْتَ الْأَلِفِ مَعَ الْكَسْرَةِ. نَنْطِقُهَا دَائِمًا بِوُضُوح.",
+      "voice": "gemini-3.8-flash-lite-tts/Aoede",
+      "rate": "1.0",
+      "bytes": 177452
     }
   },
   "model": "eleven_v4"

@@ -12,8 +12,16 @@ import { authenticatedFetch } from './apiAuth';
 import { formatArabicTextWithPhonemes, getArabicPhonemeIpa } from './arabicPhonemeBank';
 import { audioKey } from '../cognitiveProfile/audioCatalog';
 
-let manifestCache: { clips: Record<string, { file: string }> } | null = null;
-async function getAudioManifest(): Promise<{ clips: Record<string, { file: string }> } | null> {
+let manifestCache: { clips: Record<string, { file: string; text?: string }> } | null = null;
+let manifestSecondaryIdx: { pausal: Map<string, string>; unvowelled: Map<string, string> } | null = null;
+const stripPunctOnlyText = (s: string) =>
+  s.normalize('NFC').trim().replace(/\s+/g, ' ').replace(/[.،؛:!؟?]+$/g, '').trim();
+const stripPausalText = (s: string) =>
+  s.normalize('NFC').trim().replace(/\s+/g, ' ').replace(/[.،؛:!؟?\u064B-\u0652]+$/g, '').trim();
+const stripUnvowelledText = (s: string) =>
+  stripPausalText(s).replace(/[\u064B-\u065F\u0670]/g, '');
+
+async function getAudioManifest(): Promise<{ clips: Record<string, { file: string; text?: string }> } | null> {
   if (manifestCache) return manifestCache;
   try {
     const res = await fetch('/audio/v1/manifest.json', { cache: 'no-cache' });
@@ -23,6 +31,23 @@ async function getAudioManifest(): Promise<{ clips: Record<string, { file: strin
     }
   } catch {}
   return null;
+}
+
+function getNaturalSecondaryIdx(clips: Record<string, { file: string; text?: string }>) {
+  if (manifestSecondaryIdx) return manifestSecondaryIdx;
+  const pausal = new Map<string, string>();
+  const unvowelled = new Map<string, string>();
+  for (const entry of Object.values(clips)) {
+    if (!entry?.file || !entry.text) continue;
+    const punct = stripPunctOnlyText(entry.text);
+    if (punct && !pausal.has(punct)) pausal.set(punct, entry.file);
+    const p = stripPausalText(entry.text);
+    if (p && p.includes(' ') && !pausal.has(p)) pausal.set(p, entry.file);
+    const u = stripUnvowelledText(entry.text);
+    if (u && u.includes(' ') && u.length >= 14 && !unvowelled.has(u)) unvowelled.set(u, entry.file);
+  }
+  manifestSecondaryIdx = { pausal, unvowelled };
+  return manifestSecondaryIdx;
 }
 
 const audioMemoryCache = new Map<string, string>();
@@ -195,12 +220,15 @@ export async function playNaturalArabicAudio(
   try {
     const manifest = await getAudioManifest();
     if (manifest?.clips) {
-      const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
-      const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
+      const punctOnly = stripPunctOnlyText(text);
+      const pausal = text.includes(' ') ? text.replace(/[\u064E\u064F\u0650]+$/, '') : '';
+      const unvowelled = text.includes(' ') && text.length >= 14 ? text.replace(/[\u064B-\u065F\u0670]/g, '') : '';
       const keysToTry = [
         audioKey(text),
         text,
         text.trim(),
+        punctOnly,
+        punctOnly ? audioKey(punctOnly) : undefined,
         preparedText,
         preparedText ? audioKey(preparedText) : undefined,
         pausal,
@@ -215,6 +243,18 @@ export async function playNaturalArabicAudio(
           clip = manifest.clips[k];
           break;
         }
+      }
+
+      if (!clip) {
+        const sec = getNaturalSecondaryIdx(manifest.clips);
+        const punctKey = stripPunctOnlyText(text);
+        const pKey = text.includes(' ') ? stripPausalText(text) : '';
+        const uKey = text.includes(' ') && text.length >= 14 ? stripUnvowelledText(text) : '';
+        const fallbackFile =
+          (punctKey && sec.pausal.get(punctKey)) ||
+          (pKey && sec.pausal.get(pKey)) ||
+          (uKey && sec.unvowelled.get(uKey));
+        if (fallbackFile) clip = { file: fallbackFile };
       }
 
       if (clip?.file) {

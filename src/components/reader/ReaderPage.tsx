@@ -12,9 +12,15 @@ interface ReaderPageProps {
   problematicWords?: string[];
   studentName?: string;
   passageId?: string;
+  onOpenHandDrawnStories?: () => void;
 }
 
-export const ReaderPage: React.FC<ReaderPageProps> = ({ problematicWords, studentName, passageId }) => {
+export const ReaderPage: React.FC<ReaderPageProps> = ({
+  problematicWords,
+  studentName,
+  passageId,
+  onOpenHandDrawnStories,
+}) => {
   const [mode, setMode] = useState<'guided' | 'tools'>('guided');
   const [reading, setReading] = useState(false);
   const onReadingChange = useCallback((r: boolean) => setReading(r), []);
@@ -34,9 +40,16 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ problematicWords, studen
     <div className="space-y-6" dir="rtl">
       {!reading && (
         <KidPageHeader color="sky" title="القارئ الميسّر" subtitle="جملة قصيرة واحدة على الشاشة في كل مرة.">
-          <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm mt-2" onClick={() => setMode('tools')}>
-            أدوات الأخصائي
-          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {onOpenHandDrawnStories && (
+              <button type="button" className="bz-btn bz-btn-primary bz-btn-sm" onClick={onOpenHandDrawnStories}>
+                قصص مرسومة بخط اليد
+              </button>
+            )}
+            <button type="button" className="bz-btn bz-btn-ghost bz-btn-sm" onClick={() => setMode('tools')}>
+              أدوات الأخصائي
+            </button>
+          </div>
         </KidPageHeader>
       )}
       <FocusReader studentName={studentName} problematicWords={problematicWords} passageId={passageId} onReadingChange={onReadingChange} />

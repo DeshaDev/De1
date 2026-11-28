@@ -9,12 +9,39 @@ const AUDIO_BASE = '/audio/v1/';
 interface AudioManifest {
   version: 1;
   voice: string;
-  clips: Record<string, { file: string }>;
+  clips: Record<string, { file: string; text?: string }>;
 }
 let manifestPromise: Promise<AudioManifest | null> | null = null;
 let currentClip: HTMLAudioElement | null = null;
 const preloadedClips = new Map<string, HTMLAudioElement>();
 const MAX_PRELOADED_CLIPS = 48;
+const manifestIndexCache = new WeakMap<AudioManifest, { pausal: Map<string, string>; unvowelled: Map<string, string> }>();
+
+const stripPunctOnly = (s: string) =>
+  normalizeSpokenText(s).replace(/[.،؛:!؟?]+$/g, '').trim();
+const stripPausal = (s: string) =>
+  normalizeSpokenText(s).replace(/[.،؛:!؟?\u064B-\u0652]+$/g, '').trim();
+const stripAllVowels = (s: string) =>
+  stripPausal(s).replace(/[\u064B-\u065F\u0670]/g, '');
+
+function getSecondaryIndex(manifest: AudioManifest) {
+  let idx = manifestIndexCache.get(manifest);
+  if (idx) return idx;
+  const pausal = new Map<string, string>();
+  const unvowelled = new Map<string, string>();
+  for (const entry of Object.values(manifest.clips || {})) {
+    if (!entry?.file || !entry.text) continue;
+    const punct = stripPunctOnly(entry.text);
+    if (punct && !pausal.has(punct)) pausal.set(punct, entry.file);
+    const p = stripPausal(entry.text);
+    if (p && p.includes(' ') && !pausal.has(p)) pausal.set(p, entry.file);
+    const u = stripAllVowels(entry.text);
+    if (u && u.includes(' ') && u.length >= 14 && !unvowelled.has(u)) unvowelled.set(u, entry.file);
+  }
+  idx = { pausal, unvowelled };
+  manifestIndexCache.set(manifest, idx);
+  return idx;
+}
 
 function loadManifest(): Promise<AudioManifest | null> {
   if (!manifestPromise) {
@@ -28,31 +55,40 @@ function loadManifest(): Promise<AudioManifest | null> {
 export function resolveClipFile(manifest: AudioManifest, text: string): string | undefined {
   if (!text) return undefined;
   const prepared = prepareArabicTtsText(text);
-  // Also strip trailing short vowels (dammah/fatha/kasrah) for pausal match (e.g. قَلَمُ -> قَلَم, سَيَّارَةُ -> سَيَّارَة)
-  const pausal = text.replace(/[\u064E\u064F\u0650]+$/, '');
-  const unvowelled = text.replace(/[\u064B-\u065F\u0670]/g, '');
+  const punctOnly = stripPunctOnly(text);
+  const pausal = stripPausal(text);
+  const unvowelled = stripAllVowels(text);
 
-  // The clip recorded from exactly this text comes first; the looser aliases below exist only
-  // for texts outside the catalogue and once pointed at older recordings (مَاء spoken as مَاءُ).
   const keysToTry = [
     audioKey(normalizeSpokenText(text)),
     text,
     text.trim(),
     audioKey(text),
+    punctOnly,
+    punctOnly ? audioKey(punctOnly) : undefined,
     prepared,
     prepared ? audioKey(prepared) : undefined,
-    pausal,
-    pausal ? audioKey(pausal) : undefined,
     normalizeSpokenText(text),
-    audioKey(normalizeSpokenText(text)),
-    unvowelled,
-    unvowelled ? audioKey(unvowelled) : undefined,
+    // Never strip vowels/harakat on isolated short words (prevents رَبُّ -> رِبْ or نَافِذَةِ -> نَافِذَةٌ).
+    ...(pausal.includes(' ') ? [pausal, audioKey(pausal)] : []),
+    ...(unvowelled.includes(' ') && unvowelled.length >= 14 ? [unvowelled, audioKey(unvowelled)] : []),
   ].filter(Boolean) as string[];
 
   for (const k of keysToTry) {
     if (manifest.clips[k]?.file) {
       return manifest.clips[k].file;
     }
+  }
+
+  const secondary = getSecondaryIndex(manifest);
+  if (punctOnly && secondary.pausal.has(punctOnly)) {
+    return secondary.pausal.get(punctOnly);
+  }
+  if (pausal.includes(' ') && secondary.pausal.has(pausal)) {
+    return secondary.pausal.get(pausal);
+  }
+  if (unvowelled.includes(' ') && unvowelled.length >= 14 && secondary.unvowelled.has(unvowelled)) {
+    return secondary.unvowelled.get(unvowelled);
   }
   return undefined;
 }

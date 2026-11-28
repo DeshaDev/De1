@@ -41,20 +41,10 @@ export interface IfmReadingDiagnosis {
 
 export function getIfmApiKey(): string | null {
   const nodeEnv = typeof process !== 'undefined' ? process.env : undefined;
-  const envKey = nodeEnv?.IFM_API_KEY || nodeEnv?.VITE_IFM_API_KEY;
+  const envKey = nodeEnv?.IFM_API_KEY;
 
   if (envKey && envKey.trim() && envKey !== 'MY_IFM_API_KEY' && envKey !== 'YOUR_IFM_API_KEY') {
     return envKey.trim();
-  }
-
-  // Support Vite client-side if loaded in browser
-  try {
-    const metaEnv = (import.meta as any)?.env?.VITE_IFM_API_KEY;
-    if (metaEnv && typeof metaEnv === 'string' && metaEnv.trim()) {
-      return metaEnv.trim();
-    }
-  } catch {
-    // import.meta not defined in standard CJS/Node
   }
 
   return null;
